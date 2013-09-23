@@ -1,0 +1,42 @@
+
+This file defines the indices for all possible data entry types.
+They are grouped to some extent.  The index consists of two parts,
+the first single digit defines the group, the second two digit
+defines items within the group.
+
+% any system-specific variables
+[0;00] stdout		% redirects program output to a fort.### file instead of terminal
+[0;01] nthreads		% number of threads to use
+
+% microscope parameters  [start with 100]
+[1;00] voltage		% accelerating voltage in Volt
+[1;01] camlen		% camera length in mm
+[1;02] convergence	% beam convergence angle in mrad
+
+% aberration constants [start with 200]
+[2;00] aber_Cs		% spherical aberration in mm
+[2;01] aber_Cc		% chromatic aberration in mm
+
+% crystal structure [start with 300]
+[3;00] xtalname		% filename (ends with .xtal or ...)
+
+% sample parameters [start with 400]
+[4;00] beam		% beam direction indices
+[4;01] foilnormal	% foil normal indices
+[4;02] startthick	% starting thickness in nm
+[4;03] thickinc		% thickness increment in nm
+[4;04] numthick		% number of thicknesses
+[4;10] tname		% filename for thickness profile
+
+% diffraction parameters [start with 500]
+[5;00] 
+
+% detector parameters [start with 600]
+[6;00] BFrad		% bright field detector radius in 
+[6;01] HAADFradi		% inner HAADF detector radius in
+[6;02] HAADFrado		% outer HAADF detector radius in
+
+
+% anything to do with output [start with 900]
+[9;00] outname		% output filename
+
