@@ -36,6 +36,8 @@
 !
 !> @brief everything that has to do with file-based input-output
 ! 
+!> @version
+!
 !> @date 1/5/99   MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
