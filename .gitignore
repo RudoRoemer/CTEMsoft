@@ -1,0 +1,56 @@
+# ignore object code
+*.o
+
+# ignore OS files
+.DS_Store
+.DS_Store?
+
+# executables
+/exe/
+
+# libs, makefiles, etc
+*.a
+*.amake
+*.amake.bk
+
+# DOxygen files
+/doc/
+/dot/
+
+# examples folder
+/examples/
+
+# debug files
+*.fx3
+
+# mkdep
+mkdep_F95
+
+# Release & Debug files
+/lib/*/Release/
+/lib/Release/
+/lib/*/Debug/
+/lib/Debug/
+
+# runtime files
+absoft_run_env.sh
+
+# testbed folder
+/lib/testbed/
+
+# manuals
+/manuals/
+
+# oldsrc
+/oldsrc/
+
+# rksuite
+/src/rksuite_90/
+
+# testfolder
+/testfolder/
+
+# xtal
+/xtal/
+
+

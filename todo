@@ -1,0 +1,13 @@
+
+create a hidden folder in the user top folder with the name
+
+~/.CTEMsoft2013
+
+and create in it a subfolder called 'templates' that contains
+all the template namelist files for all programs.
+
+When a program is called with the -t command line argument, the 
+relevant template files are copied to the folder in which the 
+program was executed.
+
+

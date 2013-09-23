@@ -1,0 +1,1344 @@
+! ###################################################################
+! Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
+! All rights reserved.
+!
+! Redistribution and use in source and binary forms, with or without modification, are 
+! permitted provided that the following conditions are met:
+!
+!     - Redistributions of source code must retain the above copyright notice, this list 
+!        of conditions and the following disclaimer.
+!     - Redistributions in binary form must reproduce the above copyright notice, this 
+!        list of conditions and the following disclaimer in the documentation and/or 
+!        other materials provided with the distribution.
+!     - Neither the names of Marc De Graef, Carnegie Mellon University nor the names 
+!        of its contributors may be used to endorse or promote products derived from 
+!        this software without specific prior written permission.
+!
+! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+! AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+! IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+! ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE 
+! LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
+! DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
+! SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
+! CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
+! OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+! USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+! ###################################################################
+
+!--------------------------------------------------------------------------
+! CTEMsoft2013:symmetry.f90
+!--------------------------------------------------------------------------
+!
+! MODULE: symmetry
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief all symmetry-related routines
+!
+!> @details routines to generate a space group based on the generator string; computation
+!> of orbits and families; computation of all atoms in a single or multiple unit cells
+! 
+!> @date 1/5/99   MDG 1.0 original
+!> @date   5/19/01  MDG 2.0 f90
+!> @date  11/27/01  MDG 2.1 added kind support
+!> @date   03/19/13 MDG 3.0 udated IO and such
+!--------------------------------------------------------------------------
+
+module symmetry
+
+use local
+use symmetryvars
+
+contains
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: SYM_fillgen
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief create a generator matrix
+!
+!> @details  fills in a generator matrix based on an input 4-character code string
+!
+!> @param t input string (4 character block from generator string)
+!> @param isgn switch to indicate forward or reverse translation component
+!
+!> @date   10/13/98 MDG 1.0 original
+!> @date    5/19/01 MDG 2.0 f90
+!> @date  11/27/01  MDG 2.1 added kind support
+!--------------------------------------------------------------------------
+subroutine SYM_fillgen(t,isgn)
+
+use local
+
+IMPLICIT NONE
+
+character(1),INTENT(IN)		:: t(4)	!< 4-character input string
+integer(kind=irg),INTENT(IN)	:: isgn	!< indicates forward or reverse translation
+integer(kind=irg)			:: j		!< auxiliary variable
+real(kind=dbl)				:: sgn	!< forward or reverse multiplier for translation components
+
+! forward or reverse translation ?
+ sgn=dble(isgn)
+
+! first fill the array with zeroes and a 1 at 4,4
+ SG%SYM_c(1:4,1:4) = 0.0_dbl
+ SG%SYM_c(4,4) = 1.0_dbl
+
+! then check for the particular matrix type
+ select case (t(1))
+  case ('a'); SG%SYM_c(1,1) = 1.0_dbl; SG%SYM_c(2,2) = 1.0_dbl; SG%SYM_c(3,3) = 1.0_dbl
+  case ('b'); SG%SYM_c(1,1) =-1.0_dbl; SG%SYM_c(2,2) =-1.0_dbl; SG%SYM_c(3,3) = 1.0_dbl
+  case ('c'); SG%SYM_c(1,1) =-1.0_dbl; SG%SYM_c(2,2) = 1.0_dbl; SG%SYM_c(3,3) =-1.0_dbl
+  case ('d'); SG%SYM_c(1,3) = 1.0_dbl; SG%SYM_c(2,1) = 1.0_dbl; SG%SYM_c(3,2) = 1.0_dbl
+  case ('e'); SG%SYM_c(1,2) = 1.0_dbl; SG%SYM_c(2,1) = 1.0_dbl; SG%SYM_c(3,3) =-1.0_dbl
+  case ('f'); SG%SYM_c(1,2) =-1.0_dbl; SG%SYM_c(2,1) =-1.0_dbl; SG%SYM_c(3,3) =-1.0_dbl
+  case ('g'); SG%SYM_c(1,2) =-1.0_dbl; SG%SYM_c(2,1) = 1.0_dbl; SG%SYM_c(3,3) = 1.0_dbl
+  case ('h'); SG%SYM_c(1,1) =-1.0_dbl; SG%SYM_c(2,2) =-1.0_dbl; SG%SYM_c(3,3) =-1.0_dbl
+  case ('i'); SG%SYM_c(1,1) = 1.0_dbl; SG%SYM_c(2,2) = 1.0_dbl; SG%SYM_c(3,3) =-1.0_dbl
+  case ('j'); SG%SYM_c(1,1) = 1.0_dbl; SG%SYM_c(2,2) =-1.0_dbl; SG%SYM_c(3,3) = 1.0_dbl
+  case ('k'); SG%SYM_c(1,2) =-1.0_dbl; SG%SYM_c(2,1) =-1.0_dbl; SG%SYM_c(3,3) = 1.0_dbl
+  case ('l'); SG%SYM_c(1,2) = 1.0_dbl; SG%SYM_c(2,1) = 1.0_dbl; SG%SYM_c(3,3) = 1.0_dbl
+  case ('m'); SG%SYM_c(1,2) = 1.0_dbl; SG%SYM_c(2,1) =-1.0_dbl; SG%SYM_c(3,3) =-1.0_dbl
+  case ('n'); SG%SYM_c(1,2) =-1.0_dbl; SG%SYM_c(2,1) = 1.0_dbl; SG%SYM_c(2,2) =-1.0_dbl; SG%SYM_c(3,3) = 1.0_dbl
+ end select
+
+! then fill in the translational component
+ do j=2,4 
+  select case (t(j))
+   case('A'); SG%SYM_c(j-1,4) = sgn/6.0_dbl
+   case('B'); SG%SYM_c(j-1,4) = sgn/4.0_dbl
+   case('C'); SG%SYM_c(j-1,4) = sgn/3.0_dbl
+   case('D'); SG%SYM_c(j-1,4) = sgn/2.0_dbl
+   case('E'); SG%SYM_c(j-1,4) = sgn*2.0_dbl/3.0_dbl
+   case('F'); SG%SYM_c(j-1,4) = sgn*3.0_dbl/4.0_dbl
+   case('G'); SG%SYM_c(j-1,4) = sgn*5.0_dbl/6.0_dbl
+   case('O'); SG%SYM_c(j-1,4) = 0.0_dbl
+   case('X'); SG%SYM_c(j-1,4) = -sgn*3.0_dbl/8.0_dbl
+   case('Y'); SG%SYM_c(j-1,4) = -sgn/4.0_dbl
+   case('Z'); SG%SYM_c(j-1,4) = -sgn/8.0_dbl
+  end select
+ end do
+
+end subroutine SYM_fillgen
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: MakeGenerators
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief construct all generator matrices
+!
+!> @details interprets the generator string and initializes all generator matrices
+!
+!> @date   10/13/98 MDG 1.0 original
+!> @date    5/19/01 MDG 2.0 f90
+!> @date  11/27/01  MDG 2.1 added kind support
+!> @date  03/19/13 MDG 3.0 general cleanup
+!--------------------------------------------------------------------------!     
+subroutine MakeGenerators
+
+use local
+use crystalvars
+use math
+
+IMPLICIT NONE
+
+integer(kind=irg),parameter	:: QQ=48 				!< maximum number of point group symmetry elements
+integer(kind=irg)			:: i,k,l,iset				!< auxiliary variables
+real(kind=dbl)				:: SYM_d(4,4),SYM_e(4,4)	!< auxiliary 4x4 matrices
+real(kind=dbl), parameter	:: eps=0.0005_dbl		!< constant used to decide whether or not elements are equal 
+character(1)				:: t(4)				!< 4-character string etracted from generator string
+character(40)				:: genst				!< full generator string
+
+! fill in the space group name 
+ SG%SYM_name = SYM_SGname(cell%SYM_SGnum)
+
+! initialize the encoded identity operator aOOO
+ t = (/ 'a', 'O', 'O', 'O' /)
+! compute its matrix
+ call SYM_fillgen(t,1)
+! and put it first in the list of matrices
+ SG%SYM_data(1,:,:) = SG%SYM_c(:,:)
+
+! get the space group generator string 
+ genst = SYM_GL(cell%SYM_SGnum)
+
+! initialize the number of generators 
+ SG%SYM_GENnum = ichar(genst(2:2))-QQ
+
+! create the generator matrices 
+ do i=2,2+SG%SYM_GENnum - 1
+   do  k=1,4
+     l=2+4*(i-2)+k
+     t(k) = genst(l:l)
+   end do
+   call SYM_fillgen(t,1)
+   SG%SYM_data(i,:,:) = SG%SYM_c(:,:)
+ end do
+
+! this is where we are in the generator string
+ i=2+4*SG%SYM_GENnum+1
+
+! if there is inversion symmetry, add the inversion to the generators 
+ if (genst(1:1).eq.'1') then 
+  SG%SYM_centrosym=.TRUE.
+  t = (/ 'h', 'O', 'O', 'O' /)
+  call SYM_fillgen(t,1)
+  SG%SYM_data(SG%SYM_GENnum+2,:,:) = SG%SYM_c(:,:)
+  SG%SYM_GENnum = SG%SYM_GENnum+2
+ else   
+  SG%SYM_GENnum = SG%SYM_GENnum+1
+ end if
+
+! now check for special origin conditions (choices 1 and 2) 
+ if (genst(i:i).ne.'0') then 
+  if (cell%SYM_SGset.eq.0) then
+   call GetSetting(iset)
+   cell%SYM_SGset=iset
+  end if
+  if (cell%SYM_SGset.eq.2) then 
+! second setting: apply translation transformation to generators
+   t(1)='a'
+   do k=2,4
+    l=i+k-1
+    t(k) = genst(l:l)
+   end do
+   do l=2,SG%SYM_GENnum 
+! translate to first setting origin
+    call SYM_fillgen(t,-1)
+    SYM_d(:,:)=SG%SYM_data(l,:,:)
+! apply generator
+    SYM_e = matmul(SYM_d,SG%SYM_c)
+! translate back to second setting origin
+    call SYM_fillgen(t,1)
+    SYM_d = matmul(SG%SYM_c,SYM_e)
+! reduce the translations to the fundamental unit cell
+    do  k=1,3
+     if (abs(SYM_d(k,4)).lt.eps) SYM_d(k,4)=0.0_dbl
+     if (SYM_d(k,4).lt.0.0_dbl) then 
+      do while (SYM_d(k,4).lt.0.0_dbl) 
+       SYM_d(k,4)=SYM_d(k,4)+1.0_dbl
+      end do
+     end if
+     if (SYM_d(k,4).ge.1.0_dbl) then 
+      do while (SYM_d(k,4).ge.1.0_dbl) 
+       SYM_d(k,4)=SYM_d(k,4)-1.0_dbl
+      end do
+     end if
+     if (abs(SYM_d(k,4)-1.0_dbl).lt.eps) SYM_d(k,4)=0.0_dbl
+    end do
+! and store the result in the SYM_data array
+    SG%SYM_data(l,:,:)=SYM_d(:,:)
+   end do
+  end if ! if (SYM_SGset.eq.2)
+ end if ! if (genst(i:i).ne.'0')
+
+end subroutine MakeGenerators
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: matrixmult
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief multiply 4x4 matrices and reduce translation component
+!
+!> @details multiplies two 4x4 symmetry matrices and brings
+!> the translation component back to the fundamental unit cell.
+!
+!> @param k1 index of first input matrix
+!> @param k2 index of second input matrix
+!
+!> @note there is no output since the result is stored in the SG structure SYM_c array
+!
+!> @date   10/13/98 MDG 1.0 original
+!> @date    5/19/01 MDG 2.0 f90
+!> @date  11/27/01  MDG 2.1 added kind support
+!> @date  03/19/13 MDG 3.0 general cleanup
+!--------------------------------------------------------------------------
+subroutine matrixmult(k1,k2)
+   
+use local
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)	:: k1				!< index of first 4x4 input matrix
+integer(kind=irg),INTENT(IN)	:: k2				!< index of second 4x4 input matrix
+integer(kind=irg)			:: i,j,k			!< loop counters
+real(kind=dbl),parameter		:: eps=0.0005_dbl	!< truncation constant
+
+ do i=1,4
+  do j=1,4
+   SG%SYM_c(i,j) = 0.0_dbl
+   do k=1,4
+    SG%SYM_c(i,j)=SG%SYM_c(i,j)+SG%SYM_data(k1,i,k)*SG%SYM_data(k2,k,j)
+   end do
+  end do
+ end do
+
+! bring the translational part of the matrix back to
+! the first unit cell and correct possible rounding errors
+ do  k=1,3
+  if (abs(SG%SYM_c(k,4)).lt.eps) SG%SYM_c(k,4)=0.0_dbl
+  if (SG%SYM_c(k,4).lt.0.0_dbl) then 
+   do while (SG%SYM_c(k,4).lt.0.0_dbl) 
+    SG%SYM_c(k,4)=SG%SYM_c(k,4)+1.0_dbl
+   end do
+  end if
+  if (SG%SYM_c(k,4).gt.1.0_dbl) then 
+   do while (SG%SYM_c(k,4).gt.1.0_dbl) 
+    SG%SYM_c(k,4)=SG%SYM_c(k,4)-1.0_dbl
+   end do
+  end if
+  if (abs(SG%SYM_c(k,4)-1.0_dbl).lt.eps) SG%SYM_c(k,4)=0.0_dbl
+ end do
+
+end subroutine matrixmult
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: isitnew
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief is this a new symmetry operator?
+!
+!> @details check whether or not this is a new operator by simply comparing it 
+!> with all existing operators
+!
+!> @param nsym index of matrix to be compared
+!
+!> @date   10/13/98 MDG 1.0 original
+!> @date    5/19/01 MDG 2.0 f90
+!> @date  11/27/01  MDG 2.1 added kind support
+!--------------------------------------------------------------------------
+logical function isitnew(nsym)
+
+use local
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)	:: nsym			!< index of matrix to be compared
+integer(kind=irg)			:: i,j,k,n			!< loop counters
+real(kind=dbl),parameter		:: eps=0.0005_dbl	!< comparison threshold
+
+ k=0
+ n=0
+ do while ((k.le.nsym).and.(n.ne.12))
+  n=0
+  k=k+1
+  do i=1,3
+   do j=1,4
+    if (abs(SG%SYM_c(i,j)- SG%SYM_data(k,i,j)).lt.eps) n=n+1
+   end do
+  end do
+ end do
+ 
+ if (n.ne.12) then 
+  isitnew=.TRUE.
+ else
+  isitnew=.FALSE.
+ end if
+
+end function isitnew
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: GenerateSymmetry
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief compute all relevant symmetry operators
+!
+!> @details compute all symmetry operators and store them in SG%SYM_data.
+!               
+!> @note These routines are based on a program written by G. Ceder (MIT).
+!
+!> @param dopg include point group matrices or not (logical)
+!
+!> @date   10/13/98 MDG/Ceder 1.0 original
+!> @date    5/19/01 MDG 2.0 f90
+!> @date  11/27/01  MDG 2.1 added kind support
+!> @date  03/19/13 MDG 3.0 clean up
+!--------------------------------------------------------------------------
+subroutine GenerateSymmetry(dopg)
+
+use local
+use crystalvars
+
+IMPLICIT NONE
+
+logical,INTENT(IN)		:: dopg				!< logical to determine if point group matrices are to be computed as well
+integer(kind=irg)		:: i,j,k,nsym,k1,k2,l1,l2	!< loop counters (mostly)
+real(kind=dbl)			:: q,sm				!< auxiliary variables.
+
+! create the space group generator matrices
+ call MakeGenerators
+ nsym = SG%SYM_GENnum
+
+! generate new elements from the squares of the generators 
+ do k=1,SG%SYM_GENnum 
+  call matrixmult(k,k)
+  if (isitnew(nsym).eqv..TRUE.) then 
+   nsym=nsym+1
+   SG%SYM_data(nsym,:,:) = SG%SYM_c(:,:)
+  end if
+ end do
+
+! generate the remainder of the factorgroup
+ k1=1
+ do while (k1.le.nsym) 
+  k2=k1+1
+  do while (k2.le.nsym)
+   call matrixmult(k2,k1)
+   if (isitnew(nsym).eqv..TRUE.) then 
+    nsym=nsym+1
+    SG%SYM_data(nsym,:,:) = SG%SYM_c(:,:)
+    if (nsym.ge.192) then 
+     k2 = nsym
+     k1 = nsym
+    end if
+   end if
+   k2=k2+1
+  end do
+  k1=k1+1
+ end do
+ SG%SYM_MATnum = nsym
+
+! reduce the translation operators to the fundamental unit cell
+ do i=1,SG%SYM_MATnum
+  do j=1,3
+   SG%SYM_data(i,j,4)=mod( SG%SYM_data(i,j,4),1.0_dbl)
+  end do
+ end do
+
+ if (dopg) then
+! tag the point symmetry operators
+! this is used to determine families of directions;
+! for planes we must determine the transformed point symmetry
+! operators SYM_recip() (this requires the metric tensors)
+  SG%SYM_NUMpt=0
+  do i=1,SG%SYM_MATnum 
+   sm=SG%SYM_data(i,1,4)**2+SG%SYM_data(i,2,4)**2+SG%SYM_data(i,3,4)**2
+   if (sm.lt.0.1_dbl) then
+    SG%SYM_NUMpt=SG%SYM_NUMpt+1
+
+! direct space point group symmetry elements
+    SG%SYM_direc(SG%SYM_NUMpt,:,:)=SG%SYM_data(i,1:3,1:3)
+
+! reciprocal space point group symmetry elements
+    do j=1,3
+     do k=1,3 
+      q=0.0_dbl
+      do l1=1,3
+       do l2=1,3
+        q=q+cell%dmt(j,l1)*SG%SYM_data(i,l1,l2)*cell%rmt(l2,k)
+       end do
+      end do
+      SG%SYM_recip(SG%SYM_NUMpt,j,k)=q
+     end do
+    end do
+   end if  ! (sm.lt.0.1)
+  end do
+ end if ! if (dopg.eq..TRUE.)
+! this completes generation of the factor group 
+
+end subroutine GenerateSymmetry
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: CalcFamily
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief compute the indices of equivalent planes/directions
+!
+!> @details compute the indices of equivalent planes/directions and store them in the itmp array
+!               
+!> @param ind input index triplet
+!> @param num output number of family members generated
+!> @param space space in which to perform the computation (direct 'd' or reciprocal 'r')
+!
+!> @date   10/13/98 MDG 1.0 original
+!> @date    5/19/01 MDG 2.0 f90
+!> @date  11/27/01  MDG 2.1 added kind support
+!--------------------------------------------------------------------------
+subroutine CalcFamily(ind,num,space)
+        
+use local
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(OUT):: num		!< number of equivalent entries generated
+integer(kind=irg),INTENT(IN)	:: ind(3)		!< input triplet
+character(1),INTENT(IN)		:: space		!< 'd' or 'r'
+integer(kind=irg)			:: m,i,j		!< loop counters and such
+real(kind=sgl)				:: h,k,l,ih,ik,il,idiff	!< auxiliary variables
+logical					:: newpoint		!< is this a new point ?
+real,parameter				:: eps=0.0001_sgl	!< comparison threshold
+
+! first take the identity
+ j=1
+ itmp(j,1:3)=ind(1:3)
+ h=float(ind(1))
+ k=float(ind(2))
+ l=float(ind(3))
+
+! multiply with all point group elements
+ do i=2,SG%SYM_NUMpt 
+  if (space.eq.'d') then
+   ih=SG%SYM_direc(i,1,1)*h+SG%SYM_direc(i,1,2)*k+SG%SYM_direc(i,1,3)*l
+   ik=SG%SYM_direc(i,2,1)*h+SG%SYM_direc(i,2,2)*k+SG%SYM_direc(i,2,3)*l
+   il=SG%SYM_direc(i,3,1)*h+SG%SYM_direc(i,3,2)*k+SG%SYM_direc(i,3,3)*l
+  else
+   ih=SG%SYM_recip(i,1,1)*h+SG%SYM_recip(i,1,2)*k+SG%SYM_recip(i,1,3)*l
+   ik=SG%SYM_recip(i,2,1)*h+SG%SYM_recip(i,2,2)*k+SG%SYM_recip(i,2,3)*l
+   il=SG%SYM_recip(i,3,1)*h+SG%SYM_recip(i,3,2)*k+SG%SYM_recip(i,3,3)*l
+  end if
+
+! is this a new point ?
+  newpoint=.TRUE.
+  do m=1,j+1
+   idiff=(itmp(m,1)-ih)**2+(itmp(m,2)-ik)**2+(itmp(m,3)-il)**2
+   if (idiff.lt.eps) newpoint=.FALSE.
+  end do
+
+  if (newpoint) then 
+   j=j+1
+   itmp(j,1)=nint(ih)
+   itmp(j,2)=nint(ik)
+   itmp(j,3)=nint(il)
+  endif
+
+ end do 
+ num=j
+
+end subroutine CalcFamily
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: CalcOrbit
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief compute the orbit of a point
+!
+!> @details compute the orbit of a point and outputs it in an array
+!
+!> @param m input 
+!> @param n output number of orbit members generated
+!> @param ctmp output coordinate array
+!
+!> @date   10/13/98 MDG 1.0 original
+!> @date    5/19/01 MDG 2.0 f90
+!> @date  11/27/01  MDG 2.1 added kind support
+!--------------------------------------------------------------------------
+subroutine CalcOrbit(m,n,ctmp)
+
+use local
+use crystalvars
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(OUT)	:: ctmp(192,3)		!< output array with orbit coordinates
+integer(kind=irg),INTENT(OUT):: n				!< number of equivalent entries 
+integer(kind=irg),INTENT(IN)	:: m				!< index of input atom in asymmetric unit array cell%ATOM_pos
+
+real(kind=dbl)				:: r(3),s(3),diff		!< auxiliary variables
+real(kind=dbl), parameter 	:: eps = 1.0D-4	!< coparison threshold
+integer(kind=irg)			:: i,j,k,mm		!< auxiliary variables
+logical					:: new			!< is this a new point ?
+
+! get the atom coordinates
+! and store them in the temporary array
+ n=1
+ do i=1,3
+  r(i)=cell%ATOM_pos(m,i)
+  ctmp(n,i)=r(i)
+ end do
+ 
+! get all the equivalent atom positions
+ do i=2,SG%SYM_MATnum
+  do j=1,3
+   s(j)=SG%SYM_data(i,j,4)
+   do k=1,3
+    s(j)=s(j)+SG%SYM_data(i,j,k)*r(k)
+   end do
+  end do
+
+! reduce to the fundamental unit cell if necessary
+  if (SG%SYM_reduce) then
+   do j=1,3
+    s(j) = mod(s(j)+100.0_dbl,1.0_dbl)
+   end do
+  end if
+
+! is this a new point ?
+  new = .TRUE.
+  do mm=1,n
+   diff=0.0_dbl
+   do j=1,3
+    diff=diff+abs(ctmp(mm,j)-s(j))
+   end do
+   if (diff.lt.eps) then
+     new = .FALSE.
+   end if
+  end do 
+
+! yes, it is a new point
+  if (new.eqv..TRUE.) then
+   n=n+1
+   do j=1,3
+    ctmp(n,j)=s(j)
+   end do
+  end if
+
+ end do
+
+end subroutine CalcOrbit
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: CalcStar
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief compute the star of a vector
+!
+!> @details compute the star of a given reciprocal vector and outputs it in an array
+!
+!> @todo Since a star and an orbit are basically the same, but in different spaces,
+!> it might be a good idea to merge CalcStar with CalcOrbit.
+!
+!> @param kk input vector 
+!> @param n output number of orbit members generated
+!> @param stmp output coordinate array
+!> @param space space in which to carry out the computation
+!
+!> @date   10/13/98 MDG 1.0 original
+!> @date    5/19/01 MDG 2.0 f90
+!> @date  11/27/01  MDG 2.1 added kind support
+!--------------------------------------------------------------------------
+subroutine CalcStar(kk,n,stmp,space)
+
+use local
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(OUT)	:: stmp(48,3)		!< output array with equivalent vectors
+real(kind=dbl),INTENT(IN)	:: kk(3)			!< input vector
+integer(kind=irg),INTENT(OUT):: n				!< number of entries in equivalent vector array
+character(1),INTENT(IN)		:: space			!< 'd' or 'r'
+integer(kind=irg)			:: i,j,k,mm		!< various loop counters and such
+real(kind=dbl)				:: r(3),s(3),diff		!< auxiliary variables
+real(kind=dbl),parameter 	:: eps=1.0D-4		!< comparison threshold
+logical					:: new			!< logical (is this a new one?)
+
+ n=1
+ r=kk
+ stmp(n,1:3)=r(1:3)
+
+! get all the equivalent reciprocal/direct space vectors
+ do i=2,SG%SYM_NUMpt 
+  do j=1,3
+   s(j)=0.0_dbl
+   do k=1,3
+    if (space.eq.'r') then 
+     s(j)=s(j)+SG%SYM_recip(i,j,k)*r(k)
+    else
+     s(j)=s(j)+SG%SYM_direc(i,j,k)*r(k)
+    end if
+   end do
+  end do
+
+! is this a new point ?
+  new = .TRUE.
+  do mm=1,n
+   diff=0.0_dbl
+   do j=1,3
+    diff=diff+abs(stmp(mm,j)-s(j))
+   end do
+   if (diff.le.eps) then
+     new  = .FALSE.
+   endif
+  end do
+
+! yes, it is a new point
+  if (new.eqv..TRUE.) then
+   n=n+1
+   stmp(n,1:3)=s(1:3)
+  end if
+
+ end do
+
+end subroutine CalcStar
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: CalcPositions
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief  compute atom positions in one or more unit cells
+!
+!> @details Compute all atom positions in the fundamental unit
+!> cell and translate to neighbouring cells if needed
+!> (used for structure drawings and structure factor computations)
+!!
+!> @param switch input vector 
+!
+!> @date   10/13/98 MDG 1.0 original
+!> @date    5/19/01 MDG 2.0 f90
+!> @date  11/27/01  MDG 2.1 added kind support
+!> @date  03/21/13  MDG 3.0 clean up and updated IO
+!--------------------------------------------------------------------------
+subroutine CalcPositions(switch)
+
+use local
+use crystalvars
+use io
+use error
+use crystal
+
+IMPLICIT NONE
+
+character(1),INTENT(IN)   :: switch			!< if switch='m', then multiple unit cells, otherwise single cell
+logical				:: inside			!< auxiliary logical
+integer(kind=irg) 		:: i,j,k,l,mm,icnt,celln(3),ncells,n,kk,ier, io_int(3)  !< various auxiliary variables
+real(kind=dbl)    		:: ctmp(192,3),ff(3),sh(3)	!< auxiliary variables	
+real(kind=sgl)    		:: r(3),g(3)				!< auxiliary variables	
+
+! make sure all coordinates are reduced to the fundamental unit cell
+ SG%SYM_reduce=.TRUE.
+
+! multiple cells ?
+ if (switch.eq.'m') then 
+  call ReadValue('Number of unit cells in a, b and c direction ?: ', io_int,3)
+  do j=1,3
+   celln(j) = io_int(j)
+   sh(j) = 0.5_dbl*celln(j)+1.0_dbl
+  end do
+  ncells = celln(1)*celln(2)*celln(3)
+ else
+! no, just one cell
+  do j=1,3
+   celln(j)=0
+   sh(j)=1.0_dbl
+  end do
+  ncells = 1
+ end if
+
+! main loop
+! first allocate the apos variable (contains CARTESIAN coordinates
+! if switch is 'm', crystal coordinates otherwise)
+ if (allocated(apos)) deallocate(apos)
+ allocate (apos(cell%ATOM_ntype, ncells * SG%SYM_MATnum, 3),stat=ier)
+ if (ier.ne.0) call FatalError('CalcPositions','unable to allocate memory for array apos')
+
+ do i=1,cell%ATOM_ntype
+
+! for each atom in the asymmetric unit
+  call CalcOrbit(i,n,ctmp)
+  numat(i)=n
+  icnt=1
+
+! replicate in all cells
+  do j=1,celln(1)+1
+   ff(1)=float(j)
+   do k=1,celln(2)+1
+    ff(2)=float(k)
+    do l=1,celln(3)+1
+     ff(3)=float(l)
+     do kk=1,numat(i)
+      do mm=1,3
+       r(mm)=ctmp(kk,mm)+ff(mm)-sh(mm)
+      end do 
+      if (switch.eq.'m') then
+! make sure the atom is actually inside the block of unit
+! cells, or on one of the edges/faces/corners
+       inside=.TRUE.
+       do mm=1,3
+        if ((r(mm)+sh(mm)).gt.(celln(mm)+1.0)) inside=.FALSE.
+       end do
+       if (inside) then
+        call TransSpace(r,g,'d','c')
+        do mm=1,3
+         apos(i,icnt,mm)=g(mm)
+        end do
+        icnt=icnt+1
+       end if
+      else ! switch
+
+! prepare for structure factor computation
+       do mm=1,3
+        apos(i,icnt,mm)=r(mm)
+       end do
+       icnt=icnt+1
+      end if  ! switch
+     end do ! kk
+    end do ! l 
+   end do ! k
+  end do ! j
+  numat(i)=icnt-1
+ end do  ! cell%ATOM_type
+
+end subroutine CalcPositions
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: GetSetting
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief  space group first or second setting
+!
+!> @details for the space groups with a second origin setting
+!> this routine asks which of the two settings to use
+!
+!> @param iset  output value (1 or 2) 
+!
+!> @date   10/13/98 MDG 1.0 original
+!> @date    5/19/01 MDG 2.0 f90
+!> @date  11/27/01  MDG 2.1 added kind support
+!> @date  03/21/13  MDG 3.0 clean up and updated IO
+!--------------------------------------------------------------------------
+subroutine GetSetting(iset)
+
+use local
+use io
+use crystalvars
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(OUT)  	:: iset				!< output setting
+integer(kind=irg)      			:: i,isg, io_int(1)		!< auxiliary variables
+
+! There are 24 space groups with two origin choices.
+! The symmetry of both sites is stored in the array
+! sitesym; the space group numbers are stored
+! in tworig
+
+!> numbers of the space groups with two settings
+integer(kind=irg),parameter  	:: tworig(24)=(/48,50,59,68,70,85,86,88,125,126,129,130,133,134,137,138,&
+                                            141,142,201,203,222,224,227,228/)
+
+!> site symmetry list
+character(7),parameter 		:: sitesym(48) = (/ '222    ',' -1    ','222/n  ',' -1    ','mm2/n  ',' -1    ', &
+                                           		'222    ',' -1    ','222    ',' -1    ','-4     ',' -1    ', &
+                                           		'-4     ',' -1    ','-4     ',' -1    ','422    ','2/m    ', &
+                                           		'422/n  ',' -1    ','-4m2   ','2/m    ','-4/ncn ',' -1    ', &
+                                           		'-4121/c',' -1    ','-42m   ','2/m    ','-4m2/n ',' -1    ', &
+                                           		'-4cg   ','2/m    ','-4m2   ','2/m    ','-4c21  ',' -1    ', &
+                                           		'23     ',' -3    ','23     ',' -3    ','432    ',' -3    ', &
+                                           		'-43m   ','-3m    ','-43m   ','-3m    ','23     ',' -3    '/)
+
+ isg = 0
+ do i=1,24
+  if (tworig(i).eq.cell%SYM_SGnum) isg=i
+ end do
+ 
+ if (isg.ne.0) then 
+  mess = ' ---------------------------------------------'; call Message("(A)")
+  mess = ' This space group has two origin settings.'; call Message("(A)")
+  mess = ' The first setting has site symmetry    : '//sitesym(2*isg-1); call Message("(A)")
+  mess = ' the second setting has site symmetry   : '//sitesym(2*isg); call Message("(A)")
+  call ReadValue(' Which setting do you wish to use (1/2) : ', io_int, 1)
+  iset = io_int(1)
+  mess = '---------------------------------------------'; call Message("(A)")
+ end if
+ 
+end subroutine GetSetting
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: GetSpaceGroup
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief asks the user for a space group number
+!
+!> @details This routines lists all the relevant space groups for 
+!> the present crystal system, andasks the user to piok one.
+!>
+!> the following space groups have a hexagonal and rhombohedral
+!> setting;  the generator matrices are different, and so are
+!> their entries in the SYM_GL array.\n
+!>  hexagonal setting 146: R 3           231\n
+!>  hexagonal setting 148: R -3          232\n
+!>  hexagonal setting 155: R 3 2         233\n
+!>  hexagonal setting 160: R 3 m         234\n
+!>  hexagonal setting 161: R 3 c         235\n
+!>  hexagonal setting 166: R -3 m        23\n
+!> hexagonal setting 167: R -3 c        237\n
+!
+!> @todo  the space group listing portion of this code uses simple write() 
+!> statements, which in principle should only be used in the io module; so,
+!> we may need to move this entire routine to the io.f90 file to be consistent.
+!
+!> @date   10/13/98 MDG 1.0 original
+!> @date    5/19/01 MDG 2.0 f90
+!> @date  11/27/01  MDG 2.1 added kind support
+!> @date  03/21/13  MDG 3.0 clean up and updated IO
+!--------------------------------------------------------------------------
+subroutine GetSpaceGroup
+
+use local
+use io
+use crystalvars
+
+IMPLICIT NONE
+
+integer(kind=irg)  	:: sgmin,sgmax,i,j,TRIG(7), io_int(1)		!< auxiliary var	iables	
+logical           		:: skip							!< logical variable
+
+ TRIG = (/ 146,148,155,160,161,166,167 /)
+ skip = .FALSE.
+
+ select case (cell%xtal_system)
+ case (1); sgmin = 195; sgmax = 230
+ case (2); sgmin =  75; sgmax = 142
+ case (3); sgmin =  16; sgmax =  74
+ case (4); sgmin = 168; sgmax = 194
+ case (5); if (cell%SYM_second) then
+             mess = 'The space groups below correspond to the '; call Message("(/A)")
+             mess = 'second (rhombohedral) setting.'; call Message("(A/)")
+             mess = 'Please select one of the space groups.'; call Message("(A/)")
+             do i=1,7
+              if ((mod(i,4).eq.0).or.(i.eq.7)) then
+                write (stdout,"(1x,i3,':',A11,5x)") TRIG(i),SYM_SGname(TRIG(i))
+              else
+                write (stdout,"(1x,i3,':',A11,5x,$)") TRIG(i),SYM_SGname(TRIG(i))
+              end if
+             end do 
+             mess = ' -------------------------- '; call Message("(A)")
+             call ReadValue(' Enter space group number : ', io_int, 1)
+             cell%SYM_SGnum = io_int(1)
+
+! check for rhombohedral settings of rhombohedral space groups
+             if (cell%SYM_second) then
+               if (cell%SYM_SGnum.eq.146) cell%SYM_SGnum=231
+               if (cell%SYM_SGnum.eq.148) cell%SYM_SGnum=232
+               if (cell%SYM_SGnum.eq.155) cell%SYM_SGnum=233
+               if (cell%SYM_SGnum.eq.160) cell%SYM_SGnum=234
+               if (cell%SYM_SGnum.eq.161) cell%SYM_SGnum=235
+               if (cell%SYM_SGnum.eq.166) cell%SYM_SGnum=236
+               if (cell%SYM_SGnum.eq.167) cell%SYM_SGnum=237
+             endif
+             skip = .TRUE.
+           else 
+            sgmin = 143
+            sgmax = 167
+           end if
+ case (6); sgmin =   3; sgmax =  15
+ case (7); sgmin =   1; sgmax =   2
+ end select
+
+! print out all the relevant space group names and numbers        
+ if (skip.eqv..FALSE.) then
+  mess = ' '; call Message("(/A/)")
+  do i=sgmin,sgmax
+   j=i-sgmin+1
+   if ((mod(j,4).eq.0).or.(i.eq.sgmax)) then
+    write (stdout,"(1x,i3,':',A11,5x)") i,SYM_SGname(i)
+   else
+    write (stdout,"(1x,i3,':',A11,5x,$)") i,SYM_SGname(i)
+   end if
+  end do
+  cell%SYM_SGnum = sgmin-1
+  do while ((cell%SYM_SGnum.lt.sgmin).or.(cell%SYM_SGnum.gt.sgmax)) 
+   mess = ' -------------------------- '; call Message("(A)")
+   call ReadValue(' Enter space group number : ', io_int, 1)
+   cell%SYM_SGnum = io_int(1)
+   if ((cell%SYM_SGnum.lt.sgmin).or.(cell%SYM_SGnum.gt.sgmax)) then
+    mess = 'Error in space group number '; call Message("(A)")
+    mess = 'Crystal system / space group mismatch '; call Message("(A)")
+   end if
+  end do
+ end if 
+
+end subroutine GetSpaceGroup
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: GetOrder
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief  determine order of a subfamily
+!
+!> @details determine the order of the subfamily of a reciprocal 
+!> lattice family belonging to a zone
+!
+!> @param k input vector (zone axis) 
+!> @param il  output list of indices that belong to the zone
+!> @param num number of values to test
+!> @param jcnt number of distinct entries in the output list
+!
+!> @date   10/13/98 MDG 1.0 original
+!> @date    5/19/01 MDG 2.0 f90
+!> @date  11/27/01  MDG 2.1 added kind support
+!> @date  03/21/13  MDG 3.0 clean up and updated IO
+!--------------------------------------------------------------------------
+subroutine GetOrder(k,il,num,jcnt)
+
+use local
+use symmetryvars   ! uses itmp variable
+
+IMPLICIT NONE
+
+real(kind=sgl),INTENT(IN) 		:: k(3)		!< input vector (zone axis)
+integer(kind=irg),INTENT(OUT)	:: il(48)		!< output index list
+integer(kind=irg),INTENT(IN)		:: num		!< number of  entries to test
+integer(kind=irg),INTENT(OUT)	:: jcnt		!< number of entries in output
+integer(kind=irg)				:: i			!< loop counter
+real(kind=sgl)					:: gn(3)		!< auxiliary variable
+real(kind=sgl),parameter 		:: eps=1.0E-5	!< threshold value
+
+ jcnt = 0
+ do i=1,num
+  gn(1:3) = float(itmp(i,1:3))
+  if (abs(sum(gn*k)).lt.eps) then
+    jcnt = jcnt+1
+    il(jcnt) = i
+  end if
+ end do
+
+end subroutine GetOrder
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: ShortestG
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief  determine shortest vector pair for a given zone
+!
+!> @details determine the pair of shortest reciprocal lattice 
+!> vectors for a given zone axis; used to draw diffraction 
+!> patterns and in a bunch of other routines
+!>
+!> we look for 4 integer numbers which transform ga and gb
+!> simultaneously into two shortest possible vectors of the same zone;
+!> a range of -5:5 should be sufficient as a search space
+!> 
+!> If g1 and g2 are those shortest vectors, then we have
+!> 
+!>    ga  =  na*g1 + ma*g2\n
+!>    gb  =  nb*g1 + mb*g2\n
+!> 
+!> Inversion of this relation gives
+!> 
+!>    g1  =  (mb*ga - ma*gb)/D\n
+!>    g2  =  (-nb*ga + na*gb)/D\n
+!> 
+!> with D = na*mb - nb*ma.
+!> 
+!> The procedure below searches for the combination of 
+!> (ma,mb,na,nb) which simultaneously minimizes the 
+!> length of g1 and g2, and makes sure that both g1 and g2
+!> are integer linear combinations of the reciprocal basis
+!> vectors.
+!
+!> @param k input vector (zone axis) 
+!> @param gone  output indices of first vector
+!> @param gtwo output indices of second vector
+!> @param isym used to resolve some potential ambiguities for 3-fold and 6-fold symmetries
+!
+!> @todo It may be possible to do this in a different (easier) way; it is a 
+!> bit clumsy right now...
+!
+!> @date   10/13/98 MDG 1.0 original
+!> @date    5/19/01 MDG 2.0 f90
+!> @date  11/27/01  MDG 2.1 added kind support
+!> @date  03/21/13  MDG 3.0 clean up and updated IO
+!--------------------------------------------------------------------------
+subroutine ShortestG(k,gone,gtwo,isym)
+
+use local
+use error
+use crystal
+use crystalvars
+use constants
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(INOUT)	:: isym				!< used to resolve some potential ambiguities for 3-fold and 6-fold symmetries
+integer(kind=irg),INTENT(IN)		:: k(3)				!< input zone axis indices
+integer(kind=irg),INTENT(OUT)	:: gone(3)				!< output first vector
+integer(kind=irg),INTENT(OUT)	:: gtwo(3)				!< output second vector
+integer(kind=irg)				:: ga(3),gb(3),nzero(3),u,v,w,snz,ml(4),igsave(3)		!< auxiliary variables
+integer(kind=irg)				:: ima,imb,ina,inb,el(6),denom,minsum,inm,il(48),jcnt,num !< auxiliary variables
+real(kind=sgl)					:: fel(6),fit,gsave(3)		!< auxiliary variables
+integer(kind=irg),allocatable 		:: ifit(:,:,:,:)			!< array used to search
+
+ u = k(1)
+ v = k(2)
+ w = k(3)
+
+! determine two arbitrary vectors normal to k 
+! first count the zeroes in k
+ nzero = (/0,0,0/)
+ where (k.eq.0) nzero = 1
+ snz = sum(nzero)
+ 
+ if (snz.eq.0) then  ! make sure ga x gb is parallel to k
+   ga = (/v,-u,0/)
+   gb = (/w,0,-u/)
+ else
+  select case (snz)
+  case(1);  ga = nzero; gb = 1 - nzero
+            if (nzero(1).eq.1) gb = gb * (/0,w,-v/)
+            if (nzero(2).eq.1) gb = gb * (/w,0,-u/)
+            if (nzero(3).eq.1) gb = gb * (/v,-u,0/)
+  case(2);  if ((nzero(1).eq.1).and.(nzero(2).eq.1)) then
+             ga = (/1,0,0/); gb = (/0,1,0/)
+            endif
+            if ((nzero(1).eq.1).and.(nzero(3).eq.1)) then
+             ga = (/0,0,1/); gb = (/1,0,0/)
+            endif
+            if ((nzero(2).eq.1).and.(nzero(3).eq.1)) then
+             ga = (/0,1,0/); gb = (/0,0,1/)
+            endif
+  case(3); call FatalError('ShortestG',' beam direction cannot be [0,0,0]')
+  end select
+ end if 
+
+ inm = 5
+ allocate(ifit(-inm:inm,-inm:inm,-inm:inm,-inm:inm))
+ do ima=-inm,inm
+  do imb=-inm,inm
+   do ina=-inm,inm
+    do inb=-inm,inm
+     el(1) = imb*ga(1)-ima*gb(1) 
+     el(2) = imb*ga(2)-ima*gb(2) 
+     el(3) = imb*ga(3)-ima*gb(3) 
+     el(4) = ina*gb(1)-inb*ga(1) 
+     el(5) = ina*gb(2)-inb*ga(2) 
+     el(6) = ina*gb(3)-inb*ga(3) 
+     denom = ina*imb-inb*ima
+     ifit(ima,imb,ina,inb)=100
+     if (denom.ne.0) then
+      fel = float(el)/float(denom)
+      fit = sum(abs(float(int(fel))-fel))
+! here is where we only keep the integer combinations
+      if (fit.eq.0.0) then
+        gone(1:3) = int(fel(1:3))
+        gtwo(1:3) = int(fel(4:6))
+! keep the sum of the squares of the lengths 
+       ifit(ima,imb,ina,inb)=sum(gone**2)+sum(gtwo**2) 
+      end if
+     end if
+    end do
+   end do
+  end do
+ end do
+ minsum = 50
+
+! look for the minimum of ifit with the smallest and most
+! positive coefficients; store them in ml
+! [minloc does not work here because there may be multiple minima]
+ do ima=-inm,inm
+  do imb=-inm,inm
+   do ina=-inm,inm
+    do inb=-inm,inm
+     if (ifit(ima,imb,ina,inb).le.minsum) then
+      minsum = ifit(ima,imb,ina,inb)
+      ml(1) = ima
+      ml(2) = imb
+      ml(3) = ina
+      ml(4) = inb
+     end if
+    end do
+   end do
+  end do
+ end do
+ deallocate(ifit)
+
+! transform ga and gb into g1 and g2 
+ gone = (ml(2)*ga-ml(1)*gb)/(ml(3)*ml(2)-ml(4)*ml(1))
+ gtwo = (ml(3)*gb-ml(4)*ga)/(ml(3)*ml(2)-ml(4)*ml(1))
+
+! next rank these two vectors so that their cross product is along +k
+ call CalcCross(float(gone),float(gtwo),gsave,'r','r',0)
+ fit = CalcDot(gsave,float(k),'r')
+ if (fit.lt.0.0) then
+  igsave = gone
+  gone = gtwo
+  gtwo = igsave
+ end if
+
+! finally, if isym.ne.0 make sure that the selection of the 
+! basis vectors for the 3-fold and 6-fold 2D point groups is
+! correctly done.
+!
+! For isym < 7:   90 degrees between vectors (should not be a problem)
+! For isym = 7:  120 degrees between vectors (should be ok too)
+! distinguish between 3 coming from a cubic group
+! vs. the same symmetries originating from a hexagonal setting
+ if ((isym.eq.7).and.(cell%gamma.eq.120.0)) then
+   isym=11
+   fit = CalcAngle(float(gone),float(gtwo),'r')*180.0/cPi 
+   if (abs(fit-120.0).lt.1.0) then
+     gtwo=gone+gtwo
+   end if
+ end if
+
+! For isym = 8:  here we should distinguish between the settings 3m1 and 31m !!!
+!                The angle should always be 120 degrees, so we must check that
+!                this is the case for the selected gone and gtwo.
+ if ((isym.eq.8).and.(cell%gamma.eq.120.0)) then
+   isym=12
+   fit = CalcAngle(float(gone),float(gtwo),'r')*180.0/cPi 
+   if (abs(fit-120.0).lt.1.0) then
+     gtwo=gone+gtwo
+   end if
+ end if
+!
+ if (isym.eq.8) then
+   fit = CalcAngle(float(gone),float(gtwo),'r')*180.0/cPi 
+   if (abs(fit-120.0).gt.1.0) then
+     gtwo=gtwo-gone
+   end if
+
+! we assume it is the 31m setting;  if the order of gone is 6, then that is not true
+   call CalcFamily(gone,num,'r')
+   call GetOrder(float(k),il,num,jcnt)
+   if (jcnt.eq.6) then  ! it is the 3m1 setting
+     isym = 13
+   end if
+ end if
+
+! it could the 3m1 setting for the 3m hexagonal case
+ if (isym.eq.12) then
+! we assume it is the 31m setting;  if the order of gone is 6, then that is not true
+   call CalcFamily(gone,num,'r')
+   call GetOrder(float(k),il,num,jcnt)
+   if (jcnt.eq.6) then  ! it is the 3m1 setting
+     isym = 14
+   end if
+ end if
+
+! For isym = 9 or 10:   60 degrees between vectors (may not be the case)
+ if ((isym.eq.9).or.(isym.eq.10)) then
+   fit = CalcAngle(float(gone),float(gtwo),'r')*180.0/cPi 
+   if (abs(fit-120.0).lt.1.0) then
+     gtwo=gone+gtwo
+   end if
+ end if
+
+end subroutine ShortestG
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: IsGAllowed
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief  is a reflection allowed?
+!
+!> @details determine whether or not a given reflection is absent due  
+!> lattice centering operations.
+!
+!> @param g input vector  
+!
+!> @date   10/13/98 MDG 1.0 original
+!> @date    5/19/01 MDG 2.0 f90
+!> @date  11/27/01  MDG 2.1 added kind support
+!> @date  03/21/13  MDG 3.0 clean up and updated IO
+!--------------------------------------------------------------------------
+logical function IsGAllowed(g)
+
+use local
+use symmetryvars
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)	:: g(3)		!< input reciprocal lattice vector
+integer(kind=irg)			:: seo		!< auxiliary variable
+character(1)				:: lc			!< first letter of space group name
+
+! Determine whether or not this vector is
+! actually allowed by the lattice centering
+ lc(1:1) =  SG%SYM_name(2:2)
+ IsGAllowed = .TRUE.
+ select case (lc)
+  case ('P'); ! all reflections allowed for a primitive lattice
+  case ('F'); seo = sum(mod(g+100,2)); if ((seo.eq.1).or.(seo.eq.2)) IsGAllowed = .FALSE.
+  case ('I'); seo = mod(sum(g)+100,2); if (seo.eq.1) IsGAllowed = .FALSE.
+  case ('A'); seo = mod(g(2)+g(3)+100,2); if (seo.eq.1) IsGAllowed = .FALSE.
+  case ('B'); seo = mod(g(1)+g(3)+100,2); if (seo.eq.1) IsGAllowed = .FALSE.
+  case ('C'); seo = mod(g(1)+g(2)+100,2); if (seo.eq.1) IsGAllowed = .FALSE.
+  case ('R'); if (hexset) then
+               seo = mod(-g(1)+g(2)+g(3)+90,3); if (seo.ne.0) IsGAllowed = .FALSE.
+              endif ! otherwise reflections are all allowed
+ end select
+ 
+end function IsGAllowed
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: BFsymmetry
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief  What is the bright field symmetry?
+!
+!> @details routine to determine the symmetry of a bright field bend center [uses Table 4 in BESR paper]
+!>
+!> we must intercept the special cases where more than one symmetry of the same order can
+!> occur in a given Laue group;  e.g.  Laue group 2/m has two bright field symmetries
+!> of order 2:  2 and m
+!> 
+!> This happens for the following Laue groups:\n
+!>   2/m     [010] -> 2    [u0w] -> m\n
+!>   -3m     [11.0] -> 2   [u-u.w] -> m\n
+!> 
+!> The normal conversion from the reduced order ir to the actual Bright Field
+!> symmetry uses the PGTWDinverse array to determine the 2D symmetry
+!
+!> @param uvw input vector (zone axis)
+!> @param j index into inverse Laue group list
+!> @param isym keeps track of special cases	
+!> @param ir  index of point group
+!
+!> @date   10/13/98 MDG 1.0 original
+!> @date    5/19/01 MDG 2.0 f90
+!> @date  11/27/01  MDG 2.1 added kind support
+!> @date  03/21/13  MDG 3.0 clean up and updated IO
+!--------------------------------------------------------------------------
+subroutine BFsymmetry(uvw,j,isym,ir)
+
+use local
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)	:: uvw(3)	!< zone axis indices
+integer(kind=irg),INTENT(IN)	:: j		!< index into Laue group list
+integer(kind=irg),INTENT(OUT)	:: isym	!< keeps track ot special cases
+integer(kind=irg),INTENT(OUT)	:: ir		!< index of point group
+
+integer(kind=irg)		:: orderPG, Lauenum, ng		!< auxiliary variables
+real(kind=dbl)			:: kstar(48,3)				!< star variable
+
+
+ orderPG = SG%SYM_NUMpt
+ Lauenum = PGLaueinv(j)
+ call CalcStar(dble(uvw),ng,kstar,'d')
+ ir = orderPG/ng
+
+! take care of special cases
+ isym = PGTWDinverse(ir,Lauenum)
+ if ((Lauenum.eq.2).and.(ir.eq.2)) then   ! this deals with Laue Group 2/m
+  if (uvw(2).eq.0) isym=3
+ end if
+ if ((Lauenum.eq.7).and.(ir.eq.2)) then   ! and this covers -3m
+  if (uvw(1).eq.-uvw(2)) isym=3
+ end if
+
+end subroutine BFsymmetry
+
+end module

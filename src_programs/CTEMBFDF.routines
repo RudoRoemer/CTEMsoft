@@ -1,0 +1,145 @@
+! This file contains a few routines for the BFDF program.
+! These routines were used to create several of the BF-DF
+! pairs in the book.  Simply replace the lines between the 
+! statements
+! 
+! REPLACE START
+!  ...
+! REPLACE STOP
+! 
+! in the file TBBFDF.f90 by any of the sets of lines below
+! and recompile the program.
+!
+! The thickness values are stored in the array z,
+! and the excitation error values are stored in exe
+!
+! Case 1 straight wedge
+! ------
+! create the thickness array 
+ mess = 'Enter minimum,maximum thickness [nm]  = '; call GetReal(2)
+ zmin = io_real(1)
+ zmax = io_real(2)
+ dz = (zmax-zmin)/float(jdim)
+ do i=1,jdim
+  do j=1,jdim
+   z(i,j) = float(j)*dz
+  end do
+ end do
+! create the excitation error array 
+ mess = 'Enter w-parameter (s * xi)  = '; call GetReal(1)
+ ss = io_real(1)
+ ss=ss/xig
+ do i=1,jdim
+  do j=1,jdim
+   exe(i,j) = ss
+  end do
+ end do
+!
+! Case 2 bent wedge
+! ------
+! create the thickness array 
+ mess = 'Enter minimum,maximum thickness [nm]  = '; call GetReal(2)
+ zmin = io_real(1)
+ zmax = io_real(2)
+ dz = (zmax-zmin)/float(jdim)
+ do i=1,jdim
+  do j=1,jdim
+   z(i,j) = float(j)*dz
+  end do
+ end do
+! create the excitation error array 
+ mess = 'Enter max w-parameter (s * xi)  = '; call GetReal(1)
+ sm = io_real(1)
+ do i=1,jdim
+  ss = (-sm+2.0*sm*float(i-1)/float(jdim))/xig
+  do j=1,jdim
+   exe(i,j) = ss
+  end do
+ end do
+!
+! Case 4 bent foil with circular hole 
+! ------
+ mess = 'Enter minimum,maximum thickness [nm]  = '; call GetReal(2)
+ zmin = io_real(1)
+ zmax = io_real(2)
+ dz = (zmax-zmin)/float(jdim)
+ ihole = 4*jdim/6
+ jhole = jdim/2
+! outer radius
+ irad = 150
+! inner radius
+ jrad = 40
+ f1 = 1.0/float(irad-jrad)
+ do i=1,jdim
+  do j=1,jdim
+   dd = sqrt(float(i-ihole)**2+float(j-jhole)**2)
+! inside or outside the hole ?
+   z(i,j) = float(j)*dz
+   if (dd.lt.jrad) then
+    z(i,j) = 0.D0
+   else
+    if (dd.lt.irad) then
+     z(i,j)=z(i,j)*f1*(dd-float(jrad))
+    end if
+   end if
+  end do
+ end do
+! create the excitation error array 
+ mess = 'Enter max w-parameter (s * xi)  = '; call GetReal(1)
+ sm = io_real(1)
+ do i=1,jdim
+  ss = (-sm+2.0*sm*float(i-1)/float(jdim))/xig
+  do j=1,jdim
+   exe(i,j) = ss
+  end do
+ end do
+!
+! Case 4 Random superposition of cosine waves
+! ------
+ T0 = SECNDS(0.0)
+ mess = 'Average thickness, minimum thickness [nm]  = '; call Message("(A)")
+ mess = '(minimum thickness may be <0, to create holes)'; call GetReal(2)
+ zav = io_real(1)
+ zdev = io_real(2)
+ mess = 'How many random waves ? (<100) = '; call GetInt(1)
+ nw = oi_int(1)
+ nw = min(nw,100)
+ ff = cPi/float(jdim)
+! superimpose a bunch of waves with random periodicities and phases
+ T1 = SECNDS(T0)
+ seed = int(1000.0*T1)
+ do k=1,2*nw
+  r(k) = ran(seed)*10.0
+  p(k) = ran(seed)*3.0
+ end do
+ do i=1,jdim
+  fi = float(i)*ff
+  do j=1,jdim
+   fj=float(j)*ff
+   z(i,j) = 0.0 
+   do k=1,nw
+    z(i,j) = z(i,j) + cos(r(2*k)*fi+p(2*k))*cos(r(2*k-1)*(fi+fj)+p(2*k-1)) + &
+                      sin(r(2*k-1)*fj+p(2*k))*sin(r(2*k)*(fi-fj)+p(2*k-1))
+   end do
+  end do
+ end do
+ zmin = minval(z)
+ zmax = maxval(z)
+ ztot = sum(z)/float(jdim)**2
+! create the excitation error array 
+ q = (zav-zdev)/(ztot-zmin)
+ do i=1,jdim
+  ss = (-0.5+1.0*float(i-1)/float(jdim))/xig
+  do j=1,jdim
+   exe(i,j) = ss
+   z(i,j) = zdev+q*(z(i,j)-zmin)
+   if (z(i,j).lt.0.0) z(i,j)=0.0
+  end do
+ end do
+ zmi = minval(z)
+ zma = maxval(z)
+ ztot = sum(z)/float(jdim)**2
+ mess = 'Actual average thickness = '; oi_real(1)=ztot; call WriteReal(1,"(f10.4)")
+ zmin=zmi 
+ zmax=zma 
+
