@@ -52,7 +52,7 @@ module io
 
 use local
 
-character(132)               		:: mess		!< 132 character string for message output
+character(132)              	:: mess		!< 132 character string for message output
 
 public
 
@@ -135,8 +135,8 @@ subroutine ReadValueString(Qstring, in_string, frm)
 
 use local
 
-character(*),INTENT(IN)					:: Qstring, frm
-character(*),INTENT(OUT)					:: in_string
+character(*),INTENT(IN)			:: Qstring, frm
+character(*),INTENT(OUT)			:: in_string
 
 ! send Qstring to the output
 mess = Qstring
@@ -166,9 +166,9 @@ subroutine ReadValueStringArray(Qstring, in_string, num, frm)
 
 use local
 
-character(*),INTENT(IN)					:: Qstring, frm 
-character(1),INTENT(OUT)				:: in_string(num)
-integer(kind=irg),INTENT(IN)				:: num
+character(*),INTENT(IN)			:: Qstring, frm 
+character(1),INTENT(OUT)			:: in_string(num)
+integer(kind=irg),INTENT(IN)			:: num
 
 ! send Qstring to the output
 mess = Qstring
@@ -197,7 +197,7 @@ subroutine ReadValueIntShort(Qstring, in_int, num)
 
 use local
 
-character(*), INTENT(IN)					:: Qstring
+character(*), INTENT(IN)			:: Qstring
 integer(kind=ish),INTENT(OUT)			:: in_int(*)
 integer(kind=irg),INTENT(IN),OPTIONAL		:: num
 
@@ -234,7 +234,7 @@ subroutine ReadValueIntLong(Qstring, in_int, num)
 
 use local
 
-character(*), INTENT(IN)					:: Qstring
+character(*), INTENT(IN)			:: Qstring
 integer(kind=irg),INTENT(OUT)			:: in_int(*)
 integer(kind=irg),INTENT(IN),OPTIONAL		:: num
 
@@ -271,8 +271,8 @@ subroutine ReadValueRealSingle(Qstring, in_real, num)
 
 use local
 
-character(*), INTENT(IN)					:: Qstring
-real(kind=sgl),INTENT(OUT)				:: in_real(*)
+character(*), INTENT(IN)			:: Qstring
+real(kind=sgl),INTENT(OUT)			:: in_real(*)
 integer(kind=irg),INTENT(IN),OPTIONAL		:: num
 
 ! send Qstring to the output
@@ -310,8 +310,8 @@ subroutine ReadValueRealDouble(Qstring, in_real, num)
 
 use local
 
-character(*), INTENT(IN)					:: Qstring
-real(kind=dbl),INTENT(OUT)				:: in_real(*)
+character(*), INTENT(IN)			:: Qstring
+real(kind=dbl),INTENT(OUT)			:: in_real(*)
 integer(kind=irg),INTENT(IN),OPTIONAL		:: num
 
 ! send Qstring to the output
@@ -348,8 +348,8 @@ subroutine WriteValueString(Qstring, out_string, frm)
 
 use local
 
-character(*), INTENT(IN)					:: Qstring, out_string
-character(*),INTENT(IN),OPTIONAL			:: frm
+character(*), INTENT(IN)			:: Qstring, out_string
+character(*),INTENT(IN),OPTIONAL		:: frm
 
 
 ! send Qstring to the output only if it is non-zero length
@@ -387,9 +387,9 @@ subroutine WriteValueIntShort(Qstring, out_int, num, frm)
 
 use local
 
-character(*), INTENT(IN)					:: Qstring
-character(*),INTENT(IN),OPTIONAL			:: frm
-integer(kind=ish),INTENT(IN)				:: out_int(*)
+character(*), INTENT(IN)			:: Qstring
+character(*),INTENT(IN),OPTIONAL		:: frm
+integer(kind=ish),INTENT(IN)			:: out_int(*)
 integer(kind=irg),INTENT(IN),OPTIONAL		:: num
 
 ! send Qstring to the output
@@ -435,9 +435,9 @@ subroutine WriteValueIntLong(Qstring, out_int, num, frm)
 
 use local
 
-character(*), INTENT(IN)					:: Qstring
-character(*),INTENT(IN),OPTIONAL			:: frm
-integer(kind=irg),INTENT(IN)				:: out_int(*)
+character(*), INTENT(IN)			:: Qstring
+character(*),INTENT(IN),OPTIONAL		:: frm
+integer(kind=irg),INTENT(IN)			:: out_int(*)
 integer(kind=irg),INTENT(IN),OPTIONAL		:: num
 
 ! send Qstring to the output
@@ -484,10 +484,10 @@ subroutine WriteValueRealSingle(Qstring, out_real, num, frm)
 
 use local
 
-character(*), INTENT(IN)					:: Qstring
-character(*),INTENT(IN),OPTIONAL			:: frm
-real(kind=sgl),INTENT(IN)				:: out_real(*)
+character(*), INTENT(IN)			:: Qstring
+real(kind=sgl),INTENT(IN)			:: out_real(*)
 integer(kind=irg),INTENT(IN),OPTIONAL		:: num
+character(*),INTENT(IN),OPTIONAL		:: frm
 
 ! send Qstring to the output
 if (len(Qstring).ne.0) then
@@ -532,9 +532,9 @@ subroutine WriteValueRealDouble(Qstring, out_real, num,frm)
 
 use local
 
-character(*), INTENT(IN)					:: Qstring
-character(*),INTENT(IN),OPTIONAL			:: frm
-real(kind=dbl),INTENT(IN)				:: out_real(*)
+character(*), INTENT(IN)			:: Qstring
+character(*),INTENT(IN),OPTIONAL		:: frm
+real(kind=dbl),INTENT(IN)			:: out_real(*)
 integer(kind=irg),INTENT(IN),OPTIONAL		:: num
 
 ! send Qstring to the output
@@ -580,9 +580,9 @@ subroutine WriteValueRealComplex(Qstring, out_cmplx, num,frm)
 
 use local
 
-character(*), INTENT(IN)					:: Qstring
-character(*),INTENT(IN),OPTIONAL			:: frm
-complex(kind=sgl),INTENT(IN)				:: out_cmplx(*)
+character(*), INTENT(IN)			:: Qstring
+character(*),INTENT(IN),OPTIONAL		:: frm
+complex(kind=sgl),INTENT(IN)			:: out_cmplx(*)
 integer(kind=irg),INTENT(IN),OPTIONAL		:: num
 
 ! send Qstring to the output
