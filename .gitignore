@@ -8,10 +8,11 @@
 # executables
 /exe/
 
-# libs, makefiles, etc
+# libs, makefiles, editor backup files, etc
 *.a
 *.amake
 *.amake.bk
+*.f90.bak
 
 # DOxygen files
 /doc/

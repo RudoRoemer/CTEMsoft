@@ -52,47 +52,25 @@
 !> @date 12/07/12  MDG 1.4 added energy vs. depth sampling
 !> @date 03/11/13  MDG 2.0 replaced regular storage by modified Lambert projection
 !> @date 07/23/13  MDG 3.0 complete rewrite
+!> @date 09/25/13  MDG 3.1 modified output file format
 !--------------------------------------------------------------------------
 program CTEMMC
 
 use local
+use files
 use io
 
 IMPLICIT NONE
 
-character(fnlen)			:: nmlfile
+character(fnlen)			:: nmldeffile
 
-integer(kind=irg)			:: numarg	!< number of command line arguments
-integer(kind=irg)			:: iargc	!< external function for command line
-character(fnlen)    			:: arg		!< to be read from the command line
-
-!----------------------------------------------------------------
-!----------------------------------------------------------------
-!----------------------------------------------------------------
-!----------------------------------------------------------------
-!  Here is where the main program starts 
-!----------------------------------------------------------------
-!----------------------------------------------------------------
-!----------------------------------------------------------------
-!----------------------------------------------------------------
-! process the command line argument (should be only one or none ...)
-numarg = iargc()
-if (numarg.gt.0) then ! there is an argument
-        call getarg(1,arg)
-        nmlfile = arg
-        if (trim(nmlfile).eq.'-h') then
-		mess = ' Program should be called as follows: '; call Message("(/A)")
-		mess = '        CTEMMC [nmlfile]'; call Message("(A)")
-		mess = ' where nmlfile is an optional file name for the namelist file;'; call Message("(A)")
-		mess = ' if absent, the default name ''CTEMMC.nml'' will be used.'; call Message("(A/)")
-		stop
-	end if
-else
-	nmlfile = 'CTEMMC.nml'    		! assign the default namelist file name
-end if
+! deal with the command line arguments, if any
+nmldeffile = 'CTEMMC.nml'
+progname = 'CTEMMC.f90'
+call Interpret_Program_Arguments(nmldeffile,1,(/ 20 /) )
 
 ! perform a Monte Carlo simulation
- call DoMCsimulation(nmlfile)
+ call DoMCsimulation(nmldeffile)
  
 end program CTEMMC 
  
@@ -111,6 +89,7 @@ end program CTEMMC
 !> @date 05/14/13  MDG 2.1 replaced IO by namelist file
 !> @date 07/23/13  MDG 3.0 complete rewrite
 !> @date 07/30/13  MDG 3.1 added Patrick's code for double sample tilt (sigma, omega)
+!> @date 09/25/13  MDG 3.2 added a few parameters to the output file 
 !--------------------------------------------------------------------------
 subroutine DoMCsimulation(nmlfile)
 
@@ -119,6 +98,7 @@ use crystal
 use crystalvars
 use symmetry
 use error
+use io
 use files
 use diffraction, only:CalcWaveLength
 use rng
@@ -156,7 +136,7 @@ real(kind=dbl)		:: at_wt	! average atomic weight in g/mole
 ! variable passing array
 real(kind=dbl)		:: varpas(13) 
 integer(kind=irg)	:: i, TID, nx, skip
-real(kind=sgl)		:: dens, avA, avZ ! used with CalcDensity routine
+real(kind=sgl)		:: dens, avA, avZ, io_real(3) ! used with CalcDensity routine
 
 ! variables used for parallel random number generator (based on http://http://jblevins.org/log/openmp)
 type(rng_t), allocatable :: rngs(:)
@@ -169,7 +149,7 @@ integer(kind=irg),allocatable	:: accum_e(:,:,:), acc_e(:,:,:), accum_z(:,:,:,:),
 integer(kind=irg)	:: istat
 
 ! define the IO namelist to facilitate passing variables to the program.
-namelist  / MCdata / xtalname, sig, numsx, numsy, num_el, primeseed, EkeV, &
+namelist  / MCdata / xtalname, sig, numsx, num_el, primeseed, EkeV, &
 		dataname, nthreads, Ehistmin, Ebinsize, depthmax, depthstep, omega
  
 ! define reasonable default values for the namelist parameters
@@ -177,16 +157,15 @@ xtalname = 'undefined'
 sig = 70.0
 omega = 0.0
 numsx = 1501
-numsy = 1501
 primeseed = 932117
 num_el = 10000000_k12  ! try 10 million electrons unless otherwise specified   
+nthreads = 4
 EkeV = 30.D0
-dataname = 'undefined.data'
 Ehistmin = EkeV - 10.0D0
 Ebinsize = 0.25D0  ! we'll keep this fixed for now
 depthmax = 50.D0
 depthstep = 1.D0
-nthreads = 4
+dataname = 'undefined.data'
 
 ! then we read the MCdata namelist, which may override some of these defaults  
  OPEN(UNIT=dataunit,FILE=trim(nmlfile),DELIM='APOSTROPHE')
@@ -196,6 +175,8 @@ nthreads = 4
  if (trim(xtalname).eq.'undefined') then
   call FatalError('CTEMMC:',' structure file name is undefined in '//nmlfile)
  end if
+
+numsy = numsx
 
 ! print some information
  progname = 'CTEMMC.f90'
@@ -213,9 +194,8 @@ nthreads = 4
  density = dble(dens)
  Ze = dble(avZ)
  at_wt = dble(avA)
- write (*,*) ' '
- write (*,*) 'Density, avZ, avA = ',density,Ze,at_wt
- write (*,*) ' '
+ io_real(1:3) = (/ dens, avZ, avA /) 
+ call WriteValue('Density, avZ, avA = ',io_real,3,"(2f10.5,',',f10.5)")
 
 ! allocate the accumulator arrays for number of electrons and energy
  numEbins =  int((EkeV-Ehistmin)/Ebinsize)+1
@@ -274,7 +254,7 @@ nthreads = 4
  write (*,*) ' Number of electrons on detector       = ',sum(accum_e)
 
 open(dataunit,file=trim(dataname),status='unknown',form='unformatted')
-write(dataunit) numEbins, numzbins, numsx, numsy
+write(dataunit) numEbins, numzbins, numsx, numsy, num_el, nthreads
 write (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
 write(dataunit) accum_e
 write (dataunit) accum_z

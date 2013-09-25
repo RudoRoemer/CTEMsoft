@@ -2,6 +2,8 @@
 002STEMrundata.template
 003SRdef_foildata.template
 010CTEMlacbed.template
+020CTEMMC.template
+021CTEMEBSDzE.template
 200dislocation.template
 201stackingfault.template
 202void.template
