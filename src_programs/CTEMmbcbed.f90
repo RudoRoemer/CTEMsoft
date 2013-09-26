@@ -118,7 +118,7 @@ integer(kind=irg),allocatable 	:: diskoffset(:,:)
 real(kind=sgl),allocatable    	:: inten(:,:)
 logical				:: usesym=.FALSE.
 
-namelist /inputlist/ stdout,xtalname, voltage, camlen, k, fn, dmin, convergence, startthick, thickinc, numthick, outname
+namelist /inputlist/ stdout,xtalname, voltage, camlen, k, fn, npix, dmin, convergence, startthick, thickinc, numthick, outname
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 xtalname = 'undefined'		! initial value to check that the keyword is present in the nml file
@@ -126,6 +126,7 @@ voltage = 200000.0		! acceleration voltage [V]
 camlen = 1000.0			! camera length [mm]
 k = (/ 0, 0, 1 /)		! beam direction [direction indices]
 fn = (/ 0, 0, 1 /)		! foil normal [direction indices]
+npix = 900			! size of the (square) computed CBED pattern
 dmin = 0.015			! smallest d-spacing to include in dynamical matrix [nm]
 convergence = 20.0		! beam convergence angle [mrad]
 startthick = 10.0		! starting thickness [nm]
@@ -200,7 +201,7 @@ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
 
 ! compute number of pixels along diameter of central disk for given camera length
   RR = 300.0/25.4   ! dots per millimeter for 300 dots per inch; legacy code from when the output was in PostScript
-  npx = nint(RR*camlen*thetac)
+  npx = int(RR*camlen*thetac)
   npy = npx
   io_int(1) = 2.0*npx
   call WriteValue('Number of image pixels along diameter of central disk = ', io_int, 1, "(I4)")
@@ -222,13 +223,13 @@ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
 ! hence the conversion to dpi
   
 ! allocate the disk variable which will hold the entire computed pattern
-  npix = int(3.0*300.0)   ! 3 inches wide at 300 dpi
+!  npix = int(3.0*300.0)   ! 3 inches wide at 300 dpi
   allocate(disk(numt,npix,npix))
   disk=0.0
 
   sc = mLambda*camlen*RR
-  scmax = 1.5*300.0 + npx
   PX = npix/2
+  scmax = PX + npx
 
 ! force dynamical matrix routine to read new Bethe parameters from file
   call Set_Bethe_Parameters(.TRUE.)
@@ -318,7 +319,7 @@ write (*,*) '# Laue group = ',isym
        ip = PX + diskoffset(i,2) - ktmp%i
        jp = PX + diskoffset(i,3) + ktmp%j
        if (((ip.ge.1).and.(ip.le.npix)).and.((jp.ge.1).and.(jp.le.npix))) then
-          disk(1:numt,ip,jp) = inten(1:numt,BetheParameter%reflistindex(i))
+          disk(1:numt,ip,jp) = disk(1:numt,ip,jp) + inten(1:numt,BetheParameter%reflistindex(i))
         end if
      end if
     end if
