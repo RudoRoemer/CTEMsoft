@@ -45,7 +45,7 @@
 !> this module rather than in diffraction, where it would logically belong.  We may need
 !> to figure out how to change that. 
 ! 
-!> @date   04/29/13 MDG 1.0 original
+!> @date   04/29/13 MDG 1.0 original 
 !--------------------------------------------------------------------------
 module gvectors
 
@@ -94,6 +94,7 @@ type BetheParameterType
 	integer(kind=irg),allocatable 	:: stronghkl(:,:)
 	real(kind=sgl),allocatable	:: weaksg(:)
 	real(kind=sgl),allocatable	:: strongsg(:)
+	integer(kind=irg),allocatable 	:: strongID(:)
 	integer(kind=sgl),allocatable	:: reflistindex(:)		! used to map strong reflections onto the original reflist
 end type BetheParameterType
 
@@ -703,6 +704,7 @@ subroutine Prune_ReflectionList(numk,nstrong)
 use local
 use dynamical
 use kvectors
+use diffraction
 
 IMPLICIT NONE
 
@@ -716,7 +718,8 @@ integer(kind=irg),allocatable		:: strongreflections(:,:)
 
 ! reset the value of DynNbeams in case it was modified in a previous call 
 DynNbeams = DynNbeamsLinked
-  	
+
+istrong = 0
 nstrong = 0
 
 ! loop over all the incident beam directions
@@ -743,7 +746,8 @@ nstrong = 0
 !  cutoff lambda |Ug| > |sg| > weakcutoff lambda |Ug|  -> weak reflection
 !  weakcutoff lambda |Ug| > |sg|  -> strong reflection
 !
-        sgp = abs(rltmpa%sg) 
+
+        sgp = abs(Calcsg(float(rltmpa%hkl),sngl(ktmp%k),DynFN)) 
         lUg = cabs(rltmpa%Ucg) * mLambda
         cut1 = BetheParameter%cutoff * lUg
         cut2 = BetheParameter%weakcutoff * lUg
@@ -758,7 +762,7 @@ nstrong = 0
         else   ! it is not a double diffraction reflection
           if (sgp.le.cut1) then  ! count this beam
 ! is this a weak or a strong reflection (in terms of Bethe potentials)? 
-             	if ((sgp.le.cut2).and.(rltmpa%famnum.ne.1)) then ! it's a strong beam
+             	if ((sgp.le.cut2).and.(rltmpa%famnum.eq.0)) then ! it's a strong beam and we haven't counted it yet
 	    		nstrong = nstrong + 1
 		     	rltmpa%famnum = 1    
              	end if
@@ -770,6 +774,7 @@ nstrong = 0
 ! go to the next incident beam direction
     if (ik.ne.numk) ktmp => ktmp%next
   end do ! ik loop
+
 
 ! ok, now that we have the list, we'll go through it again to set sequential numbers instead of 1's
 ! at the same time, we'll extract the data that we need to write to the data file
@@ -1025,6 +1030,7 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
 	if (allocated(BetheParameter%strongsg)) deallocate(BetheParameter%strongsg)
 	allocate(BetheParameter%weakhkl(3,BetheParameter%nnw),BetheParameter%weaksg(BetheParameter%nnw))
 	allocate(BetheParameter%stronghkl(3,BetheParameter%nns),BetheParameter%strongsg(BetheParameter%nns))
+        if (.not.allocated(BetheParameter%strongID)) allocate(BetheParameter%strongID(BetheParameter%nns))
 
 ! here's where we extract the relevant information from the linked list (much faster
 ! than traversing the list each time...)
@@ -1041,6 +1047,8 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
 	        istrong = istrong+1
 	        BetheParameter%stronghkl(1:3,istrong) = rltmpa%hkl(1:3)
 	        BetheParameter%strongsg(istrong) = rltmpa%sg
+! make an inverse index list
+		BetheParameter%strongID(istrong) = ir		
 	     end if
 	   rltmpa => rltmpa%next
 	end do
@@ -1116,14 +1124,17 @@ end subroutine Compute_DynMat
 !> in the current folder.  If present, it will read the parameters, otherwise it will use 
 !> defaults which have been determined to be reasonable based on dynamical EBSD runs. 
 !
+!> @param silent optional, if present, then no output
 !> @date   05/08/13 MDG 1.0 original
 !--------------------------------------------------------------------------
-subroutine Set_Bethe_Parameters()
+subroutine Set_Bethe_Parameters(silent)
 
 use local
 use io
 
 IMPLICIT NONE
+
+logical,INTENT(IN),OPTIONAL	:: silent
 
 character(fnlen),parameter 	:: Bethefilename = 'BetheParameters.nml'
 logical				:: fexist
@@ -1144,8 +1155,10 @@ if (fexist.eq..TRUE.) then ! check for the file in the local folder
  OPEN(UNIT=dataunit,FILE=trim(Bethefilename),DELIM='APOSTROPHE')
  READ(UNIT=dataunit,NML=BetheList)
  CLOSE(UNIT=dataunit)
- mess = 'Read Bethe parameters from BetheParameters.nml'; call Message("(A)")
- write (stdout,nml=BetheList)
+ if (.not.present(silent)) then
+   mess = 'Read Bethe parameters from BetheParameters.nml'; call Message("(A)")
+   write (stdout,nml=BetheList)
+ end if
 end if
 
 BetheParameter % weakcutoff = weakcutoff

@@ -1942,7 +1942,8 @@ iequiv = 0
 iequiv(1:2,1) = (/ ipx, ipy /)
 nequiv = 1
 
-select case (isym)
+if (maxval(abs( (/ ipx, ipy /) )).ne.0.0) then
+ select case (isym)
   case (1)
 ! do nothing (triclinic symmetry)
   case (2)
@@ -2017,7 +2018,8 @@ select case (isym)
 	iequiv(1:2,5) = (/ ipy-fly-floor( float(ipx-fly)/2.0), -ipx-fly /)
 	iequiv(1:2,6) = (/ int(-ipx+my), ipy /)
 	nequiv = 6
-end select
+ end select
+end if
     
 end subroutine Apply2DLaueSymmetry
 

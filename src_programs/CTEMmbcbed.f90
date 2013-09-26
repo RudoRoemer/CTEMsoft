@@ -41,66 +41,48 @@
 !> @date  11/29/01 MDG 1.0 original
 !> @date 04/08/13 MDG 2.0 rewrite
 !> @date 05/14/13 MDG 2.1 replaced all IO by namelist file and added command line argument handling
+!> @date 09/25/13 MDG 2.2 improved command line argument handling
+!> @date 09/26/13 MDG 2.3 corrected scaling error and added HOLZ
 !--------------------------------------------------------------------------
 program CTEMmbcbed
 
 use local
+use files
 use io
 
 
 IMPLICIT NONE
 
-character(fnlen)			:: nmlfile
+character(fnlen)			:: nmldeffile
 
-integer(kind=irg)			:: numarg		!< number of command line arguments
-integer(kind=irg)			:: iargc		!< external function for command line
-character(fnlen)    			:: arg		!< to be read from the command line
-
-!----------------------------------------------------------------
-!----------------------------------------------------------------
-!----------------------------------------------------------------
-!----------------------------------------------------------------
-!  Here is where the main program starts 
-!----------------------------------------------------------------
-!----------------------------------------------------------------
-!----------------------------------------------------------------
-!----------------------------------------------------------------
-! process the command line argument (should be only one or none ...)
-numarg = iargc()
-if (numarg.gt.0) then ! there is an argument
-        call getarg(1,arg)
-        nmlfile = trim(arg)
-        if (trim(nmlfile).eq.'-h') then
-		mess = ' Program should be called as follows: '; call Message("(/A)")
-		mess = '        CTEMmbcbed [nmlfile]'; call Message("(A)")
-		mess = ' where nmlfile is an optional file name for the namelist file;'; call Message("(A)")
-		mess = ' if absent, the default name ''CTEMmbcbed.nml'' will be used.'; call Message("(A/)")
-		stop
-	end if
-else
-	nmlfile = 'CTEMmbcbed.nml'    		! assign the default namelist file name
-end if
+! deal with the command line arguments, if any
+nmldeffile = 'CTEMmbcbed.nml'
+progname = 'CTEMmbcbed.f90'
+call Interpret_Program_Arguments(nmldeffile,1,(/ 11 /) )
 
 ! generate a set of zone axis CBED patterns
- call MBCBEDpage(nmlfile)
+call MBCBEDcomputation(nmldeffile)
 
 end program
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE:MBCBEDPage
+! SUBROUTINE:MBCBEDcomputation
 !
 !> @author Marc De Graef, Carnegie Melon University
 !
 !> @brief draw zone axis convergent beam electron diffraction patterns
 !
 !> @param nmlfile namelist input file
+!
+!> @todo implement symmetry
 ! 
 !> @date 11/29/01  MDG 1.0 original
 !> @date 04/08/13  MDG 2.0 rewrite
 !> @date 05/14/13  MDG 2.1 replaced IO by namelist file
+!> @date 09/25/13  MDG 2.2 minor program cleanup
 !--------------------------------------------------------------------------
-subroutine MBCBEDpage(nmlfile)
+subroutine MBCBEDcomputation(nmlfile)
 
 use local
 use constants
@@ -109,6 +91,7 @@ use crystalvars
 use diffraction
 use gvectors
 use kvectors
+use Lambert, ONLY: Apply2DLaueSymmetry
 use postscript, ONLY: GetIndex
 use symmetry
 use math
@@ -119,37 +102,35 @@ use files
 
 IMPLICIT NONE
 
-real(kind=sgl)      			:: laL,kt,z0,thc,thb,hkl(3),ind(3),ktmax, io_real(3), voltage, convergence, &
-                       				   dom,glen,qr,qi,bg,xgpz,bragg,c(3),RR,gx(3),gy(3),gg(3), thetac, startthick, thickinc, &
-                       				   sc, scmax, PX, PY, qx, qy, frac, dmin
-integer(kind=irg)   			:: g(3),ira,dpcnt,ppi,ijmax,ga(3),gb(3),k(3),fcnt,ccnt,cnt, skip, numthick, istat, &
-                       				  newcount,count_rate,count_max, io_int(6), i, j, isym, ir, order, nn, fn(3), &
-                       				  iorder, npx, npy, numt, im, numk, npix, ik, ip, jp, maxholz
-character(1)        			:: ans
+real(kind=sgl)      			:: ktmax, io_real(3), voltage, convergence, &
+                       		bragg,c(3),RR,gx(3),gy(3),gg(3), thetac, startthick, thickinc, &
+                       		sc, scmax, PX, qx, qy, frac, dmin, s
+integer(kind=irg)   			:: ijmax,ga(3),gb(3),k(3),cnt, skip, numthick, istat, &
+                       		newcount,count_rate,count_max, io_int(6), ii, i, j, isym, ir, fn(3), &
+                       		npx, npy, numt, numk, npix, ik, ip, jp, maxholz, iequiv(2,12), nequiv
 character(3)				:: method
 character(fnlen)     			:: outname, nmlfile, xtalname
 
 
-complex(kind=sgl)   		:: czero
-logical             				:: overlap,np,first
 real(kind=sgl),parameter     	:: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/),yoff(0:5)=(/6.0,6.0,3.0,3.0,0.0,0.0/)
 real(kind=sgl),allocatable    	:: disk(:,:,:), thick(:)
 integer(kind=irg),allocatable 	:: diskoffset(:,:)
 real(kind=sgl),allocatable    	:: inten(:,:)
+logical				:: usesym=.FALSE.
 
 namelist /inputlist/ stdout,xtalname, voltage, camlen, k, fn, dmin, convergence, startthick, thickinc, numthick, outname
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 xtalname = 'undefined'		! initial value to check that the keyword is present in the nml file
-voltage = 200000.0			! acceleration voltage [V]
+voltage = 200000.0		! acceleration voltage [V]
 camlen = 1000.0			! camera length [mm]
-k = (/ 0, 0, 1 /)			! beam direction [direction indices]
-fn = (/ 0, 0, 1 /)			! foil normal [direction indices]
-dmin = 0.025				! smallest d-spacing to include in dynamical matrix [nm]
-convergence = 20.0			! beam convergence angle [mrad]
-startthick = 10.0			! starting thickness [nm]
+k = (/ 0, 0, 1 /)		! beam direction [direction indices]
+fn = (/ 0, 0, 1 /)		! foil normal [direction indices]
+dmin = 0.015			! smallest d-spacing to include in dynamical matrix [nm]
+convergence = 20.0		! beam convergence angle [mrad]
+startthick = 10.0		! starting thickness [nm]
 thickinc = 10.0			! thickness increment
-numthick = 10				! number of increments
+numthick = 10			! number of increments
 outname = 'mbcbedout.data'	! out put filename
 
 ! read the namelist file
@@ -164,12 +145,12 @@ end if
 ! print some general program information (must be done here since the nmlist file 
 ! may have redefind the stdout entry
  progname = 'CTEMmbcbed.f90'
- progdesc = ' convergent beam pattern simulation'
+ progdesc = ' Zone axis convergent beam pattern simulation'
  call CTEMsoft
 
-mess = 'Input parameter list: '; call Message("(A)")
-write (stdout,NML=inputlist)
-mess=' '; call Message("(A/)")
+ mess = 'Input parameter list: '; call Message("(A)")
+ write (stdout,NML=inputlist)
+ mess=' '; call Message("(A/)")
 
 ! first get the crystal data and microscope voltage
  SG%SYM_reduce=.TRUE.
@@ -197,7 +178,6 @@ mess=' '; call Message("(A/)")
  io_int(1) = ir 
  call WriteValue('; order = ',io_int, 1, "(I4,//)")
 
-
 ! determine the shortest reciprocal lattice points for this zone
  call ShortestG(k,ga,gb,isym)
  io_int(1:3)=ga(1:3)
@@ -206,7 +186,7 @@ mess=' '; call Message("(A/)")
 
 ! construct the list of all possible reflections
 method = 'ALL'
-maxholz = 3
+maxholz = 0
 call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
 
 ! enter range of incident beam directions
@@ -216,7 +196,7 @@ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
   thetac = convergence/1000.0
   
 ! convert to ktmax along ga
-  ktmax = 0.5*thetac*bragg
+  ktmax = 0.5*thetac/bragg
 
 ! compute number of pixels along diameter of central disk for given camera length
   RR = 300.0/25.4   ! dots per millimeter for 300 dots per inch; legacy code from when the output was in PostScript
@@ -232,10 +212,15 @@ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
   allocate(thick(numt),stat=istat)
   thick = startthick + thickinc* (/ (float(i),i=0,numt-1) /)
 
+!isym = 13
+
 ! determine all independent incident beam directions (use a linked list starting at khead)
   call Calckvectors(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,'Conical')
- 
 
+! This needs to be modified to move away from the 900x900 image and make it variable
+! The original legacy code was suitable for dumping the results in a postscript file,
+! hence the conversion to dpi
+  
 ! allocate the disk variable which will hold the entire computed pattern
   npix = int(3.0*300.0)   ! 3 inches wide at 300 dpi
   allocate(disk(numt,npix,npix))
@@ -246,7 +231,7 @@ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
   PX = npix/2
 
 ! force dynamical matrix routine to read new Bethe parameters from file
-  call Set_Bethe_Parameters()
+  call Set_Bethe_Parameters(.TRUE.)
 
 ! allocate the offset array
 ! to get this array, we need to do a mock initialization of the dynamical matrix in zone axis orientation
@@ -283,6 +268,7 @@ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
     rltmpa => rltmpa%next
   end do
 
+write (*,*) '# Laue group = ',isym
   frac = 0.05
 
   mess = ' '; call Message("(A/)")
@@ -308,19 +294,33 @@ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
    
 ! solve the dynamical eigenvalue equation
    call CalcBWint(DynNbeams,numt,thick,inten)
+   
+!write (*,*) ik,ktmp%k(1),ktmp%k(2),ktmp%k(3),BetheParameter%nns,BetheParameter%nnw
 
 ! and copy the intensities in the correct locations
    do i=1,DynNbeamsLinked
     if ( (diskoffset(i,1).eq.1).and.(BetheParameter%reflistindex(i).ne.0) ) then
-      ip = PX + diskoffset(i,2) - ktmp%i
-      jp = PX + diskoffset(i,3) + ktmp%j
+     if (usesym) then ! use Laue group symmetry
+      ip = diskoffset(i,2) - ktmp%i
+      jp = diskoffset(i,3) + ktmp%j
+      call Apply2DLaueSymmetry(ip,jp,isym,iequiv,nequiv)
+      iequiv = iequiv+PX
 
+      do ii=1,nequiv
 ! is this point inside the viewing square ?
-      if (((ip.ge.1).and.(ip.le.npix)).and.((jp.ge.1).and.(jp.le.npix))) then
-        do j=1,numt
-         disk(j,ip,jp) = disk(j,ip,jp) + inten(j,BetheParameter%reflistindex(i))
-        end do
-      end if
+        ip = iequiv(1,ii)
+        jp = iequiv(2,ii)
+        if (((ip.ge.1).and.(ip.le.npix)).and.((jp.ge.1).and.(jp.le.npix))) then
+          disk(1:numt,ip,jp) = inten(1:numt,BetheParameter%reflistindex(i))
+        end if
+      end do
+     else  ! do not use symmetry
+       ip = PX + diskoffset(i,2) - ktmp%i
+       jp = PX + diskoffset(i,3) + ktmp%j
+       if (((ip.ge.1).and.(ip.le.npix)).and.((jp.ge.1).and.(jp.le.npix))) then
+          disk(1:numt,ip,jp) = inten(1:numt,BetheParameter%reflistindex(i))
+        end if
+     end if
     end if
    end do
 
@@ -352,7 +352,7 @@ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
   
   mess = ' Data stored in '//outname; call Message("(/A/)") 
  
-end subroutine MBCBEDpage
+end subroutine MBCBEDcomputation
 
 
 ! ###################################################################
@@ -382,14 +382,12 @@ use constants
 
 IMPLICIT NONE
 
-integer(kind=irg)                             	:: nn,i,j,ig,ih,IPIV(nn),nt
-complex(kind=dbl)    				:: CGinv(nn,nn), Minp(nn,nn),diag(nn),Wloc(nn), lCG(nn,nn), lW(nn), lalpha(nn)
-real(kind=sgl)                             		:: thick(nt),inten(nt,nn),th
-! complex(kind=dbl)                			:: Ijk(nn,nn),Lgh(nn,nn),q
+integer(kind=irg)	:: nn,i,j,IPIV(nn),nt
+complex(kind=dbl)	:: CGinv(nn,nn), Minp(nn,nn),diag(nn),Wloc(nn), lCG(nn,nn), lW(nn), lalpha(nn)
+real(kind=sgl) 		:: thick(nt),inten(nt,nn),th
 
-intent(IN)      :: nt, nn, thick
-intent(OUT)     :: inten
-
+intent(IN)      	:: nt, nn, thick
+intent(OUT)     	:: inten
 
 ! compute the eigenvalues and eigenvectors
  Minp = DynMat

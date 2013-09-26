@@ -1,0 +1,24 @@
+&inputlist
+! if output should go to a file, then insert stdout = some number > 10; comment for screen output
+! stdout = 10
+! input file name for crystal structure
+xtalname = 'Cu.xtal'
+! beam accelerating voltage [V]
+voltage = 200000.
+! camera length [mm]
+camlen = 1000.0
+! incident beam direction (zone axis)
+k = 0,0,1
+! foil normal indices
+fn = 0,0,1
+! beam convergence angle [mrad]
+convergence = 5.7
+! starting value for thickness series [nm]
+startthick = 10.0
+! thickness increment [nm]
+thickinc = 10.0
+! number of increments
+numthick = 20
+! file name of output file
+outname = '/somewhere/test.data'
+/

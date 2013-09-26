@@ -139,7 +139,7 @@ integer(kind=irg),allocatable :: accum_e(:,:,:), accum_z(:,:,:,:), lambdaE(:,:),
 character(80) 		:: energyfile
 
 
-namelist /EBSDzEvars/ xtalname,dmin,npx,dataname,energyfile
+namelist /EBSDzEvars/ xtalname,dmin,npx,outname,energyfile
 
 ! note that the CTEMMC.f90 program creates a statistical output file that 
 ! must be read by the present program, so that things like energy etc are 
@@ -233,6 +233,7 @@ call Message("(A)")
 open(dataunit,file=trim(energyfile),status='unknown',form='unformatted')
 
 read(dataunit) numEbins, numzbins, nsx, nsy, num_el, MCnthreads
+MCnthreads = 8
 io_int(1:6) = (/ numEbins, numzbins, nsx, nsy, num_el, MCnthreads /)
 call WriteValue(' NumEbins, numzbins, nsx, nsy, num_el, MCnthreads ',io_int,6,"(5I,',',I)")
 etotal = num_el * MCnthreads
