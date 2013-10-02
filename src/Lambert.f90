@@ -2023,7 +2023,54 @@ end if
     
 end subroutine Apply2DLaueSymmetry
 
+!--------------------------------------------------------------------------
+!
+! FUNCTION: Apply2DPGSymmetry
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief Apply the 2D point group symmetry to a pair of coordinates 
+!
+!> @param ipx x-coordinate
+!> @param ipy y-coordinate
+!> @param isym 2D point group number
+!> @param iequiv array with equivalent coordinates
+!> @param nequiv number of equivalent coordinates
+!! 
+!> @date  10/02/13 MDG 1.0 first version
+!--------------------------------------------------------------------------
+subroutine Apply2DPGSymmetry(ipx,ipy,isym,iequiv,nequiv)
 
+use local
+use io
+use symmetryvars
+use symmetry
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)	:: ipx
+integer(kind=irg),INTENT(IN)	:: ipy
+integer(kind=irg),INTENT(IN)	:: isym
+integer(kind=irg),INTENT(OUT)	:: iequiv(2,12)
+integer(kind=irg),INTENT(OUT)	:: nequiv
+ 
+integer(kind=irg)		:: i
+
+! make sure that the symmetry matrices have been predefined; if not, then
+! compute them first
+if (TDPG%SYM_pgnum.ne.isym) call Generate2DSymmetry(isym)
+
+! set the order
+nequiv = TDPG%SYM_MATnum
+iequiv = 0
+
+! compute the transformed coordinates
+do i=1,nequiv
+  iequiv(1:2,i) = matmul( (/ ipx, ipy /), TDPG%SYM_direc(i,1:2,1:2) )
+end do
+
+! that's it.
+end subroutine Apply2DPGSymmetry
 
 
 end module Lambert

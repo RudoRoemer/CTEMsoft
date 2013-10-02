@@ -76,8 +76,8 @@ use local
 IMPLICIT NONE
 
 character(1),INTENT(IN)		:: t(4)	!< 4-character input string
-integer(kind=irg),INTENT(IN)	:: isgn	!< indicates forward or reverse translation
-integer(kind=irg)			:: j		!< auxiliary variable
+integer(kind=irg),INTENT(IN)		:: isgn	!< indicates forward or reverse translation
+integer(kind=irg)			:: j	!< auxiliary variable
 real(kind=dbl)				:: sgn	!< forward or reverse multiplier for translation components
 
 ! forward or reverse translation ?
@@ -147,12 +147,12 @@ use math
 
 IMPLICIT NONE
 
-integer(kind=irg),parameter	:: QQ=48 				!< maximum number of point group symmetry elements
-integer(kind=irg)			:: i,k,l,iset				!< auxiliary variables
-real(kind=dbl)				:: SYM_d(4,4),SYM_e(4,4)	!< auxiliary 4x4 matrices
+integer(kind=irg),parameter	:: QQ=48 			!< maximum number of point group symmetry elements
+integer(kind=irg)		:: i,k,l,iset			!< auxiliary variables
+real(kind=dbl)			:: SYM_d(4,4),SYM_e(4,4)	!< auxiliary 4x4 matrices
 real(kind=dbl), parameter	:: eps=0.0005_dbl		!< constant used to decide whether or not elements are equal 
-character(1)				:: t(4)				!< 4-character string etracted from generator string
-character(40)				:: genst				!< full generator string
+character(1)			:: t(4)				!< 4-character string etracted from generator string
+character(40)			:: genst			!< full generator string
 
 ! fill in the space group name 
  SG%SYM_name = SYM_SGname(cell%SYM_SGnum)
@@ -268,8 +268,8 @@ IMPLICIT NONE
 
 integer(kind=irg),INTENT(IN)	:: k1				!< index of first 4x4 input matrix
 integer(kind=irg),INTENT(IN)	:: k2				!< index of second 4x4 input matrix
-integer(kind=irg)			:: i,j,k			!< loop counters
-real(kind=dbl),parameter		:: eps=0.0005_dbl	!< truncation constant
+integer(kind=irg)		:: i,j,k			!< loop counters
+real(kind=dbl),parameter	:: eps=0.0005_dbl		!< truncation constant
 
  do i=1,4
   do j=1,4
@@ -322,8 +322,8 @@ use local
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(IN)	:: nsym			!< index of matrix to be compared
-integer(kind=irg)			:: i,j,k,n			!< loop counters
+integer(kind=irg),INTENT(IN)		:: nsym			!< index of matrix to be compared
+integer(kind=irg)			:: i,j,k,n		!< loop counters
 real(kind=dbl),parameter		:: eps=0.0005_dbl	!< comparison threshold
 
  k=0
@@ -706,11 +706,11 @@ use crystal
 
 IMPLICIT NONE
 
-character(1),INTENT(IN)   :: switch			!< if switch='m', then multiple unit cells, otherwise single cell
+character(1),INTENT(IN)   	:: switch			!< if switch='m', then multiple unit cells, otherwise single cell
 logical				:: inside			!< auxiliary logical
 integer(kind=irg) 		:: i,j,k,l,mm,icnt,celln(3),ncells,n,kk,ier, io_int(3)  !< various auxiliary variables
 real(kind=dbl)    		:: ctmp(192,3),ff(3),sh(3)	!< auxiliary variables	
-real(kind=sgl)    		:: r(3),g(3)				!< auxiliary variables	
+real(kind=sgl)    		:: r(3),g(3)			!< auxiliary variables	
 
 ! make sure all coordinates are reduced to the fundamental unit cell
  SG%SYM_reduce=.TRUE.
@@ -815,7 +815,7 @@ use crystalvars
 IMPLICIT NONE
 
 integer(kind=irg),INTENT(OUT)  	:: iset				!< output setting
-integer(kind=irg)      			:: i,isg, io_int(1)		!< auxiliary variables
+integer(kind=irg)      		:: i,isg, io_int(1)		!< auxiliary variables
 
 ! There are 24 space groups with two origin choices.
 ! The symmetry of both sites is stored in the array
@@ -823,8 +823,8 @@ integer(kind=irg)      			:: i,isg, io_int(1)		!< auxiliary variables
 ! in tworig
 
 !> numbers of the space groups with two settings
-integer(kind=irg),parameter  	:: tworig(24)=(/48,50,59,68,70,85,86,88,125,126,129,130,133,134,137,138,&
-                                            141,142,201,203,222,224,227,228/)
+integer(kind=irg),parameter  		:: tworig(24)=(/48,50,59,68,70,85,86,88,125,126,129,130,133,134,137,138,&
+                                         141,142,201,203,222,224,227,228/)
 
 !> site symmetry list
 character(7),parameter 		:: sitesym(48) = (/ '222    ',' -1    ','222/n  ',' -1    ','mm2/n  ',' -1    ', &
@@ -893,7 +893,7 @@ use crystalvars
 IMPLICIT NONE
 
 integer(kind=irg)  	:: sgmin,sgmax,i,j,TRIG(7), io_int(1)		!< auxiliary var	iables	
-logical           		:: skip							!< logical variable
+logical           	:: skip						!< logical variable
 
  TRIG = (/ 146,148,155,160,161,166,167 /)
  skip = .FALSE.
@@ -991,11 +991,11 @@ use symmetryvars   ! uses itmp variable
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN) 		:: k(3)		!< input vector (zone axis)
-integer(kind=irg),INTENT(OUT)	:: il(48)		!< output index list
+integer(kind=irg),INTENT(OUT)		:: il(48)	!< output index list
 integer(kind=irg),INTENT(IN)		:: num		!< number of  entries to test
-integer(kind=irg),INTENT(OUT)	:: jcnt		!< number of entries in output
-integer(kind=irg)				:: i			!< loop counter
-real(kind=sgl)					:: gn(3)		!< auxiliary variable
+integer(kind=irg),INTENT(OUT)		:: jcnt		!< number of entries in output
+integer(kind=irg)			:: i		!< loop counter
+real(kind=sgl)				:: gn(3)	!< auxiliary variable
 real(kind=sgl),parameter 		:: eps=1.0E-5	!< threshold value
 
  jcnt = 0
@@ -1068,12 +1068,13 @@ IMPLICIT NONE
 
 integer(kind=irg),INTENT(INOUT)	:: isym				!< used to resolve some potential ambiguities for 3-fold and 6-fold symmetries
 integer(kind=irg),INTENT(IN)		:: k(3)				!< input zone axis indices
-integer(kind=irg),INTENT(OUT)	:: gone(3)				!< output first vector
-integer(kind=irg),INTENT(OUT)	:: gtwo(3)				!< output second vector
-integer(kind=irg)				:: ga(3),gb(3),nzero(3),u,v,w,snz,ml(4),igsave(3)		!< auxiliary variables
-integer(kind=irg)				:: ima,imb,ina,inb,el(6),denom,minsum,inm,il(48),jcnt,num !< auxiliary variables
-real(kind=sgl)					:: fel(6),fit,gsave(3)		!< auxiliary variables
-integer(kind=irg),allocatable 		:: ifit(:,:,:,:)			!< array used to search
+integer(kind=irg),INTENT(OUT)		:: gone(3)			!< output first vector
+integer(kind=irg),INTENT(OUT)		:: gtwo(3)			!< output second vector
+
+integer(kind=irg)			:: ga(3),gb(3),nzero(3),u,v,w,snz,ml(4),igsave(3)		!< auxiliary variables
+integer(kind=irg)			:: ima,imb,ina,inb,el(6),denom,minsum,inm,il(48),jcnt,num 	!< auxiliary variables
+real(kind=sgl)				:: fel(6),fit,gsave(3)		!< auxiliary variables
+integer(kind=irg),allocatable 		:: ifit(:,:,:,:)		!< array used to search
 
  u = k(1)
  v = k(2)
@@ -1107,6 +1108,7 @@ integer(kind=irg),allocatable 		:: ifit(:,:,:,:)			!< array used to search
   end select
  end if 
 
+! check linear combinations to see if there are any shorter ones
  inm = 5
  allocate(ifit(-inm:inm,-inm:inm,-inm:inm,-inm:inm))
  do ima=-inm,inm
@@ -1257,9 +1259,9 @@ use symmetryvars
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(IN)	:: g(3)		!< input reciprocal lattice vector
+integer(kind=irg),INTENT(IN)		:: g(3)		!< input reciprocal lattice vector
 integer(kind=irg)			:: seo		!< auxiliary variable
-character(1)				:: lc			!< first letter of space group name
+character(1)				:: lc		!< first letter of space group name
 
 ! Determine whether or not this vector is
 ! actually allowed by the lattice centering
@@ -1341,6 +1343,63 @@ real(kind=dbl)			:: kstar(48,3)				!< star variable
 
 end subroutine BFsymmetry
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: GetPatternSymmetry
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief  Determine the diffraction group number and optionally produce output
+!
+!> @param uvw input vector (zone axis)
+!> @param pgnum point group number
+!> @param verbose (optional) produces output if present
+!
+!> @date   10/01/13 MDG 1.0 original
+!--------------------------------------------------------------------------
+function GetPatternSymmetry(uvw,pgnum,verbose) result(dgn)
+
+use local
+use io
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)	:: uvw(3)	!< zone axis indices
+integer(kind=irg),INTENT(IN)	:: pgnum	!< point group number
+logical,INTENT(IN),OPTIONAL	:: verbose	!< print output or not
+
+integer(kind=irg)		:: dgn		!< output diffraction group number
+integer(kind=irg)		:: io_int(3)
+
+! get the diffraction group number
+ dgn = GetDiffractionGroup(uvw,pgnum)
+
+! and print some general information if needed.
+ if (present(verbose)) then
+   mess = ' '
+   call Message("(A)")
+   io_int(1:3) = uvw(1:3)
+   call WriteValue(' Zone Axis : ',io_int,3,"('[',I3,I3,I3,']')")
+   mess = ' Crystal point group           : '//PGTHD(pgnum)
+   call Message("(/A)")
+   mess = ' Laue group                    : '// PGTHD(PGLaue(pgnum))
+   call Message("(A)")
+   mess = ' Diffraction group             : '//DG(dgn)
+   call Message("(A)")
+   mess = ' Projection diffraction group  : '// DG(PDG(dgn))
+   call Message("(A/)")
+
+   mess = ' Bright Field symmetry         : '//PGTWD(BFPG(dgn))
+   call Message("(A)")
+   mess = ' Whole Pattern symmetry        : '//PGTWD(WPPG(dgn))
+   call Message("(A)")
+   mess = ' Dark Field general symmetry   : '//PGTWD(DFGN(dgn))
+   call Message("(A)")
+   mess = ' Dark Field special symmetry   : '//PGTWD(DFSP(dgn))
+   call Message("(A/)")
+ end if
+
+end function GetPatternSymmetry
 
 !--------------------------------------------------------------------------
 !
@@ -1355,7 +1414,8 @@ end subroutine BFsymmetry
 !> In this first version, let's compute the order of the family of directions
 !> and based on that and the PG number determine what the diffraction group is.
 !> The data in this routine was painstakingly entered after staring at both the 
-!> BESR table and the International Tables for Crystallography, point group section.
+!> BESR table and the International Tables for Crystallography, point group section,
+!> Table 10.2.2.
 !
 !> @param uvw zone axis direction 
 !> @param pgn point group number
@@ -1383,17 +1443,13 @@ integer(kind=irg)		:: auvw(3), mina, nz, i, s 	!< abs(uvw), min(auvw), number of
 integer(kind=irg)		:: dgn				!< (output) diffraction group number
 logical				:: found
 
-! do we need to do something special for the four-index notation ?
-! probably not, since we only pass on the first two and the last index...
-
-
 ! compute the order of the family of directions (in direct space)
  call CalcStar(dble(uvw),ng,kstar,'d')
 
 ! determine some parameters that might be useful in deciding the correct diffraction group symmetry 
  auvw = iabs(uvw)
  mina = minval(auvw)
- nz = 0
+ nz = 0   ! how many zeroes are there in the index symbol ?
  do i=1,3 
    if (uvw(i).eq.0) nz = nz+1
  end do
@@ -1401,6 +1457,9 @@ logical				:: found
 ! very long case statement to cover each of the 32 point groups
 ! we'll put them in reverse order since structures in materials
 ! science are more likely to have a higher symmetry...
+!
+! These statements were carefully entered, but it is certainly possible that
+! there are errors remaining... Please report any potential errors to the author.
 select case (pgn)
  case (32) ! m -3 m
  	select case (ng)
@@ -1881,7 +1940,7 @@ select case (pgn)
  case (5) ! 2/m
  	select case (ng)
  		case (2)
- 			if (nz.eq.2) then
+			if (sum(iabs( uvw - (/0, 1, 0/) )).eq.0) then
 				dgn = 5  ! 21R
 			else
 				dgn = 11 ! 2RmmR
@@ -1895,13 +1954,13 @@ select case (pgn)
  case (4) ! m
  	select case (ng)
  		case (1)
- 			if (nz.eq.2) then
-				dgn = 2  ! 1R
-			else
-				dgn = 7 ! m
-			end if
+			dgn = 7 ! m 	
  		case (2)
- 			dgn = 1 ! 1
+			if (sum(iabs( uvw - (/0, 1, 0/) )).eq.0) then
+				dgn = 2 ! 1R
+			else
+ 				dgn = 1 ! 1
+			end if
  		case default
 			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
 			call Message("(A)")
@@ -1909,7 +1968,7 @@ select case (pgn)
  case (3) ! 2
  	select case (ng)
   		case (1)
-			if (nz.eq.2) then
+			if (sum(iabs( uvw - (/0, 1, 0/) )).eq.0) then
 				dgn = 3 ! 2
 			else
 				dgn = 6 ! mR
@@ -1931,6 +1990,141 @@ select case (pgn)
 end select
 
 end function GetDiffractionGroup
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: Generate2DSymmetry
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief generate the symmetry matrices for one of the 2D planar point groups.
+!
+!> @details The output of this routine is stored in the TDPG structure that 
+!> is defined at the end of the symmetryvars module.  Routine verified on 10/2/13.
+!
+!> @param pgn 2D point group number
+!
+!> @date   10/02/13 MDG 1.0 original
+!--------------------------------------------------------------------------
+subroutine Generate2DSymmetry(pgn)
+
+use local
+use error
+use symmetryvars
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)	:: pgn		!< point group number
+
+! here we define all 8 possible 2x2 matrices (remember column major order !)
+integer(kind=irg),parameter 	:: mI(2,2) = reshape( (/ 1, 0, 0, 1 /), (/2,2/))	! identity
+integer(kind=irg),parameter 	:: mA(2,2) = reshape( (/-1, 0, 0, 1 /), (/2,2/))	! mirror
+integer(kind=irg),parameter 	:: mB(2,2) = reshape( (/ 0, 1,-1, 0 /), (/2,2/))	! 4-fold
+integer(kind=irg),parameter 	:: mC(2,2) = reshape( (/ 0, 1, 1, 0 /), (/2,2/))	! diagonal mirror
+integer(kind=irg),parameter 	:: mD(2,2) = reshape( (/-1, 1,-1, 0 /), (/2,2/))	! 3-fold
+integer(kind=irg),parameter 	:: mE(2,2) = reshape( (/ 0,-1, 1,-1 /), (/2,2/))	! 3-fold twice
+integer(kind=irg),parameter 	:: mF(2,2) = reshape( (/-1, 0,-1, 1 /), (/2,2/))	! 6-fold
+integer(kind=irg),parameter 	:: mG(2,2) = reshape( (/ 1,-1, 0,-1 /), (/2,2/))	! 6-fold twice
+
+
+TDPG%SYM_pgnum = pgn
+
+select case (pgn)
+  case (1) ! 1
+	TDPG%SYM_MATnum = 1
+	TDPG%SYM_direc(1,1:2,1:2) = mI
+!------------
+  case (2) ! 2
+	TDPG%SYM_MATnum = 2
+	TDPG%SYM_direc(1,1:2,1:2) = mI
+	TDPG%SYM_direc(2,1:2,1:2) = -mI
+!------------
+  case (3) ! m
+	TDPG%SYM_MATnum = 2
+	TDPG%SYM_direc(1,1:2,1:2) = mI
+	TDPG%SYM_direc(2,1:2,1:2) = mA
+!------------
+  case (4) ! 2mm
+	TDPG%SYM_MATnum = 4
+	TDPG%SYM_direc(1,1:2,1:2) = mI
+	TDPG%SYM_direc(2,1:2,1:2) = -mI
+	TDPG%SYM_direc(3,1:2,1:2) = mA
+	TDPG%SYM_direc(4,1:2,1:2) = -mA
+!------------
+  case (5) ! 4
+	TDPG%SYM_MATnum = 4
+	TDPG%SYM_direc(1,1:2,1:2) = mI
+	TDPG%SYM_direc(2,1:2,1:2) = -mI
+	TDPG%SYM_direc(3,1:2,1:2) = mB
+	TDPG%SYM_direc(4,1:2,1:2) = -mB
+!------------
+  case (6) ! 4mm
+	TDPG%SYM_MATnum = 8
+	TDPG%SYM_direc(1,1:2,1:2) = mI
+	TDPG%SYM_direc(2,1:2,1:2) = -mI
+	TDPG%SYM_direc(3,1:2,1:2) = mA
+	TDPG%SYM_direc(4,1:2,1:2) = -mA
+	TDPG%SYM_direc(5,1:2,1:2) = mB
+	TDPG%SYM_direc(6,1:2,1:2) = -mB
+	TDPG%SYM_direc(7,1:2,1:2) = mC
+	TDPG%SYM_direc(8,1:2,1:2) = -mC
+!------------
+  case (7) ! 3
+	TDPG%SYM_MATnum = 3
+	TDPG%SYM_direc(1,1:2,1:2) = mI
+	TDPG%SYM_direc(2,1:2,1:2) = mD
+	TDPG%SYM_direc(3,1:2,1:2) = mE
+!------------
+  case (8) ! 3m1
+	TDPG%SYM_MATnum = 6
+	TDPG%SYM_direc(1,1:2,1:2) = mI
+	TDPG%SYM_direc(2,1:2,1:2) = mD
+	TDPG%SYM_direc(3,1:2,1:2) = mE
+	TDPG%SYM_direc(4,1:2,1:2) = -mC
+	TDPG%SYM_direc(5,1:2,1:2) = -mF
+	TDPG%SYM_direc(6,1:2,1:2) = -mG
+!------------
+  case (9) ! 6
+	TDPG%SYM_MATnum = 6
+	TDPG%SYM_direc(1,1:2,1:2) = mI
+	TDPG%SYM_direc(2,1:2,1:2) = -mI
+	TDPG%SYM_direc(3,1:2,1:2) = mD
+	TDPG%SYM_direc(4,1:2,1:2) = -mD
+	TDPG%SYM_direc(5,1:2,1:2) = mE
+	TDPG%SYM_direc(6,1:2,1:2) = -mE
+!------------
+  case (10) ! 6mm
+	TDPG%SYM_MATnum = 12
+	TDPG%SYM_direc(1,1:2,1:2) = mI
+	TDPG%SYM_direc(2,1:2,1:2) = -mI
+	TDPG%SYM_direc(3,1:2,1:2) = mD
+	TDPG%SYM_direc(4,1:2,1:2) = -mD
+	TDPG%SYM_direc(5,1:2,1:2) = mE
+	TDPG%SYM_direc(6,1:2,1:2) = -mE
+	TDPG%SYM_direc(7,1:2,1:2) = mF
+	TDPG%SYM_direc(8,1:2,1:2) = -mF
+	TDPG%SYM_direc(9,1:2,1:2) = mG
+	TDPG%SYM_direc(10,1:2,1:2) = -mG
+	TDPG%SYM_direc(11,1:2,1:2) = mC
+	TDPG%SYM_direc(12,1:2,1:2) = -mC	
+!------------
+  case (11) ! 31m
+	TDPG%SYM_MATnum = 6
+	TDPG%SYM_direc(1,1:2,1:2) = mI
+	TDPG%SYM_direc(2,1:2,1:2) = mC
+	TDPG%SYM_direc(3,1:2,1:2) = mD
+	TDPG%SYM_direc(4,1:2,1:2) = mE
+	TDPG%SYM_direc(5,1:2,1:2) = mF
+	TDPG%SYM_direc(6,1:2,1:2) = mG
+!------------
+  case default
+	call FatalError('Generate2DSymmetry',' unknown 2D point group number')
+	stop
+end select
+
+
+end subroutine Generate2DSymmetry
+
 
 
 

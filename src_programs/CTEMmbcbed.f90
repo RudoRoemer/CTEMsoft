@@ -105,7 +105,7 @@ IMPLICIT NONE
 real(kind=sgl)      			:: ktmax, io_real(3), voltage, convergence, &
                        		bragg,c(3),RR,gx(3),gy(3),gg(3), thetac, startthick, thickinc, &
                        		sc, scmax, PX, qx, qy, frac, dmin, s
-integer(kind=irg)   			:: ijmax,ga(3),gb(3),k(3),cnt, skip, numthick, istat, &
+integer(kind=irg)   			:: ijmax,ga(3),gb(3),k(3),cnt, skip, numthick, istat, dgn, &
                        		newcount,count_rate,count_max, io_int(6), ii, i, j, isym, ir, fn(3), &
                        		npx, npy, numt, numk, npix, ik, ip, jp, maxholz, iequiv(2,12), nequiv
 character(3)				:: method
@@ -170,14 +170,13 @@ end if
  do i=1,32
   if (SGPG(i).le.cell % SYM_SGnum) j=i
  end do
-! and the Bright Field symmetry
- call BFsymmetry(k,j,isym,ir)
- io_int(1:3) = k(1:3)
- call WriteValue('', io_int, 3, "(//,' ','[',3I2,'] has Bright Field symmetry ',$)")
- mess = PGTWD(isym)
- call Message("(A,$)")
- io_int(1) = ir 
- call WriteValue('; order = ',io_int, 1, "(I4,//)")
+
+! use the new routine to get the whole pattern 2D symmetry group, since that
+! is the one that determines the independent beam directions.
+ dgn = GetPatternSymmetry(k,j,.TRUE.)
+ isym = WPPG(dgn) ! WPPG lists the whole pattern point group numbers vs. diffraction group numbers
+
+write (*,*) 'dgn = ',dgn,'; isym = ',isym
 
 ! determine the shortest reciprocal lattice points for this zone
  call ShortestG(k,ga,gb,isym)
@@ -213,8 +212,6 @@ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
   allocate(thick(numt),stat=istat)
   thick = startthick + thickinc* (/ (float(i),i=0,numt-1) /)
 
-!isym = 13
-
 ! determine all independent incident beam directions (use a linked list starting at khead)
   call Calckvectors(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,'Conical')
 
@@ -223,7 +220,6 @@ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
 ! hence the conversion to dpi
   
 ! allocate the disk variable which will hold the entire computed pattern
-!  npix = int(3.0*300.0)   ! 3 inches wide at 300 dpi
   allocate(disk(numt,npix,npix))
   disk=0.0
 

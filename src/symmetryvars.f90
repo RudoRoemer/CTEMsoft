@@ -362,7 +362,7 @@ logical,parameter       :: DGPG(32,31) = reshape((/ &
 
 
 ! declare user-defined types
-!> symdata type definition 
+!> symdata type definition (for 3D symmetry operations with space groups)
 type symdata
   integer(kind=irg) 	:: SYM_GENnum			!< number of generator matrices
   integer(kind=irg) 	:: SYM_MATnum			!< number of non-zero symmetry matrices
@@ -388,6 +388,19 @@ integer(kind=irg)	:: numat(maxpasym)		!< number of atoms of each type in the asy
 
 ! atom coordinates
 real(kind=dbl),allocatable :: apos(:,:,:)		!< atom position array
+
+! for many diffraction calculations we need the 2D planar point groups; 
+! the maximum order of such a group is 12, and there are only 10 of them, with
+! two settings for one of them (3m1 and 31m).
+type symdata2D
+  integer(kind=irg)	:: SYM_pgnum			!< 2D point group number
+  integer(kind=irg)	:: SYM_MATnum			!< number of non-zero symmetry matrices (order)
+  integer(kind=irg)	:: SYM_direc(12,2,2)		!< point group matrices (filled in by Generate2DSymmetry)
+end type
+
+! define the 2D point group variable
+type (symdata2D)	:: TDPG
+
 
 end module symmetryvars
 

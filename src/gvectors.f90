@@ -934,7 +934,6 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
 	BetheParameter%stronglist = 0
 	BetheParameter%reflistindex = 0
 
-
     	rltmpa => reflist%next
 
 ! deal with the transmitted beam first
@@ -1028,9 +1027,10 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
 	if (allocated(BetheParameter%weaksg)) deallocate(BetheParameter%weaksg)
 	if (allocated(BetheParameter%stronghkl)) deallocate(BetheParameter%stronghkl)
 	if (allocated(BetheParameter%strongsg)) deallocate(BetheParameter%strongsg)
+	if (allocated(BetheParameter%strongID)) deallocate(BetheParameter%strongID)
 	allocate(BetheParameter%weakhkl(3,BetheParameter%nnw),BetheParameter%weaksg(BetheParameter%nnw))
 	allocate(BetheParameter%stronghkl(3,BetheParameter%nns),BetheParameter%strongsg(BetheParameter%nns))
-        if (.not.allocated(BetheParameter%strongID)) allocate(BetheParameter%strongID(BetheParameter%nns))
+        allocate(BetheParameter%strongID(BetheParameter%nns))
 
 ! here's where we extract the relevant information from the linked list (much faster
 ! than traversing the list each time...)
