@@ -473,13 +473,13 @@ use local
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(OUT):: num		!< number of equivalent entries generated
-integer(kind=irg),INTENT(IN)	:: ind(3)		!< input triplet
-character(1),INTENT(IN)		:: space		!< 'd' or 'r'
-integer(kind=irg)			:: m,i,j		!< loop counters and such
+integer(kind=irg),INTENT(OUT)		:: num				!< number of equivalent entries generated
+integer(kind=irg),INTENT(IN)		:: ind(3)			!< input triplet
+character(1),INTENT(IN)		:: space			!< 'd' or 'r'
+integer(kind=irg)			:: m,i,j			!< loop counters and such
 real(kind=sgl)				:: h,k,l,ih,ik,il,idiff	!< auxiliary variables
-logical					:: newpoint		!< is this a new point ?
-real,parameter				:: eps=0.0001_sgl	!< comparison threshold
+logical					:: newpoint			!< is this a new point ?
+real,parameter				:: eps=0.0001_sgl		!< comparison threshold
 
 ! first take the identity
  j=1
@@ -544,12 +544,12 @@ use crystalvars
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(OUT)	:: ctmp(192,3)		!< output array with orbit coordinates
-integer(kind=irg),INTENT(OUT):: n				!< number of equivalent entries 
-integer(kind=irg),INTENT(IN)	:: m				!< index of input atom in asymmetric unit array cell%ATOM_pos
+real(kind=dbl),INTENT(OUT)		:: ctmp(192,3)		!< output array with orbit coordinates
+integer(kind=irg),INTENT(OUT)		:: n			!< number of equivalent entries 
+integer(kind=irg),INTENT(IN)		:: m			!< index of input atom in asymmetric unit array cell%ATOM_pos
 
-real(kind=dbl)				:: r(3),s(3),diff		!< auxiliary variables
-real(kind=dbl), parameter 	:: eps = 1.0D-4	!< coparison threshold
+real(kind=dbl)				:: r(3),s(3),diff	!< auxiliary variables
+real(kind=dbl), parameter 		:: eps = 1.0D-4		!< comparison threshold
 integer(kind=irg)			:: i,j,k,mm		!< auxiliary variables
 logical					:: new			!< is this a new point ?
 
@@ -629,13 +629,13 @@ use local
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(OUT)	:: stmp(48,3)		!< output array with equivalent vectors
-real(kind=dbl),INTENT(IN)	:: kk(3)			!< input vector
-integer(kind=irg),INTENT(OUT):: n				!< number of entries in equivalent vector array
-character(1),INTENT(IN)		:: space			!< 'd' or 'r'
+real(kind=dbl),INTENT(OUT)		:: stmp(48,3)		!< output array with equivalent vectors
+real(kind=dbl),INTENT(IN)		:: kk(3)		!< input vector
+integer(kind=irg),INTENT(OUT)		:: n			!< number of entries in equivalent vector array
+character(1),INTENT(IN)		:: space		!< 'd' or 'r'
 integer(kind=irg)			:: i,j,k,mm		!< various loop counters and such
-real(kind=dbl)				:: r(3),s(3),diff		!< auxiliary variables
-real(kind=dbl),parameter 	:: eps=1.0D-4		!< comparison threshold
+real(kind=dbl)				:: r(3),s(3),diff	!< auxiliary variables
+real(kind=dbl),parameter 		:: eps=1.0D-4		!< comparison threshold
 logical					:: new			!< logical (is this a new one?)
 
  n=1
@@ -1293,9 +1293,9 @@ end function IsGAllowed
 !> occur in a given Laue group;  e.g.  Laue group 2/m has two bright field symmetries
 !> of order 2:  2 and m
 !> 
-!> This happens for the following Laue groups:\n
-!>   2/m     [010] -> 2    [u0w] -> m\n
-!>   -3m     [11.0] -> 2   [u-u.w] -> m\n
+!> This happens for the following Laue groups:
+!>   2/m     [010] -> 2    [u0w] -> m
+!>   -3m     [11.0] -> 2   [u-u.w] -> m
 !> 
 !> The normal conversion from the reduced order ir to the actual Bright Field
 !> symmetry uses the PGTWDinverse array to determine the 2D symmetry
@@ -1318,7 +1318,7 @@ IMPLICIT NONE
 
 integer(kind=irg),INTENT(IN)	:: uvw(3)	!< zone axis indices
 integer(kind=irg),INTENT(IN)	:: j		!< index into Laue group list
-integer(kind=irg),INTENT(OUT)	:: isym	!< keeps track ot special cases
+integer(kind=irg),INTENT(OUT)	:: isym		!< keeps track of special cases
 integer(kind=irg),INTENT(OUT)	:: ir		!< index of point group
 
 integer(kind=irg)		:: orderPG, Lauenum, ng		!< auxiliary variables
@@ -1340,5 +1340,598 @@ real(kind=dbl)			:: kstar(48,3)				!< star variable
  end if
 
 end subroutine BFsymmetry
+
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: GetDiffractionGroup
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief get the diffraction group number for this zone axis orientation
+!
+!> @details This implements Table 4 in BESR76 or Table 7.2 in the CTEM book
+!> This is a bit tricky and we want to do this as efficiently as possible...
+!> In this first version, let's compute the order of the family of directions
+!> and based on that and the PG number determine what the diffraction group is.
+!> The data in this routine was painstakingly entered after staring at both the 
+!> BESR table and the International Tables for Crystallography, point group section.
+!
+!> @param uvw zone axis direction 
+!> @param pgn point group number
+!
+!> @todo verify that for point groups with multiple settings, things are still correct.
+!> this would be for the following point groups  -6m2, -3m, 3m, 32, -42m, and the unique
+!> axis settings for the monoclinic groups.
+!
+!> @date   10/01/13 MDG 1.0 original
+!--------------------------------------------------------------------------
+function GetDiffractionGroup(uvw,pgn) result(dgn)
+
+use local
+use symmetryvars
+use io
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)	:: uvw(3)			!< zone axis indices
+integer(kind=irg),INTENT(IN)	:: pgn				!< point group number
+
+real(kind=dbl)			:: kstar(48,3)			!< star variable
+integer(kind=irg)		:: ng				!< number of members in star
+integer(kind=irg)		:: auvw(3), mina, nz, i, s 	!< abs(uvw), min(auvw), number of zeroes
+integer(kind=irg)		:: dgn				!< (output) diffraction group number
+logical				:: found
+
+! do we need to do something special for the four-index notation ?
+! probably not, since we only pass on the first two and the last index...
+
+
+! compute the order of the family of directions (in direct space)
+ call CalcStar(dble(uvw),ng,kstar,'d')
+
+! determine some parameters that might be useful in deciding the correct diffraction group symmetry 
+ auvw = iabs(uvw)
+ mina = minval(auvw)
+ nz = 0
+ do i=1,3 
+   if (uvw(i).eq.0) nz = nz+1
+ end do
+
+! very long case statement to cover each of the 32 point groups
+! we'll put them in reverse order since structures in materials
+! science are more likely to have a higher symmetry...
+select case (pgn)
+ case (32) ! m -3 m
+ 	select case (ng)
+ 		case (6)
+ 			dgn = 19 ! 4mm1R
+ 		case (8)
+ 			dgn = 24 ! 6RmmR
+ 		case (12)
+ 			dgn = 12 ! 2mm1R
+ 		case (24)
+ 			dgn = 11 ! 2RmmR
+ 		case (48)
+ 			dgn = 4  ! 2R
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+ 	end select
+ case (31) ! -4 3 m
+ 	select case (ng)
+ 		case (4)
+ 			dgn = 23 ! 3m
+ 		case (6)
+ 			dgn = 18 !4RmmR
+ 		case (12)
+ 			if (mina.eq.0) then
+				dgn = 8 ! m1R 
+			else 
+				dgn = 7 ! m
+			end if 
+ 		case (24)
+ 			if (mina.eq.0) then
+				dgn = 6 ! mR 
+			else 
+				dgn = 1 ! 1
+			end if 
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+ 	end select
+ case (30) ! 432
+ 	select case (ng)
+ 		case (6)
+ 			dgn = 16 ! 4mRmR
+ 		case (8)
+ 			dgn = 22 ! 3mR 
+ 		case (12)
+ 			dgn = 9  ! 2mRmR
+ 		case (24)
+  			if (mina.eq.0) then
+  				dgn = 6 ! mR
+  			else
+ 		  if ( (auvw(1).eq.auvw(2)).or.(auvw(1).eq.auvw(3)).or.(auvw(2).eq.auvw(3)) ) then
+				dgn = 6 ! mR
+			  else
+				dgn = 1 ! 1
+			  end if
+			end if
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+ 	end select
+ !------------
+ case (29) ! m3
+ 	select case (ng)
+ 		case (6)
+ 			dgn = 12 ! 2mm1R
+ 		case (8)
+ 			dgn = 21 ! 6R 
+ 		case (12)
+ 			dgn = 11 ! 2RmmR
+ 		case (24)
+ 			dgn = 4  ! 2R
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+ 	end select
+ case (28) ! 23
+ 	select case (ng)
+ 		case (4)
+ 			dgn = 20 ! 3
+ 		case (6)
+ 			dgn = 9  ! 2mRmR 
+		case (12)
+  			if (mina.eq.0) then
+  				dgn = 6 ! mR
+  			else
+ 				dgn = 1 ! 1
+ 			end if
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+ 	end select
+ !------------
+ case (27) ! 6/mmm
+ 	select case (ng)
+ 		case (2)
+ 			dgn = 31 ! 6mm1R
+ 		case (6)
+ 			dgn = 12 ! 2mm1R
+ 		case (12)
+ 			dgn = 11 ! 2RmmR 
+		case (24)
+ 			dgn = 4  ! 2R
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+ 	end select
+ case (26) ! -6m2
+ 	select case (ng)
+ 		case (2)
+ 			dgn = 30 ! 3m1R
+ 		case (3)
+ 			dgn = 10 ! 2mm
+ 		case (6)
+ 			if (auvw(3).ne.0) then
+				dgn = 7 ! m 
+			else  ! check if [11.0] is part of kstar
+				found = .FALSE.
+				do i=1,ng
+					s = sum( int(kstar(i,1:3)) - (/ 1, 1, 0 /) )
+					if (s.eq.0) found=.TRUE.
+				end do
+				if (found) then 
+					dgn = 8 ! m1R
+				else
+					dgn = 7 ! m
+				end if 
+			end if
+		case (12)
+ 			found = .FALSE.
+			do i=1,ng
+				s = kstar(i,1)-kstar(i,2)
+				if (s.eq.0) found=.TRUE.
+			end do
+			if (found) then
+				dgn = 6  ! mR
+			else
+				dgn = 1  ! 1
+			end if
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+ 	end select
+ case (25) ! 6mm
+ 	select case (ng)
+ 		case (1)
+ 			dgn = 29 ! 6mm
+ 		case (6)
+ 			if (auvw(3).eq.0) then  
+				dgn = 8 ! m1R
+			else
+ 				dgn = 7 ! m
+			end if
+ 		case (12)
+ 			if (auvw(3).eq.0) then  
+				dgn = 6 ! mR
+			else
+ 				dgn = 1 ! 1
+			end if
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+ 	end select
+ case (24) ! 622
+ 	select case (ng)
+ 		case (2)
+ 			dgn = 28 ! 6mRmR
+ 		case (6)
+			dgn = 9  ! 2mRmR
+ 		case (12)   ! there are three cases that produce mR, and one that produces 1
+ 			found = .FALSE.
+ 			if (auvw(3).eq.0) found=.TRUE.
+ 			do i=1,ng  ! look for [hh.l]
+				s = kstar(i,1)-kstar(i,2)
+				if (s.eq.0) found=.TRUE.
+			end do
+ 			do i=1,ng  ! look for [h -h.l]
+				s = kstar(i,1)+kstar(i,2)
+				if (s.eq.0) found=.TRUE.
+			end do
+ 			if (found) then  
+				dgn = 6 ! mR
+			else
+ 				dgn = 1 ! 1
+			end if
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+ 	end select
+ !------------
+ case (23) ! 6/m
+ 	select case (ng)
+ 		case (2)
+ 			dgn = 27 ! 61R
+ 		case (6)
+ 			dgn = 11 ! 2RmmR 
+ 		case (12)
+			dgn = 4  ! 2R
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+ 	end select
+ case (22) ! -6
+ 	select case (ng)
+ 		case (2)
+ 			dgn = 26 ! 31R
+ 		case (3)
+ 			dgn = 7  ! m 
+ 		case (6)
+			dgn = 1  ! 1
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+ 	end select
+ case (21) ! -6
+ 	select case (ng)
+ 		case (1)
+ 			dgn = 25 ! 6
+ 		case (6)
+			if (auvw(3).eq.0) then
+				dgn = 6  ! mR
+			else
+				dgn = 1  ! 1
+			end if
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+ 	end select
+ !------------
+ case (20) ! -3m
+ 	select case (ng)
+ 		case (2)
+ 			dgn = 24 ! 6RmmR
+ 		case (6)
+			if (auvw(3).eq.0) then
+				found = .FALSE.
+				do i=1,ng
+					s = kstar(i,1)+kstar(i,2)
+					if (s.eq.0) found=.TRUE.
+				end do
+				if (found) then
+					dgn = 11  ! 2RmmR
+				else
+					dgn = 5  ! 21R
+				end if
+			else
+				dgn = 11  ! 2RmmR
+			end if
+  		case (12)
+			dgn = 4  ! 2R
+		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+ 	end select
+ case (19) ! -3m1
+ 	select case (ng)
+ 		case (1)
+ 			dgn = 23 ! 3m
+ 		case (3)
+			if (auvw(3).eq.0) then
+				dgn = 2  ! 1R
+			else
+				dgn = 7  ! m
+			end if
+  		case (6)
+			dgn = 1  ! 1
+		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+ 	end select
+ case (18) ! 321
+ 	select case (ng)
+ 		case (2)
+ 			dgn = 22 ! 3mR
+ 		case (3)
+			dgn = 3  ! 2
+  		case (6)
+			found = .FALSE.
+			do i=1,ng
+				s = kstar(i,1)+kstar(i,2)
+				if (s.eq.0) found=.TRUE.
+			end do
+			if (found) then
+				dgn = 6  ! mR
+			else
+				dgn = 1  ! 1
+			end if
+		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+ 	end select
+ !------------
+ case (17) ! -3
+ 	select case (ng)
+ 		case (2)
+ 			dgn = 21 ! 6R
+ 		case (6)
+ 			dgn = 4  ! 2R 
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+ 	end select
+ case (16) ! 3
+ 	select case (ng)
+ 		case (1)
+ 			dgn = 20 ! 3
+ 		case (3)
+ 			dgn = 1  ! 1 
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+ 	end select
+ !------------
+ case (15) ! 4/mmm
+ 	select case (ng)
+ 		case (2)
+ 			dgn = 19 ! 4mm1R
+ 		case (4)
+ 			dgn = 12 ! 2mm1R 
+ 		case (8)
+			dgn = 11 ! 2RmmR
+ 		case (16)
+ 			dgn = 4  ! 2R
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+ 	end select
+ case (14) ! 4/mmm
+ 	select case (ng)
+ 		case (2)
+ 			dgn = 18 ! 4RmmR
+ 		case (4)
+ 			if (nz.eq.2) then
+				dgn = 9 ! 2mRmR
+			else
+				if (nz.eq.1) then
+					dgn = 8 ! m1R
+				else
+					dgn = 7 ! m
+				end if
+			end if 
+ 		case (8)
+			if (nz.eq.1) then
+				dgn = 6 ! mR
+			else
+				dgn = 1  ! 1
+			end if
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+ 	end select
+ case (13) ! 4mmm
+ 	select case (ng)
+ 		case (1)
+ 			dgn = 17 ! 4mm
+ 		case (4)
+ 			if ( (nz.eq.2).or. ( (nz.eq.1).and.(auvw(3).eq.0))  ) then
+				dgn = 8 ! m1R
+			else
+				dgn = 7 ! m
+			end if 
+ 		case (8)
+			if (nz.eq.1) then
+				dgn = 6 ! mR
+			else
+				dgn = 1  ! 1
+			end if
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+	end select
+ case (12) ! 422
+ 	select case (ng)
+ 		case (2)
+ 			dgn = 16 ! 4mRmR
+ 		case (4)
+			dgn = 9  ! 2mRmR
+ 		case (8)
+ 			auvw = auvw - auvw(1)
+			if ( (auvw(2).ne.0).and.(auvw(3).ne.0) ) then
+				dgn = 1 ! 1
+			else
+				dgn = 6 ! mR
+			end if
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+	end select
+!------------
+ case (11) ! 4/m
+ 	select case (ng)
+ 		case (2)
+ 			dgn = 15 ! 41R
+ 		case (4)
+			dgn = 11 ! 2RmmR
+ 		case (8)
+			dgn = 4  ! 2R
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+	end select
+ case (10) ! -4
+ 	select case (ng)
+ 		case (2)
+ 			dgn = 14 ! 4R
+ 		case (4)
+			if (auvw(3).eq.0) then 
+				dgn = 6 ! mR
+			else
+				dgn = 1 ! 1
+			end if				
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+	end select
+ case (9) ! 4
+ 	select case (ng)
+ 		case (1)
+ 			dgn = 13 ! 4
+ 		case (4)
+			if (auvw(3).eq.0) then 
+				dgn = 6 ! mR
+			else
+				dgn = 1 ! 1
+			end if				
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+	end select
+!------------
+ case (8) ! mmm
+ 	select case (ng)
+ 		case (2)
+ 			dgn = 12 ! 2mm1R
+ 		case (4)
+ 			dgn = 11 ! 2RmmR
+ 		case (8)
+			dgn = 4 ! 2R
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+	end select
+ case (7) ! mm2
+ 	select case (ng)
+ 		case (1)
+ 			dgn = 10 ! 2mm
+ 		case (2)
+ 			if (nz.eq.1) then
+ 				dgn = 8 ! m1R
+ 			else
+				dgn = 7 ! m
+			end if
+ 		case (4)
+ 			if (auvw(3).eq.0) then
+				dgn = 6 ! mR
+			else
+				dgn = 1 ! 1
+			end if
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+	end select
+ case (6) ! 222
+ 	select case (ng)
+ 		case (2)
+ 			dgn = 9 ! 2mRmR
+ 		case (4)
+ 			if (nz.eq.1) then
+				dgn = 6 ! mR
+			else
+				dgn = 1 ! 1
+			end if
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+	end select
+!------------
+ case (5) ! 2/m
+ 	select case (ng)
+ 		case (2)
+ 			if (nz.eq.2) then
+				dgn = 5  ! 21R
+			else
+				dgn = 11 ! 2RmmR
+			end if
+ 		case (4)
+ 			dgn = 4 ! 2R
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+	end select
+ case (4) ! m
+ 	select case (ng)
+ 		case (1)
+ 			if (nz.eq.2) then
+				dgn = 2  ! 1R
+			else
+				dgn = 7 ! m
+			end if
+ 		case (2)
+ 			dgn = 1 ! 1
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+	end select
+ case (3) ! 2
+ 	select case (ng)
+  		case (1)
+			if (nz.eq.2) then
+				dgn = 3 ! 2
+			else
+				dgn = 6 ! mR
+			end if
+ 		case (2)
+			dgn = 1 ! 1
+ 		case default
+			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
+			call Message("(A)")
+	end select
+!------------
+ case (2) ! -1
+ 	dgn = 4 ! 2R
+ case (1) ! 1
+ 	dgn = 1 ! 1
+ case default
+	write (*,*) 'unknown point group'
+	dgn = 0
+end select
+
+end function GetDiffractionGroup
+
+
 
 end module
