@@ -410,7 +410,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
     
   end select  ! grid value
 
-end if ! mapmode.eq.'Standard'
+end if ! mapmode.eq.'Standard' or 'StandardConical'
 
 ! the next type of grid is the one used for the modified Lambert maps in the dynamical EBSD 
 ! programs; this requires some special care, since these mappings are a little trickier than 
