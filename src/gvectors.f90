@@ -96,6 +96,7 @@ type BetheParameterType
 	real(kind=sgl),allocatable	:: strongsg(:)
 	integer(kind=irg),allocatable 	:: strongID(:)
 	integer(kind=sgl),allocatable	:: reflistindex(:)		! used to map strong reflections onto the original reflist
+	integer(kind=sgl),allocatable	:: weakreflistindex(:)		! used to map weak reflections onto the original reflist
 end type BetheParameterType
 
 type(BetheParameterType)	:: BetheParameter
@@ -929,10 +930,12 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
         if (.not.allocated(BetheParameter%weaklist)) allocate(BetheParameter%weaklist(DynNbeams))
         if (.not.allocated(BetheParameter%stronglist)) allocate(BetheParameter%stronglist(DynNbeams))
         if (.not.allocated(BetheParameter%reflistindex)) allocate(BetheParameter%reflistindex(DynNbeams))
+        if (.not.allocated(BetheParameter%weakreflistindex)) allocate(BetheParameter%weakreflistindex(DynNbeams))
 
 	BetheParameter%weaklist = 0
 	BetheParameter%stronglist = 0
 	BetheParameter%reflistindex = 0
+	BetheParameter%weakreflistindex = 0
 
     	rltmpa => reflist%next
 
@@ -993,6 +996,7 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
               		BetheParameter%reflistindex(ig) = nnn
              	else ! it's a weak beam
               		BetheParameter%weaklist(ig) = 1
+              		BetheParameter%weakreflistindex(ig) = nnn
              	end if
           end if
         end if
@@ -1013,7 +1017,14 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
 ! next, we define nns to be the number of strong beams, and nnw the number of weak beams.
 	 BetheParameter%nns = sum(BetheParameter%stronglist)
 	 BetheParameter%nnw = sum(BetheParameter%weaklist)
-
+	 
+! add nns to the weakreflistindex to offset it; this is used for plotting reflections on CBED patterns
+	do ig=2,DynNbeamsLinked
+	  if (BetheParameter%weakreflistindex(ig).ne.0) then
+	    BetheParameter%weakreflistindex(ig) = BetheParameter%weakreflistindex(ig) + BetheParameter%nns
+	  end if
+	end do
+	
 ! We may want to keep track of the total and average numbers of strong and weak beams  
 	 BetheParameter%totweak = BetheParameter%totweak + BetheParameter%nnw
 	 BetheParameter%totstrong = BetheParameter%totstrong + BetheParameter%nns
