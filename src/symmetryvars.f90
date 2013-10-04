@@ -259,7 +259,7 @@ character(10),parameter  :: PGTWD(0:14) = (/ ' none     ','    1     ','    2   
                                              ' 31m [hex]',' 3m1 [cub]',' 3m1 [hex]'/)
 
 !> 10 2D point group orders in International Tables order
-integer(kind=irg),parameter       :: PGTWDorder(0:10) = (/0,1,2,2,4,4,8,3,6,6,12/)
+integer(kind=irg),parameter       :: PGTWDorder(0:14) = (/0,1,2,2,4,4,8,3,6,6,12,3,6,6,6/)
 
 !> inverse table for 2D point groups; this essentially implements the inverse of Table 4 in BESR paper for the Bright Field symmetry.
 integer(kind=irg),parameter       :: PGTWDinverse(12,11) = reshape((/ & 

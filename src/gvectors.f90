@@ -835,7 +835,7 @@ logical,INTENT(IN)			:: IgnoreFoilNormal	!< how to deal with the foil normal
 logical,INTENT(IN),OPTIONAL		:: IncludeSecondOrder	!< second order Bethe potential correction switch
 
 complex(kind=dbl)  			:: czero,pre, weaksum, ughp, uhph
-integer(kind=irg) 		 	:: istat,ir,ic,nn, iweak, istrong, iw, ig, ll(3), gh(3), nnn
+integer(kind=irg) 		 	:: istat,ir,ic,nn, iweak, istrong, iw, ig, ll(3), gh(3), nnn, nweak
 real(kind=sgl)     			:: glen,exer,gg(3), kpg(3), gplen, sgp, lUg, cut1, cut2
 real(kind=dbl)				:: lsfour, weaksgsum 
 logical					:: AddSecondOrder
@@ -942,6 +942,7 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
 ! deal with the transmitted beam first
     nn = 1		! nn counts all the scattered beams that satisfy the cutoff condition
     nnn = 1		! nnn counts only the strong beams
+    nweak = 0		! counts only the weak beams
     BetheParameter%stronglist(nn) = 1   ! make sure that the transmitted beam is always a strong beam ...
     BetheParameter%weaklist(nn) = 0
     BetheParameter%reflistindex(nn) = 1
@@ -995,8 +996,9 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
 	      		BetheParameter%stronglist(ig) = 1
               		BetheParameter%reflistindex(ig) = nnn
              	else ! it's a weak beam
+              		nweak = nweak+1
               		BetheParameter%weaklist(ig) = 1
-              		BetheParameter%weakreflistindex(ig) = nnn
+              		BetheParameter%weakreflistindex(ig) = nweak
              	end if
           end if
         end if

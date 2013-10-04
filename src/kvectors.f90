@@ -49,7 +49,7 @@ use local
 
 IMPLICIT NONE
 
-! derived type definitions
+! derived type definitions 
 
 ! linked list of wave vectors (used by all diffraction programs)
 type kvectorlist  
@@ -538,6 +538,132 @@ if (mapmode.eq.'RoscaLambert') then
 end if
 
 end subroutine Calckvectors
+
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: CalckvectorsSymmetry
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief create a linked list of wave vectors, using the whole pattern symmetry
+!
+!> @details This is a new version to test whether or not we can use the whole pattern
+!> symmetry to determine the relevant list of incident wave vectors; this should be a 
+!> general routine, so that we do not need to consider each symmetry case separately.
+!> This will require a floating point version of the Apply2DPGSymmetry routine in symmetry.f90.
+!
+!> @param k central wave vector
+!> @param ga reciprocal lattice vector normal to k
+!> @param ktmax maximum length of tangential component
+!> @param npx number of vectors along x 
+!> @param npy number of vectors along y 
+!> @param numk total number of wave vectors in list
+!> @param isym Laue group number
+!> @param ijmax used for conical illumination
+!> @param debug when present, an output file with the kselected array is produced
+!
+!> @date   10/03/13 MDG 1.0 original
+!--------------------------------------------------------------------------
+recursive subroutine CalckvectorsSymmetry(k,ga,ktmax,npx,npy,numk,isym,ijmax,debug)
+
+use local
+use io
+use error
+use constants
+use diffraction
+use crystal
+use crystalvars
+use Lambert
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(IN)		:: k(3)		!< initial wave vector
+real(kind=dbl),INTENT(IN)		:: ga(3)	!< "horizontal" reciprocal lattice vector
+real(kind=dbl),INTENT(IN)		:: ktmax	!< maximum length of tangential wave vector
+integer(kind=irg),INTENT(IN)		:: npx		!< number of kvectors along x
+integer(kind=irg),INTENT(IN)		:: npy		!< number of kvectors along y
+integer(kind=irg),INTENT(OUT)		:: numk		!< total number of kvectors in linked list
+integer(kind=irg),INTENT(IN)		:: isym		!< Laue symmetry group number 
+integer(kind=irg),INTENT(INOUT)	:: ijmax	!< max parameter used for Conical and StandardConical modes
+logical,INTENT(IN),OPTIONAL		:: debug
+
+integer(kind=irg),allocatable		:: kselected(:,:)	!< keeps track of which k-vectors have already been considered
+
+integer(kind=irg)       		:: istat,i,j, iequiv(2,12), nequiv, ii, jj, nx, ny
+real(kind=dbl)				:: glen, gan(3), gperp(3), kstar(3), delta
+logical					:: hexgrid = .FALSE.
+character(3)				:: grid
+
+nx = 2*npx
+ny = 2*npy
+allocate(kselected(-nx:nx,-ny:ny))
+
+! initialize the kselected array to 0
+kselected = 0
+
+write (*,*) 'CalckvectorsSymmetry ',npx, npy, shape(kselected)
+
+! compute geometrical factors 
+ glen = CalcLength(ga,'r')              		! length of ga
+ gan = ga/glen                                 	! normalized ga
+ delta = 2.0*ktmax*glen/(2.0*float(npx)+1.0)   	! grid step size in nm-1 
+ call TransSpace(k,kstar,'d','r')       		! transform incident direction to reciprocal space
+ call CalcCross(ga,kstar,gperp,'r','r',0)      	! compute g_perp = ga x k
+ call NormVec(gperp,'r')                       	! normalize g_perp
+ call NormVec(kstar,'r')                       	! normalize reciprocal beam vector
+
+! allocate the head and tail of the linked list
+ allocate(khead,stat=istat)   				! allocate new value
+ if (istat.ne.0) call FatalError('Calckvectors','unable to allocate khead pointer')
+ ktail => khead                      			! tail points to new value
+ nullify(ktail%next)                			! nullify next in new value
+ numk = 1                          			! keep track of number of k-vectors so far
+ ktail%i = 0                             		! i-index of beam
+ ktail%j = 0                             		! j-index of beam
+ ktail%kt = (/0.0,0.0,0.0/)				! no tangential component for central beam direction
+ ktail%k = kstar/mLambda				! divide by wavelength
+ ktail%kn = CalcDot(ktail%k,kstar,'r')			! normal component
+ kselected(0,0) = 2
+
+! next, we scan over the entire range of potential beam directions, defined by npx and npy along with
+! the conical truncation parameter ijmax; for each point we check whether or not it has been considered
+! before; it it has, we move on, if it hasn't, then we add this point to the linked list in the usual way.
+! we do this by computing the equivalent (i,j) using the Whole Pattern symmetry.
+     do i=-nx,nx
+      do j=-ny,ny
+  	if (kselected(i,j).eq.0) then
+          if ((i*i+j*j).le.ijmax) then
+! first of all, add the present point to the linked list
+	   call Add_knode(i,j,numk,delta,gan,gperp,kstar) 
+! then compute the equivalent points and flag all of them in kselected
+	   call Apply2DPGSymmetry(i,j,isym,iequiv,nequiv)
+	   kselected(iequiv(1,1),iequiv(2,1)) = 2
+	   if (nequiv.gt.1) then 
+	    do jj=2,nequiv
+	     kselected(iequiv(1,jj),iequiv(2,jj)) = 1
+	    end do
+	   end if
+        end if
+       end if
+      end do
+     end do
+! the result of doing things this way is that the collection of incident beam directions may 
+! have a strange collective shape, but after application of the 2D PG symmetry, things should 
+! look ok.
+
+! for debugging purposes, we can write the kselected array to a file.
+if (present(debug)) then
+  open(unit=20,file='kselected.data',status='unknown',form='unformatted')
+  write (20) 2*nx+1,2*ny+1
+  write (20) kselected
+  close(unit=20,status='keep')
+end if
+
+! and clean up the kselected array
+deallocate(kselected)
+
+end subroutine CalckvectorsSymmetry
 
 
 !--------------------------------------------------------------------------

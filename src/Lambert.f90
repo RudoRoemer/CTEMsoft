@@ -2031,6 +2031,10 @@ end subroutine Apply2DLaueSymmetry
 !
 !> @brief Apply the 2D point group symmetry to a pair of coordinates 
 !
+!> @details This routine returns a set of unique equivalent coordinates for the
+!> input point.  Note that for special points, the number nequiv must be reduced
+!> from its point group order value.
+!
 !> @param ipx x-coordinate
 !> @param ipy y-coordinate
 !> @param isym 2D point group number
@@ -2054,19 +2058,44 @@ integer(kind=irg),INTENT(IN)	:: isym
 integer(kind=irg),INTENT(OUT)	:: iequiv(2,12)
 integer(kind=irg),INTENT(OUT)	:: nequiv
  
-integer(kind=irg)		:: i
+integer(kind=irg)		:: i, j, k, pequiv(2,12), mequiv
+real(kind=sgl),parameter	:: eps = 1.0E-6 
+real(kind=sgl)			:: diff
+logical				:: newp
 
 ! make sure that the symmetry matrices have been predefined; if not, then
 ! compute them first
 if (TDPG%SYM_pgnum.ne.isym) call Generate2DSymmetry(isym)
 
-! set the order
-nequiv = TDPG%SYM_MATnum
+! set the order;  note that this may need to reduced for special points
+mequiv = TDPG%SYM_MATnum
 iequiv = 0
+pequiv = 0
 
 ! compute the transformed coordinates
-do i=1,nequiv
-  iequiv(1:2,i) = matmul( (/ ipx, ipy /), TDPG%SYM_direc(i,1:2,1:2) )
+do i=1,mequiv
+  pequiv(1:2,i) = matmul( (/ ipx, ipy /), TDPG%SYM_direc(i,1:2,1:2) )
+end do
+
+! the first point is always unique, so simply copy it
+nequiv = 1
+iequiv(1:2,1) = pequiv(1:2,1)
+
+! next, identify double entries and remove them from the list
+do i=2,mequiv
+  newp = .TRUE.
+  do j=1,nequiv
+   diff= sum(abs(pequiv(1:2,i)-iequiv(1:2,j)))
+   if (diff.le.eps) then
+     newp  = .FALSE.
+   endif
+  end do
+
+! yes, it is a new point
+  if (newp) then
+   nequiv=nequiv+1
+   iequiv(1:2,nequiv) = pequiv(1:2,i)
+  end if
 end do
 
 ! that's it.
