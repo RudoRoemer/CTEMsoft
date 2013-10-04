@@ -91,7 +91,7 @@ use crystalvars
 use diffraction
 use gvectors
 use kvectors
-use Lambert, ONLY: Apply2DLaueSymmetry
+use Lambert, ONLY: Apply2DPGSymmetry
 use postscript, ONLY: GetIndex
 use symmetry
 use math
@@ -104,10 +104,10 @@ IMPLICIT NONE
 
 real(kind=sgl)      			:: ktmax, io_real(3), voltage, convergence, &
                        		bragg,c(3),RR,gx(3),gy(3),gg(3), thetac, startthick, thickinc, &
-                       		sc, scmax, PX, qx, qy, frac, dmin, s
+                       		sc, scmax, PX, qx, qy, frac, dmin, s, scf
 integer(kind=irg)   			:: ijmax,ga(3),gb(3),k(3),cnt, skip, numthick, istat, dgn, badpoints, &
                        		newcount,count_rate,count_max, io_int(6), ii, i, j, isym, ir, fn(3), &
-                       		npx, npy, numt, numk, npix, ik, ip, jp, maxholz, iequiv(2,12), nequiv
+                       		npx, npy, numt, numk, npix, ik, ip, jp, maxholz, iequiv(2,12), nequiv, it
 character(3)				:: method
 character(fnlen)     			:: outname, nmlfile, xtalname
 
@@ -116,7 +116,7 @@ real(kind=sgl),parameter     	:: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/),
 real(kind=sgl),allocatable    	:: disk(:,:,:), thick(:)
 integer(kind=irg),allocatable 	:: diskoffset(:,:)
 real(kind=sgl),allocatable    	:: inten(:,:)
-logical				:: usesym=.FALSE., bp
+logical				:: usesym=.TRUE., bp
 
 namelist /inputlist/ stdout,xtalname, voltage, camlen, k, fn, npix, dmin, convergence, startthick, thickinc, numthick, outname
 
@@ -213,11 +213,12 @@ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
   thick = startthick + thickinc* (/ (float(i),i=0,numt-1) /)
 
 ! determine all independent incident beam directions (use a linked list starting at khead)
-  call Calckvectors(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,'Conical')
-
-! This needs to be modified to move away from the 900x900 image and make it variable
-! The original legacy code was suitable for dumping the results in a postscript file,
-! hence the conversion to dpi
+!  call Calckvectors(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,'Conical')
+  isym = WPPG(dgn)
+!  isym=1
+!  usesym=.FALSE.
+  call CalckvectorsSymmetry(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,'Conical')
+!  write (*,*) k,';',ga,';',ktmax,';',npx,npy,numk,isym,ijmax,npix
   
 ! allocate the disk variable which will hold the entire computed pattern
   allocate(disk(numt,npix,npix))
@@ -265,6 +266,7 @@ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
     end if
     rltmpa => rltmpa%next
   end do
+write (*,*) 'first point at ',diskoffset(1,1:3), BetheParameter%reflistindex(1), BetheParameter%weakreflistindex(1)
 
   frac = 0.05
 
@@ -276,7 +278,6 @@ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
 
   call flush(stdout)
  
-
 ! time the computation
   cnt = 0
   call system_clock(cnt,count_rate,count_max)
@@ -315,22 +316,32 @@ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
   
 ! we combine the reflistindex and weakreflistindex into one to make the CBED drawing.
 BetheParameter%reflistindex = BetheParameter%reflistindex + BetheParameter%weakreflistindex
-
+ 
 ! and copy the strong intensities in the correct locations
    do i=1,DynNbeamsLinked
     if ( (diskoffset(i,1).eq.1).and.(BetheParameter%reflistindex(i).ne.0)) then
-     if (usesym) then ! use Laue group symmetry
+     if (usesym) then ! use 2D point group symmetry
       ip = diskoffset(i,2) - ktmp%i
       jp = diskoffset(i,3) + ktmp%j
-      call Apply2DLaueSymmetry(ip,jp,isym,iequiv,nequiv)
+      call Apply2DPGSymmetry(ip,jp,isym,iequiv,nequiv)
       iequiv = iequiv+PX
+      scf = float(nequiv) / float(PGTWDorder(isym))	! this is a normalization factor to avoid double counting on symmetry elements
+!      if (scf.ne.1.0) write (*,*) ktmp%i, ktmp%j, nequiv, scf
 
       do ii=1,nequiv
 ! is this point inside the viewing square ?
         ip = iequiv(1,ii)
         jp = iequiv(2,ii)
         if (((ip.ge.1).and.(ip.le.npix)).and.((jp.ge.1).and.(jp.le.npix))) then
-          disk(1:numt,ip,jp) = inten(1:numt,BetheParameter%reflistindex(i))
+         if ( (BetheParameter%reflistindex(i).eq.1) ) then
+          disk(1:numt,ip,jp) = disk(1:numt,ip,jp) + inten(1:numt,BetheParameter%reflistindex(i))
+ 	 else
+!          disk(1:numt,ip,jp) = disk(1:numt,ip,jp) + scf * inten(1:numt,BetheParameter%reflistindex(i))
+! this is a placeholder; it is not technically correct to do this, but the result looks quite reasonable
+          do it=1,numt
+           disk(it,ip,jp) = maxval( (/ inten(it,BetheParameter%reflistindex(i)), disk(it,ip,jp) /) )
+          end do
+         end if
         end if
       end do
      else  ! do not use symmetry
