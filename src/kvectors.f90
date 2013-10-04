@@ -196,7 +196,7 @@ if (mapmode.eq.'Conical') then ! used for CBED without symmetry application, inc
   do j=jmin,jmax
    if (.not.((i.eq.0).and.(j.eq.0))) then  		! the point (0,0) has already been taken care of
     if ((i**2+j**2).le.ijmax) then 			! only directions inside the incident cone
-     call Add_knode(i,j,numk,delta,gan,gperp,kstar) 	! add k-vector to linked list
+     call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 	! add k-vector to linked list
     end if
    end if
   end do
@@ -279,7 +279,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
    case('srw')		! systematic row incident beam orientations
      do i=imin,imax
       if (i.ne.0) then  				! the point (0,0) has already been taken care of
-       call Add_knode(i,0,numk,delta,gan,gperp,kstar) 
+       call Add_knode(i,0,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
       end if
      end do
 
@@ -288,7 +288,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
       do j=jmin,jmax
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar) 
+         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
         end if
        end if
       end do
@@ -300,7 +300,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
        if ((j.eq.0).and.(i.lt.0)) cycle jloop_sqb   	! skip the points  (i<0,0)
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar) 
+         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
         end if
        end if
       end do jloop_sqb   
@@ -311,7 +311,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
       do i=j,imax
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar) 
+         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
         end if
        end if
       end do
@@ -322,7 +322,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
       do i=1-Kdelta(j,0),npx
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar,hexgrid) 
+         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
        end if
       end do
@@ -333,7 +333,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
       do i=j,npx
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar,hexgrid) 
+         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
        end if
       end do
@@ -344,7 +344,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
       do i=1-Kdelta(j,0)-j,npx-j
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar,hexgrid) 
+         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
        end if
       end do
@@ -355,7 +355,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
       do i=0,npx-j
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar,hexgrid) 
+         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
        end if
       end do
@@ -366,7 +366,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
       do i=1-Kdelta(j,0),npx-j
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar,hexgrid) 
+         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
        end if
       end if
       end do
@@ -377,7 +377,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
       do i=j,npx-j
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar,hexgrid) 
+         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
        end if
       end do
@@ -388,7 +388,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
       do i=j/2,min(2*j,npy)
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar,hexgrid) 
+         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
        end if
       end do
@@ -399,7 +399,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
       do i=-j/2,min(j,npy-1)
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar,hexgrid) 
+         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
        end if
       end do
@@ -561,11 +561,12 @@ end subroutine Calckvectors
 !> @param numk total number of wave vectors in list
 !> @param isym Laue group number
 !> @param ijmax used for conical illumination
+!> @param klaue fractional Laue center coordinates
 !> @param debug when present, an output file with the kselected array is produced
 !
 !> @date   10/03/13 MDG 1.0 original
 !--------------------------------------------------------------------------
-recursive subroutine CalckvectorsSymmetry(k,ga,ktmax,npx,npy,numk,isym,ijmax,debug)
+recursive subroutine CalckvectorsSymmetry(k,ga,ktmax,npx,npy,numk,isym,ijmax,klaue,debug)
 
 use local
 use io
@@ -586,14 +587,17 @@ integer(kind=irg),INTENT(IN)		:: npy		!< number of kvectors along y
 integer(kind=irg),INTENT(OUT)		:: numk		!< total number of kvectors in linked list
 integer(kind=irg),INTENT(IN)		:: isym		!< Laue symmetry group number 
 integer(kind=irg),INTENT(INOUT)	:: ijmax	!< max parameter used for Conical and StandardConical modes
+real(kind=sgl),INTENT(IN)		:: klaue(2)	!< fractional Laue center coordinates
 logical,INTENT(IN),OPTIONAL		:: debug
 
 integer(kind=irg),allocatable		:: kselected(:,:)	!< keeps track of which k-vectors have already been considered
 
 integer(kind=irg)       		:: istat,i,j, iequiv(2,12), nequiv, ii, jj, nx, ny
-real(kind=dbl)				:: glen, gan(3), gperp(3), kstar(3), delta
+real(kind=dbl)				:: glen, gan(3), gperp(3), kstar(3), delta, Lauexy(2)
 logical					:: hexgrid = .FALSE.
 character(3)				:: grid
+real(kind=sgl)				:: kt(3),kr(3)
+real(kind=sgl)				:: ktlen
 
 nx = 2*npx
 ny = 2*npy
@@ -602,10 +606,9 @@ allocate(kselected(-nx:nx,-ny:ny))
 ! initialize the kselected array to 0
 kselected = 0
 
-write (*,*) 'CalckvectorsSymmetry ',npx, npy, shape(kselected)
-
 ! compute geometrical factors 
  glen = CalcLength(ga,'r')              		! length of ga
+ Lauexy = glen * klaue					! scaled Laue center coordinates
  gan = ga/glen                                 	! normalized ga
  delta = 2.0*ktmax*glen/(2.0*float(npx)+1.0)   	! grid step size in nm-1 
  call TransSpace(k,kstar,'d','r')       		! transform incident direction to reciprocal space
@@ -621,12 +624,20 @@ write (*,*) 'CalckvectorsSymmetry ',npx, npy, shape(kselected)
  numk = 1                          			! keep track of number of k-vectors so far
  ktail%i = 0                             		! i-index of beam
  ktail%j = 0                             		! j-index of beam
- ktail%kt = (/0.0,0.0,0.0/)				! no tangential component for central beam direction
- ktail%k = kstar/mLambda				! divide by wavelength
- ktail%kn = CalcDot(ktail%k,kstar,'r')			! normal component
+ 
+! use the Laue center coordinates to define the tangential component of the incident wave vector
+ kt = - Lauexy(1)*gan - Lauexy(2)*gperp  		! tangential component of k
+ ktail%kt = kt                    			! store tangential component of k
+ ktlen = CalcLength(kt,'r')**2      			! squared length of tangential component
+
+ kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar 	! complete wave vector
+ ktail%k = kr                     			! store in pointer list
+ ktail%kn = CalcDot(ktail%k,kstar,'r')    		! normal component of k
+  
  kselected(0,0) = 2
 
-! next, we scan over the entire range of potential beam directions, defined by npx and npy along with
+ if (maxval(abs(klaue)).eq.0.0) then 			! zone axis orientation, so we should use symmetry
+! we scan over the entire range of potential beam directions, defined by npx and npy along with
 ! the conical truncation parameter ijmax; for each point we check whether or not it has been considered
 ! before; it it has, we move on, if it hasn't, then we add this point to the linked list in the usual way.
 ! we do this by computing the equivalent (i,j) using the Whole Pattern symmetry.
@@ -635,7 +646,7 @@ write (*,*) 'CalckvectorsSymmetry ',npx, npy, shape(kselected)
   	if (kselected(i,j).eq.0) then
           if ((i*i+j*j).le.ijmax) then
 ! first of all, add the present point to the linked list
-	   call Add_knode(i,j,numk,delta,gan,gperp,kstar) 
+	   call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
 ! then compute the equivalent points and flag all of them in kselected
 	   call Apply2DPGSymmetry(i,j,isym,iequiv,nequiv)
 	   kselected(iequiv(1,1),iequiv(2,1)) = 2
@@ -648,9 +659,19 @@ write (*,*) 'CalckvectorsSymmetry ',npx, npy, shape(kselected)
        end if
       end do
      end do
-! the result of doing things this way is that the collection of incident beam directions may 
-! have a strange collective shape, but after application of the 2D PG symmetry, things should 
-! look ok.
+  else							! not a zone axis, so no symmmetry
+     do i=-nx,nx
+      do j=-ny,ny
+  	if (kselected(i,j).eq.0) then
+          if ((i*i+j*j).le.ijmax) then
+! first of all, add the present point to the linked list
+	    call Add_knode(i,j,numk,delta,gan,gperp,kstar,sngl(Lauexy))
+	    kselected(i,j) = 2
+        end if
+       end if
+      end do
+     end do
+  end if
 
 ! for debugging purposes, we can write the kselected array to a file.
 if (present(debug)) then
@@ -681,11 +702,14 @@ end subroutine CalckvectorsSymmetry
 !> @param gan normalized g-vector
 !> @param gperp normalized perpendicular g-vector
 !> @param kstar reciprocal components of wave vector
-!> @param hexgrid (optional) indicates hexagonl sampling if present
+!> @param klaue fractional Laue center coordinates
+!> @param hexgrid (optional) indicates hexagonal sampling if present
+!
+!> @todo implement Laue center coordinates for hexagonal grid
 !
 !> @date   04/29/13 MDG 1.0 original
 !--------------------------------------------------------------------------
-subroutine Add_knode(i,j,numk,delta,gan,gperp,kstar,hexgrid)
+subroutine Add_knode(i,j,numk,delta,gan,gperp,kstar,klaue,hexgrid)
 
 use local
 use error
@@ -702,11 +726,13 @@ real(kind=dbl),INTENT(IN)		:: delta
 real(kind=dbl),INTENT(IN)		:: gan(3)
 real(kind=dbl),INTENT(IN)		:: gperp(3)
 real(kind=dbl),INTENT(IN)		:: kstar(3)
+real(kind=sgl),INTENT(IN)		:: klaue(2)
 logical,INTENT(IN),OPTIONAL		:: hexgrid
 
 real(kind=sgl)				:: kt(3),kr(3)
 real(kind=sgl)				:: ktlen
 integer(kind=irg)			:: istat
+
 
 allocate(ktail%next,stat=istat)  		! allocate new value
 if (istat.ne.0) call FatalError('Add_knode:',' unable to allocate pointer')
@@ -722,7 +748,7 @@ if (present(hexgrid)) then
   ktail%kt = kt                    		! store tangential component of k
   ktlen = CalcLength(kt,'r')**2   		! squared length of tangential component
 else
-  kt = -float(i)*delta*gan - float(j)*delta*gperp  ! tangential component of k
+  kt = -(klaue(1)+float(i)*delta)*gan - (klaue(2)+float(j)*delta)*gperp  ! tangential component of k
   ktail%kt = kt                    		! store tangential component of k
   ktlen = delta**2*(i*i+j*j)      		! squared length of tangential component
 end if

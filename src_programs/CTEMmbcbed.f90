@@ -104,7 +104,7 @@ IMPLICIT NONE
 
 real(kind=sgl)      			:: ktmax, io_real(3), voltage, convergence, &
                        		bragg,c(3),RR,gx(3),gy(3),gg(3), thetac, startthick, thickinc, &
-                       		sc, scmax, PX, qx, qy, frac, dmin, s, scf
+                       		sc, scmax, PX, qx, qy, frac, dmin, s, klaue(2)
 integer(kind=irg)   			:: ijmax,ga(3),gb(3),k(3),cnt, skip, numthick, istat, dgn, badpoints, &
                        		newcount,count_rate,count_max, io_int(6), ii, i, j, isym, ir, fn(3), &
                        		npx, npy, numt, numk, npix, ik, ip, jp, maxholz, iequiv(2,12), nequiv, it
@@ -118,7 +118,8 @@ integer(kind=irg),allocatable 	:: diskoffset(:,:)
 real(kind=sgl),allocatable    	:: inten(:,:)
 logical				:: usesym=.TRUE., bp
 
-namelist /inputlist/ stdout,xtalname, voltage, camlen, k, fn, npix, dmin, convergence, startthick, thickinc, numthick, outname
+namelist /inputlist/ stdout,xtalname, voltage, camlen, k, fn, npix, dmin, convergence, & 
+                     startthick, thickinc, numthick, outname, klaue
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 xtalname = 'undefined'		! initial value to check that the keyword is present in the nml file
@@ -126,6 +127,7 @@ voltage = 200000.0		! acceleration voltage [V]
 camlen = 1000.0			! camera length [mm]
 k = (/ 0, 0, 1 /)		! beam direction [direction indices]
 fn = (/ 0, 0, 1 /)		! foil normal [direction indices]
+klaue = (/ 0.0, 0.0 /)		! fractional coordinates of Laue circle center
 npix = 900			! size of the (square) computed CBED pattern
 dmin = 0.015			! smallest d-spacing to include in dynamical matrix [nm]
 convergence = 20.0		! beam convergence angle [mrad]
@@ -176,8 +178,6 @@ end if
  dgn = GetPatternSymmetry(k,j,.TRUE.)
  isym = WPPG(dgn) ! WPPG lists the whole pattern point group numbers vs. diffraction group numbers
 
-write (*,*) 'dgn = ',dgn,'; isym = ',isym
-
 ! determine the shortest reciprocal lattice points for this zone
  call ShortestG(k,ga,gb,isym)
  io_int(1:3)=ga(1:3)
@@ -185,9 +185,9 @@ write (*,*) 'dgn = ',dgn,'; isym = ',isym
  call WriteValue('Reciprocal lattice vectors : ', io_int, 6,"('(',3I3,') and (',3I3,')',/)")
 
 ! construct the list of all possible reflections
-method = 'ALL'
-maxholz = 0
-call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
+ method = 'ALL'
+ maxholz = 0
+ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
 
 ! enter range of incident beam directions
   bragg = CalcDiffAngle(ga(1),ga(2),ga(3))*0.5
@@ -206,19 +206,24 @@ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
   call WriteValue('Number of image pixels along diameter of central disk = ', io_int, 1, "(I4)")
   mess=' '; call Message("(A/)")
   
-  ijmax = float(npx)**2   ! truncation value for beam directions
 ! get number of thicknesses for which to compute the CBED pattern
   numt = numthick
   allocate(thick(numt),stat=istat)
   thick = startthick + thickinc* (/ (float(i),i=0,numt-1) /)
 
+! if the Laue center is at the origin, then we can use symmetry groups to 
+! speed up the simulation; otherwise we have to cover each incident wave
+! vector separately.
+  if (maxval(abs(klaue)).eq.0.0) then
+    usesym=.TRUE.
+  else
+    usesym=.FALSE.
+  end if
+
 ! determine all independent incident beam directions (use a linked list starting at khead)
-!  call Calckvectors(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,'Conical')
   isym = WPPG(dgn)
-!  isym=1
-!  usesym=.FALSE.
-  call CalckvectorsSymmetry(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,'Conical')
-!  write (*,*) k,';',ga,';',ktmax,';',npx,npy,numk,isym,ijmax,npix
+  ijmax = float(npx)**2   ! truncation value for beam directions
+  call CalckvectorsSymmetry(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,klaue)
   
 ! allocate the disk variable which will hold the entire computed pattern
   allocate(disk(numt,npix,npix))
@@ -266,7 +271,6 @@ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
     end if
     rltmpa => rltmpa%next
   end do
-write (*,*) 'first point at ',diskoffset(1,1:3), BetheParameter%reflistindex(1), BetheParameter%weakreflistindex(1)
 
   frac = 0.05
 
@@ -325,8 +329,6 @@ BetheParameter%reflistindex = BetheParameter%reflistindex + BetheParameter%weakr
       jp = diskoffset(i,3) + ktmp%j
       call Apply2DPGSymmetry(ip,jp,isym,iequiv,nequiv)
       iequiv = iequiv+PX
-      scf = float(nequiv) / float(PGTWDorder(isym))	! this is a normalization factor to avoid double counting on symmetry elements
-!      if (scf.ne.1.0) write (*,*) ktmp%i, ktmp%j, nequiv, scf
 
       do ii=1,nequiv
 ! is this point inside the viewing square ?
@@ -336,8 +338,9 @@ BetheParameter%reflistindex = BetheParameter%reflistindex + BetheParameter%weakr
          if ( (BetheParameter%reflistindex(i).eq.1) ) then
           disk(1:numt,ip,jp) = disk(1:numt,ip,jp) + inten(1:numt,BetheParameter%reflistindex(i))
  	 else
-!          disk(1:numt,ip,jp) = disk(1:numt,ip,jp) + scf * inten(1:numt,BetheParameter%reflistindex(i))
 ! this is a placeholder; it is not technically correct to do this, but the result looks quite reasonable
+! it works fine when there is no overlap between diffraction disks, but when there is, then the result will
+! be incorrect.  This should be noted in the manual. 
           do it=1,numt
            disk(it,ip,jp) = maxval( (/ inten(it,BetheParameter%reflistindex(i)), disk(it,ip,jp) /) )
           end do
