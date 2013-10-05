@@ -50,6 +50,7 @@
 program CTEMlacbed
 
 use local
+use files
 use io
 
 IMPLICIT NONE
@@ -79,6 +80,7 @@ end program CTEMlacbed
 !> @date 11/29/01  MDG 1.0 original
 !> @date 04/08/13  MDG 2.0 rewrite
 !> @date 05/14/13  MDG 2.1 replaced IO by namelist file
+!> @date 10/04/13  MDG 3.0 adaptation for new symmetry routines and output
 !--------------------------------------------------------------------------
 subroutine LACBEDpattern(nmlfile)
 
@@ -104,10 +106,10 @@ character(fnlen),INTENT(IN)	:: nmlfile
 
 real(kind=sgl)      		:: laL,kt,z0,thc,thb,hkl(3),ind(3),ktmax, io_real(3), thickval(1), &
                        	   dom,glen,qr,qi,bg,xgpz,bragg,c(3),RR,gx(3),gy(3),gg(3), thetac, &
-                       	   sc, scmax, qx, qy, frac, dmin, convergence, voltage, startthick, thickinc
+                       	   sc, scmax, qx, qy, frac, dmin, convergence, voltage, startthick, thickinc, klaue(2)
 integer(kind=irg)   		:: g(3),ira,dpcnt,ppi,ijmax,ga(3),gb(3),k(3),fcnt,ccnt,cnt,fn(3), PX, PY, numthick,  &
                       		   ii, newcount,count_rate,count_max, io_int(6), i, j, isym, ir, order, nn, skip, refpick, &
-                      		  iorder, npx, npy, numt, im, numk, npix, ik, ip, jp, maxholz, numpix, istat, selection(3)
+                      		  iorder, npx, npy, numt, im, numk, npix, ik, ip, jp, maxholz, numpix, istat, dgn, nbeams
 character(1)        		:: ans
 character(3)			:: method
 character(fnlen)     		:: outname, tname, xtalname
@@ -116,27 +118,27 @@ character(fnlen)     		:: outname, tname, xtalname
 complex(kind=sgl)   		:: czero
 logical             		:: overlap,np,first
 real(kind=sgl),parameter     	:: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/),yoff(0:5)=(/6.0,6.0,3.0,3.0,0.0,0.0/)
-real(kind=sgl),allocatable    	:: disk(:,:,:), thickarray(:,:), thick(:)
+real(kind=sgl),allocatable    	:: disk(:,:,:,:), thickarray(:,:), thick(:)
 integer(kind=irg),allocatable 	:: diskoffset(:,:)
 real(kind=sgl),allocatable    	:: inten(:,:)
 
 
 namelist /inputlist/ stdout, xtalname, voltage, camlen, k, fn, dmin, convergence, &
-                              startthick, thickinc, numthick, tname, outname, selection
+                              startthick, thickinc, numthick, outname, npix
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 xtalname = 'undefined'		! initial value to check that the keyword is present in the nml file
-voltage = 200000.0			! acceleration voltage [V]
+stdout = 6			! standard output
+voltage = 200000.0		! acceleration voltage [V]
 camlen = 1000.0			! camera length [mm]
-k = (/ 0, 0, 1 /)			! beam direction [direction indices]
-fn = (/ 0, 0, 1 /)			! foil normal [direction indices]
-dmin = 0.025				! smallest d-spacing to include in dynamical matrix [nm]
-convergence = 20.0			! beam convergence angle [mrad]
-startthick = 10.0			! starting thickness [nm]; if negative, then thickness profile file will be read
-tname = 'thickness.data'		! thickness profile filename, used if startthick<0
+k = (/ 0, 0, 1 /)		! beam direction [direction indices]
+fn = (/ 0, 0, 1 /)		! foil normal [direction indices]
+dmin = 0.025			! smallest d-spacing to include in dynamical matrix [nm]
+convergence = 20.0		! beam convergence angle [mrad]
+startthick = 10.0		! starting thickness [nm]
 thickinc = 10.0			! thickness increment
-numthick = 10				! number of increments
-selection = (/ 0, 0, 0/)		! default reflection to use for LACBED pattern
+numthick = 10			! number of increments
+npix = 512			! output arrays will have size npix x npix
 outname = 'lacbedout.data'	! output filename
 
 ! read the namelist file
@@ -154,7 +156,7 @@ end if
  call CTEMsoft
 
  mess = 'Input parameter list: '; call Message("(A)")
- write (*,NML=inputlist)
+ write (stdout,NML=inputlist)
 
 ! first get the crystal data and microscope voltage
  SG%SYM_reduce=.TRUE.
@@ -173,15 +175,11 @@ end if
  do i=1,32
   if (SGPG(i).le.cell % SYM_SGnum) j=i
  end do
-! and the Bright Field symmetry, and print some information
- call BFsymmetry(k,j,isym,ir)
- io_int(1:3) = k(1:3)
- call WriteValue('', io_int, 3, "(//,' ','[',3I2,'] has Bright Field symmetry ',$)")
- mess = PGTWD(isym)
- call Message("(A,$)")
- io_int(1) = ir 
- call WriteValue('; order = ',io_int, 1, "(I4,//)")
 
+! use the new routine to get the whole pattern 2D symmetry group, since that
+! is the one that determines the independent beam directions.
+ dgn = GetPatternSymmetry(k,j,.TRUE.)
+ isym = WPPG(dgn) ! WPPG lists the whole pattern point group numbers vs. diffraction group numbers
 
 ! determine the shortest reciprocal lattice points for this zone
  call ShortestG(k,ga,gb,isym)
@@ -189,74 +187,73 @@ end if
  io_int(4:6)=gb(1:3)
  call WriteValue(' Reciprocal lattice vectors : ', io_int, 6,"('(',3I3,') and (',3I3,')',/)")
 
+! construct the list of all possible reflections
+ method = 'ALL'
+ maxholz = 0
+ thetac = convergence/1000.0
+ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz,thetac)
 
 ! determine range of incident beam directions
-  bragg = CalcDiffAngle(ga(1),ga(2),ga(3))*0.5*1000.0
-
-!  call ReadValue(' Enter the beam convergence angle theta_c in mrad: ', io_real, 1)
-  thetac = convergence/1000.0
+  bragg = CalcDiffAngle(ga(1),ga(2),ga(3))*0.5
   
 ! convert to ktmax along ga
-  ktmax = 0.5*thetac*1000.0/bragg
+  ktmax = 0.5*thetac/bragg
 
-! compute number of pixels along diameter of central disk for given camera length
-  RR = 300.0/25.4   ! dots per millimeter for 300 dots per inch
-  npx = nint(RR*camlen*thetac)
+write (*,*) 'ktmax = ',ktmax
+
+! the number of pixels across the disk is equal to 2*npix + 1
+  npx = npix
   npy = npx
-  io_int(1) = 2.0*npx
+  io_int(1) = 2.0*npx + 1
   call WriteValue('Number of image pixels along diameter of central disk = ', io_int, 1, "(I4)")
+  mess=' '; call Message("(A/)")
+  
+! get number of thicknesses for which to compute the LACBED disk patterns
+  numt = numthick
+  allocate(thick(numt),stat=istat)
+  thick = startthick + thickinc* (/ (float(i),i=0,numt-1) /)
 
+! set parameters for wave vector computation
+  klaue = (/ 0.0, 0.0 /)
   ijmax = float(npx)**2   ! truncation value for beam directions
-! thickness information  [this needs to be changed for Bloch output]
-  if (startthick.gt.0.0) then
-    mess = ' This program will compute LACBED patterns for a series of thicknesses.'; call Message("(/A/)")
-    numt = numthick
-    allocate(thick(numt),stat=istat)
-    thick = startthick + thickinc* (/ (float(i),i=0,numt-1) /)
-  else
-     mess = ' This program will compute an LACBED pattern for a specific thicknesses profile.'; call Message("(/A/)")
-! this hasn't been programmed yet; will require a little work; make dims variable
-     open(UNIT=dataunit,FILE=trim(tname),STATUS='old',FORM='unformatted')
-     allocate(thickarray(900,900),stat=istat)
-     read(UNIT=dataunit) numpix
-     if (numpix.ne.900) call FatalError('LACBED ',' thickness array dimensions do not match required size')
-     read(UNIT=dataunit) thickarray
-     close(UNIT=dataunit,STATUS='keep')
-     numt = 1
-  end if  
 
 ! determine all independent incident beam directions (use a linked list starting at khead)
-! we're using the Conical method since we do want to make use of symmetry
-! operations, but the illumination must be limited to a cone.  
-  call Calckvectors(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,'Conical')
+!  isym = WPPG(dgn)
 
+! for now, the solution to the symmetry problem is to do the computation for the entire 
+! illumination cone without application of symmetry.  
 
-! construct the list of all possible reflections
-! this needs a little work because we really need to create a master list with ALL
-! reflections that will be needed for at least one beam direction; furthermore, this 
-! requires figuring out which reflections are strong or weak or absent.
-method = 'ALL'
-maxholz = 0	! not used
-call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
- 
+  isym = 1
+  call CalckvectorsSymmetry(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,klaue,.TRUE.)
 
-
-! allocate the disk variable which will hold the entire computed pattern
-  npix = int(3.0*300.0)   ! 3 inches wide at 300 dpi
-  allocate(disk(numt,npix,npix))
-  disk=0.0
-
-  sc = mLambda*camlen*RR
-  scmax = 1.5*300.0 + npx
+! set scaling parameters
   PX = npix/2
 
 ! force dynamical matrix routine to read new Bethe parameters from file
   call Set_Bethe_Parameters()
 
+! up to this point, everything is nearly identical to the mbcbed program,
+! except that we do not use a camera length explicitly.  Now we
+! need to do things a little differently.  First of all, we need a master 
+! list for all the reflections that contribute in one way or another to the
+! complete LACBED pattern.  We do this by going through the entire list of incident
+! beam diretions and flagging all reflections that contribute, either as weak
+! or as strong reflections.
+  mess = 'Pruning reflection list (this takes a while ...) '
+  call Message("(A)")
+  call Prune_ReflectionList(numk,nbeams)
+  io_int(1) = nbeams
+  call WriteValue('Number of contributing beams  : ', io_int, 1, '(I)')
+
+! next we create the output array, which has one disk image for each 
+! thickness and contributing beam.  We make sure that each image is fully
+! filled by a diffraction disk (i.e., no empty space along the main axes.
+  allocate(disk(-npix:npix,-npix:npix,1:numt,1:nbeams))
+  disk=0.0
+
 ! allocate the offset array
 ! to get this array, we need to do a mock initialization of the dynamical matrix in zone axis orientation
-  call Compute_DynMat('BLOCHBETHE', khead%k, .TRUE.)
-  frac = 0.05
+!  call Compute_DynMat('BLOCHBETHE', khead%k, .TRUE.)
 
   io_int(1)=numk
   call WriteValue(' Starting computation for # beam directions = ', io_int, 1, "(I8)")
@@ -269,62 +266,43 @@ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
 ! point to the first beam direction
   ktmp => khead
 ! loop over all beam orientations, selecting them from the linked list
-  do ik = 1,numk
+kvectorloop:  do ik = 1,numk
 
-! is this point inside the viewing square ?
-      ip = PX  - ktmp%i
-      jp = PX + ktmp%j
+	ip = -ktmp%i
+ 	jp =  ktmp%j
 
-      if (((ip.ge.1).and.(ip.le.npix)).and.((jp.ge.1).and.(jp.le.npix))) then
+! compute the dynamical matrix using Bloch waves with Bethe potentials 
+	call Compute_DynMat('BLOCHBETHE', ktmp%k, .TRUE.)
 
-  ! compute the dynamical matrix using Bloch waves with Bethe potentials 
-        call Compute_DynMat('BLOCHBETHE', ktmp%k, .TRUE.)
+! allocate the intensity array to include both strong beams and weak beams (in that order)
+	allocate(inten(numt,DynNbeams+BetheParameter%nnw))
+  	inten = 0.0
+ 
+! solve the dynamical eigenvalue equation and return the intensities of ALL reflections,
+! both strong and weak; the weak intensities should also be plotted at the correct locations....
+! this uses a new version of the CalcBWint routine that implements both strong and weak beam intensities.
+   	call CalcBWint(DynNbeams,BetheParameter%nnw,numt,thick,inten)
 
-! allocate the intensity array
-        allocate(inten(numt,DynNbeams))
-        inten = 0.0
-!write (*,*) ik, DynNbeams
+! we combine the reflistindex and weakreflistindex into a single list so that we can match 
+! each diffracted intensity with the correct diffraction disk in the disks array.
+	BetheParameter%reflistindex = BetheParameter%reflistindex + BetheParameter%weakreflistindex
 
-! solve the dynamical eigenvalue equation
-       if (allocated(thickarray)) then 
-         thickval(1) = thickarray(PX  - ktmp%i,PX + ktmp%j)
-         call CalcBWint(DynNbeams,numt,thickval, inten)
-      else
-        call CalcBWint(DynNbeams,numt,thick,inten)
-      end if
+! ok, we have all the intensities.  now we need to copy them into the correct diffraction disks
+! for now, we'll do this without application of the symmetry operators.  That works reasonably well,
+! at least for non-three or sixfold symmetry, which we'll need to fix later.
+	rltmpa => reflist%next
+	do i=1,DynNbeamsLinked
+	  if (BetheParameter%reflistindex(i).ne.0) then ! is this a reflection on the current list
+! it is, so we need to determine which of the nbeams beams corresponds to it
+	    ii = rltmpa%famnum
+            disk(ip,jp,1:numt,ii) = inten(1:numt,BetheParameter%reflistindex(i))
+	  end if
+	  rltmpa => rltmpa%next
+	end do
 
-! first determine which reflection we are going to plot the pattern for.
-! normally, it's the bright field pattern, so refpick = 1, but if selection
-! is not (/ 0,0,0 /), then we need to first figure out what the number
-! is of the selected reflection in the main list, and then we need to see if
-! that reflection was actually used in the Bloch wave computation...
-	if (sum(abs(selection)).eq.0) then
-	  refpick = 1
-	else
-	  refpick = -1
-	  do ii = 1, BetheParameter%nns
-	    if (sum(abs(selection(1:3)-BetheParameter%stronghkl(1:3,ii))).eq.0) then
-	     refpick = ii
-	    end if
-	  end do
-!	  if (refpick.gt.0) write (*,*) ik, BetheParameter%stronghkl(1:3,refpick), refpick, &
-!	  BetheParameter%reflistindex(refpick)
-	end if
-
-
-! copy in the correct locations
-      if (refpick.eq.-1) then
-       disk(1:numt,ip,jp) = 0.0
-     else
-!      ii = BetheParameter%reflistindex(refpick)
-      do j=1,numt
-         disk(j,ip,jp) = disk(j,ip,jp) + inten(j,refpick)
-      end do
-     end if
 ! and remove the intensity array
      deallocate(inten)
     
-   end if
 
 ! select next beam direction
    if (ik.ne.numk) ktmp => ktmp%next
@@ -336,7 +314,21 @@ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
     frac = frac + 0.05
    end if  
 
-  end do
+  end do kvectorloop
+
+! next we need to apply the symmetry operators to ALL beams, including the special and 
+! general diffraction symmetry for dark field disks... this is complicated, since the 
+! reflections are not grouped by symmetrically equivalent classes.  There are two
+! solutions; either we figure out on the spot which reflections are equivalent, which
+! requires running through the entire reflection list several times, or we change the 
+! ComputeReflections routine to list reflections consecutively by family.  Either way
+! will work, but the latter one may result in a faster algorithm.  Whichever way we
+! do this, we will need to make a copy of the entire disk array, so that we don't 
+! apply the operators too many times...  Either way, this routine will need to know
+! ALL the details about the 31 diffraction groups.
+
+
+
 
 !write (*,*) ' maximum intensity ', maxval(disk)
 !write (*,*) ' minimum # strong beams ',BetheParameter%minstrong
@@ -348,61 +340,64 @@ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
   mess = ' Program run completed '; call Message("(/A/)")
   call WriteValue('Total computation time [s] ' , io_real, 1, "(F)")
 
+! to avoid having more than 2Gb in one written section of the output file (IDL can not deal
+! with sections that are larger) we will chop the array into smaller sections and write each
+! one separately.  This will need to be recoded below.  In a later stage, we will replace
+! all this with HDF5 output, so the problem will disappear.
   open(unit=dataunit,file=trim(outname),status='unknown',action='write',form='unformatted')
-!  loadingfile = .FALSE.
-!  call SafeOpenFile('d1','unformatted',outname)
-  write (dataunit) numt,npix
+  write (dataunit) 2*npix+1,2*npix+1,numt,nbeams
   write (dataunit) disk
-!  call SafeCloseFile('d1','keep',outname)
   close(UNIT=dataunit,STATUS='keep')
+
+
   
   mess = ' Data stored in '//outname; call Message("(/A/)") 
  
 end subroutine LACBEDpattern
 
 
-! ###################################################################
-! 
-!  subroutine CalcBW
-! 
-!  Author: Marc De Graef
-!  
-!  Description: integrate the dynamical equations using the Bloch Wave
-!  formalism.
-! 
-!  History
-! 
-!  modified by  rev reason
-!  -------- --- --- -----------
-!  10/13/98 MDG 1.0 original
-!   7/04/01 MDG 2.0 f90
-! ###################################################################
-subroutine CalcBWint(nn,nt,thick,inten)
+
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: CalcBWint
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief compute the scattered intensities for a range of thicknesses
+!
+!> @param nn number of strong beams
+!> @param nw number of weak beams
+!> @param nt number of thickness values
+!> @param thick thickness array
+!> @param inten output intensity list, including weak beams
+!
+!> @date  10/13/98 MDG 1.0 original
+!> @date   7/04/01 MDG 2.0 f90
+!> @date  04/29/13 MDG 3.0 inclusion of Bethe weak beams
+!--------------------------------------------------------------------------
+subroutine CalcBWint(nn,nw,nt,thick,inten)
 
 use local
 use io
 use diffraction
 use kvectors
+use gvectors
 use dynamical
 use constants
 
 IMPLICIT NONE
 
-integer(kind=irg)                             	:: nn,i,j,ig,ih,IPIV(nn),nt
-complex(kind=dbl)    				:: CGinv(nn,nn), Minp(nn,nn),diag(nn),Wloc(nn), lCG(nn,nn), lW(nn), lalpha(nn)
-real(kind=sgl)                             		:: thick(nt),inten(nt,nn),th
-! complex(kind=dbl)                			:: Ijk(nn,nn),Lgh(nn,nn),q
+integer(kind=irg),INTENT(IN)	:: nn			!< number of strong beams
+integer(kind=irg),INTENT(IN)	:: nw			!< number of weak beams
+integer(kind=irg),INTENT(IN)	:: nt			!< number of thickness values
+real(kind=sgl),INTENT(IN)	:: thick(nt)		!< thickness array
+real(kind=sgl),INTENT(INOUT)	:: inten(nt,nn+nw)	!< output intensities (both strong and weak)
 
-intent(IN)      :: nt, nn, thick
-intent(OUT)     :: inten
-
-! should we just return zero ?
-if (nt.eq.1) then
-  if (thick(1).eq.0.0) then 
-    inten = 0.0
-    return
-  end if
-end if
+integer(kind=irg)		:: i,j,IPIV(nn), ll(3), jp
+complex(kind=dbl)		:: CGinv(nn,nn), Minp(nn,nn),diag(nn),Wloc(nn), lCG(nn,nn), lW(nn), &
+				lalpha(nn), delta(nn,nn), weak(nw,nn), Ucross(nw,nn), tmp(nw,nn), c
+real(kind=sgl) 			:: th
 
 ! compute the eigenvalues and eigenvectors
  Minp = DynMat
@@ -417,12 +412,40 @@ end if
   lalpha(i) = CGinv(i,1)
  end do
 
- do i=1,nt
-  th =thick(i)
-  diag(1:nn)=exp(-th*imag(lW(1:nn)))*cmplx(cos(th*real(lW(1:nn))),sin(th*real(lW(1:nn))))*lalpha(1:nn)
-  do j=1,nn
-   inten(i,j) = abs(sum(lCG(j,1:nn)*diag(1:nn)))**2
-  end do 
+! in preparation for the intensity computation, we need the prefactor array for the
+! weak beam amplitude computation...
+! we will also need a potential coefficient array for the cross coefficients, which we 
+! compute in the same loop
+ do j=1,nn   ! strong beam loop
+   do jp=1,nw  ! weak beam loop
+! prefactor value
+     c = cmplx(2.D0*BetheParameter%weaksg(jp)/mLambda) - 2.D0*ktmp%kn*Wloc(j)
+     weak(jp,j) = cmplx(-1.D0,0.D0)/c
+! cross potential coefficient
+     ll(1:3) = BetheParameter%weakhkl(1:3,jp) - BetheParameter%stronghkl(1:3,j)
+     Ucross(jp,j) = LUT( ll(1),ll(2),ll(3) )
+   end do
  end do
- 
+
+! compute the strong beam intensities, stored in the first nn slots of inten 
+! we can also compute the weak beams, since they make use of the same diag(1:nn) expression
+! as the strong beams, plus a few other factors (excitation error, wave length, Fourier coefficients)
+ do i=1,nt
+  th = thick(i)
+  diag(1:nn)=exp(-th*imag(lW(1:nn)))*cmplx(cos(th*real(lW(1:nn))),sin(th*real(lW(1:nn))))*lalpha(1:nn)
+! the delta array is common to the strong and weak beam intensity computation, so we compute it first
+  do j=1,nn
+   delta(j,1:nn) = lCG(j,1:nn)*diag(1:nn)
+  end do
+! strong beams
+  do j=1,nn
+   inten(i,j) = cabs(sum(delta(j,1:nn)))**2
+  end do 
+! weak beams
+  tmp = matmul(Ucross,delta)
+  do jp=1,nw
+   inten(i,nn+jp) = cabs( sum(weak(jp,1:nn)*tmp(jp,1:nn)) )**2
+  end do  
+ end do
+   
 end subroutine CalcBWint

@@ -33,7 +33,7 @@
 !
 ! MODULE: kvectors
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief variables and types needed to determine lists of wave vectors
 !
@@ -72,7 +72,7 @@ contains
 !
 ! FUNCTION: Kdelta
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Kronecker delta function, returns 1 or 0
 !
@@ -102,7 +102,7 @@ end function Kdelta
 !
 ! SUBROUTINE: Calckvectors
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief create a linked list of wave vectors
 !
@@ -544,7 +544,7 @@ end subroutine Calckvectors
 !
 ! SUBROUTINE: CalckvectorsSymmetry
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief create a linked list of wave vectors, using the whole pattern symmetry
 !
@@ -691,7 +691,7 @@ end subroutine CalckvectorsSymmetry
 !
 ! SUBROUTINE: Add_knode
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief add one entry to the linked wave vector list (standard mode)
 !
@@ -745,15 +745,14 @@ ktail%j = j                      		! j-index of beam
 ! is it a square or hexagonal grid ?
 if (present(hexgrid)) then
   kt = -(float(i)-float(j)*0.5)*delta*gan - float(j)*delta*gperp*0.5*sqrt(3.0)  ! tangential component of k
-  ktail%kt = kt                    		! store tangential component of k
-  ktlen = CalcLength(kt,'r')**2   		! squared length of tangential component
 else
   kt = -(klaue(1)+float(i)*delta)*gan - (klaue(2)+float(j)*delta)*gperp  ! tangential component of k
-  ktail%kt = kt                    		! store tangential component of k
-  ktlen = delta**2*(i*i+j*j)      		! squared length of tangential component
 end if
 
-kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
+ktail%kt = kt                    		! store tangential component of k
+ktlen = CalcLength(kt,'r')**2      		! squared length of tangential component
+
+kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar 	! complete wave vector
 ktail%k = kr                     		! store in pointer list
 ktail%kn = CalcDot(ktail%k,kstar,'r')    	! normal component of k
 
@@ -764,7 +763,7 @@ end subroutine Add_knode
 !
 ! FUNCTION: GetSextant
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief determines in which sextant a point (x,y) is located (used for RoscaLambert mapmode)
 !
@@ -817,7 +816,7 @@ end function GetSextant
 !
 ! SUBROUTINE: Addkvector
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief add a k-vector for square or hexagonal grid sampling mode (used for RoscaLambert mapmode)
 !
@@ -946,7 +945,7 @@ end subroutine AddkVector
 !
 ! SUBROUTINE: Delete_kvectorlist
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief delete the entire linked list
 !

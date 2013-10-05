@@ -601,9 +601,9 @@ use local
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)			:: p(3)	!< input/output vector components
-character(1),INTENT(IN)				:: space	!< space character ('d', 'r', or 'c')
-real(kind=dbl)						:: x  		!< auxiliary variable
+real(kind=dbl),INTENT(IN)			:: p(3)		!< input/output vector components
+character(1),INTENT(IN)			:: space	!< space character ('d', 'r', or 'c')
+real(kind=dbl)					:: x  		!< auxiliary variable
 
  x = dsqrt(CalcDot(p,p,space))
 
@@ -639,10 +639,10 @@ use constants
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)		:: p(3)		!< first vector components
-real(kind=sgl),INTENT(IN)		:: q(3) 		!< second vector components
-real(kind=sgl)					:: a			!< angle in radians
-character(1),INTENT(IN)			:: space		!< space of the computation ('d', 'r', 'c')
-real(kind=sgl)					:: x, y, z, t	!< auxiliary variables
+real(kind=sgl),INTENT(IN)		:: q(3) 	!< second vector components
+real(kind=sgl)				:: a		!< angle in radians
+character(1),INTENT(IN)		:: space	!< space of the computation ('d', 'r', 'c')
+real(kind=sgl)				:: x, y, z, t	!< auxiliary variables
 
  x = CalcDot(p,q,space)
  y = CalcLength(p,space)
@@ -695,10 +695,10 @@ use constants
 IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN)		:: p(3)		!< first vector components
-real(kind=dbl),INTENT(IN)		:: q(3) 		!< second vector components
-real(kind=dbl)					:: a			!< angle in radians
-character(1),INTENT(IN)			:: space		!< space of the computation ('d', 'r', 'c')
-real(kind=dbl)					:: x, y, z, t	!< auxiliary variables
+real(kind=dbl),INTENT(IN)		:: q(3) 	!< second vector components
+real(kind=dbl)				:: a		!< angle in radians
+character(1),INTENT(IN)		:: space	!< space of the computation ('d', 'r', 'c')
+real(kind=dbl)				:: x, y, z, t	!< auxiliary variables
 
 
  x = CalcDot(p,q,space)

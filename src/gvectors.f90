@@ -689,20 +689,23 @@ end subroutine CalcDynMat
 !
 !> @brief select from the reflection list those g-vectors that will be counted in an LACBED computation
 !
-!> @details This routine basicaly repeats a section form the Compute_DynMat routine
-!> without actually computing the dynamical matrix; it simple keeps track of all the
-!> beams that are at one point or another regarded as strong beams and write their 
-!> information to the dataunit file (which must be opened in the calling program).
+!> @details This routine basicaly repeats a section from the Compute_DynMat routine
+!> without actually computing the dynamical matrix; it simply keeps track of all the
+!> beams that are at one point or another regarded as strong or weak beams.
 !> We'll use the famnum field in the rlp linked list to flag the strong reflections.
+!> Linked list entries that are not used are instantly removed from the linked list.
 !
 !> @param numk number of wave vectors to consider
-!> @param nstrong total number of unique strong beams
+!> @param nbeams total number of unique beams
 !
-!> @date   09/20/13 MDG 1.0 original
+!> @date  09/20/13 MDG 1.0 original
+!> @date  10/05/13 MDG 1.1 removal of unused reflections from linked list
+!> @date  10/05/13 MDG 1.2 changed the order of nested loops to speed things up a bit
 !--------------------------------------------------------------------------
-subroutine Prune_ReflectionList(numk,nstrong)
+subroutine Prune_ReflectionList(numk,nbeams)
 
 use local
+use io
 use dynamical
 use kvectors
 use diffraction
@@ -710,7 +713,7 @@ use diffraction
 IMPLICIT NONE
 
 integer(kind=irg),INTENT(IN)		:: numk
-integer(kind=irg),INTENT(OUT)		:: nstrong
+integer(kind=irg),INTENT(OUT)		:: nbeams
 
 integer(kind=irg)			:: ik, ig, istrong
 real(kind=sgl)     			:: sgp, lUg, cut1, cut2
@@ -720,75 +723,81 @@ integer(kind=irg),allocatable		:: strongreflections(:,:)
 ! reset the value of DynNbeams in case it was modified in a previous call 
 DynNbeams = DynNbeamsLinked
 
-istrong = 0
-nstrong = 0
+nbeams = 0
 
-! loop over all the incident beam directions
-  ktmp => khead
-! loop over all beam orientations, selecting them from the linked list
-  do ik = 1,numk
-  
 ! reset the reflection linked list
-    rltmpa => reflist%next
+  rltmpa => reflist%next
 
 ! pick the first reflection since that is the transmitted beam (only on the first time)
-    if (ik.eq.1) then 
-      rltmpa%famnum = 1    
-      nstrong = nstrong + 1
-    end if
+  rltmpa%famnum = 1    
+  nbeams = nbeams + 1
 
 ! loop over all reflections in the linked list    
-    rltmpa => rltmpa%next
-    reflectionloop: do ig=2,DynNbeamsLinked
+  rltmpa => rltmpa%next
+  reflectionloop: do ig=2,DynNbeamsLinked
+    lUg = cabs(rltmpa%Ucg) * mLambda
+    cut1 = BetheParameter%cutoff * lUg
+    cut2 = BetheParameter%weakcutoff * lUg
 
-! We compare the precomputed |sg| with two multiples of lambda |Ug|
+! loop over all the incident beam directions
+    ktmp => khead
+! loop over all beam orientations, selecting them from the linked list
+    kvectorloop: do ik = 1,numk
+! We compare |sg| with two multiples of lambda |Ug|
 !
 !  |sg|>cutoff lambda |Ug|   ->  don't count reflection
 !  cutoff lambda |Ug| > |sg| > weakcutoff lambda |Ug|  -> weak reflection
 !  weakcutoff lambda |Ug| > |sg|  -> strong reflection
 !
-
         sgp = abs(Calcsg(float(rltmpa%hkl),sngl(ktmp%k),DynFN)) 
-        lUg = cabs(rltmpa%Ucg) * mLambda
-        cut1 = BetheParameter%cutoff * lUg
-        cut2 = BetheParameter%weakcutoff * lUg
-
 ! we have to deal separately with double diffraction reflections, since
 ! they have a zero potential coefficient !        
         if ( dbdiff(rltmpa%hkl(1),rltmpa%hkl(2),rltmpa%hkl(3)) ) then  ! it is a double diffraction reflection
-          if ((sgp.le.BetheParameter%sgcutoff).and.(rltmpa%famnum.ne.1)) then         
-	    nstrong = nstrong + 1
+          if (sgp.le.BetheParameter%sgcutoff) then         
+	    nbeams = nbeams + 1
     	    rltmpa%famnum = 1    
+	    EXIT kvectorloop	! this beam did contribute, so we no longer need to consider it
           end if
         else   ! it is not a double diffraction reflection
-          if (sgp.le.cut1) then  ! count this beam
-! is this a weak or a strong reflection (in terms of Bethe potentials)? 
-             	if ((sgp.le.cut2).and.(rltmpa%famnum.eq.0)) then ! it's a strong beam and we haven't counted it yet
-	    		nstrong = nstrong + 1
-		     	rltmpa%famnum = 1    
-             	end if
+          if (sgp.le.cut1) then  ! count this beam, whether it is weak or strong
+	    nbeams = nbeams + 1
+	    rltmpa%famnum = 1    
+	    EXIT kvectorloop	! this beam did contribute, so we no longer need to consider it
           end if
         end if
-! go to the next beam in the list
-      rltmpa => rltmpa%next
-    end do reflectionloop
+ 
 ! go to the next incident beam direction
-    if (ik.ne.numk) ktmp => ktmp%next
-  end do ! ik loop
+       if (ik.ne.numk) ktmp => ktmp%next
+     end do kvectorloop  ! ik loop
 
+! go to the next beam in the list
+   rltmpa => rltmpa%next
+  end do reflectionloop
 
+  mess = 'Renumbering reflections'; call Message("(A)")
+  
 ! ok, now that we have the list, we'll go through it again to set sequential numbers instead of 1's
-! at the same time, we'll extract the data that we need to write to the data file
+! at the same time, we'll deallocate those entries that are no longer needed.
   rltmpa => reflist%next
-  rltmpa => rltmpa%next
+  rltmpb => rltmpa
+  rltmpa => rltmpa%next	! we keep the first entry, always.
+  istrong = 1
   reflectionloop2: do ig=2,DynNbeamsLinked
     if (rltmpa%famnum.eq.1) then
 	istrong = istrong + 1
       	rltmpa%famnum = istrong
+	rltmpa => rltmpa%next
+	rltmpb => rltmpb%next
+    else   ! remove this entry from the linked list
+	rltmpb%next => rltmpa%next
+	deallocate(rltmpa)
+	rltmpa => rltmpb%next
     endif
 ! go to the next beam in the list
-    rltmpa => rltmpa%next
   end do reflectionloop2
+
+  DynNbeamsLinked = nbeams
+  DynNbeams = nbeams
 
 end subroutine Prune_ReflectionList
 
@@ -1200,37 +1209,50 @@ end subroutine Set_Bethe_Parameters
 !> @param method  approach to follow (ALL or ZA)
 !> @param ConvertList logical, determines whether or not conversion of list is needed
 !> @param maxholz maximum range of HOLZ reflections to include
+!> @param convang (optional) beam convergence angle for beam inclusion selection (used for CBED etc.)
 !
 !> @date 04/29/13 MDG 1.0 original
 !> @date 09/20/13 MDG 1.1 corrected handling of LUT
+!> @date 10/05/13 MDG 1.2 limit the range of reflections by means of the convergence angle (optional)
 !--------------------------------------------------------------------------
-subroutine Compute_ReflectionList(dmin,k,ga,gb,method,ConvertList,maxholz)
+subroutine Compute_ReflectionList(dmin,k,ga,gb,method,ConvertList,maxholz,convang)
 
 use local
 use io
 use crystal
+use constants
 use dynamical
 use diffraction
 use symmetry
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)				:: dmin
-integer(kind=irg),INTENT(IN)				:: k(3)
-integer(kind=irg),INTENT(IN)				:: ga(3)
-integer(kind=irg),INTENT(IN)				:: gb(3)
-character(*),INTENT(IN)				:: method
-logical,INTENT(IN)					:: ConvertList
-integer(kind=irg),INTENT(IN),OPTIONAL			:: maxholz
+real(kind=sgl),INTENT(IN)			:: dmin
+integer(kind=irg),INTENT(IN)			:: k(3)
+integer(kind=irg),INTENT(IN)			:: ga(3)
+integer(kind=irg),INTENT(IN)			:: gb(3)
+character(*),INTENT(IN)			:: method
+logical,INTENT(IN)				:: ConvertList
+integer(kind=irg),INTENT(IN)			:: maxholz
+real(kind=sgl),INTENT(IN),OPTIONAL		:: convang
 
-integer(kind=irg)					:: imh, imk, iml, gg(3), ix, iy, iz, i, minholz, RHOLZ, im, istat, N, ig
-real(kind=sgl)						:: dhkl, io_real(9), H, g3(3), g3n(3), FNg(3), ddt
-integer(kind=irg)					:: io_int(3), gshort(3), gp(3)
+integer(kind=irg)				:: imh, imk, iml, gg(3), ix, iy, iz, i, minholz, RHOLZ, im, istat, N, ig
+real(kind=sgl)					:: dhkl, io_real(9), H, g3(3), g3n(3), FNg(3), ddt, maxang, minang, s
+integer(kind=irg)				:: io_int(3), gshort(3), gp(3)
 
 ! determine the master list of reflections for the general case (i.e., a box in reciprocal space)
 if (method.eq.'ALL') then 
 ! set threshold for double diffraction detection
   ddt = 1.0e-6
+
+! set the parameters for the cone volume to exclude reflections
+ if (present(convang)) then
+    minang = cPi*0.5 - 3.0*convang
+    maxang = cPi*0.5 + 3.0*convang
+ else
+    minang = 0.0
+    maxang = cPi
+ end if 
 
 ! The master list is easily created by brute force
  imh = 1
@@ -1283,11 +1305,13 @@ if (method.eq.'ALL') then
         gg = (/ ix, iy, iz /)
         if ((IsGAllowed(gg)).AND.(sum(abs(gg)).ne.0)) then
 ! if this g is inside the original box, then add it to the linked list
+          s = -10.0
           if ((abs(ix).le.imh).and.(abs(iy).le.imk).and.(abs(iz).le.iml)) then 
-            call AddReflection(gg)
-          else
-            call CalcUcg(gg)
+! check if the angular range puts it between the two cones (mainly used for CBED etc.)	
+	    s = abs(CalcAngle( float(gg), float(k), 'r' ) )   
+	    if ((s.ge.minang).and.(s.le.maxang)) call AddReflection(gg)
           end if
+          if (s.eq.-10.0) call CalcUcg(gg)
 ! add the reflection to the look up table
           LUT(ix, iy, iz) = rlp%Ucg
 ! flag this reflection as a double diffraction candidate if cabs(Ucg)<ddt threshold

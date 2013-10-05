@@ -198,6 +198,10 @@ end if
 ! convert to ktmax along ga
   ktmax = 0.5*thetac/bragg
 
+write (*,*) 'Bragg angle ', bragg
+write (*,*) 'conv. angle ', thetac
+write (*,*) 'ktmax ', ktmax
+
 ! compute number of pixels along diameter of central disk for given camera length
   RR = 300.0/25.4   ! dots per millimeter for 300 dots per inch; legacy code from when the output was in PostScript
   npx = int(RR*camlen*thetac)
@@ -223,7 +227,7 @@ end if
 ! determine all independent incident beam directions (use a linked list starting at khead)
   isym = WPPG(dgn)
   ijmax = float(npx)**2   ! truncation value for beam directions
-  call CalckvectorsSymmetry(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,klaue)
+  call CalckvectorsSymmetry(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,klaue,.TRUE.)
   
 ! allocate the disk variable which will hold the entire computed pattern
   allocate(disk(numt,npix,npix))
