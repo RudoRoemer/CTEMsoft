@@ -32,7 +32,7 @@
 !
 ! PROGRAM: CTEMlacbed 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Zone axis LACBED
 !
@@ -71,7 +71,7 @@ end program CTEMlacbed
 !
 ! SUBROUTINE:LACBEDpattern
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute a large angle zone axis convergent beam electron diffraction pattern
 !
@@ -81,6 +81,7 @@ end program CTEMlacbed
 !> @date 04/08/13  MDG 2.0 rewrite
 !> @date 05/14/13  MDG 2.1 replaced IO by namelist file
 !> @date 10/04/13  MDG 3.0 adaptation for new symmetry routines and output
+!> @date 10/05/13  MDG 3.1 added output stuff for IDL visualization program
 !--------------------------------------------------------------------------
 subroutine LACBEDpattern(nmlfile)
 
@@ -109,7 +110,8 @@ real(kind=sgl)      		:: laL,kt,z0,thc,thb,hkl(3),ind(3),ktmax, io_real(3), thic
                        	   sc, scmax, qx, qy, frac, dmin, convergence, voltage, startthick, thickinc, klaue(2)
 integer(kind=irg)   		:: g(3),ira,dpcnt,ppi,ijmax,ga(3),gb(3),k(3),fcnt,ccnt,cnt,fn(3), PX, PY, numthick,  &
                       		   ii, newcount,count_rate,count_max, io_int(6), i, j, isym, ir, order, nn, skip, refpick, &
-                      		  iorder, npx, npy, numt, im, numk, npix, ik, ip, jp, maxholz, numpix, istat, dgn, nbeams
+                      		  iorder, npx, npy, numt, im, numk, npix, ik, ip, jp, maxholz, numpix, istat, dgn, nbeams, &
+                      		  ifamily, isum, famhkl(3), inum
 character(1)        		:: ans
 character(3)			:: method
 character(fnlen)     		:: outname, tname, xtalname
@@ -118,8 +120,8 @@ character(fnlen)     		:: outname, tname, xtalname
 complex(kind=sgl)   		:: czero
 logical             		:: overlap,np,first
 real(kind=sgl),parameter     	:: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/),yoff(0:5)=(/6.0,6.0,3.0,3.0,0.0,0.0/)
-real(kind=sgl),allocatable    	:: disk(:,:,:,:), thickarray(:,:), thick(:)
-integer(kind=irg),allocatable 	:: diskoffset(:,:)
+real(kind=sgl),allocatable    	:: disk(:,:,:,:), thickarray(:,:), thick(:), familytwotheta(:)
+integer(kind=irg),allocatable 	:: diskoffset(:,:), familymult(:), familyhkl(:,:)
 real(kind=sgl),allocatable    	:: inten(:,:)
 
 
@@ -221,8 +223,8 @@ write (*,*) 'ktmax = ',ktmax
 !  isym = WPPG(dgn)
 
 ! for now, the solution to the symmetry problem is to do the computation for the entire 
-! illumination cone without application of symmetry.  
-
+! illumination cone without application of symmetry.  Instead, we'll get the spped up by 
+! going to multiple cores later on.
   isym = 1
   call CalckvectorsSymmetry(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,klaue,.TRUE.)
 
@@ -245,15 +247,66 @@ write (*,*) 'ktmax = ',ktmax
   io_int(1) = nbeams
   call WriteValue('Number of contributing beams  : ', io_int, 1, '(I)')
 
-! next we create the output array, which has one disk image for each 
-! thickness and contributing beam.  We make sure that each image is fully
-! filled by a diffraction disk (i.e., no empty space along the main axes.
-  allocate(disk(-npix:npix,-npix:npix,1:numt,1:nbeams))
-  disk=0.0
 
-! allocate the offset array
-! to get this array, we need to do a mock initialization of the dynamical matrix in zone axis orientation
-!  call Compute_DynMat('BLOCHBETHE', khead%k, .TRUE.)
+! since we're only going to store one diffraction disk per family of reflections,
+! we need to decide which one we're going to keep.  For those, we'll need to 
+! determine the 2D multiplicity and store that along with the Miller indices 
+! of a representative family member.
+
+! we do not know how many independent families there are yet, so we go through the 
+! list once and then we'll allocate the proper arrays.
+ifamily = 1	! for the incident beam
+rltmpa => reflist%next
+rltmpa => rltmpa%next
+
+outerloop: do while (associated(rltmpa%next))
+    famhkl = rltmpa%famhkl
+    ifamily = ifamily+1
+    isum = 1
+    rltmpa => rltmpa%next
+    do while (sum(abs(rltmpa%famhkl-famhkl)).eq.0)
+      rltmpa => rltmpa%next
+      isum = isum+1
+      if (.not.associated(rltmpa%next)) EXIT outerloop
+    end do
+end do outerloop
+
+! ok, so there are ifamily families; next we need to store the corresponding
+! hkl, and multiplicity, as well as the corresponding entry in the disk array
+allocate(familyhkl(3,ifamily), familymult(ifamily), familytwotheta(ifamily))
+
+! redo the above loop, but now fill in the data
+ifamily = 1	! for the incident beam
+familyhkl(1:3,ifamily) = (/ 0, 0, 0 /)
+familymult(ifamily) = 1
+rltmpa => reflist%next
+rltmpa => rltmpa%next
+
+outerloop2: do while (associated(rltmpa%next))
+    famhkl = rltmpa%famhkl
+    ifamily = ifamily+1
+    familyhkl(1:3,ifamily) = famhkl
+    familytwotheta(ifamily) = CalcDiffAngle(famhkl(1),famhkl(2),famhkl(3))*1000.0
+    familymult(ifamily) = 1
+    rltmpa => rltmpa%next
+    do while (sum(abs(rltmpa%famhkl-famhkl)).eq.0)
+      rltmpa => rltmpa%next
+      familymult(ifamily) = familymult(ifamily) + 1
+      if (.not.associated(rltmpa%next)) EXIT outerloop2
+    end do
+end do outerloop2
+
+! correct last counter
+familymult(ifamily) = familymult(ifamily)+1
+
+  io_int(1) = ifamily
+  call WriteValue(' Number of unique families in output = ', io_int, 1, "(I5)")
+
+! next we create the output array, which has one disk image for each 
+! thickness and contributing family.  We make sure that each image is fully
+! filled by a diffraction disk (i.e., no empty space along the main axes.
+  allocate(disk(-npix:npix,-npix:npix,1:numt,1:ifamily))
+  disk=0.0
 
   io_int(1)=numk
   call WriteValue(' Starting computation for # beam directions = ', io_int, 1, "(I8)")
@@ -287,15 +340,21 @@ kvectorloop:  do ik = 1,numk
 ! each diffracted intensity with the correct diffraction disk in the disks array.
 	BetheParameter%reflistindex = BetheParameter%reflistindex + BetheParameter%weakreflistindex
 
-! ok, we have all the intensities.  now we need to copy them into the correct diffraction disks
-! for now, we'll do this without application of the symmetry operators.  That works reasonably well,
-! at least for non-three or sixfold symmetry, which we'll need to fix later.
-	rltmpa => reflist%next
-	do i=1,DynNbeamsLinked
+! ok, we have all the intensities.  Next we need to copy the relevant intensities into the slots 
+! of the disk array, one for each family.
+	rltmpa => reflist%next%next
+	inum = 1
+        disk(ip,jp,1:numt,inum) = inten(1:numt,1)
+	do i=2,DynNbeamsLinked
 	  if (BetheParameter%reflistindex(i).ne.0) then ! is this a reflection on the current list
 ! it is, so we need to determine which of the nbeams beams corresponds to it
-	    ii = rltmpa%famnum
-            disk(ip,jp,1:numt,ii) = inten(1:numt,BetheParameter%reflistindex(i))
+	    inum = 1
+	    do while ( (sum(abs(familyhkl(1:3,inum) - rltmpa%hkl)).ne.0).and.(inum.le.ifamily) ) 
+		inum = inum+1
+	    end do
+  	    if (inum.lt.(ifamily+1)) then	
+              disk(ip,jp,1:numt,inum) = inten(1:numt,BetheParameter%reflistindex(i))
+	    end if
 	  end if
 	  rltmpa => rltmpa%next
 	end do
@@ -303,7 +362,6 @@ kvectorloop:  do ik = 1,numk
 ! and remove the intensity array
      deallocate(inten)
     
-
 ! select next beam direction
    if (ik.ne.numk) ktmp => ktmp%next
 
@@ -316,6 +374,8 @@ kvectorloop:  do ik = 1,numk
 
   end do kvectorloop
 
+! the following comment only applies if we use symmetry to determine the computational wedge.
+! 
 ! next we need to apply the symmetry operators to ALL beams, including the special and 
 ! general diffraction symmetry for dark field disks... this is complicated, since the 
 ! reflections are not grouped by symmetrically equivalent classes.  There are two
@@ -324,15 +384,10 @@ kvectorloop:  do ik = 1,numk
 ! ComputeReflections routine to list reflections consecutively by family.  Either way
 ! will work, but the latter one may result in a faster algorithm.  Whichever way we
 ! do this, we will need to make a copy of the entire disk array, so that we don't 
-! apply the operators too many times...  Either way, this routine will need to know
-! ALL the details about the 31 diffraction groups.
-
-
-
-
-!write (*,*) ' maximum intensity ', maxval(disk)
-!write (*,*) ' minimum # strong beams ',BetheParameter%minstrong
-!write (*,*) ' maximum # strong beams ',BetheParameter%maxstrong
+! apply the operators too many times...  To do so, we need to make sure that if one
+! single family member has an entry in the disks array, then all equivalent family 
+! members must also be in the array... (equivalent with respect to the zone axis WP symmetry)
+! This will require a bit of thinking before implementation can begin.
 
 ! stop the clock and report the total time     
   call system_clock(newcount,count_rate,count_max)
@@ -340,17 +395,35 @@ kvectorloop:  do ik = 1,numk
   mess = ' Program run completed '; call Message("(/A/)")
   call WriteValue('Total computation time [s] ' , io_real, 1, "(F)")
 
-! to avoid having more than 2Gb in one written section of the output file (IDL can not deal
-! with sections that are larger) we will chop the array into smaller sections and write each
-! one separately.  This will need to be recoded below.  In a later stage, we will replace
-! all this with HDF5 output, so the problem will disappear.
+! the final bit of the program involves dumping all the results into a file,
+! binary for now, but HDF5 in the future, for the IDL visualization program 
+! to read.
   open(unit=dataunit,file=trim(outname),status='unknown',action='write',form='unformatted')
-  write (dataunit) 2*npix+1,2*npix+1,numt,nbeams
-  write (dataunit) disk
+! first write the array dimensions
+  write (dataunit) 2*npix+1,2*npix+1,numt,ifamily
+! then the name of the crystal data file
+  write (dataunit) xtalname
+! the accelerating voltage [V]
+  write (dataunit) voltage
+! convergence angle [mrad]
+  write (dataunit) convergence
+! the zone axis indices
+  write (dataunit) k
+! number of the Whole Pattern symmetry group
+  write (dataunit) WPPG(dgn)
+! thickness data
+  write (dataunit) startthick, thickinc
+! and from here one we write the individual diffraction disks with associated information  
+! Miller indices, multiplicity, two-theta [mrad], and position for a reference camera length
+  write (dataunit) familyhkl(1:3,1), familymult(1), familytwotheta(1)
+  write (dataunit) disk(-npix:npix,-npix:npix,1:numt,1)
+! we'll write them in reverse order, so that the smaller Miller indices come first.
+  do ir = ifamily,2,-1
+    write (dataunit) familyhkl(1:3,ir), familymult(ir), familytwotheta(ir)
+    write (dataunit) disk(-npix:npix,-npix:npix,1:numt,ir)
+  end do
   close(UNIT=dataunit,STATUS='keep')
 
-
-  
   mess = ' Data stored in '//outname; call Message("(/A/)") 
  
 end subroutine LACBEDpattern
@@ -362,7 +435,7 @@ end subroutine LACBEDpattern
 !
 ! SUBROUTINE: CalcBWint
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute the scattered intensities for a range of thicknesses
 !

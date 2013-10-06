@@ -57,6 +57,7 @@ IMPLICIT NONE
 type reflisttype  
   integer(kind=irg)          	:: num, &  		! sequential number
                               	hkl(3),&		! Miller indices
+                              	famhkl(3),&		! family representative Miller indices
 				HOLZN,& 		! belongs to this HOLZ layer
 				famnum,&		! family number
 				nab(2)  		! decomposition with respect to ga and gb
@@ -74,6 +75,7 @@ type(reflisttype),pointer 	:: reflist, & 	! linked list of reflections
 
 complex(kind=dbl),allocatable 	:: LUT(:,:,:)
 logical,allocatable		:: dbdiff(:,:,:)
+logical,allocatable		:: refdone(:,:,:)	! used to keep track of which reflections have already been dealt with.
 
 ! define the cutoff parameters for the Bethe potential approach (and set to zero initially)
 type BetheParameterType
@@ -1236,7 +1238,7 @@ logical,INTENT(IN)				:: ConvertList
 integer(kind=irg),INTENT(IN)			:: maxholz
 real(kind=sgl),INTENT(IN),OPTIONAL		:: convang
 
-integer(kind=irg)				:: imh, imk, iml, gg(3), ix, iy, iz, i, minholz, RHOLZ, im, istat, N, ig
+integer(kind=irg)				:: imh, imk, iml, gg(3), ix, iy, iz, i, minholz, RHOLZ, im, istat, N, ig, numr, ir
 real(kind=sgl)					:: dhkl, io_real(9), H, g3(3), g3n(3), FNg(3), ddt, maxang, minang, s
 integer(kind=irg)				:: io_int(3), gshort(3), gp(3)
 
@@ -1280,6 +1282,10 @@ if (method.eq.'ALL') then
   allocate(LUT(-2*imh:2*imh,-2*imk:2*imk,-2*iml:2*iml),stat=istat)
   LUT = dcmplx(0.D0,0.D0)
 
+! allocate an array to keep track of all families of reflections
+  allocate(refdone(-imh:imh,-imk:imk,-iml:iml),stat=istat)
+  refdone = .FALSE.
+  
 ! allocate an array that keeps track of potential double diffraction reflections
   allocate(dbdiff(-2*imh:2*imh,-2*imk:2*imk,-2*iml:2*iml),stat=istat)
   dbdiff = .FALSE.
@@ -1294,25 +1300,35 @@ if (method.eq.'ALL') then
 
 ! and add this reflection to the look-up table
   LUT(gg(1),gg(2),gg(3)) = rlp%Ucg
+  refdone(gg(1),gg(2),gg(3)) = .TRUE. 
 
 ! now do the same for the other allowed reflections
 ! note that the lookup table must be twice as large as the list of participating reflections,
 ! since the dynamical matrix uses g-h as its index !!!  However, the linked list of reflections
-! should only contain the g, h refelctions separately, not their differences. (i.e., smaller box)
+! should only contain the g, h reflections separately, not their differences. (i.e., smaller box)
     do ix=-2*imh,2*imh
       do iy=-2*imk,2*imk
        do iz=-2*iml,2*iml
         gg = (/ ix, iy, iz /)
-        if ((IsGAllowed(gg)).AND.(sum(abs(gg)).ne.0)) then
+        if (IsGAllowed(gg)) then
 ! if this g is inside the original box, then add it to the linked list
-          s = -10.0
           if ((abs(ix).le.imh).and.(abs(iy).le.imk).and.(abs(iz).le.iml)) then 
+! compute the family of reflections
+	     call CalcFamily( gg, numr, 'r' )
+	     do ir=1,numr
+	       if ( .not.refdone(itmp(ir,1),itmp(ir,2),itmp(ir,3)) ) then
 ! check if the angular range puts it between the two cones (mainly used for CBED etc.)	
-	    s = abs(CalcAngle( float(gg), float(k), 'r' ) )   
-	    if ((s.ge.minang).and.(s.le.maxang)) call AddReflection(gg)
+   	    	 s = abs(CalcAngle( float( (/ itmp(ir,1),itmp(ir,2),itmp(ir,3) /) ), float(k), 'r' ) )   
+	    	 if ((s.ge.minang).and.(s.le.maxang)) then 
+		    call AddReflection( (/ itmp(ir,1),itmp(ir,2),itmp(ir,3) /) )
+		    rltail%famhkl = (/ itmp(1,1),itmp(1,2),itmp(1,3) /)
+		 end if
+		 refdone(itmp(ir,1),itmp(ir,2),itmp(ir,3)) = .TRUE.
+               end if
+	     end do
           end if
-          if (s.eq.-10.0) call CalcUcg(gg)
 ! add the reflection to the look up table
+	  call CalcUcg( gg )
           LUT(ix, iy, iz) = rlp%Ucg
 ! flag this reflection as a double diffraction candidate if cabs(Ucg)<ddt threshold
           if (cabs(rlp%Ucg).le.ddt) then 
