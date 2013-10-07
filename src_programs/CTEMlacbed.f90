@@ -82,6 +82,7 @@ end program CTEMlacbed
 !> @date 05/14/13  MDG 2.1 replaced IO by namelist file
 !> @date 10/04/13  MDG 3.0 adaptation for new symmetry routines and output
 !> @date 10/05/13  MDG 3.1 added output stuff for IDL visualization program
+!> @date 10/07/13  MDG 3.2 corrected subtle error in reflection numbering
 !--------------------------------------------------------------------------
 subroutine LACBEDpattern(nmlfile)
 
@@ -105,43 +106,38 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)	:: nmlfile
 
-real(kind=sgl)      		:: laL,kt,z0,thc,thb,hkl(3),ind(3),ktmax, io_real(3), thickval(1), &
-                       	   dom,glen,qr,qi,bg,xgpz,bragg,c(3),RR,gx(3),gy(3),gg(3), thetac, &
-                       	   sc, scmax, qx, qy, frac, dmin, convergence, voltage, startthick, thickinc, klaue(2)
-integer(kind=irg)   		:: g(3),ira,dpcnt,ppi,ijmax,ga(3),gb(3),k(3),fcnt,ccnt,cnt,fn(3), PX, PY, numthick,  &
-                      		   ii, newcount,count_rate,count_max, io_int(6), i, j, isym, ir, order, nn, skip, refpick, &
-                      		  iorder, npx, npy, numt, im, numk, npix, ik, ip, jp, maxholz, numpix, istat, dgn, nbeams, &
-                      		  ifamily, isum, famhkl(3), inum
-character(1)        		:: ans
+real(kind=sgl)      		:: ktmax, io_real(3), bragg, thetac, &
+                       	   frac, dmin, convergence, voltage, startthick, thickinc, klaue(2)
+integer(kind=irg)   		:: ijmax,ga(3),gb(3),k(3),cnt,fn(3), PX, numthick, ss, &
+                      		   newcount,count_rate,count_max, io_int(6), i, j, isym, ir, skip, &
+                      		   npx, npy, numt, numk, npix, ik, ip, jp, maxholz, istat, dgn, nbeams, &
+                      		   ifamily, isum, famhkl(3), inum
 character(3)			:: method
-character(fnlen)     		:: outname, tname, xtalname
+character(fnlen)     		:: outname, xtalname
 
-
-complex(kind=sgl)   		:: czero
-logical             		:: overlap,np,first
-real(kind=sgl),parameter     	:: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/),yoff(0:5)=(/6.0,6.0,3.0,3.0,0.0,0.0/)
-real(kind=sgl),allocatable    	:: disk(:,:,:,:), thickarray(:,:), thick(:), familytwotheta(:)
-integer(kind=irg),allocatable 	:: diskoffset(:,:), familymult(:), familyhkl(:,:)
+real(kind=sgl),allocatable    	:: diskoffset(:,:), disk(:,:,:,:), thick(:), familytwotheta(:), slice(:,:,:)
+integer(kind=irg),allocatable 	:: familymult(:), familyhkl(:,:)
 real(kind=sgl),allocatable    	:: inten(:,:)
 
 
-namelist /inputlist/ stdout, xtalname, voltage, camlen, k, fn, dmin, convergence, &
+namelist /inputlist/ stdout, xtalname, voltage, k, fn, dmin, convergence, &
                               startthick, thickinc, numthick, outname, npix
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 xtalname = 'undefined'		! initial value to check that the keyword is present in the nml file
 stdout = 6			! standard output
 voltage = 200000.0		! acceleration voltage [V]
-camlen = 1000.0			! camera length [mm]
 k = (/ 0, 0, 1 /)		! beam direction [direction indices]
 fn = (/ 0, 0, 1 /)		! foil normal [direction indices]
 dmin = 0.025			! smallest d-spacing to include in dynamical matrix [nm]
-convergence = 20.0		! beam convergence angle [mrad]
+convergence = 25.0		! beam convergence angle [mrad]
 startthick = 10.0		! starting thickness [nm]
 thickinc = 10.0			! thickness increment
 numthick = 10			! number of increments
-npix = 512			! output arrays will have size npix x npix
+npix = 256			! output arrays will have size npix x npix
 outname = 'lacbedout.data'	! output filename
+
+camlen = 1000.0			! camera length [mm]   (this is not part of the namelist, but needed later)
 
 ! read the namelist file
 open(UNIT=dataunit,FILE=nmlfile,DELIM='apostrophe',STATUS='old')
@@ -201,8 +197,6 @@ end if
 ! convert to ktmax along ga
   ktmax = 0.5*thetac/bragg
 
-write (*,*) 'ktmax = ',ktmax
-
 ! the number of pixels across the disk is equal to 2*npix + 1
   npx = npix
   npy = npx
@@ -232,21 +226,20 @@ write (*,*) 'ktmax = ',ktmax
   PX = npix/2
 
 ! force dynamical matrix routine to read new Bethe parameters from file
-  call Set_Bethe_Parameters()
+  call Set_Bethe_Parameters(.TRUE.)
 
 ! up to this point, everything is nearly identical to the mbcbed program,
 ! except that we do not use a camera length explicitly.  Now we
 ! need to do things a little differently.  First of all, we need a master 
 ! list for all the reflections that contribute in one way or another to the
 ! complete LACBED pattern.  We do this by going through the entire list of incident
-! beam diretions and flagging all reflections that contribute, either as weak
+! beam directions and flagging all reflections that contribute, either as weak
 ! or as strong reflections.
-  mess = 'Pruning reflection list (this takes a while ...) '
+  mess = ' Pruning reflection list (this takes a while ...) '
   call Message("(A)")
   call Prune_ReflectionList(numk,nbeams)
   io_int(1) = nbeams
   call WriteValue('Number of contributing beams  : ', io_int, 1, '(I)')
-
 
 ! since we're only going to store one diffraction disk per family of reflections,
 ! we need to decide which one we're going to keep.  For those, we'll need to 
@@ -272,8 +265,9 @@ outerloop: do while (associated(rltmpa%next))
 end do outerloop
 
 ! ok, so there are ifamily families; next we need to store the corresponding
-! hkl, and multiplicity, as well as the corresponding entry in the disk array
-allocate(familyhkl(3,ifamily), familymult(ifamily), familytwotheta(ifamily))
+! hkl, and multiplicity, as well as the diffraction angle and the position of 
+! the diffraction disk center for a standard camera length.
+allocate(familyhkl(3,ifamily), familymult(ifamily), familytwotheta(ifamily), diskoffset(2,ifamily))
 
 ! redo the above loop, but now fill in the data
 ifamily = 1	! for the incident beam
@@ -285,7 +279,7 @@ rltmpa => rltmpa%next
 outerloop2: do while (associated(rltmpa%next))
     famhkl = rltmpa%famhkl
     ifamily = ifamily+1
-    familyhkl(1:3,ifamily) = famhkl
+    familyhkl(1:3,ifamily) = famhkl(1:3)
     familytwotheta(ifamily) = CalcDiffAngle(famhkl(1),famhkl(2),famhkl(3))*1000.0
     familymult(ifamily) = 1
     rltmpa => rltmpa%next
@@ -294,13 +288,21 @@ outerloop2: do while (associated(rltmpa%next))
       familymult(ifamily) = familymult(ifamily) + 1
       if (.not.associated(rltmpa%next)) EXIT outerloop2
     end do
+! print results for debugging
+!write (*,*) ifamily, familyhkl(1,ifamily),familyhkl(2,ifamily),familyhkl(3,ifamily),familymult(ifamily),&
+!familytwotheta(ifamily)
 end do outerloop2
 
 ! correct last counter
 familymult(ifamily) = familymult(ifamily)+1
 
+! and print last entry (used for debugging)
+!write (*,*) ifamily, familyhkl(1,ifamily),familyhkl(2,ifamily),familyhkl(3,ifamily),familymult(ifamily),&
+!familytwotheta(ifamily)
+
   io_int(1) = ifamily
-  call WriteValue(' Number of unique families in output = ', io_int, 1, "(I5)")
+  call WriteValue('Number of unique families in output = ', io_int, 1, "(I5)")
+
 
 ! next we create the output array, which has one disk image for each 
 ! thickness and contributing family.  We make sure that each image is fully
@@ -309,7 +311,7 @@ familymult(ifamily) = familymult(ifamily)+1
   disk=0.0
 
   io_int(1)=numk
-  call WriteValue(' Starting computation for # beam directions = ', io_int, 1, "(I8)")
+  call WriteValue('Starting computation for # beam directions = ', io_int, 1, "(I8)")
 
 ! time the computation
   cnt = 0
@@ -347,12 +349,13 @@ kvectorloop:  do ik = 1,numk
         disk(ip,jp,1:numt,inum) = inten(1:numt,1)
 	do i=2,DynNbeamsLinked
 	  if (BetheParameter%reflistindex(i).ne.0) then ! is this a reflection on the current list
-! it is, so we need to determine which of the nbeams beams corresponds to it
-	    inum = 1
-	    do while ( (sum(abs(familyhkl(1:3,inum) - rltmpa%hkl)).ne.0).and.(inum.le.ifamily) ) 
-		inum = inum+1
+! it is, so we need to determine which of the families corresponds to it
+	    inum = -1
+	    do ir=2,ifamily
+	     ss = sum(abs(familyhkl(1:3,ir) - rltmpa%hkl(1:3)))
+	     if (ss.eq.0) inum = ir
 	    end do
-  	    if (inum.lt.(ifamily+1)) then	
+  	    if (inum.ne.-1) then	
               disk(ip,jp,1:numt,inum) = inten(1:numt,BetheParameter%reflistindex(i))
 	    end if
 	  end if
@@ -415,12 +418,15 @@ kvectorloop:  do ik = 1,numk
   write (dataunit) startthick, thickinc
 ! and from here one we write the individual diffraction disks with associated information  
 ! Miller indices, multiplicity, two-theta [mrad], and position for a reference camera length
+  allocate(slice(-npix:npix,-npix:npix,1:numt))
   write (dataunit) familyhkl(1:3,1), familymult(1), familytwotheta(1)
-  write (dataunit) disk(-npix:npix,-npix:npix,1:numt,1)
+  slice = disk(-npix:npix,-npix:npix,1:numt,1)
+  write (dataunit) slice
 ! we'll write them in reverse order, so that the smaller Miller indices come first.
   do ir = ifamily,2,-1
     write (dataunit) familyhkl(1:3,ir), familymult(ir), familytwotheta(ir)
-    write (dataunit) disk(-npix:npix,-npix:npix,1:numt,ir)
+    slice = disk(-npix:npix,-npix:npix,1:numt,ir)
+    write (dataunit) slice
   end do
   close(UNIT=dataunit,STATUS='keep')
 

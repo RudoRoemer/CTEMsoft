@@ -1,8 +1,13 @@
 &inputlist
-! if output should go to a file, then insert stdout = some number > 10; comment for screen output
-! stdout = 10
-! input file name for crystal structure
+! do not change the first line in this file !
+!
+! Note: All parameter values are default values for the program
+!
+!--------------
+! the name of the crystal input file MUST be specified (full pathname)
 xtalname = 'Cu.xtal'
+! if output should go to a file, then insert stdout = some number > 10; comment for screen output
+stdout = 6
 ! beam accelerating voltage [V]
 voltage = 200000.
 ! camera length [mm]
@@ -21,4 +26,5 @@ thickinc = 10.0
 numthick = 20
 ! file name of output file
 outname = '/somewhere/test.data'
+! this last line must be present!
 /

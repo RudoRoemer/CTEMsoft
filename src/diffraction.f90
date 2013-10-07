@@ -1695,7 +1695,7 @@ logical,INTENT(IN),OPTIONAL		:: keeporder	!< optional legacy parameter, should b
 integer(kind=irg)    				:: INFO, LDA, LDVR, LDVL, LWORK, JPIV(nn),MILWORK, i
 integer(kind=irg),parameter   		:: LWMAX = 5000 
 complex(kind=dbl)    			:: VL(nn,nn),  WORK(LWMAX), normsum
-real(kind=dbl)       				:: RWORK(2*nn)
+real(kind=dbl)       				:: RWORK(2*nn), io_real(1)
 character            				:: JOBVL, JOBVR
 complex(kind=dbl),allocatable 	:: MIWORK(:)
 
@@ -1752,6 +1752,8 @@ end do
 
  if ((cabs(sum(matmul(CGG,CGinv)))-dble(nn)).gt.1.E-8) then
   mess= 'Error in matrix inversion; continuing'; call Message("(A)")
+  io_real(1) = cabs(sum(matmul(CGG,CGinv)))-dble(nn)
+  call WriteValue('   Matrix inversion error; this number should be zero: ',io_real,1,"(F)")
  endif
   
  deallocate(MIWORK)

@@ -703,6 +703,7 @@ end subroutine CalcDynMat
 !> @date  09/20/13 MDG 1.0 original
 !> @date  10/05/13 MDG 1.1 removal of unused reflections from linked list
 !> @date  10/05/13 MDG 1.2 changed the order of nested loops to speed things up a bit
+!> @date  10/07/13 MDG 1.3 added section to reset the famhkl entries after pruning
 !--------------------------------------------------------------------------
 subroutine Prune_ReflectionList(numk,nbeams)
 
@@ -717,7 +718,7 @@ IMPLICIT NONE
 integer(kind=irg),INTENT(IN)		:: numk
 integer(kind=irg),INTENT(OUT)		:: nbeams
 
-integer(kind=irg)			:: ik, ig, istrong
+integer(kind=irg)			:: ik, ig, istrong, curfam(3), newfam(3)
 real(kind=sgl)     			:: sgp, lUg, cut1, cut2
 integer(kind=irg),allocatable		:: strongreflections(:,:)
 
@@ -776,7 +777,7 @@ nbeams = 0
    rltmpa => rltmpa%next
   end do reflectionloop
 
-  mess = 'Renumbering reflections'; call Message("(A)")
+  mess = ' Renumbering reflections'; call Message("(A)")
   
 ! ok, now that we have the list, we'll go through it again to set sequential numbers instead of 1's
 ! at the same time, we'll deallocate those entries that are no longer needed.
@@ -798,8 +799,33 @@ nbeams = 0
 ! go to the next beam in the list
   end do reflectionloop2
 
+! reset the number of beams to the newly obtained number
   DynNbeamsLinked = nbeams
   DynNbeams = nbeams
+
+! and finally, go through the entire list once again to correct the famhkl
+! entries, which may be incorrect now; famhkl is supposed to be one of the 
+! reflections on the current list, but that might not be the case since
+! famhkl was first initalized when there were additional reflections on
+! the list... so we set famhkl to be the same as the first hkl in each family.
+  rltmpa => reflist%next%next  ! no need to check the first one
+reflectionloop3:  do while (associated(rltmpa))
+    curfam = rltmpa%famhkl
+    if (sum(abs(curfam-rltmpa%hkl)).ne.0) then
+      newfam = rltmpa%hkl
+      do while (sum(abs(rltmpa%famhkl-curfam)).eq.0)
+        rltmpa%famhkl = newfam
+        rltmpa => rltmpa%next
+      end do
+    else
+      do while (sum(abs(rltmpa%famhkl-curfam)).eq.0)
+        rltmpa => rltmpa%next
+	if ( .not.associated(rltmpa) ) EXIT reflectionloop3
+      end do
+    end if
+! go to the next beam in the list
+  end do reflectionloop3
+
 
 end subroutine Prune_ReflectionList
 
@@ -1238,9 +1264,12 @@ logical,INTENT(IN)				:: ConvertList
 integer(kind=irg),INTENT(IN)			:: maxholz
 real(kind=sgl),INTENT(IN),OPTIONAL		:: convang
 
-integer(kind=irg)				:: imh, imk, iml, gg(3), ix, iy, iz, i, minholz, RHOLZ, im, istat, N, ig, numr, ir
+integer(kind=irg)				:: imh, imk, iml, gg(3), ix, iy, iz, i, minholz, RHOLZ, im, istat, N, &
+						ig, numr, ir, irsel
 real(kind=sgl)					:: dhkl, io_real(9), H, g3(3), g3n(3), FNg(3), ddt, maxang, minang, s
 integer(kind=irg)				:: io_int(3), gshort(3), gp(3)
+
+logical,allocatable				:: inrange(:)
 
 ! determine the master list of reflections for the general case (i.e., a box in reciprocal space)
 if (method.eq.'ALL') then 
@@ -1293,6 +1322,7 @@ if (method.eq.'ALL') then
   DynNbeams = 1
   gg = (/ 0,0,0 /)
   call AddReflection( gg )   ! this guarantees that 000 is always the first reflection
+  rltail%famhkl = gg
   call CalcUcg(gg)   
   DynUpz = rlp%Vpmod
   io_real(1) = rlp%xgp
@@ -1306,38 +1336,51 @@ if (method.eq.'ALL') then
 ! note that the lookup table must be twice as large as the list of participating reflections,
 ! since the dynamical matrix uses g-h as its index !!!  However, the linked list of reflections
 ! should only contain the g, h reflections separately, not their differences. (i.e., smaller box)
-    do ix=-2*imh,2*imh
-      do iy=-2*imk,2*imk
-       do iz=-2*iml,2*iml
+ixl: do ix=-2*imh,2*imh
+iyl:  do iy=-2*imk,2*imk
+izl:   do iz=-2*iml,2*iml
         gg = (/ ix, iy, iz /)
         if (IsGAllowed(gg)) then
 ! if this g is inside the original box, then add it to the linked list
           if ((abs(ix).le.imh).and.(abs(iy).le.imk).and.(abs(iz).le.iml)) then 
+	   if ( .not.refdone(ix,iy,iz) ) then
 ! compute the family of reflections
 	     call CalcFamily( gg, numr, 'r' )
-	     do ir=1,numr
-	       if ( .not.refdone(itmp(ir,1),itmp(ir,2),itmp(ir,3)) ) then
+! for each family member, we need to determine whether or not it falls inside the angular range
+! then we need to pick one of those to be the representative family member for data output (used in LACBED).
+	     irsel = 0
+	     allocate(inrange(numr))
+	     inrange = .FALSE.
 ! check if the angular range puts it between the two cones (mainly used for CBED etc.)	
+	     do ir=1,numr
    	    	 s = abs(CalcAngle( float( (/ itmp(ir,1),itmp(ir,2),itmp(ir,3) /) ), float(k), 'r' ) )   
 	    	 if ((s.ge.minang).and.(s.le.maxang)) then 
-		    call AddReflection( (/ itmp(ir,1),itmp(ir,2),itmp(ir,3) /) )
-		    rltail%famhkl = (/ itmp(1,1),itmp(1,2),itmp(1,3) /)
+		   inrange(ir) = .TRUE.
+		   if (irsel.eq.0) irsel=ir   ! keep the first one that satisfies this condition
 		 end if
 		 refdone(itmp(ir,1),itmp(ir,2),itmp(ir,3)) = .TRUE.
-               end if
+ 	     end do
+! next add those reflections that are inrange
+	     do ir=1,numr
+		if ((inrange(ir)).and.(irsel.gt.0)) then 
+		  call AddReflection( (/ itmp(ir,1),itmp(ir,2),itmp(ir,3) /) )
+		  rltail%famhkl = (/ itmp(irsel,1),itmp(irsel,2),itmp(irsel,3) /)
+		end if
 	     end do
-          end if
+	     deallocate(inrange)
+          end if 
+         end if ! inside smaller box
 ! add the reflection to the look up table
-	  call CalcUcg( gg )
-          LUT(ix, iy, iz) = rlp%Ucg
+	 call CalcUcg( gg )
+         LUT(ix, iy, iz) = rlp%Ucg
 ! flag this reflection as a double diffraction candidate if cabs(Ucg)<ddt threshold
-          if (cabs(rlp%Ucg).le.ddt) then 
-            dbdiff(ix,iy,iz) = .TRUE.
-          end if
-        end if
-       end do
-      end do
-    end do
+         if (cabs(rlp%Ucg).le.ddt) then 
+           dbdiff(ix,iy,iz) = .TRUE.
+         end if
+        end if ! IsGAllowed
+       end do izl
+      end do iyl
+    end do ixl
   io_int(1) = DynNbeams
   call WriteValue(' Length of the master list of reflections : ', io_int, 1, "(I8)")
 end if   ! method = ALL
