@@ -16,6 +16,8 @@ k = 0,0,1
 fn = 0,0,1
 ! minimum d-spacing to be taken into account [nm]
 dmin = 0.025
+! maximum HOLZ layer number for the output file (this does not affect the number for the actual computations)
+maxHOLZ = 2
 ! incident beam convergence angle [mrad]
 convergence = 25.0
 ! output will be diffraction disks inside a square of area (2*npix+1)^2
