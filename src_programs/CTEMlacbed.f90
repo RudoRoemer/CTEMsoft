@@ -110,7 +110,7 @@ character(fnlen),INTENT(IN)	:: nmlfile
 
 real(kind=sgl)      		:: ktmax, io_real(3), bragg, thetac, c(3), gx(3), gy(3), sc, qx, qy, &
                        	   frac, dmin, convergence, voltage, startthick, thickinc, klaue(2)
-integer(kind=irg)   		:: ijmax,ga(3),gb(3),k(3),cnt,fn(3), PX, numthick, ss, icnt, &
+integer(kind=irg)   		:: ijmax,ga(3),gb(3),k(3),cnt,fn(3), PX, numthick, ss, icnt, pgnum, ih, &
                       		   newcount,count_rate,count_max, io_int(6), i, j, isym, ir, skip, &
                       		   npx, npy, numt, numk, npix, ik, ip, jp, maxholz, istat, dgn, nbeams, &
                       		   ifamily, isum, famhkl(3), inum, maxHOLZ
@@ -182,6 +182,7 @@ end if
 ! use the new routine to get the whole pattern 2D symmetry group, since that
 ! is the one that determines the independent beam directions.
  dgn = GetPatternSymmetry(k,j,.TRUE.)
+ pgnum = j
  isym = WPPG(dgn) ! WPPG lists the whole pattern point group numbers vs. diffraction group numbers
 
 ! determine the shortest reciprocal lattice points for this zone
@@ -443,6 +444,10 @@ kvectorloop:  do ik = 1,numk
 ! binary for now, but HDF5 in the future, for the IDL visualization program 
 ! to read.
   open(unit=dataunit,file=trim(outname),status='unknown',action='write',form='unformatted')
+! write the program identifier
+  write (dataunit) trim(progname)
+! write the version number
+  write (dataunit) scversion
 ! first write the array dimensions
   write (dataunit) 2*npix+1,2*npix+1,numt,icnt
 ! then the name of the crystal data file
@@ -453,26 +458,33 @@ kvectorloop:  do ik = 1,numk
   write (dataunit) convergence
 ! the zone axis indices
   write (dataunit) k
+! number of k-values in disk
+  write (dataunit) numk
+! horizontal reciprocal lattice vector
+  write (dataunit) ga  
 ! maximum HOLZ layer in the output file
   write (dataunit) maxHOLZ
-! number of the Whole Pattern symmetry group
-  write (dataunit) WPPG(dgn)
+! eight integers with the labels of various symmetry groups
+  write (dataunit) (/ pgnum, PGLaue(pgnum), dgn, PDG(dgn), BFPG(dgn), WPPG(dgn), DFGN(dgn), DFSP(dgn) /)
 ! thickness data
   write (dataunit) startthick, thickinc
 ! and from here one we write the individual diffraction disks with associated information  
 ! Miller indices, multiplicity, two-theta [mrad], and position for a reference camera length
 ! only for those families that belong the HOLZ layers <= maxHOLZ (to keep the file size down a bit)
   allocate(slice(-npix:npix,-npix:npix,1:numt))
-  write (dataunit) familyhkl(1:3,1), familymult(1), familytwotheta(1), diskoffset(1:2,1)
+  write (dataunit) familyhkl(1:3,1), familymult(1), familytwotheta(1), diskoffset(1:2,1), whichHOLZ(1)
   slice = disk(-npix:npix,-npix:npix,1:numt,1)
   write (dataunit) slice
-! we'll write them in reverse order, so that the smaller Miller indices come first.
-  do ir = ifamily,2,-1
-    if (whichHOLZ(ir).le.maxHOLZ) then
-      write (dataunit) familyhkl(1:3,ir), familymult(ir), familytwotheta(ir), diskoffset(1:2,ir)
+! we'll write them in reverse order, so that the smaller Miller indices come first (at least for high symmetry structures);
+! we'll also write them by HOLZ number
+  do ih = 0,maxHOLZ
+   do ir = ifamily,2,-1
+    if (whichHOLZ(ir).eq.ih) then
+      write (dataunit) familyhkl(1:3,ir), familymult(ir), familytwotheta(ir), diskoffset(1:2,ir), whichHOLZ(ir)
       slice = disk(-npix:npix,-npix:npix,1:numt,ir)
       write (dataunit) slice
     end if
+   end do
   end do
   close(UNIT=dataunit,STATUS='keep')
 
