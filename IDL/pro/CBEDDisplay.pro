@@ -9,6 +9,11 @@
 @CBEDgetfilename		; select a data file
 @CBEDreaddatafile		; read a data file
 @CBEDprogressbar		; draws a progress bar during file loading
+@CBEDprosetvalue		; used for event handling
+@CBEDLACBEDWidget		; LACBED display widget
+@CBEDLACBEDWidget_event		; LACBED display widget event handler
+@CBEDDrawWidget			; drawing widget for BF and DF/Eades patterns
+
 
 ;
 ; Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
@@ -75,7 +80,7 @@ widget_s = {widgetstruct, $
             progress:long(0), $                 ; progress status bar widget ID
             progressdrawID:long(0), $           ; progress status bar widget draw ID
             imagebase:long(0), $                ; base widget ID for BF/HAADF image display widget
-            cbedbase:long(0), $                 ; base widget ID for CBED pattern display widget
+         ;  cbedbase:long(0), $                 ; base widget ID for CBED pattern display widget
             dataname:long(0), $                 ; filename widget ID
             xtalname:long(0), $                 ; crystal structure filename widget ID
             filesize:long(0), $                 ; filesize widget ID
@@ -83,6 +88,7 @@ widget_s = {widgetstruct, $
             loadlacbedfile:long(0), $           ; load LACBED file button ID
             loadmbcbedfile:long(0), $           ; load MBCBED file button ID
 	    logfile: long(0), $			; logfile toggle widget ID
+	    logoffset: long(0), $		; logarithm offset parameter widget
             imx:long(0), $                 	; number of image pixels along x
             imy:long(0), $                 	; number of image pixels along y
             patx:long(0), $                 	; number of CBED pattern pixels along x
@@ -90,6 +96,21 @@ widget_s = {widgetstruct, $
             CBEDzoom:long(0), $                 ; CBED pattern zoom factor
             maxHOLZ:long(0), $                  ; maximum HOLZ layer number
 	    ga:long(0), $			; indices of horizontal g-vector
+	    startLACBED: long(0), $		; button to generate LACBED widget
+	    startCBED: long(0), $		; button to generate CBED widget
+	    startMBCBED: long(0), $		; button to generate MBCBED widget
+	    LACBEDbase: long(0), $		; LACBED widget base
+	    LACBEDDrawbase: long(0), $		; LACBED draw widget base
+	    CBEDbase: long(0), $		; CBED widget base
+	    MBCBEDbase: long(0), $		; MBCBED widget base
+	    LACBEDthicklist: long(0), $		; LACBED thickness drop list
+	    dfdisplaymode: long(0), $		; dark field display mode (0=single; 1=symmetrize; 2=Eades)
+	    LACBEDdroplist0: long(0), $		; droplist for ZOLZ
+	    LACBEDdroplist1: long(0), $		; droplist for HOLZ layer 1
+	    LACBEDdroplist2: long(0), $		; droplist for HOLZ layer 2
+	    LACBEDdroplist3: long(0), $		; droplist for HOLZ layer 3  [for now, a maximum of 3 HOLZ layers are included]
+	    gsel: long(0), $			; selected g-vector widget
+	    diskrotation: long(0), $		; disk rotation angle [CW, degrees]
 	    imagelegendbgroup:long(0), $	; image legend button group
 	    imageformatbgroup:long(0), $	; image format button group
 	    cbedlegendbgroup:long(0), $		; cbed legend button group
@@ -98,8 +119,8 @@ widget_s = {widgetstruct, $
 	    saveimage:long(0), $		; save image button
 	    savecbed:long(0), $			; save cbed pattern button
 	    bfrho: long(0), $			; Bright Field radius in mrad
-	    haadfrhoin: long(0), $		; Dark Field inner radius in mrad
-	    haadfrhoout: long(0), $		; Dark Field outer radius in mrad
+	    eadesrhoin: long(0), $		; Eades pattern inner radius in mrad
+	    eadesrhoout: long(0), $		; Eades pattern outer radius in mrad
 	    detsegm: long(0), $			; number of HAADF detector segments
 	    angsegm: long(0), $			; off set angle for first HAADF detector segment
 	    patang: long(0), $			; maximum CBED pattern angle (from input file)
@@ -107,12 +128,16 @@ widget_s = {widgetstruct, $
             detdrawID:long(0), $                ; detector draw window ID
 	    BFdraw: long(0), $			; BF widget
 	    BFdrawID: long(0), $		; BF widget ID
+	    DFdraw: long(0), $			; DF widget
+	    DFdrawID: long(0), $		; DF widget ID
 	    HAADFdraw: long(0), $		; HAADF widget
 	    HAADFdrawID: long(0), $		; HAADF widget ID
 	    CBEDdraw: long(0), $		; CBED widget
 	    CBEDdrawID: long(0), $		; CBED widget ID
 	    BFmin: long(0), $			; BF image minimum intensity
 	    BFmax: long(0), $			; BF image maximum intensity
+	    DFmin: long(0), $			; DF image minimum intensity
+	    DFmax: long(0), $			; DF image maximum intensity
 	    HAADFmin: long(0), $		; HAADF image minimum intensity
 	    HAADFmax: long(0), $		; HAADF image maximum intensity
 	    CBEDmin: long(0), $			; CBED pattern minimum intensity
@@ -162,6 +187,7 @@ data = {datastruct, $
 	logunit: fix(13), $			; logical file unit for log file
 	logname: '', $				; filename for log output
 	logfileopen: fix(0), $			; log file is open when 1, closed when 0
+	logoffset: float(0.001), $		; logarithmic display offset parameter (to avoid taking log(0)... )
 	detwinx: fix(401), $			; detector display window size x
 	detwiny: fix(401), $			; detector display window size y
 	imx: long(0), $				; number of image pixels along x
@@ -176,17 +202,25 @@ data = {datastruct, $
 	cbedlegend: long(0), $			; display cbed scale bar toggle (0=do not display, 1=display)
 	cbedformat: long(0), $			; cbed output format selector (0=jpeg, 1=tiff, 2=bmp)
 	cbedmode: long(0), $			; cbed intensity mode toggle (0=normal, 1=logarithmic)
+	dfdisplaymode: long(0), $		; dark field display mode (0=single; 1=symmetrized; 2=Eades)
 	diffractionmode: long(0), $		; diffraction mode (MBCBED=0, LACBED=1)
+	lastmode: long(0), $			; last drawing mode (0=grayscale or 1=RGB)
+	diskrotation: float(0), $		; disk rotation angle [CW, degrees]
 	maxHOLZ: long(2), $			; maximum HOLZ lyer number in data file
+	famsel: fix(0), $			; selected family ID number
 	BFrho: float(3.5), $			; Bright Field radius in mrad
-	Eadesrhoin: float(3.5), $		; Eades detector inner radius in mrad
-	Eadesrhoout: float(10.0), $		; Eades detector outer radius in mrad
+	Eadesrhoin: float(10.0), $		; Eades detector inner radius in mrad
+	Eadesrhoout: float(50.0), $		; Eades detector outer radius in mrad
 	BFmin: float(0.0), $			; BF image minimum intensity
 	BFmax: float(0.0), $			; BF image maximum intensity
+	DFmin: float(0.0), $			; DF image minimum intensity
+	DFmax: float(0.0), $			; DF image maximum intensity
 	Eadesmin: float(0.0), $			; Eades image minimum intensity
 	Eadesmax: float(0.0), $			; Eades image maximum intensity
 	CBEDmin: float(0.0), $			; CBED pattern minimum intensity
 	CBEDmax: float(0.0), $			; CBED pattern maximum intensity
+	BFdrawID: long(0), $			; BF window ID 
+	DFdrawID: long(0), $			; DF window ID 
 	patang: float(15.0), $			; this is the horizontal half scale of the detector plot in mm
         camlen: float(500), $                   ; camera length field (mm)
         refcamlen: float(1000), $               ; reference camera length to which the others will be scaled (mm)
@@ -206,6 +240,8 @@ data = {datastruct, $
 	numt: long(0), $			; number of sample thicknesses
 	startthick: float(0), $			; starting thickness
 	thickinc: float(0), $			; thickness increment
+	thicksel: long(0), $			; selected thickness index
+	thickness: float(0), $			; selected thickness
 	symgroups: lonarr(8), $			; symmetry group labels
 	datadims: lon64arr(4), $		; dimensions of rawdata array
 	xlocation: float(0.0), $		; main widget x-location (can be modified and stored in preferences file)
@@ -653,6 +689,53 @@ widget_s.symDFS   = WIDGET_TEXT(file5, $
 			VALUE=PGTHD[data.symgroups[7]],$
 			XSIZE=10, $
 			/ALIGN_LEFT)
+
+;-------------
+; next we have the buttons that generate LACBED, CBED, or MBCBED widgets
+;-------------
+block3 = WIDGET_BASE(widget_s.base, $
+			XSIZE=650, $
+			/FRAME, $
+			/ROW)
+
+file5 = WIDGET_BASE(block3, $
+			/ROW, $
+			/ALIGN_CENTER)
+
+widget_s.startLACBED = WIDGET_BUTTON(file5, $
+                        VALUE='LACBED Window', $
+                        UVALUE='STARTLACBEDWIDGET', $
+                        EVENT_PRO='CBEDDisplay_event', $
+                        SENSITIVE=0, $
+                        /FRAME)
+
+widget_s.startCBED = WIDGET_BUTTON(file5, $
+                        VALUE='CBED Window', $
+                        UVALUE='STARTCBEDWIDGET', $
+                        EVENT_PRO='CBEDDisplay_event', $
+                        SENSITIVE=0, $
+                        /FRAME)
+
+widget_s.startMBCBED = WIDGET_BUTTON(file5, $
+                        VALUE='MBCBED Window', $
+                        UVALUE='STARTMBCBEDWIDGET', $
+                        EVENT_PRO='CBEDDisplay_event', $
+                        SENSITIVE=0, $
+                        /FRAME)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ;----------

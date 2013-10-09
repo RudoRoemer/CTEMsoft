@@ -46,7 +46,8 @@ common CBED_data_common, data
 common PointGroups, PGTHD, PGTWD, DG
 
 ; the next common block contains all the raw data needed to generate the CBED patterns
-common CBED_rawdata, gvecs, gmult, gtt, gxy, disks
+common CBED_rawdata, gvecs, gmult, gtt, gxy, disks, numHOLZ, HOLZlist
+common CBED_current, BFcurrent, DFcurrent, RGBcurrent, mask
 
 
   CBEDprint,'Reading data file '+data.dataname
@@ -93,6 +94,11 @@ common CBED_rawdata, gvecs, gmult, gtt, gxy, disks
 ; WIDGET_CONTROL, SET_VALUE=string(data.numt,FORMAT="(I14)"), widget_s.numt
   WIDGET_CONTROL, SET_VALUE=string(data.numfam,FORMAT="(I5)"), widget_s.numfam
 
+; create the mask
+  mask = shift(dist(data.datadims[0]),data.datadims[0]/2,data.datadims[0]/2)
+  mask[where (mask le data.datadims[0]/2)] = 1.0
+  mask[where (mask gt data.datadims[0]/2)] = 0.0
+  mask = mask gt 0.5
 
   xtalname = bytarr(132)
   readu,1,xtalname
@@ -165,6 +171,10 @@ common CBED_rawdata, gvecs, gmult, gtt, gxy, disks
   widget_control, set_value=PGTWD[data.symgroups[6]], widget_s.symDFG
   widget_control, set_value=PGTWD[data.symgroups[7]], widget_s.symDFS
 
+; initialize the Whole Pattern symmetry
+  CBEDGenerate2DSymmetry,data.symgroups[5]
+
+
 ; starting thickness and thickness increment
   startthick = 0.0
   thickinc = 0.0
@@ -173,8 +183,7 @@ common CBED_rawdata, gvecs, gmult, gtt, gxy, disks
   data.thickinc = thickinc
     cbedprint,' Starting thickness [nm]   = '+string(startthick,FORMAT="(F6.3)")
     cbedprint,' Thickness increment [nm]  = '+string(thickinc,FORMAT="(F6.3)")
-; WIDGET_CONTROL, SET_VALUE=string(data.startthick,FORMAT="(F6.3)"), widget_s.startthick
-; WIDGET_CONTROL, SET_VALUE=string(data.thickinc,FORMAT="(F6.3)"), widget_s.thickinc
+; these are not shown in the main widget, but they are shown in a droplist widget in other areas
 
 
 ; ok, the above items are common to the two data file formats
@@ -205,6 +214,10 @@ common CBED_rawdata, gvecs, gmult, gtt, gxy, disks
     endfor
     CBEDprogressbar,100.0
     close,1
+; activate the LACBED and CBED buttons
+    WIDGET_CONTROL, widget_s.startLACBED, sensitive=1
+    WIDGET_CONTROL, widget_s.startCBED, sensitive=1
+    WIDGET_CONTROL, widget_s.startMBCBED, sensitive=0
   end; else begin ; this is the MBCBED data format
 ;end
 

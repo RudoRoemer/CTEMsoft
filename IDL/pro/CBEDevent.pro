@@ -26,31 +26,74 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:CBEDApply2DSymmetry.pro
+; CTEMsoft2013:CBEDevent.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: CBEDApply2DSymmetry.pro
+; PROGRAM: CBEDevent.pro
 ;
-;> @author Marc De Graef, Carnegie Mellon University
+;> @author Marc De Graef, Carnegie Melon University
 ;
-;> @brief apply all the symmetry operators for a given 2D point group
+;> @brief special event handler for all the CW_BGROUP calls, since CW_BGROUP does not support event_pro
 ;
-;> @date 10/08/13 MDG 1.0 first attempt 
+;> @date 10/09/13 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-function CBEDApply2DSymmetry,inp,iorder
-;
-; apply a series of basic 2D symmetry operations to the input array
-;
-common SYM2D, SYM_MATnum, SYM_direc
+function CBEDevent, event
 
-; first of all, apply the identity operation
-z = inp
+;------------------------------------------------------------
+; common blocks
+common CBED_widget_common, widget_s
+common CBED_data_common, data
+common CBED_rawdata, gvecs, gmult, gtt, gxy, disks, numHOLZ, HOLZlist
+common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
-; then loop over all the symmetry operators
-for i=1,SYM_MATnum-1 do begin
-  z += CBEDApply2DOperator(inp,i)
-endfor
+if (data.eventverbose eq 1) then help,event,/structure
 
-; and return the array, properly normalized to avoid double counting
-return,z; /float(SYM_MATnum)
-end
+
+WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
+
+IF N_ELEMENTS(eventval) EQ 0 THEN RETURN,eventval
+
+CASE eventval OF
+
+ 'LOGFILE':  begin
+; toggle the log mode 
+		if (data.logmode eq 0) then begin
+		   CBEDprint,'Turning log mode on',/blank
+		 q = systime()
+ 		 z = strsplit(q,' ',/extract,/regex)
+ 		 data.logname = data.pathname+'/CBEDDisplay'+z[0]+z[1]+z[2]+'_'+z[3]+'_'+z[4]+'.log'
+		 CBEDprint,'Log file: '+data.logname
+		 data.logmode = 1
+		 openw,data.logunit,data.logname
+		 data.logfileopen = 1
+		end else begin
+		   CBEDprint,'Turning log mode off',/blank
+		 if (data.logfileopen eq 1) then begin
+		   close,data.logunit
+		   data.logfileopen = 0
+		 endif
+	    	 data.logmode = 0
+		endelse
+	  endcase
+  
+  'CBEDFORMAT': begin
+		WIDGET_CONTROL, get_value=val,widget_s.cbedformatbgroup
+		data.cbedformat = fix(val[0])
+	  endcase
+
+  'CBEDMODE': begin
+		WIDGET_CONTROL, get_value=val,widget_s.cbedmodebgroup
+		data.cbedmode = fix(val[0])
+	  endcase
+
+  'IMAGEFORMAT': begin
+		WIDGET_CONTROL, get_value=val,widget_s.imageformatbgroup
+		data.imageformat = fix(val[0])
+	  endcase
+
+else: MESSAGE, "Event User Value Not Found"
+
+endcase
+
+return,eventval
+end 

@@ -26,31 +26,37 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:CBEDApply2DSymmetry.pro
+; CTEMsoft2013:CBEDprosetvalue.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: CBEDApply2DSymmetry.pro
+; PROGRAM: CBEDprosetvalue.pro
 ;
-;> @author Marc De Graef, Carnegie Mellon University
+;> @author Marc De Graef, Carnegie Melon University
 ;
-;> @brief apply all the symmetry operators for a given 2D point group
+;> @brief This is the routine called by the PRO_SET_VALUE option for other widgets
 ;
-;> @date 10/08/13 MDG 1.0 first attempt 
+;> @date 10/09/13 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-function CBEDApply2DSymmetry,inp,iorder
-;
-; apply a series of basic 2D symmetry operations to the input array
-;
-common SYM2D, SYM_MATnum, SYM_direc
+pro CBEDprosetvalue, wid, widval
 
-; first of all, apply the identity operation
-z = inp
+; by default, this routine has to two 4 things (see IDL manual)
+; 1. Process the Value supplied to the procedure in the necessary way
+; 2. Unset the PRO_SET_VALUE keyword for the affected widget by setting its value to a null string
+; 3. Set the affected widget's value using the SET_VALUE keyword to WIDGET_CONTROL
+; 4. Reset the PRO_SET_VALUE keyword to the original procedure
+; the reason for this is that if we do not unset, the keyword, then this routine 
+; would start calling itself in an infinite loop ...
 
-; then loop over all the symmetry operators
-for i=1,SYM_MATnum-1 do begin
-  z += CBEDApply2DOperator(inp,i)
-endfor
+; 1.  nothing needs to be done here
 
-; and return the array, properly normalized to avoid double counting
-return,z; /float(SYM_MATnum)
+; 2.
+WIDGET_CONTROL, PRO_SET_VALUE='', wid
+
+; 3.
+WIDGET_CONTROL, SET_VALUE = widval, wid
+
+; 4.
+WIDGET_CONTROL, PRO_SET_VALUE='CBEDprosetvalue', wid
+
+
 end
