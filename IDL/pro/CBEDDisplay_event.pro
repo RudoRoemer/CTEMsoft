@@ -93,13 +93,13 @@ print,'Not yet implemented'
 	  endcase
 
  'QUIT': begin
-; do a general cleanup
+; do a general cleanup of potentially open widgets
 		CBEDprint,'Quitting program',/blank
-;	if (XRegistered("STEMCBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.cbedbase, /DESTROY
-;	if (XRegistered("STEMImageWidget") NE 0) then WIDGET_CONTROL, widget_s.imagebase, /DESTROY
+		if (XRegistered("CBEDDrawWidget") NE 0) then WIDGET_CONTROL, widget_s.LACBEDDrawbase, /DESTROY
+		if (XRegistered("CBEDLACBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.LACBEDbase, /DESTROY
+
 ; write the preferences file
-;	STEMwritepreferences
-; kill a bunch of large variables
+		CBEDwritepreferences
 
 ; close the log file if it is open
 		if (data.logfileopen eq 1) then begin

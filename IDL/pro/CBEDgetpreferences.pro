@@ -63,47 +63,29 @@ if (rs eq 1) then begin
     case nm of 
 ; root folder
 	'CBEDroot': data.CBEDroot=val
-; CBED zoom
-;  	'CBEDzoom': data.CBEDzoom=fix(val)
-; image legend on or off ?
-;  	'imagelegend': data.imagelegend = fix(val)
 ; image output format
-;  	'imageformat': data.imageformat = fix(val)
-; cbed legend on or off ?
-;  	'cbedlegend': data.cbedlegend = fix(val)
+  	'imageformat': data.imageformat=fix(val)
 ; cbed output format
-;  	'cbedformat': data.cbedformat = fix(val)
+  	'cbedformat': data.cbedformat=fix(val)
 ; cbed output mode (linear or logarithmic)
-;  	'cbedmode': data.cbedmode = fix(val)
-; BF detector radius [mm]
-;  	'BFrho': data.BFrho = float(val)
-; HAADF inner detector radius [mm]
-;  	'HAADFrhoin': data.HAADFrhoin = float(val)
-; HAADF outer detector radius [mm]
-;  	'HAADFrhoout': data.HAADFrhoout = float(val)
-; BF detector radius in mrad
-;  	'BFmrad': data.BFmrad = float(val)
-; HAADF inner detector radius [mrad]
-;  	'HAADFimrad': data.HAADFimrad = float(val)
-; HAADF outer detector radius [mrad]
-;  	'HAADFomrad': data.HAADFomrad = float(val)
-; number of detector segments
-;  	'detsegm': data.detsegm = fix(val)
-; detector segment ofset angle
-;  	'angsegm': data.angsegm = float(val)
+  	'cbedmode': data.cbedmode=fix(val)
+; Eades inner detector radius [mrad]
+  	'Eadesrhoin': data.eadesrhoin=float(val)
+; Eades outer detector radius [mrad]
+  	'Eadesrhoout': data.eadesrhoout=float(val)
+; disk rotation angle
+  	'diskrotation': data.diskrotation=float(val)
 ; camera length [mm]
-;  	'camlen': data.camlen = float(val)
-; single or multiple sector mode
-;  	'sectormode': data.sectormode = fix(val)
-; k or g selection mode
-;  	'dfmode': data.dfmode = fix(val)
-; aperture radius [mm]
-;  	'aprad': data.aprad = float(val)
+  	'camlen': data.camlen=float(val)
+; dark field display mode
+  	'dfdisplaymode': data.dfdisplaymode=fix(val)
 ; window locations
-   	'xlocation': data.xlocation = float(val)
-  	'ylocation': data.ylocation = float(val)
-  	'cbedxlocation': data.cbedxlocation = float(val)
-  	'cbedylocation': data.cbedylocation = float(val)
+  	'xlocation': data.xlocation=float(val)
+  	'ylocation': data.ylocation=float(val)
+  	'lacbedxlocation': data.LACBEDxlocation=float(val)
+  	'lacbedylocation': data.LACBEDylocation=float(val)
+  	'lacbedpatternxlocation': data.LACBEDPatternxlocation=float(val)
+  	'lacbedpatternylocation': data.LACBEDPatternylocation=float(val)
 
     else: MESSAGE,'unknown option for preferences file'
     endcase

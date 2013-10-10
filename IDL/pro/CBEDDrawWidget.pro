@@ -55,9 +55,9 @@ widget_s.LACBEDDrawbase = WIDGET_BASE(TITLE='LACBED Pattern Widget', $
                         /ROW, $
                         XSIZE=2*data.datadims[0]+30, $
                         /ALIGN_CENTER, $
-;		/TLB_MOVE_EVENTS, $
-                        XOFFSET=data.cbedxlocation, $
-                        YOFFSET=data.cbedylocation)
+			/TLB_MOVE_EVENTS, $
+                        XOFFSET=data.LACBEDPatternxlocation, $
+                        YOFFSET=data.LACBEDPatternylocation)
 
 ;------------------------------------------------------------
 ; create the various blocks

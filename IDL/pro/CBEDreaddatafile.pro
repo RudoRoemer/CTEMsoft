@@ -223,6 +223,20 @@ common CBED_current, BFcurrent, DFcurrent, RGBcurrent, mask
 
   CBEDprint,'Completed reading data file',/blank
 
+; there are a few parameters that need to be reset after reading a new file
+; [no need to write them to widgets since there shouldn't be any open immediately
+; after a new file has been read]
+data.thicksel = 0
+data.famsel = 0
+data.diskrotation = 0.0
+data.dfdisplaymode = 0
+data.CBEDmode = 0
+
+
+
+
+
+
 skipall:
 
 end

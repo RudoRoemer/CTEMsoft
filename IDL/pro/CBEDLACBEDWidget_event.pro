@@ -51,9 +51,10 @@ common CBED_current, BFcurrent, DFcurrent, RGBcurrent, mask
 if (data.eventverbose eq 1) then help,event,/structure
 
 ; intercept the image widget movement here 
-if (event.id eq widget_s.imagebase) then begin
-  data.imagexlocation = event.x
-  data.imageylocation = event.y-25
+if (event.id eq widget_s.LACBEDbase) then begin
+  data.LACBEDxlocation = event.x
+  data.LACBEDylocation = event.y-25
+    CBEDprint,' Window moved to location ('+string(fix(data.LACBEDxlocation),format="(I4)")+','+string(fix(data.LACBEDylocation),format="(I4)")+')'
 end else begin
 
   WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
@@ -167,7 +168,7 @@ end else begin
 	  end
 	  WIDGET_CONTROL, SET_VALUE=string(data.BFmin,FORMAT="(E9.2)"), widget_s.BFmin
 	  WIDGET_CONTROL, SET_VALUE=string(data.BFmax,FORMAT="(E9.2)"), widget_s.BFmax
-; then display the appropriate dark field pattern (single, symmetric single, or Eades	
+; then display the appropriate dark field pattern (single, symmetric single, or Eades)
 	  wset,data.DFdrawID
 	  case data.dfdisplaymode of 
 ; single DF image
@@ -237,17 +238,20 @@ end else begin
 ; this is just for fun... display a colorized version of a random selection of ZOLZ patterns,
 ; symmetrized except for the BF pattern
 	  rgb = bytarr(3,data.datadims[0],data.datadims[1])
-	  sel = fix( randomu(seed,6) * float(numHOLZ[0]) ) 
+	  sel = fix( randomu(seed,9) * float(numHOLZ[0]) ) 
 ; red channel
-	  zr = CBEDApply2DSymmetry(reform(disks[*,*,data.thicksel,sel[0]]),0) + CBEDApply2DSymmetry(reform(disks[*,*,data.thicksel,sel[1]]),0)
+	  zr = replicate(0.0,data.datadims[0],data.datadims[1])
+	  for i=0,2 do zr += CBEDApply2DSymmetry(reform(disks[*,*,data.thicksel,sel[i]]),0) 
 	  if (data.diskrotation ne 0.0) then zr = rot(zr,data.diskrotation,cubic=-0.5)
 	  zr *= mask
 ; green channel
-	  zg = CBEDApply2DSymmetry(reform(disks[*,*,data.thicksel,sel[2]]),0) + CBEDApply2DSymmetry(reform(disks[*,*,data.thicksel,sel[3]]),0)
+	  zg = replicate(0.0,data.datadims[0],data.datadims[1])
+	  for i=3,5 do zg += CBEDApply2DSymmetry(reform(disks[*,*,data.thicksel,sel[i]]),0) 
 	  if (data.diskrotation ne 0.0) then zg = rot(zg,data.diskrotation,cubic=-0.5)
 	  zg *= mask
 ; blue channel
-	  zb = CBEDApply2DSymmetry(reform(disks[*,*,data.thicksel,sel[4]]),0) + CBEDApply2DSymmetry(reform(disks[*,*,data.thicksel,sel[5]]),0)
+	  zb = replicate(0.0,data.datadims[0],data.datadims[1])
+	  for i=6,8 do zb += CBEDApply2DSymmetry(reform(disks[*,*,data.thicksel,sel[i]]),0) 
 	  if (data.diskrotation ne 0.0) then zb = rot(zb,data.diskrotation,cubic=-0.5)
 	  zb *= mask
 ; copy into the RGB channels

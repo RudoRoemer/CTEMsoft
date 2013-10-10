@@ -26,59 +26,35 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:CBEDwritepreferences.pro
+; CTEMsoft2013:CBEDLACBEDWidget_event.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: CBEDwritepreferences.pro
+; PROGRAM: CBEDLACBEDWidget_event.pro
 ;
-;> @author Marc De Graef, Carnegie Mellon University
+;> @author Marc De Graef, Carnegie Melon University
 ;
-;> @brief write the preferences file
+;> @brief main event handler for LACBED mode
 ;
-;> @date 09/25/13 MDG 1.0 first attempt 
+;> @date 10/09/13 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro CBEDwritepreferences,dummy
- 
+pro CBEDDrawWidget_event, event
+
 ;------------------------------------------------------------
 ; common blocks
 common CBED_widget_common, widget_s
 common CBED_data_common, data
+common CBED_rawdata, gvecs, gmult, gtt, gxy, disks, numHOLZ, HOLZlist
+common CBED_HOLZlists, HOLZvals
+common fontstrings, fontstr, fontstrlarge, fontstrsmall
+common CBED_current, BFcurrent, DFcurrent, RGBcurrent, mask
 
-; prefs file
-  openw,1,data.prefname
-  nprefs = 15
-  data.nprefs = nprefs
-  printf,1,nprefs
-  printf,1,'CBEDroot::'+data.CBEDroot
-; image output format
-  printf,1,'imageformat::'+string(data.imageformat,format="(I1)")
-; cbed output format
-  printf,1,'cbedformat::'+string(data.cbedformat,format="(I1)")
-; cbed output mode (linear or logarithmic)
-  printf,1,'cbedmode::'+string(data.cbedmode,format="(I1)")
-; Eades inner detector radius [mrad]
-  printf,1,'Eadesrhoin::'+string(data.eadesrhoin,format="(F5.2)")
-; Eades outer detector radius [mrad]
-  printf,1,'Eadesrhoout::'+string(data.eadesrhoout,format="(F5.2)")
-; disk rotation angle
-  printf,1,'diskrotation::'+string(data.diskrotation,format="(F5.2)")
-; camera length [mm]
-  printf,1,'camlen::'+string(data.camlen,format="(F6.1)")
-; dark field display mode
-  printf,1,'dfdisplaymode::'+string(data.dfdisplaymode,format="(I1)")
-; window locations
-  printf,1,'xlocation::'+string(data.xlocation,format="(F6.1)")
-  printf,1,'ylocation::'+string(data.ylocation,format="(F6.1)")
-  printf,1,'lacbedxlocation::'+string(data.LACBEDxlocation,format="(F6.1)")
-  printf,1,'lacbedylocation::'+string(data.LACBEDylocation,format="(F6.1)")
-  printf,1,'lacbedpatternxlocation::'+string(data.LACBEDPatternxlocation,format="(F6.1)")
-  printf,1,'lacbedpatternylocation::'+string(data.LACBEDPatternylocation,format="(F6.1)")
-; printf,1,'cbedxlocation::'+string(data.cbedxlocation,format="(F6.1)")
-; printf,1,'cbedylocation::'+string(data.cbedylocation,format="(F6.1)")
-; and close the file
-  close,1
+if (data.eventverbose eq 1) then help,event,/structure
 
-  CBEDprint,'The preferences file '+data.prefname+' was successfully saved '
-
+; intercept the image widget movement here 
+if (event.id eq widget_s.LACBEDDrawbase) then begin
+  data.LACBEDPatternxlocation = event.x
+  data.LACBEDPatternylocation = event.y-25
+    CBEDprint,' Window moved to location ('+string(fix(data.LACBEDPatternxlocation),format="(I4)")+','+string(fix(data.LACBEDPatternylocation),format="(I4)")+')'
 end
 
+end

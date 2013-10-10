@@ -56,8 +56,8 @@ widget_s.LACBEDbase = WIDGET_BASE(TITLE='LACBED Widget', $
                         /ALIGN_CENTER, $
 			/TLB_MOVE_EVENTS, $
 			EVENT_PRO='CBEDLACBEDWidget_event', $
-                        XOFFSET=data.imagexlocation, $
-                        YOFFSET=data.imageylocation)
+                        XOFFSET=data.LACBEDxlocation, $
+                        YOFFSET=data.LACBEDylocation)
 
 ;------------------------------------------------------------
 ; create the various vertical blocks

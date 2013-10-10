@@ -13,6 +13,7 @@
 @CBEDLACBEDWidget		; LACBED display widget
 @CBEDLACBEDWidget_event		; LACBED display widget event handler
 @CBEDDrawWidget			; drawing widget for BF and DF/Eades patterns
+@CBEDDrawWidget_event		; LACBED draw widget event handler
 
 
 ;
@@ -246,6 +247,10 @@ data = {datastruct, $
 	datadims: lon64arr(4), $		; dimensions of rawdata array
 	xlocation: float(0.0), $		; main widget x-location (can be modified and stored in preferences file)
 	ylocation: float(0.0), $		; main widget y-location (can be modified and stored in preferences file)
+	LACBEDPatternxlocation: float(600), $	; initital x-location of LACBEDdraw widget
+	LACBEDPatternylocation: float(200), $	; initital y-location of LACBEDdraw widget
+	LACBEDxlocation: float(600), $		; initital x-location of LACBED widget
+	LACBEDylocation: float(200), $		; initital y-location of LACBED widget
 	imagexlocation: float(600.0), $		; image widget x-location (can be modified and stored in preferences file)
 	imageylocation: float(100.0), $		; image widget y-location 
 	cbedxlocation: float(1200.0), $		; cbed widget x-location (can be modified and stored in preferences file)
@@ -286,7 +291,7 @@ data.ylocation = data.scrdimx / 8.0
 
 ;------------------------------------------------------------
 ; does the preferences file exist ?  If not, create it, otherwise read it
-;CBEDgetpreferences
+CBEDgetpreferences
 
 ;------------------------------------------------------------
 ; create the top level widget
