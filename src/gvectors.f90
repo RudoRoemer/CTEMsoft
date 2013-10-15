@@ -803,7 +803,7 @@ nbeams = 0
   DynNbeamsLinked = nbeams
   DynNbeams = nbeams
 
-! and finally, go through the entire list once again to correct the famhkl
+! go through the entire list once again to correct the famhkl
 ! entries, which may be incorrect now; famhkl is supposed to be one of the 
 ! reflections on the current list, but that might not be the case since
 ! famhkl was first initalized when there were additional reflections on
@@ -825,7 +825,6 @@ reflectionloop3:  do while (associated(rltmpa))
     end if
 ! go to the next beam in the list
   end do reflectionloop3
-
 
 end subroutine Prune_ReflectionList
 

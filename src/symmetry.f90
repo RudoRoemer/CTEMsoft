@@ -451,6 +451,80 @@ end subroutine GenerateSymmetry
 
 !--------------------------------------------------------------------------
 !
+! SUBROUTINE: Calc2DFamily
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief compute the indices of equivalent planes/directions
+!
+!> @details compute the indices of equivalent planes w.r.t. 2D symmetry and store them in the itmp array
+!               
+!> @param ind input index triplet
+!> @param ksame logical list with symmetry operators to consider
+!> @param numksame number of entries in ksame to be considered
+!> @param nunique number of unique entries in itmp
+!
+!> @date   10/13/98 MDG 1.0 original
+!> @date    5/19/01 MDG 2.0 f90
+!> @date  11/27/01  MDG 2.1 added kind support
+!--------------------------------------------------------------------------
+subroutine Calc2DFamily(ind,ksame,numksame,nunique)
+        
+use local
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)		:: ind(3)			!< input triplet
+integer(kind=irg),INTENT(OUT)		:: nunique			!< number of equivalent entries generated
+integer(kind=irg),INTENT(IN)		:: numksame			!< number on the input list
+logical,INTENT(IN)			:: ksame(*)			!< list of symmetry operators
+
+integer(kind=irg)			:: m,i,j			!< loop counters and such
+real(kind=sgl)				:: h,k,l,ih,ik,il,idiff	!< auxiliary variables
+logical					:: newpoint			!< is this a new point ?
+real,parameter				:: eps=0.0001_sgl		!< comparison threshold
+
+! first take the identity
+ j=1
+ itmp(j,1:3)=ind(1:3)
+ h=float(ind(1))
+ k=float(ind(2))
+ l=float(ind(3))
+
+! multiply with all point group elements that have the value .TRUE. in ksame
+ do i=2,SG%SYM_NUMpt 
+  if (ksame(i)) then 
+!   if (space.eq.'d') then
+    ih=SG%SYM_direc(i,1,1)*h+SG%SYM_direc(i,1,2)*k+SG%SYM_direc(i,1,3)*l
+    ik=SG%SYM_direc(i,2,1)*h+SG%SYM_direc(i,2,2)*k+SG%SYM_direc(i,2,3)*l
+    il=SG%SYM_direc(i,3,1)*h+SG%SYM_direc(i,3,2)*k+SG%SYM_direc(i,3,3)*l
+!   else
+!    ih=SG%SYM_recip(i,1,1)*h+SG%SYM_recip(i,1,2)*k+SG%SYM_recip(i,1,3)*l
+!    ik=SG%SYM_recip(i,2,1)*h+SG%SYM_recip(i,2,2)*k+SG%SYM_recip(i,2,3)*l
+!    il=SG%SYM_recip(i,3,1)*h+SG%SYM_recip(i,3,2)*k+SG%SYM_recip(i,3,3)*l
+!   end if
+
+! is this a new point ?
+   newpoint=.TRUE.
+   do m=1,j+1
+    idiff=(itmp(m,1)-ih)**2+(itmp(m,2)-ik)**2+(itmp(m,3)-il)**2
+    if (idiff.lt.eps) newpoint=.FALSE.
+   end do
+
+   if (newpoint) then 
+    j=j+1
+    itmp(j,1)=nint(ih)
+    itmp(j,2)=nint(ik)
+    itmp(j,3)=nint(il)
+   end if
+  end if
+ end do 
+ nunique=j
+
+end subroutine Calc2DFamily
+
+!--------------------------------------------------------------------------
+!
 ! SUBROUTINE: CalcFamily
 !
 !> @author Marc De Graef, Carnegie Melon University
@@ -2126,6 +2200,91 @@ end select
 end subroutine Generate2DSymmetry
 
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: CheckPatternSymmetry
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief verify the relative orientation of the 2D point group with respect to the standard orientation.
+!
+!> @details For some 2D point groups, the orientation of the group's symmetry elements 
+!> differs from the standard orientation in ITC A; for instance, for the [112] zone axis in fcc,
+!> the calling program will select the (1,-1,0) vector to be the horizontal vector; the 
+!> whole pattern m symmetry for this zone axis indicates the presence of a single mirror plane,
+!> which, in its standard orientation, is also horizontal, whereas it should be normal to
+!> (1,-1,0).  This routine tests for such cases and returns the correct relative orientation 
+!> angle thetam if a correction is needed. If necessary, the 2D pint group number is also 
+!> changed (for the 3m1 vs. 31m case).
+!
+!> @param k zone axis
+!> @param ga horizontal g vector
+!> @param isym 2D point group number for whole pattern symmetry
+!> @param thetam (output) point group rotation angle, if needed
+!
+!> @date   10/14/13 MDG 1.0 original
+!--------------------------------------------------------------------------
+subroutine CheckPatternSymmetry(k,ga,isym,thetam)
 
+use local
+use error
+use crystal
+use symmetryvars
+use constants
+use io
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)		:: k(3)		!< zone axis
+integer(kind=irg),INTENT(IN)		:: ga(3)	!< g-vector
+integer(kind=irg),INTENT(INOUT)	:: isym		!< 2D point group number
+real(kind=sgl),INTENT(OUT)		:: thetam	!< rotation angle (degrees, CCW)
+
+integer(kind=irg)			:: num
+real(kind=sgl)				:: io_real(1)
+
+! no action is needed for the following 2D point groups: 1, 2, 3, 4, 4mm, 6, 6mm
+thetam = 0.0
+
+! for the group m (isym=3), we need to determine the cardinality of the 
+! family of ga; if equal to 1, then ga lies in the mirror plane and all
+! is correct.  If the cardinality is 2, then we compute the angle between
+! ga and ga' and set thetam to half of this angle.
+
+if (isym.eq.3) then 
+  call CalcFamily(ga, num, 'r')
+  if (num.ne.1) then
+    thetam = 0.5 * CalcAngle(float(ga),float(itmp(2,1:3)),'r') *180.0/cPi
+  end if  
+  io_real(1) = thetam
+  call WriteValue('  --> Pattern symmetry m correction; point group rotation angle [deg]',io_real, 1, "(F6.3/)")
+end if
+
+! for the group 2mm, the mirror planes may be rotated diagonally in the cell, so 
+! we need to check this in the same way that we checked for m
+
+if (isym.eq.4) then 
+  call CalcFamily(ga, num, 'r')
+  if (num.ne.2) then
+    thetam = 0.5 * CalcAngle(float(ga),float(itmp(2,1:3)),'r') *180.0/cPi
+  end if  
+  io_real(1) = thetam
+  call WriteValue('  --> Pattern symmetry 2mm correction; point group rotation angle [deg]',io_real, 1, "(F6.3/)")
+end if
+
+! finally, for the groups 3m1 and 31m, we need to check which one we have
+
+if ((isym.eq.8).or.(isym.eq.11)) then 
+  call CalcFamily(ga, num, 'r')
+  if (num.eq.3) then
+    isym = 11
+  else
+    isym = 8
+  end if  
+  mess = '  --> Pattern symmetry verified to be '//PGTWD(isym)
+  call Message("(A/)")
+end if
+
+end subroutine CheckPatternSymmetry
 
 end module

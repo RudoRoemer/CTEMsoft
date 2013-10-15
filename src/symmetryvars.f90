@@ -254,12 +254,11 @@ integer(kind=irg),parameter :: SGsym(73) =(/1,2,3,5,6,8,10,12,16,21,22,23,25,35,
 ! formalism described in the BESR paper.
 
 !> 10 2D point group symbols in International Tables order
-character(10),parameter  :: PGTWD(0:14) = (/ ' none     ','    1     ','    2     ','    m     ','  2mm     ','    4     ', &
-                                             '  4mm     ','   3 [cub]',' 31m [cub]','    6     ','  6mm     ','   3 [hex]', &
-                                             ' 31m [hex]',' 3m1 [cub]',' 3m1 [hex]'/)
+character(10),parameter  :: PGTWD(0:11) = (/ ' none     ','    1     ','    2     ','    m     ','  2mm     ','    4     ', &
+                                             '  4mm     ','    3     ','   3m1    ','    6     ','  6mm     ','   31m    ' /)
 
 !> 10 2D point group orders in International Tables order
-integer(kind=irg),parameter       :: PGTWDorder(0:14) = (/0,1,2,2,4,4,8,3,6,6,12,3,6,6,6/)
+integer(kind=irg),parameter       :: PGTWDorder(0:11) = (/0,1,2,2,4,4,8,3,6,6,12,6/)
 
 !> inverse table for 2D point groups; this essentially implements the inverse of Table 4 in BESR paper for the Bright Field symmetry.
 integer(kind=irg),parameter       :: PGTWDinverse(12,11) = reshape((/ & 
