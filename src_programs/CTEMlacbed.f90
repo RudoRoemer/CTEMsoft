@@ -83,7 +83,9 @@ end program CTEMlacbed
 !> @date 10/04/13  MDG 3.0 adaptation for new symmetry routines and output
 !> @date 10/05/13  MDG 3.1 added output stuff for IDL visualization program
 !> @date 10/07/13  MDG 3.2 corrected subtle error in reflection numbering
-!> @date 10.08/13  MDG 3.3 added maxHOLZ output limitation; disk offset computation
+!> @date 10/08/13  MDG 3.3 added maxHOLZ output limitation; disk offset computation
+!> @date 10/15/13  MDG 3.4 modified handling of Whole Pattern symmetry; add minten output limitation
+!> @date 10/16/13  MDG 3.5 added correct HOLZ coordinate handling
 !--------------------------------------------------------------------------
 subroutine LACBEDpattern(nmlfile)
 
@@ -108,12 +110,12 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)	:: nmlfile
 
-real(kind=sgl)      		:: ktmax, io_real(3), bragg, thetac, c(3), gx(3), gy(3), sc, qx, qy, minten, &
-                       	   frac, dmin, convergence, voltage, startthick, thickinc, klaue(2), thetam
+real(kind=sgl)      		:: ktmax, io_real(3), bragg, thetac, sc, minten, pxy(2), galen, &
+                       	   frac, dmin, convergence, voltage, startthick, thickinc, klaue(2), thetam 
 integer(kind=irg)   		:: ijmax,ga(3),gb(3),k(3),cnt,fn(3), PX, numthick, ss, icnt, pgnum, ih, nunique, famnum, &
                       		   newcount,count_rate,count_max, io_int(6), i, j, isym, ir, skip, ghkl(3), &
-                      		   npx, npy, numt, numk, npix, ik, ip, jp, maxholz, istat, dgn, nbeams, &
-                      		   ifamily, isum, famhkl(3), inum, maxHOLZ, numksame
+                      		   npx, npy, numt, numk, npix, ik, ip, jp, istat, dgn, nbeams, &
+                      		   ifamily, famhkl(3), inum, maxHOLZ, numksame
 character(3)			:: method
 character(fnlen)     		:: outname, xtalname
 
@@ -199,11 +201,14 @@ end if
 ! group is rotated (CCW) with respect to the standard setting...
  call CheckPatternSymmetry(k,ga,isym,thetam)
 
+! initialize the HOLZ geometry type
+ call GetHOLZGeometry(float(ga),float(gb),k,fn) 
+
 ! construct the list of all possible reflections
  method = 'ALL'
- maxholz = 0
  thetac = convergence/1000.0
- call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz,thetac)
+ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxHOLZ,thetac)
+ galen = CalcLength(float(ga),'r')
 
 ! determine range of incident beam directions
   bragg = CalcDiffAngle(ga(1),ga(2),ga(3))*0.5
@@ -231,7 +236,7 @@ end if
 !  isym = WPPG(dgn)
 
 ! for now, the solution to the symmetry problem is to do the computation for the entire 
-! illumination cone without application of symmetry.  Instead, we'll get the spped up by 
+! illumination cone without application of symmetry.  Instead, we'll get the speed up by 
 ! going to multiple cores later on.
   isym = 1
   call CalckvectorsSymmetry(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,klaue,.TRUE.)
@@ -259,17 +264,6 @@ end if
 ! we need to decide which one we're going to keep.  For those, we'll need to 
 ! determine the 2D multiplicity and store that along with the Miller indices 
 ! of a representative family member.
-
-! first normalize the zone axis in cartesian components; this is the z-axis
-  call TransSpace(float(k),c,'d','c')
-  call NormVec(c,'c')
-
-! then make ga the x-axis
-  call TransSpace(float(ga),gx,'r','c')
-  call NormVec(gx,'c')
-
-! compute the cross product between k and gx; this is the y-axis
-  call CalcCross(c,gx,gy,'c','c',0)
 
 ! set the scale parameter for a default camera length of 1000 mm.
   sc = mLambda * 1000.0 * 300.0 / 25.4  ! the absolute value does not matter and is derived from legacy Postscript code
@@ -391,10 +385,9 @@ outerloop2: do while (associated(rltmpa))
     familytwotheta(ifamily) = CalcDiffAngle(famhkl(1),famhkl(2),famhkl(3))*1000.0
     familymult(ifamily) = 1
 ! get the disk offset parameters
-    call TransSpace(float(famhkl),c,'r','c')
-    qx = CalcDot(c,gx,'c')*sc
-    qy = CalcDot(c,gy,'c')*sc
-    diskoffset(1:2,ifamily) = (/ qx, qy /)
+    pxy = sc * GetHOLZcoordinates(float(famhkl), (/ 0.0, 0.0, 0.0 /), sngl(mLambda))
+    diskoffset(1:2,ifamily) = pxy
+  
 ! and remove the equivalent reflections from the list
     rltmpb => rltmpa%next
 whileloop3: do while (associated(rltmpb))
@@ -412,13 +405,6 @@ whileloop3: do while (associated(rltmpb))
    if (.not.associated(rltmpa%next)) EXIT outerloop2
    rltmpa => rltmpa%next
   end do outerloop2
-
-! correct last counter
-!  familymult(ifamily) = familymult(ifamily)+1
-
-! and print last entry (used for debugging)
-!write (*,*) ifamily, familyhkl(1,ifamily),familyhkl(2,ifamily),familyhkl(3,ifamily),familymult(ifamily),&
-!familytwotheta(ifamily)
 
   io_int(1) = ifamily
   call WriteValue('Maximum number of unique families in output = ', io_int, 1, "(I5)")
@@ -445,8 +431,11 @@ kvectorloop:  do ik = 1,numk
 	ip = -ktmp%i
  	jp =  ktmp%j
 
-! compute the dynamical matrix using Bloch waves with Bethe potentials 
-	call Compute_DynMat('BLOCHBETHE', ktmp%k, .TRUE.)
+! compute the dynamical matrix using Bloch waves with Bethe potentials; note that the IgnoreFoilNormal flag
+! has been set to .FALSE.; if it is set to .TRUE., the computation of the ZOLZ will still be mostly correct,
+! but the excitation errors of the HOLZ reflections will be increasingly incorrect with HOLZ order.  This was
+! useful during program testing but should probably be removed as an option altogether...
+	call Compute_DynMat('BLOCHBETHE', ktmp%k, ktmp%kt, .FALSE.)
 
 ! allocate the intensity array to include both strong beams and weak beams (in that order)
 	allocate(inten(numt,DynNbeams+BetheParameter%nnw))
@@ -523,13 +512,14 @@ kvectorloop:  do ik = 1,numk
 ! equation.   [check special case of hexagonal indices !!!!]
 ! Along the way, we count the ones up to order maxHOLZ.
 ! Also, to reduce the size of the output file a bit, we ignore those reflections that
-! have a maximum intensity less than minten for the initial thickness value. 
+! have a maximum intensity less than minten for the initial thickness value. On the
+! other hand, if a reflection is due to double diffraction, then we include it, always.
   allocate(whichHOLZ(ifamily))
   icnt = 0
   do ir=1,ifamily
     whichHOLZ(ir) = iabs(k(1)*familyhkl(1,ir)+k(2)*familyhkl(2,ir)+k(3)*familyhkl(3,ir))
     if (whichHOLZ(ir).le.maxHOLZ) then 
-      if (maxval(disk(:,:,0,ir)).ge.minten) then
+      if ( (maxval(disk(:,:,1,ir)).ge.minten) .or. ( dbdiff(familyhkl(1,ir),familyhkl(2,ir),familyhkl(3,ir))) ) then
         icnt = icnt+1
       else  ! just change the HOLZ value to some large value to make sure it does not get written to the file
         whichHOLZ(ir) = 10
@@ -555,12 +545,20 @@ kvectorloop:  do ik = 1,numk
   write (dataunit) convergence
 ! the zone axis indices
   write (dataunit) k
+! the foil normal indices
+  write (dataunit) fn
 ! number of k-values in disk
   write (dataunit) numk
+! dmin value
+  write (dataunit) dmin
 ! horizontal reciprocal lattice vector
   write (dataunit) ga  
+! length horizontal reciprocal lattice vector (need for proper Laue center coordinate scaling)
+  write (dataunit) galen
 ! maximum HOLZ layer in the output file
   write (dataunit) maxHOLZ
+! intensity cutoff
+  write (dataunit) minten
 ! eight integers with the labels of various symmetry groups
   write (dataunit) (/ pgnum, PGLaue(pgnum), dgn, PDG(dgn), BFPG(dgn), WPPG(dgn), DFGN(dgn), DFSP(dgn) /)
 ! write the 2D point group rotation angle
@@ -591,8 +589,15 @@ kvectorloop:  do ik = 1,numk
   io_int(1) = maxHOLZ
   call WriteValue('Data includes families of reflections in HOLZ layers 0 through ',io_int,1,"(I2)")
   io_int(1) = icnt
-  call WriteValue('Total number of independent families saved to file : ',io_int,1,"(I4)")
+  call WriteValue('Total number of independent families above intensity threshold saved to file : ',io_int,1,"(I4/)")
  
+ write (*,*) 'Some statistics :'
+ write (*,*) 'Average number of strong beams : ',float(BetheParameter%totstrong)/float(numk)
+ write (*,*) '          (min,max) : ',BetheParameter%minstrong,BetheParameter%maxstrong
+ write (*,*) 'Average number of weak beams : ',float(BetheParameter%totweak)/float(numk)
+ write (*,*) '          (min,max) : ',BetheParameter%minweak,BetheParameter%maxweak
+
+
 end subroutine LACBEDpattern
 
 

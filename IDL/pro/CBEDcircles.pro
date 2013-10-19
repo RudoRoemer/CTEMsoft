@@ -26,56 +26,91 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:CBEDgetfilename.pro
+; CTEMsoft2013:CBEDcircles.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: CBEDgetfilename.pro
+; PROGRAM: CBEDcircles.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief Display an interface and ask user to select a file
+;> @brief Draw diffraction and Laue limiting circles
 ;
-;> @date 06/13/13 MDG 1.0 first attempt 
+;> @date 10/15/13 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------
-pro CBEDgetfilename,validfile,MBCBED=MBCBED,LACBED=LACBED
- 
+pro CBEDcircles,dummy
+
 ;------------------------------------------------------------
 ; common blocks
 common CBED_widget_common, widget_s
 common CBED_data_common, data
+common CBED_rawdata, gvecs, gmult, gtt, gxy, disks, numHOLZ, HOLZlist
+common CBED_HOLZlists, HOLZvals
+common fontstrings, fontstr, fontstrlarge, fontstrsmall
+common SYM2D, SYM_MATnum, SYM_direc
+common CBEDcirclestuff, CBEDschematic, midx, midy, drad, cang, scl
 
-  s = ''
-  cd,current = s
-  data.homefolder = s
-  if (data.CBEDroot eq 'undefined') then begin
-    data.CBEDroot = data.homefolder
-  end 
+; the LACBED convergence angle is shown as a red circle of radius 180 pixels
+; inside the fixed size display window (401x401)
 
-  rootpath = data.CBEDroot
+; the output will be a schematic RGB image
+CBEDschematic = bytarr(3,data.detwinx,data.detwiny)
 
-  if keyword_set(LACBED) then begin
-    res=dialog_pickfile(title='Select a valid CTEMlacbed data file',path=rootpath)
-  end else begin
-    res=dialog_pickfile(title='Select a valid CTEMmbcbed data file',path=rootpath)
-  end
+midx = (data.detwinx-1)/2
+midy = (data.detwiny-1)/2
 
-  if (res eq '') then begin
-	  print,'No selection made; Exiting program'
-	  validfile = 0
-	  return
-  end
-  validfile = 1
-  finfo = file_info(res)
-  data.filesize = finfo.size
-; find the last folder separator
-  spos = strpos(res,'/',/reverse_search)
-  dpos = strpos(res,'.',/reverse_search)
-  plen = strlen(res)
-  data.pathname = strmid(res,0,spos)
-  data.dataname = strmid(res,spos+1)
-  data.suffix = strmid(res,dpos+1)
-  data.CBEDroot = data.pathname
+; use the Z-buffer to draw the individual components
+set_plot,'Z'
+device,set_resolution=[data.detwinx,data.detwiny]
+erase
 
-WIDGET_CONTROL, SET_VALUE=data.dataname, widget_s.dataname
+; first get the main LACBED convergence circle
+drad = 180
+numth = 361
+th = findgen(numth) * !dtor
+ct = cos(th)
+st = sin(th)
+
+plots,midx+drad*ct,midy+drad*st,/dev,thick=2
+
+green = tvrd()
+erase
+
+; then draw the limiting circle for the Laue center positions
+; this depends on the user selected convergence angle
+cang =  drad*(data.thetau/data.thetac)
+frac = drad - cang
+plots,midx+frac*ct,midy+frac*st,/dev,thick=2
+red = tvrd()
+erase
+
+; finally, draw all the ZOLZ reflections to scale in blue
+; (at least, those that fall inside the window)
+glen = sqrt(gxy[0,1]^2+gxy[1,1]^2)
+scl = drad * (gtt[1] / data.thetac) /glen
+
+for i=0,numHOLZ[0]-1 do begin 
+  posxy = scl * CBEDApply2DSymmetryPoint(reform(gxy[0:1,i]))
+  for j=0,SYM_MATnum-1 do begin
+    px = midx + posxy[0,j]
+    py = midy + posxy[1,j]
+    plots,px + cang*ct, py + cang*st,/dev,thick=2
+  endfor
+end
+
+blue = tvrd()
+
+
+CBEDschematic[0,0:*,0:*] = red
+CBEDschematic[1,0:*,0:*] = green
+CBEDschematic[2,0:*,0:*] = blue
+
+set_plot,'X'
+
+wset,data.diskdrawID
+erase
+tvscl,CBEDschematic,true=1
+
+
+
 
 end

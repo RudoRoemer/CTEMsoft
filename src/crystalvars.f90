@@ -44,7 +44,7 @@
 !> @date    4/ 5/00 MDG 1.2 modified TransCoor to include new mInvert
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   03/19/13 MDG 3.0 update to new version
-!
+!> @date   10/17/13 MDG 3.1 added HOLZentries type
 !--------------------------------------------------------------------------
 module crystalvars
 
@@ -89,6 +89,16 @@ type orientation
 end type
 
 !> cell is the generic unit cell variable used in all programs.  
-type (unitcell) 		:: cell
+type (unitcell) 	:: cell
+
+! next we add a structure that contains all the relevant HOLZ geometry information;
+! it can be filled by calling the GetHOLZGeometry subroutine in crystal.f90
+type HOLZentries
+  real(kind=sgl)	:: g1(3),g2(3),g3(3),gx(3),gy(3),LC1,LC2,H,FNr(3),FNg(3),gp(2),gtoc(2,2),gshort(3)
+  integer(kind=irg)	:: uvw(3),FN(3)
+end type
+
+type (HOLZentries)	:: HOLZdata
+
 
 end module

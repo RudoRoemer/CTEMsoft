@@ -81,6 +81,7 @@ end program
 !> @date 04/08/13  MDG 2.0 rewrite
 !> @date 05/14/13  MDG 2.1 replaced IO by namelist file
 !> @date 09/25/13  MDG 2.2 minor program cleanup
+!> @date 10/18/13  MDG 3.0 major modifications to bring program in line with CTEMlacbed program
 !--------------------------------------------------------------------------
 subroutine MBCBEDcomputation(nmlfile)
 
@@ -103,27 +104,28 @@ use files
 
 IMPLICIT NONE
 
-real(kind=sgl)      			:: ktmax, io_real(3), voltage, convergence, &
+real(kind=sgl)      			:: ktmax, io_real(3), voltage, convergence, galen, &
                        		bragg,c(3),RR,gx(3),gy(3),gg(3), thetac, startthick, thickinc, &
-                       		sc, scmax, PX, qx, qy, frac, dmin, s, klaue(2)
+                       		sc, scmax, PX, qx, qy, frac, dmin, s, klaue(2), pxy(2)
 integer(kind=irg)   			:: ijmax,ga(3),gb(3),k(3),cnt, skip, numthick, istat, dgn, badpoints, &
-                       		newcount,count_rate,count_max, io_int(6), ii, i, j, isym, ir, fn(3), &
+                       		newcount,count_rate,count_max, io_int(6), ii, i, j, isym, ir, fn(3), pgnum, &
                        		npx, npy, numt, numk, npix, ik, ip, jp, maxholz, iequiv(2,12), nequiv, it
 character(3)				:: method
 character(fnlen)     			:: outname, nmlfile, xtalname
 
 
 real(kind=sgl),parameter     	:: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/),yoff(0:5)=(/6.0,6.0,3.0,3.0,0.0,0.0/)
-real(kind=sgl),allocatable    	:: disk(:,:,:), thick(:)
+real(kind=sgl),allocatable    	:: disk(:,:,:), thick(:), slice(:,:)
 integer(kind=irg),allocatable 	:: diskoffset(:,:)
 real(kind=sgl),allocatable    	:: inten(:,:)
 logical				:: usesym=.TRUE., bp
 
-namelist /inputlist/ stdout,xtalname, voltage, camlen, k, fn, npix, dmin, convergence, & 
+namelist /MBCBEDlist/ stdout,xtalname, voltage, camlen, k, fn, npix, dmin, convergence, & 
                      startthick, thickinc, numthick, outname, klaue
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 xtalname = 'undefined'		! initial value to check that the keyword is present in the nml file
+stdout = 6			! standard output ID
 voltage = 200000.0		! acceleration voltage [V]
 camlen = 1000.0			! camera length [mm]
 k = (/ 0, 0, 1 /)		! beam direction [direction indices]
@@ -139,7 +141,7 @@ outname = 'mbcbedout.data'	! out put filename
 
 ! read the namelist file
 open(UNIT=dataunit,FILE=nmlfile,DELIM='apostrophe',STATUS='old')
-read(UNIT=dataunit,NML=inputlist)
+read(UNIT=dataunit,NML=MBCBEDlist)
 close(UNIT=dataunit,STATUS='keep')
 
 if (trim(xtalname).eq.'undefined') then
@@ -153,7 +155,7 @@ end if
  call CTEMsoft
 
  mess = 'Input parameter list: '; call Message("(A)")
- write (stdout,NML=inputlist)
+ write (stdout,NML=MBCBEDlist)
  mess=' '; call Message("(A/)")
 
 ! first get the crystal data and microscope voltage
@@ -162,7 +164,7 @@ end if
  skip = 3
  call CalcWaveLength(dble(voltage),skip)
  
- ! generate all atom positions
+! generate all atom positions
  call CalcPositions('v')
  
 ! get k and f
@@ -177,6 +179,7 @@ end if
 ! use the new routine to get the whole pattern 2D symmetry group, since that
 ! is the one that determines the independent beam directions.
  dgn = GetPatternSymmetry(k,j,.TRUE.)
+ pgnum = j
  isym = WPPG(dgn) ! WPPG lists the whole pattern point group numbers vs. diffraction group numbers
 
 ! determine the shortest reciprocal lattice points for this zone
@@ -185,23 +188,20 @@ end if
  io_int(4:6)=gb(1:3)
  call WriteValue('Reciprocal lattice vectors : ', io_int, 6,"('(',3I3,') and (',3I3,')',/)")
 
+! initialize the HOLZ geometry type
+ call GetHOLZGeometry(float(ga),float(gb),k,fn) 
+
 ! construct the list of all possible reflections
  method = 'ALL'
- maxholz = 0
+ maxholz = 2
+ thetac = convergence/1000.0
  call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxholz)
 
 ! enter range of incident beam directions
   bragg = CalcDiffAngle(ga(1),ga(2),ga(3))*0.5
-
-! call ReadValue(' Enter the beam convergence angle theta_c in mrad: ', io_real, 1)
-  thetac = convergence/1000.0
   
 ! convert to ktmax along ga
   ktmax = 0.5*thetac/bragg
-
-write (*,*) 'Bragg angle ', bragg
-write (*,*) 'conv. angle ', thetac
-write (*,*) 'ktmax ', ktmax
 
 ! compute number of pixels along diameter of central disk for given camera length
   RR = 300.0/25.4   ! dots per millimeter for 300 dots per inch; legacy code from when the output was in PostScript
@@ -227,6 +227,7 @@ write (*,*) 'ktmax ', ktmax
 
 ! determine all independent incident beam directions (use a linked list starting at khead)
   isym = WPPG(dgn)
+  isym = 1
   ijmax = float(npx)**2   ! truncation value for beam directions
   call CalckvectorsSymmetry(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,klaue,.TRUE.)
   
@@ -243,34 +244,37 @@ write (*,*) 'ktmax ', ktmax
 
 ! allocate the offset array
 ! to get this array, we need to do a mock initialization of the dynamical matrix in zone axis orientation
-  call Compute_DynMat('BLOCHBETHE', khead%k, .TRUE.)
+  call Compute_DynMat('BLOCHBETHE', khead%k, khead%kt, .FALSE.)
   allocate(diskoffset(DynNbeamsLinked,3))
   diskoffset = 0
 
 ! compute the offset parameters for all diffraction disks (for the zone-axis orientation !!!)
 ! first normalize the zone axis in cartesian components; this is the z-axis
-  call TransSpace(float(k),c,'d','c')
-  call NormVec(c,'c')
+!  call TransSpace(float(k),c,'d','c')
+!  call NormVec(c,'c')
 
 ! then make ga the x-axis
-  call TransSpace(float(ga),gx,'r','c')
-  call NormVec(gx,'c')
+!  call TransSpace(float(ga),gx,'r','c')
+!  call NormVec(gx,'c')
 
 ! compute the cross product between k and gx; this is the y-axis
-  call CalcCross(c,gx,gy,'c','c',0)
+!  call CalcCross(c,gx,gy,'c','c',0)
 
 ! project every g-vector onto gx and gy to get the components
 ! and keep only the ones that will fall on the viewing region
   rltmpa => reflist%next
   do i=1,DynNbeamsLinked
     gg(1:3)=rltmpa%hkl
-    call TransSpace(gg,c,'r','c')
-    qx= CalcDot(c,gx,'c')*sc
-    qy= CalcDot(c,gy,'c')*sc
-    if ((abs(qx).lt.scmax).and.(abs(qy).lt.scmax)) then
+
+    pxy =  sc * GetHOLZcoordinates(gg, (/ 0.0, 0.0, 0.0 /), sngl(mLambda))
+
+!    call TransSpace(gg,c,'r','c')
+!    qx= CalcDot(c,gx,'c')*sc
+!    qy= CalcDot(c,gy,'c')*sc
+    if ((abs(pxy(1)).lt.scmax).and.(abs(pxy(2)).lt.scmax)) then
       diskoffset(i,1) = 1
-      diskoffset(i,2) = nint(qx)
-      diskoffset(i,3) = nint(qy)
+      diskoffset(i,2) = nint(pxy(1))
+      diskoffset(i,3) = nint(pxy(2))
     else
       diskoffset(i,1) = 0
     end if
@@ -296,7 +300,7 @@ write (*,*) 'ktmax ', ktmax
 ! loop over all beam orientations, selecting them from the linked list
   do ik = 1,numk
   ! compute the dynamical matrix using Bloch waves with Bethe potentials 
-   call Compute_DynMat('BLOCHBETHE', ktmp%k, .TRUE.)
+   call Compute_DynMat('BLOCHBETHE', ktmp%k, ktmp%kt, .FALSE.)
 
 ! allocate the intensity array to include both strong beams and weak beams (in that order)
   allocate(inten(numt,DynNbeams+BetheParameter%nnw))
@@ -387,9 +391,52 @@ BetheParameter%reflistindex = BetheParameter%reflistindex + BetheParameter%weakr
   mess = ' Program run completed '; call Message("(/A/)")
   call WriteValue('Total computation time [s] ' , io_real, 1, "(F)")
 
+! the final bit of the program involves dumping all the results into a file,
+! binary for now, but HDF5 in the future, for the IDL visualization program 
+! to read. We'll keep this format the same as for the CTEMlacbed program, so there 
+! are a few entries that are not used in this case.
   open(unit=dataunit,file=trim(outname),status='unknown',action='write',form='unformatted')
-  write (dataunit) numt,npix
-  write (dataunit) disk
+! write the program identifier
+  write (dataunit) trim(progname)
+! write the version number
+  write (dataunit) scversion
+! first write the array dimensions
+  write (dataunit) 2*npix+1,2*npix+1,numt,0 	! fourth index is not used
+! then the name of the crystal data file
+  write (dataunit) xtalname
+! the accelerating voltage [V]
+  write (dataunit) voltage
+! convergence angle [mrad]
+  write (dataunit) convergence
+! the zone axis indices
+  write (dataunit) k
+! the foil normal indices
+  write (dataunit) fn
+! number of k-values in disk
+  write (dataunit) numk
+! dmin value
+  write (dataunit) dmin
+! horizontal reciprocal lattice vector
+  write (dataunit) ga  
+! length horizontal reciprocal lattice vector (need for proper Laue center coordinate scaling)
+  write (dataunit) galen
+! maximum HOLZ layer in the output file
+  write (dataunit) maxholz
+! intensity cutoff
+  write (dataunit) 0.0		! not used
+! eight integers with the labels of various symmetry groups
+  write (dataunit) (/ pgnum, PGLaue(pgnum), dgn, PDG(dgn), BFPG(dgn), WPPG(dgn), DFGN(dgn), DFSP(dgn) /)
+! write the 2D point group rotation angle
+  write (dataunit) 0.0		! not used
+! thickness data
+  write (dataunit) startthick, thickinc
+! finally we add the CBED patterns
+  allocate (slice(npix,npix))
+  do ir=1,numt
+    slice = disk(ir,1:npix,1:npix)
+    write (dataunit) slice
+  end do
+  deallocate(slice)
   close(UNIT=dataunit,STATUS='keep')
   
   mess = ' Data stored in '//outname; call Message("(/A/)") 
@@ -410,7 +457,12 @@ BetheParameter%reflistindex = BetheParameter%reflistindex + BetheParameter%weakr
     call Message("(A)/")    
   end if
  
- 
+  write (*,*) 'Some statistics :'
+ write (*,*) 'Average number of strong beams : ',float(BetheParameter%totstrong)/float(numk)
+ write (*,*) '          (min,max) : ',BetheParameter%minstrong,BetheParameter%maxstrong
+ write (*,*) 'Average number of weak beams : ',float(BetheParameter%totweak)/float(numk)
+ write (*,*) '          (min,max) : ',BetheParameter%minweak,BetheParameter%maxweak
+
  
 end subroutine MBCBEDcomputation
 

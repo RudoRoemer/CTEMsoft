@@ -79,6 +79,17 @@ if (rs eq 1) then begin
   	'camlen': data.camlen=float(val)
 ; dark field display mode
   	'dfdisplaymode': data.dfdisplaymode=fix(val)
+; user defined beam convergence angle
+  	'thetau': data.thetau=float(val)
+; user defined camera length
+  	'camlen': data.camlen=float(val)
+; Laue center x-coordinate
+  	'Lauex': data.Lauex=float(val)
+; Laue center y-coordinate
+  	'Lauey': data.Lauey=float(val)
+; logarithm offset value
+  	'logoffset': data.logoffset=float(val)
+
 ; window locations
   	'xlocation': data.xlocation=float(val)
   	'ylocation': data.ylocation=float(val)
@@ -86,7 +97,11 @@ if (rs eq 1) then begin
   	'lacbedylocation': data.LACBEDylocation=float(val)
   	'lacbedpatternxlocation': data.LACBEDPatternxlocation=float(val)
   	'lacbedpatternylocation': data.LACBEDPatternylocation=float(val)
-
+  	'cbedxlocation': data.CBEDxlocation=float(val)
+  	'cbedylocation': data.CBEDylocation=float(val)
+  	'cbeddrawxlocation': data.CBEDDrawxlocation=float(val)
+  	'cbedrawdylocation': data.CBEDDrawylocation=float(val)
+;
     else: MESSAGE,'unknown option for preferences file'
     endcase
   endfor

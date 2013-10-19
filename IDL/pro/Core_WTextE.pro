@@ -26,56 +26,54 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:CBEDgetfilename.pro
+; CTEMsoft2013:Core_WTextE.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: CBEDgetfilename.pro
+; PROGRAM: Core_WTextE.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief Display an interface and ask user to select a file
+;> @brief Editable text widget short cut routine
 ;
-;> @date 06/13/13 MDG 1.0 first attempt 
+;> @date 09/25/13 MDG 1.0 first attempt at a user-friendly interface
 ;--------------------------------------------------------------------------
-pro CBEDgetfilename,validfile,MBCBED=MBCBED,LACBED=LACBED
- 
-;------------------------------------------------------------
-; common blocks
-common CBED_widget_common, widget_s
-common CBED_data_common, data
+function Core_WTextE, parent, title, fnt, x1, y1, x2, y2, value, uvalue, routine, aright=aright
 
-  s = ''
-  cd,current = s
-  data.homefolder = s
-  if (data.CBEDroot eq 'undefined') then begin
-    data.CBEDroot = data.homefolder
-  end 
+if keyword_set(aright) then begin
+  label2 = WIDGET_LABEL(parent, $
+		VALUE=title, $
+		FONT=fnt, $
+		XSIZE=x1, $
+		YSIZE=y1, $
+		/ALIGN_RIGHT)
 
-  rootpath = data.CBEDroot
-
-  if keyword_set(LACBED) then begin
-    res=dialog_pickfile(title='Select a valid CTEMlacbed data file',path=rootpath)
-  end else begin
-    res=dialog_pickfile(title='Select a valid CTEMmbcbed data file',path=rootpath)
-  end
-
-  if (res eq '') then begin
-	  print,'No selection made; Exiting program'
-	  validfile = 0
-	  return
-  end
-  validfile = 1
-  finfo = file_info(res)
-  data.filesize = finfo.size
-; find the last folder separator
-  spos = strpos(res,'/',/reverse_search)
-  dpos = strpos(res,'.',/reverse_search)
-  plen = strlen(res)
-  data.pathname = strmid(res,0,spos)
-  data.dataname = strmid(res,spos+1)
-  data.suffix = strmid(res,dpos+1)
-  data.CBEDroot = data.pathname
-
-WIDGET_CONTROL, SET_VALUE=data.dataname, widget_s.dataname
-
+  val =  WIDGET_TEXT(parent, $
+		VALUE=value,$
+		XSIZE=x2, $
+		YSIZE=y2, $
+		/EDITABLE, $
+                EVENT_PRO=routine, $
+		UVALUE=uvalue, $
+		/ALIGN_RIGHT)
+end else begin
+  label2 = WIDGET_LABEL(parent, $
+		VALUE=title, $
+		FONT=fnt, $
+		XSIZE=x1, $
+		YSIZE=y1, $
+		/ALIGN_LEFT)
+    
+  val =  WIDGET_TEXT(parent, $
+		VALUE=value,$
+		XSIZE=x2, $
+		YSIZE=y2, $
+		/EDITABLE, $
+                EVENT_PRO=routine, $
+		UVALUE=uvalue, $
+		/ALIGN_LEFT)
 end
+
+return,val
+end
+
+

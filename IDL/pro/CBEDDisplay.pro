@@ -1,3 +1,5 @@
+@Core_WText			; core text widget creation 
+@Core_WTextE			; core editable text widget creation 
 @CBEDprint			; appends messages to the status text widget
 @CBEDgetpreferences		; read the preferences file
 @CBEDwritepreferences		; write the preferences file
@@ -12,9 +14,17 @@
 @CBEDprosetvalue		; used for event handling
 @CBEDLACBEDWidget		; LACBED display widget
 @CBEDLACBEDWidget_event		; LACBED display widget event handler
-@CBEDDrawWidget			; drawing widget for BF and DF/Eades patterns
-@CBEDDrawWidget_event		; LACBED draw widget event handler
-
+;@CBEDLACBEDDrawWidget		; drawing widget for BF and DF/Eades patterns
+;@CBEDDrawWidget_event		; LACBED draw widget event handler
+@CBEDCBEDWidget			; CBED display widget
+@CBEDCBEDDrawWidget		; CBED Draw widget
+@CBEDCBEDDrawWidget_event	; CBED Draw widget event handler
+@CBEDCBEDWidget_event		; CBED display widget event handler
+@CBEDApply2DSymmetryPoint	; apply 2D point symmetry to a point
+@CBEDApply2DSymmetryStack	; apply 2D point symmetry to a stack of diffraction disks
+@CBEDevent			; special routine to deal with CW_BGROUP events
+@CBEDgocbed			; compute a synthetic CBED pattern from the LACBED data
+@CBEDcircles			; draw a schematic diffraction pattern along with Laue limiting circle
 
 ;
 ; Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
@@ -63,7 +73,9 @@ common CBED_widget_common, widget_s
 common CBED_data_common, data
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 common PointGroups, PGTHD, PGTWD, DG
+common trafos, done, c030, c060, c120, c150, c240, c300, s030, s060, s120, s150, s240, s300
 
+done = 0
 !EXCEPT=0
 
 ;------------------------------------------------------------
@@ -103,6 +115,8 @@ widget_s = {widgetstruct, $
 	    LACBEDbase: long(0), $		; LACBED widget base
 	    LACBEDDrawbase: long(0), $		; LACBED draw widget base
 	    CBEDbase: long(0), $		; CBED widget base
+	    CBEDDrawbase: long(0), $		; CBED Draw widget base
+	    CBDraw: long(0), $			; Draw widget base for diffraction disk outline
 	    MBCBEDbase: long(0), $		; MBCBED widget base
 	    LACBEDthicklist: long(0), $		; LACBED thickness drop list
 	    dfdisplaymode: long(0), $		; dark field display mode (0=single; 1=symmetrize; 2=Eades)
@@ -111,6 +125,8 @@ widget_s = {widgetstruct, $
 	    LACBEDdroplist2: long(0), $		; droplist for HOLZ layer 2
 	    LACBEDdroplist3: long(0), $		; droplist for HOLZ layer 3  [for now, a maximum of 3 HOLZ layers are included]
 	    gsel: long(0), $			; selected g-vector widget
+	    fn: long(0), $			; foil normal widget 
+	    minten: long(0), $			; minimum intensity cutoff
 	    diskrotation: long(0), $		; disk rotation angle [CW, degrees]
 	    imagelegendbgroup:long(0), $	; image legend button group
 	    imageformatbgroup:long(0), $	; image format button group
@@ -143,7 +159,11 @@ widget_s = {widgetstruct, $
 	    HAADFmax: long(0), $		; HAADF image maximum intensity
 	    CBEDmin: long(0), $			; CBED pattern minimum intensity
 	    CBEDmax: long(0), $			; CBED atptern maximum intensity
-            camlen:long(0), $                   ; camera length field (mm)
+            Lauex:long(0), $                    ; Laue center x-coordinate
+            Lauey:long(0), $                    ; Laue center y-coordinate
+            camlen:long(0), $                   ; default camera length (mm)
+            camlenval:long(0), $                ; user selected camera length
+            convangval:long(0), $               ; user selected convergence angle 
             wavelength:long(0), $               ; wave length field (pm)
             wavek:long(0), $                    ; wave vector indices
             numfam:long(0), $                   ; number of g-vectors
@@ -168,6 +188,8 @@ widget_s = {widgetstruct, $
             closecbed:long(0), $                ; close CBED widget button
             closeimage:long(0), $               ; close image widget button
             mainstop:long(0), $                 ; stop button
+            jumplist:long(0), $                 ; droplist with tracking values
+            movemodegroup:long(0), $            ; button group widget for Laue center tracking mode
             topbgroup:long(0) $                 ; top level button group widget
            }
 
@@ -197,6 +219,7 @@ data = {datastruct, $
 	paty: long(900), $			; number of pattern pixels along y
 	CBEDzoom: fix(1), $			; zoom factor for CBED pattern
 	ga: lonarr(3), $			; indices of horizontal g-vector
+	galen: float(0), $			; length of horizontal g-vector
 	addlog: float(0.0001), $		; factor to add for logarithmic CBED display
 	imagelegend: long(0), $			; display image scale bar toggle (0=do not display, 1=display)
 	imageformat: long(0), $			; image output format selector (0=jpeg, 1=tiff, 2=bmp)
@@ -222,18 +245,30 @@ data = {datastruct, $
 	CBEDmax: float(0.0), $			; CBED pattern maximum intensity
 	BFdrawID: long(0), $			; BF window ID 
 	DFdrawID: long(0), $			; DF window ID 
+	CBdrawID: long(0), $			; CB window ID 
+	diskdrawID: long(0), $			; disk window ID 
 	patang: float(15.0), $			; this is the horizontal half scale of the detector plot in mm
         camlen: float(500), $                   ; camera length field (mm)
         refcamlen: float(1000), $               ; reference camera length to which the others will be scaled (mm)
+	dmin: float(0.0), $			; minimal d-spacing
 	aprad: float(0.5), $			; aperture radius for CBED pattern computation in LACBED mode [mrad]
 	apx: float(0.0), $			; aperture x position
 	apy: float(0.0), $			; aperture y position
 	apminrad: float(0.1), $			; minimal aperture radius for CBED imaging [mrad]
 	rdisk: float(0.0), $			; disk radius in units of pixels
 	wavek: lonarr(3), $			; wave vector indices
+	minten: float(0), $			; maximum intensity for thinnest section
+	fn: lonarr(3), $			; foil normal indices
+	voltage: float(0.0), $			; acceleration voltage [V]
 	wavelength: float(0.0), $		; wave length [nm] (will be displayed in [pm])
 	dfl: float(1.0), $			; pixel size [nm]
 	thetac: float(0.0), $			; beam convergence angle [mrad]
+	thetau: float(0.0), $			; user selected beam convergence angle [mrad]
+	thetam: float(0.0), $			; point group rotation angle [degrees]
+        Lauex: float(0), $                      ; Laue center x-coordinate
+        Lauey: float(0), $                      ; Laue center y-coordinate
+        oldLauex: float(0), $                   ; old Laue center x-coordinate
+        oldLauey: float(0), $                   ; old Laue center y-coordinate
 	nums: long(0), $			; number of pixels along disk radius (diameter = 2*nums+1)
 	scale: float(0.0), $			; scale factor for CBED, [number of pixels per reciprocal nanometer]
 	numfam: long(0), $			; number of reflections in CBED pattern
@@ -243,6 +278,8 @@ data = {datastruct, $
 	thickinc: float(0), $			; thickness increment
 	thicksel: long(0), $			; selected thickness index
 	thickness: float(0), $			; selected thickness
+	jumpsel: long(0), $			; selected jump mode index
+	movemode: long(0), $			; move mode index
 	symgroups: lonarr(8), $			; symmetry group labels
 	datadims: lon64arr(4), $		; dimensions of rawdata array
 	xlocation: float(0.0), $		; main widget x-location (can be modified and stored in preferences file)
@@ -251,10 +288,12 @@ data = {datastruct, $
 	LACBEDPatternylocation: float(200), $	; initital y-location of LACBEDdraw widget
 	LACBEDxlocation: float(600), $		; initital x-location of LACBED widget
 	LACBEDylocation: float(200), $		; initital y-location of LACBED widget
+	CBEDxlocation: float(600), $		; initital x-location of CBED widget
+	CBEDylocation: float(200), $		; initital y-location of CBED widget
+	CBEDDrawxlocation: float(600), $	; initital x-location of CBED Draw widget
+	CBEDDrawylocation: float(200), $	; initital y-location of CBED Draw widget
 	imagexlocation: float(600.0), $		; image widget x-location (can be modified and stored in preferences file)
 	imageylocation: float(100.0), $		; image widget y-location 
-	cbedxlocation: float(1200.0), $		; cbed widget x-location (can be modified and stored in preferences file)
-	cbedylocation: float(100.0), $		; cbed widget y-location 
         scrdimx:0L, $                           ; display area x size in pixels 
         scrdimy:0L $                            ; display area y size in pixels 
         }
@@ -307,45 +346,15 @@ widget_s.base = WIDGET_BASE(TITLE='Zone Axis CBED Display Program', $
 ;------------------------------------------------------------
 ; create the various vertical blocks
 ; block 1 deals with the input file and displays the data dimensions
-block1 = WIDGET_BASE(widget_s.base, $
-			/FRAME, $
-			/COLUMN)
+block1 = WIDGET_BASE(widget_s.base, /FRAME, /COLUMN)
 
 ;----------
-file1 = WIDGET_BASE(block1, $
-			/ROW, $
-                        XSIZE=980, $
-			/ALIGN_CENTER)
-
-label2 = WIDGET_LABEL(file1, $
-			VALUE='Data File Name', $
-			FONT=fontstrlarge, $
-			XSIZE=200, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.dataname = WIDGET_TEXT(file1, $
-			VALUE=data.dataname,$
-			XSIZE=77, $
-			/ALIGN_LEFT)
+file1 = WIDGET_BASE(block1, /ROW, XSIZE=980, /ALIGN_CENTER)
+widget_s.dataname = Core_WText(file1, 'Data File Name',fontstrlarge, 200, 25, 77, 1, data.dataname)
 
 ;----------
-file3 = WIDGET_BASE(block1, $
-			/ROW, $
-			/BASE_ALIGN_BOTTOM, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file3, $
-			VALUE='Data File Size', $
-			FONT=fontstrlarge, $
-			XSIZE=200, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.filesize = WIDGET_TEXT(file3, $
-			VALUE=string(data.filesize,FORMAT="(I)")+' bytes', $
-			XSIZE=40, $
-			/ALIGN_RIGHT)
+file3 = WIDGET_BASE(block1,  /ROW,  /BASE_ALIGN_BOTTOM,  /ALIGN_LEFT)
+widget_s.filesize = Core_WText(file3, 'Data File Size',fontstrlarge, 200, 25, 30, 1, string(float(data.filesize)/1024./1024.,FORMAT="(F8.2)")+' Mb' )
 
 widget_s.progress = WIDGET_DRAW(file3, $
 			COLOR_MODEL=2, $
@@ -355,357 +364,114 @@ widget_s.progress = WIDGET_DRAW(file3, $
 			YSIZE=20)
 
 
-file3 = WIDGET_BASE(block1, $
-			/ROW, $
-			/ALIGN_LEFT)
+;----------
+file3 = WIDGET_BASE(block1,  /ROW,  /ALIGN_LEFT)
+widget_s.imx = Core_WText(file3, 'Disk Dimensions',fontstrlarge, 200, 25, 10, 1, string(data.imx,FORMAT="(I5)"))
+widget_s.imy = Core_WText(file3, 'by',fontstrlarge, 25, 25, 10, 1, string(data.imy,FORMAT="(I5)"))
 
-label4 = WIDGET_LABEL(file3, $
-			VALUE='Disk Dimensions', $
-			FONT=fontstrlarge, $
-			XSIZE=200, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.imx= WIDGET_TEXT(file3, $
-			VALUE=string(data.imx,format="(I5)"),$
-			XSIZE=10, $
-			/ALIGN_LEFT)
-
-labela = WIDGET_LABEL(file3, $
-			VALUE='by', $
-			FONT=fontstrlarge, $
-			XSIZE=25, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.imy= WIDGET_TEXT(file3, $
-			VALUE=string(data.imy,format="(I5)"),$
-			XSIZE=10, $
-			/ALIGN_LEFT)
 
 ;----------- next we have a series of parameters that are 
 ; derived from the input file and can not be changed by
 ; the user...
 
-block2 = WIDGET_BASE(widget_s.base, $
-			/FRAME, $
-			/ROW)
-
-file4 = WIDGET_BASE(block2, $
-			/COLUMN, $
-			/ALIGN_LEFT)
+block2 = WIDGET_BASE(widget_s.base, /FRAME, /ROW)
+file4 = WIDGET_BASE(block2, /COLUMN, /ALIGN_LEFT)
 
 ;-------------
-file5 = WIDGET_BASE(file4, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file5, $
-			VALUE='# of g-families', $
-			FONT=fontstrlarge, $
-			XSIZE=230, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.numfam= WIDGET_TEXT(file5, $
-			VALUE=string(data.numfam,format="(I5)"),$
-			XSIZE=10, $
-			/ALIGN_LEFT)
+file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
+widget_s.numfam = Core_WText(file5, '# of g-families',fontstrlarge, 230, 25, 10, 1, string(data.numfam,FORMAT="(I5)"))
 
 ;-------------
-file5 = WIDGET_BASE(file4, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file5, $
-			VALUE='Beam Convergence [mrad]', $
-			FONT=fontstrlarge, $
-			XSIZE=230, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.thetac= WIDGET_TEXT(file5, $
-			VALUE=string(data.thetac,format="(F6.3)"),$
-			XSIZE=10, $
-			/ALIGN_LEFT)
+file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
+widget_s.thetac = Core_WText(file5, 'Beam Convergence [mrad]',fontstrlarge, 230, 25, 10, 1, string(data.thetac,FORMAT="(F6.3)"))
 
 ;-------------
-file5 = WIDGET_BASE(file4, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file5, $
-			VALUE='Wave Length [pm]', $
-			FONT=fontstrlarge, $
-			XSIZE=230, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.wavelength= WIDGET_TEXT(file5, $
-			VALUE=string(data.wavelength,format="(F7.4)"),$
-			XSIZE=10, $
-			/ALIGN_LEFT)
-
+file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
+widget_s.wavelength = Core_WText(file5, 'Wave Length [pm]',fontstrlarge, 230, 25, 10, 1, string(data.wavelength,FORMAT="(F7.4)"))
 
 ;-------------
-file5 = WIDGET_BASE(file4, $
-			/ROW, $
-			/ALIGN_LEFT)
+file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
+widget_s.maxHOLZ = Core_WText(file5, 'Maximum HOLZ    ',fontstrlarge, 230, 25, 10, 1, string(data.maxHOLZ,FORMAT="(I4)"))
 
-label2 = WIDGET_LABEL(file5, $
-			VALUE='Maximum HOLZ    ', $
-			FONT=fontstrlarge, $
-			XSIZE=230, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.maxHOLZ= WIDGET_TEXT(file5, $
-			VALUE=string(data.maxHOLZ,format="(I4)"),$
-			XSIZE=10, $
-			/ALIGN_LEFT)
+;-------------
+file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
+wv = '['+string(data.fn[0],format="(I2)")+' '+ string(data.fn[1],format="(I2)")+' '+ string(data.fn[2],format="(I2)")+']'
+widget_s.fn= Core_WText(file5, 'Foil Normal',fontstrlarge, 230, 25, 10, 1, string(data.maxHOLZ,FORMAT="(I4)"))
 
 ;-------------
 ;-------------
-file6 = WIDGET_BASE(block2, $
-			/COLUMN, $
-			/ALIGN_LEFT)
+file6 = WIDGET_BASE(block2, /COLUMN, /ALIGN_LEFT)
 
 ;-------------
-file7 = WIDGET_BASE(file6, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file7, $
-			VALUE='# of k-vectors', $
-			FONT=fontstrlarge, $
-			XSIZE=200, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.numk= WIDGET_TEXT(file7, $
-			VALUE=string(data.numk,format="(I5)"),$
-			XSIZE=20, $
-			/ALIGN_LEFT)
+file7 = WIDGET_BASE(file6, /ROW, /ALIGN_LEFT)
+widget_s.numk = Core_WText(file7, '# of k-vectors  ',fontstrlarge, 200, 25, 20, 1, string(data.numk,FORMAT="(I5)"))
 
 ;-------------
-file7 = WIDGET_BASE(file6, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file7, $
-			VALUE='Structure File', $
-			FONT=fontstrlarge, $
-			XSIZE=200, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.xtalname= WIDGET_TEXT(file7, $
-			VALUE=data.xtalname,$
-			XSIZE=20, $
-			/ALIGN_LEFT)
+file7 = WIDGET_BASE(file6, /ROW, /ALIGN_LEFT)
+widget_s.xtalname = Core_WText(file7, 'Structure File  ',fontstrlarge, 200, 25, 20, 1, data.xtalname)
 
 ;-------------
-file7 = WIDGET_BASE(file6, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file7, $
-			VALUE='Zone axis [uvw]', $
-			FONT=fontstrlarge, $
-			XSIZE=200, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-wv = '['+string(data.wavek[0],format="(I2)")+' '+ string(data.wavek[1],format="(I2)")+' '+ string(data.wavek[2],format="(I2)")+']'
-widget_s.wavek= WIDGET_TEXT(file7, $
-			VALUE=wv,$
-			XSIZE=20, $
-			/ALIGN_LEFT)
+file7 = WIDGET_BASE(file6, /ROW, /ALIGN_LEFT)
+wv = '['+string(data.wavek[0],format="(I3)")+' '+ string(data.wavek[1],format="(I3)")+' '+ string(data.wavek[2],format="(I3)")+']'
+widget_s.wavek = Core_WText(file7, 'Zone axis [uvw] ',fontstrlarge, 200, 25, 20, 1, wv )
 
 ;-------------
-file7 = WIDGET_BASE(file6, $
-			/ROW, $
-			/ALIGN_LEFT)
+file7 = WIDGET_BASE(file6, /ROW, /ALIGN_LEFT)
+wv = '('+string(data.ga[0],format="(I3)")+' '+ string(data.ga[1],format="(I3)")+' '+ string(data.ga[2],format="(I3)")+')'
+widget_s.ga = Core_WText(file7, 'Horizontal g    ',fontstrlarge, 200, 25, 20, 1, wv )
 
-label2 = WIDGET_LABEL(file7, $
-			VALUE='Horizontal g   ', $
-			FONT=fontstrlarge, $
-			XSIZE=200, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-wv = '('+string(data.ga[0],format="(I2)")+' '+ string(data.ga[1],format="(I2)")+' '+ string(data.ga[2],format="(I2)")+')'
-widget_s.ga= WIDGET_TEXT(file7, $
-			VALUE=wv,$
-			XSIZE=20, $
-			/ALIGN_LEFT)
+;-------------
+file7 = WIDGET_BASE(file6, /ROW, /ALIGN_LEFT)
+widget_s.minten = Core_WText(file7, 'Intensity cutoff',fontstrlarge, 200, 25, 20, 1, string(data.minten,format="(E10.2)") )
 
 
 ;------------------------------------------------------------
 ; block 3 displays a number of symmetry properties (there are 8 in total)
-block3 = WIDGET_BASE(widget_s.base, $
-			/FRAME, $
-			/ROW)
-
-file4 = WIDGET_BASE(block3, $
-			/COLUMN, $
-			/ALIGN_LEFT)
+block3 = WIDGET_BASE(widget_s.base, /FRAME, /ROW)
+file4 = WIDGET_BASE(block3, /COLUMN, /ALIGN_LEFT)
 
 ;-------------
-file5 = WIDGET_BASE(file4, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file5, $
-			VALUE='Crystal PG', $
-			FONT=fontstrlarge, $
-			XSIZE=230, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-data.symgroups = [3,6,5,4,1,4,3,4]
-
-widget_s.symCPG   = WIDGET_TEXT(file5, $
-			VALUE=PGTHD[data.symgroups[0]],$
-			XSIZE=10, $
-			/ALIGN_LEFT)
+file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
+data.symgroups = [0,0,0,0,0,0,0,0]
+widget_s.symCPG = Core_WText(file5, 'Crystal PG',fontstrlarge, 230, 25, 10, 1, PGTHD[data.symgroups[0]] )
 
 ;-------------
-file5 = WIDGET_BASE(file4, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file5, $
-			VALUE='Diffraction PG', $
-			FONT=fontstrlarge, $
-			XSIZE=230, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.symDPG   = WIDGET_TEXT(file5, $
-			VALUE=DG[data.symgroups[2]],$
-			XSIZE=10, $
-			/ALIGN_LEFT)
+file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
+widget_s.symDPG = Core_WText(file5, 'Diffraction PG',fontstrlarge, 230, 25, 10, 1, DG[data.symgroups[2]] )
 
 ;-------------
-file5 = WIDGET_BASE(file4, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file5, $
-			VALUE='Whole Pattern PG', $
-			FONT=fontstrlarge, $
-			XSIZE=230, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.symWPG   = WIDGET_TEXT(file5, $
-			VALUE=PGTWD[data.symgroups[5]],$
-			XSIZE=10, $
-			/ALIGN_LEFT)
+file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
+widget_s.symWPG = Core_WText(file5, 'Whole Pattern PG',fontstrlarge, 230, 25, 10, 1, PGTWD[data.symgroups[5]] )
 
 ;-------------
-file5 = WIDGET_BASE(file4, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file5, $
-			VALUE='Dark Field General PG', $
-			FONT=fontstrlarge, $
-			XSIZE=230, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.symDFG   = WIDGET_TEXT(file5, $
-			VALUE=PGTHD[data.symgroups[6]],$
-			XSIZE=10, $
-			/ALIGN_LEFT)
+file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
+widget_s.symDFG = Core_WText(file5, 'Dark Field General PG',fontstrlarge, 230, 25, 10, 1, PGTHD[data.symgroups[6]] )
 
 ;-------------
 ;-------------
-file4 = WIDGET_BASE(block3, $
-			/COLUMN, $
-			/ALIGN_LEFT)
+file4 = WIDGET_BASE(block3, /COLUMN, /ALIGN_LEFT)
 
 ;-------------
-file5 = WIDGET_BASE(file4, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file5, $
-			VALUE='Laue PG', $
-			FONT=fontstrlarge, $
-			XSIZE=230, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.symLPG   = WIDGET_TEXT(file5, $
-			VALUE=PGTHD[data.symgroups[1]],$
-			XSIZE=10, $
-			/ALIGN_LEFT)
+file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
+widget_s.symLPG = Core_WText(file5, 'Laue PG',fontstrlarge, 230, 25, 10, 1, PGTHD[data.symgroups[1]] )
 
 ;-------------
-file5 = WIDGET_BASE(file4, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file5, $
-			VALUE='Projection Diff. PG', $
-			FONT=fontstrlarge, $
-			XSIZE=230, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.symPDG   = WIDGET_TEXT(file5, $
-			VALUE=DG[data.symgroups[3]],$
-			XSIZE=10, $
-			/ALIGN_LEFT)
+file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
+widget_s.symPDG = Core_WText(file5, 'Projection Diff. PG',fontstrlarge, 230, 25, 10, 1, DG[data.symgroups[3]] )
 
 ;-------------
-file5 = WIDGET_BASE(file4, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file5, $
-			VALUE='Bright Field PG', $
-			FONT=fontstrlarge, $
-			XSIZE=230, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.symBFG   = WIDGET_TEXT(file5, $
-			VALUE=PGTWD[data.symgroups[4]],$
-			XSIZE=10, $
-			/ALIGN_LEFT)
+file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
+widget_s.symBFG = Core_WText(file5, 'Bright Field PG',fontstrlarge, 230, 25, 10, 1, PGTWD[data.symgroups[4]] )
 
 ;-------------
-file5 = WIDGET_BASE(file4, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file5, $
-			VALUE='Dark Field Special PG', $
-			FONT=fontstrlarge, $
-			XSIZE=230, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.symDFS   = WIDGET_TEXT(file5, $
-			VALUE=PGTHD[data.symgroups[7]],$
-			XSIZE=10, $
-			/ALIGN_LEFT)
+file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
+widget_s.symDFS = Core_WText(file5, 'Dark Field Special PG',fontstrlarge, 230, 25, 10, 1, PGTWD[data.symgroups[7]] )
 
 ;-------------
 ; next we have the buttons that generate LACBED, CBED, or MBCBED widgets
 ;-------------
-block3 = WIDGET_BASE(widget_s.base, $
-			XSIZE=650, $
-			/FRAME, $
-			/ROW)
-
-file5 = WIDGET_BASE(block3, $
-			/ROW, $
-			/ALIGN_CENTER)
+block3 = WIDGET_BASE(widget_s.base, XSIZE=650, /FRAME, /ROW)
+file5 = WIDGET_BASE(block3, /ROW, /ALIGN_CENTER)
 
 widget_s.startLACBED = WIDGET_BUTTON(file5, $
                         VALUE='LACBED Window', $
@@ -728,21 +494,6 @@ widget_s.startMBCBED = WIDGET_BUTTON(file5, $
                         SENSITIVE=0, $
                         /FRAME)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ;----------
 ; next, add a text window for program messages
 
@@ -755,14 +506,8 @@ widget_s.status= WIDGET_TEXT(widget_s.base, $
 
 ;------------------------------------------------------------
 ; block 3 QUIT button, LOAD FILE button and progress bar (used for file loading)
-block3 = WIDGET_BASE(widget_s.base, $
-			XSIZE=650, $
-			/FRAME, $
-			/ROW)
-
-file11 = WIDGET_BASE(block3, $
-			/ROW, $
-			/ALIGN_LEFT)
+block3 = WIDGET_BASE(widget_s.base, XSIZE=650, /FRAME, /ROW)
+file11 = WIDGET_BASE(block3, /ROW, /ALIGN_LEFT)
 
 widget_s.mainstop = WIDGET_BUTTON(file11, $
                         VALUE='Quit', $

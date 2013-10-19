@@ -656,7 +656,7 @@ IMPLICIT NONE
 real(kind=sgl),INTENT(IN) 	::  gg(3)		!< reciprocal lattice point
 real(kind=sgl),INTENT(IN) 	::  kk(3)		!< wave vector
 real(kind=sgl),INTENT(IN) 	::  FN(3) 		!< foil normal
-real(kind=sgl)				:: kpg(3),tkpg(3),xnom,xden,q1,q2,sg
+real(kind=sgl)			:: kpg(3),tkpg(3),xnom,xden,q1,q2,sg
 
 
  kpg=kk+gg
@@ -700,7 +700,7 @@ IMPLICIT NONE
 real(kind=dbl),INTENT(IN) 	::  gg(3)		!< reciprocal lattice point
 real(kind=dbl),INTENT(IN) 	::  kk(3)		!< wave vector
 real(kind=dbl),INTENT(IN) 	::  FN(3) 		!< foil normal
-real(kind=dbl)				:: kpg(3),tkpg(3),xnom,xden,q1,q2,sg
+real(kind=dbl)			:: kpg(3),tkpg(3),xnom,xden,q1,q2,sg
 
  kpg=kk+gg
  tkpg=2.D0*kk+gg

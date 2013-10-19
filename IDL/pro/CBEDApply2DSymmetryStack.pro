@@ -26,56 +26,53 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:CBEDgetfilename.pro
+; CTEMsoft2013:CBEDApply2DSymmetryStack.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: CBEDgetfilename.pro
+; PROGRAM: CBEDApply2DSymmetryStack.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief Display an interface and ask user to select a file
+;> @brief apply all the symmetry operators for a given 2D point group to a stack of disks
 ;
-;> @date 06/13/13 MDG 1.0 first attempt 
+;> @date 10/08/13 MDG 1.0 first attempt 
+;> @date 10/15/13 MDG 1.1 correction for relative orientation of point group to disk
 ;--------------------------------------------------------------------------
-pro CBEDgetfilename,validfile,MBCBED=MBCBED,LACBED=LACBED
- 
-;------------------------------------------------------------
-; common blocks
-common CBED_widget_common, widget_s
+function CBEDApply2DSymmetryStack,inp
+;
+; apply a series of basic 2D symmetry operations to the input array
+;
+common SYM2D, SYM_MATnum, SYM_direc
 common CBED_data_common, data
 
-  s = ''
-  cd,current = s
-  data.homefolder = s
-  if (data.CBEDroot eq 'undefined') then begin
-    data.CBEDroot = data.homefolder
-  end 
+; loop over all the symmetry operators
+for i=1,SYM_MATnum-1 do begin
+  slice = reform(inp[*,*,i])
+  if (data.thetam ne 0.0) then slice = rot(slice,-data.thetam,cubic=-0.5)
+  case SYM_direc[i] of 
+    'rot1': slice = rotate(slice,1)
+    'rot2': slice = rotate(slice,2)
+    'rot3': slice = rotate(slice,3)
+    'rot030': slice = rot(slice,-30.0,missing=0.0)
+    'rot060': slice = rot(slice,-60.0,missing=0.0)
+    'rot120': slice = rot(slice,-120.0,missing=0.0)
+    'rot150': slice = rot(slice,-150.0,missing=0.0)
+    'rot240': slice = rot(slice,-240.0,missing=0.0)
+    'rot300': slice = rot(slice,-300.0,missing=0.0)
+    'rev1': slice = reverse(slice,1)
+    'rev2': slice = reverse(slice,2)
+    'rev030': slice = rot(reverse(rot(slice,30.0,missing=0.0),2),-30.0,missing=0.0)
+    'rev060': slice = rot(reverse(rot(slice,60.0,missing=0.0),2),-60.0,missing=0.0)
+    'rev120': slice = rot(reverse(rot(slice,120.0,missing=0.0),2),-120.0,missing=0.0)
+    'rev150': slice = rot(reverse(rot(slice,150.0,missing=0.0),2),-150.0,missing=0.0)
+    'tra1': slice = transpose(slice)
+    'tra2': slice = rotate(transpose(rotate(slice,1)),3)
+    else: print,'unknown symmetry operation; continuing '+SYM_direc[i]
+  endcase
+  if (data.thetam ne 0.0) then slice = rot(slice,data.thetam,cubic=-0.5)
+  inp[0,0,i] = slice 
+endfor
 
-  rootpath = data.CBEDroot
-
-  if keyword_set(LACBED) then begin
-    res=dialog_pickfile(title='Select a valid CTEMlacbed data file',path=rootpath)
-  end else begin
-    res=dialog_pickfile(title='Select a valid CTEMmbcbed data file',path=rootpath)
-  end
-
-  if (res eq '') then begin
-	  print,'No selection made; Exiting program'
-	  validfile = 0
-	  return
-  end
-  validfile = 1
-  finfo = file_info(res)
-  data.filesize = finfo.size
-; find the last folder separator
-  spos = strpos(res,'/',/reverse_search)
-  dpos = strpos(res,'.',/reverse_search)
-  plen = strlen(res)
-  data.pathname = strmid(res,0,spos)
-  data.dataname = strmid(res,spos+1)
-  data.suffix = strmid(res,dpos+1)
-  data.CBEDroot = data.pathname
-
-WIDGET_CONTROL, SET_VALUE=data.dataname, widget_s.dataname
-
+return,inp
 end
+

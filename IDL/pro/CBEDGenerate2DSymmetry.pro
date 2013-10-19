@@ -99,15 +99,7 @@ case isym of
 	SYM_direc[4] = 'rev030'
 	SYM_direc[5] = 'rev150'
      end
-  9: begin  ; 31m
-	SYM_MATnum = 6
-	SYM_direc[1] = 'rot120'
-	SYM_direc[2] = 'rot240'
-	SYM_direc[3] = 'rev2'
-	SYM_direc[4] = 'rev060'
-	SYM_direc[5] = 'rev120'
-     end
-  10: begin  ; 6
+  9: begin  ; 6
 	SYM_MATnum = 6
 	SYM_direc[1] = 'rot060'
 	SYM_direc[2] = 'rot120'
@@ -115,7 +107,7 @@ case isym of
 	SYM_direc[4] = 'rot240'
 	SYM_direc[5] = 'rot300'
       end
-  11: begin  ; 6mm
+  10: begin  ; 6mm
 	SYM_MATnum = 12
 	SYM_direc[1] = 'rot060'
 	SYM_direc[2] = 'rot120'
@@ -129,6 +121,14 @@ case isym of
 	SYM_direc[10] = 'rev120'
 	SYM_direc[11] = 'rev150'
       end
+  11: begin  ; 31m
+	SYM_MATnum = 6
+	SYM_direc[1] = 'rot120'
+	SYM_direc[2] = 'rot240'
+	SYM_direc[3] = 'rev2'
+	SYM_direc[4] = 'rev060'
+	SYM_direc[5] = 'rev120'
+     end
   else: CBEDprint,'2D symmetry group not implemented',/blank
 endcase
 

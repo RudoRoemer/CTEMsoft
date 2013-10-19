@@ -86,6 +86,11 @@ CASE eventval OF
 		data.cbedmode = fix(val[0])
 	  endcase
 
+  'MOVEMODE': begin
+		WIDGET_CONTROL, get_value=val,widget_s.movemodegroup
+		data.movemode= fix(val[0])
+	  endcase
+
   'IMAGEFORMAT': begin
 		WIDGET_CONTROL, get_value=val,widget_s.imageformatbgroup
 		data.imageformat = fix(val[0])

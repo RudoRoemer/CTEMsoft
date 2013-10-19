@@ -26,56 +26,85 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:CBEDgetfilename.pro
+; CTEMsoft2013:CBEDCBEDDrawWidget.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: CBEDgetfilename.pro
+; PROGRAM: CBEDCBEDDrawWidget.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief Display an interface and ask user to select a file
+;> @brief Draw widget for LACBED
 ;
-;> @date 06/13/13 MDG 1.0 first attempt 
+;> @date 10/09/13 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------
-pro CBEDgetfilename,validfile,MBCBED=MBCBED,LACBED=LACBED
- 
+
+pro CBEDCBEDDrawWidget,dummy
+
 ;------------------------------------------------------------
 ; common blocks
 common CBED_widget_common, widget_s
 common CBED_data_common, data
+common CBED_rawdata, gvecs, gmult, gtt, gxy, disks, numHOLZ, HOLZlist
+common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
-  s = ''
-  cd,current = s
-  data.homefolder = s
-  if (data.CBEDroot eq 'undefined') then begin
-    data.CBEDroot = data.homefolder
-  end 
+; note that there are no user input parameters here, so no need for an event handler routine
 
-  rootpath = data.CBEDroot
+;------------------------------------------------------------
+; create the top level widget
+widget_s.CBEDDrawbase = WIDGET_BASE(TITLE='CBED Pattern', $
+                        /ROW, $
+                        XSIZE=1030, $
+                        YSIZE=1100, $
+                        /ALIGN_CENTER, $
+			/TLB_MOVE_EVENTS, $
+                        XOFFSET=data.CBEDDrawxlocation, $
+                        YOFFSET=data.CBEDDrawylocation)
 
-  if keyword_set(LACBED) then begin
-    res=dialog_pickfile(title='Select a valid CTEMlacbed data file',path=rootpath)
-  end else begin
-    res=dialog_pickfile(title='Select a valid CTEMmbcbed data file',path=rootpath)
-  end
+;------------------------------------------------------------
+; create the various blocks
+; block 1 contains the BF drawing window
+block1 = WIDGET_BASE(widget_s.CBEDDrawbase, /FRAME, /ALIGN_CENTER, /COLUMN)
 
-  if (res eq '') then begin
-	  print,'No selection made; Exiting program'
-	  validfile = 0
-	  return
-  end
-  validfile = 1
-  finfo = file_info(res)
-  data.filesize = finfo.size
-; find the last folder separator
-  spos = strpos(res,'/',/reverse_search)
-  dpos = strpos(res,'.',/reverse_search)
-  plen = strlen(res)
-  data.pathname = strmid(res,0,spos)
-  data.dataname = strmid(res,spos+1)
-  data.suffix = strmid(res,dpos+1)
-  data.CBEDroot = data.pathname
+;------------------------------------------------------------
+widget_s.CBdraw = WIDGET_DRAW(block1, $
+			COLOR_MODEL=2, $
+			RETAIN=2, $
+			/ALIGN_CENTER, $
+			XSIZE=1025, $
+			YSIZE=1025)
 
-WIDGET_CONTROL, SET_VALUE=data.dataname, widget_s.dataname
+
+;------------------------------------------------------------
+block2a = WIDGET_BASE(block1, $
+			/FRAME, $
+			/ROW)
+
+label1 = WIDGET_LABEL(block2a, $
+			VALUE='min/max', $
+			FONT=fontstr, $
+			XSIZE=75, $
+			YSIZE=30, $
+			/ALIGN_LEFT)
+
+widget_s.BFmin= WIDGET_TEXT(block2a, $
+			VALUE=string(data.BFmin,format="(F)"),$
+			XSIZE=10, $
+			/ALIGN_LEFT)
+
+widget_s.BFmax= WIDGET_TEXT(block2a, $
+			VALUE=string(data.BFmax,format="(F)"),$
+			XSIZE=10, $
+			/ALIGN_LEFT)
+
+;------------------------------------------------------------
+; realize the widget structure
+WIDGET_CONTROL,widget_s.CBEDDrawbase,/REALIZE
+
+; realize the draw widgets
+WIDGET_CONTROL, widget_s.CBdraw, GET_VALUE=drawID
+data.CBdrawID = drawID
+
+; and hand over control to the xmanager
+XMANAGER,"CBEDCBEDDrawWidget",widget_s.CBEDDrawbase,/NO_BLOCK
 
 end

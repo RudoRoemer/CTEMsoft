@@ -48,11 +48,12 @@ common CBED_rawdata, gvecs, gmult, gtt, gxy, disks, numHOLZ, HOLZlist
 common CBED_HOLZlists, HOLZvals
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
+
 ;------------------------------------------------------------
 ; create the top level widget
 widget_s.LACBEDbase = WIDGET_BASE(TITLE='LACBED Widget', $
                         /COLUMN, $
-                        XSIZE=500, $
+                        XSIZE=700, $
                         /ALIGN_CENTER, $
 			/TLB_MOVE_EVENTS, $
 			EVENT_PRO='CBEDLACBEDWidget_event', $
@@ -115,6 +116,8 @@ widget_s.LACBEDthicklist = WIDGET_DROPLIST(file1, $
 			UVALUE='CBEDLACBEDTHICKLIST', $
 			/ALIGN_LEFT)
 
+WIDGET_CONTROL, set_droplist_select=data.thicksel, widget_s.LACBEDthicklist
+
 ;---------- droplists for each of the HOLZ layers
 file1 = WIDGET_BASE(block1, $
 			/ROW, $
@@ -151,39 +154,47 @@ for ii=0,data.maxHOLZ do begin
   for i=0,numHOLZ[ii]-1 do begin
     j = ioffset + i
     icnt += 1
-    wv = '('+string(gvecs[0,j],format="(I3)")+' '+ string(gvecs[1,j],format="(I3)")+' '+ string(gvecs[2,j],format="(I3)")+')'
+    wv = '('+string(gvecs[0,j],format="(I3)")+' '+ string(gvecs[1,j],format="(I3)")+' '+ string(gvecs[2,j],format="(I3)")+'); '+string(gtt[j],format="(F6.2)")+'; '+string(gmult[j],format="(I2)")
     HOLZvals[icnt] = wv
     tvals[i+1] = wv
   end
   ioffset += numHOLZ[ii]
 ; and generate the widget
   case ii of
-    0: widget_s.LACBEDdroplist0 = WIDGET_DROPLIST(file1, $
+    0: widget_s.LACBEDdroplist0 = WIDGET_LIST(file1, $
 			EVENT_PRO='CBEDLACBEDWidget_event', $
+			FONT=fontstrsmall, $
 			VALUE=tvals,$
 			UVALUE='HOLZlayer0', $
 ;		PRO_SET_VALUE='CBEDprosetvalue', $
+			YSIZE = 5, $
 			/ALIGN_LEFT)
 
-    1: widget_s.LACBEDdroplist1 = WIDGET_DROPLIST(file1, $
+    1: widget_s.LACBEDdroplist1 = WIDGET_LIST(file1, $
 			EVENT_PRO='CBEDLACBEDWidget_event', $
+			FONT=fontstrsmall, $
 			VALUE=tvals,$
 			UVALUE='HOLZlayer1', $
 ;		PRO_SET_VALUE='CBEDprosetvalue', $
+			YSIZE = 5, $
 			/ALIGN_LEFT)
 
-    2: widget_s.LACBEDdroplist2 = WIDGET_DROPLIST(file1, $
+    2: widget_s.LACBEDdroplist2 = WIDGET_LIST(file1, $
 			EVENT_PRO='CBEDLACBEDWidget_event', $
+			FONT=fontstrsmall, $
 			VALUE=tvals,$
 			UVALUE='HOLZlayer2', $
 ;		PRO_SET_VALUE='CBEDprosetvalue', $
+			YSIZE = 5, $
 			/ALIGN_LEFT)
 
-    3: widget_s.LACBEDdroplist3 = WIDGET_DROPLIST(file1, $
+    3: widget_s.LACBEDdroplist3 = WIDGET_LIST(file1, $
 			EVENT_PRO='CBEDLACBEDWidget_event', $
+			FONT=fontstrsmall, $
 			VALUE=tvals,$
 			UVALUE='HOLZlayer3', $
 ;		PRO_SET_VALUE='CBEDprosetvalue', $
+			YSIZE = 5, $
 			/ALIGN_LEFT)
 
     else: print,'This program is limited to a maximum of 3 HOLZ layers'
@@ -192,53 +203,13 @@ skiptherest:
 endfor
 
 ;---------- Eades angular range
-file1 = WIDGET_BASE(block1, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file1, $
-			VALUE='Eades angular range [mrad]', $
-			FONT=fontstrlarge, $
-			XSIZE=290, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.eadesrhoin = WIDGET_TEXT(file1, $
-			VALUE=string(data.Eadesrhoin,format="(F6.3)"),$
-			XSIZE=10, $
-			/EDITABLE, $
-                        EVENT_PRO='CBEDLACBEDWidget_event', $
-			UVALUE='EADESMIN', $
-			/ALIGN_LEFT)
-
-widget_s.eadesrhoout = WIDGET_TEXT(file1, $
-			VALUE=string(data.Eadesrhoout,format="(F6.3)"),$
-			XSIZE=10, $
-			/EDITABLE, $
-                        EVENT_PRO='CBEDLACBEDWidget_event', $
-			UVALUE='EADESMAX', $
-			/ALIGN_LEFT)
-
+file1 = WIDGET_BASE(block1, /ROW, /ALIGN_LEFT)
+widget_s.eadesrhoin  = Core_WTextE(file1, 'Eades angular range [mrad]',fontstrlarge, 290, 25, 10, 1, string(data.Eadesrhoin,FORMAT="(F8.3)"),'EADESMIN','CBEDLACBEDWidget_event')
+widget_s.eadesrhoout = Core_WTextE(file1, '',fontstrlarge, 0, 25, 10, 1, string(data.Eadesrhoout,FORMAT="(F8.3)"),'EADESMAX','CBEDLACBEDWidget_event')
 
 ;---------- rotate disks
-file1 = WIDGET_BASE(block1, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file1, $
-			VALUE='Disk rotation angle [CW, deg.] ', $
-			FONT=fontstrlarge, $
-			XSIZE=290, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.diskrotation = WIDGET_TEXT(file1, $
-			VALUE=string(data.diskrotation,format="(F6.2)"),$
-			XSIZE=10, $
-			/EDITABLE, $
-                        EVENT_PRO='CBEDLACBEDWidget_event', $
-			UVALUE='DISKROTATION', $
-			/ALIGN_LEFT)
+file1 = WIDGET_BASE(block1, /ROW, /ALIGN_LEFT)
+widget_s.diskrotation = Core_WTextE(file1, 'Disk rotation angle[CW, deg]',fontstrlarge, 290, 25, 10, 1, string(data.diskrotation,FORMAT="(F6.2)"),'DISKROTATION','CBEDLACBEDWidget_event')
 
 ;---------- intensity scaling 
 file1 = WIDGET_BASE(block1, $

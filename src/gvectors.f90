@@ -75,7 +75,7 @@ type(reflisttype),pointer 	:: reflist, & 	! linked list of reflections
 
 complex(kind=dbl),allocatable 	:: LUT(:,:,:)
 logical,allocatable		:: dbdiff(:,:,:)
-logical,allocatable		:: refdone(:,:,:)	! used to keep track of which reflections have already been dealt with.
+integer(kind=ish),allocatable		:: refdone(:,:,:)	! used to keep track of which reflections have already been dealt with.
 
 ! define the cutoff parameters for the Bethe potential approach (and set to zero initially)
 type BetheParameterType
@@ -152,6 +152,7 @@ if (.not.associated(reflist)) then
 end if
 
 end subroutine MakeRefList
+
 
 
 !--------------------------------------------------------------------------
@@ -709,6 +710,7 @@ subroutine Prune_ReflectionList(numk,nbeams)
 
 use local
 use io
+use crystal
 use dynamical
 use kvectors
 use diffraction
@@ -752,6 +754,9 @@ nbeams = 0
 !  cutoff lambda |Ug| > |sg| > weakcutoff lambda |Ug|  -> weak reflection
 !  weakcutoff lambda |Ug| > |sg|  -> strong reflection
 !
+! 	sgp = abs(CalcsgHOLZ(float(rltmpa%hkl),sngl(ktmp%kt),sngl(mLambda)))
+! 	write (*,*) rltmpa%hkl,CalcsgHOLZ(float(rltmpa%hkl),sngl(ktmp%kt), &
+!			sngl(mLambda)),Calcsg(float(rltmpa%hkl),sngl(ktmp%k),DynFN)
         sgp = abs(Calcsg(float(rltmpa%hkl),sngl(ktmp%k),DynFN)) 
 ! we have to deal separately with double diffraction reflections, since
 ! they have a zero potential coefficient !        
@@ -806,7 +811,7 @@ nbeams = 0
 ! go through the entire list once again to correct the famhkl
 ! entries, which may be incorrect now; famhkl is supposed to be one of the 
 ! reflections on the current list, but that might not be the case since
-! famhkl was first initalized when there were additional reflections on
+! famhkl was first initialized when there were additional reflections on
 ! the list... so we set famhkl to be the same as the first hkl in each family.
   rltmpa => reflist%next%next  ! no need to check the first one
 reflectionloop3:  do while (associated(rltmpa))
@@ -816,6 +821,7 @@ reflectionloop3:  do while (associated(rltmpa))
       do while (sum(abs(rltmpa%famhkl-curfam)).eq.0)
         rltmpa%famhkl = newfam
         rltmpa => rltmpa%next
+	if ( .not.associated(rltmpa) ) EXIT reflectionloop3
       end do
     else
       do while (sum(abs(rltmpa%famhkl-curfam)).eq.0)
@@ -846,6 +852,7 @@ end subroutine Prune_ReflectionList
 !
 !> @param calcmode string that describes the particular matrix mode
 !> @param kk incident wave vector
+!> @param kt tangential component of incident wave vector (encodes the Laue Center)
 !> @param IgnoreFoilNormal switch for foil normal inclusion in sg computation
 !> @param IncludeSecondOrder (optional) switch to include second order correction to Bethe potentials
 !
@@ -853,7 +860,7 @@ end subroutine Prune_ReflectionList
 !> @date   08/30/13 MDG 1.1 correction of effective excitation error
 !> @date   09/20/13 MDG 1.2 added second order Bethe potential correction switch
 !--------------------------------------------------------------------------
-recursive subroutine Compute_DynMat(calcmode,kk,IgnoreFoilNormal,IncludeSecondOrder)
+recursive subroutine Compute_DynMat(calcmode,kk,kt,IgnoreFoilNormal,IncludeSecondOrder)
 
 use local
 use dynamical
@@ -866,7 +873,7 @@ use io
 IMPLICIT NONE
 
 character(*),INTENT(IN)		:: calcmode		!< computation mode
-real(kind=dbl),INTENT(IN)		:: kk(3)		!< incident wave vector
+real(kind=dbl),INTENT(IN)		:: kk(3),kt(3)		!< incident wave vector and tangential component
 logical,INTENT(IN)			:: IgnoreFoilNormal	!< how to deal with the foil normal
 logical,INTENT(IN),OPTIONAL		:: IncludeSecondOrder	!< second order Bethe potential correction switch
 
@@ -934,6 +941,7 @@ if (calcmode.ne.'BLOCHBETHE') then
 	    DynMat(ir,ir) = cmplx(0.0,DynUpz,dbl)
 	   else  ! compute the excitation error
 	    exer = Calcsg(float(rltmpa%hkl),sngl(kk),DynFN)
+
 	    rltmpa%sg = exer
 	    if (calcmode.eq.'DIAGH') then  !
 	     DynMat(ir,ir) = cmplx(0.0,2.D0*cPi*exer,dbl)
@@ -984,6 +992,7 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
     BetheParameter%reflistindex(nn) = 1
 
     rltmpa%sg = 0.D0    
+! write (*,*) 'DynNbeamsLinked = ',DynNbeamsLinked
 
 ! loop over all reflections in the linked list    
     rltmpa => rltmpa%next
@@ -999,6 +1008,10 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
         rltmpa%sg = (1.0/mLambda**2 - gplen**2)*0.5/gplen
      else
 	rltmpa%sg = Calcsg(gg,sngl(kk),DynFN)
+! here we need to determine the components of the Laue Center w.r.t. the g1 and g2 vectors
+! and then pass those on to the routine; 
+!	rltmpa%sg = CalcsgHOLZ(gg,sngl(kt),sngl(mLambda))
+! write (*,*) gg, Calcsg(gg,sngl(kk),DynFN), CalcsgHOLZ(gg,sngl(kt),sngl(mLambda))
      end if
 
 ! use the reflection num entry to indicate whether or not this
@@ -1265,7 +1278,7 @@ real(kind=sgl),INTENT(IN),OPTIONAL		:: convang
 
 integer(kind=irg)				:: imh, imk, iml, gg(3), ix, iy, iz, i, minholz, RHOLZ, im, istat, N, &
 						ig, numr, ir, irsel
-real(kind=sgl)					:: dhkl, io_real(9), H, g3(3), g3n(3), FNg(3), ddt, maxang, minang, s
+real(kind=sgl)					:: dhkl, io_real(9), H, g3(3), g3n(3), FNg(3), ddt, maxang, minang, s, kr(3)
 integer(kind=irg)				:: io_int(3), gshort(3), gp(3)
 
 logical,allocatable				:: inrange(:)
@@ -1273,7 +1286,9 @@ logical,allocatable				:: inrange(:)
 ! determine the master list of reflections for the general case (i.e., a box in reciprocal space)
 if (method.eq.'ALL') then 
 ! set threshold for double diffraction detection
-  ddt = 1.0e-6
+  ddt = 1.0e-10
+
+call TransSpace(float(k),kr,'d','r')
 
 ! set the parameters for the cone volume to exclude reflections
  if (present(convang)) then
@@ -1312,8 +1327,9 @@ if (method.eq.'ALL') then
 
 ! allocate an array to keep track of all families of reflections
   allocate(refdone(-imh:imh,-imk:imk,-iml:iml),stat=istat)
-  refdone = .FALSE.
-  
+!  refdone = .FALSE.
+ refdone = 0
+ 
 ! allocate an array that keeps track of potential double diffraction reflections
   allocate(dbdiff(-2*imh:2*imh,-2*imk:2*imk,-2*iml:2*iml),stat=istat)
   dbdiff = .FALSE.
@@ -1329,7 +1345,7 @@ if (method.eq.'ALL') then
 
 ! and add this reflection to the look-up table
   LUT(gg(1),gg(2),gg(3)) = rlp%Ucg
-  refdone(gg(1),gg(2),gg(3)) = .TRUE. 
+  refdone(gg(1),gg(2),gg(3)) = 2 !.TRUE. 
 
 ! now do the same for the other allowed reflections
 ! note that the lookup table must be twice as large as the list of participating reflections,
@@ -1340,9 +1356,14 @@ iyl:  do iy=-2*imk,2*imk
 izl:   do iz=-2*iml,2*iml
         gg = (/ ix, iy, iz /)
         if (IsGAllowed(gg)) then
+
 ! if this g is inside the original box, then add it to the linked list
-          if ((abs(ix).le.imh).and.(abs(iy).le.imk).and.(abs(iz).le.iml)) then 
-	   if ( .not.refdone(ix,iy,iz) ) then
+         if ((abs(ix).le.imh).and.(abs(iy).le.imk).and.(abs(iz).le.iml)) then 
+
+! if we haven't visited this reflection yet
+!	   if ( .not.refdone(ix,iy,iz) ) then
+	   if ( refdone(ix,iy,iz) .eq. 0) then
+
 ! compute the family of reflections
 	     call CalcFamily( gg, numr, 'r' )
 ! for each family member, we need to determine whether or not it falls inside the angular range
@@ -1352,36 +1373,70 @@ izl:   do iz=-2*iml,2*iml
 	     inrange = .FALSE.
 ! check if the angular range puts it between the two cones (mainly used for CBED etc.)	
 	     do ir=1,numr
-   	    	 s = abs(CalcAngle( float( (/ itmp(ir,1),itmp(ir,2),itmp(ir,3) /) ), float(k), 'r' ) )   
+   	    	 s = CalcAngle( float( (/ itmp(ir,1),itmp(ir,2),itmp(ir,3) /) ), kr, 'r' )   
 	    	 if ((s.ge.minang).and.(s.le.maxang)) then 
 		   inrange(ir) = .TRUE.
 		   if (irsel.eq.0) irsel=ir   ! keep the first one that satisfies this condition
 		 end if
-		 refdone(itmp(ir,1),itmp(ir,2),itmp(ir,3)) = .TRUE.
+!		 refdone(itmp(ir,1),itmp(ir,2),itmp(ir,3)) = .TRUE.	! and flag the reflection
+		 refdone(itmp(ir,1),itmp(ir,2),itmp(ir,3)) = 1	! and flag the reflection
  	     end do
 ! next add those reflections that are inrange
 	     do ir=1,numr
 		if ((inrange(ir)).and.(irsel.gt.0)) then 
 		  call AddReflection( (/ itmp(ir,1),itmp(ir,2),itmp(ir,3) /) )
-		  rltail%famhkl = (/ itmp(irsel,1),itmp(irsel,2),itmp(irsel,3) /)
+         	  LUT(itmp(ir,1),itmp(ir,2),itmp(ir,3)) = rlp%Ucg
+		 refdone(itmp(ir,1),itmp(ir,2),itmp(ir,3)) = 2	! and flag the reflection
+! flag this reflection as a double diffraction candidate if cabs(Ucg)<ddt threshold
+	         if (cabs(rlp%Ucg).le.ddt) then 
+         	  dbdiff(itmp(ir,1),itmp(ir,2),itmp(ir,3)) = .TRUE.
+         	 end if      	 
 		end if
 	     end do
+! since we're using a thin wedge, we might be skipping points close to the origin due to rounding errors, in particular 
+! ZOLZ points, so check if this point is in the ZOLZ and not yet tagged as such, then add it		 
+	     do ir=1,numr
+		N = itmp(ir,1) * k(1) + itmp(ir,2) * k(2) +itmp(ir,3) * k(3)
+		if ((N.eq.0).and.(refdone(itmp(ir,1),itmp(ir,2),itmp(ir,3)).eq.1)) then
+		  call AddReflection( (/ itmp(ir,1),itmp(ir,2),itmp(ir,3) /) )
+         	  LUT(itmp(ir,1),itmp(ir,2),itmp(ir,3)) = rlp%Ucg
+		  refdone(itmp(ir,1),itmp(ir,2),itmp(ir,3)) = 2	! and flag the reflection
+! flag this reflection as a double diffraction candidate if cabs(Ucg)<ddt threshold
+	         if (cabs(rlp%Ucg).le.ddt) then 
+         	  dbdiff(itmp(ir,1),itmp(ir,2),itmp(ir,3)) = .TRUE.
+         	 end if
+		end if
+	     end do
+! set the representative family member
+	     if (irsel.gt.0) rltail%famhkl = (/ itmp(irsel,1),itmp(irsel,2),itmp(irsel,3) /)
 	     deallocate(inrange)
           end if 
-         end if ! inside smaller box
+         else ! not inside smaller box
+
 ! add the reflection to the look up table
-	 call CalcUcg( gg )
-         LUT(ix, iy, iz) = rlp%Ucg
+ 	   call CalcUcg( gg )
+           LUT(ix, iy, iz) = rlp%Ucg
 ! flag this reflection as a double diffraction candidate if cabs(Ucg)<ddt threshold
-         if (cabs(rlp%Ucg).le.ddt) then 
-           dbdiff(ix,iy,iz) = .TRUE.
-         end if
+           if (cabs(rlp%Ucg).le.ddt) then 
+             dbdiff(ix,iy,iz) = .TRUE.
+           end if
+
+         end if ! not inside smaller box
+
         end if ! IsGAllowed
        end do izl
       end do iyl
     end do ixl
   io_int(1) = DynNbeams
   call WriteValue(' Length of the master list of reflections : ', io_int, 1, "(I8)")
+  
+  open(unit=20,file='redone.data',status='unknown',form='unformatted')
+  write (20) imh,imk,iml
+  write (20) refdone
+  close(unit=20,status='keep')
+
+  deallocate(refdone)
+  
 end if   ! method = ALL
 
 

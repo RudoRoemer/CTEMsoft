@@ -26,35 +26,47 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:CBEDLACBEDWidget_event.pro
+; CTEMsoft2013:Core_WText.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: CBEDLACBEDWidget_event.pro
+; PROGRAM: Core_WText.pro
 ;
-;> @author Marc De Graef, Carnegie Melon University
+;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief main event handler for LACBED mode
+;> @brief Text widget short cut routine
 ;
-;> @date 10/09/13 MDG 1.0 first version
+;> @date 09/25/13 MDG 1.0 first attempt at a user-friendly interface
 ;--------------------------------------------------------------------------
-pro CBEDDrawWidget_event, event
+function Core_WText, parent, title, fnt, x1, y1, x2, y2, value, aright=aright
 
-;------------------------------------------------------------
-; common blocks
-common CBED_widget_common, widget_s
-common CBED_data_common, data
-common CBED_rawdata, gvecs, gmult, gtt, gxy, disks, numHOLZ, HOLZlist
-common CBED_HOLZlists, HOLZvals
-common fontstrings, fontstr, fontstrlarge, fontstrsmall
-common CBED_current, BFcurrent, DFcurrent, RGBcurrent, mask
+if keyword_set(aright) then begin
+  label2 = WIDGET_LABEL(parent, $
+		VALUE=title, $
+		FONT=fnt, $
+		XSIZE=x1, $
+		YSIZE=y1, $
+		/ALIGN_RIGHT)
 
-if (data.eventverbose eq 1) then help,event,/structure
-
-; intercept the image widget movement here 
-if (event.id eq widget_s.LACBEDDrawbase) then begin
-  data.LACBEDPatternxlocation = event.x
-  data.LACBEDPatternylocation = event.y-25
-    CBEDprint,' Window moved to location ('+string(fix(data.LACBEDPatternxlocation),format="(I4)")+','+string(fix(data.LACBEDPatternylocation),format="(I4)")+')'
+  val =  WIDGET_TEXT(parent, $
+		VALUE=value,$
+		XSIZE=x2, $
+		YSIZE=y2, $
+		/ALIGN_RIGHT)
+end else begin
+  label2 = WIDGET_LABEL(parent, $
+		VALUE=title, $
+		FONT=fnt, $
+		XSIZE=x1, $
+		YSIZE=y1, $
+		/ALIGN_LEFT)
+    
+  val =  WIDGET_TEXT(parent, $
+		VALUE=value,$
+		XSIZE=x2, $
+		YSIZE=y2, $
+		/ALIGN_LEFT)
 end
 
+return,val
 end
+

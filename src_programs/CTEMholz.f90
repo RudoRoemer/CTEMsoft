@@ -51,14 +51,14 @@ IMPLICIT NONE
 
 type holzreflection
   integer(kind=irg)             		:: hkl(3),n1,n2,N
-  logical                       			:: draw,dbdiff
+  logical                       		:: draw,dbdiff
   real(kind=sgl)                		:: hlphi,hlx(2),hly(2),sg,Ig,pxy(2)
-  type(holzreflection),pointer        	:: next
+  type(holzreflection),pointer        		:: next
 end type holzreflection
 
 type(holzreflection),pointer    		:: top,temp,bot
 real(kind=sgl)                  		:: g1(3),g2(3),g3(3),H,FNg(3),FNr(3),gshort(3),gp(3),LC1,LC2,thickness,rectangle(2), &
-                                   			   PX,PY,thetac,laL,Gmax,Imax,gtoc(2,2),glen,phi,CBEDrad,CBEDsc
+                                   		   PX,PY,thetac,laL,Gmax,Imax,gtoc(2,2),glen,phi,CBEDrad,CBEDsc
 integer(kind=irg)               		:: uvw(3),FN(3)
 
 end module HOLZvars
@@ -139,16 +139,16 @@ use HOLZvars
 
 IMPLICIT NONE
 
-type (unitcell)                 		:: savecell
+type (unitcell)                 	:: savecell
 
-logical                         		:: again, first, newzone, nexttop
+logical                         	:: again, first, newzone, nexttop
 real(kind=sgl)                  	:: negative(2),twopi,thr, oi_real(9), &
-                                   		  RHOLZmax,RHOLZ(20),xo,yo,sc,pos(2),dy
+                                   	  RHOLZmax,RHOLZ(20),xo,yo,sc,pos(2),dy
 real(kind=sgl),parameter        	:: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/), &
-                                   		   yoff(0:5)=(/6.0,6.0,3.0,3.0,0.0,0.0/), &
-                                   		   eps = 1.0E-3
+                                   	   yoff(0:5)=(/6.0,6.0,3.0,3.0,0.0,0.0/), &
+                                   	   eps = 1.0E-3
 integer(kind=irg)               	:: g1i(3),g2i(3),i,numHOLZ, io_int(1)
-real(kind=sgl),parameter        :: le=3.25,he=2.9375
+real(kind=sgl),parameter        	:: le=3.25,he=2.9375
 
 ! dimensions of a TEM negative in inches:  3.9375 x 3.1875
  negative = (/ 3.9375, 3.1875 /)
@@ -592,8 +592,8 @@ integer(kind=irg),INTENT(IN)	:: N
 
 integer(kind=irg)                	:: inmhkl(2),hc,i,j,nref,istat, oi_int(1)
 real(kind=sgl)                   	:: correction,gg(3),Ig,smax,kk(3),gxy(2),pxy(2),exer,sgdenom,x,tgm,qx,qy,y,det,LC3, &
-                                    		   ll(3),lpg(3),gplen
-logical                          		:: a,dbdiff
+                                    	ll(3),lpg(3),gplen
+logical                          	:: a,dbdiff
 character(1)                     	:: q
 
  mess = 'Computing HOLZ reflection data'; call Message("(/A)")
@@ -615,7 +615,7 @@ character(1)                     	:: q
 end if
 
 ! loop over all possible reflections in this layer (2D loop !!!)
- smax = 20.0/thickness  ! the number 10 is arbitrary and could be changed at will
+ smax = 20.0/thickness  ! the number 20 is arbitrary and could be changed at will
  nref=0
  do i=-inmhkl(1),inmhkl(1)
   do j=-inmhkl(2),inmhkl(2)

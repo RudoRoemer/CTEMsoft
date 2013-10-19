@@ -79,7 +79,7 @@ common CBED_current, BFcurrent, DFcurrent, RGBcurrent, mask
 
 ; finfo = file_info(data.dataname)
 ; data.filesize = finfo.size
-  WIDGET_CONTROL, SET_VALUE=string(data.filesize,FORMAT="(I14)")+' bytes', widget_s.filesize
+  WIDGET_CONTROL, SET_VALUE=string(float(data.filesize)/1024./1024.,FORMAT="(F8.2)")+' Mb', widget_s.filesize
 
   dims = lonarr(4)
   readu,1,dims
@@ -109,6 +109,7 @@ common CBED_current, BFcurrent, DFcurrent, RGBcurrent, mask
 ; accelerating voltage
   voltage = 0.0
   readu,1,voltage
+  data.voltage = voltage
   data.wavelength= 1226.39/sqrt(voltage + 0.97845E-6 * voltage^2)
     CBEDprint,'Wave length = '+string(data.wavelength,FORMAT="(F7.4)")
   WIDGET_CONTROL, SET_VALUE=string(data.wavelength,FORMAT="(F7.4)"), widget_s.wavelength
@@ -124,9 +125,17 @@ common CBED_current, BFcurrent, DFcurrent, RGBcurrent, mask
   wavek = lonarr(3)
   readu,1,wavek
   data.wavek = wavek
-  wv = '['+string(data.wavek[0],format="(I2)")+' '+ string(data.wavek[1],format="(I2)")+' '+ string(data.wavek[2],format="(I2)")+']'
+  wv = '['+string(data.wavek[0],format="(I3)")+' '+ string(data.wavek[1],format="(I3)")+' '+ string(data.wavek[2],format="(I3)")+']'
     CBEDprint,'Wave vector = '+wv
   WIDGET_CONTROL, SET_VALUE=wv, widget_s.wavek
+
+; foil normal indices (3 longints)
+  fn = lonarr(3)
+  readu,1,fn
+  data.fn = fn
+  wv = '['+string(data.fn[0],format="(I3)")+' '+ string(data.fn[1],format="(I3)")+' '+ string(data.fn[2],format="(I3)")+']'
+    CBEDprint,'Foil normal = '+wv
+  WIDGET_CONTROL, SET_VALUE=wv, widget_s.fn
 
 ; number of wave vectors inside the disk
   numk = 0L
@@ -134,6 +143,11 @@ common CBED_current, BFcurrent, DFcurrent, RGBcurrent, mask
   data.numk = numk
     CBEDprint,'Number of k-vectors in disk = '+string(data.numk,FORMAT="(I)")
   WIDGET_CONTROL, SET_VALUE=string(data.numk,FORMAT="(I8)"), widget_s.numk
+
+; dmin value (not editable or viewable)
+  dmin = 0.0
+  readu,1,dmin
+  data.dmin = dmin
 
 ; first (ga) reflection
   ga = lonarr(3)
@@ -143,12 +157,24 @@ common CBED_current, BFcurrent, DFcurrent, RGBcurrent, mask
     CBEDprint,'Horizontal g-vector = '+wv
   WIDGET_CONTROL, SET_VALUE=wv, widget_s.ga
 
+; length of ga, used for proper scaling of the Laue center position
+  galen = 0.0
+  readu,1,galen
+  data.galen = galen
+
 ; maximum HOLZ layer number 
   maxHOLZ = 0L
   readu,1,maxHOLZ
   data.maxHOLZ = maxHOLZ
     CBEDprint,'Maximum HOLZ layer number = '+string(data.maxHOLZ,FORMAT="(I3)")
   WIDGET_CONTROL, SET_VALUE=string(data.maxHOLZ,FORMAT="(I5)"), widget_s.maxHOLZ
+
+; intensity cutoff
+  minten = 0.0
+  readu,1,minten
+  data.minten= minten
+    CBEDprint,'Intensity cutoff = '+string(data.minten,FORMAT="(E9.2)")
+  WIDGET_CONTROL, SET_VALUE=string(data.minten,FORMAT="(E9.2)"), widget_s.minten
 
 ; various symmetry group numbers 
   symgroups = lonarr(8)
@@ -174,6 +200,12 @@ common CBED_current, BFcurrent, DFcurrent, RGBcurrent, mask
 ; initialize the Whole Pattern symmetry
   CBEDGenerate2DSymmetry,data.symgroups[5]
 
+; read symmetry rotation angle; this is a really important parameter since it determines the 
+; correct orientation of the 2D point group with respect to the diffraction disk.  We do not
+; allow the user to change this, so we won't even show it.
+  thetam = 0.0
+  readu,1,thetam
+  data.thetam = thetam
 
 ; starting thickness and thickness increment
   startthick = 0.0
@@ -214,12 +246,29 @@ common CBED_current, BFcurrent, DFcurrent, RGBcurrent, mask
     endfor
     CBEDprogressbar,100.0
     close,1
-; activate the LACBED and CBED buttons
+; (de)activate the LACBED and CBED buttons
     WIDGET_CONTROL, widget_s.startLACBED, sensitive=1
     WIDGET_CONTROL, widget_s.startCBED, sensitive=1
     WIDGET_CONTROL, widget_s.startMBCBED, sensitive=0
-  end; else begin ; this is the MBCBED data format
-;end
+  end
+
+  if ( keyword_set(MBCBED) or (progname eq 'CTEMmbcbed.f90') ) then begin
+    CBEDprogressbar,0.0
+      CBEDprint,'Allocating memory for diffraction data array',/blank
+      disks = fltarr(dims[0],dims[1],dims[2])
+      slice = fltarr(dims[0],dims[1])
+      for i=0,dims[2]-1 do begin
+	readu,1,slice
+	disks[0:*,0:*,i] = reverse(slice,2)	; correct for the fact that the origin is in the top left for the Fortran array
+        CBEDprogressbar,100.0*float(i)/float(data.datadims[2])
+      endfor
+    CBEDprogressbar,100.0
+    close,1
+; (de)activate the LACBED and CBED buttons
+    WIDGET_CONTROL, widget_s.startLACBED, sensitive=0
+    WIDGET_CONTROL, widget_s.startCBED, sensitive=0
+    WIDGET_CONTROL, widget_s.startMBCBED, sensitive=1
+end
 
   CBEDprint,'Completed reading data file',/blank
 

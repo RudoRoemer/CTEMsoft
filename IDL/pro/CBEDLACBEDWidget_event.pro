@@ -82,7 +82,7 @@ end else begin
 
  'HOLZlayer0': begin
 	  ioffset = 0
-	  WIDGET_CONTROL, get_value=val,widget_s.LACBEDdroplist0
+;  WIDGET_CONTROL, get_value=val,widget_s.LACBEDdroplist0
 	  data.famsel = ioffset + fix(event.index) - 1
 	  wv = '('+string(gvecs[0,data.famsel],format="(I3)")+' '+ string(gvecs[1,data.famsel],format="(I3)")+' '+ string(gvecs[2,data.famsel],format="(I3)")+')'
 	  WIDGET_CONTROL, set_value=wv, widget_s.gsel
@@ -90,7 +90,7 @@ end else begin
 
  'HOLZlayer1': begin
 	  ioffset = numHOLZ[0]
-	  WIDGET_CONTROL, get_value=val,widget_s.LACBEDdroplist1
+;  WIDGET_CONTROL, get_value=val,widget_s.LACBEDdroplist1
 	  data.famsel = ioffset + fix(event.index) - 1
 	  wv = '('+string(gvecs[0,data.famsel],format="(I3)")+' '+ string(gvecs[1,data.famsel],format="(I3)")+' '+ string(gvecs[2,data.famsel],format="(I3)")+')'
 	  WIDGET_CONTROL, set_value=wv, widget_s.gsel
@@ -98,7 +98,7 @@ end else begin
 
  'HOLZlayer2': begin
 	  ioffset = total(numHOLZ[0:1])
-	  WIDGET_CONTROL, get_value=val,widget_s.LACBEDdroplist2
+;  WIDGET_CONTROL, get_value=val,widget_s.LACBEDdroplist2
 	  data.famsel = ioffset + fix(event.index) - 1
 	  wv = '('+string(gvecs[0,data.famsel],format="(I3)")+' '+ string(gvecs[1,data.famsel],format="(I3)")+' '+ string(gvecs[2,data.famsel],format="(I3)")+')'
 	  WIDGET_CONTROL, set_value=wv, widget_s.gsel
@@ -106,7 +106,7 @@ end else begin
 
  'HOLZlayer3': begin
 	  ioffset = total(numHOLZ[0:2])
-	  WIDGET_CONTROL, get_value=val,widget_s.LACBEDdroplist3
+;  WIDGET_CONTROL, get_value=val,widget_s.LACBEDdroplist3
 	  data.famsel = ioffset + fix(event.index) - 1
 	  wv = '('+string(gvecs[0,data.famsel],format="(I3)")+' '+ string(gvecs[1,data.famsel],format="(I3)")+' '+ string(gvecs[2,data.famsel],format="(I3)")+')'
 	  WIDGET_CONTROL, set_value=wv, widget_s.gsel
@@ -238,20 +238,20 @@ end else begin
 ; this is just for fun... display a colorized version of a random selection of ZOLZ patterns,
 ; symmetrized except for the BF pattern
 	  rgb = bytarr(3,data.datadims[0],data.datadims[1])
-	  sel = fix( randomu(seed,9) * float(numHOLZ[0]) ) 
+	  sel = fix( randomu(seed,15) * float(numHOLZ[0]+numHOLZ[1]) ) 
 ; red channel
 	  zr = replicate(0.0,data.datadims[0],data.datadims[1])
-	  for i=0,2 do zr += CBEDApply2DSymmetry(reform(disks[*,*,data.thicksel,sel[i]]),0) 
+	  for i=0,4 do zr += CBEDApply2DSymmetry(reform(disks[*,*,data.thicksel,sel[i]]),0) 
 	  if (data.diskrotation ne 0.0) then zr = rot(zr,data.diskrotation,cubic=-0.5)
 	  zr *= mask
 ; green channel
 	  zg = replicate(0.0,data.datadims[0],data.datadims[1])
-	  for i=3,5 do zg += CBEDApply2DSymmetry(reform(disks[*,*,data.thicksel,sel[i]]),0) 
+	  for i=5,9 do zg += CBEDApply2DSymmetry(reform(disks[*,*,data.thicksel,sel[i]]),0) 
 	  if (data.diskrotation ne 0.0) then zg = rot(zg,data.diskrotation,cubic=-0.5)
 	  zg *= mask
 ; blue channel
 	  zb = replicate(0.0,data.datadims[0],data.datadims[1])
-	  for i=6,8 do zb += CBEDApply2DSymmetry(reform(disks[*,*,data.thicksel,sel[i]]),0) 
+	  for i=10,14 do zb += CBEDApply2DSymmetry(reform(disks[*,*,data.thicksel,sel[i]]),0) 
 	  if (data.diskrotation ne 0.0) then zb = rot(zb,data.diskrotation,cubic=-0.5)
 	  zb *= mask
 ; copy into the RGB channels

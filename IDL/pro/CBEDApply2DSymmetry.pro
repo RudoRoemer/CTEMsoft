@@ -36,21 +36,35 @@
 ;> @brief apply all the symmetry operators for a given 2D point group
 ;
 ;> @date 10/08/13 MDG 1.0 first attempt 
+;> @date 10/15/13 MDG 1.1 correction for relative orientation of point group to disk
 ;--------------------------------------------------------------------------
 function CBEDApply2DSymmetry,inp,iorder
 ;
 ; apply a series of basic 2D symmetry operations to the input array
 ;
 common SYM2D, SYM_MATnum, SYM_direc
+common CBED_data_common, data
 
-; first of all, apply the identity operation
-z = inp
+
+; first of all, apply the identity operation, corrected for the point group orientation if necessary
+if (data.thetam ne 0.0) then begin
+  zinp = rot(inp,-data.thetam,cubic=-0.5)
+end else begin
+  zinp = inp
+end
+
+z = zinp
 
 ; then loop over all the symmetry operators
 for i=1,SYM_MATnum-1 do begin
-  z += CBEDApply2DOperator(inp,i)
+  z += CBEDApply2DOperator(zinp,i)
 endfor
 
+; and rotate back to the original orientation if necessary
+if (data.thetam ne 0.0) then begin
+  z = rot(z,data.thetam,cubic=-0.5)
+end 
+
 ; and return the array, properly normalized to avoid double counting
-return,z; /float(SYM_MATnum)
+return,z
 end

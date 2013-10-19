@@ -1475,4 +1475,233 @@ integer(kind=irg)				:: io_int(6)	!< used for IO
 
 end subroutine GetOR
 
+
+!--------------------------------------------------------------------------
+! 
+! FUNCTION:CalcsgHOLZ
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief compute the excitation error including HOLZ and Laue Center information
+!
+!> @details  see chapter 3
+!
+!> @param gg input g vector
+!> @param kt tangential components of wave vector
+!> @param lambda electron wavelength
+! 
+!> @date 10/16/13 MDG 1.0 new version, includes HOLZ stuff
+!--------------------------------------------------------------------------
+function CalcsgHOLZ(gg,kt,lambda) result(exer)
+
+use local
+use crystalvars
+
+IMPLICIT NONE
+
+real(kind=sgl),INTENT(IN)	:: gg(3), kt(3), lambda
+
+real(kind=sgl)			:: exer, g1len, g2len
+real(kind=sgl)			:: ll(3), lpg(3), glen, gplen, LC1, LC2, LC3, sgdenom
+
+
+glen = CalcLength(gg,'r')
+g1len = CalcLength(HOLZdata%g1,'r')
+g2len = CalcLength(HOLZdata%g2,'r')
+if (glen.ne.0.0) then
+  LC1 = CalcDot(kt,HOLZdata%g1,'r')/g1len
+  LC2 = CalcDot(kt,HOLZdata%g2,'r')/g2len
+  ll = LC1*HOLZdata%g1 + LC2*HOLZdata%g2
+  lpg = ll + gg
+  gplen = CalcLength(lpg,'r')
+  LC3 = sqrt(1.0-lambda**2*CalcLength(ll,'r')**2)
+  if (gplen.eq.0.0) then
+    exer = -lambda*CalcDot(gg,2.0*ll+gg,'r')/(2.0*LC3*CalcDot(HOLZdata%g3,HOLZdata%FNr,'r'))
+  else
+    sgdenom = 2.0*CalcDot(LC3*HOLZdata%g3-lambda*lpg,HOLZdata%FNr,'r')
+    exer = (CalcDot(lpg,2.0*LC3*HOLZdata%g3-lambda*gg,'r')-lambda*CalcDot(gg,ll,'r'))/sgdenom
+  end if
+else
+  exer = 10000.0
+end if
+
+end function CalcsgHOLZ
+
+
+
+
+!--------------------------------------------------------------------------
+! 
+! SUBROUTINE:GetHOLZGeometry
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief initialize HOLZ geometrical data for a given zone axis
+!
+!> @details  see chapter 3
+!
+!> @param g1 first ZOLZ vector
+!> @param g2 second ZOLZ vector
+!> @param uvw zone axis
+!> @param FN foil normal
+! 
+!> @date 10/17/13 MDG 1.0 original
+!--------------------------------------------------------------------------
+subroutine GetHOLZGeometry(g1,g2,uvw,fn)
+
+use local
+use crystalvars
+use io
+use error
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)		:: uvw(3), fn(3)
+real(kind=sgl),INTENT(IN)		:: g1(3), g2(3)
+
+real(kind=sgl)               		:: gmin,gam11,gam12,gam22, phi, glen, g3(3), c(3), gx(3), gy(3), gshort(3)
+integer(kind=irg),parameter  		:: inm = 8
+integer(kind=irg)            		:: ih,ik,il,NN, oi_int(1)
+
+! set some basic values
+    HOLZdata%g1 = g1
+    HOLZdata%g2 = g2
+    HOLZdata%uvw = uvw
+    HOLZdata%FN = fn
+    
+! distance between consecutive HOLZ layers in nm-1
+    HOLZdata%H = 1.0/CalcLength(float(uvw),'d')
+
+! determine g3 basis vector
+    call CalcCross(HOLZdata%g1,HOLZdata%g2,g3,'r','r',1)
+    call NormVec(g3,'r')
+    HOLZdata%g3 = HOLZdata%H * g3
+
+! compute components of FN with respect to ga, gb, g3
+    call TransSpace(float(HOLZdata%FN),HOLZdata%FNr,'d','r')
+    call NormVec(HOLZdata%FNr,'r')
+    HOLZdata%FNg = (/ CalcDot(HOLZdata%FNr,HOLZdata%g1,'r'), CalcDot(HOLZdata%FNr,HOLZdata%g2,'r'), &
+			CalcDot(HOLZdata%FNr,g3,'r') /)
+
+! look for the shortest reflection satisfying hu+kv+lw = 1
+! This could be replaced by code from Jackson's paper (1987),
+! but it does essentially the same thing.
+ gmin = 100.0
+ NN=1
+ do while((gmin.eq.100.0).and.(NN.lt.4))
+  do ih=-inm,inm
+   do ik=-inm,inm
+    do il=-inm,inm
+! does this reflection lie in the plane NN ?
+     if ((ih*uvw(1)+ik*uvw(2)+il*uvw(3)).eq.NN) then
+      glen = CalcLength(float((/ih,ik,il/)),'r')
+      if (glen.lt.gmin) then
+       gmin = glen
+       gshort = float( (/ ih,ik,il /) )
+      end if
+     end if
+    end do
+   end do
+  end do
+  oi_int(1) = NN
+  call WriteValue(' Could not find any reflections with hu+kv+lw = ', oi_int, 1, "(I2)")
+  NN = NN+1
+ end do
+ if (gmin.eq.100.0) then ! for some reason there is no reflection with N<=3 ...
+  call FatalError('ShortestGFOLZ: ',' could not find any reflections with hu+kv+lw<=3 ...')
+ end if
+ HOLZdata%gshort = gshort
+
+! projected components of G
+ gam11 = CalcDot(g1,g1,'r')
+ gam12 = CalcDot(g1,g2,'r')
+ gam22 = CalcDot(g2,g2,'r')
+ gmin = 1.0/(gam11*gam22-gam12**2)
+ HOLZdata%gp(1) = (CalcDot(gshort,g1,'r')*gam22-CalcDot(gshort,g2,'r')*gam12)*gmin
+ HOLZdata%gp(2) = (CalcDot(gshort,g2,'r')*gam11-CalcDot(gshort,g1,'r')*gam12)*gmin
+
+! coordinate transformation matrix for g1 along x (our standard orientation for all programs)
+ phi = CalcAngle(g1,g2,'r')
+ glen = CalcLength(g2,'r')
+ HOLZdata%gtoc(1,1) = CalcLength(g1,'r')
+ HOLZdata%gtoc(1,2) = glen * cos(phi)
+ HOLZdata%gtoc(2,1) = 0.0
+ HOLZdata%gtoc(2,2) = glen * sin(phi)
+
+! first normalize the zone axis in cartesian components; this is the z-axis
+  call TransSpace(float(uvw),c,'d','c')
+  call NormVec(c,'c')
+
+! then make ga the x-axis
+  call TransSpace(g1,gx,'r','c')
+  call NormVec(gx,'c')
+  HOLZdata%gx = gx
+
+! compute the cross product between k and gx; this is the y-axis
+  call CalcCross(c,gx,gy,'c','c',0)
+  HOLZdata%gy = gy
+
+
+end subroutine GetHOLZGeometry
+
+!--------------------------------------------------------------------------
+! 
+! FUNCTION:GetHOLZcoordinates
+!
+!> @author Marc De Graef, Carnegie Melon University
+!
+!> @brief find the projeccted coordinates of an arbitrary HOLZ g-vector
+!
+!> @details  see chapter 3
+!
+!> @param gg input g vector
+!> @param kt tangential wave vector component
+!> @param lambda electron wavelength
+! 
+!> @date 1/29/02  MDG 1.0 original
+!> @date 04/08/13 MDG 2.0 rewrite
+!> @date 10/16/13 MDG 3.0 incorporation into LACBED code
+!--------------------------------------------------------------------------
+function GetHOLZcoordinates(gg,kt,lambda) result(pxy)
+
+use local
+use crystalvars
+
+IMPLICIT NONE
+
+real(kind=sgl),INTENT(IN)	:: gg(3), kt(3), lambda
+
+real(kind=sgl)			:: pxy(2), h1, h2, g11, g12, g22, z
+real(kind=sgl)			:: ll(3), lpg(3), glen, gplen, LC3, exer, sgdenom, correction, gxy(2), nx, ny, c(3), hh(3)
+integer(kind=irg)		:: N
+
+! get the Laue zone number
+	N = abs( HOLZdata%uvw(1)*gg(1) + HOLZdata%uvw(2)*gg(2) + HOLZdata%uvw(3)*gg(3) )
+
+! get components of gg w.r.t. g1 and g2
+	hh = gg - N * HOLZdata%gshort 
+	h1 = CalcDot(hh,HOLZdata%g1,'c')
+	h2 = CalcDot(hh,HOLZdata%g2,'c')
+	g11 = CalcDot(HOLZdata%g1,HOLZdata%g1,'c')
+	g12 = CalcDot(HOLZdata%g1,HOLZdata%g2,'c')
+	g22 = CalcDot(HOLZdata%g2,HOLZdata%g2,'c')
+	z = 1.0/(g12**2-g11*g22)
+    	nx = (g12*h2-g22*h1)*z
+    	ny = (g12*h1-g11*h2)*z
+
+! compute excitation error, including Laue center, foil normal, and HOLZ reflection.
+	exer = CalcsgHOLZ(gg,kt,lambda)
+
+! next, determine the drawing coordinates, first in terms of g1 and g2
+        correction = 1.0/(1.0-lambda*HOLZdata%H*(float(N)+exer*HOLZdata%FNg(3)))
+        gxy = (/ (nx+N*HOLZdata%gp(1)+exer*HOLZdata%FNg(1)), (ny+N*HOLZdata%gp(2)+exer*HOLZdata%FNg(2))  /) * correction
+
+! convert to Cartesian drawing coordinates
+        pxy = matmul(HOLZdata%gtoc,gxy)
+
+end function GetHOLZcoordinates
+ 
+ 
+
+
 end module crystal

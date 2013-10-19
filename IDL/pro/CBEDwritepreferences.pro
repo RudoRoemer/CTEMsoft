@@ -46,7 +46,7 @@ common CBED_data_common, data
 
 ; prefs file
   openw,1,data.prefname
-  nprefs = 15
+  nprefs = 24
   data.nprefs = nprefs
   printf,1,nprefs
   printf,1,'CBEDroot::'+data.CBEDroot
@@ -57,15 +57,26 @@ common CBED_data_common, data
 ; cbed output mode (linear or logarithmic)
   printf,1,'cbedmode::'+string(data.cbedmode,format="(I1)")
 ; Eades inner detector radius [mrad]
-  printf,1,'Eadesrhoin::'+string(data.eadesrhoin,format="(F5.2)")
+  printf,1,'Eadesrhoin::'+string(data.eadesrhoin,format="(F8.3)")
 ; Eades outer detector radius [mrad]
-  printf,1,'Eadesrhoout::'+string(data.eadesrhoout,format="(F5.2)")
+  printf,1,'Eadesrhoout::'+string(data.eadesrhoout,format="(F8.3)")
 ; disk rotation angle
   printf,1,'diskrotation::'+string(data.diskrotation,format="(F5.2)")
 ; camera length [mm]
   printf,1,'camlen::'+string(data.camlen,format="(F6.1)")
 ; dark field display mode
   printf,1,'dfdisplaymode::'+string(data.dfdisplaymode,format="(I1)")
+; user defined beam convergence angle
+  printf,1,'thetau::'+string(data.thetau,format="(F6.2)")
+; user defined camera length
+  printf,1,'camlen::'+string(data.camlen,format="(F7.2)")
+; Laue center x-coordinate
+  printf,1,'Lauex::'+string(data.Lauex,format="(F6.2)")
+; Laue center y-coordinate
+  printf,1,'Lauey::'+string(data.Lauey,format="(F6.2)")
+; logarithm offset value
+  printf,1,'logoffset::'+string(data.logoffset,format="(E9.2)")
+
 ; window locations
   printf,1,'xlocation::'+string(data.xlocation,format="(F6.1)")
   printf,1,'ylocation::'+string(data.ylocation,format="(F6.1)")
@@ -73,8 +84,10 @@ common CBED_data_common, data
   printf,1,'lacbedylocation::'+string(data.LACBEDylocation,format="(F6.1)")
   printf,1,'lacbedpatternxlocation::'+string(data.LACBEDPatternxlocation,format="(F6.1)")
   printf,1,'lacbedpatternylocation::'+string(data.LACBEDPatternylocation,format="(F6.1)")
-; printf,1,'cbedxlocation::'+string(data.cbedxlocation,format="(F6.1)")
-; printf,1,'cbedylocation::'+string(data.cbedylocation,format="(F6.1)")
+  printf,1,'cbedxlocation::'+string(data.CBEDxlocation,format="(F6.1)")
+  printf,1,'cbedylocation::'+string(data.CBEDylocation,format="(F6.1)")
+  printf,1,'cbeddrawxlocation::'+string(data.CBEDDrawxlocation,format="(F6.1)")
+  printf,1,'cbedrawdylocation::'+string(data.CBEDDrawylocation,format="(F6.1)")
 ; and close the file
   close,1
 

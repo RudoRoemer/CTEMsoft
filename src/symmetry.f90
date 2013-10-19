@@ -2243,7 +2243,7 @@ real(kind=sgl),INTENT(OUT)		:: thetam	!< rotation angle (degrees, CCW)
 integer(kind=irg)			:: num
 real(kind=sgl)				:: io_real(1)
 
-! no action is needed for the following 2D point groups: 1, 2, 3, 4, 4mm, 6, 6mm
+! no action is needed for the following 2D point groups: 1, 2, 2mm, 3, 4, 4mm, 6, 6mm
 thetam = 0.0
 
 ! for the group m (isym=3), we need to determine the cardinality of the 
@@ -2260,19 +2260,7 @@ if (isym.eq.3) then
   call WriteValue('  --> Pattern symmetry m correction; point group rotation angle [deg]',io_real, 1, "(F6.3/)")
 end if
 
-! for the group 2mm, the mirror planes may be rotated diagonally in the cell, so 
-! we need to check this in the same way that we checked for m
-
-if (isym.eq.4) then 
-  call CalcFamily(ga, num, 'r')
-  if (num.ne.2) then
-    thetam = 0.5 * CalcAngle(float(ga),float(itmp(2,1:3)),'r') *180.0/cPi
-  end if  
-  io_real(1) = thetam
-  call WriteValue('  --> Pattern symmetry 2mm correction; point group rotation angle [deg]',io_real, 1, "(F6.3/)")
-end if
-
-! finally, for the groups 3m1 and 31m, we need to check which one we have
+! for the groups 3m1 and 31m, we need to check which one we have
 
 if ((isym.eq.8).or.(isym.eq.11)) then 
   call CalcFamily(ga, num, 'r')
