@@ -131,9 +131,9 @@ camlen = 1000.0			! camera length [mm]
 k = (/ 0, 0, 1 /)		! beam direction [direction indices]
 fn = (/ 0, 0, 1 /)		! foil normal [direction indices]
 klaue = (/ 0.0, 0.0 /)		! fractional coordinates of Laue circle center
-npix = 900			! size of the (square) computed CBED pattern
-dmin = 0.015			! smallest d-spacing to include in dynamical matrix [nm]
-convergence = 20.0		! beam convergence angle [mrad]
+npix = 1000			! size of the (square) computed CBED pattern
+dmin = 0.02			! smallest d-spacing to include in dynamical matrix [nm]
+convergence = 5.0		! beam convergence angle [mrad]
 startthick = 10.0		! starting thickness [nm]
 thickinc = 10.0			! thickness increment
 numthick = 10			! number of increments
@@ -401,7 +401,7 @@ BetheParameter%reflistindex = BetheParameter%reflistindex + BetheParameter%weakr
 ! write the version number
   write (dataunit) scversion
 ! first write the array dimensions
-  write (dataunit) 2*npix+1,2*npix+1,numt,0 	! fourth index is not used
+  write (dataunit) npix,npix,numt,0 	! fourth index is not used
 ! then the name of the crystal data file
   write (dataunit) xtalname
 ! the accelerating voltage [V]

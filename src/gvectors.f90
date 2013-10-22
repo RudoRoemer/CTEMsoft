@@ -1208,9 +1208,9 @@ namelist /BetheList/ weakcutoff, cutoff, sgcutoff
 inquire(file=trim(Bethefilename),exist=fexist)
 
 ! set all default values (must be done here, since nml file may not contain all of them)
-weakcutoff = 50.0  	! dimensionless cutoff parameter, smaller = strong, larger = weak
-cutoff = 100.0		! overall cutoff parameter
-sgcutoff = 5.0		! sg cutoff for double diffraction reflections
+weakcutoff = 80.0  	! dimensionless cutoff parameter, smaller = strong, larger = weak
+cutoff = 160.0		! overall cutoff parameter
+sgcutoff = 0.05		! sg cutoff for double diffraction reflections
 
 if (fexist.eq..TRUE.) then ! check for the file in the local folder
 ! read the parameters from the file
@@ -1346,6 +1346,7 @@ call TransSpace(float(k),kr,'d','r')
 ! and add this reflection to the look-up table
   LUT(gg(1),gg(2),gg(3)) = rlp%Ucg
   refdone(gg(1),gg(2),gg(3)) = 2 !.TRUE. 
+  allocate(inrange(48))
 
 ! now do the same for the other allowed reflections
 ! note that the lookup table must be twice as large as the list of participating reflections,
@@ -1369,7 +1370,6 @@ izl:   do iz=-2*iml,2*iml
 ! for each family member, we need to determine whether or not it falls inside the angular range
 ! then we need to pick one of those to be the representative family member for data output (used in LACBED).
 	     irsel = 0
-	     allocate(inrange(numr))
 	     inrange = .FALSE.
 ! check if the angular range puts it between the two cones (mainly used for CBED etc.)	
 	     do ir=1,numr
@@ -1409,7 +1409,7 @@ izl:   do iz=-2*iml,2*iml
 	     end do
 ! set the representative family member
 	     if (irsel.gt.0) rltail%famhkl = (/ itmp(irsel,1),itmp(irsel,2),itmp(irsel,3) /)
-	     deallocate(inrange)
+!	     deallocate(inrange)
           end if 
          else ! not inside smaller box
 
@@ -1430,12 +1430,12 @@ izl:   do iz=-2*iml,2*iml
   io_int(1) = DynNbeams
   call WriteValue(' Length of the master list of reflections : ', io_int, 1, "(I8)")
   
-  open(unit=20,file='redone.data',status='unknown',form='unformatted')
-  write (20) imh,imk,iml
-  write (20) refdone
-  close(unit=20,status='keep')
+!  open(unit=20,file='refdone.data',status='unknown',form='unformatted')
+!  write (20) imh,imk,iml
+!  write (20) refdone
+!  close(unit=20,status='keep')
 
-  deallocate(refdone)
+!  deallocate(refdone)
   
 end if   ! method = ALL
 

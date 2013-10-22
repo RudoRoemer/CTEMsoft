@@ -1,13 +1,15 @@
-&inputlist
+&MBCBEDlist
 ! do not change the first line in this file !
 !
 ! Note: All parameter values are default values for the program
 !
 !--------------
 ! the name of the crystal input file MUST be specified (full pathname)
-xtalname = 'Cu.xtal'
+xtalname = 'undefined'
 ! if output should go to a file, then insert stdout = some number > 10; comment for screen output
 stdout = 6
+! minimum lattice spacing to consider [nm]
+dmin = 0.02
 ! beam accelerating voltage [V]
 voltage = 200000.
 ! camera length [mm]
@@ -16,14 +18,18 @@ camlen = 1000.0
 k = 0,0,1
 ! foil normal indices
 fn = 0,0,1
+! coordinates of Laue center in units of g1
+klaue = 0.0, 0.0
+! number of image pixels (square CBED pattern)
+npix = 1000
 ! beam convergence angle [mrad]
-convergence = 5.7
+convergence = 5.0
 ! starting value for thickness series [nm]
 startthick = 10.0
 ! thickness increment [nm]
 thickinc = 10.0
 ! number of increments
-numthick = 20
+numthick = 10
 ! file name of output file
 outname = '/somewhere/test.data'
 ! this last line must be present!

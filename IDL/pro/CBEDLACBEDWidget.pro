@@ -123,21 +123,21 @@ file1 = WIDGET_BASE(block1, $
 			/ROW, $
 			/ALIGN_CENTER)
 
-; first of all, get the HOLZ identifier list
-HOLZlist = indgen(data.datadims[3])
-HOLZlist[0] = 0	; transmitted beam
-for i=1,data.datadims[3]-1 do begin
-  HOLZlist[i] = abs( gvecs[0,i]*data.wavek[0]+gvecs[1,i]*data.wavek[1]+gvecs[2,i]*data.wavek[2] )
-endfor
+;; first of all, get the HOLZ identifier list
+;HOLZlist = indgen(data.datadims[3])
+;HOLZlist[0] = 0	; transmitted beam
+;for i=1,data.datadims[3]-1 do begin
+;  HOLZlist[i] = abs( gvecs[0,i]*data.wavek[0]+gvecs[1,i]*data.wavek[1]+gvecs[2,i]*data.wavek[2] )
+;endfor
+;
+;; then determine how many there are in each layer
+;numHOLZ = indgen(data.maxHOLZ+1)
+;for i=0,data.maxHOLZ do begin
+;  q=where(HOLZlist eq i,cnt)
+;  numHOLZ[i] = cnt
+;endfor
 
-; then determine how many there are in each layer
-numHOLZ = indgen(data.maxHOLZ+1)
-for i=0,data.maxHOLZ do begin
-  q=where(HOLZlist eq i,cnt)
-  numHOLZ[i] = cnt
-endfor
-
-; and create the droplist widgets
+; create the droplist widgets
 ioffset = 0
 icnt = 0
 HOLZvals = strarr(data.numfam+1)

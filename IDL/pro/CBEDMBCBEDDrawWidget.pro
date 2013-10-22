@@ -26,19 +26,19 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:CBEDDrawWidget.pro
+; CTEMsoft2013:CBEDCBEDDrawWidget.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: CBEDDrawWidget.pro
+; PROGRAM: CBEDMBCBEDDrawWidget.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief Draw widget for LACBED
+;> @brief Draw widget for MBCBED
 ;
 ;> @date 10/09/13 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------
 
-pro CBEDDrawWidget,dummy
+pro CBEDMBCBEDDrawWidget,dummy
 
 ;------------------------------------------------------------
 ; common blocks
@@ -51,37 +51,27 @@ common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
 ;------------------------------------------------------------
 ; create the top level widget
-widget_s.LACBEDDrawbase = WIDGET_BASE(TITLE='LACBED Pattern Widget', $
+widget_s.MBCBEDDrawbase = WIDGET_BASE(TITLE='MBCBED Pattern', $
                         /ROW, $
-                        XSIZE=2*513+20, $
+                        XSIZE=data.datadims[0]+5, $
+                        YSIZE=data.datadims[1]+5, $
                         /ALIGN_CENTER, $
 			/TLB_MOVE_EVENTS, $
-                        XOFFSET=data.LACBEDPatternxlocation, $
-                        YOFFSET=data.LACBEDPatternylocation)
+                        XOFFSET=data.MBCBEDDrawxlocation, $
+                        YOFFSET=data.MBCBEDDrawylocation)
 
 ;------------------------------------------------------------
 ; create the various blocks
 ; block 1 contains the BF drawing window
-block1 = WIDGET_BASE(widget_s.LACBEDDrawbase, $
-			/FRAME, $
-			/ALIGN_LEFT, $
-			/COLUMN)
+block1 = WIDGET_BASE(widget_s.MBCBEDDrawbase, /FRAME, /ALIGN_CENTER, /COLUMN)
 
 ;------------------------------------------------------------
-label1 = WIDGET_LABEL(block1, $
-			VALUE='Bright Field', $
-			FONT=fontstrlarge, $
-			XSIZE=150, $
-			YSIZE=30, $
-			/ALIGN_CENTER)
-
-widget_s.BFdraw = WIDGET_DRAW(block1, $
+widget_s.MBdraw = WIDGET_DRAW(block1, $
 			COLOR_MODEL=2, $
 			RETAIN=2, $
-			X_SCROLL_SIZE = 513, $
-			Y_SCROLL_SIZE = 513, $
+			/ALIGN_CENTER, $
 			XSIZE=data.datadims[0], $
-			YSIZE=data.datadims[0])
+			YSIZE=data.datadims[1])
 
 
 ;------------------------------------------------------------
@@ -107,78 +97,14 @@ widget_s.BFmax= WIDGET_TEXT(block2a, $
 			/ALIGN_LEFT)
 
 ;------------------------------------------------------------
-; create the various blocks
-; block 2 contains the DF/Eades drawing window
-block2 = WIDGET_BASE(widget_s.LACBEDDrawbase, $
-			/FRAME, $
-			/ALIGN_LEFT, $
-			/COLUMN)
-
-;------------------------------------------------------------
-label1 = WIDGET_LABEL(block2, $
-			VALUE='Dark Field/Eades', $
-			FONT=fontstrlarge, $
-			XSIZE=150, $
-			YSIZE=30, $
-			/ALIGN_CENTER)
-
-widget_s.DFdraw = WIDGET_DRAW(block2, $
-			COLOR_MODEL=2, $
-			RETAIN=2, $
-			XSIZE=data.datadims[0], $
-			YSIZE=data.datadims[0])
-
-
-;------------------------------------------------------------
-block2a = WIDGET_BASE(block2, $
-			/FRAME, $
-			/ROW)
-
-label1 = WIDGET_LABEL(block2a, $
-			VALUE='min/max', $
-			FONT=fontstr, $
-			XSIZE=75, $
-			YSIZE=30, $
-			/ALIGN_LEFT)
-
-widget_s.DFmin= WIDGET_TEXT(block2a, $
-			VALUE=string(data.DFmin,format="(F)"),$
-			XSIZE=10, $
-			/ALIGN_LEFT)
-
-widget_s.DFmax= WIDGET_TEXT(block2a, $
-			VALUE=string(data.DFmax,format="(F)"),$
-			XSIZE=10, $
-			/ALIGN_LEFT)
-
-block2b = WIDGET_BASE(block2a, $
-			/FRAME, $
-			/ROW)
-
-label2 = WIDGET_LABEL(block2b, $
-			VALUE='Current g  ', $
-			FONT=fontstrlarge, $
-			XSIZE=100, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-wv = '('+string(gvecs[0,data.famsel],format="(I3)")+' '+ string(gvecs[1,data.famsel],format="(I3)")+' '+ string(gvecs[2,data.famsel],format="(I3)")+')'
-widget_s.gsel= WIDGET_TEXT(block2b, $
-			VALUE=wv,$
-			XSIZE=20, $
-			/ALIGN_LEFT)
-
-;------------------------------------------------------------
 ; realize the widget structure
-WIDGET_CONTROL,widget_s.LACBEDDrawbase,/REALIZE
+WIDGET_CONTROL,widget_s.MBCBEDDrawbase,/REALIZE
 
 ; realize the draw widgets
-WIDGET_CONTROL, widget_s.BFdraw, GET_VALUE=drawID
-data.BFdrawID = drawID
-WIDGET_CONTROL, widget_s.DFdraw, GET_VALUE=drawID
-data.DFdrawID = drawID
+WIDGET_CONTROL, widget_s.MBdraw, GET_VALUE=drawID
+data.MBdrawID = drawID
 
 ; and hand over control to the xmanager
-XMANAGER,"CBEDDrawWidget",widget_s.LACBEDDrawbase,/NO_BLOCK
+XMANAGER,"CBEDMBCBEDDrawWidget",widget_s.MBCBEDDrawbase,/NO_BLOCK
 
 end

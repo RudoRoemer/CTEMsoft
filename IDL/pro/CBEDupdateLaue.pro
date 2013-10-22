@@ -26,63 +26,55 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:CBEDgetfilename.pro
+; CTEMsoft2013:CBEDupdateLaue.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: CBEDgetfilename.pro
+; PROGRAM: CBEDupdateLaue.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief Display an interface and ask user to select a file
+;> @brief Draw the Laue position on top of the CBED schematic
 ;
-;> @date 06/13/13 MDG 1.0 first attempt 
+;> @date 10/15/13 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------
-pro CBEDgetfilename,validfile,MBCBED=MBCBED,LACBED=LACBED
- 
+pro CBEDupdateLaue,dummy
+
 ;------------------------------------------------------------
 ; common blocks
 common CBED_widget_common, widget_s
 common CBED_data_common, data
+common CBED_rawdata, gvecs, gmult, gtt, gxy, disks, numHOLZ, HOLZlist
+common CBED_HOLZlists, HOLZvals
+common fontstrings, fontstr, fontstrlarge, fontstrsmall
+common SYM2D, SYM_MATnum, SYM_direc
+common CBEDcirclestuff, CBEDschematic, midx, midy, drad, cang, scl, gxpos, ct, st, sc
 
+; use the Z-buffer to draw the individual components
+set_plot,'Z'
+device,set_resolution=[data.detwinx,data.detwiny]
+erase
 
+; then add the Laue position as a red cross
+Lx = data.Lauex * gxpos * data.thetac/40.0
+Ly = data.Lauey * gxpos * data.thetac/40.0
+plots, midx+Lx+[-5,5],midy+Ly,/dev,thick=2
+plots, midx+Lx,midy+Ly+[-5,5],/dev,thick=2
+empty
 
- 
-  s = ''
-  cd,current = s
-  data.homefolder = s
-  if (data.CBEDroot eq 'undefined') then begin
-    data.CBEDroot = data.homefolder
-  end 
+; and add a red circle around that spot
+plots,midx+Lx+cang*ct,midy+Ly+cang*st,/dev,thick=2
 
-  if ( keyword_set(LACBED) ) then begin
-    rootpath = data.CBEDroot
-  end else begin
-    rootpath = data.MBCBEDroot
-  end
+red = tvrd()
 
-  if keyword_set(LACBED) then begin
-    res=dialog_pickfile(title='Select a valid CTEMlacbed data file',path=rootpath)
-  end else begin
-    res=dialog_pickfile(title='Select a valid CTEMmbcbed data file',path=rootpath)
-  end
+set_plot,'X'
 
-  if (res eq '') then begin
-	  print,'No selection made; Exiting program'
-	  validfile = 0
-	  return
-  end
-  validfile = 1
-  finfo = file_info(res)
-  data.filesize = finfo.size
-; find the last folder separator
-  spos = strpos(res,'/',/reverse_search)
-  dpos = strpos(res,'.',/reverse_search)
-  plen = strlen(res)
-  data.pathname = strmid(res,0,spos)
-  data.dataname = strmid(res,spos+1)
-  data.suffix = strmid(res,dpos+1)
-  data.CBEDroot = data.pathname
+; display the disk pattern + the new red channel
+wset,data.diskdrawID
+output = CBEDschematic
+r = reform(output[0,*,*])
+r = r or red
+output[0,0:*,0:*] = r
+tv,output,true=1
 
-WIDGET_CONTROL, SET_VALUE=data.dataname, widget_s.dataname
 
 end

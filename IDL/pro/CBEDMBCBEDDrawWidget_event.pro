@@ -26,63 +26,31 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:CBEDgetfilename.pro
+; CTEMsoft2013:CBEDMBCBEDDrawWidget_event.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: CBEDgetfilename.pro
+; PROGRAM: CBEDMBCBEDDrawWidget_event.pro
 ;
-;> @author Marc De Graef, Carnegie Mellon University
+;> @author Marc De Graef, Carnegie Melon University
 ;
-;> @brief Display an interface and ask user to select a file
+;> @brief main event handler for LACBED mode
 ;
-;> @date 06/13/13 MDG 1.0 first attempt 
+;> @date 10/09/13 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro CBEDgetfilename,validfile,MBCBED=MBCBED,LACBED=LACBED
- 
+pro CBEDMBCBEDDrawWidget_event, event
+
 ;------------------------------------------------------------
 ; common blocks
 common CBED_widget_common, widget_s
 common CBED_data_common, data
 
+if (data.eventverbose eq 1) then help,event,/structure
 
-
- 
-  s = ''
-  cd,current = s
-  data.homefolder = s
-  if (data.CBEDroot eq 'undefined') then begin
-    data.CBEDroot = data.homefolder
-  end 
-
-  if ( keyword_set(LACBED) ) then begin
-    rootpath = data.CBEDroot
-  end else begin
-    rootpath = data.MBCBEDroot
-  end
-
-  if keyword_set(LACBED) then begin
-    res=dialog_pickfile(title='Select a valid CTEMlacbed data file',path=rootpath)
-  end else begin
-    res=dialog_pickfile(title='Select a valid CTEMmbcbed data file',path=rootpath)
-  end
-
-  if (res eq '') then begin
-	  print,'No selection made; Exiting program'
-	  validfile = 0
-	  return
-  end
-  validfile = 1
-  finfo = file_info(res)
-  data.filesize = finfo.size
-; find the last folder separator
-  spos = strpos(res,'/',/reverse_search)
-  dpos = strpos(res,'.',/reverse_search)
-  plen = strlen(res)
-  data.pathname = strmid(res,0,spos)
-  data.dataname = strmid(res,spos+1)
-  data.suffix = strmid(res,dpos+1)
-  data.CBEDroot = data.pathname
-
-WIDGET_CONTROL, SET_VALUE=data.dataname, widget_s.dataname
+; intercept the image widget movement here 
+if (event.id eq widget_s.MBCBEDDrawbase) then begin
+  data.MBCBEDDrawxlocation = event.x
+  data.MBCBEDDrawylocation = event.y-25
+    CBEDprint,' Window moved to location ('+string(fix(data.MBCBEDDrawxlocation),format="(I4)")+','+string(fix(data.MBCBEDDrawylocation),format="(I4)")+')'
+end
 
 end

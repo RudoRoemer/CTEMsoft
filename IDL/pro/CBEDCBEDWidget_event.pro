@@ -49,7 +49,7 @@ common fontstrings, fontstr, fontstrlarge, fontstrsmall
 common CBED_current, BFcurrent, DFcurrent, RGBcurrent, mask
 common trafos, done, c030, c060, c120, c150, c240, c300, s030, s060, s120, s150, s240, s300
 common SYM2D, SYM_MATnum, SYM_direc
-common CBEDcirclestuff, CBEDschematic, midx, midy, drad, cang, scl
+common CBEDcirclestuff, CBEDschematic, midx, midy, drad, cang, scl, gxpos, ct, st, sc
 
 if (data.eventverbose eq 1) then help,event,/structure
 
@@ -92,18 +92,58 @@ end else begin
 
  'LAUEX':  begin
 		WIDGET_CONTROL, get_value=val,widget_s.Lauex
-		data.oldLauex = data.Lauex
-		data.Lauex= float(val[0])
-		  CBEDprint,'Lauex center x-coordinate set to '+string(float(val[0]),FORMAT="(F6.2)")
-		WIDGET_CONTROL, set_value=string(data.Lauex,format="(F6.2)"), widget_s.Lauex
+; check to make sure that this value keeps the point inside the red circle
+; if it does not, then put the point at the largest x coordinate that is allowed
+; for the current y coordinate.
+		maxrad = drad * (data.thetac - data.thetau)/data.thetac ;/ gxpos * data.thetac/40.0
+	 	dx = float(val[0]) 
+	 	dy = data.Lauey 
+		s = sqrt(dx^2+dy^2)
+		if (s lt maxrad) then begin
+		  data.oldLauex = data.Lauex
+		  data.Lauex= float(val[0])
+		    CBEDprint,'Lauex center x-coordinate set to '+string(float(val[0]),FORMAT="(F8.2)")
+		  WIDGET_CONTROL, set_value=string(data.Lauex,format="(F8.2)"), widget_s.Lauex
+		end else begin
+; determine the largest x coordinate allowed for the current y coordinate
+		  mx = sqrt(maxrad^2-dy^2) 
+		  if (dx lt 0.0) then mx = -mx
+		  data.oldLauex = data.Lauex
+		  data.Lauex= mx
+		    CBEDprint,'Requested Laue x coordinate would bring center outside of red circle'
+		    CBEDprint,'Lauex center x-coordinate limited to '+string(mx,FORMAT="(F8.2)")
+		  WIDGET_CONTROL, set_value=string(data.Lauex,format="(F8.2)"), widget_s.Lauex
+		end
+		wset,data.diskdrawID
+		CBEDupdateLaue
 	endcase
 
  'LAUEY':  begin
 		WIDGET_CONTROL, get_value=val,widget_s.Lauey
-		data.oldLauey = data.Lauey
-		data.Lauey= float(val[0])
-		  CBEDprint,'Lauex center y-coordinate set to '+string(float(val[0]),FORMAT="(F6.2)")
-		WIDGET_CONTROL, set_value=string(data.Lauey,format="(F6.2)"), widget_s.Lauey
+; check to make sure that this value keeps the point inside the red circle
+; if it does not, then put the point at the largest y coordinate that is allowed
+; for the current x coordinate.
+		maxrad = drad * (data.thetac - data.thetau)/data.thetac / gxpos
+	 	dx = data.Lauex 
+	 	dy = float(val[0]) 
+		s = sqrt(dx^2+dy^2)
+		if (s lt maxrad) then begin
+		  data.oldLauey = data.Lauey
+		  data.Lauey= float(val[0])
+		    CBEDprint,'Lauey center y-coordinate set to '+string(float(val[0]),FORMAT="(F8.2)")
+		  WIDGET_CONTROL, set_value=string(data.Lauey,format="(F8.2)"), widget_s.Lauey
+		end else begin
+; determine the largest y coordinate allowed for the current x coordinate
+		  my = sqrt(maxrad^2-dx^2) 
+		  if (dy lt 0.0) then my = -my
+		  data.oldLauey = data.Lauey
+		  data.Lauey= my
+		    CBEDprint,'Requested Laue y coordinate would bring center outside of red circle'
+		    CBEDprint,'Lauey center y-coordinate limited to '+string(my,FORMAT="(F8.2)")
+		  WIDGET_CONTROL, set_value=string(data.Lauey,format="(F8.2)"), widget_s.Lauey
+		end
+		wset,data.diskdrawID
+		CBEDupdateLaue
 	endcase
 
  'LOGOFFSET':  begin
@@ -117,6 +157,7 @@ end else begin
 	data.thicksel = event.index
 	data.thickness = data.startthick + float(event.index) * data.thickinc
 	  CBEDprint,'Foil thickness set to '+string(data.thickness,FORMAT="(F6.1)")+' nm'
+	CBEDcircles
 	endcase
 
  'JUMPLIST': begin
@@ -126,54 +167,30 @@ end else begin
 
  'SELECTLAUE':  begin
 	  if (event.type eq 0) then begin
-	    mid = (data.detwinx-1)/2
-	    newx = event.x-mid 
-	    newy = event.y-mid
+  	    maxrad = drad * (data.thetac - data.thetau)/data.thetac 
+	    newx = event.x-midx
+	    newy = event.y-midy
 	    m = sqrt(newx^2+newy^2)
-	    newx /= m
-	    newy /= m
-	    frac = m/drad/scl
-	    sc = data.wavelength * 300.0 / 25.4
-
-print, newx, newy, frac
-
+	    if (m gt maxrad) then begin
+	      newx = newx * maxrad/m
+	      newy = newy * maxrad/m
+	    end
+	    data.oldLauex = data.Lauex
+	    data.oldLauey = data.Lauey
+	    data.Lauex = newx/gxpos * 40.0/data.thetac
+	    data.Lauey = newy/gxpos * 40.0/data.thetac
+	      CBEDprint,'Lauex center x-coordinate set to '+string(newx,FORMAT="(F8.2)")
+	      CBEDprint,'Lauex center x-coordinate set to '+string(newx,FORMAT="(F8.2)")
+	    WIDGET_CONTROL, set_value=string(data.Lauex,format="(F8.2)"), widget_s.Lauex
+	    WIDGET_CONTROL, set_value=string(data.Lauey,format="(F8.2)"), widget_s.Lauey
+	    CBEDmoveLaue
 	  end 
 	endcase
 
 
  'GOCBED':  begin
 ; display the CBED pattern
-
-	  if (data.movemode eq 0) then begin
-	    wset,data.CBdrawID
-	    CBEDgocbed
-	  end else begin
-	    dx = (data.Lauex-data.oldLauex) / float(5*(data.jumpsel+1)+1)
-	    dy = (data.Lauey-data.oldLauey) / float(5*(data.jumpsel+1)+1)
-	    if (( dx ne 0.0) or (dy ne 0.0) ) then begin
-	      savex = data.Lauex
-	      savey = data.Lauey
-	      for i=1,5*(data.jumpsel+1)+1 do begin
-	        data.Lauex = data.oldLauex +  float(i) * dx
-	        data.Lauey = data.oldLauey +  float(i) * dy
-	        WIDGET_CONTROL, set_value=string(data.Lauex,format="(F6.2)"), widget_s.Lauex
-	        WIDGET_CONTROL, set_value=string(data.Lauey,format="(F6.2)"), widget_s.Lauey
-	        wset,data.diskdrawID
-		;plots,
-
-	        wset,data.CBdrawID
-	        CBEDgocbed
-	      endfor
-	      data.Lauex = savex
-	      data.Lauey = savey
-	    end else begin
-	      wset,data.CBdrawID
-	      CBEDgocbed
-	    end 
-	  end 
-	  data.oldLauex = data.Lauex
-	  data.oldLauey = data.Lauey
-
+		CBEDmoveLaue
 	endcase
 
   'MAKENML': begin

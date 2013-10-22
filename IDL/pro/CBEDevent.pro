@@ -61,8 +61,8 @@ CASE eventval OF
 		   CBEDprint,'Turning log mode on',/blank
 		 q = systime()
  		 z = strsplit(q,' ',/extract,/regex)
- 		 data.logname = data.pathname+'/CBEDDisplay'+z[0]+z[1]+z[2]+'_'+z[3]+'_'+z[4]+'.log'
-		 CBEDprint,'Log file: '+data.logname
+ 		 data.logname = 'CBEDDisplay'+z[0]+z[1]+z[2]+'_'+z[4]+'_'+z[3]+'.log'
+		   CBEDprint,'Log file: '+data.logname
 		 data.logmode = 1
 		 openw,data.logunit,data.logname
 		 data.logfileopen = 1
@@ -83,6 +83,11 @@ CASE eventval OF
 
   'CBEDMODE': begin
 		WIDGET_CONTROL, get_value=val,widget_s.cbedmodebgroup
+		data.cbedmode = fix(val[0])
+	  endcase
+
+  'MBCBEDMODE': begin
+		WIDGET_CONTROL, get_value=val,widget_s.mbcbedmodebgroup
 		data.cbedmode = fix(val[0])
 	  endcase
 

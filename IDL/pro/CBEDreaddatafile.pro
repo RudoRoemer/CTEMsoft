@@ -52,6 +52,12 @@ common CBED_current, BFcurrent, DFcurrent, RGBcurrent, mask
 
   CBEDprint,'Reading data file '+data.dataname
 
+  if ( keyword_set(LACBED) ) then begin
+    data.pathname = data.CBEDroot
+  end else begin
+    data.pathname = data.MBCBEDroot
+  end
+
   openu,1,data.pathname+'/'+data.dataname,/f77
 ; first a pair of strings of 132 characters each
   progname = bytarr(14)
@@ -118,8 +124,8 @@ common CBED_current, BFcurrent, DFcurrent, RGBcurrent, mask
   thetac = 0.0
   readu,1,thetac
   data.thetac = thetac
-    CBEDprint,'Beam convergence = '+string(data.thetac,FORMAT="(F6.3)")
-  WIDGET_CONTROL, SET_VALUE=string(data.thetac,FORMAT="(F6.3)"), widget_s.thetac
+    CBEDprint,'Beam convergence = '+string(data.thetac,FORMAT="(F7.3)")
+  WIDGET_CONTROL, SET_VALUE=string(data.thetac,FORMAT="(F7.3)"), widget_s.thetac
 
 ; wave vector indices (3 longints)
   wavek = lonarr(3)
@@ -246,6 +252,20 @@ common CBED_current, BFcurrent, DFcurrent, RGBcurrent, mask
     endfor
     CBEDprogressbar,100.0
     close,1
+; get the HOLZ identifier list
+    HOLZlist = indgen(data.datadims[3])
+    HOLZlist[0] = 0	; transmitted beam
+    for i=1,data.datadims[3]-1 do begin
+      HOLZlist[i] = abs( gvecs[0,i]*data.wavek[0]+gvecs[1,i]*data.wavek[1]+gvecs[2,i]*data.wavek[2] )
+    endfor
+    
+; then determine how many there are in each layer
+    numHOLZ = indgen(data.maxHOLZ+1)
+    for i=0,data.maxHOLZ do begin
+      q=where(HOLZlist eq i,cnt)
+      numHOLZ[i] = cnt
+    endfor
+
 ; (de)activate the LACBED and CBED buttons
     WIDGET_CONTROL, widget_s.startLACBED, sensitive=1
     WIDGET_CONTROL, widget_s.startCBED, sensitive=1
@@ -280,6 +300,10 @@ data.famsel = 0
 data.diskrotation = 0.0
 data.dfdisplaymode = 0
 data.CBEDmode = 0
+data.Lauex = 0.0
+data.Lauey = 0.0
+data.oldLauex = 0.0
+data.oldLauey = 0.0
 
 
 

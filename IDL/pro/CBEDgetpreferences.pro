@@ -63,6 +63,8 @@ if (rs eq 1) then begin
     case nm of 
 ; root folder
 	'CBEDroot': data.CBEDroot=val
+; MBCBED root folder
+	'MBCBEDroot': data.MBCBEDroot=val
 ; image output format
   	'imageformat': data.imageformat=fix(val)
 ; cbed output format
@@ -101,6 +103,10 @@ if (rs eq 1) then begin
   	'cbedylocation': data.CBEDylocation=float(val)
   	'cbeddrawxlocation': data.CBEDDrawxlocation=float(val)
   	'cbedrawdylocation': data.CBEDDrawylocation=float(val)
+  	'mbcbedxlocation': data.MBCBEDxlocation=float(val)
+  	'mbcbedylocation': data.MBCBEDylocation=float(val)
+  	'mbcbeddrawxlocation': data.MBCBEDDrawxlocation=float(val)
+  	'mbcbedrawdylocation': data.MBCBEDDrawylocation=float(val)
 ;
     else: MESSAGE,'unknown option for preferences file'
     endcase

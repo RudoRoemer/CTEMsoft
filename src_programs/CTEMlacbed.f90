@@ -239,7 +239,7 @@ end if
 ! illumination cone without application of symmetry.  Instead, we'll get the speed up by 
 ! going to multiple cores later on.
   isym = 1
-  call CalckvectorsSymmetry(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,klaue,.TRUE.)
+  call CalckvectorsSymmetry(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,klaue,.FALSE.)
 
 ! set scaling parameters
   PX = npix/2
@@ -519,7 +519,7 @@ kvectorloop:  do ik = 1,numk
   do ir=1,ifamily
     whichHOLZ(ir) = iabs(k(1)*familyhkl(1,ir)+k(2)*familyhkl(2,ir)+k(3)*familyhkl(3,ir))
     if (whichHOLZ(ir).le.maxHOLZ) then 
-      if ( (maxval(disk(:,:,1,ir)).ge.minten) .or. ( dbdiff(familyhkl(1,ir),familyhkl(2,ir),familyhkl(3,ir))) ) then
+      if ( (maxval(disk(:,:,:,ir)).ge.minten) .or. ( dbdiff(familyhkl(1,ir),familyhkl(2,ir),familyhkl(3,ir))) ) then
         icnt = icnt+1
       else  ! just change the HOLZ value to some large value to make sure it does not get written to the file
         whichHOLZ(ir) = 10

@@ -47,21 +47,10 @@ common CBED_rawdata, gvecs, gmult, gtt, gxy, disks, numHOLZ, HOLZlist
 common CBED_HOLZlists, HOLZvals
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 common SYM2D, SYM_MATnum, SYM_direc
-common CBEDcirclestuff, CBEDschematic, midx, midy, drad, cang, scl
-
-; the LACBED convergence angle is shown as a red circle of radius 180 pixels
-; inside the fixed size display window (401x401)
-
-; the output will be a schematic RGB image
-CBEDschematic = bytarr(3,data.detwinx,data.detwiny)
+common CBEDcirclestuff, CBEDschematic, midx, midy, drad, cang, scl, gxpos, ct, st, sc
 
 midx = (data.detwinx-1)/2
 midy = (data.detwiny-1)/2
-
-; use the Z-buffer to draw the individual components
-set_plot,'Z'
-device,set_resolution=[data.detwinx,data.detwiny]
-erase
 
 ; first get the main LACBED convergence circle
 drad = 180
@@ -70,9 +59,37 @@ th = findgen(numth) * !dtor
 ct = cos(th)
 st = sin(th)
 
+; we'll put the (000) LACBED disk in the background ... 
+; we'll need to rescale it and embed it in a slightly larger array, 
+; then put it in the background at reduced intensity ... 
+zerodisk = reform(disks[*,*,data.thicksel,0])
+zerodisk = congrid(zerodisk,2*drad+1,2*drad+1)
+embed = fltarr(data.detwinx,data.detwiny)
+embed[midx-drad,midy-drad] = zerodisk
+embed = bytscl(embed, min=0.0,max=2.0*max(embed))
+
+
+; the LACBED convergence angle is shown as a red circle of radius 180 pixels
+; inside the fixed size display window (401x401)
+
+; the output will be a schematic RGB image
+CBEDschematic = bytarr(3,data.detwinx,data.detwiny)
+
+; use the Z-buffer to draw the individual components
+set_plot,'Z'
+device,set_resolution=[data.detwinx,data.detwiny]
+erase
+
+
 plots,midx+drad*ct,midy+drad*st,/dev,thick=2
 
-green = tvrd()
+; draw the g1 cross
+gxpos = 2.0 * asin( data.wavelength * data.galen * 0.5 / 1000.0) * drad * 1000.0/ data.thetac
+plots, midx+gxpos+[-5,5],midy,/dev,thick=2
+plots, midx+gxpos,midy+[-5,5],/dev,thick=2
+empty
+
+green = tvrd() or embed
 erase
 
 ; then draw the limiting circle for the Laue center positions
@@ -80,7 +97,10 @@ erase
 cang =  drad*(data.thetau/data.thetac)
 frac = drad - cang
 plots,midx+frac*ct,midy+frac*st,/dev,thick=2
-red = tvrd()
+plots, midx+gxpos+[-5,5],midy,/dev,thick=2
+plots, midx+gxpos,midy+[-5,5],/dev,thick=2
+empty
+red = tvrd() or embed
 erase
 
 ; finally, draw all the ZOLZ reflections to scale in blue
@@ -97,7 +117,10 @@ for i=0,numHOLZ[0]-1 do begin
   endfor
 end
 
-blue = tvrd()
+plots, midx+gxpos+[-5,5],midy,/dev,thick=2
+plots, midx+gxpos,midy+[-5,5],/dev,thick=2
+empty
+blue = tvrd() or embed
 
 
 CBEDschematic[0,0:*,0:*] = red

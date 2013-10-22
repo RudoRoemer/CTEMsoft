@@ -26,63 +26,55 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:CBEDgetfilename.pro
+; CTEMsoft2013:CBEDmoveLaue.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: CBEDgetfilename.pro
+; PROGRAM: CBEDmoveLaue.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief Display an interface and ask user to select a file
+;> @brief Move from one Laue position to another one
 ;
-;> @date 06/13/13 MDG 1.0 first attempt 
+;> @date 10/15/13 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------
-pro CBEDgetfilename,validfile,MBCBED=MBCBED,LACBED=LACBED
- 
+pro CBEDmoveLaue,dummy
+
 ;------------------------------------------------------------
 ; common blocks
 common CBED_widget_common, widget_s
 common CBED_data_common, data
+common CBED_rawdata, gvecs, gmult, gtt, gxy, disks, numHOLZ, HOLZlist
+common CBED_HOLZlists, HOLZvals
+common fontstrings, fontstr, fontstrlarge, fontstrsmall
+common SYM2D, SYM_MATnum, SYM_direc
+common CBEDcirclestuff, CBEDschematic, midx, midy, drad, cang, scl, gxpos, ct, st, sc
 
 
-
- 
-  s = ''
-  cd,current = s
-  data.homefolder = s
-  if (data.CBEDroot eq 'undefined') then begin
-    data.CBEDroot = data.homefolder
+  if (data.movemode eq 0) then begin
+    CBEDupdateLaue
+    CBEDgocbed
+  end else begin
+    dx = (data.Lauex-data.oldLauex) / float(5*(data.jumpsel+1)+1)
+    dy = (data.Lauey-data.oldLauey) / float(5*(data.jumpsel+1)+1)
+    if (( dx ne 0.0) or (dy ne 0.0) ) then begin
+      savex = data.Lauex
+      savey = data.Lauey
+      for i=1,5*(data.jumpsel+1)+1 do begin
+        data.Lauex = data.oldLauex +  float(i) * dx
+        data.Lauey = data.oldLauey +  float(i) * dy
+        WIDGET_CONTROL, set_value=string(data.Lauex,format="(F6.2)"), widget_s.Lauex
+        WIDGET_CONTROL, set_value=string(data.Lauey,format="(F6.2)"), widget_s.Lauey
+        CBEDupdateLaue
+        CBEDgocbed
+      endfor
+      data.Lauex = savex
+      data.Lauey = savey
+    end else begin
+      CBEDupdateLaue
+      CBEDgocbed
+    end 
   end 
-
-  if ( keyword_set(LACBED) ) then begin
-    rootpath = data.CBEDroot
-  end else begin
-    rootpath = data.MBCBEDroot
-  end
-
-  if keyword_set(LACBED) then begin
-    res=dialog_pickfile(title='Select a valid CTEMlacbed data file',path=rootpath)
-  end else begin
-    res=dialog_pickfile(title='Select a valid CTEMmbcbed data file',path=rootpath)
-  end
-
-  if (res eq '') then begin
-	  print,'No selection made; Exiting program'
-	  validfile = 0
-	  return
-  end
-  validfile = 1
-  finfo = file_info(res)
-  data.filesize = finfo.size
-; find the last folder separator
-  spos = strpos(res,'/',/reverse_search)
-  dpos = strpos(res,'.',/reverse_search)
-  plen = strlen(res)
-  data.pathname = strmid(res,0,spos)
-  data.dataname = strmid(res,spos+1)
-  data.suffix = strmid(res,dpos+1)
-  data.CBEDroot = data.pathname
-
-WIDGET_CONTROL, SET_VALUE=data.dataname, widget_s.dataname
+  data.oldLauex = data.Lauex
+  data.oldLauey = data.Lauey
 
 end

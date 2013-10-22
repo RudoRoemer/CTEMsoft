@@ -61,6 +61,8 @@ end else begin
   'STARTLACBEDWIDGET': begin
 		if (XRegistered("CBEDCBEDDrawWidget") NE 0) then WIDGET_CONTROL, widget_s.CBEDDrawbase, /DESTROY
 		if (XRegistered("CBEDCBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.CBEDbase, /DESTROY
+		if (XRegistered("CBEDMBCBEDDrawWidget") NE 0) then WIDGET_CONTROL, widget_s.MBCBEDDrawBase, /DESTROY
+		if (XRegistered("CBEDMBCBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.MBCBEDBase, /DESTROY
 		if (XRegistered("CBEDDrawWidget") EQ 0) then CBEDDrawWidget
 		if (XRegistered("CBEDLACBEDWidget") EQ 0) then CBEDLACBEDWidget
 	endcase
@@ -68,20 +70,29 @@ end else begin
   'STARTCBEDWIDGET': begin
 		if (XRegistered("CBEDDrawWidget") NE 0) then WIDGET_CONTROL, widget_s.LACBEDDrawbase, /DESTROY
 		if (XRegistered("CBEDLACBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.LACBEDbase, /DESTROY
+		if (XRegistered("CBEDMBCBEDDrawWidget") NE 0) then WIDGET_CONTROL, widget_s.MBCBEDDrawBase, /DESTROY
+		if (XRegistered("CBEDMBCBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.MBCBEDBase, /DESTROY
 		if (XRegistered("CBEDCBEDDrawWidget") EQ 0) then CBEDCBEDDrawWidget
 		if (XRegistered("CBEDCBEDWidget") EQ 0) then CBEDCBEDWidget
 	endcase
 
   'STARTMBCBEDWIDGET': begin
-print,'Not yet implemented'
+		if (XRegistered("CBEDDrawWidget") NE 0) then WIDGET_CONTROL, widget_s.LACBEDDrawbase, /DESTROY
+		if (XRegistered("CBEDLACBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.LACBEDbase, /DESTROY
+		if (XRegistered("CBEDCBEDDrawWidget") NE 0) then WIDGET_CONTROL, widget_s.CBEDDrawbase, /DESTROY
+		if (XRegistered("CBEDCBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.CBEDbase, /DESTROY
+		if (XRegistered("CBEDMBCBEDDrawWidget") EQ 0) then CBEDMBCBEDDrawWidget
+		if (XRegistered("CBEDMBCBEDWidget") EQ 0) then CBEDMBCBEDWidget
 	endcase
 
   'LOADLACBEDFILE': begin
 ; loading a new file means that a bunch of variables need to be reset
-	if (XRegistered("CBEDDrawWidget") NE 0) then WIDGET_CONTROL, widget_s.LACBEDDrawbase, /DESTROY
-	if (XRegistered("CBEDLACBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.LACBEDbase, /DESTROY
-	if (XRegistered("CBEDCBEDDrawWidget") NE 0) then WIDGET_CONTROL, widget_s.CBEDDrawbase, /DESTROY
-	if (XRegistered("CBEDCBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.CBEDbase, /DESTROY
+		if (XRegistered("CBEDDrawWidget") NE 0) then WIDGET_CONTROL, widget_s.LACBEDDrawbase, /DESTROY
+		if (XRegistered("CBEDLACBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.LACBEDbase, /DESTROY
+		if (XRegistered("CBEDCBEDDrawWidget") NE 0) then WIDGET_CONTROL, widget_s.CBEDDrawbase, /DESTROY
+		if (XRegistered("CBEDCBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.CBEDbase, /DESTROY
+		if (XRegistered("CBEDMBCBEDDrawWidget") NE 0) then WIDGET_CONTROL, widget_s.MBCBEDDrawBase, /DESTROY
+		if (XRegistered("CBEDMBCBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.MBCBEDBase, /DESTROY
 	
 ; ask the user to select the data file
 		CBEDgetfilename,validfile,/LACBED
@@ -92,6 +103,12 @@ print,'Not yet implemented'
 
   'LOADMBCBEDFILE': begin
 ; loading a new file means that a bunch of variables need to be reset
+		if (XRegistered("CBEDDrawWidget") NE 0) then WIDGET_CONTROL, widget_s.LACBEDDrawbase, /DESTROY
+		if (XRegistered("CBEDLACBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.LACBEDbase, /DESTROY
+		if (XRegistered("CBEDCBEDDrawWidget") NE 0) then WIDGET_CONTROL, widget_s.CBEDDrawbase, /DESTROY
+		if (XRegistered("CBEDCBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.CBEDbase, /DESTROY
+		if (XRegistered("CBEDMBCBEDDrawWidget") NE 0) then WIDGET_CONTROL, widget_s.MBCBEDDrawBase, /DESTROY
+		if (XRegistered("CBEDMBCBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.MBCBEDBase, /DESTROY
 ; ask the user to select the data file
 		CBEDgetfilename,validfile,/MBCBED
 
@@ -106,6 +123,8 @@ print,'Not yet implemented'
 		if (XRegistered("CBEDLACBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.LACBEDbase, /DESTROY
 		if (XRegistered("CBEDCBEDDrawWidget") NE 0) then WIDGET_CONTROL, widget_s.CBEDDrawbase, /DESTROY
 		if (XRegistered("CBEDCBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.CBEDbase, /DESTROY
+		if (XRegistered("CBEDMBCBEDDrawWidget") NE 0) then WIDGET_CONTROL, widget_s.MBCBEDDrawBase, /DESTROY
+		if (XRegistered("CBEDMBCBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.MBCBEDBase, /DESTROY
 
 ; write the preferences file
 		CBEDwritepreferences

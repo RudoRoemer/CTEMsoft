@@ -47,21 +47,29 @@ common CBED_rawdata, gvecs, gmult, gtt, gxy, disks, numHOLZ, HOLZlist
 common CBED_HOLZlists, HOLZvals
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 common SYM2D, SYM_MATnum, SYM_direc
+common CBEDcirclestuff, CBEDschematic, midx, midy, drad, cang, scl, gxpos, ct, st, sc
+
+wset,data.CBdrawID
 
 
 ; set the desired convergence angle thetau as a fraction of the LACBED convergence angle
 	thfrac = data.thetau/data.thetac
 
-; set the desired camera length as a fraction of 1000 mm (the reference camera length)
-	clscl = data.camlen / data.refcamlen
+; theta value [mrad] for the reference horizontal reflection
+ 	tth = asin( data.wavelength * data.galen * 0.5 / 1000.0) * 1000.0
+
+
+; set the desired camera length as a fraction of 1000 mm (the reference camera length) and also scaled w.r.t. the 
+; overall beam convergence angle; this is used to scale the coordinates of the reciprocal lattice points
+	clscl = data.camlen / data.refcamlen 
 
 ; extract a subset of the disks array
-	dx = fix(0.5*thfrac * data.datadims[0])
-	ndx = fix(2*clscl * dx)
+	dx = round(0.5*thfrac * (data.datadims[0]-1) * float(drad)/float(midx)) > 1
+	ndx = fix(2 * clscl * dx * data.thetac/40.0) > 1
 	cx = (data.datadims[0]-1)/2
 	dd = 2*dx
 	ndd = 2*ndx
-	sc = data.wavelength * 300.0 / 25.4
+	sc = data.wavelength * 6.47113 ; 300.0 / 25.4
 
 ; then make a mask to get circular disks
 	cmask = shift(dist(2*dx+1),dx,dx)
@@ -72,8 +80,8 @@ common SYM2D, SYM_MATnum, SYM_direc
 	dimx = 1024
 	d2 = dimx/2
 
-; define the Laue center and get its equivalent positions
-	Lauexy = -sc * [data.Lauex, data.Lauey]
+; define the Laue center and get its equivalent positions;
+	Lauexy = -sc * [data.Lauex, data.Lauey] * data.galen
 	Lxy = CBEDApply2DSymmetryPoint(Lauexy,/inverse)
 
 ; allocate the pattern array
@@ -85,8 +93,10 @@ common SYM2D, SYM_MATnum, SYM_direc
 	for i=0,data.datadims[3]-1 do begin  ; loop over all families
 ; equivalent disk positions
     	  posxy = clscl * CBEDApply2DSymmetryPoint(reform(gxy[0:1,i]))
-	  z = round( d2 + posxy - ndx )
-	  if (min(z) gt 0.0) and (max(z+ndd) lt dimx) then begin 
+;  z = round( d2 + posxy - ndx )
+;  if (min(z) gt 0.0) and (max(z+ndd) lt dimx) then begin 
+	  z = round( d2 + posxy - dx )
+	  if (min(z) gt 0.0) and (max(z+dd) lt dimx) then begin 
 
 ; first we extract each of the circles from the i-th disk
     	    diskstack = fltarr(2*dx+1,2*dx+1,SYM_MATnum)
@@ -112,7 +122,6 @@ common SYM2D, SYM_MATnum, SYM_direc
    	    endfor
 	  endif
    	endfor
-	;CBEDpattern -= min(CBEDpattern)
 	data.BFmin = min(CBEDpattern,max=ma)
 	data.BFmax = ma
 	WIDGET_CONTROL, SET_VALUE=string(data.BFmin,FORMAT="(E9.2)"), widget_s.BFmin

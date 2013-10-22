@@ -17,6 +17,9 @@
 ;@CBEDLACBEDDrawWidget		; drawing widget for BF and DF/Eades patterns
 ;@CBEDDrawWidget_event		; LACBED draw widget event handler
 @CBEDCBEDWidget			; CBED display widget
+@CBEDMBCBEDWidget		; MBCBED display widget
+@CBEDMBCBEDWidget_event		; MBCBED display widget event handler
+@CBEDMBCBEDDrawWidget_event	; MBCBED Draw widget event handler
 @CBEDCBEDDrawWidget		; CBED Draw widget
 @CBEDCBEDDrawWidget_event	; CBED Draw widget event handler
 @CBEDCBEDWidget_event		; CBED display widget event handler
@@ -25,6 +28,8 @@
 @CBEDevent			; special routine to deal with CW_BGROUP events
 @CBEDgocbed			; compute a synthetic CBED pattern from the LACBED data
 @CBEDcircles			; draw a schematic diffraction pattern along with Laue limiting circle
+@CBEDupdateLaue			; draw the Laue position on top of the CBED schematic
+@CBEDmoveLaue			; move CBED pattern from one Laue position to another one
 
 ;
 ; Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
@@ -116,9 +121,12 @@ widget_s = {widgetstruct, $
 	    LACBEDDrawbase: long(0), $		; LACBED draw widget base
 	    CBEDbase: long(0), $		; CBED widget base
 	    CBEDDrawbase: long(0), $		; CBED Draw widget base
+	    MBCBEDDrawbase: long(0), $		; MBCBED Draw widget base
 	    CBDraw: long(0), $			; Draw widget base for diffraction disk outline
+	    MBDraw: long(0), $			; Draw widget base for MBCBED
 	    MBCBEDbase: long(0), $		; MBCBED widget base
 	    LACBEDthicklist: long(0), $		; LACBED thickness drop list
+	    MBCBEDthicklist: long(0), $		; MBCBED thickness drop list
 	    dfdisplaymode: long(0), $		; dark field display mode (0=single; 1=symmetrize; 2=Eades)
 	    LACBEDdroplist0: long(0), $		; droplist for ZOLZ
 	    LACBEDdroplist1: long(0), $		; droplist for HOLZ layer 1
@@ -133,6 +141,8 @@ widget_s = {widgetstruct, $
 	    cbedlegendbgroup:long(0), $		; cbed legend button group
 	    cbedformatbgroup:long(0), $		; cbed format button group
 	    cbedmodebgroup:long(0), $		; cbed intensity mode button group
+	    mbcbedformatbgroup:long(0), $	; mbcbed format button group
+	    mbcbedmodebgroup:long(0), $		; mbcbed intensity mode button group
 	    saveimage:long(0), $		; save image button
 	    savecbed:long(0), $			; save cbed pattern button
 	    bfrho: long(0), $			; Bright Field radius in mrad
@@ -204,6 +214,7 @@ data = {datastruct, $
 	filesize: long64(0), $			; input file size in bytes
 	homefolder: '', $			; startup folder of the program
 	CBEDroot: 'undefined', $		; current pathname (is stored in preferences file)
+	MBCBEDroot: 'undefined', $		; current MBCBED pathname (is stored in preferences file)
 	nprefs: fix(0), $			; number of preferences in file
         status:'waiting for input', $           ; current status line
 	logmode: fix(0), $			; keep a log file or not
@@ -246,6 +257,7 @@ data = {datastruct, $
 	BFdrawID: long(0), $			; BF window ID 
 	DFdrawID: long(0), $			; DF window ID 
 	CBdrawID: long(0), $			; CB window ID 
+	MBdrawID: long(0), $			; CB window ID 
 	diskdrawID: long(0), $			; disk window ID 
 	patang: float(15.0), $			; this is the horizontal half scale of the detector plot in mm
         camlen: float(500), $                   ; camera length field (mm)
@@ -290,8 +302,12 @@ data = {datastruct, $
 	LACBEDylocation: float(200), $		; initital y-location of LACBED widget
 	CBEDxlocation: float(600), $		; initital x-location of CBED widget
 	CBEDylocation: float(200), $		; initital y-location of CBED widget
+	MBCBEDxlocation: float(600), $		; initital x-location of MBCBED widget
+	MBCBEDylocation: float(200), $		; initital y-location of MBCBED widget
 	CBEDDrawxlocation: float(600), $	; initital x-location of CBED Draw widget
 	CBEDDrawylocation: float(200), $	; initital y-location of CBED Draw widget
+	MBCBEDDrawxlocation: float(600), $	; initital x-location of MBCBED Draw widget
+	MBCBEDDrawylocation: float(200), $	; initital y-location of MBCBED Draw widget
 	imagexlocation: float(600.0), $		; image widget x-location (can be modified and stored in preferences file)
 	imageylocation: float(100.0), $		; image widget y-location 
         scrdimx:0L, $                           ; display area x size in pixels 
@@ -539,7 +555,7 @@ widget_s.logfile= CW_BGROUP(file11, $
 			/NO_RELEASE, $
 			/EXCLUSIVE, $
 			SET_VALUE=data.logmode, $
-                        EVENT_FUNC='STEMevent', $
+                        EVENT_FUNC='CBEDevent', $
 			UVALUE='LOGFILE')
 
 

@@ -46,12 +46,11 @@ common CBED_data_common, data
 
 ; prefs file
   openw,1,data.prefname
-  nprefs = 24
+  nprefs = 27
   data.nprefs = nprefs
   printf,1,nprefs
   printf,1,'CBEDroot::'+data.CBEDroot
-; image output format
-  printf,1,'imageformat::'+string(data.imageformat,format="(I1)")
+  printf,1,'MBCBEDroot::'+data.MBCBEDroot
 ; cbed output format
   printf,1,'cbedformat::'+string(data.cbedformat,format="(I1)")
 ; cbed output mode (linear or logarithmic)
@@ -68,8 +67,6 @@ common CBED_data_common, data
   printf,1,'dfdisplaymode::'+string(data.dfdisplaymode,format="(I1)")
 ; user defined beam convergence angle
   printf,1,'thetau::'+string(data.thetau,format="(F6.2)")
-; user defined camera length
-  printf,1,'camlen::'+string(data.camlen,format="(F7.2)")
 ; Laue center x-coordinate
   printf,1,'Lauex::'+string(data.Lauex,format="(F6.2)")
 ; Laue center y-coordinate
@@ -88,6 +85,10 @@ common CBED_data_common, data
   printf,1,'cbedylocation::'+string(data.CBEDylocation,format="(F6.1)")
   printf,1,'cbeddrawxlocation::'+string(data.CBEDDrawxlocation,format="(F6.1)")
   printf,1,'cbedrawdylocation::'+string(data.CBEDDrawylocation,format="(F6.1)")
+  printf,1,'mbcbedxlocation::'+string(data.MBCBEDxlocation,format="(F6.1)")
+  printf,1,'mbcbedylocation::'+string(data.MBCBEDylocation,format="(F6.1)")
+  printf,1,'mbcbeddrawxlocation::'+string(data.MBCBEDDrawxlocation,format="(F6.1)")
+  printf,1,'mbcbedrawdylocation::'+string(data.MBCBEDDrawylocation,format="(F6.1)")
 ; and close the file
   close,1
 

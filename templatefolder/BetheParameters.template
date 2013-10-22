@@ -1,0 +1,11 @@
+&Bethelist
+! Do not change the line above !
+!
+! this cutoff (c2 in the manual) draws the line between strong (smaller) and weak (larger) beams
+weakcutoff = 80.0
+! this cutoff (c1 in the manual) separates weak reflections from those that will not be considered
+cutoff = 160.0
+! this parameter sets the threshold excitation error for double diffraction reflections
+sgcutoff = 0.05
+! do not change the following line
+/

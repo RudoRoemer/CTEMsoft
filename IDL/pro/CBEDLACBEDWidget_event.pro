@@ -159,13 +159,8 @@ end else begin
 	  data.BFmax = ma
 	  if (data.diskrotation ne 0.0) then z = rot(z,data.diskrotation,cubic=-0.5)
 	  z *= mask
-	  if (data.cbedmode eq 0) then begin
-	    BFcurrent = z
-	    tvscl, BFcurrent
-	  end else begin
-	    BFcurrent = alog10(z+data.logoffset)
-	    tvscl, BFcurrent
-	  end
+	  BFcurrent = z
+	  tvscl, BFcurrent
 	  WIDGET_CONTROL, SET_VALUE=string(data.BFmin,FORMAT="(E9.2)"), widget_s.BFmin
 	  WIDGET_CONTROL, SET_VALUE=string(data.BFmax,FORMAT="(E9.2)"), widget_s.BFmax
 ; then display the appropriate dark field pattern (single, symmetric single, or Eades)
@@ -271,10 +266,9 @@ end else begin
 		de = delist[data.cbedformat]
 		filename = DIALOG_PICKFILE(/write,default_extension=de,path=data.pathname,title='enter filename without extension')
 		if (data.lastmode eq 0) then begin
-		  im = fltarr(2*data.datadims[0],data.datadims[0])
-		  im[0,0] = BFcurrent
-		  im[data.datadims[0],0] = DFcurrent
-		  im = bytscl(im)
+		  im = bytarr(2*data.datadims[0],data.datadims[0])
+		  im[0,0] = bytscl(BFcurrent)
+		  im[data.datadims[0],0] = bytscl(DFcurrent)
 		  case de of
 		    'jpeg': write_jpeg,filename,im,quality=100
 		    'tiff': write_tiff,filename,reverse(im,2)
