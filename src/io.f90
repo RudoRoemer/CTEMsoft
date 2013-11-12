@@ -32,7 +32,7 @@
 !
 ! MODULE: io
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief IO routines
 !
@@ -84,7 +84,7 @@ contains
 !
 ! SUBROUTINE: Message
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief dump a message to standard output
 !

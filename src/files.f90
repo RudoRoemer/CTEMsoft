@@ -32,7 +32,7 @@
 !
 ! MODULE: files
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief everything that has to do with file-based input-output
 ! 
@@ -57,7 +57,7 @@ contains
 !
 ! SUBROUTINE: ResetData
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  reset all unit cell and symmetry variables to zero
 ! 
@@ -118,7 +118,7 @@ end subroutine
 !
 ! SUBROUTINE: DumpXtalInfo
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Write a brief summary of the crystal structure on the screen
 ! 
@@ -195,7 +195,7 @@ end subroutine DumpXtalInfo
 !
 ! SUBROUTINE: CrystalData
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief load or generate crystal data
 ! 
@@ -248,7 +248,7 @@ end subroutine
 !
 ! SUBROUTINE: SaveData
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief save crystal structure data to file
 ! 
@@ -283,7 +283,7 @@ end subroutine
 !
 ! SUBROUTINE: ReadDataFile
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  load crystal data in memory
 !
@@ -382,7 +382,7 @@ end subroutine
 !
 ! SUBROUTINE: SafeOpenFile
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  open a data file
 !
@@ -476,7 +476,7 @@ end subroutine SafeOpenFile
 !
 ! SUBROUTINE: SafeOpenFile
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  close a data file
 !
@@ -528,7 +528,7 @@ end subroutine SafeCloseFile
 !
 ! SUBROUTINE: CopyTemplateFiles
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  copy template files into local folder
 !
@@ -603,7 +603,7 @@ end subroutine CopyTemplateFiles
 !
 ! SUBROUTINE: Interpret_Program_Arguments
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  interpret the command line arguments
 !

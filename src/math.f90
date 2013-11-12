@@ -32,7 +32,7 @@
 !
 ! MODULE: math
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief collection of mathematical/numerical routines that don't fit anywhere else
 ! 
@@ -55,7 +55,7 @@ contains
 !
 ! SUBROUTINE:mInvert
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Invert a 3x3 matrix
 !
@@ -115,7 +115,7 @@ end subroutine mInvert
 !
 ! SUBROUTINE:cInvert
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Invert a 3x3 complex matrix
 !

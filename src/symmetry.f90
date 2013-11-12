@@ -32,7 +32,7 @@
 !
 ! MODULE: symmetry
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief all symmetry-related routines
 !
@@ -56,7 +56,7 @@ contains
 !
 ! SUBROUTINE: SYM_fillgen
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief create a generator matrix
 !
@@ -128,7 +128,7 @@ end subroutine SYM_fillgen
 !
 ! SUBROUTINE: MakeGenerators
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief construct all generator matrices
 !
@@ -243,7 +243,7 @@ end subroutine MakeGenerators
 !
 ! SUBROUTINE: matrixmult
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief multiply 4x4 matrices and reduce translation component
 !
@@ -303,7 +303,7 @@ end subroutine matrixmult
 !
 ! FUNCTION: isitnew
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief is this a new symmetry operator?
 !
@@ -350,7 +350,7 @@ end function isitnew
 !
 ! SUBROUTINE: GenerateSymmetry
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute all relevant symmetry operators
 !
@@ -453,7 +453,7 @@ end subroutine GenerateSymmetry
 !
 ! SUBROUTINE: Calc2DFamily
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute the indices of equivalent planes/directions
 !
@@ -527,7 +527,7 @@ end subroutine Calc2DFamily
 !
 ! SUBROUTINE: CalcFamily
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute the indices of equivalent planes/directions
 !
@@ -597,7 +597,7 @@ end subroutine CalcFamily
 !
 ! SUBROUTINE: CalcOrbit
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute the orbit of a point
 !
@@ -679,7 +679,7 @@ end subroutine CalcOrbit
 !
 ! SUBROUTINE: CalcStar
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute the star of a vector
 !
@@ -755,7 +755,7 @@ end subroutine CalcStar
 !
 ! SUBROUTINE: CalcPositions
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  compute atom positions in one or more unit cells
 !
@@ -866,7 +866,7 @@ end subroutine CalcPositions
 !
 ! SUBROUTINE: GetSetting
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  space group first or second setting
 !
@@ -931,7 +931,7 @@ end subroutine GetSetting
 !
 ! SUBROUTINE: GetSpaceGroup
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief asks the user for a space group number
 !
@@ -1040,7 +1040,7 @@ end subroutine GetSpaceGroup
 !
 ! SUBROUTINE: GetOrder
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  determine order of a subfamily
 !
@@ -1087,7 +1087,7 @@ end subroutine GetOrder
 !
 ! SUBROUTINE: ShortestG
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  determine shortest vector pair for a given zone
 !
@@ -1312,7 +1312,7 @@ end subroutine ShortestG
 !
 ! FUNCTION: IsGAllowed
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  is a reflection allowed?
 !
@@ -1359,7 +1359,7 @@ end function IsGAllowed
 !
 ! SUBROUTINE: BFsymmetry
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  What is the bright field symmetry?
 !
@@ -1421,7 +1421,7 @@ end subroutine BFsymmetry
 !
 ! SUBROUTINE: GetPatternSymmetry
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  Determine the diffraction group number and optionally produce output
 !
@@ -1479,7 +1479,7 @@ end function GetPatternSymmetry
 !
 ! FUNCTION: GetDiffractionGroup
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief get the diffraction group number for this zone axis orientation
 !
@@ -2069,7 +2069,7 @@ end function GetDiffractionGroup
 !
 ! SUBROUTINE: Generate2DSymmetry
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief generate the symmetry matrices for one of the 2D planar point groups.
 !
@@ -2204,7 +2204,7 @@ end subroutine Generate2DSymmetry
 !
 ! SUBROUTINE: CheckPatternSymmetry
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief verify the relative orientation of the 2D point group with respect to the standard orientation.
 !

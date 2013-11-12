@@ -32,7 +32,7 @@
 !
 ! MODULE: error
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief error handling routines
 !
@@ -55,7 +55,7 @@ contains
 !
 ! SUBROUTINE: FatalError
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Write error message and abort program
 !

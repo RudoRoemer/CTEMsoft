@@ -32,7 +32,7 @@
 !
 ! MODULE: local
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief 
 !> local definitions of single and double precision, general constants and variables
@@ -129,7 +129,7 @@ contains
 !
 ! SUBROUTINE: CTEMsoft
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief prints a copyright statement and the program name
 !

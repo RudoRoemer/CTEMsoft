@@ -32,7 +32,7 @@
 !
 ! MODULE: crystalvars
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Definition of all variables and types for crystallographic computations
 !

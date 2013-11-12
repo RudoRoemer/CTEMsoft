@@ -5,7 +5,7 @@
 !
 ! MODULE: dynamical
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief variables and types needed by diffraction module
 ! 
@@ -16,6 +16,7 @@
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date    3/14/02 MDG 2.2 added CalcDynMat routine
 !> @date    4/29/13 MDG 3.0 rewrite, moved stuff into gvectors and kvectors modules
+!> @date   11/05/13 MDG 3.1 added DynMats for multiphase calculations
 !--------------------------------------------------------------------------
 module dynamical
 
@@ -29,6 +30,10 @@ complex(kind=dbl),allocatable :: W(:), &         	! eigenvalue vector for Bloch 
                                  alpha(:), &     	! excitation amplitude vector
                                  DHWMz(:,:),&		! Darwin-Howie-Whelan matrix
                                  DynMat(:,:), &  	! dynamical matrix
+                                 DynMat0(:,:), &  	! dynamical matrix (for programs that need two or more of them)
+                                 DynMat1(:,:), &  	! dynamical matrix (for programs that need two or more of them)
+                                 DynMat2(:,:), &  	! dynamical matrix (for programs that need two or more of them)
+                                 DynMat3(:,:), &  	! dynamical matrix (for programs that need two or more of them)
                                  phiz(:),Az(:,:) 	! used for Taylor expansion of scattering matrix
 
 ! The parameters in gnode are computed by CalcUcg 

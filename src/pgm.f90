@@ -32,7 +32,7 @@
 !
 ! MODULE: pgm
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief routine to write an image to a pgm file
 !

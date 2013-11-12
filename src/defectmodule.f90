@@ -33,7 +33,7 @@
 !
 ! MODULE: defectmodule
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Provides a routine to compute the displacement vector for an array of defects.
 ! 
@@ -45,10 +45,10 @@ module defectmodule
 use local
 
 complex(kind=dbl),allocatable    	:: DF_Sarray(:,:,:),theta(:),DF_Svoid(:,:)
-real(kind=sgl),allocatable       		:: images(:,:,:),DF_foilsg(:,:),DF_inclusion(:,:),DF_R(:,:)
+real(kind=sgl),allocatable       	:: images(:,:,:),DF_foilsg(:,:),DF_inclusion(:,:),DF_R(:,:)
 
-integer(kind=irg)                		:: Nmat,DF_g(3),DF_npix,DF_npiy,DF_nums,DF_numinclusion,DF_numvoid
-real(kind=sgl)                   		:: DF_slice,DF_L,DF_gc(3),DF_gstar(3)
+integer(kind=irg)                	:: Nmat,DF_g(3),DF_npix,DF_npiy,DF_nums,DF_numinclusion,DF_numvoid
+real(kind=sgl)                   	:: DF_slice,DF_L,DF_gc(3),DF_gstar(3)
 
 contains
 
@@ -57,7 +57,7 @@ contains
 !
 ! SUBROUTINE: CalcR
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief returns the total displacement vector for each slice in a column
 !
@@ -83,10 +83,11 @@ contains
 !> - if the defect uses the foil reference frame (e.g., voids, inclusions), then use tmpf
 !>  as the current position vector.
 
-!> @date   10/20/98 MDG 1.0 original
-!> @date    5/22/01 MDG 2.0 f90
-!> @date   11/27/01 MDG 2.1 added kind support
-!> @date  03/26/13  MDG  3.0 updated IO
+!> @date  10/20/98 MDG 1.0 original
+!> @date   5/22/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  03/26/13 MDG 3.0 updated IO
+!> @date  10/30/13 MDG 3.1 debug of coordinate rotations
 !--------------------------------------------------------------------------
 subroutine CalcR(i,j,numvoids,numdisl,numYdisl,numsf,numinc)
 
@@ -100,49 +101,52 @@ use foilmodule
 use void
 use stacking_fault
 use inclusion
+use quaternions
+use rotations
 
 IMPLICIT NONE
 
 integer(kind=irg),INTENT(IN)    	:: i,j,numvoids,numdisl,numYdisl,numsf,numinc
-integer(kind=irg)				:: k, islice, ii
-real(kind=dbl)        				:: dis,xpos,ypos,zpos,sumR(3),thick,tmp(3), &
-							   tmpf(3),u(3),zaamp,zaphase,zar,zai,zr(3),zi(3), &
-                                 			   zt,fx,fy,fz,nunit(3)    !,&
+integer(kind=irg)			:: k, islice, ii
+real(kind=dbl)        			:: dis,xpos,ypos,zpos,sumR(3),thick,tmp(3),tmp2(3), &
+					   tmpf(3),u(3),zaamp,zaphase,zar,zai,zr(3),zi(3), &
+                                 	   zt,fx,fy,fz,nunit(3), a_fm(3,3)    !,&
 !                                nu,x,y,z,zn,t,pre,r1,r2,r3,th,rn 
                          			 
 complex(kind=dbl)     			:: za(3)
 complex(kind=sgl)     			:: zero
-logical               				:: void
+logical               			:: void
 
 ! scale the image coordinates with respect to the origin at the center of the image
  xpos = float(i-DF_npix/2)*DF_L
  ypos = float(j-DF_npiy/2)*DF_L
 
-! foil unit normal in microscope frame 
- nunit = quat_rotate_vector( conjg(foil%a_mc), dble(foil%Fn) )
- 
-! foil normal parameters for zpos computation
- fx = -nunit(1)/nunit(3)
- fy = -nunit(2)/nunit(3)
- fz = foil%zb*0.5
-
-
 ! determine the starting point of the z-integration for the tilted foil
 ! this depends on the foil normal components which give the equation
 ! of the top foil plane as F . r = -z0/2, from which we get zt...
-! fx = -foil%a_fm(1,3)
-! fy = -foil%a_fm(2,3)
-! fz = -foil%a_fm(3,3) 
-! zt = -(-0.5*foil%z0-xpos*fx-ypos*fy)/fz
-! zt = - (xpos*fx+ypos*fy+fz)
-zt = (xpos*fx+ypos*fy+fz)
+ a_fm = qu2om(foil%a_fm)
+ fx = -a_fm(1,3)
+ fy = -a_fm(2,3)
+ fz = a_fm(3,3) 
+ zt = foil%zb*0.5 - (fx*xpos + fy*ypos)/fz
 
 ! initialize some other variables
  thick = foil%zb
  zero = cmplx(0.0,0.0)
 
+
+!if ((i.eq.120).and.(j.eq.125)) then 
+!  write (*,*) fx,fy,fz,nunit,zt,thick
+!end if
+
+
 ! loop over all slices (this is the main loop)
  sliceloop: do islice = 1,DF_nums 
+
+if ((i.eq.120).and.(j.eq.125).and.(islice.eq.1)) then 
+ write (*,*) 'Total thickness = ',DF_nums*DF_slice, foil%zb
+end if
+
 
 ! zpos is the position down the column, starting at zt (in image coordinates)
     zpos = zt - float(islice)*DF_slice
@@ -152,6 +156,7 @@ zt = (xpos*fx+ypos*fy+fz)
         
 !
     tmpf = quat_rotate_vector( conjg(foil%a_fi), dble( (/ xpos, ypos, zpos /)) )
+
 
 !------------
 !----VOIDS---
@@ -186,11 +191,21 @@ if (numvoids.ne.0) then
 !-----------------
 ! let's put a few dislocations in ... (see section 8.4.2)
 do ii=1,numdisl
-         tmp =  (/ xpos, ypos, zpos /) - &
-                    quat_rotate_vector( conjg(foil%a_fi), dble((/ DF_L*DL(ii)%id, DF_L*DL(ii)%jd, DL(ii)%zfrac*foil%z0 /)) )
+!         tmp2 =  (/ xpos, ypos, zpos /) - &
+!                    quat_rotate_vector( foil%a_fi, dble((/ DF_L*DL(ii)%id, DF_L*DL(ii)%jd, DL(ii)%zfrac*foil%z0 /)) )
+        tmp2 =  (/ xpos, ypos, zpos /) - (/ DF_L*DL(ii)%id, DF_L*DL(ii)%jd, DL(ii)%zfrac*foil%z0 /)
 
+!if ((i.eq.120).and.(j.eq.125)) then 
+!  write (*,*) xpos, ypos, zpos, DF_L*DL(ii)%id, DF_L*DL(ii)%jd, DL(ii)%zfrac*foil%z0
+!  write (*,*) tmp2
+!end if  
 ! then convert the difference vector to the defect reference frame for this dislocation (we will only need the x and y coordinates)
-         tmp = quat_rotate_vector( DL(ii)%a_id, dble(tmp) ) 
+         tmp = quat_rotate_vector( conjg(DL(ii)%a_di), dble(tmp2) ) 
+!         tmp = quat_rotate_vector( DL(ii)%a_di, quat_rotate_vector( conjg(foil%a_fi), dble(tmp2) ) ) 
+!if ((i.eq.120).and.(j.eq.125)) then 
+!  write (*,*) tmp
+!  write (*,*) '--'
+!end if  
 
 ! compute x1 + p_alpha x2  (eq. 8.38)
   za(1:3) = tmp(1) + DL(ii)%pa(1:3)*tmp(2)
@@ -232,7 +247,7 @@ do ii=1,numdisl
   end if
   u = 2.0*real(matmul(DL(ii)%dismat,cmplx(zr,zi)))
 ! transform displacement vector u to the Cartesian crystal reference frame
-  u = quat_rotate_vector( DL(ii)%a_dc, dble(u) )  
+  u = quat_rotate_vector( conjg(DL(ii)%a_dc), dble(u) )  
   sumR = sumR + u 
 end do
 

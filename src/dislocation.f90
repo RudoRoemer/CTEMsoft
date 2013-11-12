@@ -32,7 +32,7 @@
 !
 ! MODULE: dislocation
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Provides routines to compute the displacement vector for various dislocations.
 ! 
@@ -59,13 +59,13 @@ contains
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE: TransFourthRankTensor
+! SUBROUTINE: TransFourthRankTensor 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  transform a fourth rank tensor using a given transformation matrix
 ! 
-!> @note This is one ofthe very few places in this package where we still use the 
+!> @note This is one of the very few places in this package where we still use the 
 !> good old-fashioned rotation matrix instead of quaternions... Note also that we
 !> use the 6x6 notation for the tensors, so we need to convert them to real tensor
 !> notation before carrying out the rotations.
@@ -151,7 +151,7 @@ end subroutine TransFourthRankTensor
 !
 ! SUBROUTINE: laguer
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  Laguerre polynomial, based on Numerical Recipes routine of the same name
 !
@@ -233,7 +233,7 @@ end subroutine laguer
 !
 ! SUBROUTINE: zroots
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  Polynomial roots, based on Numerical Recipes routine of the same name
 !
@@ -366,7 +366,7 @@ end subroutine
 !
 ! SUBROUTINE: makedislocation
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  Compute the dismat displacement matrix for a given dislocation
 !
@@ -383,16 +383,17 @@ end subroutine
 !>
 !> We must also make sure that the x=0 plane of the defect reference frame contains the 
 !> incident beam direction, to avoid getting stacking-fault fringes in the wrong plane...
-!> Stacking faults are added in using a different module (stacking_fault.f90).
+!> Actual stacking faults are added in using a different module (stacking_fault.f90).
 !>
 !> @param inum
 !> @param dinfo
 !> @param DF_L column width
 ! 
-!> @date 1/5/99   MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90 version
-!> @date   11/27/01 MDG 2.1 added kind support
-!> @date   06/04/13 MDG 3.0 rewrite
+!> @date   1/ 5/99 MDG 1.0 original
+!> @date   5/19/01 MDG 2.0 f90 version
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  06/04/13 MDG 3.0 rewrite
+!> @date  10/30/13 MDG 3.1 debug of all rotation parts
 !--------------------------------------------------------------------------
 subroutine makedislocation(inum,dinfo,DF_L)
 
@@ -409,20 +410,20 @@ use rotations
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(IN)	:: inum
-integer(kind=irg),INTENT(IN)	:: dinfo
-real(kind=sgl),INTENT(IN)	:: DF_L
+integer(kind=irg),INTENT(IN)		:: inum
+integer(kind=irg),INTENT(IN)		:: dinfo
+real(kind=sgl),INTENT(IN)		:: DF_L
 
 real(kind=dbl)          		:: zz,zang,zmin
 real(kind=sgl)          		:: ec(6,6),lec(6,6)
 real(kind=dbl)				:: a_dc(3,3),tmp(3),ex(3),ey(3)
 real(kind=dbl)          		:: Bij(3,3),Hij(3,3)
 complex(kind=dbl)       		:: a(0:6),b(0:6),c(0:6),d(0:6),e(0:6),ff(0:6),tt(5,0:6),s(0:6),roots(6), &
-                                        	  zero,pasq(3),mat(3,3),aka(3,3),Lia(3,3),Mai(3,3),v(3),pas
+                                         zero,pasq(3),mat(3,3),aka(3,3),Lia(3,3),Mai(3,3),v(3),pas
 integer(kind=irg)       		:: i,j,k,l,imin,ind(3),jnd(3)
 
 
-! convert line direction and g-vector to the Cartesian reference frame
+! convert line direction and g-vector to the Cartesian crystal reference frame
 call TransSpace(DL(inum)%u,DL(inum)%un,'d','c')
 call TransSpace(DL(inum)%g,DL(inum)%gn,'r','c')
 ! normalize both vectors
@@ -443,7 +444,9 @@ end if
 ! transform the line direction to the foil reference frame
 tmp = quat_rotate_vector( foil%a_fc, dble(DL(inum)%un) ) / DF_L
 
-write (*,*) 'transformed line direction ', tmp, zang, zz
+if (dinfo.eq.1) then
+  write (*,*) 'transformed line direction ', tmp, zang, zz
+end if
 
 ! determine the top and bottom intersection coordinates 
 if (zz.gt.0.0) then  ! u points to the top of the foil
@@ -461,12 +464,15 @@ if (dinfo.eq.1) then
 end if 
 
 ! a_dc (crystal to defect)  matrix corrected on 11/29/10 to put defect x-axis in the plane of u and B
-write (*,*) 'cartesian quantities'
-write (*,*) 'unit line direction = ',DL(inum)%un
-write (*,*) 'unit beam direction = ',foil%Bn
+if (dinfo.eq.1) then
+  write (*,*) 'cartesian quantities'
+  write (*,*) 'unit line direction = ',DL(inum)%un
+  write (*,*) 'unit beam direction = ',foil%Bn
+end if
 
 ! transform beam direction (currently in foil frame) to cartesian 
-tmp = quat_rotate_vector(foil%a_fc, dble(foil%Bn))
+tmp = quat_rotate_vector(conjg(foil%a_fc), dble(foil%Bn))
+!tmp = quat_rotate_vector(conjg(foil%a_fc), (/ 0.0D0, 0.0D0, -1.0D0/) )
 call NormVec(tmp,'c')
 
 ! the defect z axis is the line direction and x is in the plane of u and B to avoid the intrinsic discontinuity (cut plane)
@@ -479,26 +485,28 @@ call NormVec(ey,'c')
 a_dc(2,1:3) = ey(1:3)
 DL(inum)%a_dc = om2qu(a_dc)
 
-call PrintMatrixd('a_dc',a_dc)
-
-!if (dinfo.eq.1)  then
-!  call print_q_matrix('a_dc',DL(inum)%a_dc)
-!  call print_q_matrix('a_fm',foil%a_fm)
-!  call print_q_matrix('a_mi',foil%a_mi)
-!end if
+if (dinfo.eq.1) then
+  call PrintMatrixd('a_dc',a_dc)
+end if
 
 ! a_di (image to defect)
-DL(inum)%a_di = conjg(foil%a_ic) * DL(inum)%a_dc
+DL(inum)%a_di = quat_mult( DL(inum)%a_dc, conjg(foil%a_ic) )
 DL(inum)%a_id = conjg(DL(inum)%a_di)
-!if (dinfo.eq.1)  call print_q_matrix('a_di',DL(inum)%a_di)
+
+if (dinfo.eq.1) then
+  call print_orientation(init_orientation(DL(inum)%a_di,'qu'),'om','a_di: ')
+  call print_orientation(init_orientation(DL(inum)%a_id,'qu'),'om','a_id: ')
+end if
 
 ! Burgers vector (in the defect reference frame !!!)
 ! first transform Burgers vector to crystal cartesian reference frame
 call TransSpace(dble(DL(inum)%burg),tmp,'d','c')
 ! then convert this to the defect reference frame
-DL(inum)%burgd(1:3) = quat_rotate_vector(conjg(DL(inum)%a_dc),dble(tmp))
+DL(inum)%burgd(1:3) = quat_rotate_vector(DL(inum)%a_dc,dble(tmp))
 
-write (*,*) 'rotated burgers vector  = ', DL(inum)%burgd(1:3) 
+if (dinfo.eq.1) then
+  write (*,*) 'rotated burgers vector  = ', DL(inum)%burgd(1:3) 
+end if
 
 ! transform the elastic moduli
 lec = foil%elmo
@@ -680,7 +688,7 @@ end subroutine makedislocation
 !
 ! SUBROUTINE: read_dislocation_data
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  read dislocation namelist files
 !
@@ -707,8 +715,8 @@ use files
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)	 	:: dislname(3*maxdefects)
-integer(kind=irg),INTENT(IN)	:: numdisl, numsf, DF_npix, DF_npiy, dinfo
-real(kind=sgl),INTENT(IN)	:: DF_gf(3), L
+integer(kind=irg),INTENT(IN)		:: numdisl, numsf, DF_npix, DF_npiy, dinfo
+real(kind=sgl),INTENT(IN)		:: DF_gf(3), L
 
 integer(kind=irg) 			:: i
 real(kind=dbl) 				:: id,jd,u(3),bv(3),zfrac, poisson
@@ -722,10 +730,11 @@ namelist / dislocationdata / id, jd, u, bv, zfrac, poisson
 ! allocate the memory for the dislocation parameters
   allocate(DL(numdisl+2*numsf))
 
-do i=1,numdisl
-  write (*,*) i,'->',trim(dislname(i)),'<-'
-end do
-
+if (dinfo.eq.1) then
+  do i=1,numdisl
+    write (*,*) i,'->',trim(dislname(i)),'<-'
+  end do
+end if
 
 ! these are just the individual dislocations; the ones that belong to 
 ! stacking faults are handled separately

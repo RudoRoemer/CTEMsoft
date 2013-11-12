@@ -3202,6 +3202,9 @@ else
   call WriteValue('					  \', ioreal, 3, "(2(F8.4,' '),F8.4,' /')")
 end if
 
+mess = ' '
+call Message("(A/)")
+
 end subroutine print_orientation
 
 !--------------------------------------------------------------------------
@@ -3294,6 +3297,10 @@ else
   ioreal(1:3) = o%om(3,1:3)
   call WriteValue('					  \', ioreal, 3, "(2(F8.4,' '),F8.4,' /')")
 end if
+
+
+mess = ' '
+call Message("(A/)")
 
 end subroutine print_orientation_d
 

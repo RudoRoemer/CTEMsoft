@@ -1,0 +1,980 @@
+! ###################################################################
+! Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
+! All rights reserved.
+!
+! Redistribution and use in source and binary forms, with or without modification, are 
+! permitted provided that the following conditions are met:
+!
+!     - Redistributions of source code must retain the above copyright notice, this list 
+!        of conditions and the following disclaimer.
+!     - Redistributions in binary form must reproduce the above copyright notice, this 
+!        list of conditions and the following disclaimer in the documentation and/or 
+!        other materials provided with the distribution.
+!     - Neither the names of Marc De Graef, Carnegie Mellon University nor the names 
+!        of its contributors may be used to endorse or promote products derived from 
+!        this software without specific prior written permission.
+!
+! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+! AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+! IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+! ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE 
+! LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
+! DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
+! SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
+! CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
+! OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+! USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+! ###################################################################
+
+!--------------------------------------------------------------------------
+! CTEMsoft2013:CTEMgamma.f90
+!--------------------------------------------------------------------------
+!
+! PROGRAM: CTEMgamma 
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief Near zone axis image simulation for mix of gamma and gamma' phases
+!
+!> @details Based on a conversation with Mike Mills on 11/01/13; question we 
+!> try to answer is the following: how can we perform a dynamical simulation
+!> of a two-phase microstructure, in which the precipitates have a structure
+!> that has many reflections in common with the disordered matrix.  In this
+!> particular case, obviously we have fcc Ni solid solution, and L1_2 ordere
+!> gamma phase.  
+!>
+!> We'll stick to near [001] zone axis orientations for now; we need to load 
+!> two crystal structures, compute the dynamical matrix for the ordered phase,
+!> then copy that for the disordered phase and recompute the scattering factors;
+!> to do this efficiently, we may want to re-order the reflections into two
+!> groups (fundamental and superlattice), although that is not essential to the
+!> simulation.  The microstructure can be loaded from a file, and has simple
+!> integers on each voxel, indicating which phase the voxel belongs to.  Once
+!> we have the scattering matrices for both phases, it is just a matter of running
+!> down each integration column.  We can then also implement a bent foil, which
+!> is equivalent to a beam tilt, so we can likely reuse some of the lacbed code. 
+!>
+!
+!> @date 11/02/13 MDG 1.0 original (took a few days to get it right...)
+!--------------------------------------------------------------------------
+program CTEMgamma
+
+use local
+use files
+use io
+
+IMPLICIT NONE
+
+character(fnlen)			:: nmldeffile
+
+! deal with the command line arguments, if any
+nmldeffile = 'CTEMgamma.nml'
+progname = 'CTEMgamma.f90'
+call Interpret_Program_Arguments(nmldeffile,1,(/ 30 /) )
+
+! perform the (near) zone axis computations
+call GAMMAimage(nmldeffile)
+
+end program CTEMgamma
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:GAMMAimage
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief compute the bright field and dark field images for a bent foil
+!> with a gamma-gamma' microstructure, using full dynamical theory
+!
+!> @param nmlfile namelist file name
+!
+!> @date 11/02/13  MDG 1.0 original
+!--------------------------------------------------------------------------
+subroutine GAMMAimage(nmlfile)
+
+use local
+use constants
+use crystal
+use crystalvars
+use diffraction
+use gvectors
+use kvectors
+use MBmodule
+use postscript, ONLY: GetIndex
+use symmetry
+use math
+use dynamical
+use io
+use error
+use files
+use omp_lib
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)	:: nmlfile
+
+real(kind=sgl)      		:: ktmax, io_real(3), bragg, thetac, sc, minten, pxy(2), galen, &
+                       	   frac, dmin, convergence, voltage, thick, klaue(2), thetam , dhkl, &
+                       	   xstep, ystep, zstep, gmax, gcur
+integer(kind=irg)   		:: ijmax,ga(3),gb(3),k(3),cnt,fn(3), PX, ss, icnt, pgnum, ih, nunique, famnum, numg, iz, &
+                      		   newcount,count_rate,count_max, io_int(6), i, j, isym, ir, skip, ghkl(3), gammapNBeams, &
+                      		   npx, npy, numt, numk, npix, ik, ip, jp, istat, dgn, nbeams, gafcc(3),gbfcc(3), sdm(2), &
+                      		   ifamily, famhkl(3), inum, maxHOLZ, numksame, sLUT(3), imh, imk ,iml, dimx, dimy, dimz, &
+                      		   ix, iy, jj, jnum, ii, vdimx, vdimy, vdimz
+complex(kind=dbl)		:: pre, DUg, DUgp, czero
+real(kind=dbl)			:: x, z0            
+character(3)			:: method
+character(fnlen)     		:: outname, gammaname, gammapname, microfile, variantfile
+logical				:: variants
+
+complex(kind=dbl),allocatable 	:: gammaLUT(:,:,:), gammapLUT(:,:,:), ScatMat(:,:), amp(:), amp2(:), &
+				   ScatMat0(:,:), ScatMat1(:,:), ScatMat2(:,:), ScatMat3(:,:)
+type(reflisttype),pointer 	:: gammapreflist, gammareflist
+type (unitcell) 		:: gammacell, gammapcell
+
+real(kind=sgl),allocatable    	:: images(:,:,:)
+real(kind=sgl),allocatable 	:: microstructure(:,:,:)
+integer(kind=sgl),allocatable 	:: variantnumber(:,:,:)
+real(kind=sgl),allocatable    	:: inten(:)
+real(kind=dbl)			:: s(3)
+
+namelist /GAMMAlist/ gammaname, gammapname, microfile, stdout, voltage, k, fn, klaue, dmin, &
+		      convergence,thick, npix, outname, variants, variantfile
+
+! set the input parameters to default values
+gammaname = 'undefined'	! initial value to check that the keyword is present in the nml file (gamma phase)
+gammapname = 'undefined'	! initial value to check that the keyword is present in the nml file (gamma' phase)
+microfile = 'undefined'	! microstructure file name
+variants = .FALSE.		! do we load variant information ?
+variantfile = 'undefined'	! variant information file
+stdout = 6			! standard output
+voltage = 200000.0		! acceleration voltage [V]
+k = (/ 0, 0, 1 /)		! beam direction [direction indices]
+fn = (/ 0, 0, 1 /)		! foil normal [direction indices]
+klaue = (/ 0.0, 0.0 /)		! Laue center coordinates
+dmin = 0.04			! smallest d-spacing to include in dynamical matrix [nm]
+convergence = 25.0		! beam convergence angle [mrad]
+thick = 100.0			! thickness increment
+npix = 256			! output arrays will have size (2*npix+1 x 2*npix+1)
+outname = 'gammaout.data'	! output filename
+
+maxHOLZ = 0
+pre = dcmplx(0.D0,cPi)	! i times pi
+czero = dcmplx(0.0,0.0)
+
+! read the namelist file
+open(UNIT=dataunit,FILE=nmlfile,DELIM='apostrophe',STATUS='old')
+read(UNIT=dataunit,NML=GAMMAlist)
+close(UNIT=dataunit,STATUS='keep')
+
+! make sure all the input files exist
+if (trim(gammaname).eq.'undefined') then
+  call FatalError('CTEMgamma:',' gamma structure file name is undefined in '//nmlfile)
+end if
+
+if (trim(gammapname).eq.'undefined') then
+  call FatalError('CTEMgamma:',' gamma'' structure file name is undefined in '//nmlfile)
+end if
+
+if (trim(microfile).eq.'undefined') then
+  call FatalError('CTEMgamma:',' microstructure file name is undefined in '//nmlfile)
+end if
+
+if (variants.and.(trim(variantfile).eq.'undefined')) then
+  call FatalError('CTEMgamma:',' variant file name is undefined in '//nmlfile)
+end if
+
+! print some information
+ progname = 'CTEMgamma.f90'
+ progdesc = 'Gamma-gamma'' microstructre dynamical image simulation'
+ call CTEMsoft
+
+! mess = 'Input parameter list: '; call Message("(A)")
+! write (stdout,NML=GAMMAlist)
+
+! first we initialize the gamma' structure and dynamical matrix; once
+! that is complete, we read the gamma structure and create its dynamical
+! matrix, using all the reflections of the gamma' phase instead of the 
+! smaller list for the gamma phase... this will produce a lot of zeroes
+! in the matrix, but that's not a problem.
+
+! first get the gamma' crystal data and microscope voltage
+ SG%SYM_reduce=.TRUE.
+ call CrystalData(gammapname)
+ skip = 3
+ call CalcWaveLength(dble(voltage),skip)
+
+! generate all atom positions
+ call CalcPositions('v')
+ 
+! set the foil normal 
+ DynFN = float(fn)
+ 
+! determine the point group number
+ j=0
+ do i=1,32
+  if (SGPG(i).le.cell % SYM_SGnum) j=i
+ end do
+
+! use the new routine to get the whole pattern 2D symmetry group, since that
+! is the one that determines the independent beam directions.
+ dgn = GetPatternSymmetry(k,j,.TRUE.)
+ pgnum = j
+ isym = WPPG(dgn) ! WPPG lists the whole pattern point group numbers vs. diffraction group numbers
+
+! determine the shortest reciprocal lattice points for this zone
+ call ShortestG(k,ga,gb,isym)
+ io_int(1:3)=ga(1:3)
+ io_int(4:6)=gb(1:3)
+ call WriteValue(' Reciprocal lattice vectors : ', io_int, 6,"('(',3I3,') and (',3I3,')',/)")
+
+! initialize the HOLZ geometry type
+ call GetHOLZGeometry(float(ga),float(gb),k,fn) 
+
+! construct the list of all possible reflections
+ method = 'ALL'
+ thetac = convergence/1000.0
+ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxHOLZ,thetac)
+ galen = CalcLength(float(ga),'r')
+
+! determine range of incident beam directions
+ bragg = CalcDiffAngle(ga(1),ga(2),ga(3))*0.5
+  
+! convert to ktmax along ga
+ ktmax = 0.5*thetac/bragg
+
+! the number of pixels across the disk is equal to 2*npix + 1
+ npx = npix
+ npy = npx
+ io_int(1) = 2.0*npx + 1
+ call WriteValue('Number of image pixels along edge of output images = ', io_int, 1, "(I4)")
+ mess=' '; call Message("(A/)")
+  
+! set parameters for wave vector computation
+! klaue = (/ 0.0, 0.0 /)
+ ijmax = 2.0*float(npx)**2   ! truncation value for beam directions
+
+! there's no point in using symmetry here because the microstructure file does not have any symmetry.
+ isym = 1
+ call Calckvectors(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,'Standard',.FALSE.)
+
+! call CalckvectorsSymmetry(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,klaue)
+
+! we'll have to use a special routine to create the dynamical matrix; no need to use Bethe potentials
+! at this point in time.  We need to do this for every incident beam direction, so we need to save
+! the gamma' LUT table as well as the gamma LUT.  The gamma DynMat must have the same size as that 
+! of the gamma' phase, to allow for phase overlap and continuity at the phase boundaries.
+! The master list is easily created by brute force
+write (*,*) 'prefactor = ',pre
+
+ sLUT = shape(LUT)
+ imh = (sLUT(1)-1)/2
+ imk = (sLUT(2)-1)/2
+ iml = (sLUT(3)-1)/2
+! deallocate(LUT)
+ allocate(gammapLUT(-imh:imh,-imk:imk,-iml:iml),stat=istat)
+ do ix=-imh,imh
+  do iy=-imk,imk
+   do iz=-iml,iml
+     call CalcUcg( (/ ix, iy, iz /) ) ! compute potential Fourier coefficient
+     gammapLUT(ix, iy, iz) = pre*rlp%qg
+   end do 
+  end do 
+ end do      
+ gammapNBeams = DynNbeamsLinked
+
+! in addition we need to keep the reflection linked lists for both phases, so we'll assign the 
+! head of the reflection list for the gamma' phase to the pointer gammapreflist 
+ gammapreflist => reflist%next 
+ deallocate(reflist)
+ gammapcell = cell
+! get the absorption coefficient
+ call CalcUcg( (/0,0,0/) )
+ DUgp = pre*rlp%qg
+
+! this is really all we need to keep for the gamma' phase
+
+! ===================================================
+
+! next, we load the gamma phase crystal structure and compute its list of reflections and LUT
+! we might need to merge the two lists into a special two-phase structure for efficiency
+ SG%SYM_reduce=.TRUE.
+ call CrystalData(gammaname)
+
+! generate all atom positions
+ call CalcPositions('v')
+ 
+! here we need to create a new LUT, using the list of existing reflections
+ allocate(gammaLUT(-imh:imh,-imk:imk,-iml:iml),stat=istat)
+! we need to use all the reflections from the gamma prime list to compute the LUT entries for the gamma phase
+ do ix=-imh,imh
+  do iy=-imk,imk
+   do iz=-iml,iml
+     call CalcUcg( (/ ix, iy, iz /) ) ! compute potential Fourier coefficient
+     gammaLUT(ix, iy, iz) = pre*rlp%qg
+   end do 
+  end do 
+ end do      
+ gammacell = cell
+! get the absorption coefficient
+ call CalcUcg( (/0,0,0/) )
+ DUg = pre*rlp%qg
+
+!write (*,*) 'prefactor = ',pre
+!write (*,*) DUgp, gammapLUT(0,0,0), gammapLUT(1,0,0), gammapLUT(2,0,0)
+!write (*,*) DUg, gammaLUT(0,0,0), gammaLUT(1,0,0), gammaLUT(2,0,0)
+
+! and reset the number of linked beams to that in the gammapreflist
+ DynNbeamsLinked = gammapNBeams
+
+! ===================================================
+
+! ok, so now we have two LUTs, one for gamma, one for gamma', and two linked lists of reflections.
+! next we need to read the microstructure file, which has 1 for gamma and 2 for gamma' along with
+! scale factors for the x, y, and z directions.  x lines up with the horizontal image direction
+! (we can do more detailed foil geometry stuff at a later time so for now the foil is parallel and horizontal).
+!
+! Note that the dimensions of the microstructure file are likely different from those of the output
+! data set.  So we will need a kind of interpolation routine between the image/foil reference frame 
+! and that of the microstructure (i.e., an independent scale parameter).  We do need to sample the 
+! microstructure along the beam direction lines for each image sampling point.
+!
+! For a future implementation, we can also allow for the gamma-gamma' interface to be continuous; this
+! would mean that we simly take the weighted average of the two scattering matrices.  We can also 
+! incorporate the anti-phase displacement vector for each gamma' particle, since this would be simply
+! turning on a constant displacement inside that particle.  Since we're going to include defects later
+! on, we might as well include that effect.  All this to say that the format of the microstructure file
+! will undoubtedly change at some point in the future.
+ open(unit=dataunit,file=trim(microfile),status='old',form='unformatted')
+ read (dataunit) dimx, dimy, dimz
+ read (dataunit) xstep, ystep, zstep
+ allocate(microstructure(-npix:npix,-npix:npix, dimz ),stat=istat)
+ read (dataunit) microstructure
+ close(unit=dataunit,status='keep')
+ mess = 'Loaded the microstructure file '//trim(microfile)
+ call Message("(A)")
+ if (variants) then  
+   open(unit=dataunit,file=trim(variantfile),status='old',form='unformatted')
+   read (dataunit) vdimx, vdimy, vdimz
+   if (sum( abs( (/ dimx, dimy, dimz /) - (/vdimx, vdimy, vdimz /) ) ) .ne. 0) then
+     call FatalError('GAMMAImage',' inconsistent dimensions in variant and microstructure files')
+   end if
+   write (*,*) dimx, dimy, dimz, vdimx, vdimy, vdimz
+   allocate(variantnumber(-npix:npix,-npix:npix, dimz ),stat=istat)
+   read (dataunit) variantnumber
+   close(unit=dataunit,status='keep')
+   mess = 'Loaded the variant identification file '//trim(variantfile)
+   call Message("(A)")
+ end if
+! ===================================================
+
+! we're done with the initializations; let's start the image computation.
+! we need to first determine how many reflections we're going to store in
+! in the output file (to be replaced later with BF/HAADF signals).
+! we'll keep all reflections with |g| <= |g_{220}| for the L1_2 phase.
+ cell = gammapcell
+ gmax = CalcLength( (/ 2.0, 2.0, 0.0 /),'r')
+! go through the gammapreflist and count/tag the ones that satisfy this condition   
+ rltmpa  => gammapreflist
+ rltmpa%famnum = 1	! we'll use this field to identify the reflections that will be in the output file
+ numg = 1
+ write (*,*) numg, rltmpa%hkl(1),rltmpa%hkl(2),rltmpa%hkl(3)
+ rltmpa => rltmpa%next
+ do
+   if (.not.associated(rltmpa)) EXIT
+   gcur = CalcLength( float(rltmpa%hkl), 'r')
+   if (gcur.le.gmax) then
+     numg = numg+1
+     rltmpa%famnum = numg
+     write (*,*) numg, rltmpa%hkl(1),rltmpa%hkl(2),rltmpa%hkl(3)
+   else
+     rltmpa%famnum = 0
+   end if
+   rltmpa => rltmpa%next 
+ end do
+
+! now we can allocate the output image array
+  allocate(images(-npix:npix,-npix:npix,1:numg),stat=istat)
+  images=0.0
+write (*,*) 'shape images', shape(images)
+
+! ===================================================
+
+! print the number of incident wave vectors that need to be considered
+  io_int(1)=numk
+  call WriteValue('Starting computation for # beam directions = ', io_int, 1, "(I8)")
+
+! time the computation
+  cnt = 0
+  call system_clock(cnt,count_rate,count_max)
+
+! ================ main image loop =============
+reflist => gammapreflist
+z0 = zstep ! step size for scattering matrix
+frac = 0.05
+
+! point to the first beam direction (this is really the first pixel in the image)
+  ktmp => khead
+! loop over all beam orientations, selecting them from the linked list
+kvectorloop:  do ik = 1,numk
+
+	ip = -ktmp%i
+ 	jp =  ktmp%j
+!write (*,*) 'starting DynMat computation'
+
+! compute the dynamical matrix for both phases and this particular incident beam direction
+!write (*,*) 'entering DynMat routine'
+	call Compute_GGp_DynMats(gammaLUT, gammapLUT, imh, imk, iml, ktmp%k, ktmp%kt, variants)
+!write (*,*) 'return form DynMat'
+
+! compute the scattering matrices for both phases and for a slice thickness of 1 nm
+	sdm = shape(DynMat)
+	if (variants) then  ! allocate scattering matrices for all 4 gamma-prime variants 
+  	  allocate(ScatMat(sdm(1),sdm(2)),ScatMat0(sdm(1),sdm(2)),ScatMat1(sdm(1),sdm(2)), &
+		   ScatMat2(sdm(1),sdm(2)),ScatMat3(sdm(1),sdm(2)))
+	  ScatMat = dcmplx(0.0,0.0)
+	  ScatMat0 = dcmplx(0.0,0.0)
+	  ScatMat1 = dcmplx(0.0,0.0)
+	  ScatMat2 = dcmplx(0.0,0.0)
+	  ScatMat3 = dcmplx(0.0,0.0)
+	else ! no variants, just two different scattering matrices
+ 	  allocate(ScatMat(sdm(1),sdm(2)),ScatMat0(sdm(1),sdm(2)))
+	  ScatMat = dcmplx(0.0,0.0)
+	  ScatMat0 = dcmplx(0.0,0.0)
+	end if
+!write (*,*) 'initialized ScatMats ',variants	
+
+! and perform the exponentiations
+	if (variants) then 
+	  call MatrixExponential(DynMat, ScatMat, z0, 'Pade', sdm(1))
+	  call MatrixExponential(DynMat0, ScatMat0, z0, 'Pade', sdm(1))
+	  call MatrixExponential(DynMat1, ScatMat1, z0, 'Pade', sdm(1))
+	  call MatrixExponential(DynMat2, ScatMat2, z0, 'Pade', sdm(1))
+	  call MatrixExponential(DynMat3, ScatMat3, z0, 'Pade', sdm(1))
+	else
+	  call MatrixExponential(DynMat, ScatMat, z0, 'Pade', sdm(1))
+	  call MatrixExponential(DynMat0, ScatMat0, z0, 'Pade', sdm(1))
+	end if
+!if (ik.eq.1) then 
+!  open(unit=dataunit,file='arrays.data',status='unknown',form='unformatted')
+!  write (*,*) 'dimension = ',shape(DynMat),shape(ScatMat),shape(DynMat2),shape(ScatMat2)
+!  write(dataunit) DynMat
+!  write(dataunit) DynMat2
+!  write(dataunit) ScatMat
+!  write(dataunit) ScatMat2
+!  close(unit=dataunit,status='keep')
+!end if
+
+! allocate the intensity array 
+	allocate(inten(DynNbeams), amp(DynNbeams))
+  	inten = 0.0
+
+! then iterate through the microstructure array, selecting the appropriate scattering matrix 
+! for each point.  This requires the equation of the line along the current beam direction. 
+! for now, we'll simply go straight down the column; we'll assume that z0 = zstep as well.
+	amp = cmplx(0.D0,0.D0)
+	amp(1) = cmplx(1.D0,0.D0)
+	if (variants) then 
+	  do iz=1,dimz 
+	    select case (variantnumber(ip,jp,iz))
+	      case (0) 
+		amp = matmul( ScatMat, amp )
+	      case (1) 
+		amp = matmul( (1.0-microstructure(ip,jp,iz))*ScatMat + microstructure(ip,jp,iz)*ScatMat0, amp )
+	      case (2) 
+		amp = matmul( (1.0-microstructure(ip,jp,iz))*ScatMat + microstructure(ip,jp,iz)*ScatMat1, amp )
+	      case (3) 
+		amp = matmul( (1.0-microstructure(ip,jp,iz))*ScatMat + microstructure(ip,jp,iz)*ScatMat2, amp )
+	      case (4) 
+		amp = matmul( (1.0-microstructure(ip,jp,iz))*ScatMat + microstructure(ip,jp,iz)*ScatMat3, amp )
+	      case default
+		i=0
+	    end select
+ 	  end do
+	else
+	  do iz=1,dimz 
+	    amp = matmul( (1.0-microstructure(ip,jp,iz))*ScatMat + microstructure(ip,jp,iz)*ScatMat0, amp )
+ 	  end do
+ 	end if
+ 	inten = cabs(amp)**2
+
+!write (*,*) ik, maxval(cabs(ScatMat)),maxval(cabs(DynMat)), maxval(inten), DynNbeams
+
+! ok, we have all the intensities.  Next we need to copy the relevant intensities into the slots 
+! of the disk array, one for each required reflection.
+	rltmpa => reflist
+	do i=1,DynNbeamsLinked
+	  if (BetheParameter%stronglist(i).ne.0) then ! is this a reflection on the current list
+ 	    if (BetheParameter%reflistindex(i).gt.0) then
+              images(ip,jp,BetheParameter%reflistindex(i)) = inten(BetheParameter%stronglist(i))
+	    end if
+	  end if
+	  rltmpa => rltmpa%next
+	end do
+
+! and remove the intensity and scattering matrix arrays
+	if (variants) then 
+	  deallocate(inten, ScatMat, ScatMat0, ScatMat1, ScatMat2, ScatMat3, amp)
+	else
+	  deallocate(inten, ScatMat, ScatMat0, amp)
+       end if
+! select next beam direction
+   if (ik.ne.numk) ktmp => ktmp%next
+
+! update computation progress
+   if (float(ik)/float(numk) .gt. frac) then
+    io_int(1) = nint(100.0*frac) 
+    call WriteValue('       ', io_int, 1, "(1x,I3,' percent completed')") 
+    frac = frac + 0.05
+    open(unit=dataunit,file=trim(outname),status='unknown',action='write',form='unformatted')
+    write (dataunit) dimx, dimy, numg
+    write (dataunit) images
+    close(UNIT=dataunit,STATUS='keep')
+   end if  
+
+  end do kvectorloop
+
+! stop the clock and report the total time     
+  call system_clock(newcount,count_rate,count_max)
+  io_real(1)=float(newcount-cnt)/float(count_rate)
+  mess = ' Program run completed '; call Message("(/A/)")
+  call WriteValue('Total computation time [s] ' , io_real, 1, "(F)")
+
+! the final bit of the program involves dumping all the results into a file,
+! binary for now, but HDF5 in the future, for the IDL visualization program 
+! to read.
+  open(unit=dataunit,file=trim(outname),status='unknown',action='write',form='unformatted')
+  write (dataunit) dimx, dimy, numg
+  write (dataunit) images
+  close(UNIT=dataunit,STATUS='keep')
+
+  mess = ' Data stored in '//outname; call Message("(/A/)") 
+
+end subroutine GAMMAimage
+
+
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:Compute_GGp_DynMats
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief Computes the dynamical matrices for both phases
+!
+!> @details This is a reduced and adapted version of the Compute_DynMat routine. 
+!
+!> @param gammaLUT reflection lookup table for gamma phase
+!> @param gammapLUT reflection lookup table for gamma' phase
+!> @param imh h dimension parameter for gammaLUT
+!> @param imk k dimension parameter for gammaLUT
+!> @param iml l dimension parameter for gammaLUT
+!> @param kk incident wave vector
+!> @param kt tangential component of incident wave vector
+!> @param variants logical to turn on APB variants for gamma' phase
+!
+!> @date 11/02/13  MDG 1.0 original
+!> @date 11/05/13  MDG 1.1 added variant handling
+!--------------------------------------------------------------------------
+subroutine Compute_GGp_DynMats(gammaLUT, gammapLUT, imh, imk, iml, kk, kt, variants)
+
+
+use local
+use dynamical
+use error
+use constants
+use crystal
+use diffraction
+use io
+use gvectors
+
+IMPLICIT NONE
+
+complex(kind=dbl),INTENT(IN)		:: gammaLUT(-imh:imh,-imk:imk,-iml:iml)
+complex(kind=dbl),INTENT(IN)		:: gammapLUT(-imh:imh,-imk:imk,-iml:iml)
+integer(kind=irg),INTENT(IN)		:: imh, imk, iml
+real(kind=dbl),INTENT(IN)		:: kk(3),kt(3)		!< incident wave vector and tangential component
+logical,INTENT(IN)			:: variants
+
+complex(kind=dbl)  			:: czero,pref, weaksum, ughp, uhph, ep, em
+integer(kind=irg) 		 	:: istat,ir,ic,nn, iweak, istrong, iw, ig, ll(3), gh(3), nnn, nweak, i
+real(kind=sgl)     			:: glen,exer,gg(3), kpg(3), gplen, sgp, lUg, cut1, cut2
+real(kind=dbl)				:: lsfour, weaksgsum, dgg(3), arg, R1(3), R2(3), R3(3), tpi, dp
+logical					:: AddSecondOrder
+
+complex(kind=dbl),allocatable		:: testDynMat(:,:)
+
+! has the list of reflections been allocated ?
+if (.not.associated(reflist)) call FatalError('Compute_GGp_DynMats',' reflection list has not been allocated')
+
+! if the dynamical matrices have already been allocated, deallocate them first
+! this is partially so that no program will allocate DynMats itself; it must be done
+! via this routine only.
+if (variants) then
+if (allocated(DynMat)) deallocate(DynMat)
+if (allocated(DynMat0)) deallocate(DynMat0)
+if (allocated(DynMat1)) deallocate(DynMat1)
+if (allocated(DynMat2)) deallocate(DynMat2)
+if (allocated(DynMat3)) deallocate(DynMat3)
+else
+  if (allocated(DynMat)) deallocate(DynMat)
+  if (allocated(DynMat0)) deallocate(DynMat0)
+end if 
+
+! initialize some parameters
+pref = dcmplx(0.0,1.0)*cPi	! i times pi
+czero = dcmplx(0.0,0.0)	! complex zero
+
+! we don't know yet how many strong reflections there are so we'll need to determine this first
+! this number depends on some externally supplied parameters, which we will get from a namelist
+! file (which should be read only once by the Set_Bethe_Parameters routine), or from default values
+! if there is no namelist file in the folder.
+if (BetheParameter%cutoff.eq.0.0) call Set_Bethe_Parameters(.TRUE.)
+BetheParameter%weakcutoff = BetheParameter%cutoff ! no Bethe potentials in the current approach
+
+! reset the value of DynNbeams in case it was modified in a previous call 
+DynNbeams = DynNbeamsLinked
+  	
+if (.not.allocated(BetheParameter%stronglist)) allocate(BetheParameter%stronglist(DynNbeams))
+if (.not.allocated(BetheParameter%reflistindex)) allocate(BetheParameter%reflistindex(DynNbeams))
+BetheParameter%stronglist = 0
+BetheParameter%reflistindex = 0
+
+rltmpa => reflist
+
+!write (*,*) 'Starting reflectionloop'
+
+! deal with the transmitted beam first
+    nn = 1		! nn counts all the scattered beams that satisfy the cutoff condition
+    rltmpa%sg = 0.D0    
+    BetheParameter%stronglist(1) = 1
+    BetheParameter%reflistindex(1) = 1
+
+! loop over all reflections in the linked list    
+    rltmpa => rltmpa%next
+    reflectionloop: do ig=2,DynNbeamsLinked
+      gg = float(rltmpa%hkl)        		! this is the reciprocal lattice vector 
+      rltmpa%sg = Calcsg(gg,sngl(kk),DynFN)
+
+! use the reflection num entry to indicate whether or not this
+! reflection should be used for the dynamical matrix
+! We compare |sg| with a multiple of lambda |Ug|
+!
+!  |sg|>cutoff lambda |Ug|   ->  don't count reflection
+!  cutoff lambda |Ug| > |sg|  -> strong reflection
+!
+      sgp = abs(rltmpa%sg) 
+      lUg = cabs(rltmpa%Ucg) * mLambda
+      cut1 = BetheParameter%cutoff * lUg
+
+      if (sgp.le.cut1) then  ! count this beam
+	nn = nn+1
+	BetheParameter%stronglist(ig) = nn
+	if (rltmpa%famnum.ne.0) then
+	  BetheParameter%reflistindex(ig) = rltmpa%famnum
+	else
+	  BetheParameter%reflistindex(ig) = -1
+	end if
+      end if
+
+! go to the next beam in the list
+      rltmpa => rltmpa%next
+    end do reflectionloop
+!write (*,*) 'Completed reflectionloop; # strong beams = ',nn
+
+! if we don't have any beams in this list (unlikely, but possible if the cutoff
+! parameter has an unreasonable value) then we abort the run
+! and we report some numbers to the user 
+if (nn.eq.0) then
+   mess = ' no beams found for the following parameters:'; call Message("(A)")
+   write (stdout,*) ' wave vector = ',kk,'  -> number of beams = ',nn
+   mess =  '   -> check cutoff and weakcutoff parameters for reasonableness'; call Message("(A)")
+   call FatalError('Compute_GGp_DynMats','No beams in list')
+end if
+
+! next, we define nns to be the number of strong beams.
+BetheParameter%nns = nn
+	 	
+! allocate arrays for strong beam information
+if (allocated(BetheParameter%stronghkl)) deallocate(BetheParameter%stronghkl)
+if (allocated(BetheParameter%strongsg)) deallocate(BetheParameter%strongsg)
+if (allocated(BetheParameter%strongID)) deallocate(BetheParameter%strongID)
+allocate(BetheParameter%stronghkl(3,BetheParameter%nns),BetheParameter%strongsg(BetheParameter%nns))
+allocate(BetheParameter%strongID(BetheParameter%nns))
+
+BetheParameter%stronghkl = 0
+BetheParameter%strongsg = 0.0
+BetheParameter%strongID = 0
+
+
+!write (*,*) 'starting ir loop'
+! here's where we extract the relevant information from the linked list (much faster
+! than traversing the list each time...)
+rltmpa => reflist    ! reset the a list
+istrong = 0
+do ir=1,DynNbeamsLinked
+     if (BetheParameter%stronglist(ir).gt.0) then
+        istrong = istrong+1
+        BetheParameter%stronghkl(1:3,istrong) = rltmpa%hkl(1:3)
+        BetheParameter%strongsg(istrong) = rltmpa%sg
+! make an inverse index list
+	BetheParameter%strongID(istrong) = ir		
+!	write (*,*) ir, (rltmpa%hkl(i),i=1,3), rltmpa%sg, istrong
+     end if
+   rltmpa => rltmpa%next
+end do
+
+!write (*,*) 'completed ir loop'
+
+! now we are ready to create the dynamical matrix
+DynNbeams = BetheParameter%nns
+
+! allocate DynMat and DynMat0 and set to complex zero
+allocate(DynMat(DynNbeams,DynNbeams),stat=istat)
+allocate(DynMat0(DynNbeams,DynNbeams),stat=istat)
+
+DynMat = czero	! this is for the disordered fcc phase
+DynMat0 = czero	! this is for the ordered gamma' phase
+
+! ir is the row index
+do ir=1,BetheParameter%nns
+! ic is the column index
+  do ic=1,BetheParameter%nns
+! compute the Fourier coefficient of the electrostatic lattice potential 
+    if (ic.ne.ir) then  ! not a diagonal entry
+      ll = BetheParameter%stronghkl(1:3,ir) - BetheParameter%stronghkl(1:3,ic)
+      DynMat(ir,ic) = gammaLUT(ll(1),ll(2),ll(3)) 
+      DynMat0(ir,ic) = gammapLUT(ll(1),ll(2),ll(3)) 
+    else  ! it is a diagonal entry, so we need the excitation error and the absorption length	
+      DynMat(ir,ir) = cmplx(0.0,2.D0*cPi*BetheParameter%strongsg(ir),dbl)+gammaLUT(0,0,0)
+      DynMat0(ir,ir) = cmplx(0.0,2.D0*cPi*BetheParameter%strongsg(ir),dbl)+gammapLUT(0,0,0)
+    end if
+  end do
+end do
+! that should do it for the initialization of the dynamical matrices if there are no translation variants
+
+if (variants) then ! allocate and adjust the variant dynamical matrices
+  allocate(DynMat1(DynNbeams,DynNbeams),stat=istat)
+  allocate(DynMat2(DynNbeams,DynNbeams),stat=istat)
+  allocate(DynMat3(DynNbeams,DynNbeams),stat=istat)
+  DynMat1 = DynMat0	! this is for the ordered gamma' phase variant 1
+  DynMat2 = DynMat0	! this is for the ordered gamma' phase variant 2
+  DynMat3 = DynMat0	! this is for the ordered gamma' phase variant 3
+
+! next we need to go through each matrix again and for the off-diagonal elements
+! multiply the entry with the correct APB phase factor.  
+  R1 = (/ 0.5D0, 0.5D0 ,0.0D0 /)
+  R2 = (/ 0.5D0, 0.0D0 ,0.5D0 /)
+  R3 = (/ 0.0D0, 0.5D0 ,0.5D0 /)
+! for APBs in L1_2 there are only three possibilities for the phase factor: 1, exp(i pi) and exp(-i pi)  
+! so we'll pre-compute the possible phase shifts for the superlattice reflections as ep and em:
+  ep = dcmplx(dcos(cPi),-dsin(cPi))
+  em = dcmplx(dcos(cPi),dsin(cPi))
+! ir is the row index
+  do ir=1,BetheParameter%nns
+! ic is the column index
+    do ic=1,BetheParameter%nns
+! compute the Fourier coefficient of the electrostatic lattice potential 
+      if (ic.ne.ir) then  ! not a diagonal entry
+        dgg = dble(BetheParameter%stronghkl(1:3,ir) - BetheParameter%stronghkl(1:3,ic))
+	dp = dot_product(dgg,R1)
+	arg = dmod(dp,1.D0)
+	if (dabs(arg).ne.0.D0) then
+	  arg = 2.D0*( 1.D0 - dmod(dp,2.D0) )
+	  if (arg.lt.0.D0) then 
+	    DynMat1(ir,ic) = DynMat1(ir,ic) * ep
+	  else
+	    DynMat1(ir,ic) = DynMat1(ir,ic) * em
+	  end if
+	end if
+	dp = dot_product(dgg,R2)
+	arg = dmod(dp,1.D0)
+	if (dabs(arg).ne.0.D0) then
+	  arg = 2.D0*( 1.D0 - dmod(dp,2.D0) )
+	  if (arg.lt.0.D0) then 
+	    DynMat2(ir,ic) = DynMat2(ir,ic) * ep
+	  else
+	    DynMat2(ir,ic) = DynMat2(ir,ic) * em
+	  end if
+	end if
+	dp = dot_product(dgg,R3)
+	arg = dmod(dp,1.D0)
+	if (dabs(arg).ne.0.D0) then
+	  arg = 2.D0*( 1.D0 - dmod(dp,2.D0) )
+	  if (arg.lt.0.D0) then 
+	    DynMat3(ir,ic) = DynMat3(ir,ic) * ep
+	  else
+	    DynMat3(ir,ic) = DynMat3(ir,ic) * em
+	  end if
+	end if
+      end if
+    end do
+  end do
+end if
+
+
+!  open(unit=dataunit,file='arrays.data',status='unknown',form='unformatted')
+!  write (*,*) 'dimension = ',shape(DynMat)
+!  write(dataunit) testDynMat
+!  write(dataunit) DynMat
+!  write(dataunit) DynMat2
+!  close(unit=dataunit,status='keep')
+!
+end subroutine Compute_GGp_DynMats
+
+
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: MatrixExponential
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief compute the exponential of a dynamical matrix
+!
+!> @details This routine uses two different methods, one based on the Taylor
+!> expansion, the other on Pade approximants, both with "scaling & squaring".
+!> Currently, the routine targets an accuracy level of 10^{-9}.
+!> This routine uses table 1 in "Nineteen dubious ways to compute the exponential of a matrix,
+!> twenty-five years later", C. Moler, C. Van Loan, SIAM Review, 45, 1 (2003)
+!
+!> @param A input matrix
+!> @param E output matrix
+!> @param z0 slice thickness in [nm]
+!> @param TP 'Tayl' or 'Pade', to select method
+!> @param nn number of row/column entries in A
+!
+!> @date   09/16/13 MDG 1.0 original, tested against analytical version for small array
+!--------------------------------------------------------------------------
+recursive subroutine MatrixExponential(A,E,z0,TP,nn)
+
+use local
+use io
+use error
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)		:: nn
+complex(kind=dbl),INTENT(IN)		:: A(nn,nn)
+complex(kind=dbl),INTENT(OUT)		:: E(nn,nn)
+real(kind=dbl),INTENT(IN)		:: z0
+character(4),INTENT(IN)		:: TP
+
+real(kind=dbl)				:: modA, pref, sgn
+complex(kind=dbl),allocatable		:: B(:,:), add(:,:), Nqq(:,:), Dqq(:,:), C(:,:)
+
+integer(kind=irg)			:: i, k, j, icnt, q, istat, ilev
+integer(kind=irg)    			:: INFO, LDA, MILWORK
+integer(kind=irg),allocatable		:: JPIV(:)
+complex(kind=dbl),allocatable 		:: MIWORK(:)
+integer(kind=irg),parameter		:: kTaylor(6) = (/ 3, 4, 6, 8, 7, 6 /)		! from table 1 in reference above
+integer(kind=irg),parameter		:: jTaylor(6) = (/ 1, 2, 3, 5, 9, 13 /)
+integer(kind=irg),parameter		:: qPade(6) = (/ 2, 3, 4, 4, 4, 4 /)
+integer(kind=irg),parameter		:: jPade(6) = (/ 0, 0, 1, 5, 8, 11 /)
+
+! set output array to zero
+E = dcmplx(0.D0,0.D0)
+
+!get the max( ||A|| ) value and determine index into (k,j) or (q,j) pairs
+modA = maxval(cabs(A)*z0)
+ilev = nint(alog10(modA))+3
+if (ilev.le.0) ilev = 1		! can not be smaller than 1
+
+! if modA gets to be too large, abort with a message
+if (modA.gt.1000.D0) then
+  mess = 'MatrixExponential routine can not deal with ||A|| > 1000.0'
+  call Message("/A/")
+  stop 'Program aborted'
+end if
+
+
+if (TP.eq.'Tayl') then ! use scaling and squaring for the Taylor expansion
+	k = kTaylor(ilev)
+	j = jTaylor(ilev)
+
+	! allocate an auxiliary array
+	allocate( B(nn,nn), add(nn,nn), stat=istat )
+	if (istat.ne.0) then 
+	  call FatalError('MatrixExponential','Error allocating arrays for Taylor approximation')
+	  stop
+	end if
+	
+	! perform the scaling step
+	B = (A * z0) / 2.0D0**j ! dcmplx(2.0**j,0.0)
+	
+	! initialize the diagonal of E
+	forall (i=1:nn) E(i,i) = dcmplx(1.0D0,0.D0)
+	
+	! loop over the Taylor series
+	add = B
+	E = E + add
+	do icnt=2,k
+	  add = matmul( add, B/dcmplx(icnt) )
+	  E = E + add
+	end do
+	
+	! and deallocate the auxiliary arrays
+	deallocate(add, B)
+
+else ! Pade approximation for target accuracy 10^(-9)
+	q = qPade(ilev)
+	j = jPade(ilev)
+
+	! allocate auxiliary arrays
+	allocate(B(nn,nn),C(nn,nn), Nqq(nn,nn), Dqq(nn,nn), stat=istat )
+	if (istat.ne.0) then 
+	  call FatalError('MatrixExponential','Error allocating arrays for Pade approximation')
+	  stop
+	end if
+	
+	! perform the scaling step
+	B = (A * z0) / 2.D0**j  ! dcmplx(2.0**j,0.0)
+	C = B
+		
+	! initialize the diagonal of both arrays
+	Nqq = dcmplx(0.D0,0.D0)
+	forall (i=1:nn) Nqq(i,i) = dcmplx(1.0D0,0.D0)
+	Dqq = Nqq
+
+	! init some constants
+	pref = 1.D0
+	sgn = -1.D0
+	
+	! and loop
+	do icnt=1,q
+	  pref = pref * dble(q-icnt+1) / dble(icnt) / dble(2*q-icnt+1)
+	  Nqq = Nqq + pref * C
+	  Dqq = Dqq + sgn * pref * C
+	  sgn = -sgn
+	  C = matmul( C, B )
+	end do
+	
+	! get the inverse of Dqq using the LAPACK routines zgetrf and zgetri
+	LDA = nn
+	allocate( JPIV(nn) )
+ 	call zgetrf(nn,nn,Dqq,LDA,JPIV,INFO)
+	if (INFO.ne.0) call FatalError('Error in MatrixExponential: ','ZGETRF return not zero')
+
+	MILWORK = 64*nn 
+ 	allocate(MIWORK(MILWORK))
+
+	MIWORK = dcmplx(0.0_dbl,0.0_dbl)
+ 	call zgetri(nn,Dqq,LDA,JPIV,MIWORK,MILWORK,INFO)
+ 	if (INFO.ne.0) call FatalError('Error in MatrixExponential: ','ZGETRI return not zero')
+
+	! and compute E
+	E = matmul( Dqq, Nqq )
+	
+	! clean up
+	deallocate(Nqq, Dqq, C, B, JPIV, MIWORK)
+end if
+
+! and finally compute the power 2^j of the matrix E (i.e. the squaring step)
+do icnt = 1,j
+  E = matmul( E, E )
+end do
+
+end subroutine MatrixExponential
+
+
+

@@ -32,7 +32,7 @@
 !
 ! MODULE: foilmodule
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief everything that has to do with the sample foil
 ! 
@@ -52,7 +52,7 @@ use quaternions
 ! material properties are also stored here, such as the elastic moduli
 type foiltype
   real(kind=dbl)		:: F(3),Fn(3),q(3),qn(3),brx,bry,brxy,cpx,cpy, & 
-					   alP,alS,alR,beP,elmo(6,6),z0,zb,B(3),Bn(3),Bm(3)
+				   alP,alS,alR,beP,elmo(6,6),z0,zb,B(3),Bn(3),Bm(3)
   real(kind=dbl)		:: a_fc(4), a_fm(4), a_mi(4), a_ic(4), a_mc(4), a_fi(4)
   integer(kind=irg)  		:: npix,npiy
   real(kind=sgl),allocatable :: sg(:,:)
@@ -68,25 +68,23 @@ contains
 !
 ! SUBROUTINE: initialize_foil_geometry
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  Initializes the foil geometry
 !
-!> @details This new implementation uses quaternions for all rotations.  Recall that the 
-!> quaternions.f90 module redefines the multiplication operator to include quaternion
-!> multiplication, so there's no need to call quat_mult(p,q) or anything like that; simply
-!> write p * q and things will work ok thanks to operator overloading...
+!> @details This new implementation uses quaternions for all rotations. 
 ! 
 !> @param s string to indicate which rotation is being considered
 !> @param q rotation (unit) quaternion
 ! 
-!> @date 1/5/99   MDG 1.0 original
-!> @date 1/11/10 MDG 2.0 rewrite of beam direction part
-!> @date 3/28/11 MDG 2.1 code verified
-!> @date 4/23/11 MDG 2.2 redefined origin to be at center of image
-!> @date 6/03/13 MDG 3.0 replaced rotation matrices by quaternions throughout
+!> @date  1/ 5/99 MDG 1.0 original
+!> @date  1/11/10 MDG 2.0 rewrite of beam direction part
+!> @date  3/28/11 MDG 2.1 code verified
+!> @date  4/23/11 MDG 2.2 redefined origin to be at center of image
+!> @date  6/03/13 MDG 3.0 replaced rotation matrices by quaternions throughout
+!> @date 10/30/13 MDG 3.1 complete debug of quaternion and rotation implementation 
 !--------------------------------------------------------------------------
-subroutine initialize_foil_geometry
+subroutine initialize_foil_geometry(dinfo)
 
 use local
 use math
@@ -101,51 +99,70 @@ use rotations
 
 IMPLICIT NONE
 
-real(kind=dbl)      	:: ey(3),ex(3),t,alPstart,alSstart,dx,dy 
-real(kind=sgl)		:: io_real(3)
-real(kind=dbl)		:: cp,sp,cs,ss,cr,sr, a_fc(3,3)
-integer(kind=irg) 	:: i,j
-type(orientationtyped)	:: ot
-character(10)		:: pret
+integer(kind=sgl),INTENT(IN)	:: dinfo
 
-! determine the foil-to-microscope transformations [verified on 4/23/11, converted to quaternions on 6/4/13]
+real(kind=dbl)      		:: ey(3),ex(3),t,alPstart,alSstart,dx,dy 
+real(kind=sgl)			:: io_real(3)
+real(kind=dbl)			:: cp,sp,cs,ss,cr,sr, ca, sa, a_fc(3,3)
+integer(kind=irg) 		:: i,j
+type(orientationtyped)		:: ot
+character(10)			:: pret
+
+! determine the foil-to-microscope transformations [verified on 4/23/11, converted to quaternions on 6/4/13, 
+! verified 10/30/13, and again on 11/11/13 after some changes elsewhere]
   if (foil%alR.eq.0.D0) then 
 ! the double tilt holder transformation a_fm; note quaternions, hence we need the half-angles !
+! a_fm transforms a vector v FROM the microscope reference frame To the foil reference frame
+! using the quat_rotate_vector routine.
     cp = dcos(foil%alP*0.5D0)
     sp = dsin(foil%alP*0.5D0)
+    ca = dcos(foil%alP)
+    sa = dsin(foil%alP)
     cs = dcos(foil%alS*0.5D0)
     ss = dsin(foil%alS*0.5D0)
-    foil%a_fm = quat_mult( (/ cp,-sp,0.D0,0.D0 /), (/ cs,0.D0,-ss,0.D0 /) ) 
+    foil%a_fm = conjg( quat_mult( (/ cs, 0.D0, ss*ca, ss*sa /), (/ cp, sp, 0.D0, 0.D0 /) ) )
   else
-! the rotation tilt holder transformation a_fm [verified on 4/23/11, converted to quaternions on 6/4/13]
+! the rotation tilt holder transformation a_fm [verified on 4/23/11, converted to quaternions on 6/4/13,
+! and again on 11/11/13 after changes elsewhere]
     cp = dcos(foil%alP*0.5D0)
     sp = dsin(foil%alP*0.5D0)
     cr = dcos(foil%alR*0.5D0)
     sr = dsin(foil%alR*0.5D0)
-    foil%a_fm = quat_mult( (/ cp,-sp,0.D0,0.D0 /), (/ cs,0.D0,0.D0,-ss /) )
+    ca = dcos(foil%alP)
+    sa = dsin(foil%alP)
+    foil%a_fm = conjg( quat_mult( (/ cr,0.D0, -sr*sa, sr*ca /), (/ cp, sp,0.D0,0.D0  /) ) )
   end if  
-  pret = 'a_fm: '
-  ot = init_orientation(foil%a_fm,'qu')
-  call print_orientation(ot,'om',pret) 
+  if (dinfo.eq.1) then
+    pret = 'a_fm: '
+    ot = init_orientation(foil%a_fm,'qu')
+    call print_orientation(ot,'om',pret) 
+  end if
 
-! a_mi (image to microscope)    apart from a scale factor, these two are identical 
+! a_mi (image to microscope) apart from a scale factor, these two are identical 
 ! The CTEM book uses a beta rotation angle between the image and the microscope,
 ! but that is really not necessary because we already fix the image with respect to
-! the microscope by defining q (the horizontal image direction) to point to the airlock. [verified 4/23/11, converted to quaternions on 6/4/13]
+! the microscope by defining q (the horizontal image direction) to point to the 
+! airlock. [verified 4/23/11, converted to quaternions on 6/4/13]
+! So we'll keep this transformation equal to the identity at all times.
   foil%a_mi = (/ 1.D0,0.D0,0.D0,0.D0 /)   ! identity quaternion 
-  pret = 'a_mi: '
-  ot = init_orientation(foil%a_mi,'qu')
-  call print_orientation(ot,'om',pret) 
+  if (dinfo.eq.1) then
+    pret = 'a_mi: '
+    ot = init_orientation(foil%a_mi,'qu')
+    call print_orientation(ot,'om',pret) 
+  end if
   
 ! This allows us to get the beam direction, since we know the foil normal and tilt angles
-! The beam direction is the inverse transform of the microscope e_z-axis to the foil reference frame [TO BE VERIFIED]
-  foil%B = quat_rotate_vector( conjg(foil%a_fm), (/ 0.D0,0.D0,-1.D0 /) )
+! The beam direction is the inverse transform of the microscope e_z-axis to the foil reference frame [verified 11/12/13]
+  foil%B = quat_rotate_vector( foil%a_fm, (/ 0.D0,0.D0,-1.D0 /) )
   foil%Bn = foil%B
   call NormVec(foil%Bn,'c')
-  io_real(1:3) = foil%B(1:3)
-  call WriteValue('  Beam direction (foil reference frame) = ',io_real,3,"('[',F12.5,',',F12.5,',',F12.5,']')")
-
-! transform both the foil normal and the q-vector to the crystal cartesian reference frame (eq. 8.8) [verified 4/23/11]
+  if (dinfo.eq.1) then
+    io_real(1:3) = foil%B(1:3)
+    call WriteValue('  Beam direction (foil reference frame) = ',io_real,3,"('[',F12.5,',',F12.5,',',F12.5,']')")
+  end if
+  
+! transform both the foil normal and the q-vector to the crystal cartesian reference frame (eq. 8.8) [verified 4/23/11,
+! and again on 11/12/13 afterchanges elsewhere]
   call TransSpace(foil%F,foil%Fn,'d','c')
   call TransSpace(foil%q,foil%qn,'r','c')
   call NormVec(foil%Fn,'c')
@@ -157,49 +174,53 @@ character(10)		:: pret
   call NormVec(ey,'c')
   a_fc(2,1:3) = ey(1:3)
   foil%a_fc = om2qu(a_fc)
-  pret = 'a_fc: '
-  ot = init_orientation(foil%a_fc,'qu')
-  call print_orientation(ot,'om',pret) 
-
-! simple test
-!  ey = matmul( (/ 0.0,0.0,1.0 /),transpose(foil%a_fc))
-!  mess = '  [001] in crystal cartesian to foil frame = '
-!  oi_real(1:3) = ey(1:3)
-!  call WriteReal(3,"('[',F12.5,',',F12.5,',',F12.5,']')")
-
+  if (dinfo.eq.1) then
+    pret = 'a_fc: '
+    ot = init_orientation(foil%a_fc,'qu')
+    call print_orientation(ot,'om',pret) 
+  end if
+  
 ! a_mc (crystal to microscope)
-  foil%a_mc = foil%a_fc * conjg(foil%a_fm)
-  pret = 'a_mc: '
-  ot = init_orientation(foil%a_mc,'qu')
-  call print_orientation(ot,'om',pret) 
-! transpose(matmul(transpose(foil%a_fc),foil%a_fm))
+  foil%a_mc = quat_mult( conjg(foil%a_fm), foil%a_fc )
+  if (dinfo.eq.1) then
+    pret = 'a_mc: '
+    ot = init_orientation(foil%a_mc,'qu')
+    call print_orientation(ot,'om',pret) 
+  end if
   
 ! a_ic (crystal to image)
-  foil%a_ic = foil%a_mc * conjg(foil%a_mi)
-  pret = 'a_ic: '
-  ot = init_orientation(foil%a_ic,'qu')
-  call print_orientation(ot,'om',pret) 
-! matmul(transpose(foil%a_mi),foil%a_mc)
+  foil%a_ic = quat_mult( conjg(foil%a_mi) , foil%a_mc)
+  if (dinfo.eq.1) then
+    pret = 'a_ic: '
+    ot = init_orientation(foil%a_ic,'qu')
+    call print_orientation(ot,'om',pret) 
+  end if
   
 ! a_fi (image to foil)
-  foil%a_fi = foil%a_mi * foil%a_fm
-  pret = 'a_fi: '
-  ot = init_orientation(foil%a_fi,'qu')
-  call print_orientation(ot,'om',pret) 
-! matmul(foil%a_fm,foil%a_mi)
+  foil%a_fi = quat_mult( foil%a_fc , conjg(foil%a_ic) )
+  if (dinfo.eq.1) then
+    pret = 'a_fi: '
+    ot = init_orientation(foil%a_fi,'qu')
+    call print_orientation(ot,'om',pret) 
+  end if
   
-! express the beam direction in the Bravais reference frame [verified 4/23/11]
-  ex = quat_rotate_vector( foil%a_fc, dble(foil%Bn) ) 
-  call TransSpace(ex,ey,'c','d')
-  call NormVec(ey,'c')
-  io_real(1:3) = ey(1:3)
-  call WriteValue('  Beam direction (crystal reference frame) = ', io_real, 3, "('[',F12.5,',',F12.5,',',F12.5,']'/)")
-
+! express the beam direction in the Bravais reference frame [verified 4/23/11, and again on 11/12/13
+! after changes elsewhere]
+!  ex = quat_rotate_vector( conjg(foil%a_fc), dble(foil%Bn) ) 
+!  call TransSpace(ex,ey,'c','d')
+!  call NormVec(ey,'c')
+!  if (dinfo.eq.1) then
+!    io_real(1:3) = ey(1:3)
+!    call WriteValue('  Beam direction (crystal reference frame) = ', io_real, 3, "('[',F12.5,',',F12.5,',',F12.5,']'/)")
+!  end if
+  
 ! define the foil shape (for now as an elliptic paraboloid z = brx * (x-xc)^2 + bry * (y-yc)^2) 
 if (.not.allocated(foil%sg)) allocate(foil%sg(foil%npix,foil%npiy))
 ! if the foil is not bent, then we set this array to zero, otherwise we compute the elliptical paraboloid
 if ((foil%brx.eq.0.0).and.(foil%bry.eq.0.0)) then
-  mess = ' Initializing a flat foil '; call Message("(A)")
+  if (dinfo.eq.1) then
+    mess = ' Initializing a flat foil '; call Message("(A)")
+  end if
   foil%sg = 0.0
 else
   dx = foil%npix*0.5
@@ -212,9 +233,11 @@ else
       foil%sg(i,j) = t + foil%bry * (float(j)-dy-foil%cpy)**2+ 2.0*foil%brxy * (float(j)-dy-foil%cpy)*(float(i)-dx-foil%cpx)
     end do
   end do
-  mess = ' Initializing a bent foil '; call Message("(A)")
-  io_real(1)=minval(foil%sg); io_real(2)=maxval(foil%sg); 
-  call WriteValue('Range of local excitation error deviations : ', io_real, 2, "(F10.6,',',F10.6/)")
+  if (dinfo.eq.1) then
+    mess = ' Initializing a bent foil '; call Message("(A)")
+    io_real(1)=minval(foil%sg); io_real(2)=maxval(foil%sg); 
+    call WriteValue('Range of local excitation error deviations : ', io_real, 2, "(F10.6,',',F10.6/)")
+  end if
 end if
 
 
@@ -224,7 +247,7 @@ end subroutine initialize_foil_geometry
 !
 ! SUBROUTINE: read_foil_data
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  Reads the foil geometry data
 !
@@ -232,11 +255,12 @@ end subroutine initialize_foil_geometry
 !> @param npix number of x image pixels
 !> @param npiy number of y image pixels
 !> @param L pixel size for column approximation
+!> @param dinfo flag to print information
 ! 
 !> @date 1/5/11   MDG 1.0 original
 !> @date 6/04/13 MDG 2.0 general rewrite
 !--------------------------------------------------------------------------
-subroutine read_foil_data(foilnmlfile,npix,npiy,L)
+subroutine read_foil_data(foilnmlfile,npix,npiy,L,dinfo)
 
 use local
 use crystal
@@ -248,7 +272,7 @@ use rotations
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)	:: foilnmlfile
-integer(kind=irg),INTENT(IN)	:: npix, npiy
+integer(kind=irg),INTENT(IN)	:: npix, npiy, dinfo
 real(kind=sgl),INTENT(IN)	:: L
 
 integer(kind=irg)		:: i,j
@@ -274,7 +298,10 @@ namelist / foildata / foilF, foilq, foilalP, foilalS, foilalR, foilbeP, foilz0, 
  cpx = 0.0                  		! center of the foil quadratic surface within [-1,1] range in pixel coordinates
  cpy = 0.0
  
- mess = 'opening '//foilnmlfile; call Message("(/A/)")
+ if (dinfo.eq.1) then 
+  mess = 'opening '//foilnmlfile; call Message("(/A/)")
+ end if
+
  OPEN(UNIT=dataunit,FILE=trim(foilnmlfile),DELIM='APOSTROPHE')
  READ(UNIT=dataunit,NML=foildata)
  CLOSE(UNIT=dataunit)
@@ -313,15 +340,17 @@ do i=1,6
 end do
 
 ! initialize a bunch of foil related quantities, using quaternions for all rotations
-call initialize_foil_geometry
+call initialize_foil_geometry(dinfo)
 
 ! compute the projected thickness
 amat = qu2om(foil%a_fm)
 foil%zb = foil%z0/amat(3,3)
-io_real(1)=foil%z0
-call WriteValue('Nominal foil thickness = ', io_real, 1, "(F8.3)")
-io_real(1)=foil%zb
-call WriteValue('Effective foil thickness = ', io_real, 1, "(F8.3/)")
+if (dinfo.eq.1) then
+  io_real(1)=foil%z0
+  call WriteValue('Nominal foil thickness = ', io_real, 1, "(F8.3)")
+  io_real(1)=foil%zb
+  call WriteValue('Effective foil thickness = ', io_real, 1, "(F8.3/)")
+end if
 
 end subroutine read_foil_data
 

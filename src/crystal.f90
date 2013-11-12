@@ -32,7 +32,7 @@
 !
 ! MODULE: crystal
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Everything that has to do with crystallographic computations and input/output
 !
@@ -88,7 +88,7 @@ contains
 !
 ! SUBROUTINE: CalcMatrices
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief computes important crystallographic matrices
 !
@@ -187,7 +187,7 @@ end subroutine CalcMatrices
 !
 ! SUBROUTINE: TransSpaceDouble
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief convert vector components from one inspace to outspace (double precision)
 !
@@ -256,7 +256,7 @@ end subroutine TransSpaceDouble
 !
 ! SUBROUTINE: TransSpaceSingle
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief convert vector components from one inspace to outspace (single precision)
 !
@@ -326,7 +326,7 @@ end subroutine  TransSpaceSingle
 !
 ! SUBROUTINE: TransCoor
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief convert vector components from one frame to another
 !
@@ -392,7 +392,7 @@ end subroutine TransCoor
 !
 ! FUNCTION: CalcDotSingle
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief single precision dot product in arbitrary space
 !
@@ -432,7 +432,7 @@ end function CalcDotSingle
 !
 ! FUNCTION: CalcDotDouble
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief double precision dot product in arbitrary space
 !
@@ -472,7 +472,7 @@ end function CalcDotDouble
 !
 ! SUBROUTINE: NormVecSingle
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief single precision vector normalization
 !
@@ -509,7 +509,7 @@ end subroutine NormVecSingle
 !
 ! SUBROUTINE: NormVecDouble
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief double precision vector normalization
 !
@@ -546,7 +546,7 @@ end subroutine NormVecDouble
 !
 ! FUNCTION: CalcLengthSingle
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief single precision vector length
 !
@@ -580,7 +580,7 @@ end function CalcLengthSingle
 !
 ! FUNCTION: CalcLengthDouble
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief double precision vector length
 !
@@ -613,7 +613,7 @@ end function CalcLengthDouble
 !
 ! FUNCTION: CalcAngleSingle
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief single precision angle in arbitrary space
 !
@@ -669,7 +669,7 @@ end function CalcAngleSingle
 !
 ! FUNCTION: CalcAngleDouble
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief double precision angle in arbitrary space
 !
@@ -726,7 +726,7 @@ end function CalcAngleDouble
 !
 ! SUBROUTINE: CalcCrossSingle
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief vector cross product in arbitrary space
 !
@@ -817,7 +817,7 @@ end subroutine CalcCrossSingle
 !
 ! SUBROUTINE: CalcCrossDouble
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief vector cross product in arbitrary space (double precision)
 !
@@ -908,7 +908,7 @@ end subroutine CalcCrossDouble
 !
 ! SUBROUTINE: MilBrav
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief conversion 3->4 or 4->3 index notation
 !
@@ -977,7 +977,7 @@ end subroutine MilBrav
 !
 ! SUBROUTINE: GetLatParm
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief input of lattice parameters
 !
@@ -1120,7 +1120,7 @@ end subroutine GetLatParm
 !
 ! SUBROUTINE: GetAsymPos
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief read the atom coordinates from standard input
 !
@@ -1187,7 +1187,7 @@ end subroutine GetAsymPos
 !
 ! SUBROUTINE: DisplayElements
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief print the periodic table
 !
@@ -1228,7 +1228,7 @@ end subroutine DisplayElements
 !
 ! SUBROUTINE: extractposition
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief extract atom position data from a string
 !
@@ -1369,7 +1369,7 @@ end subroutine extractposition
 !
 ! Subroutine: CalcDensity
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute the theoretical density as well as average Z and A
 !
@@ -1421,7 +1421,7 @@ end subroutine CalcDensity
 !
 ! SUBROUTINE: GetOR
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief ask for orientation relation between two crystals
 !
@@ -1480,7 +1480,7 @@ end subroutine GetOR
 ! 
 ! FUNCTION:CalcsgHOLZ
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute the excitation error including HOLZ and Laue Center information
 !
@@ -1534,7 +1534,7 @@ end function CalcsgHOLZ
 ! 
 ! SUBROUTINE:GetHOLZGeometry
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief initialize HOLZ geometrical data for a given zone axis
 !
@@ -1648,7 +1648,7 @@ end subroutine GetHOLZGeometry
 ! 
 ! FUNCTION:GetHOLZcoordinates
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief find the projeccted coordinates of an arbitrary HOLZ g-vector
 !

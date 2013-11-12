@@ -32,7 +32,7 @@
 !
 ! MODULE: others
 !
-!> @author Marc De Graef, Carnegie Melon University / and others
+!> @author Marc De Graef, Carnegie Mellon University / and others
 !
 !> @brief routines written by other people, included with permission, and adapted by MDG
 !
@@ -54,7 +54,7 @@ contains
 !
 ! SUBROUTINE: fscatt
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !> @author A. Weickenmeier, original f77 code
 !
 !> @brief computes the complex scattering amplitude

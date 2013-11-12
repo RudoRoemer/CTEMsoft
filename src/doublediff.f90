@@ -5,7 +5,7 @@
 !
 ! MODULE: doublediff
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Anything related to double diffraction
 ! 

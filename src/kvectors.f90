@@ -148,6 +148,7 @@ integer(kind=irg),INTENT(OUT)		:: numk		!< total number of kvectors in linked li
 integer(kind=irg),INTENT(IN)		:: isym		!< Laue symmetry group number 
 integer(kind=irg),INTENT(INOUT)	:: ijmax	!< max parameter used for Conical and StandardConical modes
 character(*),INTENT(IN)		:: mapmode 	!< controls the type of mapping used ('Standard' or 'RoscaLambert')
+!real(kind=sgl),INTENT(IN)		:: klaue(2)	!< Laue center coordinates
 logical,INTENT(IN),OPTIONAL		:: usehex	!< hexagonal mode for RoscaLambert mapmode
 
 integer(kind=irg)       		:: istat,i,j,istart,iend,jstart,jend, imin, imax, jmin, jmax

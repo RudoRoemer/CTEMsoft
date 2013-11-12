@@ -5,6 +5,7 @@
 011CTEMmbcbed.template
 020CTEMMC.template
 021CTEMEBSDzE.template
+030CTEMGAMMA.template
 200dislocation.template
 201stackingfault.template
 202void.template

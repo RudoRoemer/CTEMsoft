@@ -32,7 +32,7 @@
 !
 ! MODULE: graphics
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief graphics output routines
 !
@@ -57,7 +57,7 @@ contains
 !
 ! SUBROUTINE: ProjectionMatrix
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief constuct a projection matrix for a given viewing direction
 !
@@ -117,7 +117,7 @@ end subroutine
 !
 ! SUBROUTINE: GetViewingDirection
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief get theindices of the viewing direction
 !
@@ -161,7 +161,7 @@ end subroutine
 !
 ! SUBROUTINE: GetDrawingSpace
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief real space or reciprocal space drawing
 !
@@ -189,7 +189,7 @@ end subroutine
 !
 ! SUBROUTINE: StereoProj
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief draw a stereographic projection
 !
@@ -312,7 +312,7 @@ end subroutine
 !
 ! SUBROUTINE: ComputeViewTrans
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute the viewing transformation matrix
 !
@@ -387,7 +387,7 @@ end subroutine
 !
 ! SUBROUTINE: axonometry
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief draw a wireframe or phong-shaded surface
 !
@@ -837,7 +837,7 @@ end subroutine
 !
 ! SUBROUTINE: axis
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief draw an x-y plot
 !
@@ -1600,7 +1600,7 @@ end module
 !
 ! MODULE: cont_mod
 !
-!> @author Marc De Graef, Carnegie Melon University (but see below)
+!> @author Marc De Graef, Carnegie Mellon University (but see below)
 !
 !> @brief module to draw contour plots
 !

@@ -32,9 +32,22 @@
 !
 ! MODULE: stacking_fault
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Provides routines to compute the displacement vector for various stacking faults.
+!
+!> @note Remember that all defects are defined with respect to the foil in the zero-tilt
+!> orientation !!!!  This means that the foil reference frame then coincides with the 
+!> image reference frame, apart from a potential scaling factor.  
+!>
+!> Remember also that the quat_mult routine for quaternion multiplication expects 
+!> the subscripts for the a_xx rotations to be read from right to left, whereas the 
+!> quat_rotate_vector routine expects them the other way around...  So, to combine
+!> the quaternions a_fc (from crystal to foil) with a_if (from foil to image) we
+!> need to do a_ic=quat_mult(a_if,a_fc); if we want to rotate the vector v from crystal
+!> to image frame, then we need quat_rotate_vector(a_ci,v).  This is really important
+!> and has caused some confusion/errors in the past; it is a consequence of my choice for
+!> the quat_rotate_vector order of operations... 
 ! 
 !> @date   04/29/11 MDG 1.0 original
 !> @date   06/04/13 MDG 2.0 rewrite + quaternions instead of rotations
@@ -59,7 +72,7 @@ contains
 !
 ! FUNCTION: point_inside_triangle
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  determines whether or not a point lies inside or outside a triangle (in 2D)
 !
@@ -104,7 +117,7 @@ end function point_inside_triangle
 !
 ! SUBROUTINE: rank_points
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief rank points for inside/outside analysis
 !
@@ -180,12 +193,31 @@ end subroutine rank_points
 !
 ! FUNCTION: point_inside_polygon
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  determines whether or not a point lies inside or outside a polygon (in 2D)
 !
 !> @details based on http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html (Fortran version)
 ! 
+!> @note Copyright (c) 1970-2003, Wm. Randolph Franklin
+!>
+!> Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
+!> and associated documentation files (the "Software"), to deal in the Software without restriction, 
+!> including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, 
+!> and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, 
+!> subject to the following conditions:
+
+!> Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimers.
+!> Redistributions in binary form must reproduce the above copyright notice in the documentation and/or 
+!> other materials provided with the distribution.
+!> The name of W. Randolph Franklin may not be used to endorse or promote products derived from this Software 
+!> without specific prior written permission.
+!> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED 
+!> TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
+!> THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF 
+!> CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+!> DEALINGS IN THE SOFTWARE.
+!
 !> @param px point coordinate x
 !> @param py point coordinate y
 !> @param xx vertex coordinates
@@ -196,14 +228,14 @@ end subroutine rank_points
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
-logical function point_inside_polygon(px,py,xx,yy)
+function point_inside_polygon(px,py,xx,yy) result(inorout)
 
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN) 	:: px, py, xx(4), yy(4)
-real(kind=sgl) 				::  x(4), y(4), z
-integer(kind=irg) 			:: i, j, inorout
-logical 					:: mx,my,nx,ny
+real(kind=sgl) 			:: x(4), y(4), z
+integer(kind=irg) 		:: i, j, inorout
+logical 			:: mx,my,nx,ny
 
 x = xx-px
 y = yy-py
@@ -216,10 +248,7 @@ do i=1,4
   my = y(i).ge.0.0
   ny = y(j).ge.0.0
   if (.not.((my.or.ny).and.(mx.or.nx)).or.(mx.and.nx)) cycle
-  if (my.and.ny.AND.(mx.or.nx).and..not.(mx.and.nx)) then
-    inorout = -inorout
-    cycle
-  else
+  if (.not.(my.and.ny.AND.(mx.or.nx).and..not.(mx.and.nx))) then
     z  = (y(i)*x(j)-x(i)*y(j))/(x(j)-x(i))
     if (z.lt.0.0) cycle
     if (z.eq.0.0) then 
@@ -227,10 +256,11 @@ do i=1,4
       exit
     end if
     if (z.gt.0.0) inorout=-inorout
+  else
+    inorout = -inorout
+    cycle
   endif
 end do
-
-point_inside_polygon = inorout.ge.0
 
 end function point_inside_polygon
 
@@ -239,7 +269,7 @@ end function point_inside_polygon
 !
 ! SUBROUTINE: makestackingfault
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute parameters for a stacking fault
 !
@@ -288,20 +318,21 @@ IMPLICIT NONE
 real(kind=sgl),INTENT(IN)	:: DF_L
 integer(kind=irg),INTENT(IN)	:: inum, nx, ny, DF_g(3), ndl, dinfo
 
-real(kind=sgl)  			:: fpn(3),am(4,4),midpoint(3), &
-                  				 lptopi(3),lpboti(3),tptopi(3),tpboti(3),gg,det,A(4), xx(4), yy(4), tmp(3), &
-						 tmp2(3), cc
-!real(kind=sgl)  			:: a_ir(3,3),a_id(3,3),fpn(3),SFlpuf(3),SFtpuf(3),alpha,am(4,4),midpoint(3),Fi(3), &
-!                  				 lptopi(3),lpboti(3),tptopi(3),tpboti(3),gg,det,A(4),dp(3), xx(4), yy(4), tmp(3), &
-!						 tmp2(3), cc
-integer(kind=irg) 			:: i,j,info,ipiv,minx,maxx,miny,maxy
-!logical 					:: inside1,inside2, inside
+real(kind=sgl)  		:: fpn(3),am(4,4),midpoint(3), &
+                  		 lptopi(3),lpboti(3),tptopi(3),tpboti(3),gg,det,A(4), xx(4), yy(4), tmp(3), &
+				 tmp2(3), cc
+!real(kind=sgl)  		:: a_ir(3,3),a_id(3,3),fpn(3),SFlpuf(3),SFtpuf(3),alpha,am(4,4),midpoint(3),Fi(3), &
+!                  		 lptopi(3),lpboti(3),tptopi(3),tpboti(3),gg,det,A(4),dp(3), xx(4), yy(4), tmp(3), &
+!				 tmp2(3), cc
+integer(kind=irg) 		:: i,j,info,ipiv,minx,maxx,miny,maxy
+!logical 			:: inside1,inside2, inside
+
 
 ! begin by computing the angle between the projected fault normal vector 
-! in the image plane
+! in the image plane and the horizontal axis  
 
 ! first transform the plane normal into the direct space reference frame
-call TransSpace(SF(inum)%plane,tmp,'r','d')
+call TransSpace(SF(inum)%plane/CalcLength(SF(inum)%plane,'r'),tmp,'r','d')
 call NormVec(tmp,'d')
 tmp2 = foil%F
 call NormVec(tmp2,'d')
@@ -310,12 +341,11 @@ cc = CalcAngle(tmp2,tmp,'d')
 call CalcCross(tmp,tmp2,fpn,'d','d',0)
 call NormVec(fpn,'d')
 call CalcCross(tmp2,fpn,tmp,'d','d',0)
+call NormVec(tmp,'d')
 gg = sqrt(tmp(1)**2+tmp(2)**2)
-write (*,*) 'projected fault plane normal : ',tmp
-write (*,*) 'angle to foil normal : ',cc*180.0/cPi
 fpn(3) = cos(cc)
 fpn(1:2) = tmp(1:2)*sqrt(1.0-fpn(3)**2)/gg
-write (*,*) 'image space fault plane normal : ',fpn
+if (dinfo.eq.1) write (*,*) 'image space fault plane normal : ',fpn
 ! the resulting vector lies in the plane normal to the foil normal, and we
 ! need its components to compute the angle thetan (normalize the first two components)
 
@@ -324,7 +354,7 @@ SF(inum)%thetan = atan2(fpn(2),fpn(1))
 
 if (dinfo.eq.1) write (*,*) ' thetan = ',SF(inum)%thetan
 
-write (*,*) 'scale factor  = ',DF_L
+if (dinfo.eq.1) write (*,*) 'scale factor  = ',DF_L
 
 ! next compute the location of the partial centers in the image space
 SF(inum)%lpr(1:3) = (/ SF(inum)%id-0.5*sin(SF(inum)%thetan)*SF(inum)%sep, &
@@ -332,8 +362,8 @@ SF(inum)%lpr(1:3) = (/ SF(inum)%id-0.5*sin(SF(inum)%thetan)*SF(inum)%sep, &
 SF(inum)%tpr(1:3) = (/ SF(inum)%id+0.5*sin(SF(inum)%thetan)*SF(inum)%sep, &
                                    SF(inum)%jd-0.5*cos(SF(inum)%thetan)*SF(inum)%sep,0.0 /) / DF_L
 
-if (dinfo.eq.0) write (*,*) 'lpr_i = ',SF(inum)%lpr(1:3)
-if (dinfo.eq.0) write (*,*) 'tpr_i = ',SF(inum)%tpr(1:3)
+if (dinfo.eq.1) write (*,*) 'lpr_i = ',SF(inum)%lpr(1:3)
+if (dinfo.eq.1) write (*,*) 'tpr_i = ',SF(inum)%tpr(1:3)
 
 ! call makedislocation for each of the partials
   DL(ndl+1)%id = SF(inum)%lpr(1) 
@@ -342,7 +372,7 @@ if (dinfo.eq.0) write (*,*) 'tpr_i = ',SF(inum)%tpr(1:3)
   DL(ndl+1)%burg = SF(inum)%lpb
   DL(ndl+1)%g = float(DF_g)
   call makedislocation(ndl+1,dinfo,DF_L)
-  if (dinfo.eq.0) write (*,*) 'Leading Partial Position ',DL(ndl+1)%id,DL(ndl+1)%jd
+  if (dinfo.eq.1) write (*,*) 'Leading Partial Position ',DL(ndl+1)%id,DL(ndl+1)%jd
     
   DL(ndl+2)%id = SF(inum)%tpr(1) 
   DL(ndl+2)%jd = SF(inum)%tpr(2) 
@@ -350,14 +380,15 @@ if (dinfo.eq.0) write (*,*) 'tpr_i = ',SF(inum)%tpr(1:3)
   DL(ndl+2)%burg = SF(inum)%tpb
   DL(ndl+2)%g = float(DF_g)
   call makedislocation(ndl+2,dinfo,DF_L)
-  if (dinfo.eq.0)  write (*,*) 'Trailing Partial Position ',DL(ndl+2)%id,DL(ndl+2)%jd
+  if (dinfo.eq.1)  write (*,*) 'Trailing Partial Position ',DL(ndl+2)%id,DL(ndl+2)%jd
 
 ! copy the top and bottom dislocation intersections (computed in make_dislocation) 
 ! into the corresponding variables of the SF record
-SF(inum)%lpbot = DL(ndl+1)%top
-SF(inum)%lptop = DL(ndl+1)%bottom
-SF(inum)%tpbot = DL(ndl+2)%top
-SF(inum)%tptop = DL(ndl+2)%bottom
+
+SF(inum)%lpbot = DL(ndl+1)%bottom
+SF(inum)%lptop = DL(ndl+1)%top
+SF(inum)%tpbot = DL(ndl+2)%bottom
+SF(inum)%tptop = DL(ndl+2)%top
 
 ! obviously, these four points need to lie in a single plane; at this point, we check that this is indeed the case
 ! by computing the volume of the tetrahedron formed by these four points; if the volume is zero, then the 
@@ -368,7 +399,7 @@ am(1:4,3) = (/ SF(inum)%tptop(1:3),1.0 /)
 am(1:4,4) = (/ SF(inum)%tpbot(1:3),1.0 /) 
 call sgetrf(4,4,am,4,ipiv,info)
 det = abs(am(1,1)*am(2,2)*am(3,3)*am(4,4))
-if (dinfo.eq.0) write (*,*) 'determinant (should be zero) = ',det
+if (dinfo.eq.1) write (*,*) 'determinant (should be zero) = ',det
 
 ! ok, next we need to figure out which image pixels lie on the projection of the stacking fault plane.
 ! these lines need to be replaced with lines that transform the coordinates to the tilted foil case !!!
@@ -403,17 +434,18 @@ write (*,*) 'Integer fault box = ',minx,maxx,miny,maxy
 A(1:3) = fpn(1:3)
 midpoint = 0.25*(lptopi+lpboti+tptopi+tpboti)
 A(4) = sum(fpn*midpoint)
-if (dinfo.eq.0) write (*,*) 'fault plane parameters : ',A, midpoint
+if (dinfo.eq.1) write (*,*) 'fault plane parameters : ',A, midpoint
 
 ! rank the corner points so that the polygon is convex
 ! call rank_points(tpboti(1:2),lpboti(1:2),lptopi(1:2),tptopi(1:2),xx,yy)
 xx = (/ lptopi(1), tptopi(1), tpboti(1),lpboti(1) /)
 yy = (/ lptopi(2), tptopi(2), tpboti(2),lpboti(2) /)
 
+
 ! for all of the points inside this box:
 do i=minx,maxx
   do j=miny,maxy
-    if (point_inside_polygon( float(i), float(j), xx, yy )) then ! the point lies inside the projected region, so we need the depth of the SF plane at this position
+    if (point_inside_polygon( float(i), float(j), xx, yy ).ge.0) then ! the point lies inside the projected region, so we need the depth of the SF plane at this position
       SF(inum)%zpos(i+nx/2,j+ny/2) =   ( DF_L * ( A(4) - A(1)*float(i) - A(2)*float(j) )/A(3) )
     end if
 !    if (i.eq.0) write (*,*) j, DF_L * ( A(4) - A(1)*float(i) - A(2)*float(j) )/A(3), &
@@ -421,6 +453,11 @@ do i=minx,maxx
   end do
 end do
 if (dinfo.eq.1) write (*,*) 'fault plane pixels determined'
+
+open(unit=20,file='sf.data',status='unknown',form='unformatted')
+write(20) nx, ny
+write (20) SF(inum)%zpos
+close(unit=20,status='keep')
 
 ! let's also make sure that the leading partial Burgers vector is translated to the 
 ! cartesian reference frame, so that it can be used directly by the CalcR routine
@@ -431,11 +468,200 @@ SF(inum)%lpbc = matmul(cell%dsm,SF(inum)%lpb)
 end subroutine makestackingfault
 
 
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: makestackingfault2
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief compute parameters for a stacking fault
+!
+!> @details  This subroutine computes the geometrical parameters for a 
+!> stacking fault.  It computes, among others, the coordinates of the 
+!> centers of the partial dislocations, the intersections of each dislocation
+!> line with the top and bottom foil surface, and an array that indicates, for
+!> each image pixel, whether or not the corresponding integration column 
+!> contains this fault; if it does not, the  value in the array is equal to 
+!> -10000; if it does, then the value is equal to the point where the fault
+!> plane intersects with the column, measured from the top surface.
+!> In short, anything that is needed in the CalcR routine and can be computed 
+!> ahead of time, is computed here.  The routine also calls the makedislocation 
+!> routine to create the partials.
+! 
+!> @param inum
+!> @param DF_L column edge length
+!> @param nx
+!> @param ny
+!> @param DF_g
+!> @param ndl
+!> @param dinfo trigger for verbose output
+!
+!> @date   11/05/13 MDG 1.0 new attempt to replace faulty original routine
+!--------------------------------------------------------------------------
+subroutine makestackingfault2(inum,DF_L,nx,ny,DF_g,ndl,dinfo)
+ 
+use local
+use math
+use constants
+use files
+use foilmodule
+use dislocation
+use quaternions
+use crystal
+use crystalvars
+use symmetry
+use symmetryvars
+
+IMPLICIT NONE
+
+real(kind=sgl),INTENT(IN)	:: DF_L
+integer(kind=irg),INTENT(IN)	:: inum, nx, ny, DF_g(3), ndl, dinfo
+
+real(kind=sgl)  		:: fpn(3),am(4,4),midpoint(3), &
+                  		 lptopi(3),lpboti(3),tptopi(3),tpboti(3),gg,det,A(4), xx(4), yy(4), tmp(3), &
+				 tmp2(3), cc, planenormal(3), rzero(3), unita(3)
+!real(kind=sgl)  		:: a_ir(3,3),a_id(3,3),fpn(3),SFlpuf(3),SFtpuf(3),alpha,am(4,4),midpoint(3),Fi(3), &
+!                  		 lptopi(3),lpboti(3),tptopi(3),tpboti(3),gg,det,A(4),dp(3), xx(4), yy(4), tmp(3), &
+!				 tmp2(3), cc
+integer(kind=irg) 		:: i,j,info,ipiv,minx,maxx,miny,maxy
+!logical 			:: inside1,inside2, inside
+
+
+! we begin by computing the geometry in the foil reference frame, which is the cartesian frame 
+! for zero sample tilt;  sample tilts are applied once we known the partial dislocation geometry
+write (*,*) 'SFn in reciprocal : ',SF(inum)%plane
+call TransSpace(SF(inum)%plane,tmp,'r','c')
+call NormVec(tmp,'c')
+write (*,*) 'SFn in cartesian : ',tmp
+planenormal =  tmp
+
+call CalcCross( planenormal, (/ 0.0,0.0,1.0 /),  unita, 'c', 'c', 0)
+call NormVec(unita,'c')
+fpn = planenormal
+if (dinfo.eq.1) write (*,*) ' unita should have zero third component ',unita, fpn
+
+! the fault plane goes through the point rzero in the foil center plane
+rzero = (/ SF(inum)%id, SF(inum)%jd, 0.0 /)
+
+! this leads to the location of the partial dislocation centers
+SF(inum)%lpr = rzero + 0.5*SF(inum)%sep*unita / DF_L
+SF(inum)%tpr = rzero - 0.5*SF(inum)%sep*unita / DF_L
+
+if (dinfo.eq.1) write (*,*) 'lpr_i = ',SF(inum)%lpr(1:3)
+if (dinfo.eq.1) write (*,*) 'tpr_i = ',SF(inum)%tpr(1:3)
+
+! call makedislocation for each of the partials
+  DL(ndl+1)%id = SF(inum)%lpr(1) 
+  DL(ndl+1)%jd = SF(inum)%lpr(2) 
+  DL(ndl+1)%u =  SF(inum)%lpu
+  DL(ndl+1)%burg = SF(inum)%lpb
+  DL(ndl+1)%g = float(DF_g)
+  call makedislocation(ndl+1,dinfo,DF_L)
+  if (dinfo.eq.1) write (*,*) 'Leading Partial Position ',DL(ndl+1)%id,DL(ndl+1)%jd
+    
+  DL(ndl+2)%id = SF(inum)%tpr(1) 
+  DL(ndl+2)%jd = SF(inum)%tpr(2) 
+  DL(ndl+2)%u = SF(inum)%tpu
+  DL(ndl+2)%burg = SF(inum)%tpb
+  DL(ndl+2)%g = float(DF_g)
+  call makedislocation(ndl+2,dinfo,DF_L)
+  if (dinfo.eq.1)  write (*,*) 'Trailing Partial Position ',DL(ndl+2)%id,DL(ndl+2)%jd
+
+! copy the top and bottom dislocation intersections (computed in make_dislocation) 
+! into the corresponding variables of the SF record
+
+SF(inum)%lpbot = DL(ndl+1)%bottom
+SF(inum)%lptop = DL(ndl+1)%top
+SF(inum)%tpbot = DL(ndl+2)%bottom
+SF(inum)%tptop = DL(ndl+2)%top
+
+! obviously, these four points need to lie in a single plane; at this point, we check that this is indeed the case
+! by computing the volume of the tetrahedron formed by these four points; if the volume is zero, then the 
+! points are co-planar.  (Use LAPACK's LU-decomposition and compute the product of the diagonal elements of U)
+am(1:4,1) = (/ SF(inum)%lptop(1:3),1.0 /)
+am(1:4,2) = (/ SF(inum)%lpbot(1:3),1.0 /) 
+am(1:4,3) = (/ SF(inum)%tptop(1:3),1.0 /) 
+am(1:4,4) = (/ SF(inum)%tpbot(1:3),1.0 /) 
+call sgetrf(4,4,am,4,ipiv,info)
+det = abs(am(1,1)*am(2,2)*am(3,3)*am(4,4))
+if (dinfo.eq.1) write (*,*) 'determinant (should be zero) = ',det
+
+! ok, next we need to figure out which image pixels lie on the projection of the stacking fault plane.
+! these lines need to be replaced with lines that transform the coordinates to the tilted foil case !!!
+lptopi = SF(inum)%lptop
+lpboti = SF(inum)%lpbot
+tptopi = SF(inum)%tptop
+tpboti = SF(inum)%tpbot
+write (*,*) 'SF parameters :'
+write (*,*) lptopi,' <> ',lpboti
+write (*,*) tptopi,' <> ',tpboti
+
+! define the array that will contain the zpos values
+allocate(SF(inum)%zpos(nx,ny))
+SF(inum)%zpos = -10000.0    ! set all points to be outside the projected SF
+
+! first determine the smaller box
+minx = nint(min( lptopi(1),lpboti(1),tptopi(1),tpboti(1) )) -2
+maxx = nint(max( lptopi(1),lpboti(1),tptopi(1),tpboti(1) )) +2
+miny = nint(min( lptopi(2),lpboti(2),tptopi(2),tpboti(2) )) -2
+maxy = nint(max( lptopi(2),lpboti(2),tptopi(2),tpboti(2) )) +2
+
+! the fault edges may fall outside of the viewing frame (origin at the center !!!)
+if (minx.lt.(-nx/2+1)) minx=-nx/2+1
+if (maxx.gt.nx/2) maxx=nx/2
+if (miny.lt.(-ny/2+1)) miny=-ny/2+1
+if (maxy.gt.ny/2) maxy=ny/2
+
+write (*,*) 'Integer fault box = ',minx,maxx,miny,maxy
+
+! get the equation of the stacking fault plane in the image reference frame
+! first the unit plane normal in image space
+A(1:3) = fpn(1:3)
+midpoint = 0.25*(lptopi+lpboti+tptopi+tpboti)
+A(4) = sum(fpn*midpoint)
+if (dinfo.eq.1) write (*,*) 'fault plane parameters : ',A, midpoint
+
+! rank the corner points so that the polygon is convex
+! call rank_points(tpboti(1:2),lpboti(1:2),lptopi(1:2),tptopi(1:2),xx,yy)
+xx = (/ lptopi(1), tptopi(1), tpboti(1),lpboti(1) /)
+yy = (/ lptopi(2), tptopi(2), tpboti(2),lpboti(2) /)
+
+write (*,*) xx
+write (*,*) yy
+
+
+! for all of the points inside this box:
+do i=minx,maxx
+  do j=miny,maxy
+    if (point_inside_polygon( float(i), float(j), xx, yy ).gt.0) then ! the point lies inside the projected region, so we need the depth of the SF plane at this position
+      SF(inum)%zpos(i+nx/2,j+ny/2) =   ( DF_L * ( A(4) - A(1)*float(i) - A(2)*float(j) )/A(3) )
+    end if
+!    if (i.eq.0) write (*,*) j, DF_L * ( A(4) - A(1)*float(i) - A(2)*float(j) )/A(3), &
+!         point_inside_polygon( float(i), float(j), xx, yy )
+  end do
+end do
+if (dinfo.eq.1) write (*,*) 'fault plane pixels determined'
+
+open(unit=20,file='sf.data',status='unknown',form='unformatted')
+write(20) nx, ny
+write (20) SF(inum)%zpos
+close(unit=20,status='keep')
+
+! let's also make sure that the leading partial Burgers vector is translated to the 
+! cartesian reference frame, so that it can be used directly by the CalcR routine
+SF(inum)%lpbc = matmul(cell%dsm,SF(inum)%lpb)
+
+! that should do it for the stacking fault...  The rest 
+! takes place in the CalcRLocal routine.
+end subroutine makestackingfault2
+
+
 !--------------------------------------------------------------------------
 !
 ! SUBROUTINE: read_stacking_fault_data
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  read stacking fault namelist files
 !
@@ -496,7 +722,7 @@ endif
     SF(i)%tpu = SFtpu
     SF(i)%tpb = SFtpb
 ! initialize the stacking fault variables and both partial dislocations
-    call makestackingfault(i,DF_L,DF_npix,DF_npiy,DF_g,numdisl,dinfo)
+    call makestackingfault2(i,DF_L,DF_npix,DF_npiy,DF_g,numdisl,dinfo)
     numdisl = numdisl + 2
  end do
  

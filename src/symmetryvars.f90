@@ -32,7 +32,7 @@
 !
 ! MODULE: symmetryvars
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief all symmetry and related variable definitions
 !

@@ -32,7 +32,7 @@
 !
 ! MODULE: void
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Provides routines to deal with spherical voids
 ! 
@@ -55,7 +55,7 @@ contains
 !
 ! SUBROUTINE: read_void_data
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  read void parameters from file
 ! 

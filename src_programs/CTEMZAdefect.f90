@@ -42,68 +42,28 @@
 !> interactively change the detector settings (including camera length), as well as the 
 !> segment combination for a hypothetical segmented detector.
 ! 
-!  03/07/10 MDG  1.0 original, based on STEMdefect.f90 (collaboration with OSU) 
-!  03/21/10 MDG  2.0 modified for STEM illumination, fast version with bi-variate interpolation
-!  06/19/13 MDG  3.0 conversion to new libraries 
+!> @date  03/07/10 MDG  1.0 original, based on STEMdefect.f90 (collaboration with OSU) 
+!> @date  03/21/10 MDG  2.0 modified for STEM illumination, fast version with bi-variate interpolation
+!> @date  06/19/13 MDG  3.0 conversion to new libraries 
+!> @date  10/28/13 MDG  3.1 added Interpret_Program_Arguments line
 !--------------------------------------------------------------------------
 program CTEMZAdefect 
 
 use local
+use files
 use io
 
 IMPLICIT NONE
 
-character(fnlen)			:: nmlfile
+character(fnlen)			:: nmldeffile
 
-integer(kind=irg)			:: numarg		!< number of command line arguments
-integer(kind=irg)			:: iargc		!< external function for command line
-character(fnlen)    			:: arg		!< to be read from the command line
-
-integer(kind=irg),parameter		:: numt=7
-character(fnlen)			:: templates(numt)
-
-!----------------------------------------------------------------
-!----------------------------------------------------------------
-!----------------------------------------------------------------
-!----------------------------------------------------------------
-!  Here is where the main program starts 
-!----------------------------------------------------------------
-!----------------------------------------------------------------
-!----------------------------------------------------------------
-!----------------------------------------------------------------
-! process the command line argument (should be only one ...)
-numarg = iargc()
-if (numarg.gt.0) then ! there is at least one argument
-        call getarg(1,arg)
-        nmlfile = arg
-        mess = 'Found the following argument: '//trim(nmlfile); call Message("(/A/)")
-        if (trim(nmlfile).eq.'-h') then
-		mess = ' Program should be called as follows: '; call Message("(/A)")
-		mess = '        CTEMZAdefect [-h] [-t] [nmlfile]'; call Message("(A)")
-		mess = ' where nmlfile is an optional file name for the namelist file;'; call Message("(A)")
-		mess = ' if absent, the default name ''CTEMZAdefect.nml'' will be used.'; call Message("(A/)")
-		mess = ' To create templates of all possible input files, type CTEMZAdefect -t'; call Message("(A/)")
-		stop 'end of program help information'
-	end if
-!        if (trim(nmlfile).eq.'-t') then
-! with this option the program creates template namelist files in the current folder so that the 
-! user can edit them (file extension will be .template; should be changed by user to .nml)
-!		templates= (/ 'CTEMZAdefect.template', &
-!				'SRdef_foildata.template', &
-!				'STEM_rundata.template', &
-!				'disl.template', &
-!				'sf.template', &
-!				'incl.template', &
-!				'void.template' /)
-!		call CopyTemplateFiles(numt,templates)
-!		stop 'end of program; all template files created'
-!	end if
-else
-	nmlfile = 'CTEMZAdefect.nml'    		! assign the default namelist file name
-end if
+! deal with the command line arguments, if any
+nmldeffile = 'CTEMZAdefect.nml'
+progname = 'CTEMZAdefect.f90'
+call Interpret_Program_Arguments(nmldeffile,7,(/ 1, 2, 3, 200, 201, 202, 203 /) )
 
 ! initialize all user-defined variables
-call ComputeZAdefect(nmlfile)
+call ComputeZAdefect(nmldeffile)
 
 end program CTEMZAdefect
 
@@ -146,6 +106,7 @@ use dislocation
 use void
 use inclusion
 use defectmodule
+use rotations
 use TIFF_f90
 use pgm
 use timing
@@ -188,15 +149,9 @@ namelist / rundata / DF_L, DF_npix, DF_npiy, DF_slice, sgname, numvoids, incname
 				 STEMstore,STEMname, dataname, foilnmlfile, STEMnmlfile
 
 
-! here we read the general simulation information from a namelist file ZAdef_rundata.nml
 ! first we define the default values
 czero=cmplx(0.0,0.0,dbl)
 cone=cmplx(1.0,0.0,dbl)
-
-! first read the template namelist file which contains the parameter defaults
-! OPEN(UNIT=dataunit,FILE=trim(templatepathname)//'CTEMZAdefect.template',DELIM='APOSTROPHE')
-! READ(UNIT=dataunit,NML=rundata)
-! CLOSE(UNIT=dataunit)
 
 ! parameters specific to this run
  xtalname = 'undefined'		! initial value; MUST be present in nml file for program to execute
@@ -246,10 +201,6 @@ cone=cmplx(1.0,0.0,dbl)
  READ(UNIT=dataunit,NML=rundata)
  CLOSE(UNIT=dataunit)
 
-write (*,*) trim(sfname(1))
-write (*,*) trim(sfname(2))
-
-
 ! make sure the xtalname variable has been properly defined
 if (trim(xtalname).eq.'undefined') then
   call FatalError('CTEMZAdefect:',' structure file name is undefined in '//nmlfile)
@@ -276,7 +227,7 @@ end if
 ! zone axis 'ZA' or systematic row 'SR'  [legacy; needs to be removed] 
  srza = 'ZA'
  
-! determine the point group number and get the ZAP 2-D symmetry
+! determine the point group number and get the ZAP 2-D symmetry  NEEDS TO BE MODIFIED WITH NEW ROUTINES
  j=0
  do i=1,32
   if (SGPG(i).le.cell%SYM_SGnum) j=i
@@ -296,11 +247,16 @@ end if
  io_int(4:6) = gb(1:3)
  call WriteValue(' Reciprocal lattice vectors : ', io_int, 6, "('(',3I3,') and (',3I3,')',/)")
 
+
+
+
 ! this is taken from the systematic row program, so we need to verify that it is still correct!
  DF_gf = float(ga)
  DF_gstar = DF_gf/CalcLength(DF_gf,'r')**2    ! define G* such that G.G* = 1
  call TransSpace(DF_gf,DF_gc,'r','c')                 ! convert to Cartesian reference frame
   
+  ! this all needs to be modified with new routines, similar to lacbed program
+
 ! determine all families of reciprocal lattice points that belong to the zone and rank them
   call RankReflections(kk,ga,gb,fcnt,srza,iorder)
 
@@ -367,7 +323,7 @@ end if
 ! [yes, we're using the same file as for the systematic row case]
 ! this includes material property data, in this case the elastic moduli,
 ! and the foil normal, which we will need in the next step
-  call read_foil_data(foilnmlfile,DF_npix,DF_npiy,DF_L)
+  call read_foil_data(foilnmlfile,DF_npix,DF_npiy,DF_L,dinfo)
 
 ! we'll need to compute the list of wavevectors at this point if we do a STEM computation
 ! read the STEM parameters from a namelist file and initialize all STEM related arrays
@@ -454,7 +410,7 @@ if ((dispmode.eq.'new').or.(dispmode.eq.'not')) then
 
 ! read namelist files for all dislocations, if any
    if (numdisl.gt.0) call read_dislocation_data(dislname,numdisl,numsf,DF_npix,DF_npiy,DF_gf,DF_L,dinfo)
-write (*,*) 'about to read sf files'
+
 ! read namelist files for all stacking faults, if any
    if (numsf.gt.0) call read_stacking_fault_data(numsf,numdisl,sfname,DF_L,DF_npix,DF_npiy,DF_g,dinfo)
 
@@ -556,7 +512,6 @@ io_real(1) = minval(disparray)
 io_real(2) = maxval(disparray)
 call WriteValue('disparray bounds: ', io_real, 2, "(2(F10.5,' '))")
 
-
 ! ok, all the set up is now complete;
 ! next, we prepare for the actual image simulation
 ! there are three types of simulation: CTEM, STEM, or STEM with storage of CBED patterns
@@ -650,13 +605,13 @@ if (STEMstore) then
   write (dataunit) dataname
 
 ! various bits of useful information
-  write (dataunit) xtalname							! crystal structure file names	
-  write (dataunit) kk									! incident wave vector
+  write (dataunit) xtalname						! crystal structure file names	
+  write (dataunit) kk							! incident wave vector
   write (dataunit) CalcDiffAngle(ga(1),ga(2),ga(3))*0.5		! Bragg angle for the first reflection (whether allowed or not)
   write (dataunit) STEM%numberofsvalues				! number of pixels along disk radius
-  write (dataunit) sngl(mLambda)						! wave length
-  write (dataunit) beamdiv							! beam divergence
-  write (dataunit) DF_L								! pixel size
+  write (dataunit) sngl(mLambda)					! wave length
+  write (dataunit) beamdiv						! beam divergence
+  write (dataunit) DF_L						! pixel size
 	
 ! number of reflections, and associated information (hkl, ...)
   call TransSpace(float(kk),c,'d','c')

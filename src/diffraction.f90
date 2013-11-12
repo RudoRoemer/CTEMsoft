@@ -32,7 +32,7 @@
 !
 ! MODULE: diffraction
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Anything related to dynamical diffraction
 !
@@ -168,7 +168,7 @@ real(kind=sgl),allocatable    	:: Vg(:),rg(:),Vgsave(:)
 integer(kind=irg),allocatable 	:: rfamily(:,:,:),rnumfam(:)
 
 
-! interface statemens
+! interface statements
 interface Calcsg
 	module procedure CalcsgSingle
 	module procedure CalcsgDouble
@@ -181,7 +181,7 @@ contains
 !
 ! SUBROUTINE: GetVoltage
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief ask for accelerating voltage, then call CalcWaveLength
 ! 
@@ -209,7 +209,7 @@ end subroutine
 !
 ! SUBROUTINE: CalcWaveLength
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute the electron wavelength and select scattering data set
 ! 
@@ -305,7 +305,7 @@ end subroutine
 !
 ! FUNCTION: CalcDiffAngle
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute the diffraction angle 2theta in radians
 !
@@ -336,7 +336,7 @@ end function
 !
 ! FUNCTION: LorentzPF
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute the Lorentz Polarization Factor Lp
 !
@@ -368,7 +368,7 @@ end function
 !
 ! SUBROUTINE: CalcUcg
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute the complex Structure Factor for a given g
 !
@@ -633,7 +633,7 @@ end subroutine CalcUcg
 !
 ! FUNCTION: CalcsgSingle
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute the excitation error for a given reflection
 !
@@ -677,7 +677,7 @@ end function CalcsgSingle
 !
 ! FUNCTION: CalcsgDouble
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute the excitation error for a given reflection (double precision)
 !
@@ -724,7 +724,7 @@ end function CalcsgDouble
 !
 ! SUBROUTINE: TBCalcSM
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief 2-beam scattering matrix implementation
 !
@@ -824,7 +824,7 @@ end subroutine
 !
 ! SUBROUTINE: TBCalcInten
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief 2-beam transmitted and scattered intensities
 !
@@ -911,7 +911,7 @@ end subroutine
 !
 ! SUBROUTINE: TBCalcdz
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief multiply the amplitude column vector with the Scattering Matrix
 !
@@ -961,7 +961,7 @@ end subroutine
 !
 ! SUBROUTINE: DiffPage
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief draw kinematical zone axis electron diffraction patterns
 !
@@ -1263,7 +1263,7 @@ end subroutine DiffPage
 !
 ! SUBROUTINE: DumpZAP
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief draw a single zone axis diffraction pattern
 !
@@ -1438,7 +1438,7 @@ end subroutine
 !
 ! SUBROUTINE: DumpPP
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief draw a kinematical powder pattern
 !
@@ -1533,7 +1533,7 @@ end subroutine
 !
 ! SUBROUTINE: studylist
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief analyze reflection input list
 !
@@ -1649,7 +1649,7 @@ end subroutine
 !
 ! SUBROUTINE: BWsolve
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Bloch wave solver routine
 !

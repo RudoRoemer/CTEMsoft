@@ -32,7 +32,7 @@
 !
 ! MODULE: timing
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Provides routines to compute the displacement vector for various dislocations.
 ! 
@@ -56,7 +56,7 @@ contains
 !
 ! SUBROUTINE: Time_reset
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief reset time recording
 !
@@ -80,7 +80,7 @@ end subroutine Time_reset
 !
 ! SUBROUTINE: Time_report
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief report time recording
 !
@@ -106,7 +106,7 @@ end subroutine Time_report
 !
 ! SUBROUTINE: Time_start
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief start time recording
 !
@@ -125,7 +125,7 @@ end subroutine Time_start
 !
 ! SUBROUTINE: Time_estimate
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief estimare remaining time
 !
@@ -162,7 +162,7 @@ end subroutine Time_estimate
 !
 ! SUBROUTINE: Time_estimate
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief estimate remaining time
 !
@@ -216,7 +216,7 @@ end subroutine Time_remaining
 !
 ! SUBROUTINE: PrintTime
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief print  time
 !
@@ -262,7 +262,7 @@ end subroutine PrintTime
 !
 ! SUBROUTINE: Time_stop
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief stop time recording
 !

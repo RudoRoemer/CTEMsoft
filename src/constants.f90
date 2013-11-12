@@ -32,7 +32,7 @@
 !
 ! MODULE: constants
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief 
 !> Definition of constants and constant arrays used by other routines

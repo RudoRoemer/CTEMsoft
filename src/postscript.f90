@@ -32,7 +32,7 @@
 !
 ! MODULE: postscript
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief A collection of postscript output routines used to create a variety of graphics output
 !
@@ -154,7 +154,7 @@ contains
 !
 ! SUBROUTINE: PS_openfile
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief open postscript file and dump the preamble to the file
 !
@@ -219,7 +219,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_closefile
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief close and save postscript file 
 ! 
@@ -249,7 +249,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_newpage
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief start a new page inthe PS file
 !
@@ -296,7 +296,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_cellinfo
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  write unit cell information (for drawing programs)
 !
@@ -338,7 +338,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_clippath
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  make the last path the clippath
 !
@@ -360,7 +360,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_translate
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  redefine the origin of the current coordinate frame
 !
@@ -388,7 +388,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_move
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  move to a given location 
 !
@@ -416,7 +416,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_draw
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  draw a line from the current point to the new point
 !
@@ -444,7 +444,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_draw
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  draw a line with a given gray level from the current point to the new point
 !
@@ -482,7 +482,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_setlinewidth
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  set the line width
 !
@@ -509,7 +509,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_square
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  draw a square
 !
@@ -546,7 +546,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_filledsquare
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  draw a filledsquare
 !
@@ -585,7 +585,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_cross
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  draw a small cross
 !
@@ -625,7 +625,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_sphere
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  draw a colored sphere
 !
@@ -666,7 +666,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_arc
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  draw an arc of a circle (see PostScript 'arc' command for details)
 !
@@ -703,7 +703,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_circle
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  draw a circle
 !
@@ -733,7 +733,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_filledcircle
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  draw a filled circle
 !
@@ -766,7 +766,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_drawframe
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  draw the main frame
 !
@@ -795,7 +795,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_drawrect
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  draw a rectangle
 !
@@ -834,7 +834,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_line
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  draw a line between two points
 !
@@ -867,7 +867,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_setdash
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  define a dash pattern
 !
@@ -901,7 +901,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_closepathS
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  close current path and Stroke
 !
@@ -924,7 +924,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_stroke
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  stroke the current path
 !
@@ -947,7 +947,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_gsave
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  save the current graphics settings
 !
@@ -970,7 +970,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_grestore
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  restore the previous graphics settings
 !
@@ -993,7 +993,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_closepath
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief close the current path
 !
@@ -1016,7 +1016,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_newpath
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief start a new path
 !
@@ -1039,7 +1039,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_text
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief draw text at a given location
 !
@@ -1072,7 +1072,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_textv
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief draw text rotated counterclockwise by 90 degrees
 !
@@ -1105,7 +1105,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_texttitle
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief draw the title
 !
@@ -1140,7 +1140,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_textvtitle
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief draw a vertical title
 !
@@ -1178,7 +1178,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_textint
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  text followed by an integer number
 !
@@ -1214,7 +1214,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_textvar
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  text followed by a real number
 !
@@ -1250,7 +1250,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_textvar8
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  text followed by a double precision real number
 !
@@ -1286,7 +1286,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_textballoon
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  text inside a rounded balloon
 !
@@ -1333,7 +1333,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_balloon
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  draw an empty balloon
 !
@@ -1371,7 +1371,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_setfont
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief select a font and make it active
 !
@@ -1404,7 +1404,7 @@ end subroutine
 !
 ! SUBROUTINE: Printhkl
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  print hkl indices in PostScript format
 !
@@ -1470,7 +1470,7 @@ end subroutine
 !
 ! SUBROUTINE: DumpIndices
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  version of Printhkl used by stereographic projection program
 !
@@ -1602,7 +1602,7 @@ end subroutine
 !
 ! SUBROUTINE: PrintIndices
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief   draw indices in PostScript format
 !
@@ -1640,7 +1640,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_DumpImage
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief   draw integer image (512x512 maximum size) at given location with given scale
 !
@@ -1676,7 +1676,7 @@ end subroutine
 !
 ! SUBROUTINE: PS_DumpImageDistort
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief   draw integer image (512x512 maximum size) at given location with given scale which may be different along x and y
 !
@@ -1747,7 +1747,7 @@ end subroutine
 !
 ! SUBROUTINE: IndexReduce
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  Reduce an index triplet to smallest integers
 !
@@ -1790,7 +1790,7 @@ end subroutine
 !
 ! SUBROUTINE: IndexReduceMB
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  Reduce a Miller-Bravais index quartet to smallest integers
 !
@@ -1834,7 +1834,7 @@ end subroutine
 !
 ! SUBROUTINE: IndexString
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  Return a string of indices for printing (only deals with indices up to 9)
 !
@@ -1928,7 +1928,7 @@ end subroutine
 !
 ! SUBROUTINE: DrawSPFrame
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  draw a stereographic projection layout
 !
@@ -1985,7 +1985,7 @@ end subroutine
 !
 ! SUBROUTINE: GetIndex
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  get the u,v,w or h,k,l indices
 !

@@ -32,7 +32,7 @@
 !
 ! MODULE: YSHModule
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Provides routines to compute the displacement vector for surface intersecting dislocations.
 ! 
@@ -63,7 +63,7 @@ contains
 !
 ! FUNCTION: YSHDisp
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  compute the displacement field of an inclined dislocation intersecting the foil surface
 !
@@ -218,7 +218,7 @@ end function YSHDisp
 !
 ! FUNCTION: makeYSHdislocation
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief pre-compute geometrical parametersfor the Yoffe&Shaibani&Hazzledine (YSH) surface-relaxed dislocation in an elastically
 !> isotropic matrix. 
@@ -355,7 +355,7 @@ end subroutine makeYSHdislocation
 !
 ! SUBROUTINE: read_YSH_dislocation_data
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  prints quaternion and equivalent rotation matrix for a given input quaternion
 ! 

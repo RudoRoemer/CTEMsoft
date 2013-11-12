@@ -32,7 +32,7 @@
 !
 ! MODULE: inclusion
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Provides routines to deal with spherical inclusions
 ! 
@@ -55,7 +55,7 @@ contains
 !
 ! SUBROUTINE: read_inclusion_data
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  read inclusion parameters from file
 ! 

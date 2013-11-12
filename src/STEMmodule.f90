@@ -32,7 +32,7 @@
 !
 ! MODULE: STEMmodule
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Provides routines to handle the STEM detector geometry and weightfactors.
 ! 
@@ -62,7 +62,7 @@ contains
 !
 ! SUBROUTINE: init_STEM
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief initialize the weight factors for the systematic row case.
 !
@@ -454,7 +454,7 @@ end subroutine init_STEM
 !
 ! SUBROUTINE: init_STEM_ZA
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief initialize weight factors for zone-axis STEM case
 ! 
@@ -548,7 +548,7 @@ end subroutine init_STEM_ZA
 !
 ! SUBROUTINE: read_STEM_data
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief read detector and other parameters for the STEM case
 ! 

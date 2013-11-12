@@ -75,7 +75,7 @@ type(reflisttype),pointer 	:: reflist, & 	! linked list of reflections
 
 complex(kind=dbl),allocatable 	:: LUT(:,:,:)
 logical,allocatable		:: dbdiff(:,:,:)
-integer(kind=ish),allocatable		:: refdone(:,:,:)	! used to keep track of which reflections have already been dealt with.
+integer(kind=ish),allocatable	:: refdone(:,:,:)	! used to keep track of which reflections have already been dealt with.
 
 ! define the cutoff parameters for the Bethe potential approach (and set to zero initially)
 type BetheParameterType

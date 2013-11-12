@@ -32,7 +32,7 @@
 !
 ! MODULE: tiff
 !
-!> @author R.A. Vowels / Marc De Graef, Carnegie Melon University
+!> @author R.A. Vowels / Marc De Graef, Carnegie Mellon University
 !
 !> @brief TIFF output routines
 !
@@ -102,7 +102,7 @@ contains
 !
 ! SUBROUTINE:TIFF_Write_Byte_Into_Buffer
 !
-!> @author R.A. Vowels /Marc De Graef, Carnegie Melon University
+!> @author R.A. Vowels /Marc De Graef, Carnegie Mellon University
 !
 !> @brief write a single byte into a buffer and dump the
 !               buffer to file if full
@@ -141,7 +141,7 @@ end subroutine TIFF_Write_Byte_Into_Buffer
 !
 ! SUBROUTINE:TIFF_Write_Word
 !
-!> @author R.A. Vowels /Marc De Graef, Carnegie Melon University
+!> @author R.A. Vowels /Marc De Graef, Carnegie Mellon University
 !
 !> @brief write a 4-byte word into the buffer
 !
@@ -179,7 +179,7 @@ end subroutine TIFF_Write_Word
 !
 ! SUBROUTINE:TIFF_Make_Tag
 !
-!> @author R.A. Vowels /Marc De Graef, Carnegie Melon University
+!> @author R.A. Vowels /Marc De Graef, Carnegie Mellon University
 !
 !> @brief create a 12 byte Image File Directory Entry
 !
@@ -215,7 +215,7 @@ end subroutine TIFF_Make_Tag
 !
 ! SUBROUTINE:TIFF_Write_File
 !
-!> @author R.A. Vowels /Marc De Graef, Carnegie Melon University
+!> @author R.A. Vowels /Marc De Graef, Carnegie Mellon University
 !
 !> @brief write the TIFF file to unit 9
 ! 
