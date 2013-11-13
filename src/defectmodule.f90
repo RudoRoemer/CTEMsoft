@@ -39,6 +39,7 @@
 ! 
 !> @date   04/29/11 MDG 1.0 original
 !> @date   06/04/13 MDG 2.0 rewrite + quaternions instead of rotations
+!> @date   11/13/13 MDG 2.1 fixed error with coordinate transformations (after very long bug search!)
 !--------------------------------------------------------------------------
 module defectmodule
 
@@ -71,7 +72,7 @@ contains
 !> @param numsf number of stacking faults 
 !> @param numinc number of inclusions
 !
-!> @note This entire routine needs to be thoroughly verified after the quaternion conversion !
+!> @note This entire routine was thoroughly verified after the quaternion conversion !
 !>
 !> General comment for those who wish to add other defects...
 !>
@@ -88,6 +89,7 @@ contains
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  03/26/13 MDG 3.0 updated IO
 !> @date  10/30/13 MDG 3.1 debug of coordinate rotations
+!> @date  11/13/13 MDG 3.2 finally, the bug has been found!  
 !--------------------------------------------------------------------------
 subroutine CalcR(i,j,numvoids,numdisl,numYdisl,numsf,numinc)
 
@@ -123,10 +125,10 @@ logical               			:: void
 
 ! determine the starting point of the z-integration for the tilted foil
 ! this depends on the foil normal components which give the equation
-! of the top foil plane as F . r = -z0/2, from which we get zt...
+! of the top foil plane as F . r = z0/2, from which we get zt...
  a_fm = qu2om(foil%a_fm)
- fx = -a_fm(1,3)
- fy = -a_fm(2,3)
+ fx = a_fm(3,1)
+ fy = a_fm(3,2)
  fz = a_fm(3,3) 
  zt = foil%zb*0.5 - (fx*xpos + fy*ypos)/fz
 
@@ -134,19 +136,8 @@ logical               			:: void
  thick = foil%zb
  zero = cmplx(0.0,0.0)
 
-
-!if ((i.eq.120).and.(j.eq.125)) then 
-!  write (*,*) fx,fy,fz,nunit,zt,thick
-!end if
-
-
 ! loop over all slices (this is the main loop)
  sliceloop: do islice = 1,DF_nums 
-
-if ((i.eq.120).and.(j.eq.125).and.(islice.eq.1)) then 
- write (*,*) 'Total thickness = ',DF_nums*DF_slice, foil%zb
-end if
-
 
 ! zpos is the position down the column, starting at zt (in image coordinates)
     zpos = zt - float(islice)*DF_slice
@@ -154,8 +145,8 @@ end if
 ! set the displacements to zero
     sumR = 0.0
         
-!
-    tmpf = quat_rotate_vector( conjg(foil%a_fi), dble( (/ xpos, ypos, zpos /)) )
+! set the position in the foil reference frame
+    tmpf = quat_rotate_vector( foil%a_fi, dble( (/ xpos, ypos, zpos /)) )
 
 
 !------------
@@ -191,21 +182,13 @@ if (numvoids.ne.0) then
 !-----------------
 ! let's put a few dislocations in ... (see section 8.4.2)
 do ii=1,numdisl
-!         tmp2 =  (/ xpos, ypos, zpos /) - &
-!                    quat_rotate_vector( foil%a_fi, dble((/ DF_L*DL(ii)%id, DF_L*DL(ii)%jd, DL(ii)%zfrac*foil%z0 /)) )
-        tmp2 =  (/ xpos, ypos, zpos /) - (/ DF_L*DL(ii)%id, DF_L*DL(ii)%jd, DL(ii)%zfrac*foil%z0 /)
+! compute the difference vector between the current (xpos,ypos,zpos) in the foil reference frame
+! and the defect center coordinate
+  tmp2 =  tmpf - dble((/ DF_L*DL(ii)%id, DF_L*DL(ii)%jd, DL(ii)%zfrac*foil%z0 /))
 
-!if ((i.eq.120).and.(j.eq.125)) then 
-!  write (*,*) xpos, ypos, zpos, DF_L*DL(ii)%id, DF_L*DL(ii)%jd, DL(ii)%zfrac*foil%z0
-!  write (*,*) tmp2
-!end if  
 ! then convert the difference vector to the defect reference frame for this dislocation (we will only need the x and y coordinates)
-         tmp = quat_rotate_vector( conjg(DL(ii)%a_di), dble(tmp2) ) 
-!         tmp = quat_rotate_vector( DL(ii)%a_di, quat_rotate_vector( conjg(foil%a_fi), dble(tmp2) ) ) 
-!if ((i.eq.120).and.(j.eq.125)) then 
-!  write (*,*) tmp
-!  write (*,*) '--'
-!end if  
+!  tmp = quat_rotate_vector( DL(ii)%a_di, quat_rotate_vector( conjg(foil%a_fi), tmp2 ) ) 
+  tmp = quat_rotate_vector( DL(ii)%a_df, tmp2 ) 
 
 ! compute x1 + p_alpha x2  (eq. 8.38)
   za(1:3) = tmp(1) + DL(ii)%pa(1:3)*tmp(2)

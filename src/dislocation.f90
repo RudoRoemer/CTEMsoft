@@ -48,7 +48,7 @@ use quaternions
 type dislocationtype
   real(kind=dbl)     		:: burg(3),burgd(3),u(3),un(3),g(3),gn(3),id,jd, zfrac, zu
   real(kind=dbl)     		:: top(3), bottom(3)
-  real(kind=dbl)		:: a_dc(4), a_id(4), a_di(4)
+  real(kind=dbl)		:: a_dc(4), a_id(4), a_di(4), a_df(4)
   complex(kind=dbl)  		:: dismat(3,3),pa(3)
 end type dislocationtype
 
@@ -497,6 +497,9 @@ if (dinfo.eq.1) then
   call print_orientation(init_orientation(DL(inum)%a_di,'qu'),'om','a_di: ')
   call print_orientation(init_orientation(DL(inum)%a_id,'qu'),'om','a_id: ')
 end if
+
+! finally, get the foil to defect transformation (used in defect module)
+DL(inum)%a_df = quat_mult( DL(inum)%a_di, conjg(foil%a_fi) )
 
 ! Burgers vector (in the defect reference frame !!!)
 ! first transform Burgers vector to crystal cartesian reference frame

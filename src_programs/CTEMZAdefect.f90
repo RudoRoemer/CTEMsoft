@@ -32,7 +32,7 @@
 !
 ! PROGRAM: CTEMZAdefect 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief CTEMZAdefect computes zone axis defect contrast for multiple defects
 !>                      using STEM illumination and detector conditions
@@ -70,9 +70,9 @@ end program CTEMZAdefect
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE:ComputeZAdefect
+! SUBROUTINE: ComputeZAdefect
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute a zone axis STEM defect data set
 !
@@ -83,6 +83,7 @@ end program CTEMZAdefect
 !> @date 11/29/01  MDG 1.0 original
 !> @date 04/08/13  MDG 2.0 rewrite
 !> @date 05/14/13  MDG 2.1 replaced IO by namelist file
+!> @date 11/13/13  MDG 2.2 implementation of Pade approximation for scattering matrix computation
 !--------------------------------------------------------------------------
 subroutine ComputeZAdefect(nmlfile)
 
@@ -100,6 +101,7 @@ use kvectors
 use gvectors
 use files
 use io
+use math
 use foilmodule
 use stacking_fault
 use dislocation
@@ -114,26 +116,24 @@ use STEMmodule
 
 character(fnlen),INTENT(IN)		:: nmlfile
 
-integer(kind=irg)    			:: ira,nn,izero,i,j,k,n,nsl,numi,npix,npiy,imat,ii,jj,numvoids,numdisl, &
+integer(kind=irg)    			:: ira,nn,izero,i,j,k,n,numi,npix,npiy,imat,ii,jj,numvoids,numdisl, &
 					numsf,nCL,numinc,dinfo,SFplane(3),t_interval,outputfirst,outputlast, &
 					DF_nums_new,DF_npix_new,DF_npiy_new, numstart,numstop, isg, TID, &
 					NTHR, isym, ir, ga(3), gb(3),iorder,kk(3), fcnt,ccnt,ic,jc,g,numd,ix,iy, &
 					numk,ixp,iyp,tmpsaveinterval,SETNTHR, io_int(6), skip, gg(3), iSTEM
 !                                  OMP_GET_THREAD_NUM,OMP_GET_NUM_THREADS
 integer(kind=irg),parameter 		:: numdd=180 !360
-real(kind=sgl)         		:: ind(3),hkl(3),exerg,cosom,glen,exer,dgr,sl,arg,thick,mi,ma, X(2), &
+real(kind=sgl)         		:: ind(3),hkl(3),exerg,cosom,glen,exer,dgr,arg,thick,mi,ma, X(2), &
 					lauec(2), g3(3), gdotRmax,gdotR,att,xgp,ipos,jpos,kpos,DF_gf(3), &
 					DM(2,2), DD, H,FNr(3),ll(3),lpg(3),gplen,LC3, c(3), gx(3), gy(3), &
 					sgdenom, gac(3), gbc(3),zmax, beamdiv, ktmax, io_real(2), kt, qx, qy
-real(kind=dbl)        			:: thr
 character(fnlen)      			:: dataname,sgname,voidname,dislname(3*maxdefects),sfname(maxdefects), &
 					outputroot,incname,dispfile,tempname,xtalname,STEMname, foilnmlfile, STEMnmlfile
 character(4)            		:: outputformat, illumination_mode, dispmode
 character(2)            		:: srza
 character(5)            		:: fnumber(-10:10)
-complex(kind=dbl),allocatable    	:: DHWM(:,:),Afirst(:,:),DHWMvoid(:,:),DDD(:,:),Sarray(:,:,:,:)
-complex(kind=dbl),allocatable    	:: q(:,:),qin(:,:),qout(:,:),r(:,:),amp(:),amp2(:),Azz(:,:)
-! complex(kind=dbl)                	:: czero=cmplx(0.0,0.0,dbl),cone=cmplx(1.0,0.0,dbl)
+complex(kind=dbl),allocatable    	:: DHWM(:,:),DHWMvoid(:,:),DDD(:,:),Sarray(:,:,:,:)
+complex(kind=dbl),allocatable    	:: amp(:),amp2(:),Azz(:,:)
 complex(kind=dbl)                	:: czero,cone
 complex(kind=dbl)                	:: para(0:numdd),dx,dy,dxm,dym
 real(kind=sgl),allocatable       	:: weights(:), inten(:), sgarray(:,:)
@@ -574,17 +574,7 @@ end if
 
 nCL = STEM%numCL     ! set the number of camera length values
 
-! set a number of other parameters that can be predefined outside of the main loop.
-  allocate(Afirst(nn,nn))
-  Afirst = czero
-  forall (i=1:nn)
-    Afirst(i,i) = cone
-  end forall
-  ! set the thickness parameter
-  nsl = 4					! this could also be taken to be 3, but computation will be less accurate
-  sl = DF_slice/dble(2**nsl) 	! take a fraction of the slice thickness
-  thr = 1.D-8 ! 1.D-10
-  ! define the numd complex defect parameters
+! define the numd complex defect parameters
   do i=0,numd
     arg = 2.D0*cPi*float(i)/dble(numd)
     para(i) = cmplx(cos(arg),sin(arg),dbl)
@@ -687,14 +677,11 @@ end if
 
 NTHR = SETNTHR
 
-!$OMP  PARALLEL NUM_THREADS(NTHR) PRIVATE(TID,i,j,k,ii,jj,ic,ir,g,Azz,q,qin,qout,r,DDD,zmax) &
-!$OMP& SHARED(NTHR,Sarray,thr,para,t_interval,nn,DHWMz,sl,nsl,expval,Afirst,cone,czero,numd)    
+!$OMP  PARALLEL NUM_THREADS(NTHR) PRIVATE(TID,i,j,k,ii,jj,ic,ir,g,Azz,DDD,zmax) &
+!$OMP& SHARED(NTHR,Sarray,thr,para,t_interval,nn,DHWMz,DF_slice,expval,cone,czero,numd)    
 TID = OMP_GET_THREAD_NUM() 
 
-
- allocate(Azz(nn,nn), q(nn,nn), qin(nn,nn), qout(nn,nn), r(nn,nn), DDD(nn,nn))   ! these are private variables, so each thread must allocate them !
-!------------start of the old MatrixExponential routine----------------------
- q = czero; qin = czero;  qout = czero;  r = czero
+allocate(Azz(nn,nn), DDD(nn,nn))   ! these are private variables, so each thread must allocate them !
 
 !$OMP DO SCHEDULE(STATIC)
 do j=0,numd
@@ -712,38 +699,8 @@ do j=0,numd
    end do
   end do
     
-! do the second term of the Taylor series
-    Azz = Afirst
-    q = DDD * dble(sl)
-    qout = q
-    zmax = 1.D0
-    ic = 2
+  call MatrixExponential(DDD, Azz, dble(DF_slice), 'Pade', nn)  
     
-! and loop until zmax becomes smaller than the threshold thr
-    do while (zmax.gt.thr)
-     Azz = Azz + qout
-     r = q/dble(ic)
-     do ii=1,nn
-      do jj=1,nn
-           qin(ii,jj) = sum(qout(ii,1:nn) * r(1:nn,jj))
-      end do
-     end do
-     zmax = maxval(abs(qout-qin))
-     qout = qin
-     ic = ic+1
-    end do
-    Azz = Azz + qout
-
-! multiply Azz with itself nsl times to get to the required thickness
-    do ic=1,nsl
-     qin = Azz
-     do ii=1,nn
-      do jj=1,nn
-           Azz(ii,jj) = sum(qin(ii,1:nn) * qin(1:nn,jj))
-      end do
-     end do
-    end do
-!------------end of the old MatrixExponential routine----------------------    
    Sarray(1:nn,1:nn,i,j) = Azz(1:nn,1:nn)
  end do
  if ((TID.eq.0).and.(mod(j,10).eq.0)) then
@@ -752,9 +709,10 @@ do j=0,numd
 end do
 !$OMP END DO
 
-deallocate(Azz, q, qin, qout, r, DDD)
+deallocate(Azz, DDD)
 !$OMP END PARALLEL
-! mess = ' 181x181 scattering matrices precomputed '; call Message("(A/)")
+
+mess = ' 181x181 scattering matrices precomputed '; call Message("(A,' ',$)")
 
 !----------------------------------------------------!
 ! Finally, here it is: the actual image computation  !
@@ -857,7 +815,6 @@ end do donpix
 200 end do mainloop
 
 deallocate(Sarray)
-deallocate(Afirst)    
 
 ! ok, so the main computation is complete; print some timing information
 call Time_stop(npix*npiy)
