@@ -480,7 +480,7 @@ IMPLICIT NONE
 integer(kind=irg),INTENT(IN) :: nn
 
 integer(kind=irg)                   :: ik,ig, iCL
-real(kind=sgl)                        :: ll(3), lpg(3), gg(3), g3(3), glen, gplen, kpg, LC3, exer, sgdenom
+real(kind=sgl)                      :: ll(3), lpg(3), gg(3), g3(3), glen, gplen, kpg, LC3, exer, sgdenom
 
 ! this routine initializes the excitation error arrays and the weight-factor arrays for zone axis STEM signals
 ! the weightfactors are quite a bit different from the ones for the systematic row case;
@@ -570,34 +570,34 @@ use files
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)				:: STEMnmlfile
-integer(kind=irg),INTENT(IN)				:: nn
-integer(kind=irg),INTENT(IN)				:: g(3)
-real(kind=sgl),INTENT(IN)				:: kt
+character(fnlen),INTENT(IN)			:: STEMnmlfile
+integer(kind=irg),INTENT(IN)			:: nn
+integer(kind=irg),INTENT(IN)			:: g(3)
+real(kind=sgl),INTENT(IN)			:: kt
 integer(kind=irg),INTENT(IN),OPTIONAL		:: numk
 real(kind=sgl),INTENT(OUT),OPTIONAL		:: beamdiv
 
-integer(kind=irg) 						:: numberofsvalues,numCL
-real(kind=sgl) 							:: BFradius,ADFinnerradius,ADFouterradius,beamconvergence,cameralength, &
-                          							diffaprad, diffapcenter,CLarray(20)
-character(fnlen) 						:: weightoutput
-character(2) 							:: geometry  ! 'SR' or 'ZA'
+integer(kind=irg) 				:: numberofsvalues,numCL
+real(kind=sgl) 					:: BFradius,ADFinnerradius,ADFouterradius,beamconvergence,cameralength, &
+                          				diffaprad, diffapcenter,CLarray(20)
+character(fnlen) 				:: weightoutput
+character(2) 					:: geometry  ! 'SR' or 'ZA'
 
 namelist / STEMdata / BFradius, ADFinnerradius, ADFouterradius, cameralength, geometry, numCL, &
-                                    beamconvergence, numberofsvalues, diffaprad, diffapcenter, weightoutput, CLarray
+                      beamconvergence, numberofsvalues, diffaprad, diffapcenter, weightoutput, CLarray
 
 ! set default values (based on OSU Tecnai F20)
-BFradius = 3.5				! mm
+BFradius = 3.5			! mm
 ADFinnerradius = 3.5		! mm
 ADFouterradius = 10.0		! mm
 cameralength = 100.0 		! mm
-numCL = 0	 			! number of camera lengths to be used  (if zero, then use cameralength instead)
-CLarray = 0.0 				! values for the camera lengths
+numCL = 0	 		! number of camera lengths to be used  (if zero, then use cameralength instead)
+CLarray = 0.0 			! values for the camera lengths
 beamconvergence = 2.0		! mrad
 numberofsvalues = 33		! integer
 diffaprad = 0.0			! diffraction aperture radius in mrad, 0.0 if no aperture is present
-diffapcenter = 0.0			! position of center of diffraction aperture in mrad along systematic row
-weightoutput = '' 			! string with filename root for graphical output of weight profiles, empty if not needed
+diffapcenter = 0.0		! position of center of diffraction aperture in mrad along systematic row
+weightoutput = '' 		! string with filename root for graphical output of weight profiles, empty if not needed
 geometry = 'SR'
 
 ! read the namelist file

@@ -84,6 +84,7 @@ end program CTEMZAdefect
 !> @date 04/08/13  MDG 2.0 rewrite
 !> @date 05/14/13  MDG 2.1 replaced IO by namelist file
 !> @date 11/13/13  MDG 2.2 implementation of Pade approximation for scattering matrix computation
+!> @date 11/15/13  MDG 2.3 replaced reflection selection by more general algorithm
 !--------------------------------------------------------------------------
 subroutine ComputeZAdefect(nmlfile)
 
@@ -145,7 +146,7 @@ logical					:: STEMstore
 namelist / rundata / DF_L, DF_npix, DF_npiy, DF_slice, sgname, numvoids, incname, output, &
                                 voidname, numdisl, dislname, numsf, sfname, dinfo, outputformat, &
 				 outputroot,t_interval,illumination_mode,outputfirst,outputlast, dispfile, &
-				 dispmode,tmpsaveinterval,tempname,SETNTHR,xtalname,voltage,kk, lauec, &
+				 dispmode,tmpsaveinterval,tempname,SETNTHR,xtalname,voltage, lauec, &
 				 STEMstore,STEMname, dataname, foilnmlfile, STEMnmlfile
 
 
@@ -156,7 +157,6 @@ cone=cmplx(1.0,0.0,dbl)
 ! parameters specific to this run
  xtalname = 'undefined'		! initial value; MUST be present in nml file for program to execute
  voltage = 200000.0			! accelerating voltage
- kk = (/ 0, 0, 1 /)			! incident wave vector in crystal components (omitting wave length)
  lauec = (/ 0.0,0.0 /)			! Laue center coordinates (used for CTEM mode)
  STEMstore=.FALSE.			! store STEM data for external processing or not
 
@@ -226,36 +226,78 @@ end if
 
 ! zone axis 'ZA' or systematic row 'SR'  [legacy; needs to be removed] 
  srza = 'ZA'
- 
-! determine the point group number and get the ZAP 2-D symmetry  NEEDS TO BE MODIFIED WITH NEW ROUTINES
+
+! for a general determination of the beam direction and such, we really need to
+! load the foil information here...
+! this includes material property data, in this case the elastic moduli,
+! and the foil normal, which we will need in the next step
+  call read_foil_data(foilnmlfile,DF_npix,DF_npiy,DF_L,dinfo)
+
+! to keep things relatively simple, we will assume that any foil tilt 
+! angles will be small, to adjust to a specific imaging condition, so
+! we expect the beam direction to be the foil normal at zero tilt.
+! This then leads to the incident beam direction kk.  Next we proceed 
+! in the usual way to determine the zone axis reflections.
+ kk = -foil%F
+
+! Get the whole pattern 2D symmetry group, since that
+! is the one that determines the independent beam directions.
  j=0
  do i=1,32
   if (SGPG(i).le.cell%SYM_SGnum) j=i
  end do
- call BFsymmetry(kk,j,isym,ir)
-  
-! determine and display the shortest reciprocal lattice vectors for this zone
+ dgn = GetPatternSymmetry(kk,j,.TRUE.)
+ pgnum = j
+ isym = WPPG(dgn) ! WPPG lists the whole pattern point group numbers vs. diffraction group numbers
+
+! determine the shortest reciprocal lattice points for this zone
  call ShortestG(kk,ga,gb,isym)
- io_int(1:3) = kk(1:3)
- call WriteValue('', io_int, 3,  "(//,' ','[',3I2,'] has Bright Field symmetry ',$)")
- mess = PGTWD(isym)
- call Message("(A,$)")
- io_int(1) = ir
- call WriteValue(' order = ', io_int, 1, "(I4/)")
- mess = 'Reciprocal lattice vectors : '; 
- io_int(1:3) = ga(1:3)
- io_int(4:6) = gb(1:3)
- call WriteValue(' Reciprocal lattice vectors : ', io_int, 6, "('(',3I3,') and (',3I3,')',/)")
+ io_int(1:3)=ga(1:3)
+ io_int(4:6)=gb(1:3)
+ call WriteValue(' Reciprocal lattice vectors : ', io_int, 6,"('(',3I3,') and (',3I3,')',/)")
+
+! initialize the HOLZ geometry type
+ call GetHOLZGeometry(float(ga),float(gb),kk,foil%F) 
+
+! construct the list of all possible reflections
+ method = 'ALL'
+ thetac = convergence/1000.0
+ call Compute_ReflectionList(dmin,kk,ga,gb,method,.FALSE.,maxHOLZ,thetac)
+ galen = CalcLength(float(ga),'r')
 
 
 
 
 ! this is taken from the systematic row program, so we need to verify that it is still correct!
  DF_gf = float(ga)
- DF_gstar = DF_gf/CalcLength(DF_gf,'r')**2    ! define G* such that G.G* = 1
+ DF_gstar = DF_gf/CalcLength(DF_gf,'r')**2            ! define G* such that G.G* = 1
  call TransSpace(DF_gf,DF_gc,'r','c')                 ! convert to Cartesian reference frame
   
-  ! this all needs to be modified with new routines, similar to lacbed program
+
+
+! we'll need to compute the list of wavevectors at this point if we do a STEM computation
+! read the STEM parameters from a namelist file and initialize all STEM related arrays
+if (illumination_mode.eq.'STEM') then
+  beamdiv = 0.0
+  kt = 0.0
+  call read_STEM_data(STEMnmlfile,nn,ga,kt,numk,beamdiv)              ! first we need the beam divergence angle from this file ...
+  ktmax = 2.0*sin(beamdiv/2000.)/mLambda/CalcLength(float(ga),'r')   ! ktmax in units of |ga|
+! this next line needs to be verified !!!
+  ijmax = float(STEM%numberofsvalues)**2
+  call Calckvectors(dble(kk),dble(ga),dble(ktmax),STEM%numberofsvalues,STEM%numberofsvalues,numk,isym,ijmax,'Conical')    ! here we figure out how many beams there are
+  call read_STEM_data(STEMnmlfile,nn,ga,kt,numk)                      ! and then we go back and initialize the rest of the STEM parameters
+end if
+
+mess = ' -> done with STEM_rundata.nml'; call Message("(A/)")
+
+
+
+
+
+
+
+
+! this all needs to be modified with new routines, similar to lacbed program
 
 ! determine all families of reciprocal lattice points that belong to the zone and rank them
   call RankReflections(kk,ga,gb,fcnt,srza,iorder)
@@ -319,26 +361,6 @@ end if
   io_real(1) = 1.0/xgp
   call WriteValue('Normal absorption length : ', io_real, 1, "(F10.5/)")
 
-! next, we read the foildata namelist from the SRdef_foildata.nml file
-! [yes, we're using the same file as for the systematic row case]
-! this includes material property data, in this case the elastic moduli,
-! and the foil normal, which we will need in the next step
-  call read_foil_data(foilnmlfile,DF_npix,DF_npiy,DF_L,dinfo)
-
-! we'll need to compute the list of wavevectors at this point if we do a STEM computation
-! read the STEM parameters from a namelist file and initialize all STEM related arrays
-if (illumination_mode.eq.'STEM') then
-  beamdiv = 0.0
-  kt = 0.0
-  call read_STEM_data(STEMnmlfile,nn,ga,kt,numk,beamdiv)              ! first we need the beam divergence angle from this file ...
-  ktmax = 2.0*sin(beamdiv/2000.)/mLambda/CalcLength(float(ga),'r')   ! ktmax in units of |ga|
-! this next line needs to be verified !!!
-  ijmax = float(STEM%numberofsvalues)**2
-  call Calckvectors(dble(kk),dble(ga),dble(ktmax),STEM%numberofsvalues,STEM%numberofsvalues,numk,isym,ijmax,'Conical')    ! here we figure out how many beams there are
-  call read_STEM_data(STEMnmlfile,nn,ga,kt,numk)                      ! and then we go back and initialize the rest of the STEM parameters
-end if
-
-write (*,*) ' -> done with STEM_rundata.nml'
 
 ! at this point we should have enough information to define the huge array that will
 ! contain all the CBED patterns for each image pixel...

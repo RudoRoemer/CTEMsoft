@@ -1135,17 +1135,17 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
               if (ic.ne.ir) then  ! not a diagonal entry
                  ll = BetheParameter%stronghkl(1:3,ir) - BetheParameter%stronghkl(1:3,ic)
                  DynMat(ir,ic) = LUT(ll(1),ll(2),ll(3)) 
-! and subtract from this the total contribution of the weak beams
-                 weaksum = czero
-                 do iw=1,BetheParameter%nnw
-                      ll = BetheParameter%stronghkl(1:3,ir) - BetheParameter%weakhkl(1:3,iw)
-                      ughp = LUT(ll(1),ll(2),ll(3)) 
-                      ll = BetheParameter%weakhkl(1:3,iw) - BetheParameter%stronghkl(1:3,ic)
-                      uhph = LUT(ll(1),ll(2),ll(3)) 
-                      weaksum = weaksum +  ughp * uhph *cmplx(1.D0/BetheParameter%weaksg(iw),0.0,dbl)
-                 end do
-! and correct the dynamical matrix element to become a Bethe potential coefficient
-                 DynMat(ir,ic) = DynMat(ir,ic) - cmplx(0.5D0*mLambda,0.0D0,dbl)*weaksum
+        ! and subtract from this the total contribution of the weak beams
+         weaksum = czero
+         do iw=1,BetheParameter%nnw
+              ll = BetheParameter%stronghkl(1:3,ir) - BetheParameter%weakhkl(1:3,iw)
+              ughp = LUT(ll(1),ll(2),ll(3)) 
+              ll = BetheParameter%weakhkl(1:3,iw) - BetheParameter%stronghkl(1:3,ic)
+              uhph = LUT(ll(1),ll(2),ll(3)) 
+              weaksum = weaksum +  ughp * uhph *cmplx(1.D0/BetheParameter%weaksg(iw),0.0,dbl)
+         end do
+        ! and correct the dynamical matrix element to become a Bethe potential coefficient
+         DynMat(ir,ic) = DynMat(ir,ic) - cmplx(0.5D0*mLambda,0.0D0,dbl)*weaksum
 ! do we need to add the second order corrections ?
 		  if (AddSecondOrder) then 
 		    weaksum = czero

@@ -89,6 +89,8 @@ end program CTEMgamma
 !> @param nmlfile namelist file name
 !
 !> @date 11/02/13  MDG 1.0 original
+!> @date 11/13/13  MDG 1.1 moved MatrixExponential into math.f90 library file
+!> @date 11/14/13  MDG 1.2 addition of Bethe potentials for scattering matrix formalism
 !--------------------------------------------------------------------------
 subroutine GAMMAimage(nmlfile)
 
@@ -159,7 +161,7 @@ npix = 256			! output arrays will have size (2*npix+1 x 2*npix+1)
 outname = 'gammaout.data'	! output filename
 
 maxHOLZ = 0
-pre = dcmplx(0.D0,cPi)	! i times pi
+pre = dcmplx(0.D0,1.D0)*cPi	! i times pi
 czero = dcmplx(0.0,0.0)
 
 ! read the namelist file
@@ -298,6 +300,7 @@ write (*,*) 'prefactor = ',pre
 
 ! next, we load the gamma phase crystal structure and compute its list of reflections and LUT
 ! we might need to merge the two lists into a special two-phase structure for efficiency
+ call ResetData   ! this resets all the structure items to zero before loading the new structure file
  SG%SYM_reduce=.TRUE.
  call CrystalData(gammaname)
 
@@ -330,7 +333,7 @@ write (*,*) 'prefactor = ',pre
 ! ===================================================
 
 ! ok, so now we have two LUTs, one for gamma, one for gamma', and two linked lists of reflections.
-! next we need to read the microstructure file, which has 1 for gamma and 2 for gamma' along with
+! next we need to read the microstructure file, which has 0 for gamma and 1 for gamma' along with
 ! scale factors for the x, y, and z directions.  x lines up with the horizontal image direction
 ! (we can do more detailed foil geometry stuff at a later time so for now the foil is parallel and horizontal).
 !
@@ -339,12 +342,6 @@ write (*,*) 'prefactor = ',pre
 ! and that of the microstructure (i.e., an independent scale parameter).  We do need to sample the 
 ! microstructure along the beam direction lines for each image sampling point.
 !
-! For a future implementation, we can also allow for the gamma-gamma' interface to be continuous; this
-! would mean that we simly take the weighted average of the two scattering matrices.  We can also 
-! incorporate the anti-phase displacement vector for each gamma' particle, since this would be simply
-! turning on a constant displacement inside that particle.  Since we're going to include defects later
-! on, we might as well include that effect.  All this to say that the format of the microstructure file
-! will undoubtedly change at some point in the future.
  open(unit=dataunit,file=trim(microfile),status='old',form='unformatted')
  read (dataunit) dimx, dimy, dimz
  read (dataunit) xstep, ystep, zstep
@@ -353,6 +350,8 @@ write (*,*) 'prefactor = ',pre
  close(unit=dataunit,status='keep')
  mess = 'Loaded the microstructure file '//trim(microfile)
  call Message("(A)")
+
+! do we allow for translational gamma' variants?  We really should to have meaningful results...
  if (variants) then  
    open(unit=dataunit,file=trim(variantfile),status='old',form='unformatted')
    read (dataunit) vdimx, vdimy, vdimz
@@ -413,7 +412,7 @@ reflist => gammapreflist
 z0 = zstep ! step size for scattering matrix
 frac = 0.05
 
-! point to the first beam direction (this is really the first pixel in the image)
+! point to the first beam direction (this is really the first pixel in the image in the present implementation)
   ktmp => khead
 ! loop over all beam orientations, selecting them from the linked list
 kvectorloop:  do ik = 1,numk
@@ -422,9 +421,11 @@ kvectorloop:  do ik = 1,numk
  	jp =  ktmp%j
 !write (*,*) 'starting DynMat computation'
 
+if (ik.eq.1) then
 ! compute the dynamical matrix for both phases and this particular incident beam direction
 !write (*,*) 'entering DynMat routine'
-	call Compute_GGp_DynMats(gammaLUT, gammapLUT, imh, imk, iml, ktmp%k, ktmp%kt, variants)
+!	call Compute_GGp_DynMats(gammaLUT, gammapLUT, imh, imk, iml, ktmp%k, ktmp%kt, variants)
+	call Compute_GGp_DynMats_Bethe(gammaLUT, gammapLUT, imh, imk, iml, ktmp%k, ktmp%kt, variants)
 !write (*,*) 'return form DynMat'
 
 ! compute the scattering matrices for both phases and for a slice thickness of 1 nm
@@ -445,16 +446,15 @@ kvectorloop:  do ik = 1,numk
 !write (*,*) 'initialized ScatMats ',variants	
 
 ! and perform the exponentiations
+	call MatrixExponential(DynMat, ScatMat, z0, 'Pade', sdm(1))
+	call MatrixExponential(DynMat0, ScatMat0, z0, 'Pade', sdm(1))
 	if (variants) then 
-	  call MatrixExponential(DynMat, ScatMat, z0, 'Pade', sdm(1))
-	  call MatrixExponential(DynMat0, ScatMat0, z0, 'Pade', sdm(1))
 	  call MatrixExponential(DynMat1, ScatMat1, z0, 'Pade', sdm(1))
 	  call MatrixExponential(DynMat2, ScatMat2, z0, 'Pade', sdm(1))
 	  call MatrixExponential(DynMat3, ScatMat3, z0, 'Pade', sdm(1))
-	else
-	  call MatrixExponential(DynMat, ScatMat, z0, 'Pade', sdm(1))
-	  call MatrixExponential(DynMat0, ScatMat0, z0, 'Pade', sdm(1))
 	end if
+end if
+
 !if (ik.eq.1) then 
 !  open(unit=dataunit,file='arrays.data',status='unknown',form='unformatted')
 !  write (*,*) 'dimension = ',shape(DynMat),shape(ScatMat),shape(DynMat2),shape(ScatMat2)
@@ -507,6 +507,7 @@ kvectorloop:  do ik = 1,numk
 	  if (BetheParameter%stronglist(i).ne.0) then ! is this a reflection on the current list
  	    if (BetheParameter%reflistindex(i).gt.0) then
               images(ip,jp,BetheParameter%reflistindex(i)) = inten(BetheParameter%stronglist(i))
+              if (ik.eq.1) write (*,*) i, BetheParameter%reflistindex(i), BetheParameter%stronglist(i)
 	    end if
 	  end if
 	  rltmpa => rltmpa%next
@@ -514,10 +515,17 @@ kvectorloop:  do ik = 1,numk
 
 ! and remove the intensity and scattering matrix arrays
 	if (variants) then 
-	  deallocate(inten, ScatMat, ScatMat0, ScatMat1, ScatMat2, ScatMat3, amp)
+	  deallocate(inten, amp)
 	else
-	  deallocate(inten, ScatMat, ScatMat0, amp)
+	  deallocate(inten, amp)
        end if
+
+!
+!	if (variants) then 
+!	  deallocate(inten, ScatMat, ScatMat0, ScatMat1, ScatMat2, ScatMat3, amp)
+!	else
+!	  deallocate(inten, ScatMat, ScatMat0, amp)
+!       end if
 ! select next beam direction
    if (ik.ne.numk) ktmp => ktmp%next
 
@@ -551,6 +559,369 @@ kvectorloop:  do ik = 1,numk
   mess = ' Data stored in '//outname; call Message("(/A/)") 
 
 end subroutine GAMMAimage
+
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:Compute_GGp_DynMats_Bethe
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief Computes the dynamical matrices for both phases, including the Bethe potentials
+!
+!> @details This is a reduced and adapted version of the Compute_DynMat routine. 
+!
+!> @param gammaLUT reflection lookup table for gamma phase
+!> @param gammapLUT reflection lookup table for gamma' phase
+!> @param imh h dimension parameter for gammaLUT
+!> @param imk k dimension parameter for gammaLUT
+!> @param iml l dimension parameter for gammaLUT
+!> @param kk incident wave vector
+!> @param kt tangential component of incident wave vector
+!> @param variants logical to turn on APB variants for gamma' phase
+!
+!> @date 11/02/13  MDG 1.0 original
+!> @date 11/05/13  MDG 1.1 added variant handling
+!> @date 11/14/13  MDG 2.0 added Bethe potentials (first try)
+!--------------------------------------------------------------------------
+subroutine Compute_GGp_DynMats_Bethe(gammaLUT, gammapLUT, imh, imk, iml, kk, kt, variants)
+
+
+use local
+use dynamical
+use error
+use constants
+use crystal
+use diffraction
+use io
+use gvectors
+
+IMPLICIT NONE
+
+complex(kind=dbl),INTENT(IN)		:: gammaLUT(-imh:imh,-imk:imk,-iml:iml)
+complex(kind=dbl),INTENT(IN)		:: gammapLUT(-imh:imh,-imk:imk,-iml:iml)
+integer(kind=irg),INTENT(IN)		:: imh, imk, iml
+real(kind=dbl),INTENT(IN)		:: kk(3),kt(3)		!< incident wave vector and tangential component
+logical,INTENT(IN)			:: variants
+
+complex(kind=dbl)  			:: czero,pref, pre2, weaksum, ughp, uhph, ep, em
+integer(kind=irg) 		 	:: istat,ir,ic,nn, iweak, istrong, iw, ig, ll(3), gh(3), nnn, nweak, i
+real(kind=sgl)     			:: glen,exer,gg(3), kpg(3), gplen, sgp, lUg, cut1, cut2
+real(kind=dbl)				:: lsfour, weaksgsum, dgg(3), arg, R1(3), R2(3), R3(3), tpi, dp
+logical					:: AddSecondOrder
+
+complex(kind=dbl),allocatable		:: testDynMat(:,:)
+
+! has the list of reflections been allocated ?
+if (.not.associated(reflist)) call FatalError('Compute_GGp_DynMats',' reflection list has not been allocated')
+
+! if the dynamical matrices have already been allocated, deallocate them first
+! this is partially so that no program will allocate DynMats itself; it must be done
+! via this routine only.
+if (variants) then
+if (allocated(DynMat)) deallocate(DynMat)
+if (allocated(DynMat0)) deallocate(DynMat0)
+if (allocated(DynMat1)) deallocate(DynMat1)
+if (allocated(DynMat2)) deallocate(DynMat2)
+if (allocated(DynMat3)) deallocate(DynMat3)
+else
+  if (allocated(DynMat)) deallocate(DynMat)
+  if (allocated(DynMat0)) deallocate(DynMat0)
+end if 
+
+! initialize some parameters
+pref = dcmplx(0.D0,1.D0)*cPi	! i times pi
+pre2 = dcmplx(0.5D0,0.D0)/cPi	! 1/(2pi)
+czero = dcmplx(0.0,0.0)	! complex zero
+
+! we don't know yet how many strong reflections there are so we'll need to determine this first
+! this number depends on some externally supplied parameters, which we will get from a namelist
+! file (which should be read only once by the Set_Bethe_Parameters routine), or from default values
+! if there is no namelist file in the folder.
+if (BetheParameter%cutoff.eq.0.0) call Set_Bethe_Parameters(.TRUE.)
+
+! reset the value of DynNbeams in case it was modified in a previous call 
+DynNbeams = DynNbeamsLinked
+  	
+if (.not.allocated(BetheParameter%stronglist)) allocate(BetheParameter%stronglist(DynNbeams))
+if (.not.allocated(BetheParameter%reflistindex)) allocate(BetheParameter%reflistindex(DynNbeams))
+if (.not.allocated(BetheParameter%weaklist)) allocate(BetheParameter%weaklist(DynNbeams))
+if (.not.allocated(BetheParameter%weakreflistindex)) allocate(BetheParameter%weakreflistindex(DynNbeams))
+
+BetheParameter%stronglist = 0
+BetheParameter%reflistindex = 0
+BetheParameter%weaklist = 0
+BetheParameter%weakreflistindex = 0
+
+    rltmpa => reflist
+
+!write (*,*) 'Starting reflectionloop'
+
+! deal with the transmitted beam first
+    nn = 1		! nn counts all the scattered beams that satisfy the cutoff condition
+    rltmpa%sg = 0.D0    
+    nnn = 1		! nnn counts only the strong beams
+    nweak = 0		! counts only the weak beams
+    BetheParameter%stronglist(nn) = 1   ! make sure that the transmitted beam is always a strong beam ...
+    BetheParameter%weaklist(nn) = 0
+    BetheParameter%reflistindex(nn) = 1
+
+! loop over all reflections in the linked list    
+    rltmpa => rltmpa%next
+    reflectionloop: do ig=2,DynNbeamsLinked
+      gg = float(rltmpa%hkl)        		! this is the reciprocal lattice vector 
+      rltmpa%sg = Calcsg(gg,sngl(kk),DynFN)
+
+! use the reflection num entry to indicate whether or not this
+! reflection should be used for the dynamical matrix
+! We compare |sg| with a multiple of lambda |Ug|
+!
+!  |sg|>cutoff lambda |Ug|   ->  don't count reflection
+!  cutoff lambda |Ug| > |sg|  -> strong reflection
+!
+      sgp = abs(rltmpa%sg) 
+      lUg = cabs(rltmpa%Ucg) * mLambda
+      cut1 = BetheParameter%cutoff * lUg
+      cut2 = BetheParameter%weakcutoff * lUg
+
+      if (sgp.le.cut1) then  ! count this beam
+	nn = nn+1
+! is this a weak or a strong reflection (in terms of Bethe potentials)? 
+             	if (sgp.le.cut2) then ! it's a strong beam
+              		nnn = nnn+1
+	      		BetheParameter%stronglist(ig) = nnn
+	                if (rltmpa%famnum.ne.0) then
+	                  BetheParameter%reflistindex(ig) = rltmpa%famnum
+	                else
+	                  BetheParameter%reflistindex(ig) = -1
+	                end if
+             	else ! it's a weak beam
+              		nweak = nweak+1
+              		BetheParameter%weaklist(ig) = 1
+              		BetheParameter%weakreflistindex(ig) = nweak
+             	end if
+      end if
+! go to the next beam in the list
+      rltmpa => rltmpa%next
+    end do reflectionloop
+!write (*,*) 'Completed reflectionloop; # strong beams = ',nn
+
+! if we don't have any beams in this list (unlikely, but possible if the cutoff
+! parameter has an unreasonable value) then we abort the run
+! and we report some numbers to the user 
+if (nnn.eq.0) then
+   mess = ' no beams found for the following parameters:'; call Message("(A)")
+   write (stdout,*) ' wave vector = ',kk,'  -> number of beams = ',nn
+   mess =  '   -> check cutoff and weakcutoff parameters for reasonableness'; call Message("(A)")
+   call FatalError('Compute_GGp_DynMats','No beams in list')
+end if
+
+! next, we define nns to be the number of strong beams.
+BetheParameter%nns = nnn
+BetheParameter%nnw = sum(BetheParameter%weaklist)
+
+! add nns to the weakreflistindex to offset it; not sure if this will be needed here...
+do ig=2,DynNbeamsLinked
+  if (BetheParameter%weakreflistindex(ig).ne.0) then
+    BetheParameter%weakreflistindex(ig) = BetheParameter%weakreflistindex(ig) + BetheParameter%nns
+  end if
+end do
+
+! allocate arrays for strong beam information
+if (allocated(BetheParameter%stronghkl)) deallocate(BetheParameter%stronghkl)
+if (allocated(BetheParameter%strongsg)) deallocate(BetheParameter%strongsg)
+if (allocated(BetheParameter%strongID)) deallocate(BetheParameter%strongID)
+if (allocated(BetheParameter%weakhkl)) deallocate(BetheParameter%weakhkl)
+if (allocated(BetheParameter%weaksg)) deallocate(BetheParameter%weaksg)
+allocate(BetheParameter%weakhkl(3,BetheParameter%nnw),BetheParameter%weaksg(BetheParameter%nnw))
+allocate(BetheParameter%stronghkl(3,BetheParameter%nns),BetheParameter%strongsg(BetheParameter%nns))
+allocate(BetheParameter%strongID(BetheParameter%nns))
+
+BetheParameter%stronghkl = 0
+BetheParameter%strongsg = 0.0
+BetheParameter%strongID = 0
+
+
+!write (*,*) 'starting ir loop'
+! here's where we extract the relevant information from the linked list (much faster
+! than traversing the list each time...)
+rltmpa => reflist    ! reset the a list
+iweak = 0
+istrong = 0
+do ir=1,DynNbeamsLinked
+     if (BetheParameter%weaklist(ir).eq.1) then
+        iweak = iweak+1
+        BetheParameter%weakhkl(1:3,iweak) = rltmpa%hkl(1:3)
+        BetheParameter%weaksg(iweak) = rltmpa%sg
+     end if
+     if (BetheParameter%stronglist(ir).gt.0) then
+        istrong = istrong+1
+        BetheParameter%stronghkl(1:3,istrong) = rltmpa%hkl(1:3)
+        BetheParameter%strongsg(istrong) = rltmpa%sg
+! make an inverse index list
+	BetheParameter%strongID(istrong) = ir		
+!	write (*,*) ir, (rltmpa%hkl(i),i=1,3), rltmpa%sg, istrong
+     end if
+   rltmpa => rltmpa%next
+end do
+
+! now we are ready to create the dynamical matrix
+DynNbeams = BetheParameter%nns
+
+! allocate DynMat and DynMat0 and set to complex zero
+allocate(DynMat(DynNbeams,DynNbeams),stat=istat)
+allocate(DynMat0(DynNbeams,DynNbeams),stat=istat)
+
+DynMat = czero	! this is for the disordered fcc phase
+DynMat0 = czero	! this is for the ordered gamma' phase
+
+! ir is the row index
+do ir=1,BetheParameter%nns
+! ic is the column index
+  do ic=1,BetheParameter%nns
+! compute the Fourier coefficient of the electrostatic lattice potential 
+    if (ic.ne.ir) then  ! not a diagonal entry
+      ll = BetheParameter%stronghkl(1:3,ir) - BetheParameter%stronghkl(1:3,ic)
+      DynMat(ir,ic) = gammaLUT(ll(1),ll(2),ll(3)) 
+! and subtract from this the total contribution of the weak beams
+      weaksum = czero
+      do iw=1,BetheParameter%nnw
+         ll = BetheParameter%stronghkl(1:3,ir) - BetheParameter%weakhkl(1:3,iw)
+         ughp = gammaLUT(ll(1),ll(2),ll(3)) 
+         ll = BetheParameter%weakhkl(1:3,iw) - BetheParameter%stronghkl(1:3,ic)
+         uhph = gammaLUT(ll(1),ll(2),ll(3)) 
+         if (cabs(ughp*uhph).ne.0.D0) then 
+!           weaksum = weaksum +  ughp * uhph *cmplx(1.D0/(BetheParameter%weaksg(iw)-BetheParameter%strongsg(ic)),0.0,dbl)
+           weaksum = weaksum +  ughp * uhph *cmplx(1.D0/BetheParameter%weaksg(iw),0.0,dbl)
+         end if
+      end do
+! and correct the dynamical matrix element to become a Bethe potential coefficient
+      DynMat(ir,ic) = DynMat(ir,ic) - pre2*weaksum
+
+! next we do the gammap dynamical matrix
+      DynMat0(ir,ic) = gammapLUT(ll(1),ll(2),ll(3)) 
+! and subtract from this the total contribution of the weak beams
+      weaksum = czero
+      do iw=1,BetheParameter%nnw
+         ll = BetheParameter%stronghkl(1:3,ir) - BetheParameter%weakhkl(1:3,iw)
+         ughp = gammapLUT(ll(1),ll(2),ll(3)) 
+         ll = BetheParameter%weakhkl(1:3,iw) - BetheParameter%stronghkl(1:3,ic)
+         uhph = gammapLUT(ll(1),ll(2),ll(3)) 
+         if (cabs(ughp*uhph).ne.0.D0) then 
+!           weaksum = weaksum +  ughp * uhph *cmplx(1.D0/(BetheParameter%weaksg(iw)-BetheParameter%strongsg(ic)),0.0,dbl)
+           weaksum = weaksum +  ughp * uhph *cmplx(1.D0/BetheParameter%weaksg(iw),0.0,dbl)
+         end if
+      end do
+! and correct the dynamical matrix element to become a Bethe potential coefficient
+      DynMat0(ir,ic) = DynMat0(ir,ic) - pre2*weaksum
+
+    else  ! it is a diagonal entry, so we need the excitation error and the absorption length	
+      DynMat(ir,ir) = cmplx(0.0,2.D0*cPi*BetheParameter%strongsg(ir),dbl)+gammaLUT(0,0,0)      
+! determine the total contribution of the weak beams
+      weaksgsum = 0.D0
+      do iw=1,BetheParameter%nnw
+         ll = BetheParameter%stronghkl(1:3,ir) - BetheParameter%weakhkl(1:3,iw)
+         ughp = gammaLUT(ll(1),ll(2),ll(3)) 
+         if (cabs(ughp).ne.0.D0) then 
+!           weaksgsum = weaksgsum +  cabs(ughp)**2/(BetheParameter%weaksg(iw)-BetheParameter%strongsg(ir))
+           weaksgsum = weaksgsum +  cabs(ughp)**2/BetheParameter%weaksg(iw)
+         end if
+      end do
+      DynMat(ir,ir) = DynMat(ir,ir) - pre2*weaksgsum
+      
+      DynMat0(ir,ir) = cmplx(0.0,2.D0*cPi*BetheParameter%strongsg(ir),dbl)+gammapLUT(0,0,0)
+! determine the total contribution of the weak beams
+      weaksgsum = 0.D0
+      do iw=1,BetheParameter%nnw
+         ll = BetheParameter%stronghkl(1:3,ir) - BetheParameter%weakhkl(1:3,iw)
+         ughp = gammapLUT(ll(1),ll(2),ll(3)) 
+         if (cabs(ughp).ne.0.D0) then 
+!           weaksgsum = weaksgsum +  cabs(ughp)**2/(BetheParameter%weaksg(iw)-BetheParameter%strongsg(ir))
+           weaksgsum = weaksgsum +  cabs(ughp)**2/BetheParameter%weaksg(iw)
+         end if
+      end do
+      DynMat0(ir,ir) = DynMat0(ir,ir) - pre2*weaksgsum
+
+    end if
+  end do
+end do
+! that should do it for the initialization of the dynamical matrices if there are no translation variants
+
+if (variants) then ! allocate and adjust the variant dynamical matrices
+  allocate(DynMat1(DynNbeams,DynNbeams),stat=istat)
+  allocate(DynMat2(DynNbeams,DynNbeams),stat=istat)
+  allocate(DynMat3(DynNbeams,DynNbeams),stat=istat)
+  DynMat1 = DynMat0	! this is for the ordered gamma' phase variant 1
+  DynMat2 = DynMat0	! this is for the ordered gamma' phase variant 2
+  DynMat3 = DynMat0	! this is for the ordered gamma' phase variant 3
+
+! next we need to go through each matrix again and for the off-diagonal elements
+! multiply the entry with the correct APB phase factor.  
+  R1 = (/ 0.5D0, 0.5D0 ,0.0D0 /)
+  R2 = (/ 0.5D0, 0.0D0 ,0.5D0 /)
+  R3 = (/ 0.0D0, 0.5D0 ,0.5D0 /)
+! for APBs in L1_2 there are only three possibilities for the phase factor: 1, exp(i pi) and exp(-i pi)  
+! so we'll pre-compute the possible phase shifts for the superlattice reflections as ep and em:
+  ep = dcmplx(dcos(cPi),-dsin(cPi))
+  em = dcmplx(dcos(cPi),dsin(cPi))
+! ir is the row index
+  do ir=1,BetheParameter%nns
+! ic is the column index
+    do ic=1,BetheParameter%nns
+! compute the Fourier coefficient of the electrostatic lattice potential 
+      if (ic.ne.ir) then  ! not a diagonal entry
+        dgg = dble(BetheParameter%stronghkl(1:3,ir) - BetheParameter%stronghkl(1:3,ic))
+	dp = dot_product(dgg,R1)
+	arg = dmod(dp,1.D0)
+	if (dabs(arg).ne.0.D0) then
+	  arg = 2.D0*( 1.D0 - dmod(dp,2.D0) )
+	  if (arg.lt.0.D0) then 
+	    DynMat1(ir,ic) = DynMat1(ir,ic) * ep
+	  else
+	    DynMat1(ir,ic) = DynMat1(ir,ic) * em
+	  end if
+	end if
+	dp = dot_product(dgg,R2)
+	arg = dmod(dp,1.D0)
+	if (dabs(arg).ne.0.D0) then
+	  arg = 2.D0*( 1.D0 - dmod(dp,2.D0) )
+	  if (arg.lt.0.D0) then 
+	    DynMat2(ir,ic) = DynMat2(ir,ic) * ep
+	  else
+	    DynMat2(ir,ic) = DynMat2(ir,ic) * em
+	  end if
+	end if
+	dp = dot_product(dgg,R3)
+	arg = dmod(dp,1.D0)
+	if (dabs(arg).ne.0.D0) then
+	  arg = 2.D0*( 1.D0 - dmod(dp,2.D0) )
+	  if (arg.lt.0.D0) then 
+	    DynMat3(ir,ic) = DynMat3(ir,ic) * ep
+	  else
+	    DynMat3(ir,ic) = DynMat3(ir,ic) * em
+	  end if
+	end if
+      end if
+    end do
+  end do
+end if
+
+write (*,*) ' # of beams (strong/weak) ',BetheParameter%nns,BetheParameter%nnw
+
+!  open(unit=dataunit,file='arrays.data',status='unknown',form='unformatted')
+!  write (*,*) 'dimension = ',shape(DynMat)
+!  write(dataunit) testDynMat
+!  write(dataunit) DynMat
+!  write(dataunit) DynMat2
+!  close(unit=dataunit,status='keep')
+!
+end subroutine Compute_GGp_DynMats_Bethe
+
+
+
+
+
+
 
 
 

@@ -40,6 +40,7 @@
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   06/03/13 MDG 3.0 updated IO, introduced quaternions instead of rotation matrices
+!> @data   11/14/13 MDG 3.1 changed F and q to integer indices from float
 !--------------------------------------------------------------------------
 
 module foilmodule
@@ -51,10 +52,10 @@ use quaternions
 ! also, transformation quaternions from various reference frames to the foil and back
 ! material properties are also stored here, such as the elastic moduli
 type foiltype
-  real(kind=dbl)		:: F(3),Fn(3),q(3),qn(3),brx,bry,brxy,cpx,cpy, & 
+  real(kind=dbl)		:: Fn(3),qn(3),brx,bry,brxy,cpx,cpy, & 
 				   alP,alS,alR,beP,elmo(6,6),z0,zb,B(3),Bn(3),Bm(3)
   real(kind=dbl)		:: a_fc(4), a_fm(4), a_mi(4), a_ic(4), a_mc(4), a_fi(4)
-  integer(kind=irg)  		:: npix,npiy
+  integer(kind=irg)  		:: npix,npiy, F(3), q(3)
   real(kind=sgl),allocatable :: sg(:,:)
 end type foiltype
 
@@ -160,11 +161,11 @@ character(10)			:: pret
     io_real(1:3) = foil%B(1:3)
     call WriteValue('  Beam direction (foil reference frame) = ',io_real,3,"('[',F12.5,',',F12.5,',',F12.5,']')")
   end if
-  
+
 ! transform both the foil normal and the q-vector to the crystal cartesian reference frame (eq. 8.8) [verified 4/23/11,
 ! and again on 11/12/13 afterchanges elsewhere]
-  call TransSpace(foil%F,foil%Fn,'d','c')
-  call TransSpace(foil%q,foil%qn,'r','c')
+  call TransSpace(float(foil%F),foil%Fn,'d','c')
+  call TransSpace(float(foil%q),foil%qn,'r','c')
   call NormVec(foil%Fn,'c')
   call NormVec(foil%qn,'c')
 ! a_fc (crystal to foil)  
@@ -316,17 +317,17 @@ end if
 
 ! and assign these values to the appropriate slots in foil%   [verified 4/23/11]
 foil%F = foilF                          ! foil normal (w.r.t. Bravais lattice)
-foil%q = foilq                         ! reciprocal vector pointing to airlock and normal to foilB
-foil%alP = foilalP*cPi/180.0    ! convert the tilt and rotation angles to radians
+foil%q = foilq                          ! reciprocal vector pointing to airlock and normal to foilB
+foil%alP = foilalP*cPi/180.0            ! convert the tilt and rotation angles to radians
 foil%alS = foilalS*cPi/180.0
 foil%alR = foilalR*cPi/180.0
-foil%z0 = foilz0                      ! foil thickness in nanometers
-foil%npix = npix                     ! image size (this duplicates some values, but it's easier this way)
+foil%z0 = foilz0                        ! foil thickness in nanometers
+foil%npix = npix                        ! image size (this duplicates some values, but it's easier this way)
 foil%npiy = npiy
-foil%brx = brx                         ! foil shape parameter for the x-direction
-foil%bry = bry                         ! same for the y-direction
-foil%brxy = brxy                     ! and a cross term
-foil%cpx = cpx * float(npix) * 0.5 * L ! we'll define the foil shape center w.r.t. to the center of the image in [nm] coordinates
+foil%brx = brx                          ! foil shape parameter for the x-direction
+foil%bry = bry                          ! same for the y-direction
+foil%brxy = brxy                        ! and a cross term
+foil%cpx = cpx * float(npix) * 0.5 * L  ! we'll define the foil shape center w.r.t. to the center of the image in [nm] coordinates
 foil%cpy = cpy * float(npiy) * 0.5 * L  ! 
 
 ! copy the elastic moduli to the proper array, taking into account the array symmetry
