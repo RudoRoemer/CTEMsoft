@@ -52,10 +52,10 @@ use quaternions
 ! also, transformation quaternions from various reference frames to the foil and back
 ! material properties are also stored here, such as the elastic moduli
 type foiltype
-  real(kind=dbl)		:: Fn(3),qn(3),brx,bry,brxy,cpx,cpy, & 
+  real(kind=dbl)		:: F(3), q(3),Fn(3),qn(3),brx,bry,brxy,cpx,cpy, & 
 				   alP,alS,alR,beP,elmo(6,6),z0,zb,B(3),Bn(3),Bm(3)
   real(kind=dbl)		:: a_fc(4), a_fm(4), a_mi(4), a_ic(4), a_mc(4), a_fi(4)
-  integer(kind=irg)  		:: npix,npiy, F(3), q(3)
+  integer(kind=irg)  		:: npix,npiy
   real(kind=sgl),allocatable :: sg(:,:)
 end type foiltype
 
@@ -164,8 +164,8 @@ character(10)			:: pret
 
 ! transform both the foil normal and the q-vector to the crystal cartesian reference frame (eq. 8.8) [verified 4/23/11,
 ! and again on 11/12/13 afterchanges elsewhere]
-  call TransSpace(float(foil%F),foil%Fn,'d','c')
-  call TransSpace(float(foil%q),foil%qn,'r','c')
+  call TransSpace(foil%F,foil%Fn,'d','c')
+  call TransSpace(foil%q,foil%qn,'r','c')
   call NormVec(foil%Fn,'c')
   call NormVec(foil%qn,'c')
 ! a_fc (crystal to foil)  
@@ -207,13 +207,13 @@ character(10)			:: pret
   
 ! express the beam direction in the Bravais reference frame [verified 4/23/11, and again on 11/12/13
 ! after changes elsewhere]
-!  ex = quat_rotate_vector( conjg(foil%a_fc), dble(foil%Bn) ) 
-!  call TransSpace(ex,ey,'c','d')
-!  call NormVec(ey,'c')
-!  if (dinfo.eq.1) then
-!    io_real(1:3) = ey(1:3)
-!    call WriteValue('  Beam direction (crystal reference frame) = ', io_real, 3, "('[',F12.5,',',F12.5,',',F12.5,']'/)")
-!  end if
+  ex = quat_rotate_vector( conjg(foil%a_fc), dble(foil%Bn) ) 
+  call TransSpace(ex,ey,'c','d')
+  call NormVec(ey,'c')
+  if (dinfo.eq.1) then
+    io_real(1:3) = ey(1:3)
+    call WriteValue('  Beam direction (crystal reference frame) = ', io_real, 3, "('[',F12.5,',',F12.5,',',F12.5,']'/)")
+  end if
   
 ! define the foil shape (for now as an elliptic paraboloid z = brx * (x-xc)^2 + bry * (y-yc)^2) 
 if (.not.allocated(foil%sg)) allocate(foil%sg(foil%npix,foil%npiy))

@@ -104,6 +104,8 @@ if (rs eq 1) then begin
   	'ylocation': data.ylocation = float(val)
   	'imagexlocation': data.imagexlocation = float(val)
   	'imageylocation': data.imageylocation = float(val)
+  	'CTEMBFDFylocation': data.CTEMBFDFylocation = float(val)
+  	'CTEMBFDFxlocation': data.CTEMBFDFxlocation = float(val)
   	'cbedxlocation': data.cbedxlocation = float(val)
   	'cbedylocation': data.cbedylocation = float(val)
 

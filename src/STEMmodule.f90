@@ -44,12 +44,12 @@ module STEMmodule
 use local
 
 type STEMtype
-	character(fnlen)			:: weightoutput
-	character(2)  				:: geometry
-	integer(kind=irg) 			:: numberofsvalues, numk, numCL
-	real(kind=sgl) 				:: BFradius,ADFinnerradius,ADFouterradius,kt,beamconvergence,cameralength, &
-	                          			BFmrad,ADFimrad,ADFomrad, diffapmrad, diffapmcenter, CLarray(20)
-	logical,allocatable  			:: ZABFweightsarray(:,:,:),ZAADFweightsarray(:,:,:)       ! only used for the zone axis case
+	character(fnlen)		:: weightoutput
+	character(2)  			:: geometry
+	integer(kind=irg) 		:: numberofsvalues, numk, numCL
+	real(kind=sgl) 			:: BFradius,ADFinnerradius,ADFouterradius,kt,beamconvergence,cameralength, &
+	                          	   BFmrad,ADFimrad,ADFomrad, diffapmrad, diffapmcenter, CLarray(20)
+	logical,allocatable  		:: ZABFweightsarray(:,:,:),ZAADFweightsarray(:,:,:)       ! only used for the zone axis case
 	real(kind=sgl),allocatable  	:: sgarray(:,:),BFweightsarray(:,:,:),ADFweightsarray(:,:,:)   ! only used for the systematic row case
 end type STEMtype
 

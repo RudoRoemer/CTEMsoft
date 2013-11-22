@@ -1,0 +1,40 @@
+&foildata
+! Note: All values in this template file correspond to the program defaults
+!
+!------------
+! foil normal 
+foilF = 0.0, 0.0, 1.0
+!------------
+! reciprocal lattice vector pointing towards airlock along primary tilt axis 
+foilq = 1.0, 0.0, 0.0
+!------------
+! foil shape parameters 
+brx =  0.0e-7
+bry = 0.0e-7
+brxy= -0.0e-7
+cpx = 0.5
+cpy = 0.5
+!------------
+! foil tilt angles
+! primary tilt angle 
+foilalP =  0.0
+! secondary tilt angle
+foilalS =  0.0
+! rotation angle (for a tilt-rotation holder)
+foilalR =  0.0
+!------------
+! foil thickness [nm]
+foilz0 = 100.0
+!------------
+! elastic moduli (units are unimportant); list only non-zero values for diagonal and upper diagonal;
+! list only values that are allowed for the particular symmetry of the foil crystal structure
+foilelmo(1,1) = 168.4
+foilelmo(2,2) = 168.4
+foilelmo(3,3) = 168.4
+foilelmo(1,2) = 121.4
+foilelmo(1,3) = 121.4
+foilelmo(2,3) = 121.4
+foilelmo(4,4) = 75.50
+foilelmo(5,5) = 75.50
+foilelmo(6,6) = 75.50
+/

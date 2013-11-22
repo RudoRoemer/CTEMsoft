@@ -1,24 +1,10 @@
-@STEMDisplay_event    		; compile the STEM event handler
-@STEMevent    			; compile the STEM CW_BGROUP event handler
-@STEMgetpreferences		; load preferences
-@STEMwritepreferences		; save preferences
-@STEMgetfilename		; select a geometry file
-@STEMdetectorsetup		; display the detector geometry
-@STEMreadgeometry		; read geometry and data files
-@STEMprogressbar		; display a progress bar during CBED pattern computation
-@STEMcomputeCBEDpatterns	; convert the rawdata array to actual CBED patterns
-@STEMImageWidget		; image display widget
-@STEMImageWidget_event		; image display widget event handler
-@STEMCBEDWidget			; CBED widget 
-@STEMCBEDWidget_event		; CBED widget event handler
-@STEMcomputeBFHAADF		; compute and display BF and HAADF images
-@STEMdrawdisks			; superimpose the diffraction disk on the detector display
-@STEMgetmasks			; compute the BF and DF detector masks
-@STEMprint			; appends messages to the status text widget
-@STEMimagelegend		; add an image micron marker
-@STEMshowCBED			; display a CBED pattern
-@STEMCTEMBFDFWidget      	; widget for CTEM and BFDF program modes
-@STEMCTEMBFDFWidget_event		; event handler for CTEM and BFDF program modes
+@ECCIDisplay_event    		; compile the ECCI event handler
+@ECCIevent    			; compile the ECCI CW_BGROUP event handler
+@ECCIgetpreferences		; load preferences
+@ECCIwritepreferences		; save preferences
+@ECCIgetfilename		; select a geometry file
+@ECCIreadgeometry		; read geometry and data files
+@ECCIprogressbar		; display a progress bar during CBED pattern computation
 ;
 ; Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
@@ -47,10 +33,10 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:STEMDisplay.pro
+; CTEMsoft2013:ECCIDisplay.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: STEMDisplay.pro
+; PROGRAM: ECCIDisplay.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
@@ -58,22 +44,20 @@
 ;
 ;> @date 06/13/13 MDG 1.0 first attempt at a user-friendly interface
 ;--------------------------------------------------------------------------
-pro STEMDisplay,dummy
+pro ECCIDisplay,dummy
 ;
 ;------------------------------------------------------------
 ; common blocks
-common STEM_widget_common, widget_s
-common STEM_data_common, data
+common ECCI_widget_common, widget_s
+common ECCI_data_common, data
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
-; this one is used to create the blue channel of the detector plot
-common STEM_circles, th, cth, sth, blue, diskpos
 
 !EXCEPT=0
 
 ;------------------------------------------------------------
 ; make sure that this program isn't already running
-if (XRegistered("STEMDisplay") NE 0) then begin
-  print,'STEMDisplay is already running ... (if it is not, please restart your IDL session)'
+if (XRegistered("ECCIDisplay") NE 0) then begin
+  print,'ECCIDisplay is already running ... (if it is not, please restart your IDL session)'
   return
 end
 
@@ -247,16 +231,16 @@ data.ylocation = data.scrdimx / 8.0
 
 ;------------------------------------------------------------
 ; does the preferences file exist ?  If not, create it, otherwise read it
-STEMgetpreferences
+ECCIgetpreferences
 
 ;------------------------------------------------------------
 ; create the top level widget
-widget_s.base = WIDGET_BASE(TITLE='Zone Axis STEM Display Program', $
+widget_s.base = WIDGET_BASE(TITLE='Zone Axis ECCI Display Program', $
                         /COLUMN, $
                         XSIZE=700, $
                         /ALIGN_LEFT, $
 			/TLB_MOVE_EVENTS, $
-			EVENT_PRO='STEMDisplay_event', $
+			EVENT_PRO='ECCIDisplay_event', $
                         XOFFSET=data.xlocation, $
                         YOFFSET=data.ylocation)
 

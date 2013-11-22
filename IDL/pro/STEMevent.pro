@@ -92,6 +92,8 @@ CASE eventval OF
 			WIDGET_CONTROL, widget_s.gosector,sensitive=0
 			WIDGET_CONTROL, widget_s.clearsector,sensitive=0
 			WIDGET_CONTROL, widget_s.aprad,sensitive=1
+			WIDGET_CONTROL, SET_VALUE=0, widget_s.dfmode
+			data.dfmode = 0
 			STEMprint,'diffraction mode set to conventional (aperture driven) dark field mode',/blank
 			STEMdetectorsetup,/darkfield	; this creates the array of blue disks
 			data.detsegm = 1

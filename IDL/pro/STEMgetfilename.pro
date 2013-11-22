@@ -33,7 +33,7 @@
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief Display an interface and ask user to select a file
+;> @brief Display an interface and ask user to select a CTEMZAdefect output file
 ;
 ;> @date 06/13/13 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------
@@ -53,7 +53,7 @@ common STEM_data_common, data
 
   rootpath = data.STEMroot
 
-  res=dialog_pickfile(title='Select a valid CTEMZAdefect geometry file',path=rootpath)
+  res=dialog_pickfile(title='Select a valid CTEMZAdefect data file',path=rootpath)
   if (res eq '') then begin
 	  print,'No selection made; Exiting program'
 	  return
@@ -65,15 +65,15 @@ common STEM_data_common, data
   dpos = strpos(res,'.',/reverse_search)
   plen = strlen(res)
   data.pathname = strmid(res,0,spos)
-  data.geomname = strmid(res,spos+1)
+  data.dataname = strmid(res,spos+1)
   data.suffix = strmid(res,dpos+1)
   data.STEMroot = data.pathname
 
-WIDGET_CONTROL, SET_VALUE=data.geomname, widget_s.geometryfilename
+WIDGET_CONTROL, SET_VALUE=data.dataname, widget_s.filename
 
   STEMprint,' full path '+res
   STEMprint,' path '+data.pathname
-  STEMprint,' geometry file '+data.geomname
+  STEMprint,' data file '+data.dataname
   STEMprint,' suffix '+data.suffix
 
 end

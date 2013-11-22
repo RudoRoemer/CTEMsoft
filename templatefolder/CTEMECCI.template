@@ -1,52 +1,39 @@
-&rundata
-! Note: All values in this template file correspond to the program defaults
+&ECCIlist
+! The line above must not be changed
+!
+! The values below are the default values for this program
 !
 !------------
 ! multi-threading parameters
 !------------
-! number of threads to be used in multi-threaded mode 
-SETNTHR = 6
+SETNTHR = 1
 !------------
 ! microscope parameters
 !------------
 ! microscope accelerating voltage [V]
-voltage = 200000.0
-! illumination mode (parallel beam 'CTEM' or converged probe 'STEM')
-illumination_mode = 'STEM'
+voltage = 30000.
 !------------
 ! crystal structure and incident beam parameters
 !------------
-! string with the filename of the structure data (e.g., Cu.xtal; default = undefined)
+! crystal structure filename
 xtalname = 'undefined'
-! zone axis indices in crystal reference frame
-kk = 0,0,1
-! coordinates of the Laue center (x,y) in [nm^-1]
-lauec = 0.0,0.0
+! incident beam direction 
+k = 0,0,1
+! kt step size
+dkt = 0.1
+! beam convergence angle in terms of the ratio kt/|g_a| (i.e., kt_max)
+ktmax = 5.0
+! smallest d-spacing to take into account [nm]
+dmin = 0.04
 !------------
 ! various filenames
 !------------
-! name of the nml file with the STEM and detector parameters
-STEMnmlfile = 'STEM_rundata.nml'
+! output device (6=screen, >10 is fort.## file)
+output = 6
 ! name of the nml file with the foil parameters
 foilnmlfile = 'FOIL_rundata.nml'
 ! full filename of the output file, including complete path
 dataname = '/some/folder/on/your/drive/trialbinary.data'
-! store displacement field ('new'), read an existing field ('old') or don't store/read anything ('not')
-dispmode = 'not'
-! filename for the displacement field (only if dispmode <> 'not')
-dispfile = 'test_ZA.data'
-!------------
-! output modes
-!------------
-! all program output is sent to the output logical unit (default 6=screen, use >10 for file)
-output = 6
-! should the data output consist of images (STEMstore=.FALSE.) or the entire data array (STEMstore=.TRUE.)
-! for further processing in the IDL STEMDisplay.pro program?
-STEMstore = .FALSE.
-! verbose when dinfo=1, minimal screen output when dinfo=0
-dinfo = 0
-! how often should timing updates be shown (every t_interval k-steps)
-t_interval = 5
 !------------
 ! image parameters and scattering matrix step size
 !------------
@@ -61,6 +48,10 @@ DF_slice = 1.0
 !------------
 ! all defect related parameters and filenames
 !------------
+! number of Yoffe dislocation data files (set to 0 if none present)
+numYdisl = 0
+! names of the Yoffe dislocation nml files (comment if none present)
+dislYname = 'Ydisl1.nml','Ydisl2.nml'
 ! number of dislocation data files (set to 0 if none present)
 numdisl = 0
 ! names of the dislocation nml files (comment if none present)

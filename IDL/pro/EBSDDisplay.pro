@@ -59,34 +59,33 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:CBEDDisplay.pro
+; CTEMsoft2013:EBSDDisplay.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: CBEDDisplay.pro
+; PROGRAM: EBSDDisplay.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief Zone axis CBED display, used for both MBCBED and LACBED programs
+;> @brief EBSD user interface for MC and EBSD pattern display + interactive runs
 ;
-;> @date 09/25/13 MDG 1.0 first attempt at a user-friendly interface
+;> @date 11/15/13 MDG 1.0 first attempt at a user-friendly interface
 ;--------------------------------------------------------------------------
-pro CBEDDisplay,dummy
+pro EBSDDisplay,dummy
 ;
 ;------------------------------------------------------------
 ; common blocks
-common CBED_widget_common, widget_s
-common CBED_data_common, data
+
+common EBSD_widget_common, widget_s
+common EBSD_data_common, data
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
-common PointGroups, PGTHD, PGTWD, DG
-common trafos, done, c030, c060, c120, c150, c240, c300, s030, s060, s120, s150, s240, s300
 
 done = 0
 !EXCEPT=0
 
 ;------------------------------------------------------------
 ; make sure that this program isn't already running
-if (XRegistered("CBEDDisplay") NE 0) then begin
-  print,'CBEDDisplay is already running ... (if it is not, please restart your IDL session)'
+if (XRegistered("EBSDDisplay") NE 0) then begin
+  print,'EBSDDisplay is already running ... (if it is not, please restart your IDL session)'
   return
 end
 
@@ -316,22 +315,6 @@ data = {datastruct, $
         scrdimy:0L $                            ; display area y size in pixels 
         }
 
-PGTWD = [ 'none',' 1',' 2',' m',' 2mm',' 4',' 4mm',' 3',' 3m1',' 31m',' 6',' 6mm'] 
-PGTHD = ['  ' ,' 1',' -1',' 2',' m',' 2/m',' 222', $
-         ' mm2',' mmm',' 4',' -4',' 4/m',' 422', $
-         ' 4mm',' -42m','4/mmm',' 3',' -3',' 32', $
-         ' 3m',' -3m',' 6',' -6',' 6/m',' 622', $
-         ' 6mm',' -6m2',' 6/mmm',' 23',' m3',' 432', $
-         ' -43m',' m-3m']
-DG = ['  ',' 1',' 1R',' 2',' 2R',' 21R','  mR', $
-      ' m',' m1R',' 2mRmR',' 2mm',' 2RmmR',' 2mm1R', $
-      ' 4',' 4R',' 41R',' 4mRmR',' 4mm',' 4RmmR', $
-      ' 4mm1R',' 3',' 6R',' 3mR',' 3m',' 6RmmR', $
-      ' 6',' 31R',' 61R',' 6mRmR',' 6mm',' 3m1R', $
-      ' 6mm1R']
-
-
-
 ; a few font strings
 fontstr='-adobe-new century schoolbook-bold-r-normal--14-100-100-100-p-87-iso8859-1'
 fontstrlarge='-adobe-new century schoolbook-medium-r-normal--20-140-100-100-p-103-iso8859-1'
@@ -348,16 +331,16 @@ data.ylocation = data.scrdimx / 8.0
 
 ;------------------------------------------------------------
 ; does the preferences file exist ?  If not, create it, otherwise read it
-CBEDgetpreferences
+EBSDgetpreferences
 
 ;------------------------------------------------------------
 ; create the top level widget
-widget_s.base = WIDGET_BASE(TITLE='Zone Axis CBED Display Program', $
+widget_s.base = WIDGET_BASE(TITLE='EBSD Display Program', $
                         /COLUMN, $
                         XSIZE=700, $
                         /ALIGN_LEFT, $
 			/TLB_MOVE_EVENTS, $
-			EVENT_PRO='CBEDDisplay_event', $
+			EVENT_PRO='EBSDDisplay_event', $
                         XOFFSET=data.xlocation, $
                         YOFFSET=data.ylocation)
 
@@ -591,7 +574,7 @@ widget_s.progressdrawID = drawID
 WIDGET_CONTROL, widget_s.logodraw, GET_VALUE=drawID
 widget_s.logodrawID = drawID
 
-read_jpeg,'Resources/CTEMlogo.jpg',logo,true=1
+logo = read_image('../Resources/CTEMlogo.jpg')
 wset,widget_s.logodrawID
 tvscl,logo,true=1
 

@@ -10,4 +10,6 @@ jd = 0.001
 u = 1.0, 0.0, 1.0
 ! burgers vector in crystal coordinates (3 real numbers)
 bv = 0.5, 0.0, 0.5
+! depth parameter (only used when line direction is normal to foil normal)
+zfrac = 0.0
 /

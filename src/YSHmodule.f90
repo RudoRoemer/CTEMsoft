@@ -38,6 +38,7 @@
 ! 
 !> @date   04/29/11 MDG 1.0 original
 !> @date   06/04/13 MDG 2.0 rewrite + quaternions instead of rotations
+!> @date   11/21/13 MDG 3.0 verification with new libraries and new ECCI program
 !--------------------------------------------------------------------------
 module YSHModule
 
@@ -67,18 +68,18 @@ contains
 !
 !> @brief  compute the displacement field of an inclined dislocation intersecting the foil surface
 !
-!> @details compute the displacement field of an inclined dislocation intersection the top surface of 
+!> @details compute the displacement field of an inclined dislocation intersecting the top surface of 
 !> the foil, taking into account surface relaxations for the isotropic elastic case (cubic only) ... 
 !>
 !> equations are based on the Shaibani&Hazzledine 1981 paper, along with special limits for 
-!> the alpha->0 case, which were derived by MDG using Mathematica.
+!> the alpha->0 case, which were derived by MDG using Mathematica. 
 !
 !> @param x dislocation x-coordinate
 !> @param y dislocation y-coordinate
 !> @param z dislocation z-coordinate
 !> @param ii dislocation number
 !
-!> @todo There may be a problem with dislocations normal to the foil surface, likely a typographical error
+!> @todo There is a problem with dislocations normal to the foil surface, likely a typographical error
 !> in the SH paper; this needs to be resolved further, which may require explicit repetition of all 
 !> analytical computations!
 ! 
@@ -86,6 +87,7 @@ contains
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   06/04/13 MDG 3.0 rewrite
+!> @date   11/21/13 MDG 3.1 verification
 !--------------------------------------------------------------------------
 function YSHDisp(x,y,z,ii) result(res)
 
@@ -97,9 +99,9 @@ IMPLICIT NONE
 real(kind=dbl),INTENT(IN) 	:: x,y,z
 integer(kind=irg),INTENT(IN)  	::  ii
 
-real(kind=dbl)    			:: eta, zeta, etap, zetap, r, oms, omts, xx, sgn, om, omp, AA, BB, BBp, th, &
-                                 		k, lam, alA, alB, u, v, w, ms, S, du, dv, dw, qe, me, De, qx, mx, Dx, rr, eps
-real(kind=dbl) 				:: res(3) 
+real(kind=dbl)    		:: eta, zeta, etap, zetap, r, oms, omts, xx, sgn, om, omp, AA, BB, BBp, th, &
+                                 k, lam, alA, alB, u, v, w, ms, S, du, dv, dw, qe, me, De, qx, mx, Dx, rr, eps
+real(kind=dbl) 			:: res(3) 
 
 ! initialize the geometrical parameters
 eta  = y*YD(ii)%ca - z*YD(ii)%sa
@@ -188,7 +190,7 @@ if (abs(YD(ii)%bx).gt.eps) then
   if (YD(ii)%alpha.gt.0.01) then 
     k = 4.D0*oms*omts*YD(ii)%cota**2
     du = x*mx+th+k*(x*YD(ii)%ta/AA-om)
-    dv = y*mx+qx*YD(ii)%sa-lam*YD(ii)%ca-2.D0*YD(ii)%ca*(z*YD(ii)%ca+omts*y*YD(ii)%sa)/BB+k*(-1.D0+YD(ii)%ca-alA+y*YD(ii)%ta/AA+ &
+    dv = y*mx+qx*YD(ii)%sa-lam*YD(ii)%ca-2.D0*YD(ii)%ca*(z*YD(ii)%ca+omts*y*YD(ii)%sa)/BB+k*(-1.D0+YD(ii)%ca-alA+y*YD(ii)%ta/AA+&
           YD(ii)%ca*alB)
     dw = z*mx+qx*YD(ii)%ca-lam*YD(ii)%sa-2.D0*etap*YD(ii)%ca/BBp+4.D0*YD(ii)%ca*(oms*y*YD(ii)%ca-omts*z*YD(ii)%sa)/BB+ &
            k*YD(ii)%ta*(YD(ii)%ca-alA+YD(ii)%ca*alB)+4.D0*oms*YD(ii)%ca*YD(ii)%cota
@@ -198,8 +200,8 @@ if (abs(YD(ii)%bx).gt.eps) then
             2.D0*oms*(cPi + datan2(y,x) - datan2(-y,x))
     dv = 2.D0*z/(r-z)-4.D0*y**2*(YD(ii)%sig*rr-r**2)/r/AA**2/(r+z)+2.D0*omts*oms*(-1.D0+(z*(r+z)-y**2)/AA**2+alA)- &
             omts*dlog((r+z)/AA)
-    dw = 0.D0     ! not sure if this limit is correct ... Mathematica gives a directedinfinity value for the limit, which mght mean that the 
-    ! original YSH expression in the paper is incorrect for the w component ... 
+    dw = 0.D0     ! not sure if this limit is correct ... Mathematica gives a directedinfinity value for the limit, which might mean that the 
+    ! original YSH expression in the paper is incorrect for the w component ... this needs to be rederived and verified !!!
   end if
 
   u = u+sgn*du*Dx
@@ -208,7 +210,6 @@ if (abs(YD(ii)%bx).gt.eps) then
 end if
 
 ! and return the displacement components
-!write (*,*) u,v,w
 res = (/ u,v,w /)
 
 end function YSHDisp
@@ -220,10 +221,10 @@ end function YSHDisp
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief pre-compute geometrical parametersfor the Yoffe&Shaibani&Hazzledine (YSH) surface-relaxed dislocation in an elastically
-!> isotropic matrix. 
+!> @brief pre-compute geometrical parametersf or the Yoffe&Shaibani&Hazzledine (YSH) 
+!> surface-relaxed dislocation in an elastically isotropic matrix. 
 !
-!> @detailsThese parameters are then used in the CalcR routine.
+!> @details These parameters are then used in the CalcR routine.
 !>
 !> We implemented the YSH expressions instead of Yoffe's 
 !> since the former are more easily handled for numerical computations.
@@ -240,10 +241,11 @@ end function YSHDisp
 !
 !> @todo Convert IO to Write_Value calls
 ! 
-!> @date    1/5/99   MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90 version
-!> @date   11/27/01 MDG 2.1 added kind support
-!> @date   06/04/13 MDG 3.0 rewrite+added quaternions
+!> @date  1/5/99   MDG 1.0 original
+!> @date  5/19/01 MDG 2.0 f90 version
+!> @date 11/27/01 MDG 2.1 added kind support
+!> @date 06/04/13 MDG 3.0 rewrite+added quaternions
+!> @date 11/21/13 MDG 3.1 verification + rewrite of output handling
 !--------------------------------------------------------------------------
 subroutine makeYSHdislocation(i,dinfo, L)    
 
@@ -251,13 +253,19 @@ use local
 use foilmodule
 use constants
 use crystal
+use io
+use error
 use rotations
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: L
-real(kind=dbl)  	:: alpha, beta, tu(3), tx(3), ty(3), te(3), tb(3), bl, fx(3), fy(3), fz(3), dx, dy, a_di(3,3)
-integer(kind=irg) 	:: i,dinfo
+integer(kind=irg),INTENT(IN)        :: i
+integer(kind=irg),INTENT(IN)        :: dinfo
+real(kind=sgl),INTENT(IN)           :: L
+
+real(kind=dbl)  	             :: alpha, beta, tu(3), tx(3), ty(3), te(3), tb(3), bl, fx(3), fy(3), fz(3), &
+                                       dx, dy, a_di(3,3), io_real(3)
+integer(kind=irg)                   :: io_int(3)
 
 ! first, determine the alpha angle between the 
 ! negative z-axis, which is really the negative foil normal, and the line direction
@@ -266,13 +274,17 @@ integer(kind=irg) 	:: i,dinfo
 alpha = CalcAngle(foil%F,dble(YD(i)%u),'d')*180.0/cPi
 if (alpha.ge.90.0) then 
   alpha = 180.0-alpha
-  write (*,*) 'Foil normal = ',foil%F
-  write (*,*) 'line direction = ',YD(i)%u
-  write (*,*) '  --> alpha angle = ',alpha
+  if (dinfo.eq.1) then 
+    io_real(1:3) = foil%F(1:3)
+    call WriteValue('Foil normal = ', io_real, 3, "('[',3F5.1,']')")
+    io_real(1:3) = YD(i)%u(1:3)
+    call WriteValue('line direction = ', io_real, 3, "('[',3F5.1,']')")
+    io_real(1) = alpha
+    call WriteValue(' --> alpha angle = ', io_real, 1, "(F5.1)")
+  end if
   alpha = alpha*cPi/180.0
 else 
-  write (*,*) 'YSH dislocations must have line directions pointing into the foil ! '
-  stop
+  call FatalError('makeYSHdislocation','YSH dislocations must have line directions pointing into the foil ! ')
 end if
 
 ! normalize the line direction
@@ -282,31 +294,41 @@ call NormVec(tu,'c')
 ! consider the case of alpha=0 separately
 if (alpha.gt.0.0) then
   call TransSpace(foil%F,ty,'d','c')
-  call NormVec(ty,'c')   !  F
+  call NormVec(ty,'c')                     !  F
   call CalcCross(tu,ty,tx,'c','c',0)       ! x = u x F
   call NormVec(tx,'c')
-  call CalcCross(tx,tu,te,'c','c',0)             ! e = x x u
+  call CalcCross(tx,tu,te,'c','c',0)       ! e = x x u
   call NormVec(te,'c')
   call CalcCross(ty,tx,ty,'c','c',0)
   call NormVec(ty,'c')
 else
   tx = foil%qn
-  call CalcCross(tx,tu,te,'c','c',0)             ! e = x x u
+  call CalcCross(tx,tu,te,'c','c',0)       ! e = x x u
   call NormVec(te,'c')
 end if  
 bl = CalcLength(YD(i)%burg,'d')
-write (*,*) ' tx = ',tx
-write (*,*) ' te = ',te
-write (*,*) ' tu = ',tu
-write (*,*) ' ty = ',ty
-write (*,*) ' bl = ',bl
+
+if (dinfo.eq.1) then 
+  io_real(1:3) = tx(1:3)
+  call WriteValue(' tx = ',io_real, 3, "(3F5.1)")
+  io_real(1:3) = te(1:3)
+  call WriteValue(' te = ',io_real, 3, "(3F5.1)")
+  io_real(1:3) = tu(1:3)
+  call WriteValue(' tu = ',io_real, 3, "(3F5.1)")
+  io_real(1:3) = ty(1:3)
+  call WriteValue(' ty = ',io_real, 3, "(3F5.1)")
+  io_real(1) = bl
+  call WriteValue(' bl = ',io_real, 1, "(F8.3)")
+end if
+
 call TransSpace(YD(i)%burg,tb,'d','c')
 call NormVec(tb,'c')
 YD(i)%bx = bl * CalcDot(tb,tx,'c')   ! edge component normal to cut plane
 YD(i)%be = bl * CalcDot(tb,te,'c')   ! edge component in cut plane
-YD(i)%bs = bl * CalcDot(tb,tu,'c')  ! screw component
+YD(i)%bs = bl * CalcDot(tb,tu,'c')   ! screw component
 
-write (*,*) 'Burgers vector components (bx,be,bs) ',YD(i)%bx,YD(i)%be,YD(i)%bs
+io_real(1:3) = (/ YD(i)%bx,YD(i)%be,YD(i)%bs /)
+call WriteValue('Burgers vector components (bx,be,bs) ', io_real, 3, "(3F8.3)") 
 ! verified MDG 7/31/11
 
 
@@ -315,6 +337,7 @@ write (*,*) 'Burgers vector components (bx,be,bs) ',YD(i)%bx,YD(i)%be,YD(i)%bs
 ! coordinates...  We need the angle beta between the defect x axis (tx) and the foil x axis,
 ! which is the first column of the foil%a_fc matrix ...   We must make sure that this angle
 ! is measured in a CCW sense.
+
 ! projection of defect x axis onto foil x and y axes
 call TransSpace(foil%q,fx,'d','c')
 call TransSpace(foil%F,fz,'d','c')
@@ -323,11 +346,20 @@ call NormVec(fz,'c')
 call CalcCross(fz,fx,fy,'c','c',0)
 dx = CalcDot(tx,fx,'c')
 dy = CalcDot(tx,fy,'c')
+
 ! use the arctan function to get the angle with correct quadrant computation
 YD(i)%beta = atan2(dy,dx)
-write (*,*) ' dx = ',dx
-write (*,*) ' dy = ',dy
-write (*,*) ' beta = ',YD(i)%beta
+
+if (dinfo.eq.1) then 
+  io_real(1) = dx
+  call WriteValue(' dx = ', io_real, 1, "(F8.3)")
+  io_real(1) = dy
+  call WriteValue(' dy = ', io_real, 1, "(F8.3)")
+  io_real(1) = YD(i)%beta
+  call WriteValue(' beta = ', io_real, 1, "(F8.3)")
+end if
+
+! convert to a quaternion
 beta = YD(i)%beta
 a_di(1,1:3) = (/ cos(beta), sin(beta), 0.D0 /)
 a_di(2,1:3) = (/ -sin(beta), cos(beta), 0.D0 /)
@@ -335,16 +367,12 @@ a_di(3,1:3) = (/ 0.D0, 0.D0, 1.D0 /)
 YD(i)%a_di = om2qu(a_di)
 YD(i)%a_id = conjg(YD(i)%a_di)
 
-write (*,*) YD(i)%a_di
-
 ! finally some geometrical parameters needed for the displacement field computation...
 YD(i)%alpha =  alpha
 YD(i)%ca = cos(alpha)
 YD(i)%sa = sin(alpha)
 YD(i)%ta = tan(alpha)
 YD(i)%cota = 1.0/YD(i)%ta
-
-write (*,*) 'angulars = ',cos(alpha),sin(alpha),tan(alpha)
 
 ! that's it! the rest is handled in the CalcR routine.
 
@@ -357,7 +385,7 @@ end subroutine makeYSHdislocation
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief  prints quaternion and equivalent rotation matrix for a given input quaternion
+!> @brief read Yoffe dislocation input files
 ! 
 !> @param dislYname name of dislocation namelist file (string array)
 !> @param numYdisl number of dislocations
@@ -367,10 +395,11 @@ end subroutine makeYSHdislocation
 !> @param L 
 !> @param dinfo logical to trigger verbose output
 ! 
-!> @date 1/5/99   MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90 version
-!> @date   11/27/01 MDG 2.1 added kind support
-!> @date   03/25/13 MDG 3.0 updated IO
+!> @date  1/5/99  MDG 1.0 original
+!> @date  5/19/01 MDG 2.0 f90 version
+!> @date 11/27/01 MDG 2.1 added kind support
+!> @date 03/25/13 MDG 3.0 updated IO
+!> @date 11/21/13 MDG 3.1 verification
 !--------------------------------------------------------------------------
 subroutine read_YSH_dislocation_data(dislYname,numYdisl,DF_npix,DF_npiy,DF_gf,L,dinfo)
 
@@ -380,12 +409,12 @@ use files
 
 IMPLICIT NONE
 
-character(50),INTENT(IN)	 	:: dislYname(3*maxdefects)
+character(fnlen),INTENT(IN)	:: dislYname(3*maxdefects)
 integer(kind=irg),INTENT(IN)	:: numYdisl, DF_npix, DF_npiy, dinfo
 real(kind=sgl),INTENT(IN)	:: DF_gf(3), L
 
-integer(kind=irg) 			:: i
-real(kind=sgl) 				:: id,jd,u(3),bv(3),poisson
+integer(kind=irg) 	        :: i
+real(kind=sgl) 			:: id,jd,u(3),bv(3),poisson
 
 namelist / dislocationdata / id, jd, u, bv, poisson
 
@@ -395,8 +424,8 @@ namelist / dislocationdata / id, jd, u, bv, poisson
 ! these are just the individual dislocations; the ones that belong to 
 ! stacking faults are handled separately
    do i=1,numYdisl
-    mess = 'opening '//dislYname(i); call Message("(/A)")
-    OPEN(UNIT=dataunit,FILE=dislYname(i),DELIM='APOSTROPHE')
+    mess = 'opening '//trim(dislYname(i)); call Message("(/A)")
+    OPEN(UNIT=dataunit,FILE=trim(dislYname(i)),DELIM='APOSTROPHE')
     READ(UNIT=dataunit,NML=dislocationdata)
     CLOSE(UNIT=dataunit)
     
@@ -410,7 +439,7 @@ namelist / dislocationdata / id, jd, u, bv, poisson
     YD(i)%sig = poisson
     
 ! and pre-compute the dislocation displacement field parameters
-       call makeYSHdislocation(i,dinfo, L)    
+    call makeYSHdislocation(i,dinfo, L)    
   end do
   
 end subroutine read_YSH_dislocation_data

@@ -173,9 +173,13 @@ if (numvoids.ne.0) then
     end if
  end if 
 
-! ok, so we're not inside a void...
+! ok, if we get here, then we're not inside a void...
+
+!------------------
+!----CURVED FOIL---
+!------------------
 ! first we take the foil shape into account using equations (8.28) and (8.29)
-! sumR = sumR + float(islice)*DF_slice*foil%sg(i,j)*DF_gstar
+ sumR = sumR + float(islice)*DF_slice*foil%sg(i,j)*DF_gstar
 
 !-----------------
 !--DISLOCATIONS--
@@ -187,7 +191,6 @@ do ii=1,numdisl
   tmp2 =  tmpf - dble((/ DF_L*DL(ii)%id, DF_L*DL(ii)%jd, DL(ii)%zfrac*foil%z0 /))
 
 ! then convert the difference vector to the defect reference frame for this dislocation (we will only need the x and y coordinates)
-!  tmp = quat_rotate_vector( DL(ii)%a_di, quat_rotate_vector( conjg(foil%a_fi), tmp2 ) ) 
   tmp = quat_rotate_vector( DL(ii)%a_df, tmp2 ) 
 
 ! compute x1 + p_alpha x2  (eq. 8.38)
@@ -234,30 +237,36 @@ do ii=1,numdisl
   sumR = sumR + u 
 end do
 
-!-----------------
-!--DISLOCATIONS--
-!-----------------
+!-------------------------------------
+!--SURFACE INTERSECTING DISLOCATIONS--
+!-------------------------------------
+! this part is mostly used for ECCI-type image simulations, not for CTEM or STEM,
+! although it could probably be used there as well; we would need to extend it 
+! to incorporate both top and bottom foil surfaces
+
 ! do we have any dislocations with surface relaxations ?  YSH model
-       if (numYdisl.gt.0) then 
-        do ii=1,numYdisl
+if (numYdisl.gt.0) then 
+   do ii=1,numYdisl
 ! first, figure out what the coordinates are in the YSH reference frame for this dislocation ... 
 ! translate to the defect origin
-         tmp =  (/ xpos, ypos, zpos /) -  (/ DF_L*YD(ii)%id, DF_L*YD(ii)%jd, foil%z0*0.5 /)
+     tmp =  (/ xpos, ypos, zpos /) -  (/ DF_L*YD(ii)%id, DF_L*YD(ii)%jd, foil%z0*0.5 /)
 ! rotate into the defect reference frame
-         tmp = quat_rotate_vector( YD(ii)%a_id, tmp )   
+     tmp = quat_rotate_vector( YD(ii)%a_di, tmp )   
 ! compute the displacement vector
-         u = sngl(YSHDisp(dble(tmp(2)),-dble(tmp(1)),dble(tmp(3)),ii))
+     u = sngl(YSHDisp(dble(tmp(2)),-dble(tmp(1)),dble(tmp(3)),ii))
 ! and rotate back to the image reference frame
-         u = quat_rotate_vector( YD(ii)%a_di, u )     
+     u = quat_rotate_vector( YD(ii)%a_id, u )     
 ! that should do it !
-         sumR = sumR + u
-       end do
-      end if
+     sumR = sumR + u
+   end do
+end if
 
 !--------------------
 !--STACKING FAULTS--
 !--------------------
 ! stacking faults (this is easy because we've already done all the work in the stacking_fault module)
+! all we need is the z-value at which the stacking fault plane is crossed in this particular image
+! column; fromthat point on, we simply add the leading partial Burgers vector to the total displacement.
 do ii=1,numsf
   if ((zpos.lt.SF(ii)%zpos(i,j)).and.(SF(ii)%zpos(i,j).ne.-10000.0)) then 
     sumR = sumR + SF(ii)%lpbc
@@ -304,7 +313,7 @@ end do
   if (numinc.gt.0) then
    do ii=1,numinc
 ! subtract the inclusion position from the current slice position to get the relative position vector
-     tmp = tmpf -  (/ inclusions(ii)%xpos, inclusions(ii)%ypos, inclusions(ii)%zpos /)
+     tmp = tmpf - (/ inclusions(ii)%xpos, inclusions(ii)%ypos, inclusions(ii)%zpos /)
      dis = CalcLength(tmp,'c')
      if (dis.ge.inclusions(ii)%radius) then ! outside particle
        tmp = tmp*(inclusions(ii)%radius/dis)**3
@@ -314,6 +323,11 @@ end do
   end if
 
 ! TO BE IMPLEMENTED FOR RICHARD LESAR'S Discrete Dislocation Dynamics ! 
+! finally any displacement fields defined by the user routine UserDisp
+! sumR = sumR + UserDisp()
+
+
+! TO BE IMPLEMENTED FOR YUNZHI WANG's Dislocation Simulations ! 
 ! finally any displacement fields defined by the user routine UserDisp
 ! sumR = sumR + UserDisp()
 

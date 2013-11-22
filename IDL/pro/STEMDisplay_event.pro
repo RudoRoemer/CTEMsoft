@@ -223,33 +223,84 @@ end else begin
   'LOADFILE': begin
 ; loading a new file means that a bunch of variables need to be reset
 ; ask the user to select an input geometry file
+		if (XRegistered("STEMCBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.cbedbase, /DESTROY
+		if (XRegistered("STEMImageWidget") NE 0) then WIDGET_CONTROL, widget_s.imagebase, /DESTROY
+		if (XRegistered("STEMCTEMBFDFWidget") NE 0) then WIDGET_CONTROL, widget_s.CTEMBFDFbase, /DESTROY
 		STEMgetfilename
+		data.progmode = 'STEM'
 
-; read the geometry file and populate all the relevant fields
+; read the data file and populate all the relevant fields
 		STEMreadgeometry
 
 ; reset the diffraction mode
 		data.diffractionmode = 0
-		WIDGET_CONTROL,SET_VALUE=data.difffractionmode,widget_s.difffractionmode 
+		WIDGET_CONTROL,SET_VALUE=data.diffractionmode,widget_s.diffractionmode 
 		WIDGET_CONTROL, widget_s.gosector,sensitive=1
 		WIDGET_CONTROL, widget_s.clearsector,sensitive=1
 		WIDGET_CONTROL, widget_s.aprad,sensitive=0
 		WIDGET_CONTROL, get_value=val,widget_s.detsegm
 		data.detsegm = fix(val[0])
-
-; and draw the detector pattern for the current parameters
-		STEMdetectorsetup
+	endcase
 		
+  'LOADCTEMFILE': begin
+; loading a new file means that a bunch of variables need to be reset
+; ask the user to select an input file
+		if (XRegistered("STEMCBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.cbedbase, /DESTROY
+		if (XRegistered("STEMImageWidget") NE 0) then WIDGET_CONTROL, widget_s.imagebase, /DESTROY
+		if (XRegistered("STEMCTEMBFDFWidget") NE 0) then WIDGET_CONTROL, widget_s.CTEMBFDFbase, /DESTROY
+		STEMgetfilename
+		data.progmode = 'CTEM'
+
+; read the data file and populate all the relevant fields
+		STEMreadgeometry
+
+; reset the diffraction mode
+		data.diffractionmode = 0
+		WIDGET_CONTROL,SET_VALUE=data.diffractionmode,widget_s.diffractionmode 
+		WIDGET_CONTROL, widget_s.gosector,sensitive=0
+		WIDGET_CONTROL, widget_s.clearsector,sensitive=0
+		WIDGET_CONTROL, widget_s.aprad,sensitive=0
+
+; and erase the detector display
+		wset,widget_s.detdrawID 
+		erase
+		empty
+	  endcase
+
+  'LOADBFDFFILE': begin
+; loading a new file means that a bunch of variables need to be reset
+; ask the user to select an input file
+		if (XRegistered("STEMCBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.cbedbase, /DESTROY
+		if (XRegistered("STEMImageWidget") NE 0) then WIDGET_CONTROL, widget_s.imagebase, /DESTROY
+		if (XRegistered("STEMCTEMBFDFWidget") NE 0) then WIDGET_CONTROL, widget_s.CTEMBFDFbase, /DESTROY
+
+		STEMgetfilename
+		data.progmode = 'BFDF'
+
+; read the data file and populate all the relevant fields
+		STEMreadgeometry
+
+; reset the diffraction mode
+		data.diffractionmode = 0
+		WIDGET_CONTROL,SET_VALUE=data.diffractionmode,widget_s.diffractionmode 
+		WIDGET_CONTROL, widget_s.gosector,sensitive=0
+		WIDGET_CONTROL, widget_s.clearsector,sensitive=0
+		WIDGET_CONTROL, widget_s.aprad,sensitive=0
+
+; and erase the detector display
+		wset,widget_s.detdrawID 
+		erase
+		empty
 	  endcase
 
  'QUIT': begin
 ; do a general cleanup
-		  STEMprint,'Quitting program',/blank
+		  STEMprint,'Shutting down program',/blank
 		if (XRegistered("STEMCBEDWidget") NE 0) then WIDGET_CONTROL, widget_s.cbedbase, /DESTROY
 		if (XRegistered("STEMImageWidget") NE 0) then WIDGET_CONTROL, widget_s.imagebase, /DESTROY
+		if (XRegistered("STEMCTEMBFDFWidget") NE 0) then WIDGET_CONTROL, widget_s.CTEMBFDFbase, /DESTROY
 ; write the preferences file
 		STEMwritepreferences
-; kill a bunch of large variables
 
 ; close the log file if it is open
 		if (data.logfileopen eq 1) then begin

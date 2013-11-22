@@ -756,8 +756,8 @@ end if
     DL(i)%u = u
     DL(i)%burg = bv
     DL(i)%g = DF_gf
-    DL(i)%zfrac = zfrac
-    
+    DL(i)%zfrac = zfrac - 0.5
+     
 ! and pre-compute the dislocation displacement field parameters
        call makedislocation(i,dinfo, L)
   end do

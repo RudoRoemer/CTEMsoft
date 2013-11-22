@@ -24,6 +24,9 @@
 # examples folder
 /examples/
 
+# IDL Virtual Machine
+/IDL/VMapps/
+
 # debug files
 *.fx3
 

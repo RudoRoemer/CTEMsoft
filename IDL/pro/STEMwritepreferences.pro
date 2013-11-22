@@ -46,7 +46,7 @@ common STEM_data_common, data
 
 ; prefs file
   openw,1,data.prefname
-  nprefs = 25
+  nprefs = 27
   data.nprefs = nprefs
   printf,1,nprefs
   printf,1,'STEMroot::'+data.STEMroot
@@ -91,6 +91,8 @@ common STEM_data_common, data
   printf,1,'ylocation::'+string(data.ylocation,format="(F6.1)")
   printf,1,'imagexlocation::'+string(data.imagexlocation,format="(F6.1)")
   printf,1,'imageylocation::'+string(data.imageylocation,format="(F6.1)")
+  printf,1,'CTEMBFDFxlocation::'+string(data.CTEMBFDFxlocation,format="(F6.1)")
+  printf,1,'CTEMBFDFylocation::'+string(data.CTEMBFDFylocation,format="(F6.1)")
   printf,1,'cbedxlocation::'+string(data.cbedxlocation,format="(F6.1)")
   printf,1,'cbedylocation::'+string(data.cbedylocation,format="(F6.1)")
 ; and close the file

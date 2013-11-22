@@ -33,7 +33,7 @@
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief Reads the geometry and data files produced by the CTEMZAdefect.f90 program
+;> @brief Reads the data files produced by the CTEMZAdefect.f90 program
 ;
 ;> @date 06/20/13 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------
@@ -46,17 +46,28 @@ common STEM_data_common, data
 ; the next common block contains all the raw data needed to generate the CBED patterns
 common STEM_rawdata, indices, offsets, kperp, rawdata
 
-STEMprint,'Reading geometry file '+data.geomname
+STEMprint,'Reading data file '+data.dataname
+openu,1,data.pathname+'/'+data.dataname,/f77
 
-openu,1,data.pathname+'/'+data.geomname,/f77
+; get the file type (first four characters of the file)
+ftp = bytarr(4)
+readu,1,ftp
+ftp = string(ftp)
+; check that the correct file type was found
+if (data.progmode ne ftp) then begin
+  STEMprint,'File type found '+ftp
+  STEMprint,'File type expected '+data.progmode
+  STEMprint,'Please select a file of the type '+data.progmode
+  goto, skip
+end 
+
 ; first a pair of strings of 132 characters each
 dataname = bytarr(132)
 readu,1,dataname
-data.dataname = strtrim(string(dataname))
   STEMprint,'Dataname = ->'+data.dataname+'<-'
 WIDGET_CONTROL, SET_VALUE=data.dataname, widget_s.filename
 
-finfo = file_info(data.dataname)
+finfo = file_info(data.pathname+'/'+data.dataname)
 data.filesize = finfo.size
 WIDGET_CONTROL, SET_VALUE=string(data.filesize,FORMAT="(I14)")+' bytes', widget_s.filesize
 
@@ -143,52 +154,79 @@ for i=0,data.numk-1 do begin
   kperp[0:1,i] = [ki,kj]
 endfor
 
-; close the file
-close,1
+; for progmode='BFDF' we also need to read the camera length list
+if (data.progmode eq 'BFDF') then begin
+  numCL = 0L
+  readu,1,numCL
+  data.numCL = numCL
+  CLarray = fltarr(20)
+  readu,1,CLarray
+  data.CLarray = CLarray
+end 
 
-
-; next we also read the actual data file; keep in mind that this data is stored as
-; multiple [nx,ny,nbeams,5] arrays, to avoid having arrays that are too large in 
-; the data file.  With smaller arrays, we can read them with the f77 option and 
-; then store them in the larger rawdata array
-STEMprint,'Reading data file '+data.dataname
-openu,1,data.dataname,/f77
+; read the dimensions of the output array
 datadims = lonarr(4)
 readu,1,datadims
 datadims = long64(datadims)
 data.datadims = datadims
- STEMprint,'Data array has dimensions '+string(data.datadims[0],FORMAT="(I8)")+string(data.datadims[1],FORMAT="(I8)")+ $
+  STEMprint,'Data array has dimensions '+string(data.datadims[0],FORMAT="(I8)")+string(data.datadims[1],FORMAT="(I8)")+ $
 	string(data.datadims[2],FORMAT="(I8)")+string(data.datadims[3],FORMAT="(I8)")
-WIDGET_CONTROL, SET_VALUE=string(data.datadims[0],FORMAT="(I4)"), widget_s.imx
-WIDGET_CONTROL, SET_VALUE=string(data.datadims[1],FORMAT="(I4)"), widget_s.imy
-STEMprogressbar,0.0
-  STEMprint,'Allocating memory for diffraction data array',/blank
+  STEMprint,'Allocating memory for data array',/blank
 rawdata = fltarr(data.datadims)
-datablock = fltarr(data.datadims[0],data.datadims[1],data.datadims[2],5LL)
-kpos = 0LL
-numk = data.datadims[3]
-extra = numk mod 5LL
-last = numk-extra
-stepsize = data.datadims[3]/20
-for ik=0,data.datadims[3]-1 do begin
-  if ((ik mod 5) eq 0) then begin
-    readu,1,datablock
-    if (ik ne last) then begin
-      rawdata[0:*,0:*,0:*,kpos:kpos+4] = datablock[0:*,0:*,0:*,0:4]
-    end else begin
-      rawdata[0:*,0:*,0:*,kpos:kpos+extra-1] = datablock[0:*,0:*,0:*,0:extra-1]
-    endelse
-    kpos += 5
-  end
-  if ((ik mod stepsize) eq 0) then STEMprogressbar,100.0*float(ik)/float(data.datadims[3])
-end
-;readu,1,rawdata
+
+; and, finally, read the actual data
+case data.progmode of
+ 'STEM': begin
+; next we also read the actual pattern data; keep in mind that this data is stored as
+; multiple [nx,ny,nbeams,5] arrays, to avoid having arrays that are too large in 
+; the data file.  With smaller arrays, we can read them with the f77 option and 
+; then store them in the larger rawdata array; it is necessary to do things this way due 
+; to the inability of IDL to read f77 data items that are larger than 2Gb.
+	  WIDGET_CONTROL, SET_VALUE=string(data.datadims[0],FORMAT="(I4)"), widget_s.imx
+	  WIDGET_CONTROL, SET_VALUE=string(data.datadims[1],FORMAT="(I4)"), widget_s.imy
+	  STEMprogressbar,0.0
+	  datablock = fltarr(data.datadims[0],data.datadims[1],data.datadims[2],5LL)
+	  kpos = 0LL
+	  numk = data.datadims[3]
+	  extra = numk mod 5LL
+	  last = numk-extra
+	  stepsize = data.datadims[3]/20
+	  for ik=0,data.datadims[3]-1 do begin
+  	    if ((ik mod 5) eq 0) then begin
+    	      readu,1,datablock
+    	      if (ik ne last) then begin
+      	        rawdata[0:*,0:*,0:*,kpos:kpos+4] = datablock[0:*,0:*,0:*,0:4]
+    	      end else begin
+      	        rawdata[0:*,0:*,0:*,kpos:kpos+extra-1] = datablock[0:*,0:*,0:*,0:extra-1]
+    	      endelse
+    	      kpos += 5
+  	    end
+  	    if ((ik mod stepsize) eq 0) then STEMprogressbar,100.0*float(ik)/float(data.datadims[3])
+	  end
+
+	  STEMprogressbar,100.0
+	  datablock=0
+
+; and draw the detector pattern for the current parameters
+	  STEMdetectorsetup
+	endcase
+
+ 'CTEM': begin
+    	  readu,1,rawdata
+	  STEMCTEMBFDFwidget
+	endcase
+
+ 'BFDF': begin
+    	  readu,1,rawdata
+	  STEMCTEMBFDFwidget
+	endcase
+
+  else: MESSAGE, "Unknown data format"
+endcase
+
 close,1
-STEMprogressbar,100.0
+  STEMprint,'Completed reading of data file',/blank
 
-datablock=0
-
-STEMprint,'Completed reading of geometry and data files',/blank
-
+skip:
 
 end
