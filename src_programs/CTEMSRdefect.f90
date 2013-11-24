@@ -32,7 +32,7 @@
 !
 ! PROGRAM: CTEMSRdefect 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Computes systematic row defect contrast for multiple defects
 !                      using CTEM or STEM illumination and detector conditions 
@@ -67,7 +67,7 @@ end program CTEMSRdefect
 !
 ! SUBROUTINE:ComputeSRdefect
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute a systematic row defect image
 !

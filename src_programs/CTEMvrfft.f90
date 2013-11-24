@@ -32,7 +32,7 @@
 !
 ! PROGRAM:CTEMvrfft.f90 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief 2D electrostatic lattice potential 
 !

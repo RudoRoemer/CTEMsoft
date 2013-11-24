@@ -27,60 +27,42 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:CTEMzap.f90
+! CTEMsoft2013:CTEMmkxtal.f90
 !--------------------------------------------------------------------------
 !
-! PROGRAM:CTEMzap 
+! PROGRAM: mkxtal 
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief PostScript output of kinematical zone axis diffraction patterns
+!> @brief create a crystal structure file (very simple program)
 !
-! 
-!> @date 12/11/98   MDG 1.0 original
-!> @date 04/08/13 MDG 2.0 rewrite
+!> @date   11/23/13 MDG 1.0 original
 !--------------------------------------------------------------------------
-program CTEMzap
+program CTEMmkxtal
 
 use local
+use io
 use crystalvars
 use crystal
-use symmetryvars
 use symmetry
-use graphics
 use files
-use postscript
-use io
-use diffraction
 
 IMPLICIT NONE
 
-integer(kind=irg)       	:: inm
-real(kind=sgl)			:: io_real(1)
-
-
- progname = 'CTEMzap.f90'
- progdesc = 'Kinematical Zone Axis Diffraction Patterns'
+ progname = 'CTEMmkxtal.f90'
+ progdesc = 'Create a crystal structure file'
  call CTEMsoft
+ 
+ cell%SYM_SGset=0
+ call GetLatParm
+ call GetSpaceGroup
+ call GetAsymPos
+ call SaveData
 
- SG % SYM_reduce=.TRUE.
 
-! read crystal information, microscope voltage, and camera length
- call CrystalData
- call GetVoltage
- call ReadValue(' Camera length L  [mm, real] ', io_real, 1)
- camlen = io_real(1)
 
-! generate all atom positions in the fundamental unit cell
- call CalcPositions('v')
+end  program CTEMmkxtal
+       
 
-! open PostScript file
- call PS_openfile
 
-! generate a set of zone axis patterns
- call DiffPage
 
-! close Postscript file
- call PS_closefile
-
-end program CTEMzap

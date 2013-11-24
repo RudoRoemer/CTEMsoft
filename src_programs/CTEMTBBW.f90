@@ -32,7 +32,7 @@
 !
 ! PROGRAM: CTEMTBBW 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Simple two-beam Bloch wave program
 ! 
@@ -97,7 +97,7 @@ end program
 !
 ! SUBROUTINE: CalcTBBW 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief This is where the actual computation is performed
 ! 

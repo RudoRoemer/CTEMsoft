@@ -32,7 +32,7 @@
 !
 ! PROGRAM: CTEMlacbed 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Zone axis LACBED
 !
@@ -72,7 +72,7 @@ end program CTEMlacbed
 !
 ! SUBROUTINE:LACBEDpattern
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute a large angle zone axis convergent beam electron diffraction pattern
 !

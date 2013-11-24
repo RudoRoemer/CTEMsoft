@@ -32,7 +32,7 @@
 !
 ! PROGRAM: CTEMorient
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief stereographic projection of a crystal orientation relation
 !
@@ -238,7 +238,7 @@ end program CTEMorient
 !
 ! SUBROUTINE: DrawFrame
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief draw the page layout
 !

@@ -32,7 +32,7 @@
 !
 ! PROGRAM: CTEMdrawcell 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Draw a unit cell
 !
@@ -165,7 +165,7 @@ end program CTEMdrawcell
 !
 ! SUBROUTINE:DrawFrame
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief format the output page
 !

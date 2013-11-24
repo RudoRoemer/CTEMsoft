@@ -32,7 +32,7 @@
 !
 ! PROGRAM: CTEMfamily 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Draw stereographic projection of a family of planes or directions
 !

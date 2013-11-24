@@ -32,7 +32,7 @@
 !
 ! PROGRAM: CTEMholz.f90 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Generate kinematical HOLZ patterns
 !
@@ -114,7 +114,7 @@ end program
 !
 ! SUBROUTINE: HOLZPage
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief draw zone axis HOLZ diffraction pattern and line pattern
 !
@@ -493,7 +493,7 @@ end subroutine
 ! 
 ! SUBROUTINE:ShortestGFOLZ
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief find the shortest G vector
 !
@@ -562,7 +562,7 @@ end subroutine ShortestGFOLZ
 ! 
 ! SUBROUTINE:CalcHOLZ
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute the HOLZ reflections for zone N 
 !
@@ -733,7 +733,7 @@ end subroutine CalcHOLZ
 ! 
 ! SUBROUTINE:ReCalcHOLZ
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute the HOLZ reflections for zone N for new lattice parameters
 !
@@ -823,7 +823,7 @@ end subroutine ReCalcHOLZ
 ! 
 ! SUBROUTINE:PlotHOLZ
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief draw a single HOLZ zone axis diffraction pattern
 !
@@ -873,7 +873,7 @@ end subroutine PlotHOLZ
 ! 
 ! SUBROUTINE:PlotHOLZlines
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief draw a single HOLZ line convergent beam disk
 !

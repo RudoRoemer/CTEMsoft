@@ -48,12 +48,12 @@ use io
 
 IMPLICIT NONE
 
-character(fnlen)			:: nmldeffile
+character(fnlen)	:: nmldeffile
 
 ! deal with the command line arguments, if any
 nmldeffile = 'CTEMECP.nml'
 progname = 'CTEMECP.f90'
-call Interpret_Program_Arguments(nmldeffile,1,(/ 40 /) )
+call Interpret_Program_Arguments(nmldeffile,2,(/ 0, 40 /) )
 
 ! perform the zone axis computations
 call ECpattern(nmldeffile)
@@ -79,6 +79,7 @@ end program CTEMECP
 !> @param nmlfile namelist file name
 !
 !> @date 11/18/13  MDG 1.0 major rewrite from older ECP program
+!< @date 11/22/13  MDG 1.1 output modified for IDL interface
 !--------------------------------------------------------------------------
 subroutine ECpattern(nmlfile)
 
@@ -109,14 +110,14 @@ real(kind=sgl)           :: voltage, dmin, convergence, startthick, thickinc, th
 integer(kind=irg)        :: numthick, nt, npix, skip, dgn, pgnum, io_int(6), maxHOLZ, ik, k(3), numk, ga(3), gb(3), &
                             fn(3), nn, npx, npy, isym, numset, it, ijmax, jp
 
-real(kind=dbl)           :: ctmp(192,3),arg, frac, abcdist(3), albegadist(3)
+real(kind=dbl)           :: ctmp(192,3),arg, abcdist(3), albegadist(3)
 integer                  :: i,j,ir,nat(100),kk(3),&
                             n,ipx,ipy,minbeams, &
                             maxbeams,gzero,ic,ip,ikk     ! counters
 real(kind=sgl)           :: ktmax,& ! maximum tangential component of wave vector
                             pre,&   ! prefactors 
                             tpi,Znsq, kkl, &
-                            DBWF 
+                            DBWF, frac
 real,allocatable         :: thick(:), sr(:,:,:), EKI(:,:,:) ! thickness array, results
 !real(kind=dbl), allocatable           :: Kossel(:)
 complex(kind=dbl),allocatable         :: Lgh(:,:,:),Sgh(:,:)
@@ -127,21 +128,23 @@ namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, distort, abcdist, alb
                    startthick, thickinc, numthick, npix, outname
 
 ! set the input parameters to default values (except for xtalname, which must be present)
-xtalname = 'undefined'		! initial value to check that the keyword is present in the nml file
-stdout = 6			! standard output
-voltage = 30000.0		! acceleration voltage [V]
-k = (/ 0, 0, 1 /)		! beam direction [direction indices]
-fn = (/ 0, 0, 1 /)		! foil normal [direction indices]
-dmin = 0.025			! smallest d-spacing to include in dynamical matrix [nm]
+xtalname = 'undefined'		        ! initial value to check that the keyword is present in the nml file
+stdout = 6			        ! standard output
+voltage = 30000.0		        ! acceleration voltage [V]
+k = (/ 0, 0, 1 /)		        ! beam direction [direction indices]
+fn = (/ 0, 0, 1 /)		        ! foil normal [direction indices]
+dmin = 0.025			        ! smallest d-spacing to include in dynamical matrix [nm]
 distort = .FALSE.                      ! distort the input unit cell ?  
 abcdist = (/ 0.4, 0.4, 0.4/)           ! distorted a, b, c [nm]
 albegadist = (/ 90.0, 90.0, 90.0 /)    ! distorted angles [degrees]
-ktmax = 5.0                   ! beam convergence in units of |g_a|
-startthick = 2.0		! starting thickness [nm]
-thickinc = 2.0			! thickness increment
-numthick = 10			! number of increments
-npix = 256			! output arrays will have size npix x npix
-outname = 'ecp.data'	! output filename
+ktmax = 5.0                            ! beam convergence in units of |g_a|
+startthick = 2.0		        ! starting thickness [nm]
+thickinc = 2.0			        ! thickness increment
+numthick = 10			        ! number of increments
+npix = 256			        ! output arrays will have size npix x npix
+outname = 'ecp.data'        	        ! output filename
+
+! init some parameters
 gzero = 1
 frac = 0.05
 
@@ -174,6 +177,9 @@ if (distort) then
     cell%a = abcdist(1); cell%b = abcdist(2); cell%c = abcdist(3)
     cell%alpha = albegadist(1); cell%beta = albegadist(2); cell%gamma = albegadist(3)
     call CalcMatrices
+else
+    abcdist = (/ cell%a, cell%b, cell%c /)
+    albegadist = (/ cell%alpha, cell%beta, cell%gamma /)
 end if
 
 ! initialize the wave length and lattice potential computations
@@ -210,15 +216,14 @@ end if
 
 ! construct the list of all possible reflections
  method = 'ALL'
+ bragg = CalcDiffAngle(ga(1),ga(2),ga(3))*0.5
  thetac = (ktmax * 2.0 * bragg)*1000.0
- call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxHOLZ,thetac)
+ io_real(1) = thetac
+ call WriteValue(' Pattern convergence angle [mrad] = ',io_real,1,"(F8.3)")
+ io_real(1) = bragg*1000.0
+ call WriteValue(' Bragg angle of g_a [mrad] = ',io_real,1,"(F6.3)")
+ call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxHOLZ,thetac/1000.0)
  galen = CalcLength(float(ga),'r')
-
-! determine range of incident beam directions
-!  bragg = CalcDiffAngle(ga(1),ga(2),ga(3))*0.5
-  
-! convert to ktmax along ga
-!  ktmax = 0.5*thetac/bragg
 
 ! the number of pixels across the disk is equal to 2*npix + 1
   npx = npix
@@ -235,7 +240,7 @@ end if
 ! illumination cone without application of symmetry.  Instead, we'll get the speed up by 
 ! going to multiple cores later on.
   isym = 1
-  call CalckvectorsSymmetry(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,klaue,.FALSE.)
+  call CalckvectorsSymmetry(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,klaue)
   io_int(1)=numk
   call WriteValue('Starting computation for # beam directions = ', io_int, 1, "(I8)")
 
@@ -248,9 +253,10 @@ end if
   thick = startthick + thickinc * (/ (i-1,i=1,nt) /)
 
   nat = 0
+  
+  call Time_report(frac)
+  call Time_start
 
-  mess = 'Starting main computation'
-  call Message("(A/)")
   
 !----------------------------MAIN COMPUTATIONAL LOOP-----------------------
 ! point to the first beam direction
@@ -268,8 +274,6 @@ end if
 
 !  work through the beam direction list
   beamloop: do ik=1,numk
-! time the computation
-   if (ik.eq.1) call Time_start
 
 	ip = -ktmp%i
  	jp =  ktmp%j
@@ -339,23 +343,60 @@ end if
           
 ! update computation progress
    if (float(ik)/float(numk) .gt. frac) then
-    io_int(1) = nint(100.0*frac) 
-    call WriteValue('       ', io_int, 1, "(1x,I3,' percent completed')") 
-    frac = frac + 0.05
+     call Time_remaining(ik,numk)
+     frac = frac + 0.05
    end if  
 
   end do beamloop
 
-
 ! stop the clock and report the total time     
   call Time_stop(numk)
 
-! here we probably need to store some additional information for the IDL interface  
-  open(unit=dataunit,file=trim(outname),status='unknown',form='unformatted')
-  write (dataunit) 2*npx+1,2*npy+1,nt
+! store additional information for the IDL interface  
+  open(unit=dataunit,file=trim(outname),status='unknown',action='write',form='unformatted')
+! write the program identifier
+  write (dataunit) trim(progname)
+! write the version number
+  write (dataunit) scversion
+! first write the array dimensions
+  write (dataunit) 2*npix+1,2*npix+1,nt
+! then the name of the crystal data file
+  write (dataunit) xtalname
+! altered lattice parameters
+  if (distort) then 
+    write (dataunit) 1
+  else
+    write (dataunit) 0
+  end if
+! new lattice parameters and angles
+  write (dataunit) abcdist
+  write (dataunit) albegadist
+! the accelerating voltage [V]
+  write (dataunit) voltage
+! convergence angle [mrad]
+  write (dataunit) thetac
+! the zone axis indices
+  write (dataunit) k
+! the foil normal indices
+  write (dataunit) fn
+! number of k-values in disk
+  write (dataunit) numk
+! dmin value
+  write (dataunit) dmin
+! horizontal reciprocal lattice vector
+  write (dataunit) ga  
+! length horizontal reciprocal lattice vector (need for proper Laue center coordinate scaling)
+  write (dataunit) galen
+! eight integers with the labels of various symmetry groups
+  write (dataunit) (/ pgnum, PGLaue(pgnum), dgn, PDG(dgn), BFPG(dgn), WPPG(dgn), DFGN(dgn), DFSP(dgn) /)
+! thickness data
+  write (dataunit) startthick, thickinc
+! and the actual data array
   write (dataunit) sr
-!  write (dataunit) EKI
   close(unit=dataunit,status='keep')
+
+  mess = 'Data stored in output file '//trim(outname)
+  call Message("(/A/)")
 
 end subroutine ECpattern
 
@@ -377,7 +418,7 @@ end subroutine ECpattern
 !
 !> @date 11/18/13  MDG 1.0 major rewrite from older ECP program; merged with ECPz
 !--------------------------------------------------------------------------
-subroutine CalcLgh(nn,nt,thick,kn,gzero,Lgh) !,Kossel)
+recursive subroutine CalcLgh(nn,nt,thick,kn,gzero,Lgh) !,Kossel)
 
 use local
 use io
@@ -399,7 +440,6 @@ complex(kind=dbl),INTENT(OUT)       :: Lgh(nn,nn,nt)
 integer                             :: i,j,it,ig,ih,IPIV(nn)
 complex(kind=dbl),allocatable       :: CGinv(:,:), Minp(:,:),tmp3(:,:)
 complex(kind=dbl)                   :: Ijk(nn,nn),q
-real(kind=dbl)                      :: qq, s, t
 
 allocate(CGinv(nn,nn),Minp(nn,nn),tmp3(nn,nn))
 

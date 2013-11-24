@@ -30,7 +30,7 @@
 !
 ! MODULE: lens 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief A few auxiliary variables and functions used by CTEMlens program
 ! 
@@ -58,7 +58,7 @@ contains
 !
 ! FUNCTION: bz 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief axial field value
 !
@@ -88,7 +88,7 @@ end function bz
 !
 ! FUNCTION: f 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief axial field
 !
@@ -120,7 +120,7 @@ end module lens
 !
 ! PROGRAM: CTEMlens 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Electron trajectory simulation for simple field
 !

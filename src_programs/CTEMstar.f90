@@ -32,7 +32,7 @@
 !
 ! PROGRAM: 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Prints the star of a reciprocal lattice position for a given space group;
 !

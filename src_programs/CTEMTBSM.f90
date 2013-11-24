@@ -32,7 +32,7 @@
 !
 ! PROGRAM: CTEMTBSM
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Two-beam scattering matrix program
 !
@@ -90,7 +90,7 @@ end program
 !
 ! SUBROUTINE: CalcTBSM
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Actual two-beam scattering matrix computation
 !

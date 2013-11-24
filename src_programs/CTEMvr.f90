@@ -32,7 +32,7 @@
 !
 ! PROGRAM:CTEMvr 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief computes a slice of  V(r) using cosines and sines (slow version)
 !

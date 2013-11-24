@@ -26,31 +26,66 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:CBEDCBEDDrawWidget_event.pro
+; CTEMsoft2013:ECPgetpreferences.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: CBEDCBEDDrawWidget_event.pro
+; PROGRAM: ECPgetpreferences.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief main event handler for LACBED mode
+;> @brief read the preferences file and initialize all relevant widgets
 ;
-;> @date 10/09/13 MDG 1.0 first version
+;> @date 11/23/13 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------
-pro CBEDCBEDDrawWidget_event, event
-
+pro ECPgetpreferences,dummy
+ 
 ;------------------------------------------------------------
 ; common blocks
-common CBED_widget_common, widget_s
-common CBED_data_common, data
+common ECP_widget_common, widget_s
+common ECP_data_common, data
 
-if (data.eventverbose eq 1) then help,event,/structure
+; does the preferences file exist ?
+rs = file_test(data.prefname)
 
-; intercept the image widget movement here 
-if (event.id eq widget_s.CBEDDrawbase) then begin
-  data.CBEDDrawxlocation = event.x
-  data.CBEDDrawylocation = event.y-25
-    CBEDprint,' Window moved to location ('+string(fix(data.CBEDDrawxlocation),format="(I4)")+','+string(fix(data.CBEDDrawylocation),format="(I4)")+')'
+if (rs eq 1) then begin
+  s = ''
+  i = 0
+  openr,1,data.prefname
+  readf,1,i
+  data.nprefs = i
+
+; next, do a little loop and read name:value pairs
+  for i=0,data.nprefs-1 do begin
+    readf,1,s
+    spos = strpos(s,'::')
+    nm = strmid(s,0,spos)
+    val = strmid(s,spos+2)
+    case nm of 
+; root folder
+	'ECProot': data.ECProot=val
+; pattern output format
+  	'ecpformat': data.ecpformat=fix(val)
+; grid on or off ?
+  	'ecpgrid': data.ecpgrid=fix(val)
+
+; window locations
+  	'xlocation': data.xlocation=float(val)
+  	'ylocation': data.ylocation=float(val)
+  	'ECPxlocation': data.ECPxlocation=float(val)
+  	'ECPylocation': data.ECPylocation=float(val)
+;
+    else: MESSAGE,'unknown option for preferences file'
+    endcase
+  endfor
+
+  close,1
+end else begin
+  s = ''
+  cd,current=s
+  data.ECProot=s
+; prefs file does not exist yet, so let's create it with default values
+  ECPwritepreferences
+endelse
+
 end
 
-end

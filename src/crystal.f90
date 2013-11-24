@@ -1142,7 +1142,7 @@ use crystalvars
 IMPLICIT NONE
 
 logical			:: more			!< logical to determine if more atoms need to be entered
-character(1)		:: ans,list(256)		!< used for IO
+character(1)		:: ans,list(256)	!< used for IO
 real(kind=sgl)		:: pt(5), out_real(5)	!< used to read and write asymmetric position data
 integer(kind=irg)	:: j, io_int(1)		!< auxiliary variables
 
@@ -1250,14 +1250,14 @@ use local
 
 IMPLICIT NONE
 
-character(1),INTENT(IN)                	:: list(256)					!< input string
-real(kind=sgl),INTENT(OUT)        	:: pt(5)						!< output real array
-integer(kind=irg)           			:: comma(6),slash(5),period(5), &
-							   ccnt,scnt,pcnt,pp,i,j,hcnt, &
-                               				   ip,ipt,icnt,nd,n,k,ns			!< auxiliary variables
+character(1),INTENT(IN)               :: list(256)				!< input string
+real(kind=sgl),INTENT(OUT)        	:: pt(5)				!< output real array
+integer(kind=irg)           		:: comma(6),slash(5),period(5), &
+					   ccnt,scnt,pcnt,pp,i,j,hcnt, &
+                              		   ip,ipt,icnt,nd,n,k,ns		!< auxiliary variables
 integer(kind=irg),parameter 		:: nmb(48:57)=(/0,1,2,3,4,5,6,7,8,9/)	!< list of numbers
-real(kind=dbl)              			:: nominator,denominator,x		!< used for fraction interpretation
-logical                     				:: hasperiod					!< used for decimal interpretation
+real(kind=dbl)              		:: nominator,denominator,x		!< used for fraction interpretation
+logical                     		:: hasperiod				!< used for decimal interpretation
 
 ! initalize a few variables
  comma(1:6) = 0
@@ -1650,7 +1650,7 @@ end subroutine GetHOLZGeometry
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief find the projeccted coordinates of an arbitrary HOLZ g-vector
+!> @brief find the projected coordinates of an arbitrary HOLZ g-vector
 !
 !> @details  see chapter 3
 !

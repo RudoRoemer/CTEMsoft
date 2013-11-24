@@ -26,31 +26,36 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:CBEDCBEDDrawWidget_event.pro
+; CTEMsoft2013:ECPshow.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: CBEDCBEDDrawWidget_event.pro
+; PROGRAM: ECPshow.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief main event handler for LACBED mode
+;> @brief main event handler
 ;
-;> @date 10/09/13 MDG 1.0 first version
+;> @date 06/13/13 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro CBEDCBEDDrawWidget_event, event
+pro ECPshow, dummy
 
 ;------------------------------------------------------------
 ; common blocks
-common CBED_widget_common, widget_s
-common CBED_data_common, data
+common ECP_widget_common, widget_s
+common ECP_data_common, data
+common ECP_rawdata, rawdata
 
-if (data.eventverbose eq 1) then help,event,/structure
+wset,widget_s.ECPdrawID
 
-; intercept the image widget movement here 
-if (event.id eq widget_s.CBEDDrawbase) then begin
-  data.CBEDDrawxlocation = event.x
-  data.CBEDDrawylocation = event.y-25
-    CBEDprint,' Window moved to location ('+string(fix(data.CBEDDrawxlocation),format="(I4)")+','+string(fix(data.CBEDDrawylocation),format="(I4)")+')'
-end
+tvscl,rawdata[*,*,data.thicksel]
 
-end
+; do we need to draw a grid ?
+if (data.ecpgrid eq 1) then begin
+; draw the grid lines horizontally and vertically
+  for i=-data.kt,data.kt do begin
+    plots,data.xmid + [i,i]*data.dgrid,[0,data.datadims[1]],/dev,color=200
+    plots,[0,data.datadims[1]],data.xmid+[i,i]*data.dgrid,/dev,color=200
+  end
+end 
+
+end 

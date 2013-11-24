@@ -31,7 +31,7 @@
 ;
 ; PROGRAM: CBEDprosetvalue.pro
 ;
-;> @author Marc De Graef, Carnegie Melon University
+;> @author Marc De Graef, Carnegie Mellon University
 ;
 ;> @brief This is the routine called by the PRO_SET_VALUE option for other widgets
 ;

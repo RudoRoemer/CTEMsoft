@@ -26,31 +26,41 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:CBEDCBEDDrawWidget_event.pro
+; CTEMsoft2013:ECPwritepreferences.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: CBEDCBEDDrawWidget_event.pro
+; PROGRAM: ECPwritepreferences.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief main event handler for LACBED mode
+;> @brief write the preferences file
 ;
-;> @date 10/09/13 MDG 1.0 first version
+;> @date 11/23/13 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------
-pro CBEDCBEDDrawWidget_event, event
-
+pro ECPwritepreferences,dummy
+ 
 ;------------------------------------------------------------
 ; common blocks
-common CBED_widget_common, widget_s
-common CBED_data_common, data
+common ECP_widget_common, widget_s
+common ECP_data_common, data
 
-if (data.eventverbose eq 1) then help,event,/structure
+; prefs file
+  openw,1,data.prefname
+  nprefs = 7
+  data.nprefs = nprefs
+  printf,1,nprefs
+  printf,1,'ECProot::'+data.ECProot
+; pattern output format
+  printf,1,'ecpformat::'+string(data.ecpformat,format="(I1)")
+; grid on or off ?
+  printf,1,'ecpgrid::'+string(data.ecpgrid,format="(I1)")
 
-; intercept the image widget movement here 
-if (event.id eq widget_s.CBEDDrawbase) then begin
-  data.CBEDDrawxlocation = event.x
-  data.CBEDDrawylocation = event.y-25
-    CBEDprint,' Window moved to location ('+string(fix(data.CBEDDrawxlocation),format="(I4)")+','+string(fix(data.CBEDDrawylocation),format="(I4)")+')'
+; window locations
+  printf,1,'xlocation::'+string(data.xlocation,format="(F6.1)")
+  printf,1,'ylocation::'+string(data.ylocation,format="(F6.1)")
+  printf,1,'ECPxlocation::'+string(data.ECPxlocation,format="(F6.1)")
+  printf,1,'ECPylocation::'+string(data.ECPylocation,format="(F6.1)")
+  close,1
+
 end
 
-end

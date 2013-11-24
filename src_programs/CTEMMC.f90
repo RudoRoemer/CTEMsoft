@@ -32,7 +32,7 @@
 !
 ! PROGRAM: CTEMMC 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Monte Carlo BSE simulation with Lambert projection for data storage
 !
@@ -78,7 +78,7 @@ end program CTEMMC
 !
 ! SUBROUTINE:DoMCsimulation
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Perform the MC simulation
 !
@@ -268,7 +268,7 @@ contains
 !
 ! SUBROUTINE:single_run
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief does a full simulation starting from a given random number seed
 !

@@ -32,7 +32,7 @@
 !
 ! PROGRAM: CTEMSRBW 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Systematic row Bloch wave program
 !
@@ -97,7 +97,7 @@ end program CTEMSRBW
 !
 ! SUBROUTINE: CalcSRBW 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief performs the actual Bloch wave calculation
 ! 
@@ -272,7 +272,7 @@ end subroutine CalcSRBW
 !
 ! SUBROUTINE: BWshow 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief create some output for this computation, using the temporary file fort.15
 !
@@ -326,7 +326,7 @@ end subroutine BWshow
 !
 ! SUBROUTINE: BWtoPS 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief create PostScript output
 !
@@ -504,7 +504,7 @@ end subroutine BWtoPS
 !
 ! SUBROUTINE: ExtractBWdata 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Produces postscript output
 !
@@ -577,7 +577,7 @@ end subroutine ExtractBWdata
 !
 ! SUBROUTINE: BWtoI 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Convert Bloch wave parameters to intensities
 !

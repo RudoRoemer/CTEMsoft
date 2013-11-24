@@ -32,7 +32,7 @@
 !
 ! PROGRAM: CTEMSRCBED 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Systematic Row Convergent Beam Electron Diffraction 
 ! > using scattering matrix approach
@@ -90,7 +90,7 @@ end program CTEMSRCBED
 !
 ! PROGRAM: SRCBEDPage 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief draw systematic row convergent beam electron diffraction patterns
 ! 
@@ -449,7 +449,7 @@ end subroutine SRCBEDPage
 !
 ! SUBROUTINE: DumpSRCBED 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief draw a single systematic row CBED pattern
 !

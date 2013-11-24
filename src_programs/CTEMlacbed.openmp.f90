@@ -32,7 +32,7 @@
 !
 ! PROGRAM: CTEMlacbed 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Zone axis LACBED
 !
@@ -82,7 +82,7 @@ end program
 !
 ! SUBROUTINE:LACBEDpattern
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute a large angle zone axis convergent beam electron diffraction pattern
 !
@@ -341,7 +341,7 @@ end subroutine LACBEDpattern
 !
 ! SUBROUTINE: LocalCompute_DynMat
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute the entire dynamical matrix, including HOLZ and Bethe potentials
 !

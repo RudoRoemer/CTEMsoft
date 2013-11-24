@@ -217,8 +217,8 @@ use symmetry
 IMPLICIT NONE
 
 character(fnlen),OPTIONAL,INTENT(IN)  	:: fname			!< optional file name
-integer(kind=irg)					:: io_int(1)
-logical 							:: fr = .TRUE.
+integer(kind=irg)			:: io_int(1)
+logical 				:: fr = .TRUE.
 
  loadingfile = .FALSE.
  if (PRESENT(fname)) then 

@@ -32,7 +32,7 @@
 !
 ! PROGRAM:CTEMstereo 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief STandard stereographic projections
 !

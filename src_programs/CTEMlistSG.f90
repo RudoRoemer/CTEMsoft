@@ -32,7 +32,7 @@
 !
 ! PROGRAM: CTEMlistSG
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief List space group equivalent positions
 !

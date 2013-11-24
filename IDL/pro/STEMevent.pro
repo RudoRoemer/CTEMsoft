@@ -31,7 +31,7 @@
 ;
 ; PROGRAM: STEMevent.pro
 ;
-;> @author Marc De Graef, Carnegie Melon University
+;> @author Marc De Graef, Carnegie Mellon University
 ;
 ;> @brief special event handler for all the CW_BGROUP calls, since CW_BGROUP does not support event_pro
 ;

@@ -32,7 +32,7 @@
 !
 ! PROGRAM:CTEMorbit 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief print the orbit of a point (inside unit cell)
 !! 

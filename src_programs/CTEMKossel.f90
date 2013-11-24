@@ -32,7 +32,7 @@
 !
 ! PROGRAM: CTEMlacbed 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Kossel patterns, taken from master EBSD pattern simulation, with adjustment for 
 !> Bloch wave part ...

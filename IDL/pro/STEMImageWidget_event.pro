@@ -31,7 +31,7 @@
 ;
 ; PROGRAM: STEMImageWidget_event.pro
 ;
-;> @author Marc De Graef, Carnegie Melon University
+;> @author Marc De Graef, Carnegie Mellon University
 ;
 ;> @brief main event handler
 ;

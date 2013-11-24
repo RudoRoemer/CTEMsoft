@@ -31,7 +31,7 @@
 !
 ! PROGRAM: CTEMEBSDzE 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief CTEMEBSDzE computes the energy-dependent master EBSD pattern for a given structure
 !
@@ -81,7 +81,7 @@ end program CTEMEBSDzE
 !
 ! SUBROUTINE:ComputeMasterPattern
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute an EBSD master pattern as a function of energy
 !

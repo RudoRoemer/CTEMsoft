@@ -32,7 +32,7 @@
 !
 ! PROGRAM: CTEMMCTKD 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Monte Carlo BSE simulation with Lambert projection for data storage
 !
@@ -94,7 +94,7 @@ end program CTEMMCTKD
 !
 ! SUBROUTINE:DoMCTKDsimulation
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Perform the MCTKD simulation
 !
@@ -297,7 +297,7 @@ contains
 !
 ! SUBROUTINE:single_run
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief does a full simulation starting from a given random number seed
 !

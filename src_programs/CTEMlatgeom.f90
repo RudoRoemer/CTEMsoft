@@ -32,7 +32,7 @@
 !
 ! PROGRAM: CTEMlatgeom 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief general lattice geometry computations
 !
@@ -108,7 +108,7 @@ end program CTEMlatgeom
 !
 ! SUBROUTINE: PrintMenu 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Print a menu and return a selection
 !

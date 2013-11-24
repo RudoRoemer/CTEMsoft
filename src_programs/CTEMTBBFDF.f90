@@ -32,7 +32,7 @@
 !
 ! PROGRAM:CTEMTBBFDF 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Two beam bright field dark field image pairs
 !

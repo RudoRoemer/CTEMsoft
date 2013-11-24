@@ -32,7 +32,7 @@
 !
 ! PROGRAM: CTEMxtalinfo 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief generate multiple pages with crystallographic information for a given structure
 ! 
@@ -94,7 +94,7 @@ end program CTEMxtalinfo
 !
 ! SUBROUTINE: CTEMxtalinfo 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief creates a page with crystallographic unit cell info
 ! 
@@ -245,7 +245,7 @@ end subroutine InfoPage
 !
 ! SUBROUTINE: DumpMatrix 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief format a 3x3 matrix in PostScript
 ! 
@@ -310,7 +310,7 @@ end subroutine DumpMatrix
 !
 ! SUBROUTINE: DumpAtom 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief format atom info for asymmetric unit
 ! 
@@ -355,7 +355,7 @@ end subroutine DumpAtom
 !
 ! SUBROUTINE: StrucFacPage 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Structure Factor Information Page
 !
@@ -556,7 +556,7 @@ end subroutine StrucFacPage
 !
 ! SUBROUTINE: DumpLine 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  formats a line of structure factor information
 !
@@ -657,7 +657,7 @@ end subroutine DumpLine
 !
 ! SUBROUTINE: StereoPage 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief creates pages with stereographic projections
 !

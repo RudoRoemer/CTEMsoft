@@ -26,31 +26,56 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:CBEDCBEDDrawWidget_event.pro
+; CTEMsoft2013:ECPgetfilename.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: CBEDCBEDDrawWidget_event.pro
+; PROGRAM: ECPgetfilename.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief main event handler for LACBED mode
+;> @brief Display an interface and ask user to select a CTEMECP output file
 ;
-;> @date 10/09/13 MDG 1.0 first version
+;> @date 11/23/13 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------
-pro CBEDCBEDDrawWidget_event, event
-
+pro ECPgetfilename,validfile
+ 
 ;------------------------------------------------------------
 ; common blocks
-common CBED_widget_common, widget_s
-common CBED_data_common, data
+common ECP_widget_common, widget_s
+common ECP_data_common, data
 
-if (data.eventverbose eq 1) then help,event,/structure
+  validfile = 0
 
-; intercept the image widget movement here 
-if (event.id eq widget_s.CBEDDrawbase) then begin
-  data.CBEDDrawxlocation = event.x
-  data.CBEDDrawylocation = event.y-25
-    CBEDprint,' Window moved to location ('+string(fix(data.CBEDDrawxlocation),format="(I4)")+','+string(fix(data.CBEDDrawylocation),format="(I4)")+')'
+  s = ''
+  cd,current = s
+  data.homefolder = s
+  if (data.ECProot eq 'undefined') then begin
+    data.ECProot = data.homefolder
+  end 
+
+  rootpath = data.ECProot
+
+  res=dialog_pickfile(title='Select a valid CTEMECP data file',path=rootpath)
+  if (res eq '') then begin
+	  print,'No selection made; Exiting program'
+  	  goto,skip
+  end
+  finfo = file_info(res)
+  data.filesize = finfo.size
+; find the last folder separator
+  spos = strpos(res,'/',/reverse_search)
+  dpos = strpos(res,'.',/reverse_search)
+  plen = strlen(res)
+  data.pathname = strmid(res,0,spos)
+  data.dataname = strmid(res,spos+1)
+  data.suffix = strmid(res,dpos+1)
+  data.ECProot = data.pathname
+
+  validfile = 1
+
+WIDGET_CONTROL, SET_VALUE=data.dataname, widget_s.filename
+WIDGET_CONTROL, SET_VALUE=string(data.filesize,FORMAT="(I)")+' bytes', widget_s.filesize
+
+skip:
 end
 
-end

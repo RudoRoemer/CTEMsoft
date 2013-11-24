@@ -26,31 +26,68 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:CBEDCBEDDrawWidget_event.pro
+; CTEMsoft2013:ECPDisplay_event.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: CBEDCBEDDrawWidget_event.pro
+; PROGRAM: ECPDisplay_event.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief main event handler for LACBED mode
+;> @brief main event handler
 ;
-;> @date 10/09/13 MDG 1.0 first version
+;> @date 11/23/13 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro CBEDCBEDDrawWidget_event, event
+pro ECPDisplay_event, event
 
 ;------------------------------------------------------------
 ; common blocks
-common CBED_widget_common, widget_s
-common CBED_data_common, data
+common ECP_widget_common, widget_s
+common ECP_data_common, data
+common ECP_rawdata, rawdata
+
 
 if (data.eventverbose eq 1) then help,event,/structure
 
-; intercept the image widget movement here 
-if (event.id eq widget_s.CBEDDrawbase) then begin
-  data.CBEDDrawxlocation = event.x
-  data.CBEDDrawylocation = event.y-25
-    CBEDprint,' Window moved to location ('+string(fix(data.CBEDDrawxlocation),format="(I4)")+','+string(fix(data.CBEDDrawylocation),format="(I4)")+')'
-end
+if (event.id eq widget_s.base) then begin
+  data.xlocation = event.x
+  data.ylocation = event.y-25
+end else begin
 
-end
+  WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
+  
+; IF N_ELEMENTS(eventval) EQ 0 THEN RETURN,eventval
+
+  CASE eventval OF
+  'LOADFILE': begin
+; loading a new file means the current window must be deleted if it exists
+		if (XRegistered("ECPatternWidget") NE 0) then WIDGET_CONTROL, widget_s.ECPatternbase, /DESTROY
+	
+; ask the user to select the data file
+		ECPgetfilename,validfile
+
+; read the data file and populate all the relevant fields
+		if (validfile eq 1) then ECPreaddatafile,valid
+
+; start up the display widget
+		if (valid eq 1) then ECPatternWidget
+	  endcase
+
+ 'QUIT': begin
+; do a general cleanup of potentially open widgets
+		if (XRegistered("ECPatternWidget") NE 0) then WIDGET_CONTROL, widget_s.ECPatternbase, /DESTROY
+
+; write the preferences file
+		ECPwritepreferences
+
+; and finally kill the base widget
+		WIDGET_CONTROL, widget_s.base, /DESTROY
+		!EXCEPT=1
+	endcase
+
+  else: MESSAGE, "Event User Value Not Found"
+
+  endcase
+
+endelse
+
+end 

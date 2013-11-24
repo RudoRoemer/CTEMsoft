@@ -32,7 +32,7 @@
 !
 ! PROGRAM: CTEMBWshow 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Program reads Bloch wave input file from various programs and displays output
 !
@@ -122,7 +122,7 @@ end program
 !
 ! SUBROUTINE: BWtoPS 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Produces postscript output
 !
@@ -290,7 +290,7 @@ end subroutine BWtoPS
 !
 ! SUBROUTINE: ExtractBWdata 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Produces postscript output
 !
@@ -365,7 +365,7 @@ end subroutine ExtractBWdata
 !
 ! SUBROUTINE: BWtoI 
 !
-!> @author Marc De Graef, Carnegie Melon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief Convert Bloch wave parameters to intensities
 !

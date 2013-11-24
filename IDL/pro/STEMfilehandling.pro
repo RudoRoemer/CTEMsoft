@@ -31,7 +31,7 @@
 ;
 ; PROGRAM: STEMfilehandling.pro
 ;
-;> @author Marc De Graef, Carnegie Melon University
+;> @author Marc De Graef, Carnegie Mellon University
 ;
 ;> @brief Basic file handling routines
 ;
