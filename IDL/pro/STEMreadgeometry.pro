@@ -58,6 +58,7 @@ if (data.progmode ne ftp) then begin
   STEMprint,'File type found '+ftp
   STEMprint,'File type expected '+data.progmode
   STEMprint,'Please select a file of the type '+data.progmode
+  close,1
   goto, skip
 end 
 

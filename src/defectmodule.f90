@@ -131,7 +131,7 @@ logical               			:: void
  fy = a_fm(3,2)
  fz = a_fm(3,3) 
  zt = foil%zb*0.5 - (fx*xpos + fy*ypos)/fz
-
+ 
 ! initialize some other variables
  thick = foil%zb
  zero = cmplx(0.0,0.0)
@@ -147,7 +147,6 @@ logical               			:: void
         
 ! set the position in the foil reference frame
     tmpf = quat_rotate_vector( foil%a_fi, dble( (/ xpos, ypos, zpos /)) )
-
 
 !------------
 !----VOIDS---
@@ -192,6 +191,7 @@ do ii=1,numdisl
 
 ! then convert the difference vector to the defect reference frame for this dislocation (we will only need the x and y coordinates)
   tmp = quat_rotate_vector( DL(ii)%a_df, tmp2 ) 
+
 
 ! compute x1 + p_alpha x2  (eq. 8.38)
   za(1:3) = tmp(1) + DL(ii)%pa(1:3)*tmp(2)
@@ -329,7 +329,7 @@ end do
 
 ! TO BE IMPLEMENTED FOR YUNZHI WANG's Dislocation Simulations ! 
 ! finally any displacement fields defined by the user routine UserDisp
-! sumR = sumR + UserDisp()
+! sumR = sumR + UserDisp()        
 
    DF_R(islice,1:3) = sumR(1:3)
   end do sliceloop ! main loop over the slices

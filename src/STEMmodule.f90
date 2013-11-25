@@ -84,13 +84,13 @@ IMPLICIT NONE
 integer(kind=irg),INTENT(IN)		:: nn
 integer(kind=irg),INTENT(IN)		:: g(3)
 
-integer(kind=irg) 				:: i,j,n,ira,jj,k,kk, iCL
-real(kind=sgl) 					:: glen, thb, alp, omega_c, omega_min, omega_max,omega,a,b,c,th,dom,p,q,dr,dx
+integer(kind=irg) 			:: i,j,n,ira,jj,k,kk, iCL
+real(kind=sgl) 				:: glen, thb, alp, omega_c, omega_min, omega_max,omega,a,b,c,th,dom,p,q,dr,dx
 real(kind=sgl),parameter 		:: cPi=3.141592654
 
 ! these are only used to debug this routine
 real(kind=sgl),allocatable 		:: thetar(:),outar(:,:,:)
-logical    						:: debug = .FALSE., diffappresent = .FALSE., apinBF=.FALSE. , apinADF = .FALSE.
+logical    				:: debug = .FALSE., diffappresent = .FALSE., apinBF=.FALSE. , apinADF = .FALSE.
 
 ! this routine initializes the excitation error arrays and the weight-factor arrays for systematic row STEM signals
 ! we'll assume that the central beam is centered on the BF detector; then we can 

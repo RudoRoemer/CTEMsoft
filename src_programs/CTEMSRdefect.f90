@@ -111,13 +111,13 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)      :: nmlfile 
 
-integer(kind=irg)                :: ira,nn,izero,i,j,k,n,nsl,numi,npix,npiy,ii,jj,numvoids,numdisl,numsf, skip, &
+integer(kind=irg)                :: ira,nn,izero,i,j,k,n,nsl,numi,npix,npiy,ii,jj,numvoids,numdisl,numYdisl,numsf, skip, &
                                   numinc,dinfo,t_interval,outputfirst,outputlast,DF_nums_new, io_int(3), grange, &
                                   DF_npix_new,DF_npiy_new, numstart,numstop, isg, TID, NTHR, jcnt, numCL, iCL, &
-                                  SR_g(3), SETNTHR
+                                  SR_g(3), SETNTHR, imat
 !                                  OMP_GET_THREAD_NUM,OMP_GET_NUM_THREADS
 real(kind=sgl)                   :: ind(3),hkl(3),exerg,cosom,glen,exer,dgr,sl,thr,arg,zmax,thick,mi,ma, &
-                                  att,xgp,DF_gf(3),DF_gd(3,maxdefects), io_real(1), voltage, kt
+                                  att,xgp,DF_gf(3),DF_gd(3,maxdefects), io_real(1), voltage, kt, frac, gdotR
 character(fnlen)                 :: dataname,sgname,voidname,dislname(3*maxdefects),sfname(maxdefects), &
 				     outputroot,incname,dispfile,tempname,xtalname,STEMname, foilnmlfile, STEMnmlfile
 character(4)                     :: outputformat, illumination_mode, dispmode, progmode
@@ -179,6 +179,8 @@ namelist / SRdeflist / DF_L, DF_npix, DF_npiy, DF_slice, Nmat, sgname, numvoids,
 ! other parameters that the user does not have access to
  Nmat = 3600       			! number of precomputed A matrices to be stored (every 0.1 degrees)
  progmode = 'STEM'
+ frac = 0.05
+ numYdisl = 0
  
 ! then we read the rundata namelist, which may override some of these defaults  
  OPEN(UNIT=dataunit,FILE=nmlfile,DELIM='APOSTROPHE')
@@ -260,12 +262,12 @@ end if
   
 ! next, we read the foildata namelist from the foil namelist file
 ! this includes material property data, in this case the elastic moduli
-call read_foil_data(foilnmlfile,DF_npix,DF_npiy,DF_L,dinfo)
+  call read_foil_data(foilnmlfile,DF_npix,DF_npiy,DF_L,dinfo)
     
 ! define the foil thickness, attenuation, and number slices per column
-thick = foil%zb    ! this is the same everywhere for this version; needs to be updated in the next version
-att = exp(-2.0*cPi*thick*xgp)  ! this is the global attenuation factor; remove the factor 2.0 if amplitudes are needed
-DF_nums = nint(thick/DF_slice)  ! this is the number of slices for this particular column
+  thick = foil%zb    ! this is the same everywhere for this version; needs to be updated in the next version
+  att = exp(-2.0*cPi*thick*xgp)  ! this is the global attenuation factor; remove the factor 2.0 if amplitudes are needed
+  DF_nums = nint(thick/DF_slice)  ! this is the number of slices for this particular column
 
 ! next, deal with all the defects
 !
@@ -284,21 +286,15 @@ if ((dispmode.eq.'new').or.(dispmode.eq.'not')) then
 
 ! is there an inclusion data file? if so, then read it
    if (incname.ne.'none') call read_inclusion_data(numinc,incname,DF_L,DF_npix,DF_npiy,dinfo)
-
-! transform the g-vector to the defect reference frames (needed for all dislocations in CalcR).
-! this can only be done AFTER all dislocations and stacking faults have been created. [converted to quaternions 6/12/13]
-!   do i=1,numdisl
-!     DF_gd(0:2,i) = quat_rotate_vector(DL(i)%a_dc,dble(DF_gc))
-!   end do
    
 ! precompute ALL the defect columns and, if needed, store them in dispfile
 ! this portion should be carried out in multi-threaded mode as much as possible
-  allocate(disparray(DF_nums,DF_npix,DF_npiy))
+  allocate(disparray(DF_nums,DF_npix,DF_npiy), DF_R(DF_nums,3))
   disparray = 0
   mess = ' Starting Displacement Field Computation (multi-threaded)'; call Message("(A/)")
 
   call CalcRLocal(numvoids,numdisl,numsf,numinc,DF_nums,DF_npix,DF_npiy,t_interval,disparray,SETNTHR)
-  
+
 ! and, if needed, store the defect displacement field for re-runs
 if (dispmode.ne.'not') then
   if ((dispfile.ne.'none').and.(dispmode.eq.'new')) then 
@@ -343,7 +339,7 @@ end if
 ! initialize the timer
   numstart = 1
   numstop = STEM%numberofsvalues    
-  call Time_report(1.0/float(numstop-numstart+1))
+  call Time_report(frac)
   call Time_start
 
 ! the following should not be needed, but let's make sure it works before we change it...
@@ -422,7 +418,7 @@ mainloop: do isg = numstart,numstop   ! this is the main computational loop
     DF_Sarray(k,1:nn,1:nn) = Az(1:nn,1:nn)
    end do  ! main loop
    deallocate(Az)
-   mess = ' Scattering matrices computed'; call Message("(/A)")
+!   mess = ' Scattering matrices computed'; call Message("(/A)")
 
 !------------------------------------------------!
 ! Finally, here it is: the actual (threaded!) image computation  !
@@ -431,7 +427,7 @@ mainloop: do isg = numstart,numstop   ! this is the main computational loop
 !  call OMP_SET_NUM_THREADS(4)
 !$OMP     PARALLEL PRIVATE(TID,i,j,k,ii,jj,iCL,amp,amp2,Az,inten,weights,jcnt) &
 !$OMP&   SHARED(NTHR,npix,npiy,DF_nums,disparray,DF_Sarray,DF_Svoid,illumination_mode, &
-!$OMP&   BFweightsarray,ADFweightsarray,att,images,STEMimages,t_interval,nn,numCL,izero)
+!$OMP&   BFweightsarray,ADFweightsarray,att,images,STEMimages,t_interval,nn,numCL,izero,isg)
 !$OMP     
 
   NTHR = OMP_GET_NUM_THREADS()
@@ -444,7 +440,7 @@ mainloop: do isg = numstart,numstop   ! this is the main computational loop
 !$OMP DO SCHEDULE (GUIDED)
 donpix: do i=1,npix
   donpiy:   do j=1,npiy
-      allocate(Az(nn,nn),amp(nn),amp2(nn),weights(nn),inten(nn))   ! these are private variables, so each thread must allocate them !
+      allocate(Az(nn,nn),amp(nn),amp2(nn),weights(nn))   ! these are private variables, so each thread must allocate them !
 
 ! initialize the wave function for this pixel with (1.0,0.0) for the incident beam izero
       amp = cmplx(0.0,0.0,dbl)
@@ -461,7 +457,7 @@ donpix: do i=1,npix
 ! and multiply with this matrix; for some reason, the Absoft compiler has an issue with 
 ! this statement, and the matmul routine can not be used... probably a compiler bug...
 !       amp2 = matmul(Az,amp)
-! so we do t computation explicitly
+! so we do the computation explicitly
        amp2 = cmplx(0.0,0.0,dbl)
        do ii=1,nn
         do jj=1,nn
@@ -472,16 +468,19 @@ donpix: do i=1,npix
       end do doslices ! loop over slices
       
 ! compute the (attenuated) intensities for the CTEM and STEM images and store
-      STEMimages(1:nn,i,j,isg) = att*abs(amp(1:nn))**2
+      STEMimages(1:nn,i,j,isg) = att*cabs(amp(1:nn))**2
  
-     deallocate(Az,amp,amp2,weights,inten)
+     deallocate(Az,amp,amp2,weights)
     end do donpiy
   end do donpix
 !$OMP END DO 
 !$OMP END PARALLEL
-  
-  
-  call Time_remaining(isg-numstart+1,numstop-numstart+1)
+
+   if (float(isg)/float(numstop) .gt. frac) then
+     call Time_remaining(isg,numstop)
+     frac = frac + 0.05
+   end if  
+   
 200 end do mainloop
 
     
@@ -499,9 +498,6 @@ end subroutine ComputeSRdefect
 
 ! we should not need to do this... all it takes is to change the settings in the defectmodule.f90 file 
 ! to enable OpenMP runs ... 
-
-
-
 
 !--------------------------------------------------------------------------
 !
@@ -542,8 +538,8 @@ IMPLICIT NONE
 
 integer(kind=irg)     :: i,j,k,ii,islice,numvoids,numdisl,numsf,numinc,lDFnums,lDFnpix,lDFnpiy,TID,NTHR,imat,t_interval
 integer(kind=irg)     :: disparray(lDFnums,lDFnpix,lDFnpiy),jcnt, SETNTHR
-real(kind=dbl)        :: rx,ry,rz,dis,xpos,ypos,zpos,RR(3),sumR(3),thick,tmp(3),tmpf(3),u(3),zaamp,zaphase,zar,zai,zr(3),zi(3), &
-                         zt,fx,fy,fz,z0,gdotR,nunit(3), a_fm(3,3)    !,&
+real(kind=dbl)        :: rx,ry,rz,dis,xpos,ypos,zpos,RR(3),sumR(3),thick,tmp(3),tmp2(3),tmpf(3),u(3),zaamp,zaphase,zar, &
+                         zai,zr(3),zi(3),zt,fx,fy,fz,z0,gdotR,nunit(3), a_fm(3,3)    !,&
 !                        nu,x,y,z,zn,t,pre,r1,r2,r3,th,rn 
 real(kind=dbl)        :: afi(4), afc(4)                         
 real(kind=dbl)        :: lDFR(3)
@@ -573,6 +569,7 @@ type (inclusiontype), allocatable     :: linclusions(:)
  zero = cmplx(0.0,0.0)
  afi = foil%a_fi
  afc = foil%a_fc
+ 
  if (allocated(voids)) then
    allocate(lvoids(numvoids))
    lvoids = voids
@@ -601,7 +598,8 @@ call OMP_SET_NUM_THREADS(SETNTHR)
 
 ! initiate multi-threaded segment
 !$OMP   PARALLEL DEFAULT(SHARED) &
-!$OMP& PRIVATE(TID,lDFR,gdotR,i,j,k,imat,zt,xpos,ypos,zpos,islice,dis,sumR,tmp,tmpf,ii,void,za,zar,zai,zaamp,zaphase,zr,zi,u,jcnt)
+!$OMP& PRIVATE(TID,lDFR,gdotR,i,j,k,imat,zt,xpos,ypos,zpos,islice,dis,sumR,tmp,tmp2,tmpf, &
+!$OMP& ii,void,za,zar,zai,zaamp,zaphase,zr,zi,u,jcnt)
   NTHR = OMP_GET_NUM_THREADS()
   TID = OMP_GET_THREAD_NUM()
 
@@ -670,16 +668,20 @@ call OMP_SET_NUM_THREADS(SETNTHR)
 ! first we take the foil shape into account using equations (8.28) and (8.29)
 !      sumR = sumR + float(islice)*DF_slice*lsg(i,j)*DF_gstar
 
+!-----------------
+!--DISLOCATIONS--
+!-----------------
 ! let's put a few dislocations in ... (see section 8.4.2)
 
        do ii=1,numdisl
 ! convert the defect location from untilted image space to the tilted foil reference frame, and subtract it from the current
 ! column and slice position
-         tmp =  tmpf - dble( (/ DF_L*lDL(ii)%id, DF_L*lDL(ii)%jd, lDL(ii)%zfrac*z0 /) )
+         tmp2 =  tmpf - dble( (/ DF_L*lDL(ii)%id, DF_L*lDL(ii)%jd, lDL(ii)%zfrac*z0 /) )
 
 ! then convert the difference vector to the defect reference frame for this dislocation (we will only need the x and y coordinates)
-         tmp = quat_rotate_vector(lDL(ii)%a_df, tmp)
-         
+         tmp = quat_rotate_vector(lDL(ii)%a_df, tmp2)
+
+
 ! compute x1 + p_alpha x2  (eq. 8.38)
           za(1:3) = tmp(1) + lDL(ii)%pa(1:3)*tmp(2)
 ! compute the displacement vector u (eq. 8.38) [this expands the log of a complex number and takes the real part only] 
@@ -773,7 +775,7 @@ call OMP_SET_NUM_THREADS(SETNTHR)
            sumR = sumR + linclusions(ii)%C*tmp
          end do
         end if
- 
+
 ! finally any displacement fields defined by the user routine UserDisp
 ! sumR = sumR + UserDisp()
 
