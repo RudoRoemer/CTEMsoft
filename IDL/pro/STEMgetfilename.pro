@@ -55,8 +55,8 @@ common STEM_data_common, data
 
   res=dialog_pickfile(title='Select a valid CTEMZAdefect data file',path=rootpath)
   if (res eq '') then begin
-	  print,'No selection made; Exiting program'
-	  return
+	  STEMprint,'No selection made'
+	  goto, skip
   end
   finfo = file_info(res)
   data.filesize = finfo.size
@@ -76,5 +76,6 @@ WIDGET_CONTROL, SET_VALUE=data.dataname, widget_s.filename
   STEMprint,' data file '+data.dataname
   STEMprint,' suffix '+data.suffix
 
+skip:
 end
 

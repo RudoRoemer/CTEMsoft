@@ -1,4 +1,4 @@
-&rundata
+&SRdeflist
 ! Note: All values in this template file correspond to the program defaults
 !
 !------------
@@ -11,17 +11,19 @@ SETNTHR = 6
 !------------
 ! microscope accelerating voltage [V]
 voltage = 200000.0
-! program mode (parallel beam 'CTEM', BF/HAADF pairs 'BFDF' or full converged beam 'STEM')
+! program mode (BF/HAADF pairs 'BFDF' or full  'STEM')
 progmode = 'STEM'
 !------------
 ! crystal structure and incident beam parameters
 !------------
 ! string with the filename of the structure data (e.g., Cu.xtal; default = undefined)
 xtalname = 'undefined'
-! zone axis indices in crystal reference frame
-kk = 0,0,1
-! coordinates of the Laue center (x,y) in [nm^-1]
-lauec = 0.0,0.0
+! fundamental reciprocal lattice vector of the systematic row
+SRG = 1, 0, 0
+! range of reflections to be taken into account (-Grange*SRG to +Grange*SRG); number of beams = 2*Grange+1
+Grange = 4
+! Laue center for G at the center of the diffraction disk, defined as k_t/|g| (GLaue = 0.5 means g in Bragg)
+GLaue = 0.5
 !------------
 ! various filenames
 !------------
@@ -34,7 +36,7 @@ dataname = '/some/folder/on/your/drive/trialbinary.data'
 ! store displacement field ('new'), read an existing field ('old') or don't store/read anything ('not')
 dispmode = 'not'
 ! filename for the displacement field (only if dispmode <> 'not')
-dispfile = 'test_ZA.data'
+dispfile = 'test_SR.data'
 !------------
 ! output modes
 !------------
@@ -42,8 +44,6 @@ dispfile = 'test_ZA.data'
 output = 6
 ! verbose when dinfo=1, minimal screen output when dinfo=0
 dinfo = 0
-! how often should timing updates be shown (every t_interval k-steps)
-t_interval = 5
 !------------
 ! image parameters and scattering matrix step size
 !------------

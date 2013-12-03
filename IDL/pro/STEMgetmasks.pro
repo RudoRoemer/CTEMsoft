@@ -35,6 +35,9 @@
 ;
 ;> @brief Creates the detector masks for standard or segmented imaging.
 ;
+;> @note need to check this for the SR program mode; BFindices is currently
+; likely incorrect for that mode ... 
+;
 ;> @date 06/20/13 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------
 pro STEMgetmasks,aperture=aperture
@@ -60,10 +63,12 @@ common STEM_circles, th, cth, sth, blue, diskpos
 ; that fall inside the specified aperture and return them for the BF detector and
 ; one single selected reflection
 
+if (data.srzamode eq 'ZA') then zeropos = 0 else zeropos = (data.numref-1)/2
+
 if keyword_set(aperture) then begin
 ; extract the central disk information from the ktpg and ktpgang arrays (ktpg is in mrad)
-  ktp = reform(ktpg(0,*))
-  ktpang = reform(ktpgang(0,*))
+  ktp = reform(ktpg(zeropos,*))
+  ktpang = reform(ktpgang(zeropos,*))
 ; convert to x,y coordinates
   ktx = ktp * cos(ktpang)
   kty = ktp * sin(ktpang)
@@ -74,12 +79,12 @@ if keyword_set(aperture) then begin
   d = sqrt((ktx-cpx)^2+(kty-cpy)^2)
   q = where(d le data.aprad, cnt)
 ; and convert those indices to the BFindices array
-  if (cnt gt 0) then begin
-    BFindices = array_indices(ktp,q)
-  end else begin
-    BFindices = [0]
-      STEMprint,'No beam directions found inside aperture'
-  endelse
+    if (cnt gt 0) then begin
+      BFindices = array_indices(ktp,q)
+    end else begin
+      BFindices = [0]
+        STEMprint,'No beam directions found inside aperture'
+    endelse
 end else begin
 
 ; define the angular detector radii
@@ -121,15 +126,16 @@ end else begin   ; there is more than one detector segment, so we need to determ
   q=where(diff lt 0,cnt)
   secnum = 0	; no problems for any sector
   if (cnt gt 0) then secnum = q[0]
-;  print,'problem sector = ',secnum
+; print,'problem sector = ',secnum, q
 ; make a copy of ktpg
   ktpgc = ktpg
 ; and exclude the points that can not contribute to any sector because of the radial detector size
   q = where(((ktpg le data.HAADFimrad) or (ktpg gt data.HAADFomrad)),cnt)
   if (cnt gt 0) then ktpgc[q] = 0.0
 ; then we need to check the angular ranges for each sector and keep only the active sectors
-;print,min(ktpgang),max(ktpgang)
-;for i=1,data.detsegm do print,STEMsectors[i],STEMsectorranges[1,i],STEMsectorranges[0,i]
+
+;print,transpose(STEMsectorranges[0,1:data.detsegm])
+;print,transpose(STEMsectorranges[1,1:data.detsegm])
 
   for i=1,data.detsegm do begin			; loop over sectors
     if (STEMsectors[i] eq 0) then begin		; is this sector inactive
@@ -152,7 +158,7 @@ end else begin   ; there is more than one detector segment, so we need to determ
   if (HAADFcnt gt 0) then begin
     HAADFmask[q] = 1.0
     HAADFindices = array_indices(ktpgc,q)
-      STEMprint,' Total number of pixels in HAADF detector = '+string(HAADFcnt,FORMAT="(I6)")
+      STEMprint,' Total number of pixels on HAADF detector = '+string(HAADFcnt,FORMAT="(I6)")
   end else begin
     STEMprint,' There are no pixels on the HAADF detector'
   end

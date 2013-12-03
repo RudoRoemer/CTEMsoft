@@ -91,6 +91,7 @@ widget_s = {widgetstruct, $
             xtalname:long(0), $                 ; crystal structure filename widget ID
             geometryfilename:long(0), $         ; geometry filename widget ID
             filesize:long(0), $                 ; filesize widget ID
+            SRZA:long(0), $                     ; systematic row or zone axis mode
             pathname:long(0), $                 ; pathname widget ID
             loadfile:long(0), $                 ; load file widget ID
             loadCTEMfile:long(0), $             ; load CTEM file widget ID
@@ -212,6 +213,8 @@ data = {datastruct, $
 	wavelength: float(0.0), $		; wave length [nm] (will be displayed in [pm])
 	dfl: float(1.0), $			; pixel size [nm]
 	thetac: float(0.0), $			; beam divergence angle [mrad]
+	SRZA: '', $				; systematic row or zone axis mode label
+	SRZAmode: '', $				; systematic row or zone axis mode indicator
 	nums: long(0), $			; number of pixels along disk radius (diameter = 2*nums+1)
 	bragg: float(0.0), $			; Bragg angle for ga reflection (rad)
 	scale: float(0.0), $			; scale factor for CBED, [number of pixels per reciprocal nanometer]
@@ -247,13 +250,13 @@ data.ylocation = data.scrdimx / 8.0
 
 ;------------------------------------------------------------
 ; does the preferences file exist ?  If not, create it, otherwise read it
-STEMgetpreferences
+STEMgetpreferences,/noprint
 
 ;------------------------------------------------------------
 ; create the top level widget
-widget_s.base = WIDGET_BASE(TITLE='Zone Axis STEM Display Program', $
-                        /COLUMN, $
-                        XSIZE=700, $
+widget_s.base = WIDGET_BASE(TITLE='STEM Defect Display Program', $
+                        /ROW, $
+                        XSIZE=1450, $
                         /ALIGN_LEFT, $
 			/TLB_MOVE_EVENTS, $
 			EVENT_PRO='STEMDisplay_event', $
@@ -278,12 +281,12 @@ widget_s.logodraw = WIDGET_DRAW(block1, $
 
 ;----------
 
-block1 = WIDGET_BASE(widget_s.base, $
+block2 = WIDGET_BASE(block1, $
 			/FRAME, $
 			/COLUMN)
 
 ;----------
-file1 = WIDGET_BASE(block1, $
+file1 = WIDGET_BASE(block2, $
 			/ROW, $
                         XSIZE=700, $
 			/ALIGN_CENTER)
@@ -301,7 +304,7 @@ widget_s.filename = WIDGET_TEXT(file1, $
 			/ALIGN_LEFT)
 
 ;----------
-file3 = WIDGET_BASE(block1, $
+file3 = WIDGET_BASE(block2, $
 			/ROW, $
 			/BASE_ALIGN_BOTTOM, $
 			/ALIGN_LEFT)
@@ -326,7 +329,7 @@ widget_s.progress = WIDGET_DRAW(file3, $
 			YSIZE=20)
 
 
-file3 = WIDGET_BASE(block1, $
+file3 = WIDGET_BASE(block2, $
 			/ROW, $
 			/ALIGN_LEFT)
 
@@ -354,11 +357,91 @@ widget_s.imy= WIDGET_TEXT(file3, $
 			XSIZE=10, $
 			/ALIGN_LEFT)
 
+label4 = WIDGET_LABEL(file3, $
+			VALUE='  Data set mode', $
+			FONT=fontstrlarge, $
+			XSIZE=140, $
+			YSIZE=25, $
+			/ALIGN_LEFT)
+
+data.SRZA = ''
+widget_s.SRZA= WIDGET_TEXT(file3, $
+			VALUE=data.SRZA,$
+			XSIZE=20, $
+			/ALIGN_LEFT)
+
+;----------
+; next, add a text window for program messages
+
+widget_s.status= WIDGET_TEXT(block1, $
+			XSIZE=115, $
+			YSIZE=12, $
+			/SCROLL, $
+			VALUE=' ',$
+			/ALIGN_CENTER)
+
+
+;------------------------------------------------------------
+; block 3 QUIT button, LOAD FILE button and progress bar (used for file loading)
+block3 = WIDGET_BASE(block1, $
+			XSIZE=650, $
+			/FRAME, $
+			/ROW)
+
+file11 = WIDGET_BASE(block3, $
+			/ROW, $
+			/ALIGN_LEFT)
+
+widget_s.mainstop = WIDGET_BUTTON(file11, $
+                                VALUE='Quit', $
+                                UVALUE='QUIT', $
+                                EVENT_PRO='STEMDisplay_event', $
+                                SENSITIVE=1, $
+                                /FRAME)
+
+widget_s.loadfile = WIDGET_BUTTON(file11, $
+                                VALUE='STEM File', $
+                                UVALUE='LOADFILE', $
+                                EVENT_PRO='STEMDisplay_event', $
+                                SENSITIVE=1, $
+                                /FRAME)
+
+widget_s.loadCTEMfile = WIDGET_BUTTON(file11, $
+                                VALUE='CTEM File', $
+                                UVALUE='LOADCTEMFILE', $
+                                EVENT_PRO='STEMDisplay_event', $
+                                SENSITIVE=1, $
+                                /FRAME)
+
+widget_s.loadBFDFfile = WIDGET_BUTTON(file11, $
+                                VALUE='BF/HAADF File', $
+                                UVALUE='LOADBFDFFILE', $
+                                EVENT_PRO='STEMDisplay_event', $
+                                SENSITIVE=1, $
+                                /FRAME)
+
+values = ['Off','On']
+widget_s.logfile= CW_BGROUP(file11, $
+			values, $
+			/FRAME, $
+                        LABEL_LEFT='LogFile', $
+			/ROW, $
+			/NO_RELEASE, $
+			/EXCLUSIVE, $
+			SET_VALUE=data.logmode, $
+                        EVENT_FUNC='STEMevent', $
+			UVALUE='LOGFILE')
+
+
 ;----------- next we have a series of parameters that are 
 ; derived from the input file and can not be changed by
 ; the user...
 
-block2 = WIDGET_BASE(widget_s.base, $
+block1 = WIDGET_BASE(widget_s.base, $
+			/FRAME, $
+			/COLUMN)
+
+block2 = WIDGET_BASE(block1, $
 			/FRAME, $
 			/ROW)
 
@@ -481,7 +564,7 @@ widget_s.wavek= WIDGET_TEXT(file7, $
 
 ;------------------------------------------------------------
 ; block 2 controls the detector dimensions and segment number+orientation
-block2 = WIDGET_BASE(widget_s.base, $
+block2 = WIDGET_BASE(block1, $
 			/FRAME, $
 			/ROW)
 
@@ -701,8 +784,7 @@ widget_s.detdraw = WIDGET_DRAW(block2, $
 
 ;----------
 ; for diffraction mode equal to regular dark field, these are the controls
-
-file1 = WIDGET_BASE(widget_s.base, $
+file1 = WIDGET_BASE(block1, $
 			/ROW, $
 			/FRAME, $
 			/ALIGN_LEFT)
@@ -735,69 +817,6 @@ widget_s.dfmode= CW_BGROUP(file1, $
                         EVENT_FUNC='STEMevent', $
 			UVALUE='DFMODE')
 
-
-;----------
-; next, add a text window for program messages
-
-widget_s.status= WIDGET_TEXT(widget_s.base, $
-			XSIZE=115, $
-			YSIZE=10, $
-			/SCROLL, $
-			VALUE=' ',$
-			/ALIGN_CENTER)
-
-;------------------------------------------------------------
-; block 3 QUIT button, LOAD FILE button and progress bar (used for file loading)
-block3 = WIDGET_BASE(widget_s.base, $
-			XSIZE=650, $
-			/FRAME, $
-			/ROW)
-
-file11 = WIDGET_BASE(block3, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-widget_s.mainstop = WIDGET_BUTTON(file11, $
-                                VALUE='Quit', $
-                                UVALUE='QUIT', $
-                                EVENT_PRO='STEMDisplay_event', $
-                                SENSITIVE=1, $
-                                /FRAME)
-
-widget_s.loadfile = WIDGET_BUTTON(file11, $
-                                VALUE='STEM File', $
-                                UVALUE='LOADFILE', $
-                                EVENT_PRO='STEMDisplay_event', $
-                                SENSITIVE=1, $
-                                /FRAME)
-
-widget_s.loadCTEMfile = WIDGET_BUTTON(file11, $
-                                VALUE='CTEM File', $
-                                UVALUE='LOADCTEMFILE', $
-                                EVENT_PRO='STEMDisplay_event', $
-                                SENSITIVE=1, $
-                                /FRAME)
-
-widget_s.loadBFDFfile = WIDGET_BUTTON(file11, $
-                                VALUE='BF/HAADF File', $
-                                UVALUE='LOADBFDFFILE', $
-                                EVENT_PRO='STEMDisplay_event', $
-                                SENSITIVE=1, $
-                                /FRAME)
-
-values = ['Off','On']
-widget_s.logfile= CW_BGROUP(file11, $
-			values, $
-			/FRAME, $
-                        LABEL_LEFT='LogFile', $
-			/ROW, $
-			/NO_RELEASE, $
-			/EXCLUSIVE, $
-			SET_VALUE=data.logmode, $
-                        EVENT_FUNC='STEMevent', $
-			UVALUE='LOGFILE')
-
-
 ;------------------------------------------------------------
 ; realize the widget structure
 WIDGET_CONTROL,widget_s.base,/REALIZE
@@ -826,13 +845,13 @@ sth = sin(th)
 STEMprint,'Zone Axis STEM Display Program [M. De Graef, 2013]',/blank
 
 ; ask the user to select an input geometry file
-;STEMgetfilename
+STEMgetfilename
 
 ; read the geometry file and populate all the relevant fields
-;STEMreadgeometry
+STEMreadgeometry
 
 ; and draw the detector pattern for the current parameters
-;STEMdetectorsetup
+STEMdetectorsetup
 
 
 end

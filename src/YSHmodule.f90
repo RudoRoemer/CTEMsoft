@@ -265,7 +265,6 @@ real(kind=sgl),INTENT(IN)           :: L
 
 real(kind=dbl)  	             :: alpha, beta, tu(3), tx(3), ty(3), te(3), tb(3), bl, fx(3), fy(3), fz(3), &
                                        dx, dy, a_di(3,3), io_real(3)
-integer(kind=irg)                   :: io_int(3)
 
 ! first, determine the alpha angle between the 
 ! negative z-axis, which is really the negative foil normal, and the line direction

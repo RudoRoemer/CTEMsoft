@@ -437,7 +437,7 @@ subroutine balbak ( n, low, igh, scale, m, z )
   integer ( kind = 4 ) j
   integer ( kind = 4 ) k
   integer ( kind = 4 ) low
-  real    ( kind = 8 ) s
+!  real    ( kind = 8 ) s
   real    ( kind = 8 ) scale(n)
   real    ( kind = 8 ) z(n,m)
 
@@ -5730,7 +5730,7 @@ subroutine eltran ( n, low, igh, a, ind, z )
   real    ( kind = 8 ) a(n,igh)
   integer ( kind = 4 ) i
   integer ( kind = 4 ) ind(igh)
-  integer ( kind = 4 ) j
+!  integer ( kind = 4 ) j
   integer ( kind = 4 ) kl
   integer ( kind = 4 ) low
   integer ( kind = 4 ) mm
@@ -5967,7 +5967,7 @@ subroutine figi2 ( n, t, d, e, z, ierr )
   real    ( kind = 8 ) h
   integer ( kind = 4 ) i
   integer ( kind = 4 ) ierr
-  integer ( kind = 4 ) j
+!  integer ( kind = 4 ) j
   real    ( kind = 8 ) t(n,3)
   real    ( kind = 8 ) z(n,n)
 
@@ -6476,7 +6476,7 @@ subroutine hqr2 ( n, low, igh, h, wr, wi, z, ierr )
   integer ( kind = 4 ) en
   integer ( kind = 4 ) enm2
   real    ( kind = 8 ) h(n,n)
-  real    ( kind = 8 ) hnorm
+!  real    ( kind = 8 ) hnorm
   integer ( kind = 4 ) i
   integer ( kind = 4 ) ierr
   integer ( kind = 4 ) igh
@@ -6502,7 +6502,7 @@ subroutine hqr2 ( n, low, igh, h, wr, wi, z, ierr )
   real    ( kind = 8 ) s
   real    ( kind = 8 ) sa
   real    ( kind = 8 ) t
-  real    ( kind = 8 ) temp
+!  real    ( kind = 8 ) temp
   real    ( kind = 8 ) tst1
   real    ( kind = 8 ) tst2
   real    ( kind = 8 ) vi
@@ -11838,7 +11838,7 @@ subroutine ratqr ( n, eps1, d, e, e2, m, w, ind, bd, type, idef, ierr )
   integer ( kind = 4 ) jdef
   integer ( kind = 4 ) jj
   integer ( kind = 4 ) k
-  integer ( kind = 4 ) k1
+!  integer ( kind = 4 ) k1
   integer ( kind = 4 ) m
   real    ( kind = 8 ) p
   real    ( kind = 8 ) q
@@ -13355,7 +13355,7 @@ subroutine rsm ( n, a, w, m, z, ierr )
   real    ( kind = 8 ) fwork1(n)
   real    ( kind = 8 ) fwork2(n)
   real    ( kind = 8 ) fwork3(n)
-  real    ( kind = 8 ) fwork4(n)
+!  real    ( kind = 8 ) fwork4(n)
   integer ( kind = 4 ) ierr
   integer ( kind = 4 ) iwork(n)
   integer ( kind = 4 ) k1
@@ -15502,7 +15502,7 @@ subroutine trbak1 ( n, a, e, m, z )
   real    ( kind = 8 ) e(n)
   integer ( kind = 4 ) i
   integer ( kind = 4 ) j
-  integer ( kind = 4 ) k
+!  integer ( kind = 4 ) k
   integer ( kind = 4 ) l
   real    ( kind = 8 ) s
   real    ( kind = 8 ) z(n,m)

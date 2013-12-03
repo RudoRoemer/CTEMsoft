@@ -722,7 +722,7 @@ integer(kind=irg),INTENT(OUT)		:: nbeams
 
 integer(kind=irg)			:: ik, ig, istrong, curfam(3), newfam(3)
 real(kind=sgl)     			:: sgp, lUg, cut1, cut2
-integer(kind=irg),allocatable		:: strongreflections(:,:)
+!integer(kind=irg),allocatable		:: strongreflections(:,:)
 
 
 ! reset the value of DynNbeams in case it was modified in a previous call 

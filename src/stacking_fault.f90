@@ -316,9 +316,9 @@ IMPLICIT NONE
 real(kind=sgl),INTENT(IN)	:: DF_L
 integer(kind=irg),INTENT(IN)	:: inum, nx, ny, DF_g(3), ndl, dinfo
 
-real(kind=sgl)  		:: fpn(3),am(4,4),midpoint(3), a_fm(3,3), ex(3), ey(3),&
-                  		 lptopi(3),lpboti(3),tptopi(3),tpboti(3),gg,det,A(4), xx(4), yy(4), tmp(3), &
-				 tmp2(3), cc, planenormal(3), rzero(3), unita(3), SFpos(3), fx, fy, fz, zt, xpos, ypos
+real(kind=sgl)  		:: fpn(3),am(4,4),midpoint(3), ex(3), ey(3),&
+                  		 lptopi(3),lpboti(3),tptopi(3),tpboti(3),det,A(4), xx(4), yy(4), tmp(3), &
+				 planenormal(3), rzero(3), unita(3)
 
 integer(kind=irg) 		:: i,j,info,ipiv,minx,maxx,miny,maxy
 

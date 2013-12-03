@@ -48,12 +48,21 @@ common STEM_rawdata, indices, offsets, kperp, rawdata
 ; this one contains all the arrays needed to apply the BF and HAADF masks
 common STEM_masks, ktpg, ktpgang, BFmask, HAADFmask, BFindices, HAADFindices, BFcnt, HAADFcnt
 common STEM_images, BFimage, HAADFimage, DFimage
+; and this common block is used for the systematic row mode look up table
+common STEM_srmode, SRLUT
+
+if (data.srzamode eq 'ZA') then zeropos = 0 else zeropos = (data.numref-1)/2
+
 
 if arg_present(selection) then begin
  if keyword_set(aperture) then begin ;we need to compute the HAADF image with the selected aperture position/radius
   if (selection eq 0) then begin  ; BF image
     BFimage = replicate(0.0,data.datadims[0],data.datadims[1])
-    for i=0,BFcnt-1 do BFimage += reform(rawdata[*,*,0,BFindices[i]])
+    if (data.srzamode eq 'ZA') then begin
+      for i=0,BFcnt-1 do BFimage += reform(rawdata[*,*,0,BFindices[i]])
+    end else begin
+      for i=0,BFcnt-1 do BFimage += reform(rawdata[*,*,zeropos,SRLUT[BFindices[i]]])
+    endelse
     wset,widget_s.BFdrawID
     tvscl,BFimage
     data.BFmin = min(BFimage)
@@ -62,7 +71,11 @@ if arg_present(selection) then begin
     WIDGET_CONTROL, set_value=string(data.BFmax,format="(F)"), widget_s.BFmax
   end else begin ; DF image
     DFimage = replicate(0.0,data.datadims[0],data.datadims[1])
-    for i=0,BFcnt-1 do DFimage += reform(rawdata[*,*,selection,BFindices[i]])
+    if (data.srzamode eq 'ZA') then begin
+      for i=0,BFcnt-1 do DFimage += reform(rawdata[*,*,selection,BFindices[i]])
+    end else begin
+      for i=0,BFcnt-1 do DFimage += reform(rawdata[*,*,selection,SRLUT[BFindices[i]]])
+    endelse
     wset,widget_s.HAADFdrawID
     tvscl,DFimage
     data.HAADFmin = min(DFimage)
@@ -72,7 +85,11 @@ if arg_present(selection) then begin
   endelse
  end else begin		; no aperture keyword present
   DFimage = replicate(0.0,data.datadims[0],data.datadims[1])
-  for i=0,data.numk-1 do DFimage += reform(rawdata[*,*,selection,i])
+  if (data.srzamode eq 'ZA') then begin
+    for i=0,data.numk-1 do DFimage += reform(rawdata[*,*,selection,i])
+  end else begin
+    for i=0,data.numk-1 do DFimage += reform(rawdata[*,*,selection,SRLUT[i]])
+  endelse
 
   wset,widget_s.HAADFdrawID
   tvscl,DFimage
@@ -96,8 +113,13 @@ end else begin ; no reflection has been selected
   BFimage = replicate(0.0,data.datadims[0],data.datadims[1])
   HAADFimage = replicate(0.0,data.datadims[0],data.datadims[1])
 
+ if (data.SRZAmode eq 'ZA') then begin
   for i=0,BFcnt-1 do BFimage += reform(rawdata[*,*,BFindices[0,i],BFindices[1,i]])
   for i=0,HAADFcnt-1 do HAADFimage += reform(rawdata[*,*,HAADFindices[0,i],HAADFindices[1,i]])
+ end else begin
+  for i=0,BFcnt-1 do BFimage += reform(rawdata[*,*,BFindices[0,i],SRLUT[BFindices[1,i]]])
+  for i=0,HAADFcnt-1 do HAADFimage += reform(rawdata[*,*,HAADFindices[0,i],SRLUT[HAADFindices[1,i]]])
+ end
 
 ; display the images
   wset,widget_s.BFdrawID

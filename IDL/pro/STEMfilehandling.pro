@@ -64,8 +64,8 @@ end else begin
   rootpath = ''
   res=dialog_pickfile(title='Select CTEMsoft top folder',path=rootpath,get_path=s,/directory)
   if (res eq '') then begin
-	  print,'No root folder selection made; Exiting program'
-	  return
+	  STEMprint,'No root folder selection made'
+	  goto, skip
   end
   CTEMroot = strtrim(res,2)
 ; and create the file
@@ -122,5 +122,6 @@ end
   STEMprint,'    !CTEM_log  		'+!CTEM_log 
   STEMprint,'    !CTEM_results	'+!CTEM_results
 
+skip:
 end
 

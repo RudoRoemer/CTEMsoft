@@ -112,7 +112,7 @@ integer(kind=irg),INTENT(IN)    	:: i,j,numvoids,numdisl,numYdisl,numsf,numinc
 integer(kind=irg)			:: k, islice, ii
 real(kind=dbl)        			:: dis,xpos,ypos,zpos,sumR(3),thick,tmp(3),tmp2(3), &
 					   tmpf(3),u(3),zaamp,zaphase,zar,zai,zr(3),zi(3), &
-                                 	   zt,fx,fy,fz,nunit(3), a_fm(3,3)    !,&
+                                 	   zt,fx,fy,fz,a_fm(3,3)    !,&
 !                                nu,x,y,z,zn,t,pre,r1,r2,r3,th,rn 
                          			 
 complex(kind=dbl)     			:: za(3)

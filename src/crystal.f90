@@ -1672,7 +1672,7 @@ IMPLICIT NONE
 real(kind=sgl),INTENT(IN)	:: gg(3), kt(3), lambda
 
 real(kind=sgl)			:: pxy(2), h1, h2, g11, g12, g22, z
-real(kind=sgl)			:: ll(3), lpg(3), glen, gplen, LC3, exer, sgdenom, correction, gxy(2), nx, ny, c(3), hh(3)
+real(kind=sgl)			:: exer, correction, gxy(2), nx, ny, hh(3)
 integer(kind=irg)		:: N
 
 ! get the Laue zone number

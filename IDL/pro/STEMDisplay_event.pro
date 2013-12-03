@@ -119,6 +119,7 @@ end else begin
 
 
  'SELECTSECTOR': begin
+	        if (data.srzamode eq 'ZA') then zeropos = 0 else zeropos = (data.numref-1)/2
 		if (event.press eq 1B) then begin    ; only act on clicks, not on releases
 		  sel = clickablemap[event.x,event.y]
 		  if (data.diffractionmode eq 0) then begin
@@ -143,7 +144,9 @@ end else begin
 ; what we do here depends on the data.dfmode value
 		      if (data.dfmode eq 0) then begin 		; set the k-vector position
 ; these are in pixel coordinates
-		        data.apx = -(event.x-200)
+;	        if (data.srzamode eq 'ZA') then data.apx = -(event.x-200) else data.apx = event.x-200
+data.apx = event.x-200
+
 		        data.apy = event.y-200
 			dis = sqrt(data.apx^2+data.apy^2)
 			if (dis gt data.rdisk) then goto,skiptherest
@@ -173,14 +176,15 @@ end else begin
 			skiptherest:
 		      end else begin
 ; select a g-vector
-		        px = -(event.x - 200)
+;	        if (data.srzamode eq 'ZA') then px = -(event.x-200) else px = event.x - 200
+		        px = event.x - 200
 		        py = event.y - 200
 		        d = sqrt( (diskpos[0,*]-px)^2 + (diskpos[1,*]-py)^2 )
 		        q = where(d eq min(d))
 		        sel = q[0]		; number of selected reflection
 		        hkl = indices(0:2,sel)
 		          STEMprint,'Reflection selected : '+string(hkl[0],FORMAT="(I3)")+' '+ $
-		      	    string(hkl[1],FORMAT="(I3)")+' '+string(hkl[2],FORMAT="(I3)")
+		      	    string(hkl[1],FORMAT="(I3)")+' '+string(hkl[2],FORMAT="(I3)")+'; '+string(sel,format="(I2)")
 			STEMdrawdisks,/darkfield,/addaperture,highlightdisk=sel
 			if (array_equal(BFindices,[0]) eq 0) then begin
 			  s = size(BFindices,/dimensions)
@@ -235,6 +239,8 @@ end else begin
 ; reset the diffraction mode
 		data.diffractionmode = 0
 		WIDGET_CONTROL,SET_VALUE=data.diffractionmode,widget_s.diffractionmode 
+		data.detsegm = 1
+		WIDGET_CONTROL, SET_VALUE=string(data.detsegm,format="(I3)"),widget_s.detsegm
 		WIDGET_CONTROL, widget_s.gosector,sensitive=1
 		WIDGET_CONTROL, widget_s.clearsector,sensitive=1
 		WIDGET_CONTROL, widget_s.aprad,sensitive=0
@@ -257,6 +263,8 @@ end else begin
 ; reset the diffraction mode
 		data.diffractionmode = 0
 		WIDGET_CONTROL,SET_VALUE=data.diffractionmode,widget_s.diffractionmode 
+		data.detsegm = 1
+		WIDGET_CONTROL, SET_VALUE=string(data.detsegm,format="(I3)"),widget_s.detsegm
 		WIDGET_CONTROL, widget_s.gosector,sensitive=0
 		WIDGET_CONTROL, widget_s.clearsector,sensitive=0
 		WIDGET_CONTROL, widget_s.aprad,sensitive=0
@@ -283,6 +291,8 @@ end else begin
 ; reset the diffraction mode
 		data.diffractionmode = 0
 		WIDGET_CONTROL,SET_VALUE=data.diffractionmode,widget_s.diffractionmode 
+		data.detsegm = 1
+		WIDGET_CONTROL, SET_VALUE=string(data.detsegm,format="(I3)"),widget_s.detsegm
 		WIDGET_CONTROL, widget_s.gosector,sensitive=0
 		WIDGET_CONTROL, widget_s.clearsector,sensitive=0
 		WIDGET_CONTROL, widget_s.aprad,sensitive=0

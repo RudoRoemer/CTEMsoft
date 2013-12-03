@@ -52,7 +52,7 @@ common STEM_rawdata, indices, offsets, kperp, rawdata
 ; create the top level widget
 widget_s.CTEMBFDFbase = WIDGET_BASE(TITLE='CTEM/BFDF Display', $
                         /COLUMN, $
-                        XSIZE=data.datadims[1]*2+200, $
+                        XSIZE=max([data.datadims[1]*2+200,700]), $
                         /ALIGN_CENTER, $
 			/TLB_MOVE_EVENTS, $
 			EVENT_PRO='STEMCTEMBFDFWidget_event', $

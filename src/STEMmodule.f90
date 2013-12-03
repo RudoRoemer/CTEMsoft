@@ -480,7 +480,7 @@ IMPLICIT NONE
 integer(kind=irg),INTENT(IN) :: nn
 
 integer(kind=irg)                   :: ik,ig, iCL
-real(kind=sgl)                      :: ll(3), lpg(3), gg(3), g3(3), glen, gplen, kpg, LC3, exer, sgdenom
+real(kind=sgl)                      :: ll(3), lpg(3), gg(3), glen, gplen, kpg
 
 ! this routine initializes the excitation error arrays and the weight-factor arrays for zone axis STEM signals
 ! the weightfactors are quite a bit different from the ones for the systematic row case;
@@ -553,6 +553,7 @@ end subroutine init_STEM_ZA
 !> @brief read detector and other parameters for the STEM case
 ! 
 !> @param STEMnmlfile filename of the namelist file
+!> @param geometry 'SR' for systematic row or 'ZA' for zone axis
 !> @param nn number of reflections
 !> @param g fundamental g-vector for systematic row
 !> @param kt tangential wave vector component
@@ -561,8 +562,9 @@ end subroutine init_STEM_ZA
 ! 
 !> @date   04/29/11 MDG 1.0 original
 !> @date   06/12/13 MDG 2.0 rewrite 
+!> @date   11/26/13 MDG 2.1 made geometry an input parameter instead of part of the STEMdata namelist
 !--------------------------------------------------------------------------
-subroutine read_STEM_data(STEMnmlfile,nn,g,kt,numk,beamdiv)
+subroutine read_STEM_data(STEMnmlfile,geometry,nn,g,kt,numk,beamdiv)
 
 use local
 use io
@@ -571,6 +573,7 @@ use files
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)			:: STEMnmlfile
+character(2),INTENT(IN) 			:: geometry  ! 'SR' or 'ZA'
 integer(kind=irg),INTENT(IN)			:: nn
 integer(kind=irg),INTENT(IN)			:: g(3)
 real(kind=sgl),INTENT(IN)			:: kt
@@ -581,9 +584,8 @@ integer(kind=irg) 				:: numberofsvalues,numCL
 real(kind=sgl) 					:: BFradius,ADFinnerradius,ADFouterradius,beamconvergence,cameralength, &
                           				diffaprad, diffapcenter,CLarray(20)
 character(fnlen) 				:: weightoutput
-character(2) 					:: geometry  ! 'SR' or 'ZA'
 
-namelist / STEMdata / BFradius, ADFinnerradius, ADFouterradius, cameralength, geometry, numCL, &
+namelist / STEMdata / BFradius, ADFinnerradius, ADFouterradius, cameralength, numCL, &
                       beamconvergence, numberofsvalues, diffaprad, diffapcenter, weightoutput, CLarray
 
 ! set default values (based on OSU Tecnai F20)
@@ -598,11 +600,10 @@ numberofsvalues = 33		! integer
 diffaprad = 0.0			! diffraction aperture radius in mrad, 0.0 if no aperture is present
 diffapcenter = 0.0		! position of center of diffraction aperture in mrad along systematic row
 weightoutput = '' 		! string with filename root for graphical output of weight profiles, empty if not needed
-geometry = 'SR'
 
 ! read the namelist file
-mess = 'opening STEM_rundata.nml'; call Message("(/A)")
-OPEN(UNIT=dataunit,FILE=STEMnmlfile,DELIM='APOSTROPHE')
+mess = 'opening '//trim(STEMnmlfile); call Message("(/A)")
+OPEN(UNIT=dataunit,FILE=trim(STEMnmlfile),DELIM='APOSTROPHE')
 READ(UNIT=dataunit,NML=STEMdata)
 CLOSE(UNIT=dataunit)
 
@@ -629,7 +630,11 @@ if (PRESENT(beamdiv)) beamdiv=beamconvergence
   STEM%diffapmcenter = diffapcenter
   STEM%weightoutput = weightoutput
   STEM%geometry = geometry
-  STEM%numk = numk
+  if (PRESENT(numk)) then
+    STEM%numk = numk
+  else
+    STEM%numk = STEM%numberofsvalues
+  end if
 
 ! and initialize all other STEM related arrays 
 if (.not.PRESENT(beamdiv)) then

@@ -37,7 +37,7 @@
 ;
 ;> @date 06/13/13 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------
-pro STEMgetpreferences,dummy
+pro STEMgetpreferences,noprint=noprint
  
 ;------------------------------------------------------------
 ; common blocks
@@ -119,8 +119,8 @@ end else begin
   cd,current=s
   data.STEMroot=s
 ; prefs file does not exist yet, so let's create it with default values
-  STEMprint,'Creating preferences file '+data.prefname
-  STEMwritepreferences
+  if not keyword_set(noprint) then STEMprint,'Creating preferences file '+data.prefname
+  if keyword_set(noprint) then STEMwritepreferences,/noprint else STEMwritepreferences
 endelse
 
 end

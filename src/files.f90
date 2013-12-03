@@ -310,12 +310,12 @@ use symmetryvars
 IMPLICIT NONE
 
 logical,optional,INTENT(IN)  		:: fr			!< logical 
-integer(kind=irg) 				:: i,ipg,isave,iost
-logical           					:: fread = .TRUE.
+integer(kind=irg) 			:: i,ipg,isave,iost
+logical           			:: fread = .TRUE.
 
 ! the following variables are used for the older (smaller) xtal file format
-integer 						:: ATOM_type(50),ATOM_ntype,SYM_SGnum,xtal_system,SYM_SGset
-real    						:: ATOM_pos(50,5)
+integer 				:: ATOM_type(50),ATOM_ntype,SYM_SGnum,SYM_SGset
+real    				:: ATOM_pos(50,5)
 
 
  if (present(fr)) fread=.FALSE.

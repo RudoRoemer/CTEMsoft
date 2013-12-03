@@ -51,7 +51,7 @@ common fontstrings, fontstr, fontstrlarge, fontstrsmall
 ; create the top level widget
 widget_s.imagebase = WIDGET_BASE(TITLE='BF / HAADF Image Display', $
                         /COLUMN, $
-                        XSIZE=data.datadims[0]*2+30, $
+                        XSIZE=max([542,data.datadims[0]*2+30]), $
                         /ALIGN_CENTER, $
 			/TLB_MOVE_EVENTS, $
 			EVENT_PRO='STEMImageWidget_event', $

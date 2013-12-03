@@ -452,7 +452,7 @@ end if
 if (zz.gt.0.0) then  ! u points to the top of the foil
     DL(inum)%top = (/ DL(inum)%id + tmp(1)*DL(inum)%zu, DL(inum)%jd + tmp(2)*DL(inum)%zu, 0.5D0*foil%z0 /)
     DL(inum)%bottom = (/ DL(inum)%id - tmp(1)*DL(inum)%zu, DL(inum)%jd - tmp(2)*DL(inum)%zu, -0.5D0*foil%z0 /)
-else                       ! u points to the bottom of the foil
+else                 ! u points to the bottom of the foil
     DL(inum)%top = (/ DL(inum)%id - tmp(1)*DL(inum)%zu, DL(inum)%jd - tmp(2)*DL(inum)%zu, -0.5D0*foil%z0 /)
     DL(inum)%bottom = (/ DL(inum)%id + tmp(1)*DL(inum)%zu, DL(inum)%jd + tmp(2)*DL(inum)%zu, 0.5D0*foil%z0 /)
 end if  
@@ -756,7 +756,7 @@ end if
     DL(i)%u = u
     DL(i)%burg = bv
     DL(i)%g = DF_gf
-    DL(i)%zfrac = zfrac - 0.5
+    DL(i)%zfrac = zfrac ! - 0.5
      
 ! and pre-compute the dislocation displacement field parameters
        call makedislocation(i,dinfo, L)

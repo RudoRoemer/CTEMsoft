@@ -593,10 +593,9 @@ logical,INTENT(IN),OPTIONAL		:: debug
 
 integer(kind=irg),allocatable		:: kselected(:,:)	!< keeps track of which k-vectors have already been considered
 
-integer(kind=irg)       		:: istat,i,j, iequiv(2,12), nequiv, ii, jj, nx, ny
+integer(kind=irg)       		:: istat,i,j, iequiv(2,12), nequiv, jj, nx, ny
 real(kind=dbl)				:: glen, gan(3), gperp(3), kstar(3), delta, Lauexy(2)
 logical					:: hexgrid = .FALSE.
-character(3)				:: grid
 real(kind=sgl)				:: kt(3),kr(3)
 real(kind=sgl)				:: ktlen
 

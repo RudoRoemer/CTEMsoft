@@ -37,7 +37,7 @@
 ;
 ;> @date 06/13/13 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------
-pro STEMwritepreferences,dummy
+pro STEMwritepreferences,noprint=noprint
  
 ;------------------------------------------------------------
 ; common blocks
@@ -98,7 +98,7 @@ common STEM_data_common, data
 ; and close the file
   close,1
 
-  STEMprint,'The preferences file '+data.prefname+' was successfully saved '
+  if not keyword_set(noprint) then STEMprint,'The preferences file '+data.prefname+' was successfully saved '
 
 end
 

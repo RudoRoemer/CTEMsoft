@@ -53,22 +53,45 @@ erase
 
 if keyword_set(darkfield) then diskpos=fltarr(2,data.numref)
 
+if (data.SRZAmode eq 'ZA') then begin
 ;get the radius for the disks
-magn = 0.001*float((data.detwinx-1)/2)/data.patang
-cdisk = reform(ktpg[*,0]) * data.camlen * magn  ; pixel distance for disk centers
-data.rdisk = data.thetac * data.camlen * magn  ; disk radius in pixels
+  magn = 0.001*float((data.detwinx-1)/2)/data.patang
+  cdisk = reform(ktpg[*,0]) * data.camlen * magn  ; pixel distance for disk centers
+  data.rdisk = data.thetac * data.camlen * magn  ; disk radius in pixels
 
 ; skip the center reflection in this loop
-for iref=1,data.numref-1 do begin
+  for iref=1,data.numref-1 do begin
 ; center of disk in units of pixels
-  cpos =  [-offsets[0,iref], offsets[1,iref] ]
+    cpos =  [ offsets[0,iref], offsets[1,iref] ]
 ; normalize cpos and convert to mrad scale
-  cpos /= sqrt(cpos[0]^2+cpos[1]^2)
-  cpos *= cdisk[iref]  ; this is now in mm
-  if keyword_set(darkfield) then diskpos[0:1,iref] = cpos[0:1]   ; this is in pixel coordinates, without the offset
+    cpos /= sqrt(cpos[0]^2+cpos[1]^2)
+    cpos *= cdisk[iref]  ; this is now in mm
+    if keyword_set(darkfield) then diskpos[0:1,iref] = cpos[0:1]   ; this is in pixel coordinates, without the offset
 ; and plot the disk
-  plots,450+cpos[0]+data.rdisk*cth,450+cpos[1]+data.rdisk*sth,/dev,thick=3 
-endfor
+    if (data.srzamode eq 'ZA') then plots,450+cpos[0]+data.rdisk*cth,450+cpos[1]+data.rdisk*sth,/dev,thick=3 else plots,450+cpos[0]+data.rdisk*cth,450+cpos[1]+data.rdisk*sth,/dev,thick=3 
+  endfor
+end else begin  ; SR mode has zero beam at different location
+;get the radius for the disks
+  magn = 0.001*float((data.detwinx-1)/2)/data.patang
+  zeropos = (data.datadims[3]-1)/2
+  cdisk = reform(ktpg[*,zeropos]) * data.camlen * magn  ; pixel distance for disk centers
+  data.rdisk = data.thetac * data.camlen * magn  ; disk radius in pixels
+
+  zeropos = (data.numref-1)/2
+; skip the center reflection in this loop
+  for iref=0,data.numref-1 do begin
+   if (iref ne zeropos) then begin
+; center of disk in units of pixels
+    cpos =  [ offsets[0,iref], offsets[1,iref] ]
+; normalize cpos and convert to mrad scale
+    cpos /= sqrt(cpos[0]^2+cpos[1]^2)
+    cpos *= cdisk[iref]  ; this is now in mm
+    if keyword_set(darkfield) then diskpos[0:1,iref] = cpos[0:1]   ; this is in pixel coordinates, without the offset
+; and plot the disk
+    plots,450+cpos[0]+data.rdisk*cth,450+cpos[1]+data.rdisk*sth,/dev,thick=3 
+   end
+  endfor
+end
 
 ; and add the central disk
 plots,450+data.rdisk*cth,450+data.rdisk*sth,/dev,thick=2 
@@ -88,20 +111,25 @@ if keyword_set(darkfield) then begin
 ; convert the aperture radius to pixels
     aprad = data.aprad * data.rdisk / data.thetac
 ; and plot a circle at the correct position
-    plots,450-data.apx+aprad*cth,450+data.apy+aprad*sth,/dev,thick=1 
+    if (data.srzamode eq 'ZA') then plots,450+data.apx+aprad*cth,450+data.apy+aprad*sth,/dev,thick=1 else plots,450+data.apx+aprad*cth,450+data.apy+aprad*sth,/dev,thick=1 
   endif
 
 ; what if we selected one of the diffracted disks?
   if arg_present(highlightdisk) then begin
 ; center of disk in units of pixels
     iref = highlightdisk
-    cpos =  [offsets[0,iref], offsets[1,iref] ]
+    cpos =  [ offsets[0,iref], offsets[1,iref] ]
 ; normalize cpos and convert to mrad scale
     cpos /= sqrt(cpos[0]^2+cpos[1]^2)
     cpos *= cdisk[iref]  ; this is now in mm
 ; and plot the disk
-    plots,450+cpos[0]+data.rdisk*cth,450+cpos[1]+data.rdisk*sth,/dev,thick=3 
-    plots,450-diskpos[0,iref]-data.apx+aprad*cth,450+diskpos[1,iref]+data.apy+aprad*sth,/dev,thick=1 
+    if (data.srzamode eq 'ZA') then begin
+      plots,450+cpos[0]+data.rdisk*cth,450+cpos[1]+data.rdisk*sth,/dev,thick=3 
+      plots,450+diskpos[0,iref]+data.apx+aprad*cth,450+diskpos[1,iref]+data.apy+aprad*sth,/dev,thick=1 
+    end else begin
+      plots,450+cpos[0]+data.rdisk*cth,450+cpos[1]+data.rdisk*sth,/dev,thick=3 
+      plots,450+diskpos[0,iref]+data.apx+aprad*cth,450+diskpos[1,iref]+data.apy+aprad*sth,/dev,thick=1 
+    endelse
   endif
 
   red = tvrd()

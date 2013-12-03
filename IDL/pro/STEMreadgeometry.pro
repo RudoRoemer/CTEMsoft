@@ -45,6 +45,8 @@ common STEM_widget_common, widget_s
 common STEM_data_common, data
 ; the next common block contains all the raw data needed to generate the CBED patterns
 common STEM_rawdata, indices, offsets, kperp, rawdata
+; and this common block is used for the systematic row mode look up table
+common STEM_srmode, SRLUT
 
 STEMprint,'Reading data file '+data.dataname
 openu,1,data.pathname+'/'+data.dataname,/f77
@@ -53,14 +55,70 @@ openu,1,data.pathname+'/'+data.dataname,/f77
 ftp = bytarr(4)
 readu,1,ftp
 ftp = string(ftp)
-; check that the correct file type was found
-if (data.progmode ne ftp) then begin
-  STEMprint,'File type found '+ftp
-  STEMprint,'File type expected '+data.progmode
-  STEMprint,'Please select a file of the type '+data.progmode
-  close,1
-  goto, skip
-end 
+
+case data.progmode of 
+  'STEM': begin
+; next, verify that we have the correct filetype
+		if ( (ftp eq 'STEM') or (ftp eq 'SRST')) then begin
+;  ok, we are in STEM mode, either zone axis or systematic row
+  		  if (ftp eq 'STEM') then begin
+     		    data.SRZA = 'Zone Axis     ' 
+     		    data.SRZAmode = 'ZA'
+  		  end else begin
+     		    data.SRZA = 'Systematic Row'
+     		    data.SRZAmode = 'SR'
+  		  end
+  		  WIDGET_CONTROL, SET_VALUE=data.SRZA, widget_s.SRZA
+		  end else begin
+  		    STEMprint,'File type found '+ftp
+  		    STEMprint,'File type expected '+data.progmode
+  		    STEMprint,'Please select a file of the type '+data.progmode
+  		    close,1
+  		    goto, skip
+		  end
+	endcase
+
+  'BFDF': begin
+; next, verify that we have the correct filetype
+		if ( (ftp eq 'BFDF') or (ftp eq 'SRBF')) then begin
+;  ok, we are in BFDF mode, either zone axis or systematic row
+  		  if (ftp eq 'BFDF') then begin
+     		    data.SRZA = 'Zone Axis     ' 
+     		    data.SRZAmode = 'ZA'
+  		  end else begin
+     		    data.SRZA = 'Systematic Row'
+     		    data.SRZAmode = 'SR'
+  		  end
+  		  WIDGET_CONTROL, SET_VALUE=data.SRZA, widget_s.SRZA
+		  end else begin
+  		    STEMprint,'File type found '+ftp
+  		    STEMprint,'File type expected '+data.progmode
+  		    STEMprint,'Please select a file of the type '+data.progmode
+  		    close,1
+  		    goto, skip
+		  end
+	endcase
+
+  'CTEM': begin
+; next, verify that we have the correct filetype
+		if (ftp eq 'CTEM') then begin
+;  ok, we are in CTEM mode, which is only available for zone axis geometry
+     		  data.SRZA = 'Zone Axis     ' 
+     		  data.SRZAmode = 'ZA'
+  		  WIDGET_CONTROL, SET_VALUE=data.SRZA, widget_s.SRZA
+		  end else begin
+  		    STEMprint,'File type found '+ftp
+  		    STEMprint,'File type expected '+data.progmode
+  		    STEMprint,'Please select a file of the type '+data.progmode
+  		    close,1
+  		    goto, skip
+		  end
+	endcase
+
+  else: MESSAGE, "Unknown data format"
+endcase
+
+; ok, we've sorted out the filetype; next we read the remainder of the input file
 
 ; first a pair of strings of 132 characters each
 dataname = bytarr(132)
@@ -138,7 +196,7 @@ for i=0,data.numref-1 do begin
   readu,1,hkl
   readu,1,qx,qy
   indices[0:2,i] = hkl
-  offsets[0:1,i] = [qx,qy]
+  offsets[0:1,i] = [qx,qy] 
 endfor
 
 ; wavevectors
@@ -227,6 +285,44 @@ endcase
 
 close,1
   STEMprint,'Completed reading of data file',/blank
+
+; if we are in systematic row mode, then we need to "fill up" the diffraction disks
+; with the results from the central line; once that is done, the remainder of the 
+; program should work the same way as for the ZA case...
+;
+; We'll keep a systematic row look-up table, SRLUT, that labels for each point in the disk what the 
+; corresponding intensity value is in the rawdata array... 
+if (data.SRZAmode eq 'SR') then begin
+; first make a mask of the correct radius and get the integer indices of all the points inside
+  mrad = (data.numk-1)/2
+  dm = shift(dist(data.numk),mrad,mrad)
+  dm[where(dm le mrad)] = 1.0
+  dm[where(dm gt mrad)] = 0.0
+  q = where(dm gt 0.0)
+  dmlist = array_indices(dm,q)
+  sz = size(dmlist,/dimensions)
+  SRLUT = lonarr(sz[1])
+; then get all points except for the the central line of points
+  x = reform(dmlist[0,*]) - mrad
+  y = reform(dmlist[1,*]) - mrad
+  q = where(y ne 0L,cnt)
+; and add those points to the current k-vector coordinate arrays
+  kp = kperp
+  kperp = lonarr(2,data.numk+cnt)
+  kperp[0:1,0:data.numk-1] = kp[0:1,0:data.numk-1]
+  SRLUT[0:data.numk-1] = lindgen(data.numk)
+  for i=data.numk,data.numk+cnt-1 do begin
+    kperp[0:1,i] = [x[q[i-data.numk]],y[q[i-data.numk]]]
+    SRLUT[i] = x[q[i-data.numk]] + mrad
+  endfor
+  data.numk += cnt
+
+; and display some information
+    STEMprint,'Converted systematic row data to full diffraction disks'
+    STEMprint,'Number of k-vectors increased from '+string(2*mrad+1,FORMAT="(I3)")+' to '+string(data.numk,FORMAT="(I6)"),/blank
+  WIDGET_CONTROL, SET_VALUE=string(data.numk,FORMAT="(I6)"), widget_s.numk
+endif
+ 
 
 skip:
 

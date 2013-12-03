@@ -80,6 +80,12 @@ data.scale = 1000.0 * data.wavelength * (data.nums+1) * data.bragg / (data.theta
 PX = data.patx/2
 scmax = PX + data.nums		; if a disk center coordinate is larger than this, exclude that disk
 
+if (data.SRZAmode eq 'SR') then begin
+  mrad = (data.datadims[3]-1)/2
+; this next line may require some verification on more complex crystal structures...
+  data.scale *= 0.5
+end
+
 lipos = long64(ipos)
 ljpos = long64(jpos)
 
@@ -87,9 +93,15 @@ ljpos = long64(jpos)
 for ibeam=0LL,long64(data.numk)-1LL do begin
   for iref=0LL,long64(data.numref)-1LL do begin
    if ((abs(offsets[0,iref]) lt scmax) and (abs(offsets[1,iref]) lt scmax)) then begin
-    ip = PX - offsets[0,iref]*data.scale + kperp[0,ibeam]
+    ip = PX + offsets[0,iref]*data.scale + kperp[0,ibeam]
     jp = PX + offsets[1,iref]*data.scale + kperp[1,ibeam]
-    if (((ip ge 0) and (ip le data.patx-1)) and ((jp ge 0) and (jp le data.paty-1))) then CBED[ip,jp] += rawdata[lipos,ljpos,iref,ibeam]
+    if (((ip ge 0) and (ip le data.patx-1)) and ((jp ge 0) and (jp le data.paty-1))) then begin
+      if (data.SRZAmode eq 'ZA' ) then begin
+        CBED[ip,jp] += rawdata[lipos,ljpos,iref,ibeam]
+      end else begin
+        CBED[ip,jp] += rawdata[lipos,ljpos,iref,kperp[0,ibeam]+mrad]
+      end
+    end
    end
   end
 end

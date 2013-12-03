@@ -7,14 +7,15 @@ BFradius = 3.5
 ! Dark Field inner and outer radii in mm
 ADFinnerradius = 3.5
 ADFouterradius = 10.0
-! computational geometry ('SR' for systematic row, 'ZA' for zone axis)
-geometry = 'ZA'
 ! number of camera lengths
 numCL = 6
 ! camera length values in mm
 CLarray = 163.0,  222.00, 327.00, 546.00, 771.00, 1118.00
-! beam convergence ange in mrad
+! beam convergence angle in mrad
 beamconvergence =  5.70
-! number of radial incident beam directions to be taken along the diffraction disk radius 
-numberofsvalues = 20
+! STEMZAdefect: number of radial incident beam directions along the diffraction disk radius 
+! STEMSRdefect: number of radial incident beam directions along the diffraction disk diameter
+!  for the systematic row case, this needs to be an odd number (will be made odd if 
+!  an even number is entered here); for the zone axis case, both even and odd are permitted.
+numberofsvalues = 21
 /

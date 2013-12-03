@@ -58,6 +58,56 @@ widget_s.cbedbase = WIDGET_BASE(TITLE='CBED Pattern Display', $
                         XOFFSET=data.cbedxlocation, $
                         YOFFSET=data.cbedylocation)
 
+
+;------------------------------------------------------------
+; block 2 contains the button groups and save button
+block2 = WIDGET_BASE(widget_s.cbedbase, $
+			/FRAME, $
+			/ROW)
+
+vals = ['Off','On']
+widget_s.cbedlegendbgroup = CW_BGROUP(block2, $
+			vals, $
+			/ROW, $
+			/NO_RELEASE, $
+			/EXCLUSIVE, $
+			FONT=fontstr, $
+			LABEL_LEFT = 'Scale Bar', $
+			/FRAME, $
+                        EVENT_FUNC='STEMevent', $
+			UVALUE='CBEDLEGEND', $
+			SET_VALUE=data.cbedlegend)
+
+
+vals = ['jpeg','tiff','bmp']
+widget_s.cbedformatbgroup = CW_BGROUP(block2, $
+			vals, $
+			/ROW, $
+			/NO_RELEASE, $
+			/EXCLUSIVE, $
+			FONT=fontstr, $
+			LABEL_LEFT = 'File Format', $
+			/FRAME, $
+                        EVENT_FUNC='STEMevent', $
+			UVALUE='CBEDFORMAT', $
+			SET_VALUE=data.cbedformat)
+
+; and, finally, a save and a close button
+widget_s.savecbed = WIDGET_BUTTON(block2, $
+			VALUE='Save', $
+			/NO_RELEASE, $
+                        EVENT_PRO='STEMCBEDWidget_event', $
+			UVALUE='SAVECBED', $
+			/ALIGN_RIGHT)
+
+widget_s.closecbed = WIDGET_BUTTON(block2, $
+			VALUE='Close', $
+			/NO_RELEASE, $
+                        EVENT_PRO='STEMCBEDWidget_event', $
+			UVALUE='CLOSECBED', $
+			/ALIGN_RIGHT)
+
+
 ;------------------------------------------------------------
 ; create the various blocks
 ; block 1 contains the drawing windows
@@ -66,22 +116,6 @@ block1 = WIDGET_BASE(widget_s.cbedbase, $
 			/ALIGN_CENTER, $
 			/COLUMN)
 
-;------------------------------------------------------------
-label1 = WIDGET_LABEL(block1, $
-			VALUE='CBED Pattern', $
-			FONT=fontstrlarge, $
-			XSIZE=150, $
-			YSIZE=30, $
-			/ALIGN_CENTER)
-
-widget_s.CBEDdraw = WIDGET_DRAW(block1, $
-			COLOR_MODEL=2, $
-			RETAIN=2, $
-			/BUTTON_EVENTS, $
-			EVENT_PRO='STEMCBEDWidget_event', $
-			UVALUE = 'DRAWCBEDPATTERN', $
-			XSIZE=data.patx, $
-			YSIZE=data.paty)
 
 
 ;------------------------------------------------------------
@@ -119,36 +153,18 @@ widget_s.CBEDzoom = CW_BGROUP(block2a, $
 			/EXCLUSIVE, $
 			/NO_RELEASE, $
 			LABEL_LEFT = 'Zoom Factor', $
+			FONT=fontstr, $
 			/FRAME, $
                         EVENT_FUNC='STEMevent', $
 			UVALUE='CBEDZOOM', $
 			SET_VALUE=cbedzoom)
 
-
-
-;------------------------------------------------------------
-; block 2 contains the button groups and save button
-block2 = WIDGET_BASE(widget_s.cbedbase, $
-			/FRAME, $
-			/ROW)
-
-vals = ['Off','On']
-widget_s.cbedlegendbgroup = CW_BGROUP(block2, $
-			vals, $
-			/ROW, $
-			/NO_RELEASE, $
-			/EXCLUSIVE, $
-			LABEL_LEFT = 'Scale Bar', $
-			/FRAME, $
-                        EVENT_FUNC='STEMevent', $
-			UVALUE='CBEDLEGEND', $
-			SET_VALUE=data.cbedlegend)
-
 vals = ['normal','logarithmic']
-widget_s.cbedmodebgroup = CW_BGROUP(block2, $
+widget_s.cbedmodebgroup = CW_BGROUP(block2a, $
 			vals, $
 			/ROW, $
 			/NO_RELEASE, $
+			FONT=fontstr, $
 			/EXCLUSIVE, $
 			LABEL_LEFT = 'Intensity Scale', $
 			/FRAME, $
@@ -156,32 +172,15 @@ widget_s.cbedmodebgroup = CW_BGROUP(block2, $
 			UVALUE='CBEDMODE', $
 			SET_VALUE=data.cbedmode)
 
-vals = ['jpeg','tiff','bmp']
-widget_s.cbedformatbgroup = CW_BGROUP(block2, $
-			vals, $
-			/ROW, $
-			/NO_RELEASE, $
-			/EXCLUSIVE, $
-			LABEL_LEFT = 'File Format', $
-			/FRAME, $
-                        EVENT_FUNC='STEMevent', $
-			UVALUE='CBEDFORMAT', $
-			SET_VALUE=data.cbedformat)
+widget_s.CBEDdraw = WIDGET_DRAW(block1, $
+			COLOR_MODEL=2, $
+			RETAIN=2, $
+			/BUTTON_EVENTS, $
+			EVENT_PRO='STEMCBEDWidget_event', $
+			UVALUE = 'DRAWCBEDPATTERN', $
+			XSIZE=data.patx, $
+			YSIZE=data.paty)
 
-; and, finally, a save and a close button
-widget_s.savecbed = WIDGET_BUTTON(block2, $
-			VALUE='Save', $
-			/NO_RELEASE, $
-                        EVENT_PRO='STEMCBEDWidget_event', $
-			UVALUE='SAVECBED', $
-			/ALIGN_RIGHT)
-
-widget_s.closecbed = WIDGET_BUTTON(block2, $
-			VALUE='Close', $
-			/NO_RELEASE, $
-                        EVENT_PRO='STEMCBEDWidget_event', $
-			UVALUE='CLOSECBED', $
-			/ALIGN_RIGHT)
 
 
 ;------------------------------------------------------------

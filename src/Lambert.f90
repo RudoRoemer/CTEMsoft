@@ -1933,7 +1933,7 @@ integer(kind=irg),INTENT(IN)	:: isym
 integer(kind=irg),INTENT(OUT)	:: iequiv(2,12)
 integer(kind=irg),INTENT(OUT)	:: nequiv
  
-integer(kind=irg)	:: fly, ix, iy
+integer(kind=irg)	:: fly
 real(kind=sgl)		:: my
 
 iequiv = 0
@@ -2058,7 +2058,7 @@ integer(kind=irg),INTENT(IN)	:: isym
 integer(kind=irg),INTENT(OUT)	:: iequiv(2,12)
 integer(kind=irg),INTENT(OUT)	:: nequiv
  
-integer(kind=irg)		:: i, j, k, pequiv(2,12), mequiv
+integer(kind=irg)		:: i, j, pequiv(2,12), mequiv
 real(kind=sgl),parameter	:: eps = 1.0E-6 
 real(kind=sgl)			:: diff
 logical				:: newp

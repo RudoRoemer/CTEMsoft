@@ -60,7 +60,7 @@ character(fnlen)			:: nmldeffile
 ! deal with the command line arguments, if any
 nmldeffile = 'CTEMZAdefect.nml'
 progname = 'CTEMZAdefect.f90'
-call Interpret_Program_Arguments(nmldeffile,7,(/ 1, 2, 3, 200, 201, 202, 203 /) )
+call Interpret_Program_Arguments(nmldeffile,8,(/ 0, 1, 2, 3, 200, 201, 202, 203 /) )
 
 ! initialize all user-defined variables
 call ComputeZAdefect(nmldeffile)
@@ -116,37 +116,34 @@ use STEMmodule
 
 character(fnlen),INTENT(IN)		:: nmlfile
 
-integer(kind=irg)    			:: ira,nn,izero,i,j,k,n,numi,npix,npiy,imat,ii,jj,numvoids,numdisl, &
-					numsf,nCL,numinc,dinfo,SFplane(3),t_interval,outputfirst,outputlast, &
+integer(kind=irg)    		:: nn,i,j,k,npix,npiy,ii,jj,numvoids,numdisl, &
+					numsf,nCL,numinc,dinfo,t_interval, &
 					DF_nums_new,DF_npix_new,DF_npiy_new, numstart,numstop, isg, TID, &
-					NTHR, isym, ir, ga(3), gb(3),iorder,kk(3), fcnt,ccnt,ic,jc,g,numd,ix,iy, &
-					numk,ixp,iyp,tmpsaveinterval,SETNTHR, io_int(6), skip, gg(3), iSTEM
+					NTHR, isym, ir, ga(3), gb(3),kk(3),ic,g,numd,ix,iy, &
+					numk,ixp,iyp,SETNTHR, io_int(6), skip, gg(3), iSTEM
 !                                  OMP_GET_THREAD_NUM,OMP_GET_NUM_THREADS
-integer(kind=irg),parameter 		:: numdd=180 !360
-real(kind=sgl)         		:: ind(3),hkl(3),exerg,cosom,glen,exer,dgr,arg,thick,mi,ma, X(2), dmin, &
-					lauec(2), g3(3), gdotRmax,gdotR,att,xgp,ipos,jpos,kpos,DF_gf(3), &
+integer(kind=irg),parameter 		:: numdd=180
+real(kind=sgl)         		:: glen,exer,arg,thick, X(2), dmin, &
+					lauec(2), g3(3), gdotR,att,xgp,DF_gf(3), &
 					DM(2,2), DD, H,FNr(3),ll(3),lpg(3),gplen,LC3, c(3), gx(3), gy(3), &
 					sgdenom, gac(3), gbc(3),zmax, beamdiv, ktmax, io_real(2), kt, qx, qy
 character(fnlen)      			:: dataname,sgname,voidname,dislname(3*maxdefects),sfname(maxdefects), &
-					outputroot,incname,dispfile,tempname,xtalname,STEMname, foilnmlfile, STEMnmlfile
-character(4)            		:: outputformat, illumination_mode, dispmode, progmode
-character(2)            		:: srza
-character(5)            		:: fnumber(-10:10)
+					incname,dispfile,xtalname,foilnmlfile, STEMnmlfile
+character(4)            		:: dispmode, progmode
 complex(kind=dbl),allocatable    	:: DHWM(:,:),DHWMvoid(:,:),DDD(:,:),Sarray(:,:,:,:)
 complex(kind=dbl),allocatable    	:: amp(:),amp2(:),Azz(:,:)
 complex(kind=dbl)                	:: czero,cone
 complex(kind=dbl)                	:: para(0:numdd),dx,dy,dxm,dym
-real(kind=sgl),allocatable       	:: weights(:), inten(:), sgarray(:,:)
+real(kind=sgl),allocatable       	:: inten(:), sgarray(:,:)
 real(kind=sgl),allocatable    		:: disparray(:,:,:,:),imatvals(:,:), ZAimages(:,:,:,:)
 integer(kind=irg),allocatable   	:: BFweightsarray(:,:,:),ADFweightsarray(:,:,:)
 integer(kind=sgl),allocatable    	:: expval(:,:,:)
-logical					:: STEMstore
 
-namelist / rundata / DF_L, DF_npix, DF_npiy, DF_slice, dmin, sgname, numvoids, incname, output, &
+namelist / rundata / DF_L, DF_npix, DF_npiy, DF_slice, dmin, sgname, numvoids, incname, stdout, &
                                 voidname, numdisl, dislname, numsf, sfname, dinfo, &
-				 outputroot,t_interval,illumination_mode,outputfirst,outputlast, dispfile, &
-				 dispmode,tmpsaveinterval,tempname,SETNTHR,xtalname,voltage,kk, lauec, &
-				 STEMstore, dataname, foilnmlfile, STEMnmlfile
+				 t_interval,progmode, dispfile, &
+				 dispmode,SETNTHR,xtalname,voltage,kk, lauec, &
+				 dataname, foilnmlfile, STEMnmlfile
 
 
 ! first we define the default values
@@ -158,11 +155,10 @@ cone=cmplx(1.0,0.0,dbl)
  voltage = 200000.0			! accelerating voltage
  kk = (/ 0, 0, 1 /)			! incident wave vector in crystal components (omitting wave length)
  lauec = (/ 0.0,0.0 /)			! Laue center coordinates (used for CTEM mode)
- dmin = 0.04			        ! smallest d-spacing to include in dynamical matrix [nm]
- STEMstore=.FALSE.			! store STEM data for external processing or not
+ dmin = 0.04			       ! smallest d-spacing to include in dynamical matrix [nm]
 
 ! CTEM or STEM ?
- illumination_mode = 'CTEM'  		! default illumination mode (can be 'CTEM' or 'STEM')
+ progmode = 'CTEM'  		        ! default illumination mode (can be 'CTEM' or 'STEM')
  STEMnmlfile = 'STEM_rundata.nml'	! name of the STEM rundata namelist file
  foilnmlfile = 'FOIL_rundata.nml'	! name of the foil rundata namelist file
  
@@ -188,25 +184,18 @@ cone=cmplx(1.0,0.0,dbl)
  dispmode = 'not'  			! should a diplacement file be written ('new') or read ('old') or neither ('not')?
 
 ! output parameters
-! outputroot = 'image'  		! default root name for output files
  dataname = 'ZAdefect.data'		! default outputfile name
- t_interval = 10       		! default timing interval (output every t_interval image columns)
-! tmpsaveinterval = 100000		! frequency of intermediate data storage
+ t_interval = 10       	        ! default timing interval (output every t_interval image columns)
 ! 
 ! then we read the actual rundata namelist, which may override some or all of these defaults  
  OPEN(UNIT=dataunit,FILE=nmlfile,DELIM='APOSTROPHE')
  READ(UNIT=dataunit,NML=rundata)
  CLOSE(UNIT=dataunit)
-
+  
 ! make sure the xtalname variable has been properly defined
 if (trim(xtalname).eq.'undefined') then
   call FatalError('CTEMZAdefect:',' structure file name is undefined in '//nmlfile)
 end if
-
-! set the program mode (needed to identify the type of output file)
-progmode = 'STEM'
-if (illumination_mode.eq.'CTEM') progmode='CTEM'
-if ((illumination_mode.eq.'STEM').AND.(STEMstore.eq..FALSE.)) progmode='BFDF'
 
 ! we got this far, so display the standard program info
  progname = 'CTEMZAdefect.f90'
@@ -226,9 +215,6 @@ if ((illumination_mode.eq.'STEM').AND.(STEMstore.eq..FALSE.)) progmode='BFDF'
  ! generate all atom positions
  call CalcPositions('v')
 
-! zone axis 'ZA' or systematic row 'SR'  [legacy; needs to be removed] 
- srza = 'ZA'
- 
 ! determine the point group number and get the ZAP 2-D symmetry  NEEDS TO BE MODIFIED WITH NEW ROUTINES
  j=0
  do i=1,32
@@ -249,23 +235,23 @@ if ((illumination_mode.eq.'STEM').AND.(STEMstore.eq..FALSE.)) progmode='BFDF'
  io_int(4:6) = gb(1:3)
  call WriteValue(' Reciprocal lattice vectors : ', io_int, 6, "('(',3I3,') and (',3I3,')',/)")
 
-! this is taken from the systematic row program, so we need to verify that it is still correct!
+! determine the cartesian components of ga
  DF_gf = float(ga)
  DF_gstar = DF_gf/CalcLength(DF_gf,'r')**2    ! define G* such that G.G* = 1
  call TransSpace(DF_gf,DF_gc,'r','c')                 ! convert to Cartesian reference frame
   
 ! we'll need to compute the list of wavevectors at this point
 ! read the STEM parameters from a namelist file and initialize all STEM related arrays
-if (illumination_mode.eq.'STEM') then
+if (progmode.ne.'CTEM') then
   beamdiv = 0.0
   kt = 0.0
-  call read_STEM_data(STEMnmlfile,nn,ga,kt,numk,beamdiv)             ! first we need the beam divergence angle from this file ...
-  ktmax = 2.0*sin(beamdiv/2000.)/mLambda/CalcLength(float(ga),'r')   ! ktmax in units of |ga|
+  call read_STEM_data(STEMnmlfile,'ZA',nn,ga,kt,numk,beamdiv)          ! first we need the beam divergence angle from this file ...
+  ktmax = 2.0*sin(beamdiv/2000.)/mLambda/CalcLength(float(ga),'r')     ! ktmax in units of |ga|
 ! this next line needs to be verified !!!
   ijmax = float(STEM%numberofsvalues)**2
   call Calckvectors(dble(kk),dble(ga),dble(ktmax),STEM%numberofsvalues,STEM%numberofsvalues,numk,isym,ijmax,'Conical')    ! here we figure out how many beams there are
   call Compute_ReflectionList(dmin,kk,ga,gb,'ALL',.FALSE.,0,beamdiv)
-else
+else  ! progmode = CTEM
   ijmax = 0.0
   call Calckvectors(dble(kk),dble(ga),dble(ktmax),STEM%numberofsvalues,STEM%numberofsvalues,numk,isym,ijmax,'Conical')    ! here we figure out how many beams there are
   call Compute_ReflectionList(dmin,kk,ga,gb,'ALL',.FALSE.,0)
@@ -282,7 +268,7 @@ end if
   call read_foil_data(foilnmlfile,DF_npix,DF_npiy,DF_L,dinfo)
   DynFN = foil%F
   
-! then we need to prune that list to have only reflections that will actually occur in the 
+! then we need to prune the reflection list to have only reflections that will actually occur in the 
 ! computation
   mess = ' Pruning reflection list (this takes a while ...) '
   call Message("(A)")
@@ -291,14 +277,14 @@ end if
   call WriteValue('Number of contributing beams  : ', io_int, 1, '(I)')
   nn = nbeams
 
-  if (illumination_mode.eq.'STEM') then
-    call read_STEM_data(STEMnmlfile,nn,ga,kt,numk)        ! and then we go back and initialize the rest of the STEM parameters
+  if (progmode.ne.'CTEM') then
+    call read_STEM_data(STEMnmlfile,'ZA',nn,ga,kt,numk)        ! and then we go back and initialize the rest of the STEM parameters
   end if
 
 ! ideally, we should use Bethe potentials to reduce the size of the dynamical matrix;
 ! while the theory has been worked out to do this, it would require tremendous changes
 ! to the program starting about here; given the time limitations, there won't be any 
-! chance to do this before the end of the year, so we'll leave that for some other time...
+! chance to do this before the end of the year (2013), so we'll leave that for some other time...
   
 ! allocate and initialize DF_Sarray, theta, and DF_Svoid
   allocate(theta(-nn:nn),DF_Svoid(nn,nn))
@@ -307,7 +293,6 @@ end if
 ! allocate the various DHW Matrices
   allocate(DHWMz(nn,nn),DHWM(nn,nn),DHWMvoid(nn,nn))
   DHWMvoid = czero; DHWMz=czero; DHWM(nn,nn)=czero
-
   
  ! Compute the off-diagonal part of the complex DHW matrix (factor i is included)
  ! We can precompute those because they will not change at all during the run
@@ -335,7 +320,6 @@ end if
 ! compute Fourier coefficient of electrostatic lattice potential 
      call CalcUcg(rltmpa%hkl - rltmpb%hkl)
      DHWMz(ir,ic) = cPi*cmplx(-aimag(rlp%qg),real(rlp%qg),dbl)  ! and initialize the off-diagonal matrix element (including i)
-!     write (*,*) ir,ic,rltmpa%hkl - rltmpb%hkl,DHWMz(ir,ic)
     end if
     rltmpb => rltmpb%next  ! move to next column-entry
    end do
@@ -344,11 +328,9 @@ end if
    X(2) = CalcDot(float(rltmpa%hkl),float(gb),'c')
    X = matmul(DM,X)/DD
    rltmpa%nab(1:2) = int(X(1:2))
-!   write (*,*) '    -> ',ir,int(X)
    rltmpa => rltmpa%next   ! move to next row-entry
   end do
-
- mess = 'Reference Darwin-Howie-Whelan matrix initialized'; call Message("(A/)")
+  mess = 'Reference Darwin-Howie-Whelan matrix initialized'; call Message("(A/)")
 
 ! compute the normal absorption factor xgp
   call CalcUcg((/0,0,0/))
@@ -356,10 +338,9 @@ end if
   io_real(1) = 1.0/xgp
   call WriteValue('Normal absorption length : ', io_real, 1, "(F10.5/)")
 
-
 ! Set up the excitation errors for CTEM illumination mode;
 ! distance between consecutive HOLZ layers in nm-1
-if (illumination_mode.eq.'CTEM') then  
+if (progmode.eq.'CTEM') then  
   H = 1.0/CalcLength(float(kk),'d')
 ! g3 basis vector, properly scaled
   call CalcCross(float(ga),float(gb),g3,'r','r',1)
@@ -518,26 +499,28 @@ call WriteValue('disparray bounds: ', io_real, 2, "(2(F10.5,' '))")
 
 ! ok, all the set up is now complete;
 ! next, we prepare for the actual image simulation
-! there are three types of simulation: CTEM, STEM, or STEM with storage of CBED patterns
+! there are three types of simulation: CTEM, BF/HAADF, or STEM with storage of CBED patterns
   npix = DF_npix
   npiy = DF_npiy
-  if (illumination_mode.eq.'CTEM') then
+  if (progmode.eq.'CTEM') then
     allocate(ZAimages(nn,npix,npiy,1))
-  else   ! in STEM mode, there are only two signals, so two images but potentially multiple camera lengths
-    if (STEMstore.ne..TRUE.) then
+  end if
+  if (progmode.eq.'BFDF') then
       allocate(ZAimages(2,npix,npiy,STEM%numCL))
-    else
-! this is for STEMstore mode; we'll store data in blocks of 5 k-vectors to avoid issues with
+  end if
+  if (progmode.eq.'STEM') then
+! for STEM mode; we'll store data in blocks of 5 k-vectors to avoid issues with
 ! files that have too large a record size for IDL to read
       allocate(ZAimages(npix,npiy,nn,5))
-    end if
   end if
   ZAimages = 0.0
+
+! the following needs to be modified
 
 ! to enable threaded excution, we must first make a local copy of 
 ! the weights arrays STEM%ZABFweightsarray and STEM%ZAADFweightsarray,
 ! since OpenMP does not allow for this type of variable constructs
-if (illumination_mode.eq.'STEM') then  
+if (progmode.ne.'CTEM') then  
   allocate(BFweightsarray(nn,STEM%numk,STEM%numCL),ADFweightsarray(nn,STEM%numk,STEM%numCL))
   BFweightsarray = STEM%ZABFweightsarray
   ADFweightsarray = STEM%ZAADFweightsarray
@@ -564,7 +547,7 @@ do ir=1,nn
 end do
 
 ! initialize the timer
-if (illumination_mode.eq.'CTEM') then
+if (progmode.eq.'CTEM') then
   numstart = 1
   numstop = 1
   call Time_report(float(t_interval)/float(npix))
@@ -584,7 +567,6 @@ nCL = STEM%numCL     ! set the number of camera length values
     para(i) = cmplx(cos(arg),sin(arg),dbl)
   end do
 
-
 ! before we start the main computational loop, we need to store the 
 ! necessary variables for the reconstruction of STEM BF/HAADF images
 ! using the post-processing IDL routine.  This file should contain all
@@ -602,13 +584,13 @@ nCL = STEM%numCL     ! set the number of camera length values
   write (dataunit) dataname
 
 ! various bits of useful information
-  write (dataunit) xtalname						! crystal structure file names	
-  write (dataunit) kk							! incident wave vector
-  write (dataunit) CalcDiffAngle(ga(1),ga(2),ga(3))*0.5		! Bragg angle for the first reflection (whether allowed or not)
-  write (dataunit) STEM%numberofsvalues				! number of pixels along disk radius
-  write (dataunit) sngl(mLambda)					! wave length
-  write (dataunit) beamdiv						! beam divergence
-  write (dataunit) DF_L						! pixel size
+  write (dataunit) xtalname					! crystal structure file names	
+  write (dataunit) kk				               ! incident wave vector
+  write (dataunit) CalcDiffAngle(ga(1),ga(2),ga(3))*0.5	! Bragg angle for the first reflection (whether allowed or not)
+  write (dataunit) STEM%numberofsvalues			! number of pixels along disk radius
+  write (dataunit) sngl(mLambda)				! wave length
+  write (dataunit) beamdiv					! beam divergence
+  write (dataunit) DF_L				        ! pixel size
 	
 ! number of reflections, and associated information (hkl, ...)
   call TransSpace(float(kk),c,'d','c')
@@ -671,10 +653,10 @@ mainloop: do isg = numstart,numstop   ! this is the main computational loop
 ! this part is essentially the same as the threaded section of the older
 ! ZAdefect.all.f90 program (which was a test program).
 !
- 
+
 ! get the correct excitation errors for this beam orientation (in STEM mode);
 ! no need to do anything in CTEM mode
-if (illumination_mode.eq.'STEM') then  
+if (progmode.ne.'CTEM') then  
 ! fill the diagonal of the reference dynamical matrix and the void matrix
   forall (i=1:nn)
    DHWMz(i,i)=2.0*cPi*cmplx(0.0,sgarray(i,isg))    ! initialize the diagonal elements of the dynamical matrix
@@ -728,7 +710,7 @@ mess = ' 181x181 scattering matrices precomputed '; call Message("(A,' ',$)")
 
 NTHR = SETNTHR
 !$OMP  PARALLEL NUM_THREADS(NTHR) PRIVATE(TID,i,j,k,ii,Azz,amp,amp2,ix,iy,dx,dy,dxm,dym,inten,ixp,iyp) &
-!$OMP& SHARED(NTHR,Sarray,DF_Svoid,disparray,t_interval,nn,cone,czero,images,npix,npiy,illumination_mode,att,DF_nums)    
+!$OMP& SHARED(NTHR,Sarray,DF_Svoid,disparray,t_interval,nn,cone,czero,images,npix,npiy,att,DF_nums)    
 TID = OMP_GET_THREAD_NUM() 
   
  allocate(Azz(nn,nn),amp(nn),amp2(nn),inten(nn))
@@ -772,21 +754,20 @@ TID = OMP_GET_THREAD_NUM()
     end do doslices ! loop over slices 
       
 ! compute the intensities and (for STEM mode) use the proper weight-factor
-    if (illumination_mode.eq.'STEM') then
-      inten(1:nn) = att*abs(amp(1:nn))**2
-      if (STEMstore.eq..FALSE.) then
+    inten(1:nn) = att*cabs(amp(1:nn))**2
+    if (progmode.eq.'STEM') then
+        ZAimages(i,j,1:nn,iSTEM) = inten(1:nn)
+    end if
+    if (progmode.eq.'BFDF') then
         do ii=1,nn
          do jj=1,nCL
           if (BFweightsarray(ii,isg,jj).eq.1) ZAimages(1,i,j,jj) = ZAimages(1,i,j,jj) + inten(ii)
           if (ADFweightsarray(ii,isg,jj).eq.1) ZAimages(2,i,j,jj) = ZAimages(2,i,j,jj) + inten(ii)
          end do
         end do
-      else   ! we are in STEMstore mode here
-        ZAimages(i,j,1:nn,iSTEM) = inten(1:nn)
       end if
-    else
-! compute the (attenuated) intensities for the CTEM images and store
-      ZAimages(1:nn,i,j,1) = att*abs(amp(1:nn))**2
+    if (progmode.eq.'CTEM') then
+      ZAimages(1:nn,i,j,1) = inten(1:nn)
     end if
 
     end do donpiy
@@ -796,30 +777,16 @@ end do donpix
 !$OMP END PARALLEL
 
   
-  if (illumination_mode.eq.'STEM') call Time_remaining(isg-numstart+1,numstop-numstart+1)
+  if (progmode.ne.'CTEM') call Time_remaining(isg-numstart+1,numstop-numstart+1)
 
   if (progmode.eq.'STEM') then
     if (mod(isg,5).eq.0) then
-      mess = 'Storing block of 5 k-vector results'; call Message("(A)")
+!      mess = 'Storing block of 5 k-vector results'; call Message("(A)")
       write (dataunit) ZAimages
       iSTEM = 0
       ZAimages = 0.0
     end if
   end if
-
-! every tmpsaveinterval steps, save the ZAimages array 
-!  if (mod(isg,tmpsaveinterval).eq.0) then
-!      open(unit=dataunit,file=tempname,status='unknown',action='write',form='unformatted')
-!      if (illumination_mode.eq.'CTEM') then
-!        write (dataunit) nn,DF_npix,DF_npiy,1
-!      else
-!       if (STEMstore.eq..FALSE.) then
-!          write (dataunit) 2,DF_npix,DF_npiy,STEM%numCL
-!       end if
-!      end if
-!      write (dataunit) ZAimages
-!      close(unit=dataunit,status='keep')
-!  end if
 
 200 end do mainloop
 
@@ -839,12 +806,16 @@ if (progmode.eq.'BFDF') then
   write (dataunit) ZAimages
 end if 
 
+! flush the final ZAimages array if necessary (depends on value of iSTEM)
 if ((progmode.eq.'STEM').AND.(iSTEM.ne.0)) then
   write (dataunit) ZAimages
 end if 
 
 ! in all cases we need to close the file here...
 close(UNIT=dataunit,STATUS='keep')
+
+mess = 'Data stored in file '//trim(dataname)
+call Message("(/A/)")
 
 end subroutine ComputeZAdefect
 

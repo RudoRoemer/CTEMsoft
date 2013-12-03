@@ -102,7 +102,7 @@ IMPLICIT NONE
 
 integer(kind=sgl),INTENT(IN)	:: dinfo
 
-real(kind=dbl)      		:: ey(3),ex(3),t,alPstart,alSstart,dx,dy 
+real(kind=dbl)      		:: ey(3),ex(3),t,dx,dy 
 real(kind=sgl)			:: io_real(3)
 real(kind=dbl)			:: cp,sp,cs,ss,cr,sr, ca, sa, a_fc(3,3)
 integer(kind=irg) 		:: i,j
@@ -277,7 +277,7 @@ integer(kind=irg),INTENT(IN)	:: npix, npiy, dinfo
 real(kind=sgl),INTENT(IN)	:: L
 
 integer(kind=irg)		:: i,j
-real(kind=sgl)			:: foilB(3), foilF(3), foilq(3), foilalP, foilalS, foilalR, foilbeP, &
+real(kind=sgl)			:: foilF(3), foilq(3), foilalP, foilalS, foilalR, foilbeP, &
                           	foilz0, foilelmo(6,6),brx,bry,brxy,cpx,cpy,x, io_real(1)
 real(kind=dbl)			:: amat(3,3)
 real(kind=sgl), parameter 	:: cPi=3.1415926536

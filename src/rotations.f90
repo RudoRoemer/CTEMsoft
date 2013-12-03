@@ -1319,7 +1319,7 @@ IMPLICIT NONE
 real(kind=sgl),INTENT(IN)	:: e(3)		!< input Euler angles in radians
 real(kind=sgl)			:: res(4)	!< output quaternion
 
-real(kind=sgl)			:: ee(3), phip, phim, cPhi, cp, cm, sPhi, sp, sm, q
+real(kind=sgl)			:: ee(3), cPhi, cp, cm, sPhi, sp, sm, q
 
 ee = 0.5*e
 
@@ -1364,7 +1364,7 @@ IMPLICIT NONE
 real(kind=dbl),INTENT(IN)	:: e(3)		!< input Euler angles in radians
 real(kind=dbl)			:: res(4)	!< output quaternion
 
-real(kind=dbl)			:: ee(3), phip, phim, cPhi, cp, cm, sPhi, sp, sm, q
+real(kind=dbl)			:: ee(3), cPhi, cp, cm, sPhi, sp, sm, q
 
 ee = 0.5D0*e
 

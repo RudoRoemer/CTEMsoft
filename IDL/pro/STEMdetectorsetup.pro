@@ -168,22 +168,29 @@ tvscl,STEMcimage,true=1
 
 ; pre-compute the |k_t+g| array
 ; scale factor to go from nm-1 to pixels
-data.scale = 1000.0 * data.wavelength * (data.nums+1) * data.bragg / (data.thetac * sin(data.bragg))
+if (data.srzamode eq 'ZA') then begin
+  data.scale = 1000.0 * data.wavelength * (data.nums+1) * data.bragg / (data.thetac * sin(data.bragg))
+end else begin
+  data.scale = 0.5*1000.0 * data.wavelength * (data.nums+1) * data.bragg / (data.thetac * sin(data.bragg))
+endelse
 
 ; |k_t + g| array in units of mrad; and the azimuthal angle for each point in radians
 ktpg = fltarr(data.numref,data.numk)
 ktpgang = fltarr(data.numref,data.numk)
 for iref=0,data.numref-1 do begin
   for ibeam=0,data.numk-1 do begin
-    ip =  -offsets[0,iref]*data.scale + kperp[0,ibeam]
+    ip = offsets[0,iref]*data.scale + kperp[0,ibeam]
     jp = offsets[1,iref]*data.scale + kperp[1,ibeam]
     d = 0.5*data.wavelength*sqrt(ip^2+jp^2)/data.scale
     ktpg[iref,ibeam] = 2000.0*asin(d)
     ang = atan(jp,ip)
     if (ang lt 0.0) then ang = 2.0*!pi - ang
-    ktpgang[iref,ibeam] = ang mod 2.0*!pi
+    ktpgang[iref,ibeam] = ang mod (2.0*!pi)
   endfor
 endfor 
+
+;print,transpose(ktpg[4,0:80])
+;print,transpose(ktpgang[4,0:80])
 
 ; finally, we need to compute the pattern of diffraction disks for the current camera 
 ; length and superimpose it in the blue channel of the STEMcimage detector image.  
