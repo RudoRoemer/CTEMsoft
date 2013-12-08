@@ -26,78 +26,82 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:ECPatternWidget_event.pro
+; CTEMsoft2013:ECCIevent.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: ECPatternWidget_event.pro
+; PROGRAM: ECCIevent.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief main event handler
+;> @brief special event handler for all the CW_BGROUP calls, since CW_BGROUP does not support event_pro
 ;
 ;> @date 06/13/13 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro ECPatternWidget_event, event
+function ECCIevent, event
 
 ;------------------------------------------------------------
 ; common blocks
-common ECP_widget_common, widget_s
-common ECP_data_common, data
-common ECP_rawdata, rawdata
+common ECCI_widget_common, widget_s
+common ECCI_data_common, data
+common fontstrings, fontstr, fontstrlarge, fontstrsmall
+; and two common blocks for the ECP data
+common ECP_data_common, ECPdata
+common ECP_rawdata, ECPrawdata
 
 if (data.eventverbose eq 1) then help,event,/structure
 
-; intercept the image widget movement here 
-if (event.id eq widget_s.ECPatternbase) then begin
-  data.ECPxlocation = event.x
-  data.ECPylocation = event.y-25
-end else begin
 
-  WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
+WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
 
-; IF N_ELEMENTS(eventval) EQ 0 THEN RETURN,eventval
+IF N_ELEMENTS(eventval) EQ 0 THEN RETURN,eventval
 
-  CASE eventval OF
- 'GETCOORDINATES': begin
-	  if (event.press eq 1B) then begin    ; only act on clicks, not on releases
-	    data.cx = (event.x - data.xmid) / data.dgrid
-	    data.cy = (event.y - data.xmid) / data.dgrid
-	    WIDGET_CONTROL, SET_VALUE=string(data.cx,format="(F6.3)"), widget_s.cx
-	    WIDGET_CONTROL, SET_VALUE=string(data.cy,format="(F6.3)"), widget_s.cy
-	  end
-	endcase
+CASE eventval OF
 
- 'ECPTHICKLIST': begin
-	  data.thicksel = event.index
-
-; and display the selected ECPattern
-          ECPshow
-	endcase
-
- 'SAVEECP': begin
-; display a filesaving widget in the data folder with the file extension filled in
-		delist = ['jpeg','tiff','bmp']
-		de = delist[data.ecpformat]
-		filename = DIALOG_PICKFILE(/write,default_extension=de,path=data.pathname,title='enter filename without extension')
-	        im = tvrd()
-;	im = bytscl(rawdata[*,*,data.thicksel])
-		case de of
-		  'jpeg': write_jpeg,filename,im,quality=100
-		  'tiff': write_tiff,filename,reverse(im,2)
-		  'bmp': write_bmp,filename,im
-		 else: MESSAGE,'unknown file format option'
-		endcase
+  'MOSAICSCALE': begin
+		WIDGET_CONTROL, get_value=val,widget_s.ECCImosaicbgroup
+		data.mosaicscale = fix(val[0])
 	  endcase
 
- 'CLOSEECP': begin
-; kill the base widget
-		WIDGET_CONTROL, widget_s.ECPatternbase, /DESTROY
-	endcase
+  'ECCIFORMAT': begin
+		WIDGET_CONTROL, get_value=val,widget_s.ECCIformatbgroup
+		data.ecciformat = fix(val[0])
+	  endcase
 
-  else: MESSAGE, "Event User Value Not Found"
+  'ECPFORMAT': begin
+		WIDGET_CONTROL, get_value=val,widget_s.ECPformatbgroup
+		ECPdata.ecpformat = fix(val[0])
+	  endcase
 
-  endcase
+  'ECPGRID': begin
+		WIDGET_CONTROL, get_value=val,widget_s.ECPgridbgroup
+		ECPdata.ecpgrid = fix(val[0])
+		ECCIECPshow
+	  endcase
 
-endelse
+ 'LOGFILE':  begin
+; toggle the log mode 
+		if (data.logmode eq 0) then begin
+		   ECCIprint,'Turning log mode on',/blank
+		 q = systime()
+ 		 z = strsplit(q,' ',/extract,/regex)
+ 		 data.logname = data.pathname+'/STEMDisplay'+z[0]+z[1]+z[2]+'_'+z[3]+'_'+z[4]+'.log'
+		   ECCIprint,'Log file: '+data.logname
+		 data.logmode = 1
+		 openw,data.logunit,data.logname
+		 data.logfileopen = 1
+		end else begin
+		   ECCIprint,'Turning log mode off',/blank
+		 if (data.logfileopen eq 1) then begin
+		   close,data.logunit
+		   data.logfileopen = 0
+		 endif
+	    	 data.logmode = 0
+		endelse
+	  endcase
+  
+else: MESSAGE, "Event User Value Not Found"
 
+endcase
+
+return,eventval
 end 

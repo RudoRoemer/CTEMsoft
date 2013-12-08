@@ -42,7 +42,7 @@
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief Zone axis STEM defect image computation and display
+;> @brief Zone axis electron channeling pattern display
 ;
 ;> @date 11/23/13 MDG 1.0 first attempt at a user-friendly interface
 ;--------------------------------------------------------------------------

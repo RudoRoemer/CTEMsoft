@@ -26,78 +26,47 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:ECPatternWidget_event.pro
+; CTEMsoft2013:ECCIprogressbar.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: ECPatternWidget_event.pro
+; PROGRAM: ECCIprogressbar.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief main event handler
+;> @brief Display a progress bar in the detector graphics window
 ;
-;> @date 06/13/13 MDG 1.0 first version
+;> @date 06/13/13 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------
-pro ECPatternWidget_event, event
-
+pro ECCIprogressbar,pct
+;
 ;------------------------------------------------------------
 ; common blocks
-common ECP_widget_common, widget_s
-common ECP_data_common, data
-common ECP_rawdata, rawdata
+common ECCI_widget_common, widget_s
+common ECCI_data_common, data
 
-if (data.eventverbose eq 1) then help,event,/structure
+wset, widget_s.progressdrawID 
 
-; intercept the image widget movement here 
-if (event.id eq widget_s.ECPatternbase) then begin
-  data.ECPxlocation = event.x
-  data.ECPylocation = event.y-25
-end else begin
-
-  WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
-
-; IF N_ELEMENTS(eventval) EQ 0 THEN RETURN,eventval
-
-  CASE eventval OF
- 'GETCOORDINATES': begin
-	  if (event.press eq 1B) then begin    ; only act on clicks, not on releases
-	    data.cx = (event.x - data.xmid) / data.dgrid
-	    data.cy = (event.y - data.xmid) / data.dgrid
-	    WIDGET_CONTROL, SET_VALUE=string(data.cx,format="(F6.3)"), widget_s.cx
-	    WIDGET_CONTROL, SET_VALUE=string(data.cy,format="(F6.3)"), widget_s.cy
-	  end
-	endcase
-
- 'ECPTHICKLIST': begin
-	  data.thicksel = event.index
-
-; and display the selected ECPattern
-          ECPshow
-	endcase
-
- 'SAVEECP': begin
-; display a filesaving widget in the data folder with the file extension filled in
-		delist = ['jpeg','tiff','bmp']
-		de = delist[data.ecpformat]
-		filename = DIALOG_PICKFILE(/write,default_extension=de,path=data.pathname,title='enter filename without extension')
-	        im = tvrd()
-;	im = bytscl(rawdata[*,*,data.thicksel])
-		case de of
-		  'jpeg': write_jpeg,filename,im,quality=100
-		  'tiff': write_tiff,filename,reverse(im,2)
-		  'bmp': write_bmp,filename,im
-		 else: MESSAGE,'unknown file format option'
-		endcase
-	  endcase
-
- 'CLOSEECP': begin
-; kill the base widget
-		WIDGET_CONTROL, widget_s.ECPatternbase, /DESTROY
-	endcase
-
-  else: MESSAGE, "Event User Value Not Found"
-
-  endcase
-
-endelse
-
+if (pct eq 0.0) then begin
+; clear the graphics window
+  erase
 end 
+
+; progress bar
+rect = replicate(0B,200,20)
+if (pct gt 0.0) then rect[0:2*pct-1,*] = 200
+rect[*,0] = 250
+rect[*,19] = 250
+rect[0,*] = 250
+rect[199,*] = 250
+tv,rect
+empty
+
+; when completely done (pct=100) re-display the detector screen after a short pause
+if (pct eq 100.0) then begin
+  wait,1.0
+  erase
+  empty
+end
+
+
+end

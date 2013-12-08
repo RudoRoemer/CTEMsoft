@@ -253,9 +253,11 @@ if (numYdisl.gt.0) then
 ! rotate into the defect reference frame
      tmp = quat_rotate_vector( YD(ii)%a_di, tmp )   
 ! compute the displacement vector
-     u = sngl(YSHDisp(dble(tmp(2)),-dble(tmp(1)),dble(tmp(3)),ii))
+!     u = sngl(YSHDisp(dble(tmp(2)),-dble(tmp(1)),dble(tmp(3)),ii))
+     u = sngl(YSHDisp(dble(tmp(1)),dble(tmp(2)),dble(tmp(3)),ii))
 ! and rotate back to the image reference frame
-     u = quat_rotate_vector( YD(ii)%a_id, u )     
+     u = quat_rotate_vector( YD(ii)%a_id, u )
+     u = quat_rotate_vector( conjg(foil%a_ic), u ) 
 ! that should do it !
      sumR = sumR + u
    end do

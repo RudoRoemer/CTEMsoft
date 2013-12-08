@@ -26,42 +26,45 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:ECPatternWidget.pro
+; CTEMsoft2013:ECCIECPWidget.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: ECPatternWidget.pro
+; PROGRAM: ECCIECPWidget.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief Create the CBED control widget
+;> @brief Create the ECP control widget
 ;
-;> @date 10/15/13 MDG 1.0 first attempt 
+;> @date 12/06/13 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------
 
-pro ECPatternWidget,dummy
+pro ECCIECPWidget,dummy
 
 ;------------------------------------------------------------
 ; common blocks
-common ECP_widget_common, widget_s
-common ECP_data_common, data
-common BED_rawdata, rawdata
+common ECCI_widget_common, widget_s
+common ECCI_data_common, data
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
+; and two common blocks for the ECP data
+common ECP_data_common, ECPdata
+common ECP_rawdata, ECPrawdata
+
 
 ;------------------------------------------------------------
 ; create the top level widget
-widget_s.ECPatternbase= WIDGET_BASE(TITLE='ECP Widget', $
+widget_s.ECCIECPbase= WIDGET_BASE(TITLE='ECP Pattern Widget', $
                         /COLUMN, $
-                        XSIZE=20 + max([513,data.datadims[0]]), $
+                        XSIZE=20 + max([513,ECPdata.datadims[0]]), $
                         /ALIGN_CENTER, $
 			/TLB_MOVE_EVENTS, $
-			EVENT_PRO='ECPatternWidget_event', $
+			EVENT_PRO='ECCIECPWidget_event', $
                         XOFFSET=data.ECPxlocation, $
                         YOFFSET=data.ECPylocation)
 
 ;------------------------------------------------------------
 ; create the various vertical blocks
 ; block 1 deals with the thickness selection
-block1 = WIDGET_BASE(widget_s.ECPatternbase, /FRAME, /COLUMN)
+block1 = WIDGET_BASE(widget_s.ECCIECPbase, /FRAME, /COLUMN)
 
 ;----------
 file1 = WIDGET_BASE(block1, $
@@ -76,20 +79,20 @@ label2 = WIDGET_LABEL(file1, $
 			YSIZE=25, $
 			/ALIGN_LEFT)
 
-tvals = strarr(data.datadims[2])
-for i=0,data.datadims[2]-1 do begin
-  th = data.startthick + float(i)*data.thickinc
+tvals = strarr(ECPdata.datadims[2])
+for i=0,ECPdata.datadims[2]-1 do begin
+  th = ECPdata.startthick + float(i)*ECPdata.thickinc
   tvals[i] = string(th,format="(F5.1)")
 end
 
 widget_s.ECPthicklist = WIDGET_DROPLIST(file1, $
-			EVENT_PRO='ECPatternWidget_event', $
+			EVENT_PRO='ECCIECPWidget_event', $
 			VALUE=tvals,$
 			UVALUE='ECPTHICKLIST', $
 			/ALIGN_LEFT)
 
-data.thicksel = 0
-WIDGET_CONTROL, set_droplist_select=data.thicksel, widget_s.ECPthicklist
+ECPdata.thicksel = 0
+WIDGET_CONTROL, set_droplist_select=ECPdata.thicksel, widget_s.ECPthicklist
 
 ;----------
 file1 = WIDGET_BASE(block1, $
@@ -106,9 +109,9 @@ widget_s.ECPgridbgroup = CW_BGROUP(file1, $
 			FONT=fontstrlarge, $
 			LABEL_LEFT = 'Coordinate Grid', $
 			/FRAME, $
-                        EVENT_FUNC ='ECPevent', $
+                        EVENT_FUNC ='ECCIevent', $
 			UVALUE='ECPGRID', $
-			SET_VALUE=data.ecpgrid)
+			SET_VALUE=ECPdata.ecpgrid)
 
 
 ;---------- save pattern
@@ -116,67 +119,42 @@ file1 = WIDGET_BASE(block1, $
 			/ROW, $
 			/ALIGN_LEFT)
 
-vals = ['jpeg','tiff','bmp']
-widget_s.ECPformatbgroup = CW_BGROUP(file1, $
-			vals, $
-			/ROW, $
-			/NO_RELEASE, $
-			/EXCLUSIVE, $
-			FONT=fontstrlarge, $
-			LABEL_LEFT = 'File Format', $
-			/FRAME, $
-                        EVENT_FUNC ='ECPevent', $
-			UVALUE='ECPFORMAT', $
-			SET_VALUE=data.ecpformat)
+; not really any need to save the pattern here ... that is already done in the ECPDisplay program
+;vals = ['jpeg','tiff','bmp']
+;widget_s.ECPformatbgroup = CW_BGROUP(file1, $
+;			vals, $
+;			/ROW, $
+;			/NO_RELEASE, $
+;			/EXCLUSIVE, $
+;			FONT=fontstrlarge, $
+;			LABEL_LEFT = 'File Format', $
+;			/FRAME, $
+;                        EVENT_FUNC ='ECPevent', $
+;			UVALUE='ECPFORMAT', $
+;			SET_VALUE=ECPdata.ecpformat)
 
 ;------------  coordinate display
-file3 = WIDGET_BASE(block1, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label4 = WIDGET_LABEL(file3, $
-			VALUE='Selected position ', $
-			FONT=fontstrlarge, $
-			XSIZE=160, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.cx= WIDGET_TEXT(file3, $
-			VALUE=string(data.cx,format="(F6.3)"),$
-			XSIZE=10, $
-			/ALIGN_LEFT)
-
-labela = WIDGET_LABEL(file3, $
-			VALUE=',', $
-			FONT=fontstrlarge, $
-			XSIZE=12, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.cy= WIDGET_TEXT(file3, $
-			VALUE=string(data.cy,format="(F6.3)"),$
-			XSIZE=10, $
-			/ALIGN_LEFT)
+file3 = WIDGET_BASE(block1, /ROW, /ALIGN_LEFT)
+widget_s.cx = Core_WText(file3, 'Selected position ',fontstrlarge, 160, 25, 10, 1, string(ECPdata.cx,FORMAT="(F6.3)"))
+widget_s.cy = Core_WText(file3, ',',fontstrlarge, 12, 25, 10, 1, string(ECPdata.cy,FORMAT="(F6.3)"))
 
 
 ;------------ a few control buttons
-block2 = WIDGET_BASE(widget_s.ECPatternbase, $
-			/FRAME, $
-			/ROW)
+block2 = WIDGET_BASE(widget_s.ECCIECPbase, /FRAME, /ROW)
 
-saveMBCBED = WIDGET_BUTTON(block2, $
-			VALUE='Save', $
-			/NO_RELEASE, $
-                        EVENT_PRO='ECPatternWidget_event', $
-			/FRAME, $
-			UVALUE='SAVEECP', $
-			/ALIGN_LEFT)
+;saveMBCBED = WIDGET_BUTTON(block2, $
+;			VALUE='Save', $
+;			/NO_RELEASE, $
+;                        EVENT_PRO='ECCIECPWidget_event', $
+;			/FRAME, $
+;			UVALUE='SAVEECP', $
+;			/ALIGN_LEFT)
 
 
 closeECP = WIDGET_BUTTON(block2, $
 			VALUE='Close', $
 			/NO_RELEASE, $
-                        EVENT_PRO='ECPatternWidget_event', $
+                        EVENT_PRO='ECCIECPWidget_event', $
 			/FRAME, $
 			UVALUE='CLOSEECP', $
 			/ALIGN_RIGHT)
@@ -186,23 +164,24 @@ widget_s.ECPdraw = WIDGET_DRAW(block1, $
 			COLOR_MODEL=2, $
 			RETAIN=2, $
 			/BUTTON_EVENTS, $
+                        EVENT_PRO='ECCIECPWidget_event', $
 			UVALUE = 'GETCOORDINATES', $
 			/ALIGN_CENTER, $
-			XSIZE=data.datadims[0], $
-			YSIZE=data.datadims[1])
+			XSIZE=ECPdata.datadims[0], $
+			YSIZE=ECPdata.datadims[1])
 
 
 ;------------------------------------------------------------
 ; realize the widget structure
-WIDGET_CONTROL,widget_s.ECPatternbase,/REALIZE
+WIDGET_CONTROL,widget_s.ECCIECPbase,/REALIZE
 
 ; realize the draw widgets
 WIDGET_CONTROL, widget_s.ECPdraw, GET_VALUE=drawID
 widget_s.ECPdrawID = drawID
 
 ; and hand over control to the xmanager
-XMANAGER,"ECPatternWidget",widget_s.ECPatternbase,/NO_BLOCK
+XMANAGER,"ECCIECPWidget",widget_s.ECCIECPbase,/NO_BLOCK
 
-ECPshow
+ECCIECPshow
 
 end

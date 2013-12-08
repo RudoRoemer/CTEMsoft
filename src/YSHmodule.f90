@@ -81,9 +81,10 @@ contains
 !
 !> @todo There is a problem with dislocations normal to the foil surface, likely a typographical error
 !> in the SH paper; this needs to be resolved further, which may require explicit repetition of all 
-!> analytical computations!
+!> analytical computations! Mathematica gives an infinite limit for the bx edge case when normal
+!> to the foil surface.
 ! 
-!> @date    1/5/99   MDG 1.0 original
+!> @date    1/5/99  MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   06/04/13 MDG 3.0 rewrite
@@ -241,7 +242,7 @@ end function YSHDisp
 !
 !> @todo Convert IO to Write_Value calls
 ! 
-!> @date  1/5/99   MDG 1.0 original
+!> @date  1/5/99  MDG 1.0 original
 !> @date  5/19/01 MDG 2.0 f90 version
 !> @date 11/27/01 MDG 2.1 added kind support
 !> @date 06/04/13 MDG 3.0 rewrite+added quaternions

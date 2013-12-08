@@ -26,72 +26,70 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:ECPatternWidget_event.pro
+; CTEMsoft2013:ECCIDisplay_event.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: ECPatternWidget_event.pro
+; PROGRAM: ECCIDisplay_event.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
 ;> @brief main event handler
 ;
-;> @date 06/13/13 MDG 1.0 first version
+;> @date 12/06/13 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro ECPatternWidget_event, event
+pro ECCIDisplay_event, event
 
 ;------------------------------------------------------------
 ; common blocks
-common ECP_widget_common, widget_s
-common ECP_data_common, data
-common ECP_rawdata, rawdata
+common ECCI_widget_common, widget_s
+common ECCI_data_common, data
+common fontstrings, fontstr, fontstrlarge, fontstrsmall
+; and two common blocks for the ECP data
+common ECP_data_common, ECPdata
+common ECP_rawdata, ECPrawdata
+
 
 if (data.eventverbose eq 1) then help,event,/structure
 
-; intercept the image widget movement here 
-if (event.id eq widget_s.ECPatternbase) then begin
-  data.ECPxlocation = event.x
-  data.ECPylocation = event.y-25
+if (event.id eq widget_s.base) then begin
+  data.xlocation = event.x
+  data.ylocation = event.y-25
 end else begin
 
   WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
-
+  
 ; IF N_ELEMENTS(eventval) EQ 0 THEN RETURN,eventval
 
   CASE eventval OF
- 'GETCOORDINATES': begin
-	  if (event.press eq 1B) then begin    ; only act on clicks, not on releases
-	    data.cx = (event.x - data.xmid) / data.dgrid
-	    data.cy = (event.y - data.xmid) / data.dgrid
-	    WIDGET_CONTROL, SET_VALUE=string(data.cx,format="(F6.3)"), widget_s.cx
-	    WIDGET_CONTROL, SET_VALUE=string(data.cy,format="(F6.3)"), widget_s.cy
-	  end
-	endcase
+  'LOADFILE': begin
+; loading a new file means the current window must be deleted if it exists
+		if (XRegistered("ECCImageWidget") NE 0) then WIDGET_CONTROL, widget_s.ECCImagebase, /DESTROY
+		if (XRegistered("ECCIECPWidget") NE 0) then WIDGET_CONTROL, widget_s.ECCIECPbase, /DESTROY
+	
+; ask the user to select the data file
+		ECCIgetfilename,validfile
 
- 'ECPTHICKLIST': begin
-	  data.thicksel = event.index
+; read the data file and populate all the relevant fields
+ 		valid = 0
+		if (validfile eq 1) then ECCIreaddatafile,valid
 
-; and display the selected ECPattern
-          ECPshow
-	endcase
-
- 'SAVEECP': begin
-; display a filesaving widget in the data folder with the file extension filled in
-		delist = ['jpeg','tiff','bmp']
-		de = delist[data.ecpformat]
-		filename = DIALOG_PICKFILE(/write,default_extension=de,path=data.pathname,title='enter filename without extension')
-	        im = tvrd()
-;	im = bytscl(rawdata[*,*,data.thicksel])
-		case de of
-		  'jpeg': write_jpeg,filename,im,quality=100
-		  'tiff': write_tiff,filename,reverse(im,2)
-		  'bmp': write_bmp,filename,im
-		 else: MESSAGE,'unknown file format option'
-		endcase
+; start up the display widgets
+		if (valid eq 1) then begin
+                  ECCIECPWidget
+	        end
 	  endcase
 
- 'CLOSEECP': begin
-; kill the base widget
-		WIDGET_CONTROL, widget_s.ECPatternbase, /DESTROY
+ 'QUIT': begin
+; do a general cleanup of potentially open widgets
+		if (XRegistered("ECCImageWidget") NE 0) then WIDGET_CONTROL, widget_s.ECCImagebase, /DESTROY
+		if (XRegistered("ECCIECPWidget") NE 0) then WIDGET_CONTROL, widget_s.ECCIECPbase, /DESTROY
+
+; write the preferences file
+ 		ECCIwritepreferences
+
+; and finally kill the base widget
+		WIDGET_CONTROL, widget_s.base, /DESTROY
+		!EXCEPT=1
 	endcase
 
   else: MESSAGE, "Event User Value Not Found"
@@ -101,3 +99,4 @@ end else begin
 endelse
 
 end 
+

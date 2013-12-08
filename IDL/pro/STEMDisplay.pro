@@ -829,7 +829,8 @@ widget_s.detdrawID = drawID
 WIDGET_CONTROL, widget_s.progress, GET_VALUE=drawID
 widget_s.progressdrawID = drawID
 ;
-logo = read_image('../Resources/CTEMlogo.jpg')
+;logo = read_image('../Resources/CTEMlogo.jpg')
+logo = read_image('Resources/CTEMlogo.jpg')
 wset,widget_s.logodrawID
 tvscl,logo,true=1
 

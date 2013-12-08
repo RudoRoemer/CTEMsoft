@@ -221,7 +221,7 @@ if (ilev.le.0) ilev = 1		! can not be smaller than 1
 ! if modA gets to be too large, abort with a message
 if (modA.gt.1000.D0) then
   mess = 'MatrixExponential routine can not deal with ||A|| > 1000.0'
-  call Message("/A/")
+  call Message("(/A/)")
   stop 'Program aborted'
 end if
 

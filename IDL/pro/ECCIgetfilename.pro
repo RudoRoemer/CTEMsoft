@@ -26,78 +26,59 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:ECPatternWidget_event.pro
+; CTEMsoft2013:ECCIgetfilename.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: ECPatternWidget_event.pro
+; PROGRAM: ECCIgetfilename.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief main event handler
+;> @brief Display an interface and ask user to select a CTEMZAdefect output file
 ;
-;> @date 06/13/13 MDG 1.0 first version
+;> @date 12/05/13 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------
-pro ECPatternWidget_event, event
-
+pro ECCIgetfilename,dummy
+ 
 ;------------------------------------------------------------
 ; common blocks
-common ECP_widget_common, widget_s
-common ECP_data_common, data
-common ECP_rawdata, rawdata
+common ECCI_widget_common, widget_s
+common ECCI_data_common, data
 
-if (data.eventverbose eq 1) then help,event,/structure
+  dummy = 1
 
-; intercept the image widget movement here 
-if (event.id eq widget_s.ECPatternbase) then begin
-  data.ECPxlocation = event.x
-  data.ECPylocation = event.y-25
-end else begin
+  s = ''
+  cd,current = s
+  data.homefolder = s
+  if (data.ECCIroot eq 'undefined') then begin
+    data.ECCIroot = data.homefolder
+  end 
 
-  WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
+  rootpath = data.ECCIroot
 
-; IF N_ELEMENTS(eventval) EQ 0 THEN RETURN,eventval
+  res=dialog_pickfile(title='Select a valid CTEMECCI data file',path=rootpath)
+  if (res eq '') then begin
+	  ECCIprint,'No selection made'
+	  dummy = 0
+	  goto, skip
+  end
+  finfo = file_info(res)
+  data.filesize = finfo.size
+; find the last folder separator
+  spos = strpos(res,'/',/reverse_search)
+  dpos = strpos(res,'.',/reverse_search)
+  plen = strlen(res)
+  data.pathname = strmid(res,0,spos)
+  data.ECCIname = strmid(res,spos+1)
+  data.suffix = strmid(res,dpos+1)
+  data.ECCIroot = data.pathname
 
-  CASE eventval OF
- 'GETCOORDINATES': begin
-	  if (event.press eq 1B) then begin    ; only act on clicks, not on releases
-	    data.cx = (event.x - data.xmid) / data.dgrid
-	    data.cy = (event.y - data.xmid) / data.dgrid
-	    WIDGET_CONTROL, SET_VALUE=string(data.cx,format="(F6.3)"), widget_s.cx
-	    WIDGET_CONTROL, SET_VALUE=string(data.cy,format="(F6.3)"), widget_s.cy
-	  end
-	endcase
+WIDGET_CONTROL, SET_VALUE=data.ECCIname, widget_s.ECCIname
 
- 'ECPTHICKLIST': begin
-	  data.thicksel = event.index
+  ECCIprint,' full path '+res
+  ECCIprint,' path '+data.pathname
+  ECCIprint,' data file '+data.ECCIname
+  ECCIprint,' suffix '+data.suffix
 
-; and display the selected ECPattern
-          ECPshow
-	endcase
+skip:
+end
 
- 'SAVEECP': begin
-; display a filesaving widget in the data folder with the file extension filled in
-		delist = ['jpeg','tiff','bmp']
-		de = delist[data.ecpformat]
-		filename = DIALOG_PICKFILE(/write,default_extension=de,path=data.pathname,title='enter filename without extension')
-	        im = tvrd()
-;	im = bytscl(rawdata[*,*,data.thicksel])
-		case de of
-		  'jpeg': write_jpeg,filename,im,quality=100
-		  'tiff': write_tiff,filename,reverse(im,2)
-		  'bmp': write_bmp,filename,im
-		 else: MESSAGE,'unknown file format option'
-		endcase
-	  endcase
-
- 'CLOSEECP': begin
-; kill the base widget
-		WIDGET_CONTROL, widget_s.ECPatternbase, /DESTROY
-	endcase
-
-  else: MESSAGE, "Event User Value Not Found"
-
-  endcase
-
-endelse
-
-end 

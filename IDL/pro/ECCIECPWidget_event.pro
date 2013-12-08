@@ -26,29 +26,34 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:ECPatternWidget_event.pro
+; CTEMsoft2013:ECCIECPWidget_event.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: ECPatternWidget_event.pro
+; PROGRAM: ECCIECPWidget_event.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
 ;> @brief main event handler
 ;
-;> @date 06/13/13 MDG 1.0 first version
+;> @date 12/06/13 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro ECPatternWidget_event, event
+pro ECCIECPWidget_event, event
 
 ;------------------------------------------------------------
 ; common blocks
-common ECP_widget_common, widget_s
-common ECP_data_common, data
-common ECP_rawdata, rawdata
+common ECCI_widget_common, widget_s
+common ECCI_data_common, data
+common fontstrings, fontstr, fontstrlarge, fontstrsmall
+; and two common blocks for the ECP data
+common ECP_data_common, ECPdata
+common ECP_rawdata, ECPrawdata
+common ECCI_rawdata, indices, offsets, kperp, rawdata, ECCILUT
+
 
 if (data.eventverbose eq 1) then help,event,/structure
 
 ; intercept the image widget movement here 
-if (event.id eq widget_s.ECPatternbase) then begin
+if (event.id eq widget_s.ECCIECPbase) then begin
   data.ECPxlocation = event.x
   data.ECPylocation = event.y-25
 end else begin
@@ -60,27 +65,79 @@ end else begin
   CASE eventval OF
  'GETCOORDINATES': begin
 	  if (event.press eq 1B) then begin    ; only act on clicks, not on releases
-	    data.cx = (event.x - data.xmid) / data.dgrid
-	    data.cy = (event.y - data.xmid) / data.dgrid
-	    WIDGET_CONTROL, SET_VALUE=string(data.cx,format="(F6.3)"), widget_s.cx
-	    WIDGET_CONTROL, SET_VALUE=string(data.cy,format="(F6.3)"), widget_s.cy
+; we need to put these in units of dkt
+	    ECPdata.cx = round( (event.x - ECPdata.xmid) / ECPdata.dgrid / data.dkt )
+	    ECPdata.cy = round( (event.y - ECPdata.xmid) / ECPdata.dgrid / data.dkt )
+
+	    WIDGET_CONTROL, SET_VALUE=string(float(ECPdata.cx)*data.dkt,format="(F6.3)"), widget_s.cx
+	    WIDGET_CONTROL, SET_VALUE=string(float(ECPdata.cy)*data.dkt,format="(F6.3)"), widget_s.cy
+	    
+; we indicate the selected point by turning it blue
+            ECCIECPshow,/point
+
+; then we need to create the ECCI image widget, if it doesn't already exist
+	    if (XRegistered("ECCImageWidget") EQ 0) then ECCImageWidget
+
+; and display the proper ECCI image
+	    ma = max(abs(kperp))
+	    wset,widget_s.ECCIdrawID
+	    slice = reform(rawdata[*,*,ECCILUT[ECPdata.cx+ma,ECPdata.cy+ma]])
+	    eccimin = min(rawdata,max=eccimax)
+	    if (data.mosaicscale eq 0) then begin
+	      im = bytscl(slice,min=eccimin,max=eccimax)
+ 	    end else begin
+	      im = bytscl(slice)
+	    endelse
+	    tv,im
+            mi = min(slice,max=ma)
+	    WIDGET_CONTROL, SET_VALUE=string(mi,format="(F6.1)"), widget_s.ECCIdrawmin
+	    WIDGET_CONTROL, SET_VALUE=string(ma,format="(F6.1)"), widget_s.ECCIdrawmax
+
+; then we also need to display the averaged ECCI image
+; first determine all the points that are inside the circle and add the corresponding ECCI images 
+; together
+	    wset,widget_s.ECCIavdrawID
+	    erase
+	    WIDGET_CONTROL, SET_VALUE=string(0.0,format="(F6.1)"), widget_s.ECCIavdrawmin
+	    WIDGET_CONTROL, SET_VALUE=string(0.0,format="(F6.1)"), widget_s.ECCIavdrawmax
+	    if (data.avrad ne 0.0) then begin
+	      dd = sqrt( (reform(kperp[0,*])-ECPdata.cx)^2 + (reform(kperp[1,*])-ECPdata.cy)^2 )
+	      ECCIsum = fltarr(data.datadims[0],data.datadims[1])
+	      npat = 0
+	      for i=0,data.numk-1 do if (dd[i] le data.avrad) then begin
+		ECCISUM += reform(rawdata[*,*,i])
+	        npat += 1
+	      endif
+		ECCIprint,'Number of patterns averaged : '+string(npat,format="(I4)")
+	      if (npat ne 0) then begin
+		ECCIsum /= float(npat)
+	        if (data.mosaicscale eq 0) then begin
+	          im = bytscl(ECCIsum,min=eccimin,max=eccimax)
+ 	        end else begin
+	          im = bytscl(ECCIsum)
+	        endelse
+	        tv,im
+                mi = min(ECCIsum,max=ma)
+	        WIDGET_CONTROL, SET_VALUE=string(mi,format="(F6.1)"), widget_s.ECCIavdrawmin
+	        WIDGET_CONTROL, SET_VALUE=string(ma,format="(F6.1)"), widget_s.ECCIavdrawmax
+	      endif
+	    endif
 	  end
 	endcase
 
  'ECPTHICKLIST': begin
-	  data.thicksel = event.index
+	  ECPdata.thicksel = event.index
 
 ; and display the selected ECPattern
-          ECPshow
+          ECCIECPshow
 	endcase
 
  'SAVEECP': begin
 ; display a filesaving widget in the data folder with the file extension filled in
 		delist = ['jpeg','tiff','bmp']
-		de = delist[data.ecpformat]
+		de = delist[ECPdata.ecpformat]
 		filename = DIALOG_PICKFILE(/write,default_extension=de,path=data.pathname,title='enter filename without extension')
-	        im = tvrd()
-;	im = bytscl(rawdata[*,*,data.thicksel])
+		im = bytscl(rawdata[*,*,ECPdata.thicksel])
 		case de of
 		  'jpeg': write_jpeg,filename,im,quality=100
 		  'tiff': write_tiff,filename,reverse(im,2)
@@ -91,7 +148,7 @@ end else begin
 
  'CLOSEECP': begin
 ; kill the base widget
-		WIDGET_CONTROL, widget_s.ECPatternbase, /DESTROY
+		WIDGET_CONTROL, widget_s.ECCIECPbase, /DESTROY
 	endcase
 
   else: MESSAGE, "Event User Value Not Found"

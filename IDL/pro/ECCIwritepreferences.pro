@@ -26,78 +26,48 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:ECPatternWidget_event.pro
+; CTEMsoft2013:ECCIwritepreferences.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: ECPatternWidget_event.pro
+; PROGRAM: ECCIwritepreferences.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief main event handler
+;> @brief write the preferences file
 ;
-;> @date 06/13/13 MDG 1.0 first version
+;> @date 12/06/13 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------
-pro ECPatternWidget_event, event
-
+pro ECCIwritepreferences,dummy
+ 
 ;------------------------------------------------------------
 ; common blocks
-common ECP_widget_common, widget_s
-common ECP_data_common, data
-common ECP_rawdata, rawdata
+common ECCI_widget_common, widget_s
+common ECCI_data_common, data
+common fontstrings, fontstr, fontstrlarge, fontstrsmall
+; and two common blocks for the ECP data
+common ECP_data_common, ECPdata
+common ECP_rawdata, ECPrawdata
 
-if (data.eventverbose eq 1) then help,event,/structure
 
-; intercept the image widget movement here 
-if (event.id eq widget_s.ECPatternbase) then begin
-  data.ECPxlocation = event.x
-  data.ECPylocation = event.y-25
-end else begin
+; prefs file
+  openw,1,data.prefname
+  nprefs = 9
+  data.nprefs = nprefs
+  printf,1,nprefs
+  printf,1,'ECCIroot::'+data.ECCIroot
+; pattern output format
+  printf,1,'ecpformat::'+string(ECPdata.ecpformat,format="(I1)")
+; grid on or off ?
+  printf,1,'ecpgrid::'+string(ECPdata.ecpgrid,format="(I1)")
 
-  WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
+; window locations
+  printf,1,'xlocation::'+string(data.xlocation,format="(F6.1)")
+  printf,1,'ylocation::'+string(data.ylocation,format="(F6.1)")
+  printf,1,'ECCIxlocation::'+string(data.ECCIxlocation,format="(F6.1)")
+  printf,1,'ECCIylocation::'+string(data.ECCIylocation,format="(F6.1)")
+  printf,1,'ECPxlocation::'+string(data.ECPxlocation,format="(F6.1)")
+  printf,1,'ECPylocation::'+string(data.ECPylocation,format="(F6.1)")
+  close,1
 
-; IF N_ELEMENTS(eventval) EQ 0 THEN RETURN,eventval
+end
 
-  CASE eventval OF
- 'GETCOORDINATES': begin
-	  if (event.press eq 1B) then begin    ; only act on clicks, not on releases
-	    data.cx = (event.x - data.xmid) / data.dgrid
-	    data.cy = (event.y - data.xmid) / data.dgrid
-	    WIDGET_CONTROL, SET_VALUE=string(data.cx,format="(F6.3)"), widget_s.cx
-	    WIDGET_CONTROL, SET_VALUE=string(data.cy,format="(F6.3)"), widget_s.cy
-	  end
-	endcase
-
- 'ECPTHICKLIST': begin
-	  data.thicksel = event.index
-
-; and display the selected ECPattern
-          ECPshow
-	endcase
-
- 'SAVEECP': begin
-; display a filesaving widget in the data folder with the file extension filled in
-		delist = ['jpeg','tiff','bmp']
-		de = delist[data.ecpformat]
-		filename = DIALOG_PICKFILE(/write,default_extension=de,path=data.pathname,title='enter filename without extension')
-	        im = tvrd()
-;	im = bytscl(rawdata[*,*,data.thicksel])
-		case de of
-		  'jpeg': write_jpeg,filename,im,quality=100
-		  'tiff': write_tiff,filename,reverse(im,2)
-		  'bmp': write_bmp,filename,im
-		 else: MESSAGE,'unknown file format option'
-		endcase
-	  endcase
-
- 'CLOSEECP': begin
-; kill the base widget
-		WIDGET_CONTROL, widget_s.ECPatternbase, /DESTROY
-	endcase
-
-  else: MESSAGE, "Event User Value Not Found"
-
-  endcase
-
-endelse
-
-end 
