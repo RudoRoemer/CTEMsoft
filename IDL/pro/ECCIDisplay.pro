@@ -138,15 +138,15 @@ data = {datastruct, $
 	thetac: float(0.0), $			; beam convergence
 	zoneaxis: lonarr(3), $			; zone axis indices 
 	datadims: lonarr(3), $			; dimensions of data array
-	mosaicdim: 0L, $			; dimension of ECCI mosaic
+	mosaicdim: 5L, $			; dimension of ECCI mosaic
 	mosaicscale: fix(0), $			; global or by-image intensity scaling for mosaic and ECCI display
 	avrad: float(0.0), $			; radius for ECCI pattern averaging
 	bragg: float(0.0), $			; Bragg angle for g_a
-	ktmax: '', $				; max beam tilt 
-	dkt: '', $				; beam tilt step size
-	dfl: '', $				; image pixel size
-	numref: '', $				; number of reflections
-	numk: '', $				; number of wave vectors
+	ktmax: float(0.0), $			; max beam tilt 
+	dkt: float(0.0), $			; beam tilt step size
+	dfl: float(0.0), $			; image pixel size
+	numref: long(0), $				; number of reflections
+	numk: long(0), $				; number of wave vectors
 	suffix: '', $				; filename suffix 
 	prefname: '~/.ECCIgui.prefs', $		; filename of preferences file (including path)
 	filesize: long64(0), $			; input file size in bytes
@@ -189,6 +189,9 @@ ECPdata = {ECPdatastruct, $
 	voltage: float(0.0), $			; microscope voltage
 	wavelength: float(0.0), $		; electron wavelength
 	thetac: float(0.0), $			; beam divergence angle [mrad]
+	ktmax: float(0.0), $			; beam divergence angle [units of ga]
+	delta: float(0.0), $			; scale factor
+	gperp: fltarr(3), $			; vector normal to ga
 	wavek: lonarr(3), $			; wave vector indices
 	fn: lonarr(3), $			; foil normal
 	numk: long(0), $			; number of wave vectors in ECP pattern
@@ -197,8 +200,8 @@ ECPdata = {ECPdatastruct, $
 	dgrid: float(0.0), $			; coordinate grid-spacing 
 	ecpgrid: long(0), $			; grid toggle
 	ecpformat: long(0), $			; file format selector
-	cx: long(0), $				; x-coordinate in pattern (in integer multiples)
-	cy: long(0), $				; y-coordinate in pattern
+	cx: float(0.0), $			; x-coordinate in pattern 
+	cy: float(0.0), $			; y-coordinate in pattern
 	kt: float(0.0), $			; auxiliary parameter for drawing grid lines
 	ga: lonarr(3), $			; horizontal g-vector in pattern
 	galen: float(0.0), $			; horizontal g-vector length
@@ -397,7 +400,7 @@ widget_s.logodrawID = drawID
 WIDGET_CONTROL, widget_s.progress, GET_VALUE=drawID
 widget_s.progressdrawID = drawID
 ;
-logo = read_image('../Resources/CTEMlogo.jpg')
+logo = read_image('../Resources/SEMlogo.jpg')
 wset,widget_s.logodrawID
 tvscl,logo,true=1
 

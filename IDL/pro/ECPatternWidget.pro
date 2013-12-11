@@ -94,7 +94,7 @@ WIDGET_CONTROL, set_droplist_select=data.thicksel, widget_s.ECPthicklist
 ;----------
 file1 = WIDGET_BASE(block1, $
 			/ROW, $
-                        XSIZE=400, $
+                        XSIZE=500, $
 			/ALIGN_LEFT)
 
 grid = ['off','on']
@@ -109,6 +109,23 @@ widget_s.ECPgridbgroup = CW_BGROUP(file1, $
                         EVENT_FUNC ='ECPevent', $
 			UVALUE='ECPGRID', $
 			SET_VALUE=data.ecpgrid)
+
+label4 = WIDGET_LABEL(file1, $
+			VALUE='Blur Radius', $
+			FONT=fontstrlarge, $
+			XSIZE=110, $
+			YSIZE=25, $
+			/ALIGN_LEFT)
+
+widget_s.blur=  WIDGET_TEXT(file1, $
+		VALUE=string(data.blur,FORMAT="(F6.2)"),$
+		XSIZE=10, $
+		YSIZE=1, $
+		/EDITABLE, $
+                EVENT_PRO='ECPatternWidget_event', $
+		UVALUE='BLUR', $
+		/ALIGN_LEFT)
+
 
 
 ;---------- save pattern

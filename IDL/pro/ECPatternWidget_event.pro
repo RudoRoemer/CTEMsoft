@@ -74,13 +74,20 @@ end else begin
           ECPshow
 	endcase
 
+ 'BLUR':  begin
+	    WIDGET_CONTROL, get_value=val,widget_s.blur
+	    data.blur= float(val[0])
+	    WIDGET_CONTROL, SET_VALUE=string(data.blur,FORMAT="(F6.3)"), widget_s.blur
+	    ECPshow
+	endcase
+ 
+
  'SAVEECP': begin
 ; display a filesaving widget in the data folder with the file extension filled in
 		delist = ['jpeg','tiff','bmp']
 		de = delist[data.ecpformat]
 		filename = DIALOG_PICKFILE(/write,default_extension=de,path=data.pathname,title='enter filename without extension')
 	        im = tvrd()
-;	im = bytscl(rawdata[*,*,data.thicksel])
 		case de of
 		  'jpeg': write_jpeg,filename,im,quality=100
 		  'tiff': write_tiff,filename,reverse(im,2)

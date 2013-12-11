@@ -115,6 +115,11 @@ common PointGroups, PGTHD, PGTWD, DG
   data.thetac = thetac
   WIDGET_CONTROL, SET_VALUE=string(data.thetac,FORMAT="(F7.3)"), widget_s.thetac
 
+; ktmax
+  ktmax = 0.0
+  readu,1,ktmax
+  data.ktmax = ktmax
+
 ; wave vector indices (3 longints)
   wavek = lonarr(3)
   readu,1,wavek
@@ -149,6 +154,14 @@ common PointGroups, PGTHD, PGTWD, DG
   readu,1,galen
   data.galen = galen
 
+; delta and gperp
+  delta = 0.0
+  readu,1,delta
+  data.delta = delta
+  gperp = fltarr(3)
+  readu,1,gperp
+  data.gperp = gperp
+
 ; various symmetry group numbers 
   symgroups = lonarr(8)
   readu,1,symgroups
@@ -174,8 +187,7 @@ common PointGroups, PGTHD, PGTWD, DG
 ; what is the grid spacing in units of pixels ?
   xmid = (data.datadims[0]-1)/2 
   bragg = 2.0*asin(data.galen * data.wavelength * 0.0005)
-  ktmax = data.thetac / bragg / 1000.0
-  data.dgrid = float(xmid)/ktmax
+  data.dgrid = float(xmid)/data.ktmax
   data.xmid = xmid
   data.kt = round(ktmax)+1
 

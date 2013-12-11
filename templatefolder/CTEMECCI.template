@@ -17,23 +17,33 @@ voltage = 30000.
 !------------
 ! crystal structure filename
 xtalname = 'undefined'
+! program mode  'array' or 'trace'
+progmode = 'array'
+! summation mode  'diag' or 'full'
+summode = 'diag'
 ! incident beam direction 
 k = 0,0,1
 ! kt step size
 dkt = 0.1
 ! beam convergence angle in terms of the ratio kt/|g_a| (i.e., kt_max)
 ktmax = 5.0
+!  laue center coordinates
+lauec = 0.0, 0.0
+!  second laue point for trace mode
+lauec2 = 0.0, 0.0
+! number of steps along trace
+nktstep = 20
 ! smallest d-spacing to take into account [nm]
-dmin = 0.04
+dmin = 0.1
 !------------
 ! various filenames
 !------------
-! output device (6=screen, >10 is fort.## file)
-output = 6
 ! name of the nml file with the foil parameters
 foilnmlfile = 'FOIL_rundata.nml'
 ! full filename of the output file, including complete path
 dataname = '/some/folder/on/your/drive/trialbinary.data'
+! full filename of the corresponding ECP file
+ECPname = '/some/folder/on/your/drive/ECPfile.data'
 !------------
 ! image parameters and scattering matrix step size
 !------------

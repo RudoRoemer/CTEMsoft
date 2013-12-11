@@ -309,7 +309,7 @@ namelist / foildata / foilF, foilq, foilalP, foilalS, foilalR, foilbeP, foilz0, 
 
 ! verify that the foil normal (in real space) and q (in reciprocal space) are orthogonal
 x = CalcDot(foilF,foilq,'c')
-if (abs(x).gt.0.001) then
+if (abs(x).gt.0.005) then
   mess = 'Foil normal must be orthogonal to q'; call Message("(A)")
   write (*,*) '[',foilF,'] . (', foilq, ') = ',x
   stop

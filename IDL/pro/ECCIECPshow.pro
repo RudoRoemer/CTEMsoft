@@ -50,6 +50,12 @@ common ECP_data_common, ECPdata
 common ECP_rawdata, ECPrawdata
 
 
+ignore = -1
+if (data.progmode eq 'trace') then begin
+  dkt = 1.0
+end else begin
+  dkt = data.dkt
+endelse
 ECPimage = bytarr(3,ECPdata.datadims[0],ECPdata.datadims[1])
 
 ; do all the drawing in the Z-buffer
@@ -67,13 +73,16 @@ tvscl,pattern[0:*,0:*]
 if keyword_set(point) then begin
   bx = ECPdata.cx
   by = ECPdata.cy 
-  plots,ECPdata.xmid + bx*ECPdata.dgrid*data.dkt, ECPdata.xmid + by*ECPdata.dgrid*data.dkt,psym=2,/dev,color=255
+  z = sqrt( (reform(kperp[0,*])-bx)^2 + (reform(kperp[1,*])-by)^2 )
+  q = where(z eq 0.0,cnt)
+  if (cnt ne 0) then ignore = q[0]
+  plots,ECPdata.xmid + bx*ECPdata.dgrid*dkt, ECPdata.xmid + by*ECPdata.dgrid*dkt,psym=2,/dev,color=255
   if (data.avrad ne 0.0) then begin
     rad = data.avrad*ECPdata.dgrid*data.dkt
     th = findgen(180)*2.0*!dtor
     ct = cos(th)
     st = sin(th)
-    plots,ECPdata.xmid +  bx*ECPdata.dgrid*data.dkt + rad*ct, ECPdata.xmid +  by*ECPdata.dgrid*data.dkt + rad*st,/dev,color=255
+    plots,ECPdata.xmid +  bx*ECPdata.dgrid*dkt + rad*ct, ECPdata.xmid +  by*ECPdata.dgrid*dkt + rad*st,/dev,color=255
   endif
 endif
 
@@ -96,10 +105,10 @@ end
 if keyword_set(point) then begin
   bx = ECPdata.cx
   by = ECPdata.cy 
-  plots,ECPdata.xmid + bx*ECPdata.dgrid*data.dkt, ECPdata.xmid + by*ECPdata.dgrid*data.dkt,psym=2,/dev,color=255
+  plots,ECPdata.xmid + bx*ECPdata.dgrid*dkt, ECPdata.xmid + by*ECPdata.dgrid*dkt,psym=2,/dev,color=255
 ; do we need to superimpose an averaging circle ?
   if (data.avrad ne 0.0) then begin
-    plots,ECPdata.xmid +  bx*ECPdata.dgrid*data.dkt + rad*ct, ECPdata.xmid +  by*ECPdata.dgrid*data.dkt + rad*st,/dev,color=255
+    plots,ECPdata.xmid +  bx*ECPdata.dgrid*dkt + rad*ct, ECPdata.xmid +  by*ECPdata.dgrid*dkt + rad*st,/dev,color=255
   endif
 endif
 
@@ -110,18 +119,8 @@ ECPimage[0,0:*,0:*] = channel[0:*,0:*]
 erase
 tvscl,pattern
 
-; draw all the points for which an ECCI image is available
-; for now we'll draw green crosses
-ignore = -1
-if keyword_set(point) then begin
-  ma = max(abs(kperp))
-  bx = ECPdata.cx
-  by = ECPdata.cy 
-  ignore = ECCILUT[bx+ma,by+ma]
-endif
-
 for i=0,data.numk-1 do begin
-    if (i ne ignore) then plots,ECPdata.xmid + kperp[0,i]*ECPdata.dgrid*data.dkt, ECPdata.xmid + kperp[1,i]*ECPdata.dgrid*data.dkt,psym=2,/dev,color=255
+    if (i ne ignore) then plots,ECPdata.xmid + kperp[0,i]*ECPdata.dgrid*dkt, ECPdata.xmid + kperp[1,i]*ECPdata.dgrid*dkt,psym=2,/dev,color=255
 endfor
 
 channel = tvrd()

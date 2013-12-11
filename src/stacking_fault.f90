@@ -59,7 +59,7 @@ use local
 type stackingfaulttype
   real(kind=sgl)     :: lpu(3),tpu(3),lpb(3),lpbc(3),tpb(3),plane(3),sep,id,jd, &
                                 lptop(3),lpbot(3),tptop(3),tpbot(3),thetan,a_if(3,3), &
-                                lpr(3),tpr(3)
+                                lpr(3),tpr(3), Rdisp(3)
   real(kind=sgl),allocatable     :: zpos(:,:)
 end type stackingfaulttype
 
@@ -446,9 +446,9 @@ if (dinfo.eq.1) write (*,*) 'fault plane pixels determined'
 !write (20) SF(inum)%zpos
 !close(unit=20,status='keep')
 
-! let's also make sure that the leading partial Burgers vector is translated to the 
+! let's also make sure that the SF displacement vector is translated to the 
 ! cartesian reference frame, so that it can be used directly by the CalcR routine
-SF(inum)%lpbc = matmul(cell%dsm,SF(inum)%lpb)
+SF(inum)%lpbc = matmul(cell%dsm,SF(inum)%Rdisp)
 
 ! that should do it for the stacking fault...  The rest 
 ! takes place in the CalcR routine.
@@ -492,9 +492,9 @@ character(fnlen),INTENT(IN)		:: sfname(maxdefects)
 real(kind=sgl),INTENT(IN)		:: DF_L
 
 integer(kind=irg) 			:: i,SFplane(3)
-real(kind=sgl)     			:: SFi,SFj,SFsep,SFlpu(3),SFlpb(3),SFtpu(3),SFtpb(3)
+real(kind=sgl)     			:: SFi,SFj,SFsep,SFlpu(3),SFlpb(3),SFtpu(3),SFtpb(3),SFR(3)
 
-namelist / SFdata / SFi, SFj, SFsep, SFplane, SFlpu, SFlpb, SFtpu, SFtpb
+namelist / SFdata / SFi, SFj, SFsep, SFplane, SFlpu, SFlpb, SFtpu, SFtpb, SFR
 
 ! allocate the necessary memory
 allocate(SF(numsf))
@@ -507,6 +507,7 @@ endif
 ! read the namelist files for all of the stacking faults
  do i=1,numsf
     mess = 'opening '//sfname(i); call Message("(/A)")
+    SFR = (/ 0.0, 0.0, 0.0 /)
     OPEN(UNIT=dataunit,FILE=sfname(i),DELIM='APOSTROPHE')
     READ(UNIT=dataunit,NML=SFdata)
     CLOSE(UNIT=dataunit)
@@ -519,6 +520,11 @@ endif
     SF(i)%lpb = SFlpb
     SF(i)%tpu = SFtpu
     SF(i)%tpb = SFtpb
+    if (sum(abs(SFR)).eq.0.0) then 
+      SF(i)%Rdisp = SFlpb
+    else
+      SF(i)%Rdisp = SFR
+    end if
 ! initialize the stacking fault variables and both partial dislocations
     call makestackingfault(i,DF_L,DF_npix,DF_npiy,DF_g,numdisl,dinfo)
     numdisl = numdisl + 2

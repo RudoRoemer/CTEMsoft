@@ -66,7 +66,11 @@ end else begin
  'MOSAICDIM': begin
 	    WIDGET_CONTROL, get_value=val,widget_s.mosaicdim
 	    data.mosaicdim = long(val[0])
-		ECCIprint,'ECCI mosaic dimension set to '+string(data.mosaicdim,FORMAT="(I6)")
+		if (data.progmode eq 'array') then begin
+		  ECCIprint,'ECCI mosaic dimension set to '+string(data.mosaicdim,FORMAT="(I6)")
+		end else begin
+		  ECCIprint,'# ECCI images per row set to '+string(data.mosaicdim,FORMAT="(I6)")
+		endelse
 	    WIDGET_CONTROL, SET_VALUE=string(data.mosaicdim,FORMAT="(I6)"), widget_s.mosaicdim
 	endcase
 
@@ -82,40 +86,72 @@ end else begin
 ; make a large image that contains the ECCI mosaic and then rescale it to the requested size and store it in a file
 ; we'll do this in the Z-buffer
 	  set_plot,'Z'
-	  ma = max(abs(kperp))
-	  dm = (2L*ma+1) * data.datadims[0]
-	  device,set_resolution=[dm,dm]
-	  erase
-	  eccimin = min(rawdata,max=eccimax)
+	  if (data.progmode eq 'array') then begin
+  	    kp = kperp
+ 	    kpsum = total(kperp,2)/float(data.numk)
+  	    for i=0,data.numk-1 do kp[0:1,i] -= kpsum[0:1]
+  	    ma = max(abs(kp))
+	    dm = (2L*ma+1) * data.datadims[0]
+	    device,set_resolution=[dm,dm]
+	    erase
+	    eccimin = min(rawdata,max=eccimax)
 ; write into the buffer
-	  for i=0,data.numk-1 do begin
-	    xp = (kperp[0,i]+ma)*data.datadims[0]
-   	    yp = (kperp[1,i]+ma)*data.datadims[1]
-   	    if (data.mosaicscale eq 0) then begin
-	      tv,bytscl(rawdata[*,*,i],min=eccimin,max=eccimax),xp,yp
- 	    end else begin
-	      tvscl,rawdata[*,*,i],xp,yp
-	    endelse
- 	  endfor
+	    for i=0,data.numk-1 do begin
+	      xp = (kp[0,i]+ma)*data.datadims[0]
+   	      yp = (kp[1,i]+ma)*data.datadims[1]
+   	      if (data.mosaicscale eq 0) then begin
+	        tv,bytscl(rawdata[*,*,i],min=eccimin,max=eccimax),xp,yp
+ 	      end else begin
+	        tvscl,rawdata[*,*,i],xp,yp
+	      endelse
+ 	    endfor
 
 ; get the buffer
-	  big = tvrd()
-	  set_plot,'X'
+  	    big = tvrd()
+	    set_plot,'X'
 
 ; scale it to the right size
-	  big = congrid(big,data.mosaicdim,data.mosaicdim)
+	    big = congrid(big,data.mosaicdim,data.mosaicdim)
+	  end else begin ; this is for a trace computation
+	    ncols = data.mosaicdim
+	    nrows = data.numk/ncols
+	    if ((data.numk mod ncols) ne 0) then nrows += 1
+	    dmx = ncols * data.datadims[0]
+	    dmy = nrows * data.datadims[0]
+	    device,set_resolution=[dmx,dmy]
+	    erase
+	    eccimin = min(rawdata,max=eccimax)
+; write into the buffer
+	    for i=0,data.numk-1 do begin
+	      c = i mod ncols
+	      r = nrows - 1 - (i / ncols)
+	      xp = c*data.datadims[0]
+   	      yp = r*data.datadims[1]
+   	      if (data.mosaicscale eq 0) then begin
+	        tv,bytscl(rawdata[*,*,i],min=eccimin,max=eccimax),xp,yp
+ 	      end else begin
+	        tvscl,rawdata[*,*,i],xp,yp
+	      endelse
+ 	    endfor
+
+; get the buffer
+  	    big = tvrd()
+	    set_plot,'X'
+	  endelse
 
 ; display a filesaving widget in the data folder with the file extension filled in
 	  delist = ['jpeg','tiff','bmp']
 	  de = delist[data.ecciformat]
 	  filename = DIALOG_PICKFILE(/write,default_extension=de,path=data.pathname,title='enter filename without extension')
-	  case de of
+	  if (filename ne '') then begin
+	   case de of
 	    'jpeg': write_jpeg,filename,big,quality=100
 	    'tiff': write_tiff,filename,reverse(big,2)
 	    'bmp': write_bmp,filename,big
-	   else: MESSAGE,'unknown file format option'
-  	  endcase
+	    else: MESSAGE,'unknown file format option'
+  	   endcase
 	    ECCIprint,'ECCI mosaic saved to file '+filename
+	  endif
 
 	endcase
 
@@ -127,14 +163,18 @@ end else begin
 	    px = event.x
 	    py = event.y
 
-	    ma = max(abs(kperp))
+  	    kp = kperp
+ 	    kpsum = total(kperp,2)/float(data.numk)
+  	    for i=0,data.numk-1 do kp[0:1,i] -= kpsum[0:1]
+	    kp = fix(kp)
+  	    ma = max(abs(kp))
+	    kp += ma
 	    miniECP = replicate(0.0,2*ma+1,2*ma+1)
-	    for i=-ma,ma do begin 
- 	      for j=-ma,ma do begin
-		if (ECCILUT[i+ma,j+ma] ne -1L) then miniECP[i+ma,j+ma] = rawdata[px,py,ECCILUT[i+ma,j+ma]]
-	      endfor
+
+	    for i=0,data.numk-1 do begin 
+		miniECP[kp[0,i],kp[1,i]] = rawdata[px,py,i]
 	    endfor
-	    
+ 
 ; and display the miniECP, scaled up as far as the window size will allow it...
 	    mm = 2*ma+1
 	    dm = round(float(data.datadims[0])/float(mm))
@@ -149,18 +189,24 @@ end else begin
 		delist = ['jpeg','tiff','bmp']
 		de = delist[data.ecciformat]
 		filename = DIALOG_PICKFILE(/write,default_extension=de,path=data.pathname,title='enter filename without extension')
-	        ma = max(abs(kperp))
-   	        if (data.mosaicscale eq 0) then begin
-	          im = bytscl(rawdata[*,*,ECCILUT[ECPdata.cx+ma,ECPdata.cy+ma]],min=eccimin,max=eccimax)
- 	        end else begin
-	          im = bytscl(rawdata[*,*,ECCILUT[ECPdata.cx+ma,ECPdata.cy+ma]])
-	        endelse
-		case de of
-		  'jpeg': write_jpeg,filename,im,quality=100
-		  'tiff': write_tiff,filename,reverse(im,2)
-		  'bmp': write_bmp,filename,im
-		 else: MESSAGE,'unknown file format option'
-		endcase
+	 	if (filename ne '') then begin
+	          ma = max(abs(kperp))
+  	          z = sqrt( (reform(kperp[0,*])-ECPdata.cx)^2 + (reform(kperp[1,*])-ECPdata.cy)^2 )
+  	          q = where(z eq min(z),cnt)
+	      	  eccimin = min(rawdata,max=eccimax)
+
+   	          if (data.mosaicscale eq 0) then begin
+	            im = bytscl(rawdata[*,*,q[0]],min=eccimin,max=eccimax)
+ 	          end else begin
+	            im = bytscl(rawdata[*,*,q[0]])
+	          endelse
+		  case de of
+		    'jpeg': write_jpeg,filename,im,quality=100
+		    'tiff': write_tiff,filename,reverse(im,2)
+		    'bmp': write_bmp,filename,im
+		   else: MESSAGE,'unknown file format option'
+		  endcase
+		endif
 	  endcase
 
  'SAVEAVECCI': begin
@@ -168,14 +214,16 @@ end else begin
 		delist = ['jpeg','tiff','bmp']
 		de = delist[data.ecciformat]
 		filename = DIALOG_PICKFILE(/write,default_extension=de,path=data.pathname,title='enter filename without extension')
-		wset,widget_s.ECCIavdrawID
-		im = tvrd()
-		case de of
-		  'jpeg': write_jpeg,filename,im,quality=100
-		  'tiff': write_tiff,filename,reverse(im,2)
-		  'bmp': write_bmp,filename,im
-		 else: MESSAGE,'unknown file format option'
-		endcase
+	 	if (filename ne '') then begin
+		  wset,widget_s.ECCIavdrawID
+		  im = tvrd()
+		  case de of
+		    'jpeg': write_jpeg,filename,im,quality=100
+		    'tiff': write_tiff,filename,reverse(im,2)
+		    'bmp': write_bmp,filename,im
+		   else: MESSAGE,'unknown file format option'
+		  endcase
+		endif
 	  endcase
 
  'CLOSEECCI': begin

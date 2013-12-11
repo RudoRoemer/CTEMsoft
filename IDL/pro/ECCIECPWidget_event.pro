@@ -50,6 +50,12 @@ common ECP_rawdata, ECPrawdata
 common ECCI_rawdata, indices, offsets, kperp, rawdata, ECCILUT
 
 
+if (data.progmode eq 'trace') then begin
+  dkt = 1.0
+end else begin
+  dkt = data.dkt
+endelse
+
 if (data.eventverbose eq 1) then help,event,/structure
 
 ; intercept the image widget movement here 
@@ -66,11 +72,20 @@ end else begin
  'GETCOORDINATES': begin
 	  if (event.press eq 1B) then begin    ; only act on clicks, not on releases
 ; we need to put these in units of dkt
-	    ECPdata.cx = round( (event.x - ECPdata.xmid) / ECPdata.dgrid / data.dkt )
-	    ECPdata.cy = round( (event.y - ECPdata.xmid) / ECPdata.dgrid / data.dkt )
+;    if (data.progmode ne 'array') then begin
+	      bx = (event.x - ECPdata.xmid) / ECPdata.dgrid / dkt 
+	      by = (event.y - ECPdata.xmid) / ECPdata.dgrid / dkt 
+  	      z = sqrt( (reform(kperp[0,*])-bx)^2 + (reform(kperp[1,*])-by)^2 )
+  	      q = where(z eq min(z),cnt)
+	      ECPdata.cx = kperp[0,q[0]]
+	      ECPdata.cy = kperp[1,q[0]]
+;    end else begin
+;      ECPdata.cx = float(round( (event.x - ECPdata.xmid) / ECPdata.dgrid / dkt ))
+;      ECPdata.cy = float(round( (event.y - ECPdata.xmid) / ECPdata.dgrid / dkt ))
+;    endelse
 
-	    WIDGET_CONTROL, SET_VALUE=string(float(ECPdata.cx)*data.dkt,format="(F6.3)"), widget_s.cx
-	    WIDGET_CONTROL, SET_VALUE=string(float(ECPdata.cy)*data.dkt,format="(F6.3)"), widget_s.cy
+	    WIDGET_CONTROL, SET_VALUE=string(float(ECPdata.cx)*dkt,format="(F6.3)"), widget_s.cx
+	    WIDGET_CONTROL, SET_VALUE=string(float(ECPdata.cy)*dkt,format="(F6.3)"), widget_s.cy
 	    
 ; we indicate the selected point by turning it blue
             ECCIECPshow,/point
@@ -81,47 +96,95 @@ end else begin
 ; and display the proper ECCI image
 	    ma = max(abs(kperp))
 	    wset,widget_s.ECCIdrawID
-	    slice = reform(rawdata[*,*,ECCILUT[ECPdata.cx+ma,ECPdata.cy+ma]])
-	    eccimin = min(rawdata,max=eccimax)
-	    if (data.mosaicscale eq 0) then begin
-	      im = bytscl(slice,min=eccimin,max=eccimax)
- 	    end else begin
-	      im = bytscl(slice)
-	    endelse
-	    tv,im
-            mi = min(slice,max=ma)
-	    WIDGET_CONTROL, SET_VALUE=string(mi,format="(F6.1)"), widget_s.ECCIdrawmin
-	    WIDGET_CONTROL, SET_VALUE=string(ma,format="(F6.1)"), widget_s.ECCIdrawmax
+	    case data.progmode of
+		'trace': begin
+	      	    slice = reform(rawdata[*,*,q[0]])
+	      	    eccimin = min(rawdata,max=eccimax)
+	      	    if (data.mosaicscale eq 0) then begin
+	              im = bytscl(slice,min=eccimin,max=eccimax)
+ 	            end else begin
+	              im = bytscl(slice)
+	            endelse
+	            tv,im
+                    mi = min(slice,max=ma)
+	            WIDGET_CONTROL, SET_VALUE=string(mi,format="(F6.1)"), widget_s.ECCIdrawmin
+	            WIDGET_CONTROL, SET_VALUE=string(ma,format="(F6.1)"), widget_s.ECCIdrawmax
+
+
+; then we also need to display the averaged ECCI image
+	            wset,widget_s.ECCIavdrawID
+	            erase
+	            WIDGET_CONTROL, SET_VALUE=string(0.0,format="(F6.1)"), widget_s.ECCIavdrawmin
+	            WIDGET_CONTROL, SET_VALUE=string(0.0,format="(F6.1)"), widget_s.ECCIavdrawmax
+	            if (data.avrad ne 0.0) then begin
+	              ECCIsum = fltarr(data.datadims[0],data.datadims[1])
+	              npat = 0
+	              for i=0,data.numk-1 do if (z[i] le data.avrad) then begin
+		        ECCISUM += reform(rawdata[*,*,i])
+	                npat += 1
+	              endif
+		        ECCIprint,'Number of patterns averaged : '+string(npat,format="(I4)")
+	              if (npat ne 0) then begin
+		        ECCIsum /= float(npat)
+	                if (data.mosaicscale eq 0) then begin
+	                  im = bytscl(ECCIsum,min=eccimin,max=eccimax)
+ 	                end else begin
+	                  im = bytscl(ECCIsum)
+	                endelse
+	                tv,im
+                        mi = min(ECCIsum,max=ma)
+	                WIDGET_CONTROL, SET_VALUE=string(mi,format="(F6.1)"), widget_s.ECCIavdrawmin
+	                WIDGET_CONTROL, SET_VALUE=string(ma,format="(F6.1)"), widget_s.ECCIavdrawmax
+	              endif
+	            endif
+		endcase
+
+		'array': begin
+	      	      slice = reform(rawdata[*,*,q[0]])
+	      	      eccimin = min(rawdata,max=eccimax)
+	      	      if (data.mosaicscale eq 0) then begin
+	        	    im = bytscl(slice,min=eccimin,max=eccimax)
+ 	      	      end else begin
+	        	    im = bytscl(slice)
+	      	      endelse
+	      	      tv,im
+              	      mi = min(slice,max=ma)
+	      	      WIDGET_CONTROL, SET_VALUE=string(mi,format="(F6.1)"), widget_s.ECCIdrawmin
+	      	      WIDGET_CONTROL, SET_VALUE=string(ma,format="(F6.1)"), widget_s.ECCIdrawmax
 
 ; then we also need to display the averaged ECCI image
 ; first determine all the points that are inside the circle and add the corresponding ECCI images 
 ; together
-	    wset,widget_s.ECCIavdrawID
-	    erase
-	    WIDGET_CONTROL, SET_VALUE=string(0.0,format="(F6.1)"), widget_s.ECCIavdrawmin
-	    WIDGET_CONTROL, SET_VALUE=string(0.0,format="(F6.1)"), widget_s.ECCIavdrawmax
-	    if (data.avrad ne 0.0) then begin
-	      dd = sqrt( (reform(kperp[0,*])-ECPdata.cx)^2 + (reform(kperp[1,*])-ECPdata.cy)^2 )
-	      ECCIsum = fltarr(data.datadims[0],data.datadims[1])
-	      npat = 0
-	      for i=0,data.numk-1 do if (dd[i] le data.avrad) then begin
-		ECCISUM += reform(rawdata[*,*,i])
-	        npat += 1
-	      endif
-		ECCIprint,'Number of patterns averaged : '+string(npat,format="(I4)")
-	      if (npat ne 0) then begin
-		ECCIsum /= float(npat)
-	        if (data.mosaicscale eq 0) then begin
-	          im = bytscl(ECCIsum,min=eccimin,max=eccimax)
- 	        end else begin
-	          im = bytscl(ECCIsum)
-	        endelse
-	        tv,im
-                mi = min(ECCIsum,max=ma)
-	        WIDGET_CONTROL, SET_VALUE=string(mi,format="(F6.1)"), widget_s.ECCIavdrawmin
-	        WIDGET_CONTROL, SET_VALUE=string(ma,format="(F6.1)"), widget_s.ECCIavdrawmax
-	      endif
-	    endif
+	      	      wset,widget_s.ECCIavdrawID
+	      	      erase
+	      	      WIDGET_CONTROL, SET_VALUE=string(0.0,format="(F6.1)"), widget_s.ECCIavdrawmin
+	      	      WIDGET_CONTROL, SET_VALUE=string(0.0,format="(F6.1)"), widget_s.ECCIavdrawmax
+	      	      if (data.avrad ne 0.0) then begin
+	        	dd = sqrt( (reform(kperp[0,*])-ECPdata.cx)^2 + (reform(kperp[1,*])-ECPdata.cy)^2 )
+	        	ECCIsum = fltarr(data.datadims[0],data.datadims[1])
+	        	npat = 0
+	        	for i=0,data.numk-1 do if (dd[i] le data.avrad) then begin
+		  	  ECCISUM += reform(rawdata[*,*,i])
+	          	  npat += 1
+	        	endif
+		  	ECCIprint,'Number of patterns averaged : '+string(npat,format="(I4)")
+	        	if (npat ne 0) then begin
+		  	  ECCIsum /= float(npat)
+	          	  if (data.mosaicscale eq 0) then begin
+	            	    im = bytscl(ECCIsum,min=eccimin,max=eccimax)
+ 	          	  end else begin
+	            	    im = bytscl(ECCIsum)
+	          	  endelse
+	          	  tv,im
+                  	  mi = min(ECCIsum,max=ma)
+	          	  WIDGET_CONTROL, SET_VALUE=string(mi,format="(F6.1)"), widget_s.ECCIavdrawmin
+	          	  WIDGET_CONTROL, SET_VALUE=string(ma,format="(F6.1)"), widget_s.ECCIavdrawmax
+	        	endif
+	      	      endif
+		endcase
+
+		else: MESSAGE,"Unknown program mode "+data.progmode
+	     endcase
 	  end
 	endcase
 

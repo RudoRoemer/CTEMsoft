@@ -106,7 +106,8 @@ character(fnlen),INTENT(IN)	       :: nmlfile
 
 character(fnlen)         :: xtalname, outname
 character(3)             :: method
-real(kind=sgl)           :: voltage, dmin, convergence, startthick, thickinc, thetac, galen, bragg, klaue(2), io_real(6)
+real(kind=sgl)           :: voltage, dmin, convergence, startthick, thickinc, thetac, galen, bragg, klaue(2), io_real(6), &
+                            kstar(3), gperp(3), delta
 integer(kind=irg)        :: numthick, nt, npix, skip, dgn, pgnum, io_int(6), maxHOLZ, ik, k(3), numk, ga(3), gb(3), &
                             fn(3), nn, npx, npy, isym, numset, it, ijmax, jp
 
@@ -375,6 +376,8 @@ end if
   write (dataunit) voltage
 ! convergence angle [mrad]
   write (dataunit) thetac
+! max kt value in units of ga
+  write (dataunit) ktmax
 ! the zone axis indices
   write (dataunit) k
 ! the foil normal indices
@@ -387,6 +390,13 @@ end if
   write (dataunit) ga  
 ! length horizontal reciprocal lattice vector (need for proper Laue center coordinate scaling)
   write (dataunit) galen
+! we need to store the gperp vectors
+  delta = 2.0*ktmax*galen/float(2*npix+1)        ! grid step size in nm-1 
+  call TransSpace(float(k),kstar,'d','r')        ! transform incident direction to reciprocal space
+  call CalcCross(float(ga),kstar,gperp,'r','r',0)! compute g_perp = ga x k
+  call NormVec(gperp,'r')                        ! normalize g_perp
+  write (dataunit) delta
+  write (dataunit) gperp
 ! eight integers with the labels of various symmetry groups
   write (dataunit) (/ pgnum, PGLaue(pgnum), dgn, PDG(dgn), BFPG(dgn), WPPG(dgn), DFGN(dgn), DFSP(dgn) /)
 ! thickness data

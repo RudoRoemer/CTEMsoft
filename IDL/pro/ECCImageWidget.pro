@@ -92,9 +92,17 @@ widget_s.ECCIcy = Core_WText(file3, ',',fontstr, 12, 25, 10, 1, string(ECPdata.c
 
 ;------------  coordinate display
 file1 = WIDGET_BASE(block1, /ROW, /ALIGN_LEFT)
-ma = max(abs(kperp))
-data.mosaicdim = (2L*ma+1L) * data.datadims[0]
-widget_s.mosaicdim= Core_WTextE(file1, 'Dimension of ECCI Mosaic',fontstrlarge, 230, 25, 10, 1, string(data.mosaicdim,FORMAT="(I6)"),'MOSAICDIM','ECCImageWidget_event')
+if (data.progmode eq 'array') then begin
+  kpsum = total(kperp,2)/float(data.numk)
+  kp = kperp
+  for i=0,data.numk-1 do kp[0:1,i] -= kpsum[0:1]
+  ma = max(abs(kp))
+  data.mosaicdim = (2L*ma+1L) * data.datadims[0]
+  widget_s.mosaicdim= Core_WTextE(file1, 'Dimension of ECCI Mosaic',fontstrlarge, 230, 25, 10, 1, string(data.mosaicdim,FORMAT="(I6)"),'MOSAICDIM','ECCImageWidget_event')
+end else begin
+  data.mosaicdim = 5
+  widget_s.mosaicdim= Core_WTextE(file1, 'Number of images in row ',fontstrlarge, 230, 25, 10, 1, string(data.mosaicdim,FORMAT="(I6)"),'MOSAICDIM','ECCImageWidget_event')
+endelse
 
 DoMosaic = WIDGET_BUTTON(file1, $
 			VALUE='Mosaic', $

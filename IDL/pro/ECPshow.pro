@@ -47,7 +47,25 @@ common ECP_rawdata, rawdata
 
 wset,widget_s.ECPdrawID
 
-tvscl,rawdata[*,*,data.thicksel]
+if (data.blur eq 0.0) then begin
+  tvscl,rawdata[*,*,data.thicksel]
+end else begin
+  dim = round(6.0*data.blur)
+; make sure filter has odd size and is at least 3 pixels
+  if (dim mod 2 eq 0) then dim=dim+1
+  if (dim lt 3) then dim=3
+  d2 = (dim-1)/2
+
+; some useful auxiliary variables
+  kernel = fltarr(dim,dim)
+  line = findgen(dim)-float(dim/2)
+  x = line#replicate(1.0,dim)
+  y = rotate(x,3)
+  r = x^2+y^2
+  kernel = exp(-r*0.5/data.blur^2)/(2.0*!pi*data.blur^2)
+  newimage = convol(reform(rawdata[*,*,data.thicksel]),kernel,/edge_truncate)
+  tvscl,newimage
+endelse
 
 ; do we need to draw a grid ?
 if (data.ecpgrid eq 1) then begin

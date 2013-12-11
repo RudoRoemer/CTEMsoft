@@ -127,14 +127,18 @@ data.bragg= bragg
 ; max beam tilt angle in units of bragg
 ktmax = 0.0
 readu,1,ktmax
-data.ktmax = ktmax
-  ECCIprint,'Max beam tilt angle in units of |g_a| = '+string(data.ktmax,FORMAT="(F6.3)")
-WIDGET_CONTROL, SET_VALUE=string(data.ktmax,format="(F6.3)"), widget_s.ktmax
+data.ktmax = float(ktmax)
+if (data.progmode eq 'array') then begin
+    ECCIprint,'Max beam tilt angle in units of |g_a| = '+string(data.ktmax,FORMAT="(F6.3)")
+  WIDGET_CONTROL, SET_VALUE=string(data.ktmax,format="(F6.3)"), widget_s.ktmax
+end else begin
+  WIDGET_CONTROL, SET_VALUE='-------', widget_s.ktmax
+endelse
 
 ; beam tilt step size
 dkt = 0.0
 readu,1,dkt
-data.dkt = dkt
+data.dkt = float(dkt)
   ECCIprint,'Beam tilt step size = '+string(data.dkt,FORMAT="(F6.3)")
 WIDGET_CONTROL, SET_VALUE=string(data.dkt,format="(F6.3)"), widget_s.dkt
 
@@ -156,41 +160,41 @@ WIDGET_CONTROL, SET_VALUE=string(data.thetac,FORMAT="(F8.3)"), widget_s.thetac
 ; pixel size 
 dfl = 1.0
 readu,1,dfl
-data.dfl= dfl
+data.dfl= float(dfl)
   ECCIprint,'Pixel Size [nm] = '+string(data.dfl,FORMAT="(F6.3)")
 
 ; reflections
 numref = 0L
 readu,1,numref
-data.numref = numref
+data.numref = fix(numref)
   ECCIprint,'Number of reflections = '+string(data.numref,FORMAT="(I4)")
 WIDGET_CONTROL, SET_VALUE=string(data.numref,FORMAT="(I4)"), widget_s.numref
-hkl = lonarr(3)
-qx = 0.0
-qy = 0.0
-indices = lonarr(3,data.numref)
-offsets = fltarr(2,data.numref)
-for i=0,data.numref-1 do begin
-  readu,1,hkl
-  readu,1,qx,qy
-  indices[0:2,i] = hkl
-  offsets[0:1,i] = [qx,qy] 
-endfor
+;hkl = lonarr(3)
+;qx = 0.0
+;qy = 0.0
+;indices = lonarr(3,data.numref)
+;offsets = fltarr(2,data.numref)
+;for i=0,data.numref-1 do begin
+;  readu,1,hkl
+;  readu,1,qx,qy
+;  indices[0:2,i] = hkl
+;  offsets[0:1,i] = [qx,qy] 
+;endfor
 
 ; wavevectors
 numk = 0L
 readu,1,numk
-data.numk = numk
+data.numk = fix(numk)
   ECCIprint,'Number of wave vectors = '+string(data.numk,FORMAT="(I6)"),/blank
 WIDGET_CONTROL, SET_VALUE=string(data.numk,FORMAT="(I6)"), widget_s.numk
-ki = 0L
-kj = 0L
+ki = 0.0
+kj = 0.0
 kperp=fltarr(2,data.numk)
 for i=0,data.numk-1 do begin
   readu,1,ki,kj
   kperp[0:1,i] = [ki,kj]
+;print,i,ki,kj
 endfor
-
 
 ; read the dimensions of the images 
 datadims = lonarr(2)
@@ -219,11 +223,6 @@ ECCIprogressbar,100.0
 close,1
   ECCIprint,'Completed reading of ECCI data file',/blank
 
-; we need to create a 2D ECCI look up table that links the beam directions 
-; to the corresponding images
-ma = max(abs(kperp))
-ECCILUT = replicate(-1L,2*ma+1,2*ma+1)
-for i=0L,data.numk-1L do ECCILUT[kperp[0,i]+ma,kperp[1,i]+ma] = i
 
 ;--------------------------------------------------------------------------
 ;--------------------------------------------------------------------------
@@ -308,6 +307,12 @@ for i=0L,data.numk-1L do ECCILUT[kperp[0,i]+ma,kperp[1,i]+ma] = i
   thetac = 0.0
   readu,1,thetac
   ECPdata.thetac = thetac
+  WIDGET_CONTROL, SET_VALUE=string(ECPdata.thetac,FORMAT="(F8.3)"), widget_s.thetac
+
+; ktmax
+  ktmax = 0.0
+  readu,1,ktmax
+  ECPdata.ktmax = ktmax
 
   ECPdata.padding = 0
   if (data.thetac gt ECPdata.thetac) then begin
@@ -325,9 +330,9 @@ for i=0L,data.numk-1L do ECCILUT[kperp[0,i]+ma,kperp[1,i]+ma] = i
   if (total(abs(data.zoneaxis-ECPdata.wavek)) ne 0) then begin
     ECCIprint,'  ==> Fatal error: ECP and ECCI files have different zone axes'
     ECCIprint,'  aborting file load '
-    dummy = 0
-    close,1
-    goto,skip
+;   dummy = 0
+;   close,1
+;   goto,skip
   end 
 
 ; foil normal indices (3 longints)
@@ -355,6 +360,31 @@ for i=0L,data.numk-1L do ECCILUT[kperp[0,i]+ma,kperp[1,i]+ma] = i
   readu,1,galen
   ECPdata.galen = galen
 
+; delta and gperp
+  delta = 0.0
+  readu,1,delta
+  ECPdata.delta = delta
+  gperp = fltarr(3)
+  readu,1,gperp
+  ECPdata.gperp = gperp
+
+; convert the coordinates of the beams to the ECP reference frame
+  m = [[ga[0]/galen,-gperp[0]],[ga[1]/galen,-gperp[1]]]
+  ivm = invert(m)
+  if (data.progmode eq 'array') then begin
+    delta = data.dkt*galen
+  end else begin
+    delta = galen
+  endelse
+;print,'delta = ',delta
+  for i=0,data.numk-1 do begin
+    kk = reform(kperp[*,i])/delta
+    ij = ivm ## kk
+    kperp[0:1,i] = ij[0:1]
+;print,i,transpose(ij)
+  endfor
+  
+
 ; various symmetry group numbers 
   symgroups = lonarr(8)
   readu,1,symgroups
@@ -377,10 +407,10 @@ for i=0L,data.numk-1L do ECCILUT[kperp[0,i]+ma,kperp[1,i]+ma] = i
 ; what is the grid spacing in units of pixels ?
   xmid = (ECPdata.datadims[0]-1)/2 
   bragg = 2.0*asin(ECPdata.galen * ECPdata.wavelength * 0.0005)
-  ktmax = ECPdata.thetac / bragg / 1000.0
-  ECPdata.dgrid = float(xmid)/ktmax
+  ECPdata.dgrid = float(xmid)/ECPdata.ktmax
   ECPdata.xmid = xmid
   ECPdata.kt = round(ktmax)+1
+
 
   ECCIprint,'Completed reading ECP data file',/blank
 

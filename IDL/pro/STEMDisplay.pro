@@ -846,13 +846,13 @@ sth = sin(th)
 STEMprint,'Zone Axis STEM Display Program [M. De Graef, 2013]',/blank
 
 ; ask the user to select an input geometry file
-STEMgetfilename
+;STEMgetfilename
 
 ; read the geometry file and populate all the relevant fields
-STEMreadgeometry
+;STEMreadgeometry
 
 ; and draw the detector pattern for the current parameters
-STEMdetectorsetup
+;STEMdetectorsetup
 
 
 end

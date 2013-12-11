@@ -752,6 +752,8 @@ end if
 ktail%kt = kt                    		! store tangential component of k
 ktlen = CalcLength(kt,'r')**2      		! squared length of tangential component
 
+! write (*,*) i,j,kt,ktlen
+
 kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar 	! complete wave vector
 ktail%k = kr                     		! store in pointer list
 ktail%kn = CalcDot(ktail%k,kstar,'r')    	! normal component of k

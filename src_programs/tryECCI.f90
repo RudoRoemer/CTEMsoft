@@ -43,6 +43,7 @@
 !> @date  06/19/13 MDG  3.0 conversion to new libraries 
 !> @date  10/28/13 MDG  3.1 added Interpret_Program_Arguments line
 !> @date  12/03/13 MDG  4.0 new start 
+!> @date  12/08/13 MDG  4.1 added trace (line scan) mode
 !--------------------------------------------------------------------------
 program tryECCI
 
@@ -82,6 +83,7 @@ end program tryECCI
 !> @date 05/14/13  MDG 2.1 replaced IO by namelist file
 !> @date 11/13/13  MDG 2.2 implementation of Pade approximation for scattering matrix computation
 !> @date 12/04/13  MDG 3.0 new implementation of the thickness integration, nmore along the lines of CTEMECP 
+!> @date 12/07/13  MDG 3.1 added line scan mode (called "trace")
 !--------------------------------------------------------------------------
 subroutine ComputeECCI(nmlfile)
 
@@ -117,13 +119,13 @@ integer(kind=irg)    		        :: nn,i,j,k,npix,npiy,ii,jj,numvoids,numdisl, num
 					numYdisl,numsf,numinc,dinfo,t_interval,nat(100),kkk(3), &
 					DF_nums_new,DF_npix_new,DF_npiy_new, numstart,numstop, isg, TID, &
 					NTHR, isym, ir, ga(3), gb(3),kk(3),ic,g,numd,ix,iy, &
-					numk,ixp,iyp,SETNTHR, io_int(6), skip, gg(3), iSTEM
+					numk,ixp,iyp,SETNTHR, io_int(6), skip, gg(3), iSTEM, nktstep
 !                                  OMP_GET_THREAD_NUM,OMP_GET_NUM_THREADS
 integer(kind=irg),parameter 		:: numdd=180
 real(kind=sgl)         		:: glen,thick, X(2), dmin, dkt, bragg, thetac, &
-					lauec(2),gdotR,xgp,DF_gf(3),Znsq,tpi, &
+					lauec(2),lauec2(2),gdotR,xgp,DF_gf(3),Znsq,tpi, &
 					DM(2,2), DD, ll(3),lpg(3),gplen, c(3), gx(3), gy(3), &
-					gac(3), gbc(3),zmax, ktmax, io_real(2), qx, qy
+					gac(3), gbc(3),zmax, ktmax, io_real(2), qx, qy, galen
 real(kind=dbl)                        :: ctmp(192,3),arg,arg2
 character(fnlen)      			:: dataname,sgname,voidname,dislname(3*maxdefects),sfname(maxdefects),ECPname, &
 					incname,dispfile,xtalname,foilnmlfile, STEMnmlfile,dislYname(3*maxdefects)
@@ -141,8 +143,8 @@ complex(kind=dbl),allocatable         :: Lgh(:,:),Sgh(:,:)
 
 namelist / ECCIlist / DF_L, DF_npix, DF_npiy, DF_slice, dmin, sgname, numvoids, incname, stdout, &
                                 voidname, numdisl, dislname, numYdisl, dislYname, numsf, sfname, dinfo, &
-				 t_interval,progmode, dispfile, ktmax, dkt, ECPname, summode, &
-				 dispmode,SETNTHR,xtalname,voltage,kk, lauec, &
+				 t_interval,progmode, dispfile, ktmax, dkt, ECPname, summode, lauec, lauec2, &
+				 dispmode,SETNTHR,xtalname,voltage,kk, lauec, nktstep, &
 				 dataname, foilnmlfile, STEMnmlfile
 
 
@@ -155,11 +157,13 @@ tpi = 2.0*sngl(cPi)
  xtalname = 'undefined'		! initial value; MUST be present in nml file for program to execute
  voltage = 200000.0			! accelerating voltage
  kk = (/ 0, 0, 1 /)			! incident wave vector in crystal components (omitting wave length)
- lauec = (/ 0.0,0.0 /)			! Laue center coordinates (used for single image mode)
+ lauec = (/ 0.0,0.0 /)			! Laue center coordinates (used for single image mode, start point in trace modea)
+ lauec2 = (/ 0.0,0.0 /)		! Laue center 2 coordinates (used for trace mode, end point)
+ nktstep = 10                         ! number of steps in line scan mode
  dmin = 0.04			        ! smallest d-spacing to include in dynamical matrix [nm]
  ktmax = 5.0
  dkt = 0.5
- progmode = 'array'                   ! 'array' for array of images, 'image' for single image
+ progmode = 'array'                   ! 'array' for array of images, 'trace' for line scan
  summode = 'full'                     ! 'full' for complete summation, 'diag' for diagonal only
 
 ! CTEM or STEM ?
@@ -262,13 +266,21 @@ end if
   else
     thetac = (ktmax * 2.0 * bragg) * 0.5
   end if
-  if (progmode.eq.'array') then  ! here we figure out how many beams there are
-    call Calckvectors(dble(kk),dble(ga),dble(ktmax),nkt,nkt,numk,isym,ijmax,'Conical')   
-  else  ! single image mode, potentially with a narrow range of incident beam directions
+! here we figure out how many beams there are
+  if (progmode.eq.'array') then 
+!    call Calckvectors(dble(kk),dble(ga),dble(ktmax),nkt,nkt,numk,isym,ijmax,'Conical')   
     call Calckvectorcone(kk,ga,lauec(1),lauec(2),ktmax,nkt,numk)
     io_int(1)=numk 
     call WriteValue('Total number of independent incident beam directions inside cone = ', io_int, 1,"(I8)")
   end if
+  if (progmode.eq.'trace') then  
+! single image mode, potentially with a narrow range of incident beam directions
+    call Calckvectortrace(kk,ga,lauec(1),lauec(2),lauec2(1),lauec2(2),1.0,nktstep,numk)
+    io_int(1)=numk 
+    call WriteValue('Total number of independent incident beam directions along trace = ', io_int, 1,"(I8)")
+  end if
+
+! and determine the overall reflection list
   call Compute_ReflectionList(dmin,kk,ga,gb,'ALL',.FALSE.,0,thetac)
 
 ! for now, we do not consider weak beams at all
@@ -604,7 +616,12 @@ end do
   write (dataunit) xtalname					! crystal structure file names	
   write (dataunit) kk						! incident wave vector
   write (dataunit) CalcDiffAngle(ga(1),ga(2),ga(3))*0.5      ! Bragg angle for the first reflection (whether allowed or not)
-  write (dataunit) ktmax		                       ! max beam convergence in units of |g_a|
+  if (progmode.eq.'array') then 
+    write (dataunit) ktmax		                       ! max beam convergence in units of |g_a|
+  else
+    write (dataunit) 1.0		                       ! max beam convergence in units of |g_a|
+  end if
+
   write (dataunit) dkt				               ! angular step size along disk radius
   write (dataunit) voltage				        ! microscope voltage
   write (dataunit) thetac					! beam divergence
@@ -620,28 +637,17 @@ end do
   call CalcCross(c,gx,gy,'c','c',0)
   
   write (dataunit) nn   ! number of reflections
-  rltmpa => reflist%next
-  do ic = 1,nn
-    gg=rltmpa%hkl
-    call TransSpace(float(gg),c,'r','c')
-    qx= CalcDot(c,gx,'c')
-    qy= CalcDot(c,gy,'c')
-    write (dataunit) rltmpa%hkl(1:3)
-    write (dataunit) qx,qy
-    rltmpa => rltmpa%next   ! move to next entry
-  end do
 
 ! number of wave vectors, tangential components, etc...
   write (dataunit) numk   ! number of wave vectors
   ktmp => khead
   do ic=1,numk
-    write (dataunit) ktmp%i, ktmp%j
+    write (dataunit) sngl(ktmp%kt(1)),sngl(ktmp%kt(2))
     ktmp => ktmp%next
   end do
-
+  
   write (dataunit) DF_npix,DF_npiy
   
-
   allocate(Sarray(nn,nn,0:numd,0:numd))
 
 ! initialize the timer
@@ -799,6 +805,7 @@ end do donpix
   
   ECCIimages = ECCIimages / float(DF_nums) / float(sum(nat))
   call Time_remaining(isg-numstart+1,numstop-numstart+1)
+
   write (dataunit) ECCIimages
 
 200 end do mainloop
@@ -853,16 +860,21 @@ integer(kind=irg),INTENT(IN)        :: ktstep
 integer(kind=irg),INTENT(OUT)       :: numk
 
 integer                             :: istat,imin,imax,jmin,jmax,ijmax,i,j,ic,jc,ki
-real                                :: kr(3),glen,delta,kstar(3),kt(3),gan(3),gperp(3),ktlen
+real                                :: kr(3),glen,delta,kstar(3),kt(3),gan(3),gperp(3),ktlen, dkt
 
 ! compute geometrical factors 
  glen = CalcLength(float(ga),'r')              ! length of ga
  gan = ga/glen                                 ! normalized ga
- delta = 2.0*ktrad*glen/float(2*ktstep+1)      ! grid step size in nm-1 
+! delta = 2.0*ktrad*glen/float(2*ktstep+1)     ! grid step size in nm-1 
+ delta = ktrad*glen/float(ktstep)              ! grid step size in nm-1 
+ dkt = ktrad/float(ktstep)
+!write (*,*) ktrad, ktstep, glen, delta
  call TransSpace(float(k),kstar,'d','r')       ! transform incident direction to reciprocal space
  call CalcCross(float(ga),kstar,gperp,'r','r',0)! compute g_perp = ga x k
  call NormVec(gperp,'r')                       ! normalize g_perp
  call NormVec(kstar,'r')                       ! normalize reciprocal beam vector
+
+!  kt = -(klaue(1)+float(i)*delta)*gan - (klaue(2)+float(j)*delta)*gperp  ! tangential component of k
 
 ! deal only with the incident beam (parallel illumination)
 if (ktstep.eq.0) then
@@ -873,9 +885,13 @@ if (ktstep.eq.0) then
    nullify(ktail%next)                ! nullify next in new value
    numk = 1                          ! keep track of number of k-vectors so far
  ! this should be the center vector of the illumination cone !!!
-   kt = - glen * (ktx*gan + kty * gperp)
+!   kt = - glen * (ktx*gan + kty * gperp)
+   kt = - glen * (-ktx*gan + kty * gperp)
    ktail%kt = kt                           ! store tangential component of k
    ktlen = glen**2*(ktx**2+kty**2)         ! squared length of tangential component
+   
+!   write (*,*) 0, 0, kt, ktlen
+   
    kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
    ktail%k = kr                            ! store in pointer list
    ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
@@ -885,6 +901,7 @@ else
   ic = int(ktx*glen/delta)
   jc = int(kty*glen/delta)
   ki = ktstep
+!write (*,*) ktx, kty, ktx*glen/delta, kty*glen/delta 
 
  if (.not.associated(khead)) then     ! allocate the head and ktail of the linked list
    allocate(khead,stat=istat)         ! allocate new value
@@ -895,9 +912,15 @@ else
  ! this should be the center vector of the illumination cone !!!
    ktail%i = ic                            ! i-index of beam
    ktail%j = jc                            ! j-index of beam
-   kt = -float(ktail%i)*delta*gan - float(ktail%j)*delta*gperp  ! tangential component of k
+   kt = float(ktail%i)*delta*gan - float(ktail%j)*delta*gperp  ! tangential component of k
+
+!   kt = delta * (ktx * gan - kty * gperp ) ! tangential component of k
+! write (*,*) ic,jc,kt
    ktail%kt = kt                           ! store tangential component of k
    ktlen = delta**2*(ktail%i**2+ktail%j**2)         ! squared length of tangential component
+
+!   write (*,*) ic, jc, kt, ktlen
+
    kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
    ktail%k = kr                            ! store in pointer list
    ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
@@ -921,10 +944,15 @@ else
       numk = numk + 1                 ! keep track of number of k-vectors so far
       ktail%i = ic+i                   ! i-index of beam
       ktail%j = jc+j                   ! j-index of beam
-      kt = -float(ktail%i)*delta*gan - float(ktail%j)*delta*gperp  ! tangential component of k
+      kt = float(ktail%i)*delta*gan - float(ktail%j)*delta*gperp  ! tangential component of k
+!     kt = delta * ((ktx + float(i)*dkt) * gan - (kty + float(j)*dkt) * gperp ) ! tangential component of k
+! write (*,*) ic+i,jc+j,kt
       ktail%kt = kt                    ! store tangential component of k
       ktlen = delta**2*(ktail%i**2+ktail%j**2)         ! squared length of tangential component
-      kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
+ 
+!   write (*,*) i, j, kt, ktlen
+
+     kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
       ktail%k = kr                     ! store in pointer list
       ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
      end if
@@ -937,6 +965,98 @@ end subroutine Calckvectorcone
 
 
 
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: Calckvectortrace
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief compute a set of incident beam directions for line scan ECCI mode
+!
+!> @param k incident wave vector (zone axis)
+!> @param ga principal g vector
+!> @param ktx tangential x component of trace start point
+!> @param kty tangential y component
+!> @param kt2x tangential x component of trace end point
+!> @param kt2y tangential y component
+!> @param ktrad cone opening angle
+!> @param ktstep number of steps along cone radius
+!> @param numk resulting number of incident beam directions
+!
+!> @date 12/08/13  MDG 1.0 original
+!--------------------------------------------------------------------------
+subroutine Calckvectortrace(k,ga,ktx,kty,kt2x,kt2y,ktrad,ktstep,numk)
+
+use io
+use error
+use diffraction
+use crystal
+use kvectors
+use dynamical
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)        :: k(3)
+integer(kind=irg),INTENT(IN)        :: ga(3)
+real(kind=sgl),INTENT(IN)           :: ktx
+real(kind=sgl),INTENT(IN)           :: kty
+real(kind=sgl),INTENT(IN)           :: kt2x
+real(kind=sgl),INTENT(IN)           :: kt2y
+real(kind=sgl),INTENT(IN)           :: ktrad
+integer(kind=irg),INTENT(IN)        :: ktstep
+integer(kind=irg),INTENT(OUT)       :: numk
+
+integer                             :: istat,imin,imax,jmin,jmax,ijmax,i,j,ic,jc,ki
+real                                :: kr(3),glen,delta,kstar(3),kt(3),gan(3),gperp(3),ktlen, dktx, dkty
+
+! compute geometrical factors 
+ glen = CalcLength(float(ga),'r')              ! length of ga
+ gan = ga/glen                                 ! normalized ga
+ delta = 2.0*ktrad*glen/float(2*ktstep+1)      ! grid step size in nm-1 
+ call TransSpace(float(k),kstar,'d','r')       ! transform incident direction to reciprocal space
+ call CalcCross(float(ga),kstar,gperp,'r','r',0)! compute g_perp = ga x k
+ call NormVec(gperp,'r')                       ! normalize g_perp
+ call NormVec(kstar,'r')                       ! normalize reciprocal beam vector
+
+
+! kt = -(klaue(1)+float(i)*delta)*gan - (klaue(2)+float(j)*delta)*gperp  ! tangential component of k
+
+ j = 0
+ if (.not.associated(khead)) then     ! allocate the head and ktail of the linked list
+   allocate(khead,stat=istat)         ! allocate new value
+   if (istat.ne.0) call FatalError('Calckvectortrace: unable to allocate head pointer',' ')
+   ktail => khead                     ! ktail points to new value
+   nullify(ktail%next)                ! nullify next in new value
+   numk = 1                           ! keep track of number of k-vectors so far
+! this should be the starting point of the line trace
+   kt = - glen * ( - ktx*gan + kty * gperp)
+!   write (*,*) j, kt
+   ktail%kt = kt                           ! store tangential component of k
+   ktlen = glen**2*(ktx**2+kty**2)         ! squared length of tangential component
+   kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
+   ktail%k = kr                            ! store in pointer list
+   ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
+ end if
+ dktx = (kt2x - ktx)/float(ktstep-1)
+ dkty = (kt2y - kty)/float(ktstep-1)
+
+ do j=1,ktstep-1
+      allocate(ktail%next,stat=istat)  ! allocate new value
+      if (istat.ne.0) call FatalError('Calckvectortrace: unable to allocate pointer',' ')
+      ktail => ktail%next              ! ktail points to new value
+      nullify(ktail%next)              ! nullify next in new value
+      numk = numk + 1                  ! keep track of number of k-vectors so far
+      kt = - glen * (-(ktx+float(j)*dktx)*gan + (kty+float(j)*dkty) * gperp) ! tangential component of k
+!   write (*,*) j, kt
+      ktail%kt = kt                    ! store tangential component of k
+      ktlen = delta**2*(ktail%i**2+ktail%j**2)         ! squared length of tangential component
+      kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
+      ktail%k = kr                     ! store in pointer list
+      ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
+ end do
+
+end subroutine Calckvectortrace
 
 
 
