@@ -118,10 +118,10 @@ real(kind=sgl),INTENT(IN)	:: wmax
 real(kind=sgl),INTENT(IN)	:: tmax
 
 integer(kind=irg),parameter	:: ns=512, nt=512
-integer(kind=irg)      		:: ind(3),io_int(1)
-real(kind=sgl)         			:: qr,qi,bg,Vmod,Vphase,Vpmod,Vpphase,xg,xgp,xgpz, &
-                          			   Ar(2,2), Ai(2,2), sg, dz, dsg, p(2),q(2), &
-                          			   BF(512,512,2),DF(512,512,2),It,Is,io_real(1)
+integer(kind=irg)      	:: ind(3),io_int(1)
+real(kind=sgl)         	:: bg,xg,xgp,xgpz, &
+                          	   Ar(2,2), Ai(2,2), sg, dz, dsg, p(2),q(2), &
+                          	   BF(512,512,2),DF(512,512,2),It,Is,io_real(1)
 
 ! normal aborption factor
  ind = [0,0,0]

@@ -320,10 +320,10 @@ integer(kind=irg),INTENT(IN)	:: ns
 integer(kind=irg),INTENT(IN)	:: nn
 character(*),INTENT(IN) 		:: oname
 
-real(kind=sgl)   			:: kttb, kt(3), k(3), kzero
+real(kind=sgl)   			:: kttb, k(3), kzero
 integer(kind=irg)			:: g(3),i,ik
-complex(kind=dbl)			:: W(nn), alph(nn), CG(nn,nn), amp, diag(nn)
-character(2)     				:: dtype
+complex(kind=dbl)			:: W(nn), alph(nn), CG(nn,nn)
+character(2)     			:: dtype
 character(15)				:: fname
 
  open (unit=15,file=trim(oname),form='unformatted',status = 'old')

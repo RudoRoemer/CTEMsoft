@@ -496,7 +496,7 @@ WIDGET_CONTROL,widget_s.base,/REALIZE
 WIDGET_CONTROL, widget_s.logodraw, GET_VALUE=drawID
 widget_s.logodrawID = drawID
 ;
-read_jpeg,'Resources/CTEMlogo.jpg',logo
+read_jpeg,'Resources/SEMlogo.jpg',logo
 wset,widget_s.logodrawID
 tvscl,logo,true=1
 

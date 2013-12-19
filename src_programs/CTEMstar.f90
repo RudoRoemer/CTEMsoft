@@ -49,6 +49,7 @@ program CTEMstar
 use local
 use io
 use files
+use gvectors
 use symmetryvars
 use symmetry
 use diffraction
@@ -56,9 +57,9 @@ use dynamical
 
 IMPLICIT NONE
 
-integer(kind=irg) 	:: g(3),gg(3),ans,n,i,j, io_int(3)
+integer(kind=irg) 	:: g(3),gg(3),ans,n,i, io_int(3)
 real(kind=dbl)    	:: kk(3),stmp(0:47,3)
-logical           		:: first
+logical           	:: first
 character(1)      	:: space
 
  progname = 'CTEMstar.f90'

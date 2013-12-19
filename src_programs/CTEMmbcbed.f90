@@ -105,8 +105,8 @@ use files
 IMPLICIT NONE
 
 real(kind=sgl)      			:: ktmax, io_real(3), voltage, convergence, galen, &
-                       		bragg,c(3),RR,gx(3),gy(3),gg(3), thetac, startthick, thickinc, &
-                       		sc, scmax, PX, qx, qy, frac, dmin, s, klaue(2), pxy(2)
+                       		bragg,RR, gg(3), thetac, startthick, thickinc, &
+                       		sc, scmax, PX, frac, dmin, klaue(2), pxy(2)
 integer(kind=irg)   			:: ijmax,ga(3),gb(3),k(3),cnt, skip, numthick, istat, dgn, badpoints, &
                        		newcount,count_rate,count_max, io_int(6), ii, i, j, isym, ir, fn(3), pgnum, &
                        		npx, npy, numt, numk, npix, ik, ip, jp, maxholz, iequiv(2,12), nequiv, it

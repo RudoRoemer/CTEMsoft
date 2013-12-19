@@ -58,14 +58,14 @@ IMPLICIT NONE
 
 real(kind=sgl),parameter      	:: thr = 1.0E-6
 real(kind=sgl),allocatable    	:: BF(:,:), DF(:,:), exe(:,:), z(:,:)
-real(kind=sgl)                		:: dz, xirat ,zmin, zmax
-integer(kind=irg)             	:: jdim,zero(3),ind(3), io_int(3), iflag, j,i, pspage, ihole, jhole, irad, jrad, nw, &
-						   npx, npy, k
-real(kind=sgl)                		:: qr,qi,bg,r(200),p(200),xig,xigp,betag,xizero, io_real(3), ss, sm, f1, dd, T0, T1, &
-						   zav, zdev, ff, fi, fj, ztot, q, zmi, zma, tps, x0, y0, scl
-integer(kind=irg)			:: values(1:8), kk
+real(kind=sgl)                	:: dz, zmin, zmax
+integer(kind=irg)             	:: jdim,zero(3),ind(3), io_int(3), iflag, j,i, ihole, jhole, irad, jrad, nw, &
+				   npx, npy, k
+real(kind=sgl)                	:: r(200),p(200),xig,xigp,betag,xizero, io_real(3), ss, sm, f1, dd, T0, T1, &
+				   zav, zdev, ff, fi, fj, ztot, q, zmi, zma, tps, x0, y0, scl
+integer(kind=irg)		:: values(1:8), kk
 integer, dimension(:), allocatable :: seed
-real(kind=dbl) 				:: zz
+real(kind=dbl) 			:: zz
 
  progname = 'CTEMTBBFDF.f90'
  progdesc = 'Two-beam bright field-dark field images, using BFDF.routines'

@@ -106,7 +106,7 @@ character(fnlen),INTENT(IN)	       :: nmlfile
 
 character(fnlen)         :: xtalname, outname
 character(3)             :: method
-real(kind=sgl)           :: voltage, dmin, startthick, thickinc, thetac, galen, bragg, klaue(2), io_real(6), &
+real(kind=sgl)           :: voltage, dmin, convergence, startthick, thickinc, thetac, galen, bragg, klaue(2), io_real(6), &
                             kstar(3), gperp(3), delta
 integer(kind=irg)        :: numthick, nt, npix, skip, dgn, pgnum, io_int(6), maxHOLZ, ik, k(3), numk, ga(3), gb(3), &
                             fn(3), nn, npx, npy, isym, numset, it, ijmax, jp
@@ -119,7 +119,7 @@ real(kind=sgl)           :: ktmax,& ! maximum tangential component of wave vecto
                             pre,&   ! prefactors 
                             tpi,Znsq, kkl, &
                             DBWF, frac
-real,allocatable         :: thick(:), sr(:,:,:) ! thickness array, results
+real,allocatable         :: thick(:), sr(:,:,:), EKI(:,:,:) ! thickness array, results
 !real(kind=dbl), allocatable           :: Kossel(:)
 complex(kind=dbl),allocatable         :: Lgh(:,:,:),Sgh(:,:)
 complex(kind=dbl)        :: czero
@@ -285,7 +285,6 @@ end if
 ! useful during program testing but should probably be removed as an option altogether...
 	call Compute_DynMat('BLOCHBETHE', ktmp%k, ktmp%kt, .FALSE.)
         nn = DynNbeams
-!write (*,*) ik, nn
 
 ! then we need to initialize the Sgh array for the strong beams;
 ! this may need to be modified if we want to include real detector

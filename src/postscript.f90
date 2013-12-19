@@ -176,8 +176,8 @@ use files
 IMPLICIT NONE
 
 logical,INTENT(IN),optional  	:: dontask		!< optional parameter to select file opening route
-real(kind=sgl)    			:: fw, fh		!< page format parameters
-integer(kind=irg) 			:: i			!< loop counter
+real(kind=sgl)    		:: fw, fh		!< page format parameters
+integer(kind=irg) 		:: i			!< loop counter
 
 ! define the writeable portion of the page (should be made more userfriendly for A4 format...)
  imanum = 0
@@ -192,6 +192,7 @@ integer(kind=irg) 			:: i			!< loop counter
    open(unit=psunit,file=PS%psname,status='unknown',action='write',form='formatted')
    mess = 'Opening temporary file for PostScript output'; call Message("(A)")
  else
+   loadingfile = .FALSE.
    call SafeOpenFile('ps','formatted',PS%psname)
  end if
 

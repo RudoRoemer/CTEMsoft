@@ -27,59 +27,64 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:CTEMzap.f90
+! CTEMsoft2013:CTEMZAgeom.f90
 !--------------------------------------------------------------------------
 !
-! PROGRAM:CTEMzap 
+! PROGRAM: CTEMZAgeom 
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief PostScript output of kinematical zone axis diffraction patterns
-!
+!> @brief CTEMZAgeom computes zone axis geometry
 ! 
-!> @date 12/11/98   MDG 1.0 original
-!> @date 04/08/13 MDG 2.0 rewrite
+!> @date  12/17/13 MDG  1.0 simple interface
 !--------------------------------------------------------------------------
-program CTEMzap
+program CTEMZAgeom 
 
 use local
-use crystalvars
+use error
+use crystalvars 
 use crystal
 use symmetryvars
 use symmetry
-use graphics
 use files
-use postscript
 use io
-use diffraction
 
-IMPLICIT NONE
+integer(kind=irg)    :: kk(3), ga(3), gb(3), io_int(6), j, i, dgn
 
-real(kind=sgl)			:: io_real(1)
-
-
- progname = 'CTEMzap.f90'
- progdesc = 'Kinematical Zone Axis Diffraction Patterns'
+! display the standard program info
+ progname = 'CTEMZAgeom.f90'
+ progdesc = 'Simple program to figure out zone axis geometry'
  call CTEMsoft
-
- SG % SYM_reduce=.TRUE.
-
-! read crystal information, microscope voltage, and camera length
+  
+! first get the crystal data and microscope voltage
+ SG%SYM_reduce=.TRUE.
  call CrystalData
- call GetVoltage
- call ReadValue(' Camera length L  [mm, real] ', io_real, 1)
- camlen = io_real(1)
 
-! generate all atom positions in the fundamental unit cell
- call CalcPositions('v')
+! get the zone axis
+  call ReadValue('Enter the zone axis indices : ',io_int,3)
+  kk(1:3) = io_int(1:3)  
 
-! open PostScript file
- call PS_openfile
+! determine the point group number and get the ZAP 2-D symmetry
+ j=0
+ do i=1,32
+  if (SGPG(i).le.cell % SYM_SGnum) j=i
+ end do
 
-! generate a set of zone axis patterns
- call DiffPage
+! use the new routine to get the whole pattern 2D symmetry group, since that
+! is the one that determines the independent beam directions.
+ dgn = GetPatternSymmetry(kk,j,.TRUE.)
+ 
+! determine and display the shortest reciprocal lattice vectors for this zone
+ call ShortestG(kk,ga,gb,j)
+ mess = 'Reciprocal lattice vectors : '; 
+ io_int(1:3) = ga(1:3)
+ io_int(4:6) = gb(1:3)
+ call WriteValue(' Reciprocal lattice vectors : ', io_int, 6, "('(',3I3,') and (',3I3,')',/)")
 
-! close Postscript file
- call PS_closefile
+  mess = ' --> Note that the first of these vectors is by default the horizontal direction in '
+  call Message("(A)")
+  mess = '     any diffraction pattern or image simulation. All reference frames are right-handed.'
+  call Message("(A/)")
 
-end program CTEMzap
+end program CTEMZAgeom
+

@@ -282,7 +282,8 @@ if ((dispmode.eq.'new').or.(dispmode.eq.'not')) then
    if (numdisl.gt.0) call read_dislocation_data(dislname,numdisl,numsf,DF_npix,DF_npiy,DF_gf,DF_L,dinfo)
 
 ! read namelist files for all stacking faults, if any
-   if (numsf.gt.0) call read_stacking_fault_data(numsf,numdisl,sfname,DF_L,DF_npix,DF_npiy,DF_g,dinfo)
+   numYdisl = 0
+   if (numsf.gt.0) call read_stacking_fault_data(numsf,numdisl,numYdisl,sfname,DF_L,DF_npix,DF_npiy,DF_g,dinfo)
 
 ! is there an inclusion data file? if so, then read it
    if (incname.ne.'none') call read_inclusion_data(numinc,incname,DF_L,DF_npix,DF_npiy,dinfo)

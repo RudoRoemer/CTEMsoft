@@ -400,7 +400,7 @@ widget_s.logodrawID = drawID
 WIDGET_CONTROL, widget_s.progress, GET_VALUE=drawID
 widget_s.progressdrawID = drawID
 ;
-logo = read_image('../Resources/SEMlogo.jpg')
+logo = read_image('Resources/SEMlogo.jpg')
 wset,widget_s.logodrawID
 tvscl,logo,true=1
 

@@ -94,7 +94,9 @@ for ibeam=0LL,long64(data.numk)-1LL do begin
   for iref=0LL,long64(data.numref)-1LL do begin
    if ((abs(offsets[0,iref]) lt scmax) and (abs(offsets[1,iref]) lt scmax)) then begin
     ip = PX + offsets[0,iref]*data.scale + kperp[0,ibeam]
-    jp = PX + offsets[1,iref]*data.scale + kperp[1,ibeam]
+;   jp = PX + offsets[1,iref]*data.scale + kperp[1,ibeam]
+; the following line needs to be verified
+    jp = PX - offsets[1,iref]*data.scale + kperp[1,ibeam]
     if (((ip ge 0) and (ip le data.patx-1)) and ((jp ge 0) and (jp le data.paty-1))) then begin
       if (data.SRZAmode eq 'ZA' ) then begin
         CBED[ip,jp] += rawdata[lipos,ljpos,iref,ibeam]

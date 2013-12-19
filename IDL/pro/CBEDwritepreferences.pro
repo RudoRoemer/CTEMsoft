@@ -92,7 +92,7 @@ common CBED_data_common, data
 ; and close the file
   close,1
 
-  CBEDprint,'The preferences file '+data.prefname+' was successfully saved '
+  if (widget_s.status ne 0L) then CBEDprint,'The preferences file '+data.prefname+' was successfully saved '
 
 end
 

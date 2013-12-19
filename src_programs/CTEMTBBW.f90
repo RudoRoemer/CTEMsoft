@@ -125,8 +125,8 @@ real(kind=sgl),INTENT(IN)	:: ktmax
 character(20),INTENT(IN)		:: oname
 
 real(kind=sgl)            		:: Vmod,Vphase,Vpmod,Vpphase,pre,upzero,find(3), &
-						   pr,pi,kk,l,kt(3),kttb,kn,kz,qr,qi,bg,io_real(1),pre2,dkt,gg,s
-complex(kind=dbl)         		:: M(2,2),alph(2),diag(2),amp, CGinv(2,2),Mcp(2,2)
+				        kk,kt(3),kttb,kn,kz,io_real(1),pre2,dkt,gg,s
+complex(kind=dbl)         		:: M(2,2),alph(2),CGinv(2,2),Mcp(2,2)
 integer(kind=irg)         		:: ind(3),ivec(3),ik,izero, IPIV(2), io_int(2),i,j,nn
 
 ! pre converts from V to U

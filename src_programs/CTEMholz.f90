@@ -590,11 +590,10 @@ IMPLICIT NONE
 
 integer(kind=irg),INTENT(IN)	:: N 
 
-integer(kind=irg)                	:: inmhkl(2),hc,i,j,nref,istat, oi_int(1)
-real(kind=sgl)                   	:: correction,gg(3),Ig,smax,kk(3),gxy(2),pxy(2),exer,sgdenom,x,tgm,qx,qy,y,det,LC3, &
+integer(kind=irg)                	:: inmhkl(2),i,j,nref,istat, oi_int(1)
+real(kind=sgl)                   	:: correction,gg(3),Ig,smax,gxy(2),pxy(2),exer,sgdenom,x,tgm,qx,qy,y,det,LC3, &
                                     	ll(3),lpg(3),gplen
 logical                          	:: a,dbdiff
-character(1)                     	:: q
 
  mess = 'Computing HOLZ reflection data'; call Message("(/A)")
 

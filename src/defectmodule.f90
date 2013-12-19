@@ -249,15 +249,19 @@ if (numYdisl.gt.0) then
    do ii=1,numYdisl
 ! first, figure out what the coordinates are in the YSH reference frame for this dislocation ... 
 ! translate to the defect origin
-     tmp =  (/ xpos, ypos, zpos /) -  (/ DF_L*YD(ii)%id, DF_L*YD(ii)%jd, foil%z0*0.5 /)
+     tmp =  tmpf -  (/ DF_L*YD(ii)%id, DF_L*YD(ii)%jd, foil%z0*0.5 /)
+
 ! rotate into the defect reference frame
      tmp = quat_rotate_vector( YD(ii)%a_di, tmp )   
+
 ! compute the displacement vector
 !     u = sngl(YSHDisp(dble(tmp(2)),-dble(tmp(1)),dble(tmp(3)),ii))
      u = sngl(YSHDisp(dble(tmp(1)),dble(tmp(2)),dble(tmp(3)),ii))
+
 ! and rotate back to the image reference frame
      u = quat_rotate_vector( YD(ii)%a_id, u )
      u = quat_rotate_vector( conjg(foil%a_ic), u ) 
+
 ! that should do it !
      sumR = sumR + u
    end do
@@ -268,7 +272,7 @@ end if
 !--------------------
 ! stacking faults (this is easy because we've already done all the work in the stacking_fault module)
 ! all we need is the z-value at which the stacking fault plane is crossed in this particular image
-! column; fromthat point on, we simply add the leading partial Burgers vector to the total displacement.
+! column; from that point on, we simply add the leading partial Burgers vector to the total displacement.
 do ii=1,numsf
   if ((zpos.lt.SF(ii)%zpos(i,j)).and.(SF(ii)%zpos(i,j).ne.-10000.0)) then 
     sumR = sumR + SF(ii)%lpbc

@@ -183,6 +183,14 @@ common PointGroups, PGTHD, PGTWD, DG
 
   close,1
 
+; this shouldn't happen, but in case there are points in any of the patterns
+; that have unreasonable intensities, we can replace them by their local average...
+  for i=0,data.datadims[2]-1 do begin
+    slice = reform(rawdata[*,*,i])
+    slice = median(slice,3)
+    rawdata[0,0,i] = slice
+  endfor
+
 
 ; what is the grid spacing in units of pixels ?
   xmid = (data.datadims[0]-1)/2 

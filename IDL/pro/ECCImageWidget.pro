@@ -55,7 +55,7 @@ common ECCI_rawdata, indices, offsets, kperp, rawdata, ECCILUT
 ; create the top level widget
 widget_s.ECCImagebase= WIDGET_BASE(TITLE='ECCI Image Widget', $
                         /COLUMN, $
-                        XSIZE= max([513,2*data.datadims[0]]), $
+                        XSIZE= max([543,2*data.datadims[0]]), $
                         /ALIGN_CENTER, $
 			/TLB_MOVE_EVENTS, $
 			EVENT_PRO='ECCImageWidget_event', $

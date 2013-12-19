@@ -125,7 +125,7 @@ integer(kind=irg),parameter 		:: numdd=180
 real(kind=sgl)         		:: glen,thick, X(2), dmin, dkt, bragg, thetac, &
 					lauec(2),lauec2(2),gdotR,xgp,DF_gf(3),Znsq,tpi, &
 					DM(2,2), DD, ll(3),lpg(3),gplen, c(3), gx(3), gy(3), &
-					gac(3), gbc(3),zmax, ktmax, io_real(2), qx, qy, galen
+					gac(3), gbc(3),zmax, ktmax, io_real(2)
 real(kind=dbl)                        :: ctmp(192,3),arg,arg2
 character(fnlen)      			:: dataname,sgname,voidname,dislname(3*maxdefects),sfname(maxdefects),ECPname, &
 					incname,dispfile,xtalname,foilnmlfile, STEMnmlfile,dislYname(3*maxdefects)
@@ -139,7 +139,7 @@ real(kind=sgl),allocatable       	:: sgarray(:,:)
 real(kind=sgl),allocatable    		:: disparray(:,:,:,:),imatvals(:,:), ECCIimages(:,:)
 integer(kind=sgl),allocatable    	:: expval(:,:,:)
 complex(kind=dbl),allocatable         :: Lgh(:,:),Sgh(:,:)
-
+logical	                               :: ECCI
 
 namelist / ECCIlist / DF_L, DF_npix, DF_npiy, DF_slice, dmin, sgname, numvoids, incname, stdout, &
                                 voidname, numdisl, dislname, numYdisl, dislYname, numsf, sfname, dinfo, &
@@ -147,6 +147,7 @@ namelist / ECCIlist / DF_L, DF_npix, DF_npiy, DF_slice, dmin, sgname, numvoids, 
 				 dispmode,SETNTHR,xtalname,voltage,kk, lauec, nktstep, &
 				 dataname, foilnmlfile, STEMnmlfile
 
+ECCI = .TRUE.
 
 ! first we define the default values
 czero=dcmplx(0.D0,0.D0)
@@ -384,7 +385,7 @@ if ((dispmode.eq.'new').or.(dispmode.eq.'not')) then
    if (numYdisl.gt.0) call read_YSH_dislocation_data(dislYname,numYdisl,DF_npix,DF_npiy,DF_gf,DF_L,dinfo)
 
 ! read namelist files for all stacking faults, if any
-   if (numsf.gt.0) call read_stacking_fault_data(numsf,numdisl,sfname,DF_L,DF_npix,DF_npiy,DF_g,dinfo)
+   if (numsf.gt.0) call read_stacking_fault_data(numsf,numdisl,numYdisl,sfname,DF_L,DF_npix,DF_npiy,DF_g,dinfo,ECCI)
 
 ! is there an inclusion data file? if so, then read it
    if (incname.ne.'none') call read_inclusion_data(numinc,incname,DF_L,DF_npix,DF_npiy,dinfo)
@@ -400,7 +401,6 @@ if ((dispmode.eq.'new').or.(dispmode.eq.'not')) then
 ! this portion should be carried out in multi-threaded mode as much as possible
   allocate(disparray(2,DF_nums,DF_npix,DF_npiy),imatvals(2,DF_nums))
   disparray = 0.0; imatvals = 0
-  mess = 'displacement field computation '; call Message("(A)")
   
 ! initiate multi-threaded segment
 !!$OMP     PARALLEL PRIVATE(TID,DF_R,imatvals,gdotR,i,j,k,imat) &
@@ -420,6 +420,7 @@ if ((dispmode.eq.'new').or.(dispmode.eq.'not')) then
  call TransSpace(float(ga),gac,'r','c')
  call TransSpace(float(gb),gbc,'r','c')
  
+
 !!$OMP DO SCHEDULE (GUIDED)
 !  write(*,*) TID,': starting Do Schedule'
   do i=1,DF_npix  
@@ -1007,7 +1008,7 @@ real(kind=sgl),INTENT(IN)           :: ktrad
 integer(kind=irg),INTENT(IN)        :: ktstep
 integer(kind=irg),INTENT(OUT)       :: numk
 
-integer                             :: istat,imin,imax,jmin,jmax,ijmax,i,j,ic,jc,ki
+integer                             :: istat,j
 real                                :: kr(3),glen,delta,kstar(3),kt(3),gan(3),gperp(3),ktlen, dktx, dkty
 
 ! compute geometrical factors 
@@ -1107,11 +1108,14 @@ end subroutine Calckvectortrace
 !C***********************************************************************
 RECURSIVE LOGICAL FUNCTION NANCHK(X)
 IMPLICIT NONE
-REAL X,Y
-INTEGER I
+REAL,INTENT(IN)      :: X
+REAL                 :: Y
+INTEGER              :: I
 EQUIVALENCE(Y,I)
+
 Y = X
 NANCHK = ((I .AND. z'7f80 0000') .EQ. z'7f80 0000') .AND.((I .AND. z'007f ffff') .NE. z'0000 0000')
+
 RETURN
 END
 

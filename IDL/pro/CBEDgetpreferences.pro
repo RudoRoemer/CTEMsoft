@@ -118,7 +118,7 @@ end else begin
   cd,current=s
   data.CBEDroot=s
 ; prefs file does not exist yet, so let's create it with default values
-  CBEDprint,'Creating preferences file '+data.prefname
+  if (widget_s.status ne 0L) then CBEDprint,'Creating preferences file '+data.prefname
   CBEDwritepreferences
 endelse
 

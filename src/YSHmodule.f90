@@ -45,7 +45,7 @@ module YSHModule
 use local
 use quaternions
 
-IMPLICIT NONE
+IMPLICIT NONE 
 
 type YDtype
   real(kind=dbl)     	:: burg(3), burgd(3), u(3), un(3), g(3), gn(3), id, jd, zu, bs, be, bx, beta
@@ -98,7 +98,7 @@ use constants
 IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN) 	:: x,y,z
-integer(kind=irg),INTENT(IN)  	::  ii
+integer(kind=irg),INTENT(IN)  	:: ii
 
 real(kind=dbl)    		:: eta, zeta, etap, zetap, r, oms, omts, xx, sgn, om, omp, AA, BB, BBp, th, &
                                  k, lam, alA, alB, u, v, w, ms, S, du, dv, dw, qe, me, De, qx, mx, Dx, rr, eps
@@ -115,6 +115,7 @@ omts = 1.D0-2.D0*YD(ii)%sig
 
 ! cover the special case of negative x values (based on IDL tests)
 xx = x
+sgn = 1.D0
 if (xx.lt.0.D0) then
   xx = dabs(x)
   sgn = -1.D0
@@ -123,8 +124,8 @@ else
 end if
 
 ! more parameters
-om =  (datan2(y,x)-datan2(eta,x)+datan2(x*r*YD(ii)%sa,eta*y+x**2*YD(ii)%ca))
-omp= (datan2(y,x)-datan2(etap,x)+datan2(x*r*YD(ii)%sa,etap*y-x**2*YD(ii)%ca))
+om =  (datan2(y,xx)-datan2(eta,xx)+datan2(xx*r*YD(ii)%sa,eta*y+xx**2*YD(ii)%ca))
+omp= (datan2(y,xx)-datan2(etap,xx)+datan2(xx*r*YD(ii)%sa,etap*y-xx**2*YD(ii)%ca))
 
 AA = r-z
 BB  = r-zeta
@@ -142,17 +143,17 @@ eps = 1.0D-6
 
 ! screw component first
 if (abs(YD(ii)%bs).gt.eps) then 
-  ms = x*sin(2.D0*YD(ii)%alpha)/r/BB
+  ms = xx*sin(2.D0*YD(ii)%alpha)/r/BB
   S = YD(ii)%bs/(4.D0*cPi)
   if (YD(ii)%alpha.gt.0.01) then 
-    du = x*ms+2.D0*eta*YD(ii)%ca**2/BB+2.D0*omts*YD(ii)%cota*(-1.D0+YD(ii)%ca+&
+    du = xx*ms+2.D0*eta*YD(ii)%ca**2/BB+2.D0*omts*YD(ii)%cota*(-1.D0+YD(ii)%ca+&
             YD(ii)%ca*alA-y*YD(ii)%sa/AA-alB)-sin(2.D0*YD(ii)%alpha)
-    dv = y*ms-2.D0*x*YD(ii)%ca/BB-YD(ii)%sa*(omp-om)+2.D0*omts*YD(ii)%cota*(x*YD(ii)%sa/AA-om*YD(ii)%ca)
+    dv = y*ms-2.D0*xx*YD(ii)%ca/BB-YD(ii)%sa*(omp-om)+2.D0*omts*YD(ii)%cota*(xx*YD(ii)%sa/AA-om*YD(ii)%ca)
     dw = z*ms+YD(ii)%ca*(omp-om)-2.D0*omts*om*YD(ii)%ca
   else 
     du = 2.D0*y/(r-z)
-    dv = -2.D0*x*(r+z)/(x**2+y**2)
-    dw = cPi + datan2(y,x) - datan2(-y,x)
+    dv = -2.D0*xx*(r+z)/(xx**2+y**2)
+    dw = cPi + datan2(y,xx) - datan2(-y,xx)
   end if
   u = u+du*S
   v = v-sgn*dv*S
@@ -161,22 +162,22 @@ end if
 
 ! then the edge component in the y-z plane
 if (abs(YD(ii)%be).gt.eps) then 
-  qe = x*(1.D0/BBp-1.D0/BB+2.D0*z*YD(ii)%ca/BB**2)
-  me = -qe/r-4.D0*oms*x*YD(ii)%ca**2/r/BB
+  qe = xx*(1.D0/BBp-1.D0/BB+2.D0*z*YD(ii)%ca/BB**2)
+  me = -qe/r-4.D0*oms*xx*YD(ii)%ca**2/r/BB
   De = YD(ii)%be/(8.D0*cPi*oms)
   if (YD(ii)%alpha.gt.0.01) then 
     k = 4.D0*oms*omts*YD(ii)%cota**2
-    du = x*me+lam+2.D0*YD(ii)%ca*(z+2.D0*oms*eta*YD(ii)%sa)/BB-4.D0*oms*YD(ii)%sa**2+k*(1.D0-YD(ii)%ca-YD(ii)%ca*alA+&
+    du = xx*me+lam+2.D0*YD(ii)%ca*(z+2.D0*oms*eta*YD(ii)%sa)/BB-4.D0*oms*YD(ii)%sa**2+k*(1.D0-YD(ii)%ca-YD(ii)%ca*alA+&
              y*YD(ii)%sa/AA+alB)
-    dv = y*me+qe*YD(ii)%sa+th*YD(ii)%ca+k*(-x*YD(ii)%sa/AA+om*YD(ii)%ca)
-    dw = z*me+qe*YD(ii)%ca+th*YD(ii)%sa-2.D0*x*YD(ii)%ca*(1.D0/BBp+omts/BB)+k*om*YD(ii)%sa
+    dv = y*me+qe*YD(ii)%sa+th*YD(ii)%ca+k*(-xx*YD(ii)%sa/AA+om*YD(ii)%ca)
+    dw = z*me+qe*YD(ii)%ca+th*YD(ii)%sa-2.D0*xx*YD(ii)%ca*(1.D0/BBp+omts/BB)+k*om*YD(ii)%sa
 !    write (*,*) du,dv,dw
   else 
-    rr = x**2+y**2
-    du = 2.D0*z/(r-z)+4.D0*x**2*(YD(ii)%sig*rr-r**2)/r/AA**2/(r+z)+2.D0*omts*oms*((x**2+z*(z-r))/AA**2+alA)+omts*dlog((r+z)/AA)
-    dv = 4.D0*x*y*(rr*YD(ii)%sig-r**2)/r/AA**2/(r+z)+2.D0*x*y*(rr+2.D0*z*(r+z))*oms*omts/rr**2+&
-            2.D0*oms*(cPi + datan2(y,x) - datan2(-y,x))
-    dw = 4.D0*x*rr*YD(ii)%sig*(z-2.D0*r*oms)/r/AA**2/(r+z)
+    rr = xx**2+y**2
+    du = 2.D0*z/(r-z)+4.D0*xx**2*(YD(ii)%sig*rr-r**2)/r/AA**2/(r+z)+2.D0*omts*oms*((xx**2+z*(z-r))/AA**2+alA)+omts*dlog((r+z)/AA)
+    dv = 4.D0*xx*y*(rr*YD(ii)%sig-r**2)/r/AA**2/(r+z)+2.D0*xx*y*(rr+2.D0*z*(r+z))*oms*omts/rr**2+&
+            2.D0*oms*(cPi + datan2(y,xx) - datan2(-y,xx))
+    dw = 4.D0*xx*rr*YD(ii)%sig*(z-2.D0*r*oms)/r/AA**2/(r+z)
   end if
   u = u+du*De
   v = v+sgn*dv*De
@@ -190,16 +191,16 @@ if (abs(YD(ii)%bx).gt.eps) then
   Dx = YD(ii)%bx/(8.D0*cPi*oms)
   if (YD(ii)%alpha.gt.0.01) then 
     k = 4.D0*oms*omts*YD(ii)%cota**2
-    du = x*mx+th+k*(x*YD(ii)%ta/AA-om)
+    du = xx*mx+th+k*(xx*YD(ii)%ta/AA-om)
     dv = y*mx+qx*YD(ii)%sa-lam*YD(ii)%ca-2.D0*YD(ii)%ca*(z*YD(ii)%ca+omts*y*YD(ii)%sa)/BB+k*(-1.D0+YD(ii)%ca-alA+y*YD(ii)%ta/AA+&
           YD(ii)%ca*alB)
     dw = z*mx+qx*YD(ii)%ca-lam*YD(ii)%sa-2.D0*etap*YD(ii)%ca/BBp+4.D0*YD(ii)%ca*(oms*y*YD(ii)%ca-omts*z*YD(ii)%sa)/BB+ &
            k*YD(ii)%ta*(YD(ii)%ca-alA+YD(ii)%ca*alB)+4.D0*oms*YD(ii)%ca*YD(ii)%cota
  else 
-    rr = x**2+y**2
-    du = -4.D0*x*y*(rr*YD(ii)%sig-r**2)/r/AA**2/(r+z)-2.D0*x*y*(rr+2.D0*z*(r+z))*oms*omts/rr**2+&
-            2.D0*oms*(cPi + datan2(y,x) - datan2(-y,x))
-    dv = 2.D0*z/(r-z)-4.D0*y**2*(YD(ii)%sig*rr-r**2)/r/AA**2/(r+z)+2.D0*omts*oms*(-1.D0+(z*(r+z)-y**2)/AA**2+alA)- &
+    rr = xx**2+y**2
+    du = -4.D0*xx*y*(rr*YD(ii)%sig-r**2)/r/AA**2/(r+z)-2.D0*xx*y*(rr+2.D0*z*(r+z))*oms*omts/rr**2+&
+            2.D0*oms*(cPi + datan2(y,xx) - datan2(-y,xx))
+    dv = 2.D0*z/(r-z)-4.D0*y**2*(YD(ii)%sig*rr-r**2)/r/AA**2/(r+z)+2.D0*omts*oms*(-1.D0+(z*(r-z)-y**2)/AA**2-alA)- &
             omts*dlog((r+z)/AA)
     dw = 0.D0     ! not sure if this limit is correct ... Mathematica gives a directedinfinity value for the limit, which might mean that the 
     ! original YSH expression in the paper is incorrect for the w component ... this needs to be rederived and verified !!!
@@ -327,8 +328,10 @@ YD(i)%bx = bl * CalcDot(tb,tx,'c')   ! edge component normal to cut plane
 YD(i)%be = bl * CalcDot(tb,te,'c')   ! edge component in cut plane
 YD(i)%bs = bl * CalcDot(tb,tu,'c')   ! screw component
 
-io_real(1:3) = (/ YD(i)%bx,YD(i)%be,YD(i)%bs /)
-call WriteValue('Burgers vector components (bx,be,bs) ', io_real, 3, "(3F8.3)") 
+if (dinfo.eq.1) then 
+  io_real(1:3) = (/ YD(i)%bx,YD(i)%be,YD(i)%bs /)
+  call WriteValue('Burgers vector components (bx,be,bs) ', io_real, 3, "(3F12.6)") 
+end if
 ! verified MDG 7/31/11
 
 
@@ -348,7 +351,7 @@ dx = CalcDot(tx,fx,'c')
 dy = CalcDot(tx,fy,'c')
 
 ! use the arctan function to get the angle with correct quadrant computation
-YD(i)%beta = atan2(dy,dx)
+YD(i)%beta = atan2(dy,dx) !+ cPi*0.5
 
 if (dinfo.eq.1) then 
   io_real(1) = dx
@@ -366,6 +369,13 @@ a_di(2,1:3) = (/ -sin(beta), cos(beta), 0.D0 /)
 a_di(3,1:3) = (/ 0.D0, 0.D0, 1.D0 /)
 YD(i)%a_di = om2qu(a_di)
 YD(i)%a_id = conjg(YD(i)%a_di)
+
+if (dinfo.eq.1) then 
+  write (*,*) 'beta = ',beta
+  write (*,*) YD(i)%a_di
+  write (*,*) YD(i)%a_id
+end if
+
 
 ! finally some geometrical parameters needed for the displacement field computation...
 YD(i)%alpha =  alpha
@@ -419,7 +429,7 @@ real(kind=sgl) 			:: id,jd,u(3),bv(3),poisson
 namelist / dislocationdata / id, jd, u, bv, poisson
 
 ! allocate the memory for the dislocation parameters
-  allocate(YD(numYdisl))
+  allocate(YD(3*maxdefects))
 
 ! these are just the individual dislocations; the ones that belong to 
 ! stacking faults are handled separately

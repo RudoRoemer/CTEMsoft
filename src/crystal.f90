@@ -1212,7 +1212,7 @@ integer(kind=irg) 	::  i		!< loop counter
  mess = '-------Periodic Table of the Elements--------'; call Message("(/A/)")
 
  do i=1,92
-  if (mod(i,7).eq.0) then
+  if (mod(i,10).eq.0) then
    write (stdout,"(1x,i3,':',A2)") i,ATOM_sym(i)
   else
    write (stdout,"(1x,i3,':',A2,2x,$)") i,ATOM_sym(i)

@@ -536,16 +536,17 @@ character(1)          					:: space
                Vgg(j,1),Vgg(j,2),Vgg(j,3),Vgg(j,4),xi(j),xip(j))
  end do
 
- deallocate(idx)
- deallocate(z)
- deallocate(family)
- deallocate(numfam)
- deallocate(Vgg)
- deallocate(ddg)
- deallocate(gg)
- deallocate(xi)
- deallocate(xip)
- deallocate(twth)
+ 
+!  deallocate(idx)
+!  deallocate(z)
+!  deallocate(family)
+!  deallocate(numfam)
+!  deallocate(Vgg)
+!  deallocate(ddg)
+!  deallocate(gg)
+!  deallocate(xi)
+!  deallocate(xip)
+!  deallocate(twth)
 
 ! integer number output
  901    format (1x,F12.7,' ',F12.7,' M (',I8,') show')

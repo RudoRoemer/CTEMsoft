@@ -57,9 +57,9 @@ module stacking_fault
 use local  
 
 type stackingfaulttype
-  real(kind=sgl)     :: lpu(3),tpu(3),lpb(3),lpbc(3),tpb(3),plane(3),sep,id,jd, &
+  real(kind=sgl)             :: lpu(3),tpu(3),lpb(3),lpbc(3),tpb(3),plane(3),sep,id,jd, &
                                 lptop(3),lpbot(3),tptop(3),tpbot(3),thetan,a_if(3,3), &
-                                lpr(3),tpr(3), Rdisp(3)
+                                lpr(3),tpr(3), Rdisp(3), poisson
   real(kind=sgl),allocatable     :: zpos(:,:)
 end type stackingfaulttype
 
@@ -457,6 +457,262 @@ end subroutine makestackingfault
 
 !--------------------------------------------------------------------------
 !
+! SUBROUTINE: makestackingfaultECCI
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief compute parameters for a stacking fault in ECCI mode
+!
+!> @details  This subroutine computes the geometrical parameters for a 
+!> stacking fault.  It computes, among others, the coordinates of the surface
+!> intersections of the partial dislocations, and an array that indicates, for
+!> each image pixel, whether or not the corresponding integration column 
+!> contains this fault; if it does not, the  value in the array is set to 
+!> -10000; if it does, then the value is equal to the point where the fault
+!> plane intersects with the column, measured from the top surface.
+!> In short, anything that is needed in the CalcR routine and can be computed 
+!> ahead of time, is computed here.  The routine also calls the makedislocation 
+!> routine to create the partials.
+! 
+!> @param inum
+!> @param DF_L column edge length
+!> @param nx
+!> @param ny
+!> @param DF_g
+!> @param ndl
+!> @param dinfo trigger for verbose output
+!
+!> @date   11/05/13 MDG 1.0 new attempt to replace faulty original routine
+!> @date   11/13/13 MDG 1.1 traced error to problem with transformations in defectmodule
+!> @date   11/13/13 MDG 1.2 changed SF normal transformation for zpos array computation (to be tested)
+!> @date   12/17/13 MDG 1.3 branch from original routine to deal with different ECCI geometry
+!> @date   12/18/13 MDG 1.4 debug of stacking fault location array
+!--------------------------------------------------------------------------
+subroutine makestackingfaultECCI(inum,DF_L,nx,ny,DF_g,ndl,dinfo)
+ 
+use local
+use math
+use constants
+use files
+use foilmodule
+use YSHmodule
+use dislocation
+use quaternions
+use rotations
+use crystal
+use crystalvars
+use symmetry
+use symmetryvars
+
+IMPLICIT NONE
+
+real(kind=sgl),INTENT(IN)	:: DF_L
+integer(kind=irg),INTENT(IN)	:: inum, nx, ny, DF_g(3), ndl, dinfo
+
+real(kind=sgl)  		:: fpn(3),am(4,4),midpoint(3), ex(3), ey(3),&
+                  		 lptopi(3),lpboti(3),tptopi(3),tpboti(3),det,A(4), xx(4), yy(4), tmp(3), &
+				 planenormal(3), rzero(3), unita(3), lun(3), tun(3), zang, zu, zz
+
+integer(kind=irg) 		:: i,j,info,ipiv,minx,maxx,miny,maxy
+
+! we begin by computing the geometry in the foil reference frame, which is the cartesian frame 
+! for zero sample tilt;  sample tilts are applied once we known the partial dislocation geometry
+call TransSpace(SF(inum)%plane,tmp,'r','c')
+call NormVec(tmp,'c')
+planenormal =  tmp
+
+call CalcCross( planenormal, (/ 0.0,0.0,1.0 /),  unita, 'c', 'c', 0)
+call NormVec(unita,'c')
+fpn = planenormal
+if (dinfo.eq.1) write (*,*) ' unita should have zero third component ',unita, fpn
+
+
+! the fault plane goes through the point rzero in the foil top surface
+rzero = (/ SF(inum)%id, SF(inum)%jd, sngl(foil%z0)*0.5 /)
+
+! this leads to the location of the partial dislocation intersections, and these must
+! be Yoffe dislocations !!!
+SF(inum)%lpr = rzero + 0.5*SF(inum)%sep*unita / DF_L
+SF(inum)%tpr = rzero - 0.5*SF(inum)%sep*unita / DF_L
+
+if (dinfo.eq.1) write (*,*) 'lpr_i = ',SF(inum)%lpr(1:3)
+if (dinfo.eq.1) write (*,*) 'tpr_i = ',SF(inum)%tpr(1:3)
+
+
+! convert line directions to the Cartesian crystal reference frame
+call TransSpace(SF(inum)%lpu,lun,'d','c')
+call TransSpace(SF(inum)%tpu,tun,'d','c')
+! normalize both vectors
+call NormVec(lun,'c')
+call NormVec(tun,'c')
+
+
+! call makeYSHdislocation for each of the partials
+  if (.not. allocated(YD)) allocate(YD(3*maxdefects))
+
+  YD(ndl+1)%id = SF(inum)%lpr(1) 
+  YD(ndl+1)%jd = SF(inum)%lpr(2)
+  YD(ndl+1)%u(1:3) = dble(SF(inum)%lpu(1:3))
+  YD(ndl+1)%burg(1:3) = dble(SF(inum)%lpb(1:3))
+  YD(ndl+1)%g = float(DF_g)
+  YD(ndl+1)%sig = SF(inum)%poisson
+  
+  YD(ndl+2)%id = SF(inum)%tpr(1) 
+  YD(ndl+2)%jd = SF(inum)%tpr(2)
+  YD(ndl+2)%u(1:3) = dble(SF(inum)%tpu(1:3))
+  YD(ndl+2)%burg(1:3) = dble(SF(inum)%tpb(1:3))
+  YD(ndl+2)%g = float(DF_g)
+  YD(ndl+2)%sig = SF(inum)%poisson
+
+  call makeYSHdislocation(ndl+1,dinfo,DF_L)
+  if (dinfo.eq.1) write (*,*) 'Leading Partial Position ',YD(ndl+1)%id,YD(ndl+1)%jd
+  call makeYSHdislocation(ndl+2,dinfo,DF_L)
+  if (dinfo.eq.1) write (*,*) 'Trailing Partial Position ',YD(ndl+2)%id,YD(ndl+2)%jd
+
+
+
+! first find the length of the dislocation line inside the foil along the
+! dislocation z-axis, which is the line direction; also, compute the intersection
+! points of the line with the top and bottom surfaces  (all components in [nm])
+zang = CalcAngle(YD(ndl+1)%u,foil%F,'d')
+zz = cos(zang)
+if (abs(zz).gt.0.00001) then 
+  zu = abs(foil%z0/zz)
+else
+  zu = 100000.0         ! this is when the dislocation is nearly parallel to the foil
+end if
+
+! transform the line direction to the foil reference frame
+  tmp = quat_rotate_vector( foil%a_fc, dble(lun) ) / DF_L
+
+! determine the top and bottom intersection coordinates 
+  YD(ndl+1)%top = (/ YD(ndl+1)%id, YD(ndl+1)%jd, foil%z0*0.5 /)
+  if (zz.gt.0.0) then  ! u points to the top of the foil
+    YD(ndl+1)%bottom = (/ YD(ndl+1)%id - tmp(1)*zu, YD(ndl+1)%jd - tmp(2)*zu, -0.5D0*foil%z0 /)
+  else                 ! u points to the bottom of the foil
+    YD(ndl+1)%bottom = (/ YD(ndl+1)%id + tmp(1)*zu, YD(ndl+1)%jd + tmp(2)*zu, -0.5D0*foil%z0 /)
+  end if  
+
+
+! first find the length of the dislocation line inside the foil along the
+! dislocation z-axis, which is the line direction; also, compute the intersection
+! points of the line with the top and bottom surfaces  (all components in [nm])
+zang = CalcAngle(YD(ndl+2)%u,foil%F,'d')
+zz = cos(zang)
+if (abs(zz).gt.0.00001) then 
+  zu = abs(foil%z0/zz)
+else
+  zu = 100000.0         ! this is when the dislocation is nearly parallel to the foil
+end if
+! transform the line direction to the foil reference frame
+  tmp = quat_rotate_vector( foil%a_fc, dble(tun) ) / DF_L
+
+! determine the top and bottom intersection coordinates 
+  YD(ndl+2)%top = (/ YD(ndl+2)%id, YD(ndl+2)%jd, foil%z0*0.5 /)
+  if (zz.gt.0.0) then  ! u points to the top of the foil
+    YD(ndl+2)%bottom = (/ YD(ndl+2)%id - tmp(1)*zu, YD(ndl+2)%jd - tmp(2)*zu, -0.5D0*foil%z0 /)
+  else                 ! u points to the bottom of the foil
+    YD(ndl+2)%bottom = (/ YD(ndl+2)%id + tmp(1)*zu, YD(ndl+2)%jd + tmp(2)*zu, -0.5D0*foil%z0 /)
+  end if  
+
+
+! copy the top and bottom dislocation intersections
+! into the corresponding variables of the SF record
+
+SF(inum)%lpbot = YD(ndl+1)%bottom
+SF(inum)%lptop = YD(ndl+1)%top
+SF(inum)%tpbot = YD(ndl+2)%bottom
+SF(inum)%tptop = YD(ndl+2)%top
+
+! obviously, these four points need to lie in a single plane; at this point, we check that this is indeed the case
+! by computing the volume of the tetrahedron formed by these four points; if the volume is zero, then the 
+! points are co-planar.  (Use LAPACK's LU-decomposition and compute the product of the diagonal elements of U)
+am(1:4,1) = (/ SF(inum)%lptop(1:3),1.0 /)
+am(1:4,2) = (/ SF(inum)%lpbot(1:3),1.0 /) 
+am(1:4,3) = (/ SF(inum)%tptop(1:3),1.0 /) 
+am(1:4,4) = (/ SF(inum)%tpbot(1:3),1.0 /) 
+call sgetrf(4,4,am,4,ipiv,info)
+det = abs(am(1,1)*am(2,2)*am(3,3)*am(4,4))
+if (dinfo.eq.1) write (*,*) 'determinant (should be zero) = ',det
+
+! ok, next we need to figure out which image pixels lie on the projection of the stacking fault plane.
+! We need to transform the corner points into the image reference frame !!!
+lptopi = quat_rotate_vector( conjg(foil%a_fi), dble(SF(inum)%lptop))
+lpboti = quat_rotate_vector( conjg(foil%a_fi), dble(SF(inum)%lpbot))
+tptopi = quat_rotate_vector( conjg(foil%a_fi), dble(SF(inum)%tptop))
+tpboti = quat_rotate_vector( conjg(foil%a_fi), dble(SF(inum)%tpbot))
+if (dinfo.eq.1) then
+  write (*,*) 'SF parameters :'
+  write (*,*) lptopi,' <> ',lpboti
+  write (*,*) tptopi,' <> ',tpboti
+end if
+
+! define the array that will contain the zpos values
+allocate(SF(inum)%zpos(nx,ny))
+SF(inum)%zpos = -10000.0    ! set all points to be outside the projected SF
+
+! first determine the smaller box
+minx = nint(min( lptopi(1),lpboti(1),tptopi(1),tpboti(1) )) -2
+maxx = nint(max( lptopi(1),lpboti(1),tptopi(1),tpboti(1) )) +2
+miny = nint(min( lptopi(2),lpboti(2),tptopi(2),tpboti(2) )) -2
+maxy = nint(max( lptopi(2),lpboti(2),tptopi(2),tpboti(2) )) +2
+
+! the fault edges may fall outside of the viewing frame (origin at the center !!!)
+if (minx.lt.(-nx/2+1)) minx=-nx/2+1
+if (maxx.gt.nx/2) maxx=nx/2
+if (miny.lt.(-ny/2+1)) miny=-ny/2+1
+if (maxy.gt.ny/2) maxy=ny/2
+
+if (dinfo.eq.1) write (*,*) 'Integer fault box = ',minx,maxx,miny,maxy
+
+! get the equation of the stacking fault plane in the image reference frame
+! first the unit plane normal in image space
+! we'll take two vectors: ex = from ltop to ttop; ey = from ltop to lbot
+ex = tptopi - lptopi
+ey = lpboti - lptopi
+call NormVec(ex,'c')
+call NormVec(ey,'c')
+call CalcCross(ex,ey,fpn,'c','c',0)
+
+A(1:3) = fpn ! quat_rotate_vector( conjg(foil%a_fi), dble(fpn(1:3)) )
+midpoint = 0.25*(lptopi+lpboti+tptopi+tpboti) ! quat_rotate_vector( conjg(foil%a_fi), dble(0.25*(lptopi+lpboti+tptopi+tpboti) ))
+A(4) = sum(A(1:3)*midpoint)
+if (dinfo.eq.1) write (*,*) 'fault plane parameters : ',A, midpoint
+
+! rank the corner points so that the polygon is convex
+! call rank_points(tpboti(1:2),lpboti(1:2),lptopi(1:2),tptopi(1:2),xx,yy)
+xx = (/ lptopi(1), tptopi(1), tpboti(1),lpboti(1) /)
+yy = (/ lptopi(2), tptopi(2), tpboti(2),lpboti(2) /)
+
+! for all of the points inside this box:
+do i=minx,maxx
+  do j=miny,maxy
+    if (point_inside_polygon( float(i), float(j), xx, yy ).gt.0) then 
+! the point lies inside the projected region, 
+! so we need the depth of the SF plane at this position, taking into account the 
+! proper coordinate transformation (depth must be expressed in image reference frame)
+        SF(inum)%zpos(i+nx/2,j+ny/2) = ( A(4) - A(1)*float(i) - A(2)*float(j) )/A(3)
+    end if
+  end do
+end do
+if (dinfo.eq.1) write (*,*) 'fault plane pixels determined'
+
+open(unit=20,file='sf.data',status='unknown',form='unformatted')
+write(20) nx, ny
+write (20) SF(inum)%zpos
+close(unit=20,status='keep')
+
+! let's also make sure that the SF displacement vector is translated to the 
+! cartesian reference frame, so that it can be used directly by the CalcR routine
+SF(inum)%lpbc = matmul(cell%dsm,SF(inum)%Rdisp)
+
+! that should do it for the stacking fault...  The rest 
+! takes place in the CalcR routine.
+end subroutine makestackingfaultECCI
+
+
+!--------------------------------------------------------------------------
+!
 ! SUBROUTINE: read_stacking_fault_data
 !
 !> @author Marc De Graef, Carnegie Mellon University
@@ -465,19 +721,22 @@ end subroutine makestackingfault
 !
 !> @param numsf number of stacking faults
 !> @param numdisl number of dislocations
+!> @param numYdisl number of Yoffe dislocations
 !> @param sfname name of staking fault namelist file (string array)
 !> @param DF_L 
 !> @param DF_npix number of x-pixels
 !> @param DF_npiy number of y-pixels
 !> @param DF_gf 
 !> @param dinfo logical to trigger verbose output
+!> @param ECCI logical optional to indicate ECCI formatting rather than regular TEM
 ! 
-!> @date    1/5/99   MDG 1.0 original
+!> @date    1/5/99  MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   06/04/13 MDG 3.0 rewrite
+!> @date   12/17/13 MDG 3.1 added ECCI mode
 !--------------------------------------------------------------------------
-subroutine read_stacking_fault_data(numsf,numdisl,sfname,DF_L,DF_npix,DF_npiy,DF_g,dinfo)
+subroutine read_stacking_fault_data(numsf,numdisl,numYdisl,sfname,DF_L,DF_npix,DF_npiy,DF_g,dinfo,ECCI)
 
 use local
 use io
@@ -488,13 +747,15 @@ IMPLICIT NONE
 
 integer(kind=irg),INTENT(IN)		:: numsf, DF_npix, DF_npiy, DF_g(3), dinfo
 integer(kind=irg),INTENT(INOUT)	:: numdisl
+integer(kind=irg),INTENT(INOUT)	:: numYdisl
 character(fnlen),INTENT(IN)		:: sfname(maxdefects)
 real(kind=sgl),INTENT(IN)		:: DF_L
+logical,INTENT(IN),OPTIONAL	        :: ECCI
 
 integer(kind=irg) 			:: i,SFplane(3)
-real(kind=sgl)     			:: SFi,SFj,SFsep,SFlpu(3),SFlpb(3),SFtpu(3),SFtpb(3),SFR(3)
+real(kind=sgl)     			:: SFi,SFj,SFsep,SFlpu(3),SFlpb(3),SFtpu(3),SFtpb(3),SFR(3), poisson
 
-namelist / SFdata / SFi, SFj, SFsep, SFplane, SFlpu, SFlpb, SFtpu, SFtpb, SFR
+namelist / SFdata / SFi, SFj, SFsep, SFplane, SFlpu, SFlpb, SFtpu, SFtpb, SFR, poisson
 
 ! allocate the necessary memory
 allocate(SF(numsf))
@@ -508,6 +769,7 @@ endif
  do i=1,numsf
     mess = 'opening '//sfname(i); call Message("(/A)")
     SFR = (/ 0.0, 0.0, 0.0 /)
+    poisson = 0.0
     OPEN(UNIT=dataunit,FILE=sfname(i),DELIM='APOSTROPHE')
     READ(UNIT=dataunit,NML=SFdata)
     CLOSE(UNIT=dataunit)
@@ -516,18 +778,25 @@ endif
     SF(i)%jd = SFj * 0.5 * float(DF_npiy) ! * DF_L
     SF(i)%sep = SFsep
     SF(i)%plane = SFplane
+    SF(i)%poisson = poisson
     SF(i)%lpu = SFlpu
     SF(i)%lpb = SFlpb
     SF(i)%tpu = SFtpu
     SF(i)%tpb = SFtpb
-    if (sum(abs(SFR)).eq.0.0) then 
+    if (sum(abs(SFR)).eq.0.0) then  
       SF(i)%Rdisp = SFlpb
     else
       SF(i)%Rdisp = SFR
     end if
-! initialize the stacking fault variables and both partial dislocations
-    call makestackingfault(i,DF_L,DF_npix,DF_npiy,DF_g,numdisl,dinfo)
-    numdisl = numdisl + 2
+! initialize the stacking fault variables and both partial dislocations; this might depend
+! on the imaging mode (TEM vs. ECCI)
+    if (present(ECCI)) then
+      call makestackingfaultECCI(i,DF_L,DF_npix,DF_npiy,DF_g,numYdisl,dinfo)
+      numYdisl = numYdisl + 2
+    else
+      call makestackingfault(i,DF_L,DF_npix,DF_npiy,DF_g,numdisl,dinfo)
+      numdisl = numdisl + 2
+    end if
  end do
  
 end subroutine read_stacking_fault_data

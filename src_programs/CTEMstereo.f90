@@ -58,7 +58,7 @@ IMPLICIT NONE
 
 character(1)   			:: sp
 logical        			:: topbot
-integer(kind=irg)        	:: hm,km,lm,i,iview(3), io_int(3)
+integer(kind=irg)        	:: iview(3), io_int(3)
 
  progname = 'CTEMstereo.f90'
  progdesc = 'Stereographic projections (direct/ reciprocal space)'

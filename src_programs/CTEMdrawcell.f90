@@ -60,11 +60,11 @@ use constants
 use files
         
 integer(kind=irg),parameter    		:: n=1000
-character(1)                   				:: sp
-character(3)                   				:: acol(n)
+character(1)                   		:: sp
+character(3)                   		:: acol(n)
 
-real(kind=sgl)                 				:: p(4),q(4),xmax,x(n),y(n),z(n),x1,y1,z1,asize(n),M(4,4),VD,diam, io_real(3)
-integer(kind=irg)              			:: idx(n),iview(3),iform, io_int(3)
+real(kind=sgl)                 		:: p(4),q(4),xmax,x(n),y(n),z(n),x1,y1,z1,asize(n),M(4,4),VD,diam, io_real(3)
+integer(kind=irg)              		:: idx(n),iview(3),iform, io_int(3)
 
  progname = 'CTEMdrawcell.f90'
  progdesc='Draw one or more unit cells in perspective mode'
