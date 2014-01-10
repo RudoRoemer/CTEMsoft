@@ -1,5 +1,5 @@
 ! ###################################################################
-! Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
+! Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
 ! All rights reserved.
 !
 ! Redistribution and use in source and binary forms, with or without modification, are 
@@ -25,11 +25,8 @@
 ! OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
 ! USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ! ###################################################################
-
-
-
 !--------------------------------------------------------------------------
-! CTEMsoft2013:gvectors.f90
+! CTEMsoft:gvectors.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: gvectors
@@ -46,36 +43,23 @@
 !> this module rather than in diffraction, where it would logically belong.  We may need
 !> to figure out how to change that. 
 ! 
-!> @date   04/29/13 MDG 1.0 original 
+!> @date 04/29/13 MDG 1.0 original 
+!> #date 01/10/14 MDG 2.0 new version, now use-d in crystalvars
 !--------------------------------------------------------------------------
 module gvectors
 
 use local
+use crystalvars
 
 IMPLICIT NONE
 
-! linked list of reflections
-type reflisttype  
-  integer(kind=irg)          	:: num, &  		! sequential number
-                              	hkl(3),&		! Miller indices
-                              	famhkl(3),&		! family representative Miller indices
-				HOLZN,& 		! belongs to this HOLZ layer
-				famnum,&		! family number
-				nab(2)  		! decomposition with respect to ga and gb
-  character(1)               	:: ForB    		! 'F' for full, 'B' for Bethe
-  logical                    	:: dbdiff  		! double diffraction reflection ?
-  complex(kind=dbl)		:: Ucg,&   		! potential coefficient
-                               amp     		! amplitude of beam
-  real(kind=dbl)             	:: sg,xg,Ucgmod,sangle,thetag   ! excitation error, extinction distance, and modulus of potential coefficient; scattering angle (mrad)
-  type(reflisttype),pointer 	:: next    		! connection to next entry
-end type reflisttype
-
-type(reflisttype),pointer 	:: reflist, & 	! linked list of reflections
+type(reflisttype),pointer 	:: reflist, & 	        ! linked list of reflections
                                 rltail, &  		! end of linked list
                                 rltmpa,rltmpb 	! temporary pointers
 
-complex(kind=dbl),allocatable 	:: LUT(:,:,:)
-logical,allocatable		:: dbdiff(:,:,:), dbdiffB(:,:,:)
+! moved to unitcell type in crystalvars.f90 on 1/10/14
+!complex(kind=dbl),allocatable 	:: LUT(:,:,:)
+!logical,allocatable		:: dbdiff(:,:,:), dbdiffB(:,:,:)
 integer(kind=ish),allocatable	:: refdone(:,:,:)	! used to keep track of which reflections have already been dealt with.
 
 ! define the cutoff parameters for the Bethe potential approach (and set to zero initially)
@@ -128,16 +112,17 @@ contains
 !
 !> @brief allocate and initialize the linked reflection list
 !
-!> @date   10/20/98 MDG 1.0 original
-!> @date    5/22/01 MDG 2.0 f90
-!> @date   11/27/01 MDG 2.1 added kind support
-!> @date  03/26/13  MDG 3.0 updated IO
+!> @date  10/20/98 MDG 1.0 original
+!> @date   5/22/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  03/26/13 MDG 3.0 updated IO
+!> @date  01/10/14 MDG 4.0 account for new version of cell type
 !--------------------------------------------------------------------------
 subroutine MakeRefList
 
 use local
 use error
-use dynamical
+use crystalvars
 
 IMPLICIT NONE
 
@@ -145,11 +130,13 @@ integer(kind=irg)  :: istat
 
 ! create it if it does not already exist
 if (.not.associated(reflist)) then
-  DynNbeams = 0
+  cell%DynNbeams = 0
   allocate(reflist,stat=istat)
   if (istat.ne.0) call FatalError('MakeRefList:',' unable to allocate pointer')
   rltail => reflist                 	! tail points to new value
   nullify(rltail%next)              	! nullify next in new value
+! and make sure that the reflist pointer in the current cell variable points to this list
+  cell%reflist => reflist
 end if
 
 end subroutine MakeRefList
@@ -166,10 +153,11 @@ end subroutine MakeRefList
 !
 !> @param hkl Miller indices
 !
-!> @date   10/20/98 MDG 1.0 original
-!> @date    5/22/01 MDG 2.0 f90
-!> @date   11/27/01 MDG 2.1 added kind support
-!> @date  03/26/13  MDG  3.0 updated IO
+!> @date  10/20/98 MDG 1.0 original
+!> @date   5/22/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  03/26/13 MDG 3.0 updated IO
+!> @date  01/10/14 MDG 4.0 account for new version of cell type
 !--------------------------------------------------------------------------
 subroutine AddReflection(hkl)
 
@@ -193,312 +181,18 @@ integer(kind=irg)  		:: istat
  rltail => rltail%next             		! tail points to new value
  nullify(rltail%next)              		! nullify next in new value
 
- DynNbeams = DynNbeams + 1         		! update reflection counter
- rltail%num = DynNbeams            		! store reflection number
+ cell%DynNbeams = cell%DynNbeams + 1         	! update reflection counter
+ rltail%num = cell%DynNbeams            	! store reflection number
  rltail%hkl = hkl                  		! store Miller indices
  call CalcUcg(hkl)                 		! compute potential Fourier coefficient
- rltail%Ucg = rlp%Ucg              		! and store it in the list
+! rltail%Ucg = rlp%Ucg              		! and store it in the list
  rltail%xg = rlp%xg                		! also store the extinction distance
  rltail%famnum = 0				! init this value for Prune_ReflectionList
- rltail%Ucgmod = cabs(rlp%Ucg)   		! added on 2/29/2012 for Bethe potential computations
- rltail%sangle = 1000.0*dble(CalcDiffAngle(hkl(1),hkl(2),hkl(3)))    ! added 4/18/2012 for EIC project HAADF/BF tomography simulations
- rltail%thetag = rlp%Vphase                   ! added 12/104/2013 for CTEMECCI program
+! rltail%Ucgmod = cabs(rlp%Ucg)   		! added on 2/29/2012 for Bethe potential computations
+! rltail%sangle = 1000.0*dble(CalcDiffAngle(hkl(1),hkl(2),hkl(3)))    ! added 4/18/2012 for EIC project HAADF/BF tomography simulations
+ rltail%thetag = rlp%Vphase                   ! added 12/14/2013 for CTEMECCI program
 
 end subroutine AddReflection
-
-!--------------------------------------------------------------------------
-!
-! SUBROUTINE: RankReflections
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief rank reflections
-!
-!> @param k 
-!> @param ga 
-!> @param gb
-!> @param fcnt 
-!> @param srza 
-!> @param iorder 
-!
-!> @date   10/20/98 MDG 1.0 original
-!> @date    5/22/01 MDG 2.0 f90
-!> @date   11/27/01 MDG 2.1 added kind support
-!> @date  03/26/13  MDG  3.0 updated IO
-!--------------------------------------------------------------------------
-subroutine RankReflections(k,ga,gb,fcnt,srza,iorder)
-
-use local
-use multibeams
-use diffraction
-use symmetryvars
-use symmetry
-use io
-use crystal
-use error
-use dynamical
-
-IMPLICIT NONE
-
-integer(kind=irg),INTENT(IN)	:: k(3)	!< incident beam direction
-integer(kind=irg),INTENT(IN)	:: ga(3)	!< first pattern vector
-integer(kind=irg),INTENT(IN)	:: gb(3)	!< second pattern vector
-integer(kind=irg),INTENT(OUT)	:: fcnt	!< 
-character(2),INTENT(IN)	:: srza      !< = SR for systematic row and ZA for zone axis orientation
-integer(kind=irg),INTENT(OUT)	:: iorder	!< 
-
-
-character(*),parameter 	:: var1 = ''
-integer(kind=irg)   		:: i,j,ii,jj, &    ! various counters
-                      		gn(3), & ! reciprocal lattice vectors
-                      		il(48), gg(3),rfcnt,inm,imm,num,jcnt,iproj,jproj,ier, io_int(2)
-real(kind=sgl)      		:: kk(3), &
-                      		M(2,2),X(2),D ! variables used to decompose reciprocal lattice vectors
-logical             		:: a,sgg 
-logical,allocatable 		:: z(:,:)
-
-
- kk = float(k)
- iorder = SG % SYM_NUMpt
-
- if (srza.eq.'ZA') then 
-  mess = ' The program will list all independent families of reflections of the zone'; call Message("(/A)")
-  mess = ' that can be written as linear combinations of the two independent reflections'; call Message("(/A)")
-  call ReadValue(' Enter the maximum multiple of ga and gb that should be included [integers] : ', io_int, 2)
-  imm = io_int(1)
-  inm = io_int(2)
- else
-  mess = ' The program will list all independent families of reflections of the systematic row.'; call Message("(/A)")
-  call ReadValue(' Enter the maximum multiple of ga that should be included [I] : ', io_int, 1)
-  inm = io_int(1)
- end if
-
- fcnt = 0
-
-! systematic row or zone axis ?
- select case (srza)
-
- case('ZA');
-
-! use a logical array z to exclude family members once one
-! member of the family has been evaluated
-  if (.not.allocated(z))  allocate(z(-inm:inm,-imm:imm),stat=ier)
-  if (ier.ne.0) call FatalError('RankReflections',' unable to allocate memory for array z')
-  z(-inm:inm,-imm:imm) = .FALSE.
-
-  do i=-inm,inm
-   do j=-imm,imm
-    if (.not.z(i,j)) then
-     fcnt = fcnt + 1
-     if (fcnt.gt.numr) call FatalError('RankReflections ',' too many families ')
-     gn = i*ga+j*gb
-     call CalcFamily(gn,num,'r')
-     call GetOrder(kk,il,num,jcnt)
-     numfam(fcnt) = jcnt
-    do jj = 1,jcnt
-      do ii = 1,3
-       gg(ii) = itmp(il(jj),ii)
-      end do
-      if (jj.eq.1) then
-       glen(fcnt) = CalcLength(float(gg),'r')
-      end if
-
-! determine the components of all family members with
-! respect to ga and gb      
-      M(1,1) = CalcDot(float(gb),float(gb),'c')
-      M(1,2) = -CalcDot(float(ga),float(gb),'c')
-      M(2,1) = M(1,2)
-      M(2,2) = CalcDot(float(ga),float(ga),'c')
-      D = M(1,1)*M(2,2) - M(1,2)*M(2,1)
-      X(1) = CalcDot(float(gg),float(ga),'c')
-      X(2) = CalcDot(float(gg),float(gb),'c')
-      X = matmul(M,X)/D
-      iproj = int(X(1))
-      jproj = int(X(2))
-      if (((iproj.ge.-inm).and.(iproj.le.inm)).and.((jproj.ge.-imm).and.(jproj.le.imm))) then
-       z(iproj,jproj) = .TRUE.
-      endif
-      do ii = 1,3
-       family(fcnt,jj,ii) = itmp(il(jj),ii)
-      end do
-     end do
-    end if
-   end do
-  end do
-  deallocate(z)
-
- case('SR');   ! systematic row case
-! In this case we should mostly check for centrosymmetry, since 
-! the non-centrosymmetric case may give +g and -g reflections with
-! different intensities.
-! The most straightforward way to check this is to determine 
-! whether or not -g belongs to the family {+g}.  If it does, then
-! the systematic row will be symmetric in +-g, else it is not.
-  call CalcFamily(ga,num,'r')
-  sgg = .FALSE.
-  do ii=1,num
-   gg(1:3) = itmp(ii,1:3)
-   if (sum(gg+ga).eq.0) then 
-     sgg = .TRUE.
-   end if
-  end do
-  fcnt = fcnt + 1
-  numfam(fcnt) = 1
-  glen(fcnt) = 0.0
-  family(fcnt,1,1:3) = (/0,0,0/)
-
-  if (sgg) then
-! -g does belong to the same family; enumerate all families
-   iorder = 2
-   do i=1,inm
-    fcnt = fcnt + 1
-    numfam(fcnt) = 2
-    glen(fcnt) = CalcLength(float(i*ga),'r')
-    family(fcnt,1,1:3) = i*ga(1:3)
-    family(fcnt,2,1:3) = -i*ga(1:3)
-   end do
-  else
-! -g does not belong to the same family
-   iorder = 1
-   do i=-inm,inm
-    fcnt = fcnt + 1
-    numfam(fcnt) = 1
-    glen(fcnt) = CalcLength(float(i*ga),'r')
-    family(fcnt,1,1:3) = i*ga(1:3)
-   end do
-  end if
-
- end select   ! systematic row or zone axis
-
-! allocate the variables defined in module multibeams
- if (.not.allocated(gm)) allocate(gm(fcnt),stat=ier)
- if (ier.ne.0) call FatalError(var1,'gm')
- if (.not.allocated(idx)) allocate(idx(fcnt),stat=ier)
- if (ier.ne.0) call FatalError(var1,'idx')
- if (.not.allocated(al)) allocate(al(fcnt),stat=ier)
- if (ier.ne.0) call FatalError(var1,'al')
- if (.not.allocated(V)) allocate(V(fcnt,4),stat=ier)
- if (ier.ne.0) call FatalError(var1,'V')
- gm=0.0
- gm(1:fcnt) = glen(1:fcnt)
-
-! next, rank the families by increasing |g|
- call SPSORT(gm,fcnt,idx,1,ier)
-
-! and print them out in the correct order, removing the ones that are not
-! allowed by lattice centering !  Reflections with zero structure factor,
-! but not forbidden by lattice centering may give rise to double diffracted
-! beams, so they can not be excluded at this point.
- mess = ' List of independent reflections, ranked by increasing |g|'; call Message("(/A/)")
- rfcnt = 0
- do i=1,fcnt
-  gn(1:3) = family(idx(i),1,1:3)
-  a = IsGAllowed(gn)
-  if (a) then
-   call CalcUcg(gn)
-   rfcnt=rfcnt+numfam(idx(i))
-   al(idx(i)) = .TRUE.
-   V(idx(i),1) = rlp%Vmod
-   V(idx(i),2) = rlp%Vphase
-   V(idx(i),3) = rlp%Vpmod
-   V(idx(i),4) = rlp%Vpphase
-    write (stdout,"('(',I3,I3,I3,'); |g| = ',F7.3,'; # = ',I2,'; nref = ',I3,'; |Vg| = ',F8.5,' Volt')") &
-        (gn(j),j=1,3),gm(idx(i)),numfam(idx(i)),rfcnt,rlp%Vmod
-  else
-   al(idx(i)) = .FALSE.
-  end if
- end do
- 
-end subroutine RankReflections
-
-!--------------------------------------------------------------------------
-!
-! SUBROUTINE: SelectReflections
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief determine a subset of beams to be included in multi-beam
-!> simulation
-!
-!> @param fcnt
-!> @param rfcnt
-!> @param ccnt
-!
-!> @date    5/24/01 MDG 1.0 f90
-!> @date   11/27/01 MDG 1.1 added kind support
-!> @date  03/26/13  MDG 2.0 updated IO
-!--------------------------------------------------------------------------
-subroutine SelectReflections(fcnt,rfcnt,ccnt)
-
-use local
-use multibeams
-use crystalvars
-use symmetryvars
-use symmetry
-use io
-use dynamical
-
-IMPLICIT NONE
-
-integer(kind=irg)    	:: rfcnt, gn(3), fcnt,i,j,igv, ccnt, io_int(1)
-real(kind=sgl)       	:: gmax, io_real(1)
-
-intent(IN) 		:: fcnt
-intent(OUT)		:: rfcnt,ccnt
-
-! ask for maximum value in terms of |g| or in terms of Vmod
- mess = ' The reciprocal lattice vectors contributing to the computation'; call Message("(/A)")
- mess = ' must now be selected.  You can use a maximum |g| value to '; call Message("(A)")
- mess = ' truncate reciprocal space, or you can use a |V| threshold.'; call Message("(A/)")
-! is this a non-symmorphic space group ? If so, add a little note
- if (minval(abs(SGsym - cell % SYM_SGnum)).ne.0) then
-  mess = ' The list above may show reflections with zero structure factor because'; call Message("(A)")
-  mess = ' of non-symmorphic space group symmetry elements.  Those reflections'; call Message("(A)")
-  mess = ' can be incorporated in the simulation only with the maximum |g| criterion.'; call Message("(A/)")
- end if
- call ReadValue('Use maximum |g| as criterion (1) or threshold |V| (2) :', io_int, 1)
- igv = io_int(1)
-
- if (igv.eq.1) then
-  mess = ' You have selected the maximum |g| criterion.'; call Message("(/A)")
-  call ReadValue('Enter the truncation value for |g| (strictly smaller) : ', io_real, 1)
-  gmax = io_real(1)
-  do i=1,fcnt
-   if ((gm(idx(i)).gt.gmax).and.(al(idx(i)))) al(idx(i)) = .FALSE.
-  end do 
- else
-  mess = ' You have selected the threshold |V| criterion.'; call Message("(/A)")
-  call ReadValue('Enter the minimum value for |V| (strictly larger) : ', io_real, 1)
-  gmax = io_real(1)
-  do i=1,fcnt
-   if ((V(idx(i),1).lt.gmax).and.(al(idx(i)))) al(idx(i)) = .FALSE.
-  end do 
- endif
-
- rfcnt = 0
- ccnt = 0
- mess = ' The following reflections will be included :'; call Message("(A/)")
- do i=1,fcnt
-  if (al(idx(i))) then 
-! place all reflections in the linked reflection list
-   do j=1,numfam(idx(i))
-    call AddReflection(family(idx(i),j,1:3))
-    rltail%famnum = ccnt+1
-   end do
-! and print list of included families
-   gn(1:3) = family(idx(i),1,1:3)
-   ccnt = ccnt + 1
-   rfcnt=rfcnt+numfam(idx(i))
-    write (stdout,"('(',I3,I3,I3,'); |g| = ',F7.3,'; # = ',I2,'; nref = ',I3,'; |Vg| = ',F8.5,' Volt')") &
-        (gn(j),j=1,3),gm(idx(i)),numfam(idx(i)),rfcnt,V(idx(i),1)
-  end if
- end do
-
- io_int(1) = rfcnt
- call WriteValue('Total number of reflections contributing to computation : ', io_int, 1) 
-
-end subroutine SelectReflections
-
 
 !--------------------------------------------------------------------------
 !
@@ -582,112 +276,6 @@ end subroutine Printrlp
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE: CalcDynMat
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief compute the dynamical matrix
-!
-!> @details compute the dynamical matrix for either Bloch wave
-!> or Darwin-Howie-Whelan approach. Bethe potentials
-!> are not yet implemented in this routine, but should
-!> be at some point in the future...
-!
-!> @param calcmode computational mode (D-H-W, BLOCH, DIAGH, DIAGB, BETHE)
-!
-!> @note This is the old routine; should be replaced everywhere by a call to 
-!> Compute_DynMat
-!
-!> @todo Add support for Bethe potentials; probably needs a complete rewrite to include all cases
-!
-!> @date   10/20/98 MDG 1.0 original
-!> @date    5/22/01 MDG 2.0 f90
-!> @date   11/27/01 MDG 2.1 added kind support
-!> @date  03/26/13  MDG  3.0 updated IO
-!--------------------------------------------------------------------------
-subroutine CalcDynMat(calcmode)
-
-use local
-use constants
-use error
-use crystal
-use dynamical
-use diffraction
-
-IMPLICIT NONE
-
-character(5),INTENT(IN)       	:: calcmode  !< computational mode  (D-H-W, BLOCH, DIAGH, DIAGB, or BETHE)
-integer(kind=irg) 		:: istat,ir,ic
-real(kind=sgl)     		:: glen,exer
-complex(kind=dbl)  		:: czero,pre
-
-! has reflist been allocated ?
-if (.not.associated(reflist)) call FatalError('CalcDynMat',' reflection list has not been allocated')
-
-! initialize some parameters
-czero = cmplx(0.0,0.0,dbl)
-pre = cmplx(0.0,cPi,dbl)
-
-! allocate DynMat if it hasn't already been allocated
-if (.not.allocated(DynMat)) then
-  allocate(DynMat(DynNbeams,DynNbeams),stat=istat)
-  DynMat = czero
-! get the absorption coefficient
-  call CalcUcg((/0,0,0/))
-  DynUpz = rlp%Vpmod
-end if
-
-! are we supposed to fill the off-diagonal part ?
- if ((calcmode.eq.'D-H-W').or.(calcmode.eq.'BLOCH')) then
-  rltmpa => reflist%next    ! point to the front of the list
-! ir is the row index
-  do ir=1,DynNbeams
-   rltmpb => reflist%next   ! point to the front of the list
-! ic is the column index
-   do ic=1,DynNbeams
-    if (ic.ne.ir) then  ! exclude the diagonal
-! compute Fourier coefficient of electrostatic lattice potential 
-     call CalcUcg(rltmpa%hkl - rltmpb%hkl)
-     if (calcmode.eq.'D-H-W') then
-      DynMat(ir,ic) = pre*rlp%qg
-     else
-      DynMat(ir,ic) = rlp%Ucg
-     end if
-    end if
-    rltmpb => rltmpb%next  ! move to next column-entry
-   end do
-   rltmpa => rltmpa%next   ! move to next row-entry
-  end do
- end if
-
-! or the diagonal part ?
- if ((calcmode.eq.'DIAGH').or.(calcmode.eq.'DIAGB')) then
-  rltmpa => reflist%next   ! point to the front of the list
-! ir is the row index
-  do ir=1,DynNbeams
-   glen = CalcLength(float(rltmpa%hkl),'r')
-   if (glen.eq.0.0) then
-    DynMat(ir,ir) = cmplx(0.0,DynUpz,dbl)
-   else  ! compute the excitation error
-    exer = Calcsg(float(rltmpa%hkl),DynWV,DynFN)
-    rltmpa%sg = exer
-    if (calcmode.eq.'DIAGH') then  !
-     DynMat(ir,ir) = cmplx(0.0,2.D0*cPi*exer,dbl)
-    else
-     DynMat(ir,ir) = cmplx(2.D0*exer/mLambda,DynUpz,dbl)
-    end if
-   endif
-   rltmpa => rltmpa%next   ! move to next row-entry
-  end do
- end if
-
-! or are we making use of Bethe potentials ?
-! This part is yet to be implemented
-
-end subroutine CalcDynMat
-
-!--------------------------------------------------------------------------
-!
 ! SUBROUTINE: Prune_ReflectionList
 !
 !> @author Marc De Graef, Carnegie Mellon University
@@ -707,6 +295,7 @@ end subroutine CalcDynMat
 !> @date  10/05/13 MDG 1.1 removal of unused reflections from linked list
 !> @date  10/05/13 MDG 1.2 changed the order of nested loops to speed things up a bit
 !> @date  10/07/13 MDG 1.3 added section to reset the famhkl entries after pruning
+!> @date  01/10/14 MDG 4.0 account for new version of cell type
 !--------------------------------------------------------------------------
 subroutine Prune_ReflectionList(numk,nbeams)
 
@@ -728,18 +317,19 @@ real(kind=sgl)     			:: sgp, lUg, cut1, cut2
 
 
 ! reset the value of DynNbeams in case it was modified in a previous call 
-DynNbeams = DynNbeamsLinked
+cell%DynNbeams = cell%DynNbeamsLinked
 
 nbeams = 0
 
 ! reset the reflection linked list
-  rltmpa => reflist%next
+  rltmpa => cell%reflist%next
 
 ! pick the first reflection since that is the transmitted beam (only on the first time)
   rltmpa%famnum = 1    
   nbeams = nbeams + 1
 
 ! loop over all reflections in the linked list    
+!!!! this will all need to be changed with the new Bethe potential criteria ...  
   rltmpa => rltmpa%next
   reflectionloop: do ig=2,DynNbeamsLinked
     lUg = cabs(rltmpa%Ucg) * mLambda
@@ -785,6 +375,8 @@ nbeams = 0
   end do reflectionloop
 
   mess = ' Renumbering reflections'; call Message("(A)")
+
+! change the following with the new next2 pointer in the reflist type !!!
   
 ! ok, now that we have the list, we'll go through it again to set sequential numbers instead of 1's
 ! at the same time, we'll deallocate those entries that are no longer needed.
@@ -1245,7 +837,7 @@ end subroutine Set_Bethe_Parameters
 !> general case).
 !
 !> @param dmin minimum d-spacing to allow in the list
-!> @param k zone axis indices
+!> @param k zone axis direction cosines in direct Bravais lattice
 !> @param ga first reciprocal vector of zone
 !> @param gb second reciprocal vector 
 !> @param method  approach to follow (ALL or ZA)
@@ -1256,6 +848,7 @@ end subroutine Set_Bethe_Parameters
 !> @date 04/29/13 MDG 1.0 original
 !> @date 09/20/13 MDG 1.1 corrected handling of LUT
 !> @date 10/05/13 MDG 1.2 limit the range of reflections by means of the convergence angle (optional)
+!> @date 01/10/14 MDG 2.0 update for new cell type definition
 !--------------------------------------------------------------------------
 subroutine Compute_ReflectionList(dmin,k,ga,gb,method,ConvertList,maxholz,convang)
 

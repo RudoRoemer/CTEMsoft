@@ -1,0 +1,36 @@
+&overlaplist
+! The line above must not be changed
+!
+! The values below are the default values for this program
+!
+! crystal structure filename A
+xtalnameA = 'undefined'
+! crystal structure filename B
+xtalnameB = 'undefined'
+! output device (6=screen, >10 is fort.## file)
+stdout = 6
+! smallest d-spacing to take into account [nm]
+dmin = 0.025
+! microscope accelerating voltage [V]
+voltage = 200000.
+! incident beam direction for crystal A (top crystal)
+kA = 0,0,1
+! foil normal
+fnA = 0,0,1
+! orientation relation information, real numbers
+tA = 0.0,0.0,1.0
+tB = 0.0,0.0,1.0
+gA = 1.0,0.0,0.0
+gB = 1.0,0.0,0.0
+! beam convergence angle [mrad]
+convergence = 5.0
+! number of steps along incident cone radius (zero for now)
+nkt = 0
+! number of thickness increments
+numthick = 10
+! thickness increment [nm]
+thickinc = 10.0
+
+! output file name (can be a full pathname)
+outname = 'overlap.data'
+/

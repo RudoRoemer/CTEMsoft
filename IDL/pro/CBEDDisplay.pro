@@ -353,21 +353,23 @@ CBEDgetpreferences
 ;------------------------------------------------------------
 ; create the top level widget
 widget_s.base = WIDGET_BASE(TITLE='Zone Axis CBED Display Program', $
-                        /COLUMN, $
-                        XSIZE=700, $
+                        /ROW, $
+                        XSIZE=1300, $
                         /ALIGN_LEFT, $
 			/TLB_MOVE_EVENTS, $
 			EVENT_PRO='CBEDDisplay_event', $
                         XOFFSET=data.xlocation, $
                         YOFFSET=data.ylocation)
 
-block1 = WIDGET_BASE(widget_s.base, $
+block0 = WIDGET_BASE(widget_s.base, /COLUMN)
+
+block1 = WIDGET_BASE(block0, $
 			/FRAME, $
 			/COLUMN)
 
 file1 = WIDGET_BASE(block1, $
 			/ROW, $
-                        XSIZE=700, $
+                        XSIZE=650, $
 			/ALIGN_LEFT)
 
 widget_s.logodraw = WIDGET_DRAW(block1, $
@@ -381,15 +383,15 @@ widget_s.logodraw = WIDGET_DRAW(block1, $
 ;------------------------------------------------------------
 ; create the various vertical blocks
 ; block 1 deals with the input file and displays the data dimensions
-block1 = WIDGET_BASE(widget_s.base, /FRAME, /COLUMN)
+block1 = WIDGET_BASE(block0, /FRAME, /COLUMN)
 
 ;----------
-file1 = WIDGET_BASE(block1, /ROW, XSIZE=980, /ALIGN_CENTER)
-widget_s.dataname = Core_WText(file1, 'Data File Name',fontstrlarge, 200, 25, 77, 1, data.dataname)
+file1 = WIDGET_BASE(block1, /ROW, XSIZE=650, /ALIGN_CENTER)
+widget_s.dataname = Core_WText(file1, 'Data File Name',fontstrlarge, 150, 25, 77, 1, data.dataname)
 
 ;----------
 file3 = WIDGET_BASE(block1,  /ROW,  /BASE_ALIGN_BOTTOM,  /ALIGN_LEFT)
-widget_s.filesize = Core_WText(file3, 'Data File Size',fontstrlarge, 200, 25, 30, 1, string(float(data.filesize)/1024./1024.,FORMAT="(F8.2)")+' Mb' )
+widget_s.filesize = Core_WText(file3, 'Data File Size',fontstrlarge, 150, 25, 30, 1, string(float(data.filesize)/1024./1024.,FORMAT="(F8.2)")+' Mb' )
 
 widget_s.progress = WIDGET_DRAW(file3, $
 			COLOR_MODEL=2, $
@@ -401,7 +403,7 @@ widget_s.progress = WIDGET_DRAW(file3, $
 
 ;----------
 file3 = WIDGET_BASE(block1,  /ROW,  /ALIGN_LEFT)
-widget_s.imx = Core_WText(file3, 'Disk Dimensions',fontstrlarge, 200, 25, 10, 1, string(data.imx,FORMAT="(I5)"))
+widget_s.imx = Core_WText(file3, 'Disk Dimensions',fontstrlarge, 150, 25, 10, 1, string(data.imx,FORMAT="(I5)"))
 widget_s.imy = Core_WText(file3, 'by',fontstrlarge, 25, 25, 10, 1, string(data.imy,FORMAT="(I5)"))
 
 
@@ -409,7 +411,7 @@ widget_s.imy = Core_WText(file3, 'by',fontstrlarge, 25, 25, 10, 1, string(data.i
 ; derived from the input file and can not be changed by
 ; the user...
 
-block2 = WIDGET_BASE(widget_s.base, /FRAME, /ROW)
+block2 = WIDGET_BASE(block0, /FRAME, /ROW)
 file4 = WIDGET_BASE(block2, /COLUMN, /ALIGN_LEFT)
 
 ;-------------
@@ -439,48 +441,51 @@ file6 = WIDGET_BASE(block2, /COLUMN, /ALIGN_LEFT)
 
 ;-------------
 file7 = WIDGET_BASE(file6, /ROW, /ALIGN_LEFT)
-widget_s.numk = Core_WText(file7, '# of k-vectors  ',fontstrlarge, 200, 25, 20, 1, string(data.numk,FORMAT="(I5)"))
+widget_s.numk = Core_WText(file7, '# of k-vectors  ',fontstrlarge, 150, 25, 20, 1, string(data.numk,FORMAT="(I5)"))
 
 ;-------------
 file7 = WIDGET_BASE(file6, /ROW, /ALIGN_LEFT)
-widget_s.xtalname = Core_WText(file7, 'Structure File  ',fontstrlarge, 200, 25, 20, 1, data.xtalname)
+widget_s.xtalname = Core_WText(file7, 'Structure File  ',fontstrlarge, 150, 25, 20, 1, data.xtalname)
 
 ;-------------
 file7 = WIDGET_BASE(file6, /ROW, /ALIGN_LEFT)
 wv = '['+string(data.wavek[0],format="(I3)")+' '+ string(data.wavek[1],format="(I3)")+' '+ string(data.wavek[2],format="(I3)")+']'
-widget_s.wavek = Core_WText(file7, 'Zone axis [uvw] ',fontstrlarge, 200, 25, 20, 1, wv )
+widget_s.wavek = Core_WText(file7, 'Zone axis [uvw] ',fontstrlarge, 150, 25, 20, 1, wv )
 
 ;-------------
 file7 = WIDGET_BASE(file6, /ROW, /ALIGN_LEFT)
 wv = '('+string(data.ga[0],format="(I3)")+' '+ string(data.ga[1],format="(I3)")+' '+ string(data.ga[2],format="(I3)")+')'
-widget_s.ga = Core_WText(file7, 'Horizontal g    ',fontstrlarge, 200, 25, 20, 1, wv )
+widget_s.ga = Core_WText(file7, 'Horizontal g    ',fontstrlarge, 150, 25, 20, 1, wv )
 
 ;-------------
 file7 = WIDGET_BASE(file6, /ROW, /ALIGN_LEFT)
-widget_s.minten = Core_WText(file7, 'Intensity cutoff',fontstrlarge, 200, 25, 20, 1, string(data.minten,format="(E10.2)") )
+widget_s.minten = Core_WText(file7, 'Intensity cutoff',fontstrlarge, 150, 25, 20, 1, string(data.minten,format="(E10.2)") )
 
 
 ;------------------------------------------------------------
 ; block 3 displays a number of symmetry properties (there are 8 in total)
-block3 = WIDGET_BASE(widget_s.base, /FRAME, /ROW)
+
+block0 = WIDGET_BASE(widget_s.base, XSIZE = 610, /COLUMN)
+
+block3 = WIDGET_BASE(block0, /FRAME, /ROW)
 file4 = WIDGET_BASE(block3, /COLUMN, /ALIGN_LEFT)
 
 ;-------------
 file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
 data.symgroups = [0,0,0,0,0,0,0,0]
-widget_s.symCPG = Core_WText(file5, 'Crystal PG',fontstrlarge, 230, 25, 10, 1, PGTHD[data.symgroups[0]] )
+widget_s.symCPG = Core_WText(file5, 'Crystal PG',fontstrlarge, 200, 25, 10, 1, PGTHD[data.symgroups[0]] )
 
 ;-------------
 file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
-widget_s.symDPG = Core_WText(file5, 'Diffraction PG',fontstrlarge, 230, 25, 10, 1, DG[data.symgroups[2]] )
+widget_s.symDPG = Core_WText(file5, 'Diffraction PG',fontstrlarge, 200, 25, 10, 1, DG[data.symgroups[2]] )
 
 ;-------------
 file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
-widget_s.symWPG = Core_WText(file5, 'Whole Pattern PG',fontstrlarge, 230, 25, 10, 1, PGTWD[data.symgroups[5]] )
+widget_s.symWPG = Core_WText(file5, 'Whole Pattern PG',fontstrlarge, 200, 25, 10, 1, PGTWD[data.symgroups[5]] )
 
 ;-------------
 file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
-widget_s.symDFG = Core_WText(file5, 'Dark Field General PG',fontstrlarge, 230, 25, 10, 1, PGTHD[data.symgroups[6]] )
+widget_s.symDFG = Core_WText(file5, 'Dark Field General PG',fontstrlarge, 200, 25, 10, 1, PGTHD[data.symgroups[6]] )
 
 ;-------------
 ;-------------
@@ -488,24 +493,24 @@ file4 = WIDGET_BASE(block3, /COLUMN, /ALIGN_LEFT)
 
 ;-------------
 file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
-widget_s.symLPG = Core_WText(file5, 'Laue PG',fontstrlarge, 230, 25, 10, 1, PGTHD[data.symgroups[1]] )
+widget_s.symLPG = Core_WText(file5, 'Laue PG',fontstrlarge, 200, 25, 10, 1, PGTHD[data.symgroups[1]] )
 
 ;-------------
 file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
-widget_s.symPDG = Core_WText(file5, 'Projection Diff. PG',fontstrlarge, 230, 25, 10, 1, DG[data.symgroups[3]] )
+widget_s.symPDG = Core_WText(file5, 'Projection Diff. PG',fontstrlarge, 200, 25, 10, 1, DG[data.symgroups[3]] )
 
 ;-------------
 file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
-widget_s.symBFG = Core_WText(file5, 'Bright Field PG',fontstrlarge, 230, 25, 10, 1, PGTWD[data.symgroups[4]] )
+widget_s.symBFG = Core_WText(file5, 'Bright Field PG',fontstrlarge, 200, 25, 10, 1, PGTWD[data.symgroups[4]] )
 
 ;-------------
 file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
-widget_s.symDFS = Core_WText(file5, 'Dark Field Special PG',fontstrlarge, 230, 25, 10, 1, PGTWD[data.symgroups[7]] )
+widget_s.symDFS = Core_WText(file5, 'Dark Field Special PG',fontstrlarge, 200, 25, 10, 1, PGTWD[data.symgroups[7]] )
 
 ;-------------
 ; next we have the buttons that generate LACBED, CBED, or MBCBED widgets
 ;-------------
-block3 = WIDGET_BASE(widget_s.base, XSIZE=650, /FRAME, /ROW)
+block3 = WIDGET_BASE(block0, XSIZE=550, /FRAME, /ROW)
 file5 = WIDGET_BASE(block3, /ROW, /ALIGN_CENTER)
 
 widget_s.startLACBED = WIDGET_BUTTON(file5, $
@@ -532,16 +537,16 @@ widget_s.startMBCBED = WIDGET_BUTTON(file5, $
 ;----------
 ; next, add a text window for program messages
 
-widget_s.status= WIDGET_TEXT(widget_s.base, $
+widget_s.status= WIDGET_TEXT(block0, $
 			XSIZE=115, $
-			YSIZE=10, $
+			YSIZE=18, $
 			/SCROLL, $
 			VALUE=' ',$
 			/ALIGN_CENTER)
 
 ;------------------------------------------------------------
 ; block 3 QUIT button, LOAD FILE button and progress bar (used for file loading)
-block3 = WIDGET_BASE(widget_s.base, XSIZE=650, /FRAME, /ROW)
+block3 = WIDGET_BASE(block0, XSIZE=550, /FRAME, /ROW)
 file11 = WIDGET_BASE(block3, /ROW, /ALIGN_LEFT)
 
 widget_s.mainstop = WIDGET_BUTTON(file11, $

@@ -5,11 +5,13 @@
 004CTEMSRdefect.template
 010CTEMlacbed.template
 011CTEMmbcbed.template
+012CTEMKossel.template
 020CTEMMC.template
 021CTEMEBSDzE.template
 030CTEMGAMMA.template
 040CTEMECP.template
 041CTEMECCI.template
+050CTEMoverlap.template
 200dislocation.template
 201stackingfault.template
 202void.template
