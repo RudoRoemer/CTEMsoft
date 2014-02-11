@@ -27,95 +27,96 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:inclusion.f90
+! CTEMsoft2013:apb.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: inclusion
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief Provides routines to deal with spherical inclusions
+!> @brief Provides routines to deal with cylindrical APBs
 ! 
-!> @date   04/29/11 MDG 1.0 original
-!> @date   06/04/13 MDG 2.0 rewrite + quaternions instead of rotations
+!> @date   02/10/14 MDG 1.0 original
 !--------------------------------------------------------------------------
-module inclusion
+module apb
 
 use local
 
-type inclusiontype
-	real(kind=sgl)       ::  xpos,ypos,zpos,radius,C
-end type inclusiontype
+type apbtype
+	real(kind=sgl)       ::  xpos,ypos,zpos,radius,w,Rdisp(3)
+end type apbtype
 
-type (inclusiontype), allocatable  :: inclusions(:)
+type (apbtype), allocatable  :: apbs(:)
 
 contains
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE: read_inclusion_data
+! SUBROUTINE: read_apb_data
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief  read inclusion parameters from file
+!> @brief  read apb parameters from file
 ! 
-!> @param numinc number of inclusions
-!> @param incname name of inclusion file
+!> @param numapb number of inclusions
+!> @param apbname name of inclusion file
 !> @param DF_L column edge length 
 !> @param DF_npix number of x-pixels
 !> @param DF_npiy number of y-pixels
 !> @param dinfo logical to trigger verbose output
 ! 
-!> @date 1/5/99   MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90 version
-!> @date   11/27/01 MDG 2.1 added kind support
-!> @date   03/25/13 MDG 3.0 updated IO
+!> @date   02/10/14 MDG 1.0 new code
 !--------------------------------------------------------------------------
-subroutine read_inclusion_data(numinc,incname,DF_L,DF_npix,DF_npiy,dinfo)
+subroutine read_apb_data(numapb,apbname,DF_L,DF_npix,DF_npiy,dinfo)
 
 use local
 use io
 use files
+use crystal
 use foilmodule
 
 IMPLICIT NONE
 
-character(50),INTENT(IN)       :: incname
-integer(kind=irg),INTENT(OUT)  :: numinc
-integer(kind=irg),INTENT(IN)	:: dinfo,DF_npix,DF_npiy
-real(kind=sgl),INTENT(IN)	:: DF_L
+character(fnlen),INTENT(IN)    :: apbname
+integer(kind=irg),INTENT(OUT)  :: numapb
+integer(kind=irg),INTENT(IN)   :: dinfo,DF_npix,DF_npiy
+real(kind=sgl),INTENT(IN)      :: DF_L
 
 integer(kind=irg)              :: i, io_int(1)
-real(kind=sgl)                 :: Vx,Vy,Vz,Vrad,C,tmp(3)
+real(kind=sgl)                 :: Vx,Vy,Vz,Vrad,w,tmp(3), tmp2(3), Rx, Ry, Rz
 
-! open the inclusion data file
-mess = 'Opening '//incname; call Message("(A)")
-open(unit=dataunit,file=incname,form='formatted')
-read(unit=dataunit,*) numinc
-allocate(inclusions(numinc))
+! open the apbdata file
+mess = 'Opening '//apbname; call Message("(A)")
+open(unit=dataunit,file=apbname,form='formatted')
+read(unit=dataunit,*) numapb
+allocate(apbs(numapb))
 if (dinfo.eq.1) then
-  io_int(1) = numinc
-  call WriteValue(' Number of inclusions',io_int, 1, "(I)")
+  io_int(1) = numapb
+  call WriteValue(' Number of APBs ',io_int, 1, "(I)")
 end if
 
 
 ! read each subsequent line 
-do i=1,numinc
-  read(unit=dataunit,*) Vx,Vy,Vz,Vrad,C
-  inclusions(i)%xpos = Vx * 0.5 * float(DF_npix)*DF_L
-  inclusions(i)%ypos = Vy * 0.5 * float(DF_npiy)*DF_L
-  inclusions(i)%zpos = Vz * foil%z0         ! vertical fractional location in interval [-1,1]
-  inclusions(i)%radius = Vrad    ! radius in nanometers
-  inclusions(i)%C = C                 ! this is the parameter defined in equation (8.36) of the CTEM book.
-  tmp = quat_rotate_vector( foil%a_fc, dble((/ inclusions(i)%xpos, inclusions(i)%ypos, inclusions(i)%zpos /)) )  
-  inclusions(i)%xpos = tmp(1)
-  inclusions(i)%ypos = tmp(2)
-  inclusions(i)%zpos = tmp(3)
-  if (dinfo.eq.1) write (*,*) i,Vx,Vy,Vz,Vrad,C
+do i=1,numapb
+  read(unit=dataunit,*) Vx,Vy,Vz,Vrad,w,Rx,Ry,Rz
+  apbs(i)%xpos = Vx * 0.5 * float(DF_npix)*DF_L
+  apbs(i)%ypos = Vy * 0.5 * float(DF_npiy)*DF_L
+  apbs(i)%zpos = Vz * foil%z0         ! vertical fractional location in interval [-1,1]
+  apbs(i)%radius = Vrad               ! radius in nanometers
+  apbs(i)%w = w   
+  tmp = (/ Rx, Ry, Rz /)
+  call TransSpace(tmp,tmp2,'d','c') 
+  apbs(i)%Rdisp = tmp2 
+
+  tmp = quat_rotate_vector( foil%a_fc, dble((/ apbs(i)%xpos, apbs(i)%ypos, apbs(i)%zpos /)) )  
+  apbs(i)%xpos = tmp(1)
+  apbs(i)%ypos = tmp(2)
+  apbs(i)%zpos = tmp(3)
+  write (*,*) apbs(i)
 end do
 
 ! close datafile
 close(unit=dataunit,status='keep')
-end subroutine read_inclusion_data
+end subroutine read_apb_data
 
-end module inclusion
+end module apb

@@ -136,14 +136,20 @@ end else begin   ; there is more than one detector segment, so we need to determ
 
 ;print,transpose(STEMsectorranges[0,1:data.detsegm])
 ;print,transpose(STEMsectorranges[1,1:data.detsegm])
+;print,STEMsectors
+
+;help,ktpgang
+;print, min(ktpgang,max=ma),ma
+;help, ktpgc
+;print, min(ktpgc,max=ma),ma
 
   for i=1,data.detsegm do begin			; loop over sectors
-    if (STEMsectors[i] eq 0) then begin		; is this sector inactive
+    if (STEMsectors[i] eq 0) then begin		; is this sector inactive?
 ;print,' working on sector ',i,secnum
       if (i eq secnum) then begin		; is this the problem sector?
 ; yes, it is
 	q = where(((ktpgang ge STEMsectorranges[1,i]) or (ktpgang lt STEMsectorranges[0,i])),gcnt)
-	if (gcnt gt 0) then ktpgc[q] = 0.0
+ 	if (gcnt gt 0) then ktpgc[q] = 0.0
 ;print,'problem sector: > ',STEMsectorranges[1,i], ' or < ', STEMsectorranges[0,i], ', # ',gcnt
       end else begin				
 ; no, it is not

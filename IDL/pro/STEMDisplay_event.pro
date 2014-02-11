@@ -122,6 +122,7 @@ end else begin
 	        if (data.srzamode eq 'ZA') then zeropos = 0 else zeropos = (data.numref-1)/2
 		if (event.press eq 1B) then begin    ; only act on clicks, not on releases
 		  sel = clickablemap[event.x,event.y]
+print,'selectsector: ',sel,event.x,event.y
 		  if (data.diffractionmode eq 0) then begin
 		    if (sel gt 0) then begin
 		      if (data.sectormode eq 0) then begin   	; single sector mode

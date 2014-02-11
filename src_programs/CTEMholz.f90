@@ -910,9 +910,13 @@ integer(kind=irg)  			:: i,nref
  do while (associated(temp))
  
   if (temp%draw.eqv..TRUE.) then ! draw the HOLZ line on the second drawing 
-   V=0.075*(temp%Ig/Imax)**0.1
-   V2=1.0-4.0*(temp%Ig/Imax)**0.1
+!   V=0.075*(temp%Ig/Imax)**0.1
+   V=0.015*(temp%Ig/Imax)**0.1
+!   V2=1.0-4.0*(temp%Ig/Imax)**0.1
+   V2=1.0-1.0*(temp%Ig/Imax)**0.1
+   if (V2.lt.0.0) V2 = 0.0
    call PS_setlinewidth(V)
+write (*,*) V, V2, temp%Ig, Imax
 
 ! make sure that all the lines will actually fit inside the region of interest
    if ((maxval(abs(temp%hlx)).le.CBEDrad*CBEDsc).and.(maxval(abs(temp%hly)).le.CBEDrad*CBEDsc)) then

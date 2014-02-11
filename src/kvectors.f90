@@ -53,16 +53,16 @@ IMPLICIT NONE
 
 ! linked list of wave vectors (used by all diffraction programs)
 type kvectorlist  
-  integer(kind=irg) 		:: i,j         		! image coordinates
+  integer(kind=irg) 		:: i,j         	! image coordinates
   real(kind=dbl)    		:: kt(3)       	! tangential component of wavevector
   real(kind=dbl)    		:: kn          	! normal component
   real(kind=dbl)    		:: k(3)        	! full wave vector
-  type(kvectorlist),pointer	:: next     		! connection to next wave vector
+  type(kvectorlist),pointer	:: next     	! connection to next wave vector
 end type kvectorlist
 
 type(kvectorlist),pointer 	:: khead, &    	! end of linked list
                         	ktmp, &     	! temporary pointer
-                        	ktail       		! end of linked list
+                        	ktail       	! end of linked list
 
 
 contains
@@ -160,6 +160,7 @@ character(3)				:: grid
  if (associated(khead)) then    	 	! deallocate the entire linked list
     call Delete_kvectorlist()
  end if   
+
  
 ! do we know this mapmode ?
 if ( .not.( (mapmode.eq.'Conical').or.(mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical').or. &
@@ -427,7 +428,9 @@ if (mapmode.eq.'RoscaLambert') then
       hexgrid = .FALSE.
    end if
 
+
 ! allocate the head of the linked list
+
    allocate(khead,stat=istat)         		! allocate new value
    if (istat.ne.0) call FatalError('Calckvectors',' unable to allocate khead pointer')
    ktail => khead                      	! tail points to new value
@@ -442,6 +445,7 @@ if (mapmode.eq.'RoscaLambert') then
    ktail%k = matmul(transpose(cell%dsm),kstar)
    ktail%kn = 1.0/mLambda
 
+
 ! deal with each Laue group symmetry separately
  select case (isym)
  
@@ -452,7 +456,7 @@ if (mapmode.eq.'RoscaLambert') then
 	jend = npy
 	  do j=jstart,jend
 	    do i=istart,iend   ! 
-		call AddkVector(numk,delta,i,j)
+		call AddkVector(numk,delta,i,j,hexgrid)
 	    end do
 	  end do
 
@@ -463,7 +467,7 @@ if (mapmode.eq.'RoscaLambert') then
 	jend = npy
 	  do j=jstart,jend
 	   do i=istart,iend   ! 
-		call AddkVector(numk,delta,i,j)
+		call AddkVector(numk,delta,i,j,hexgrid)
 	   end do
 	  end do
 
@@ -474,7 +478,7 @@ if (mapmode.eq.'RoscaLambert') then
 	jend = npy
 	  do j=jstart,jend
 	   do i=istart,iend   ! 
-		call AddkVector(numk,delta,i,j)
+		call AddkVector(numk,delta,i,j,hexgrid)
 	   end do
 	  end do
 
@@ -485,7 +489,7 @@ if (mapmode.eq.'RoscaLambert') then
 	jend = npy
 	  do i=istart,iend
 	   do j=jstart,i   ! 
-		call AddkVector(numk,delta,i,j)
+		call AddkVector(numk,delta,i,j,hexgrid)
 	   end do
 	  end do
 
@@ -850,7 +854,7 @@ integer(kind=irg),INTENT(INOUT)	:: numk
 real(kind=dbl),INTENT(IN)		:: delta
 integer(kind=irg),INTENT(IN)		:: i
 integer(kind=irg),INTENT(IN)		:: j
-logical,INTENT(IN),OPTIONAL		:: usehex
+logical,INTENT(IN)		        :: usehex
 
 
 integer(kind=irg)         		:: istat, ks
@@ -869,7 +873,7 @@ iPi = 1.D0/cPi  ! inverse of pi
 goahead = .FALSE.
 
 ! hexagonal sampling or not?
-if (present(usehex)) then
+if (usehex) then
   x = (i - j*0.5)*delta
   y = j*delta*srt
 else

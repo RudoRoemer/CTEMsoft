@@ -27,14 +27,14 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:CTEMgamma.f90
+! CTEMsoft2013:CTEMgammadefect.f90
 !--------------------------------------------------------------------------
 !
-! PROGRAM: CTEMgamma 
+! PROGRAM: CTEMgammadefect 
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief Near zone axis image simulation for mix of gamma and gamma' phases
+!> @brief Near zone axis image simulation for mix of gamma and gamma' phases + defects
 !
 !> @details Based on a conversation with Mike Mills on 11/01/13; question we 
 !> try to answer is the following: how can we perform a dynamical simulation
@@ -57,7 +57,7 @@
 !
 !> @date 11/02/13 MDG 1.0 original (took a few days to get it right...)
 !--------------------------------------------------------------------------
-program CTEMgamma
+program CTEMgammadefect
 
 use local
 use files
@@ -68,14 +68,14 @@ IMPLICIT NONE
 character(fnlen)			:: nmldeffile
 
 ! deal with the command line arguments, if any
-nmldeffile = 'CTEMgamma.nml'
-progname = 'CTEMgamma.f90'
+nmldeffile = 'CTEMgammadefect.nml'
+progname = 'CTEMgammadefect.f90'
 call Interpret_Program_Arguments(nmldeffile,1,(/ 30 /) )
 
 ! perform the (near) zone axis computations
 call GAMMAimage(nmldeffile)
 
-end program CTEMgamma
+end program CTEMgammadefect
 
 !--------------------------------------------------------------------------
 !
@@ -122,33 +122,32 @@ integer(kind=irg)   		:: ijmax,ga(3),gb(3),k(3),cnt,fn(3), PX, ss, icnt, pgnum, 
                       		   newcount,count_rate,count_max, io_int(6), i, j, isym, ir, skip, ghkl(3), gammapNBeams, &
                       		   npx, npy, numt, numk, npix, ik, ip, jp, istat, dgn, nbeams, gafcc(3),gbfcc(3), sdm(2), &
                       		   ifamily, famhkl(3), inum, maxHOLZ, numksame, sLUT(3), imh, imk ,iml, dimx, dimy, dimz, &
-                      		   ix, iy, jj, jnum, ii, vdimx, vdimy, vdimz
+                      		   ix, iy, jj, jnum, ii, vdimx, vdimy, vdimz, ddimc, ddimx, ddimy, ddimz
 complex(kind=dbl)		:: pre, DUg, DUgp, czero
 real(kind=dbl)			:: x, z0            
 character(3)			:: method
-character(fnlen)     		:: outname, gammaname, gammapname, microfile, variantfile
+character(fnlen)     		:: outname, gammaname, gammapname, microfile, variantfile, defectfile
 logical				:: variants
 
 complex(kind=dbl),allocatable 	:: gammaLUT(:,:,:), gammapLUT(:,:,:), ScatMat(:,:), amp(:), amp2(:), &
-				   ScatMat0(:,:), ScatMat1(:,:), ScatMat2(:,:), ScatMat3(:,:)
+				   ScatMat0(:,:), ScatMat1(:,:), ScatMat2(:,:), ScatMat3(:,:), DPF(:,:), SMm(:,:), SMp(:,:)
 type(reflisttype),pointer 	:: gammapreflist, gammareflist
 type (unitcell) 		:: gammacell, gammapcell
-real(kind=dbl)			:: glen, gan(3), gperp(3), kstar(3) 
-real(kind=sgl)                :: ktlen, kt(3), kr(3)
 
 real(kind=sgl),allocatable    	:: images(:,:,:)
-real(kind=sgl),allocatable 	:: microstructure(:,:,:)
+real(kind=sgl),allocatable 	:: microstructure(:,:,:), displacement(:,:,:,:)
 integer(kind=sgl),allocatable 	:: variantnumber(:,:,:)
 real(kind=sgl),allocatable    	:: inten(:)
 real(kind=dbl)			:: s(3)
 
-namelist /GAMMAlist/ gammaname, gammapname, microfile, stdout, voltage, k, fn, klaue, dmin, &
-		      convergence,thick, npix, outname, variants, variantfile
+namelist /GAMMAdefectlist/ gammaname, gammapname, microfile, stdout, voltage, k, fn, klaue, dmin, &
+		      convergence,thick, npix, outname, variants, variantfile, defectfile
 
 ! set the input parameters to default values
 gammaname = 'undefined'	! initial value to check that the keyword is present in the nml file (gamma phase)
 gammapname = 'undefined'	! initial value to check that the keyword is present in the nml file (gamma' phase)
 microfile = 'undefined'	! microstructure file name
+defectfile = 'undefined'	! displacement field file name
 variants = .FALSE.		! do we load variant information ?
 variantfile = 'undefined'	! variant information file
 stdout = 6			! standard output
@@ -168,33 +167,34 @@ czero = dcmplx(0.0,0.0)
 
 ! read the namelist file
 open(UNIT=dataunit,FILE=nmlfile,DELIM='apostrophe',STATUS='old')
-read(UNIT=dataunit,NML=GAMMAlist)
+read(UNIT=dataunit,NML=GAMMAdefectlist)
 close(UNIT=dataunit,STATUS='keep')
 
 ! make sure all the input files exist
 if (trim(gammaname).eq.'undefined') then
-  call FatalError('CTEMgamma:',' gamma structure file name is undefined in '//nmlfile)
+  call FatalError('CTEMgammadefect:',' gamma structure file name is undefined in '//nmlfile)
 end if
 
 if (trim(gammapname).eq.'undefined') then
-  call FatalError('CTEMgamma:',' gamma'' structure file name is undefined in '//nmlfile)
+  call FatalError('CTEMgammadefect:',' gamma'' structure file name is undefined in '//nmlfile)
 end if
 
 if (trim(microfile).eq.'undefined') then
-  call FatalError('CTEMgamma:',' microstructure file name is undefined in '//nmlfile)
+  call FatalError('CTEMgammadefect:',' microstructure file name is undefined in '//nmlfile)
+end if
+
+if (trim(defectfile).eq.'undefined') then
+  call FatalError('CTEMgammadefect:',' defect file name is undefined in '//nmlfile)
 end if
 
 if (variants.and.(trim(variantfile).eq.'undefined')) then
-  call FatalError('CTEMgamma:',' variant file name is undefined in '//nmlfile)
+  call FatalError('CTEMgammadefect:',' variant file name is undefined in '//nmlfile)
 end if
 
 ! print some information
- progname = 'CTEMgamma.f90'
- progdesc = 'Gamma-gamma'' microstructre dynamical image simulation'
+ progname = 'CTEMgammadefect.f90'
+ progdesc = 'Gamma-gamma'' defect+microstructure dynamical image simulation'
  call CTEMsoft
-
-! mess = 'Input parameter list: '; call Message("(A)")
-! write (stdout,NML=GAMMAlist)
 
 ! first we initialize the gamma' structure and dynamical matrix; once
 ! that is complete, we read the gamma structure and create its dynamical
@@ -259,34 +259,10 @@ end if
  ijmax = 2.0*float(npx)**2   ! truncation value for beam directions
 
 ! there's no point in using symmetry here because the microstructure file does not have any symmetry.
-! isym = 1
-! call Calckvectors(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,'Standard',.FALSE.)
+ isym = 1
+ call Calckvectors(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,'Standard',.FALSE.)
 
-! instead of generating a list of k-vectors, we only need a single one, possibly with a Laue tilt component
-! compute geometrical factors 
- glen = CalcLength(float(ga),'r')              	! length of ga
- gan = ga/glen                                 	! normalized ga
- call TransSpace(dble(k),kstar,'d','r')       		! transform incident direction to reciprocal space
- call CalcCross(dble(ga),kstar,gperp,'r','r',0)      	! compute g_perp = ga x k
- call NormVec(gperp,'r')                       	! normalize g_perp
- call NormVec(kstar,'r')                       	! normalize reciprocal beam vector
-
-! allocate the head and tail of the linked list
- allocate(khead,stat=istat)   				! allocate new value
- if (istat.ne.0) call FatalError('main program','unable to allocate khead pointer')
- ktail => khead                      			! tail points to new value
- nullify(ktail%next)                			! nullify next in new value
- numk = 1                          			! keep track of number of k-vectors so far
-
-! use the Laue center coordinates to define the tangential component of the incident wave vector
- kt = - klaue(1)*gan - klaue(2)*gperp  		! tangential component of k
- ktail%kt = kt                    			! store tangential component of k
- ktlen = CalcLength(kt,'r')**2      			! squared length of tangential component
-
- kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar 	! complete wave vector
- ktail%k = kr                     			! store in pointer list
- ktail%kn = CalcDot(ktail%k,kstar,'r')    		! normal component of k
-
+! call CalckvectorsSymmetry(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,klaue)
 
 ! we'll have to use a special routine to create the dynamical matrix; no need to use Bethe potentials
 ! at this point in time.  We need to do this for every incident beam direction, so we need to save
@@ -393,6 +369,22 @@ write (*,*) 'prefactor = ',pre
  end if
 ! ===================================================
 
+! ===================================================
+! next, we need to allocate and read the defect displacement field variable, which must
+! have the same dimensions as the microstructure and variants arrays (except for the first one)
+   open(unit=dataunit,file=trim(defectfile),status='old',form='unformatted')
+   read (dataunit) ddimc, ddimx, ddimy, ddimz
+   if (sum( abs( (/ dimx, dimy, dimz /) - (/ddimx, ddimy, ddimz /) ) ) .ne. 0) then
+     call FatalError('GAMMAImage',' inconsistent dimensions in defect and microstructure files')
+   end if
+   write (*,*) dimx, dimy, dimz, ddimx, ddimy, ddimz
+   allocate(displacement(3,-npix:npix,-npix:npix, dimz ),stat=istat)
+   read (dataunit) displacement
+   close(unit=dataunit,status='keep')
+   mess = 'Loaded the displacement field file '//trim(defectfile)
+   call Message("(A)")
+! ===================================================
+
 ! we're done with the initializations; let's start the image computation.
 ! we need to first determine how many reflections we're going to store in
 ! in the output file (to be replaced later with BF/HAADF signals).
@@ -421,7 +413,6 @@ write (*,*) 'prefactor = ',pre
 ! now we can allocate the output image array
   allocate(images(-npix:npix,-npix:npix,1:numg),stat=istat)
   images=0.0
-write (*,*) 'shape images', shape(images)
 
 ! ===================================================
 
@@ -434,21 +425,44 @@ write (*,*) 'shape images', shape(images)
   call system_clock(cnt,count_rate,count_max)
 
 ! ================ main image loop =============
-reflist => gammapreflist
-z0 = zstep ! step size for scattering matrix
-frac = 0.05
+  reflist => gammapreflist
+  z0 = zstep ! step size for scattering matrix
+  frac = 0.05
 
 ! point to the first beam direction (this is really the first pixel in the image in the present implementation)
   ktmp => khead
+! loop over all beam orientations, selecting them from the linked list
+kvectorloop:  do ik = 1,numk
+!write (*,*) 'ik = ',ik
 
- ! call Compute_GGp_DynMats(gammaLUT, gammapLUT, imh, imk, iml, ktmp%k, ktmp%kt, variants)
+	ip =  ktmp%i
+ 	jp =  ktmp%j
+!write (*,*) 'starting DynMat computation'
 
-  call Compute_GGp_DynMats_Bethe(gammaLUT, gammapLUT, imh, imk, iml, ktmp%k, ktmp%kt, variants)
-  sdm = shape(DynMat)
+! for now, this is the first testrun of this algorithm, so we'll keep the incident beam direction the 
+! same for all image pixels; the scattering matrices, however, will need to be different for each column/slice
+! due to the displacement field.
+
+ if (ik.eq.1) then
+! compute the dynamical matrix for both phases and this particular incident beam direction
+!write (*,*) 'entering DynMat routine'
+!	call Compute_GGp_DynMats(gammaLUT, gammapLUT, imh, imk, iml, ktmp%k, ktmp%kt, variants)
+	call Compute_GGp_DynMats_Bethe(gammaLUT, gammapLUT, imh, imk, iml, ktmp%k, ktmp%kt, variants)
 !write (*,*) 'return form DynMat'
 
-! compute the scattering matrices for both phases and for a slice thickness of 1 nm
+! compute the scattering matrices for both phases and for a slice thickness of zstep nm
+	sdm = shape(DynMat)
+	
+! defect phase factor matrix DPF
+	if (allocated(DPF)) deallocate(DPF)
+        allocate(DPF(sdm(1),sdm(2)))
 
+! matrix and precipitate scattering matrices
+        if (allocated(SMm)) deallocate(SMm)
+        if (allocated(SMp)) deallocate(SMp)
+        allocate(SMm(sdm(1),sdm(2)), SMp(sdm(1),sdm(2)))
+
+! variant matrices
 	if (variants) then  ! allocate scattering matrices for all 4 gamma-prime variants 
 	  if (allocated(ScatMat)) deallocate(ScatMat)
 	  if (allocated(ScatMat0)) deallocate(ScatMat0)
@@ -469,16 +483,8 @@ frac = 0.05
 	  ScatMat = dcmplx(0.0,0.0)
 	  ScatMat0 = dcmplx(0.0,0.0)
 	end if
-
-! and perform the exponentiations
-	call MatrixExponential(DynMat, ScatMat, z0, 'Pade', sdm(1))
-	call MatrixExponential(DynMat0, ScatMat0, z0, 'Pade', sdm(1))
-	if (variants) then 
-	  call MatrixExponential(DynMat1, ScatMat1, z0, 'Pade', sdm(1))
-	  call MatrixExponential(DynMat2, ScatMat2, z0, 'Pade', sdm(1))
-	  call MatrixExponential(DynMat3, ScatMat3, z0, 'Pade', sdm(1))
-	end if
-
+write (*,*) 'initialized ScatMats ',variants	
+end if
 
 ! allocate the intensity array 
 	allocate(inten(DynNbeams), amp(DynNbeams))
@@ -487,30 +493,46 @@ frac = 0.05
 ! then iterate through the microstructure array, selecting the appropriate scattering matrix 
 ! for each point.  This requires the equation of the line along the current beam direction. 
 ! for now, we'll simply go straight down the column; we'll assume that z0 = zstep as well.
-     do ip=-npx,npx
-      do jp=-npy,npy
 	amp = cmplx(0.D0,0.D0)
 	amp(1) = cmplx(1.D0,0.D0)
 	if (variants) then 
 	  do iz=1,dimz 
+! for each slice and image pixel we need to compute the defect phase factor matrix DPF, and 
+! then multiply it with the appropriate dynamical matrix before doing the matrix exponentiation
+! we'll end up with two matrices unless we're in the gamma phase
+            call Compute_DPF(DynNbeams, DPF, displacement(1:3, ip, jp, iz))
+
+! the matrix SMm is always needed
+	    call MatrixExponential(DynMat*DPF, SMm, z0, 'Pade', sdm(1))
+
 	    select case (variantnumber(ip,jp,iz))
 	      case (0) 
-		amp = matmul( ScatMat, amp )
+		amp = matmul( SMm, amp )
 	      case (1) 
-		amp = matmul( (1.0-microstructure(ip,jp,iz))*ScatMat + microstructure(ip,jp,iz)*ScatMat0, amp )
+	        call MatrixExponential(DynMat0*DPF, SMp, z0, 'Pade', sdm(1))
+		amp = matmul( (1.0-microstructure(ip,jp,iz))*SMm + microstructure(ip,jp,iz)*SMp, amp )
 	      case (2) 
-		amp = matmul( (1.0-microstructure(ip,jp,iz))*ScatMat + microstructure(ip,jp,iz)*ScatMat1, amp )
+	        call MatrixExponential(DynMat1*DPF, SMp, z0, 'Pade', sdm(1))
+		amp = matmul( (1.0-microstructure(ip,jp,iz))*SMm + microstructure(ip,jp,iz)*SMp, amp )
 	      case (3) 
-		amp = matmul( (1.0-microstructure(ip,jp,iz))*ScatMat + microstructure(ip,jp,iz)*ScatMat2, amp )
+	        call MatrixExponential(DynMat2*DPF, SMp, z0, 'Pade', sdm(1))
+		amp = matmul( (1.0-microstructure(ip,jp,iz))*SMm + microstructure(ip,jp,iz)*SMp, amp )
 	      case (4) 
-		amp = matmul( (1.0-microstructure(ip,jp,iz))*ScatMat + microstructure(ip,jp,iz)*ScatMat3, amp )
+	        call MatrixExponential(DynMat3*DPF, SMp, z0, 'Pade', sdm(1))
+		amp = matmul( (1.0-microstructure(ip,jp,iz))*SMm + microstructure(ip,jp,iz)*SMp, amp )
 	      case default
 		i=0
 	    end select
  	  end do
 	else
 	  do iz=1,dimz 
-	    amp = matmul( (1.0-microstructure(ip,jp,iz))*ScatMat + microstructure(ip,jp,iz)*ScatMat0, amp )
+            call Compute_DPF(DynNbeams, DPF, displacement(1:3, ip, jp, iz))
+
+! both matrices SMm and SMp are needed
+	    call MatrixExponential(DynMat*DPF, SMm, z0, 'Pade', sdm(1))
+	    call MatrixExponential(DynMat0*DPF, SMp, z0, 'Pade', sdm(1))
+
+	    amp = matmul( (1.0-microstructure(ip,jp,iz))*SMm + microstructure(ip,jp,iz)*SMp, amp )
  	  end do
  	end if
  	inten = cabs(amp)**2
@@ -524,25 +546,40 @@ frac = 0.05
 	  if (BetheParameter%stronglist(i).ne.0) then ! is this a reflection on the current list
  	    if (BetheParameter%reflistindex(i).gt.0) then
               images(ip,jp,BetheParameter%reflistindex(i)) = inten(BetheParameter%stronglist(i))
+!              if (ik.eq.1) write (*,*) i, BetheParameter%reflistindex(i), BetheParameter%stronglist(i)
 	    end if
 	  end if
 	  rltmpa => rltmpa%next
 	end do
 
+! and remove the intensity and scattering matrix arrays
+	if (variants) then 
+	  deallocate(inten, amp)
+	else
+	  deallocate(inten, amp)
+       end if
+
+!
+!	if (variants) then 
+!	  deallocate(inten, ScatMat, ScatMat0, ScatMat1, ScatMat2, ScatMat3, amp)
+!	else
+!	  deallocate(inten, ScatMat, ScatMat0, amp)
+!       end if
+! select next beam direction
+   if (ik.ne.numk) ktmp => ktmp%next
 
 ! update computation progress
-           if (float(ip)/float(npx) .gt. frac) then
-            io_int(1) = nint(100.0*frac) 
-            call WriteValue('       ', io_int, 1, "(1x,I3,' percent completed')") 
-            frac = frac + 0.05
-            open(unit=dataunit,file=trim(outname),status='unknown',action='write',form='unformatted')
-            write (dataunit) dimx, dimy, numg
-            write (dataunit) images
-            close(UNIT=dataunit,STATUS='keep')
-           end if  
-           
-    end do 
-   end do
+   if (float(ik)/float(numk) .gt. frac) then
+    io_int(1) = nint(100.0*frac) 
+    call WriteValue('       ', io_int, 1, "(1x,I3,' percent completed')") 
+    frac = frac + 0.05
+    open(unit=dataunit,file=trim(outname),status='unknown',action='write',form='unformatted')
+    write (dataunit) dimx, dimy, numg
+    write (dataunit) images
+    close(UNIT=dataunit,STATUS='keep')
+   end if  
+
+  end do kvectorloop
 
 ! stop the clock and report the total time     
   call system_clock(newcount,count_rate,count_max)
@@ -777,10 +814,10 @@ allocate(DynMat0(DynNbeams,DynNbeams),stat=istat)
 DynMat = czero	! this is for the disordered fcc phase
 DynMat0 = czero	! this is for the ordered gamma' phase
 
-! ic is the column index
-do ic=1,BetheParameter%nns
 ! ir is the row index
-  do ir=1,BetheParameter%nns
+do ir=1,BetheParameter%nns
+! ic is the column index
+  do ic=1,BetheParameter%nns
 ! compute the Fourier coefficient of the electrostatic lattice potential 
     if (ic.ne.ir) then  ! not a diagonal entry
       ll = BetheParameter%stronghkl(1:3,ir) - BetheParameter%stronghkl(1:3,ic)
@@ -876,34 +913,32 @@ if (variants) then ! allocate and adjust the variant dynamical matrices
 	dp = dot_product(dgg,R1)
 	arg = dmod(dp,1.D0)
 	if (dabs(arg).ne.0.D0) then
-!	  arg = 2.D0*( 1.D0 - dmod(dp,2.D0) )
-!	  if (arg.lt.0.D0) then 
-	    DynMat1(ir,ic) = - DynMat1(ir,ic) !* ep
-!	  else
-!	    DynMat1(ir,ic) = DynMat1(ir,ic) * em
-!	  end if
+	  arg = 2.D0*( 1.D0 - dmod(dp,2.D0) )
+	  if (arg.lt.0.D0) then 
+	    DynMat1(ir,ic) = DynMat1(ir,ic) * ep
+	  else
+	    DynMat1(ir,ic) = DynMat1(ir,ic) * em
+	  end if
 	end if
 	dp = dot_product(dgg,R2)
 	arg = dmod(dp,1.D0)
 	if (dabs(arg).ne.0.D0) then
-!	  arg = 2.D0*( 1.D0 - dmod(dp,2.D0) )
-!	  if (arg.lt.0.D0) then 
-	    DynMat2(ir,ic) = - DynMat2(ir,ic) !* ep
-!	write (*,*) dgg, dp, arg, ep
-!	  else
-!	    DynMat2(ir,ic) = DynMat2(ir,ic) * em
-!	write (*,*) dgg, dp, arg, em
-!	  end if
+	  arg = 2.D0*( 1.D0 - dmod(dp,2.D0) )
+	  if (arg.lt.0.D0) then 
+	    DynMat2(ir,ic) = DynMat2(ir,ic) * ep
+	  else
+	    DynMat2(ir,ic) = DynMat2(ir,ic) * em
+	  end if
 	end if
 	dp = dot_product(dgg,R3)
 	arg = dmod(dp,1.D0)
 	if (dabs(arg).ne.0.D0) then
-!	  arg = 2.D0*( 1.D0 - dmod(dp,2.D0) )
-!	  if (arg.lt.0.D0) then 
-	    DynMat3(ir,ic) = - DynMat3(ir,ic) !* ep
-!	  else
-!	    DynMat3(ir,ic) = DynMat3(ir,ic) * em
-!	  end if
+	  arg = 2.D0*( 1.D0 - dmod(dp,2.D0) )
+	  if (arg.lt.0.D0) then 
+	    DynMat3(ir,ic) = DynMat3(ir,ic) * ep
+	  else
+	    DynMat3(ir,ic) = DynMat3(ir,ic) * em
+	  end if
 	end if
       end if
     end do
@@ -1111,10 +1146,10 @@ allocate(DynMat0(DynNbeams,DynNbeams),stat=istat)
 DynMat = czero	! this is for the disordered fcc phase
 DynMat0 = czero	! this is for the ordered gamma' phase
 
-! ic is the column index
-do ic=1,BetheParameter%nns
 ! ir is the row index
-  do ir=1,BetheParameter%nns
+do ir=1,BetheParameter%nns
+! ic is the column index
+  do ic=1,BetheParameter%nns
 ! compute the Fourier coefficient of the electrostatic lattice potential 
     if (ic.ne.ir) then  ! not a diagonal entry
       ll = BetheParameter%stronghkl(1:3,ir) - BetheParameter%stronghkl(1:3,ic)
@@ -1145,10 +1180,10 @@ if (variants) then ! allocate and adjust the variant dynamical matrices
 ! so we'll pre-compute the possible phase shifts for the superlattice reflections as ep and em:
   ep = dcmplx(dcos(cPi),-dsin(cPi))
   em = dcmplx(dcos(cPi),dsin(cPi))
-! ic is the column index
-  do ic=1,BetheParameter%nns
 ! ir is the row index
-    do ir=1,BetheParameter%nns
+  do ir=1,BetheParameter%nns
+! ic is the column index
+    do ic=1,BetheParameter%nns
 ! compute the Fourier coefficient of the electrostatic lattice potential 
       if (ic.ne.ir) then  ! not a diagonal entry
         dgg = dble(BetheParameter%stronghkl(1:3,ir) - BetheParameter%stronghkl(1:3,ic))
@@ -1199,5 +1234,68 @@ end subroutine Compute_GGp_DynMats
 
 
 
+
+
+
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:Compute_DPF
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief Computes the defect phase factor array
+!
+!> @param nn number of beams
+!> @param DPF output array
+!> @param R displacement vector components
+!
+!> @date 02/09/14  MDG 1.0 original
+!--------------------------------------------------------------------------
+subroutine Compute_DPF(nn, DPF, R)
+
+use local
+use dynamical
+use error
+use constants
+use crystal
+use diffraction
+use io
+use gvectors
+
+IMPLICIT NONE
+
+integer(kind=sgl),INTENT(IN)         :: nn
+complex(kind=dbl),INTENT(OUT)        :: DPF(nn,nn)
+real(kind=sgl),INTENT(IN)            :: R(3)
+
+integer(kind=irg)                    :: sdm(2), ir, ic
+real(kind=dbl)                       :: dgg(3), arg
+complex(kind=dbl)                    :: czero, cone
+
+! init some stuff
+  sdm = shape(DPF)
+  czero = cmplx(0.D0,0.D0)
+  cone = cmplx(1.D0,0.D0)
+  DPF = cone
+
+! write (*,*) 'inside Compute_DPF : ',nn, R(1), R(2), R(3)
+  
+  
+! ic is the column index
+  do ic=1,BetheParameter%nns
+! ir is the row index
+    do ir=1,BetheParameter%nns
+! compute the Fourier coefficient of the electrostatic lattice potential 
+      if (ic.ne.ir) then  ! not a diagonal entry
+        dgg = dble(BetheParameter%stronghkl(1:3,ir) - BetheParameter%stronghkl(1:3,ic))
+        arg = 2.D0 * cPi * dot_product(dgg,R)
+        DPF(ir,ic) = cmplx(dcos(arg),-dsin(arg))
+      end if
+    end do
+  end do
+
+
+end subroutine Compute_DPF
 
 

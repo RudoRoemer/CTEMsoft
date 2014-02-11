@@ -176,7 +176,7 @@ dataname = 'undefined.data'
   call FatalError('CTEMMC:',' structure file name is undefined in '//nmlfile)
  end if
 
-numsy = numsx
+ numsy = numsx
 
 ! print some information
  progname = 'CTEMMC.f90'
@@ -208,7 +208,7 @@ numsy = numsx
 	   Ze, density, at_wt, Ehistmin, Ebinsize, depthmax, depthstep, omega/)
 
 ! init the lambert parameters
-  call InitLambertParameters
+ call InitLambertParameters
 
 ! set the number of OpenMP threads and allocate the corresponding number of random number streams
  call OMP_SET_NUM_THREADS(nthreads)
@@ -250,16 +250,17 @@ numsy = numsx
  write (*,*) ' '
  write (*,*) ' All threads complete; saving data to file ',trim(dataname)
 
- write (*,*) ' Total number of electrons generated = ',num_el*NUMTHREADS
+ write (*,*) ' Total number of electrons generated = ',num_el*nthreads
  write (*,*) ' Number of electrons on detector       = ',sum(accum_e)
 
-open(dataunit,file=trim(dataname),status='unknown',form='unformatted')
-write(dataunit) numEbins, numzbins, numsx, numsy, num_el, nthreads
-write (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
-write(dataunit) accum_e
-write (dataunit) accum_z
-close(dataunit,status='keep')
+ open(dataunit,file=trim(dataname),status='unknown',form='unformatted')
+ write(dataunit) numEbins, numzbins, numsx, numsy, num_el*nthreads, nthreads
+ write (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
+ write(dataunit) accum_e
+ write (dataunit) accum_z
+ close(dataunit,status='keep')
 ! this is the end of the main subroutine
+
 
 ! the routine contains one function called single_run
 contains

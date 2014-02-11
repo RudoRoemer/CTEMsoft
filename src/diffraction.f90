@@ -236,10 +236,10 @@ use dynamical
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)   			:: voltage			!< accelerating voltage [V]
+real(kind=dbl),INTENT(IN)   		:: voltage		!< accelerating voltage [V]
 integer(kind=irg),INTENT(IN),OPTIONAL 	:: skip			!< scattering set identifier
-real(kind=dbl)   					:: temp1,temp2, oi_real(1)
-integer(kind=irg)					:: hkl(3), io_int(1)
+real(kind=dbl)   			:: temp1,temp2, oi_real(1)
+integer(kind=irg)			:: hkl(3), io_int(1)
 
 ! store voltage in common block
  mAccvol = voltage
@@ -282,22 +282,22 @@ integer(kind=irg)					:: hkl(3), io_int(1)
   hkl=(/0,0,0/)
   call CalcUcg(hkl) 
   oi_real(1) = rlp%Vmod
-  call WriteValue('Mean inner potential [V] ', oi_real, 1)
+  call WriteValue('Mean inner potential [V] ', oi_real, 1, "(F6.2)")
   mPsihat = mPsihat + dble(rlp%Vmod)
   mess = ' Wavelength corrected for refraction'; call Message("(A)")
  endif
  oi_real(1) = mRelcor
- call WriteValue('Relativistic correction factor [gamma]  ', oi_real, 1)
+ call WriteValue('Relativistic correction factor [gamma]  ', oi_real, 1, "(F8.6)")
  oi_real(1) = mPsihat
- call WriteValue('Relativistic Accelerating Potential [V] ', oi_real, 1)
+ call WriteValue('Relativistic Accelerating Potential [V] ', oi_real, 1, "(F12.2)")
  mLambda = temp1/dsqrt(mPsihat)
  oi_real(1) = mLambda
- call WriteValue('Electron Wavelength [nm]                ', oi_real, 1)
+ call WriteValue('Electron Wavelength [nm]                ', oi_real, 1, "(E13.5)")
 ! interaction constant sigma
  mSigma = 2.D0*cPi*cRestmass*mRelcor*cCharge*mLambda
  mSigma = 1.0D-18*mSigma/cPlanck**2
  oi_real(1) = mSigma
- call WriteValue('Interaction constant [V nm]^(-1)        ', oi_real, 1)
+ call WriteValue('Interaction constant [V nm]^(-1)        ', oi_real, 1, "(E13.5)")
  
 end subroutine
 
@@ -1684,19 +1684,19 @@ use io
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(IN)		:: nn			!< number of beams
+integer(kind=irg),INTENT(IN)	:: nn			!< number of beams
 complex(kind=dbl),INTENT(IN)	:: M(nn,nn)	!< input dynamical matrix
 complex(kind=dbl),INTENT(OUT)	:: W(nn)		!< Bloch eigenvalues
 complex(kind=dbl),INTENT(OUT)	:: CGG(nn,nn)	!< Bloch eigenvectors
 complex(kind=dbl),INTENT(OUT)	:: CGinv(nn,nn)	!< inverse of eigenvector array
-integer(kind=irg),INTENT(IN)		:: IPIV(nn)		!< pivot array, currently unused
-logical,INTENT(IN),OPTIONAL		:: keeporder	!< optional legacy parameter, should be removed
+integer(kind=irg),INTENT(IN)	:: IPIV(nn)		!< pivot array, currently unused
+logical,INTENT(IN),OPTIONAL	:: keeporder	!< optional legacy parameter, should be removed
 
-integer(kind=irg)    				:: INFO, LDA, LDVR, LDVL, LWORK, JPIV(nn),MILWORK, i
-integer(kind=irg),parameter   		:: LWMAX = 5000 
-complex(kind=dbl)    			:: VL(nn,nn),  WORK(LWMAX), normsum
-real(kind=dbl)       				:: RWORK(2*nn), io_real(1)
-character            				:: JOBVL, JOBVR
+integer(kind=irg)    		:: INFO, LDA, LDVR, LDVL, LWORK, JPIV(nn),MILWORK, i
+integer(kind=irg),parameter   	:: LWMAX = 5000 
+complex(kind=dbl)    		:: VL(nn,nn),  WORK(LWMAX), normsum
+real(kind=dbl)       		:: RWORK(2*nn), io_real(1)
+character            		:: JOBVL, JOBVR
 complex(kind=dbl),allocatable 	:: MIWORK(:)
 
 !----------------------------------------------------------------

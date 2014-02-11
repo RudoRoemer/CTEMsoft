@@ -26,10 +26,10 @@
 ! USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ! ###################################################################
 !--------------------------------------------------------------------------
-! CTEMsoft2013:CTEMEBSDzE.f90
+! CTEMsoft2013:CTEMEBSDmaster.f90
 !--------------------------------------------------------------------------
 !
-! PROGRAM: CTEMEBSDzE 
+! PROGRAM: CTEMEBSDmaster
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -56,8 +56,10 @@
 !> @date  08/01/13  MDG 4.0 complete rewrite with Lambert format for MC output and new ctemlib.a routines 
 !>                          also, the earlier versions would do only one energy value, whereas this new 
 !>                          implementation does the complete energy-dependent master pattern
+!> @date  01/27/14  MDG 4.1 continued rewrite, fixed problem with kvector list, replaced gvector routines
+!>		   	     with updated routines; changed program name to CTEMEBSDmaster.
 !--------------------------------------------------------------------------
-program CTEMEBSDzE
+program CTEMEBSDmaster
 
 use local
 use files
@@ -65,17 +67,17 @@ use io
 
 IMPLICIT NONE
 
-character(fnlen)			:: nmldeffile
+character(fnlen)	:: nmldeffile
 
 ! deal with the command line arguments, if any
-nmldeffile = 'CTEMEBSDzE.nml'
-progname = 'CTEMEBSDzE.f90'
+nmldeffile = 'CTEMEBSDmaster.nml'
+progname = 'CTEMEBSDmaster.f90'
 call Interpret_Program_Arguments(nmldeffile,1,(/ 21 /) )
 
 ! generate a set of master EBSD patterns
  call ComputeMasterPattern(nmldeffile)
 
-end program CTEMEBSDzE
+end program CTEMEBSDmaster
 
 !--------------------------------------------------------------------------
 !
@@ -116,30 +118,32 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)	:: nmlfile
 
-character(100)    	:: fname   ! = output filename
+
 real(kind=dbl)   	:: ctmp(192,3),arg
 integer(kind=irg)      :: isym,i,j,ik,npx,npy,ipx,ipy,debug,iE,izz, izzmax, iequiv(2,12), nequiv, num_el, MCnthreads, & ! counters
                     	numk, & ! number of independent incident beam directions
-                    	ir,nat(100),kk(3), npyhex, skip, ijmax, &
-                    	numset,n,ix,iy,iz, imh, imk, iml, io_int(6),  &
-                    	istat,gzero,ic,ip,ikk,minweak,maxweak,totweak, minstrong, maxstrong, totstrong     ! counters
-real(kind=dbl)         :: tpi,Znsq, kkl, DBWF,  totZnsq, kin, s  !
-real(kind=sgl) 		:: dmin, dhkl, io_real(5)
+                    	ir,nat(100),kk(3), npyhex, skip, ijmax, Esel, one, &
+                    	numset,n,ix,iy,iz, io_int(6),  &
+                    	istat,gzero,ic,ip,ikk     ! counters
+real(kind=dbl)         :: tpi,Znsq, kkl, DBWF,  totZnsq, kin, s, sthr, Bethe_store !
+real(kind=sgl) 		:: dmin, io_real(5)
 real(kind=sgl),allocatable 	:: sr(:,:,:), srkin(:,:), srhex(:,:,:), srkinhex(:,:), EkeVs(:) ! results
 complex(kind=dbl)  		:: czero
 complex(kind=dbl),allocatable 	:: Lgh(:,:), Sgh(:,:)
 logical 		:: usehex, switchmirror
-character(fnlen) 	:: xtalname, dataname, outname
+character(fnlen) 	:: xtalname, outname
+! the following will need to be moved elsewhere at some point...
 integer(kind=irg),parameter	:: LaueTest(11) = (/ 149, 151, 153, 156, 158, 160, 161, 164, 165, 166, 167 /)  ! space groups with 2 or mirror at 30 degrees
 
 ! Monte Carlo derived quantities
 integer(kind=irg)   	:: numEbins, numzbins, nsx, nsy    ! variables used in MC energy file
 real(kind=dbl)     	:: EkeV, Ehistmin, Ebinsize, depthmax, depthstep, etotal ! enery variables from MC program
-integer(kind=irg),allocatable :: accum_e(:,:,:), accum_z(:,:,:,:), lambdaE(:,:), thick(:)
+integer(kind=irg),allocatable :: accum_e(:,:,:), accum_z(:,:,:,:), thick(:)
+real(kind=sgl),allocatable :: lambdaE(:,:)
 character(80) 		:: energyfile
 
 
-namelist /EBSDzEvars/ xtalname,dmin,npx,outname,energyfile
+namelist /EBSDmastervars/ xtalname,dmin,npx,outname,energyfile, Esel
 
 ! note that the CTEMMC.f90 program creates a statistical output file that 
 ! must be read by the present program, so that things like energy etc are 
@@ -156,12 +160,13 @@ namelist /EBSDzEvars/ xtalname,dmin,npx,outname,energyfile
 xtalname 	= 'undefined'	! program must read existing structure file name
 dmin 		= 0.015   	! minimum d-spacing in order to be admitted to the list (must become user entry)
 npx		= 500		! Nx pixels (total = 2Nx+1)
-outname		= 'EBSDzEout.data'	! default filename for final output
-energyfile	= 'z0E.data' 	! default filename for z_0(E_e) data from Monte Carlo simulations
+outname		= 'EBSDmasterout.data'	! default filename for final output
+energyfile	= 'z0E.data' 	! default filename for z_0(E_e) data from CTEMMC Monte Carlo simulations
+Esel           = -1            ! selected energy value for single energy run
 
 ! then we read the rundata namelist, which may override some of these defaults  
 OPEN(UNIT=dataunit,FILE=nmlfile,DELIM='APOSTROPHE')
-READ(UNIT=dataunit,NML=EBSDzEvars)
+READ(UNIT=dataunit,NML=EBSDmastervars)
 CLOSE(UNIT=dataunit)
 
 if (trim(xtalname).eq.'undefined') then
@@ -169,13 +174,13 @@ if (trim(xtalname).eq.'undefined') then
 end if
 
 ! print some information
-progname = 'CTEMEBSDzE.f90'
+progname = 'CTEMEBSDmaster.f90'
 progdesc = 'EBSD Energy-dependent Master Pattern Simulation'
 call CTEMsoft
 
 ! square master pattern
 npy = npx
-
+sthr = 10.D0
 
 ! ---------- start of symmetry and crystallography section
 ! first get the crystal data and some other crystallographic and symmetry information 
@@ -188,12 +193,19 @@ npy = npx
 ! the following line needs to be verified ... 
 !  hexset = .TRUE.    ! if hexagonal structure this switch selects between three and four index notation (4 if true)
 
-! determine the crystal point group
-  j=0
-  do i=1,32
-   if (SGPG(i).le.cell % SYM_SGnum) j=i
-  end do
-  isym = j   ! point group number corresponding to the crystal structure's space group
+! determine the point group number
+ j=0
+ do i=1,32
+  if (SGPG(i).le.cell % SYM_SGnum) j=i
+ end do
+ isym = j
+ 
+! use the new routine to get the whole pattern 2D symmetry group, since that
+! is the one that determines the independent beam directions.
+! dgn = GetPatternSymmetry( (/ 0, 0, 1 /),j,.TRUE.)
+! pgnum = j
+! isym = WPPG(dgn) ! WPPG lists the whole pattern point group numbers vs. diffraction group numbers
+ 
 ! and convert this to the corresponding  Laue point group number since diffraction 
 ! patterns are always centrosymmetric (hence, there are only 11 different cases for
 ! the symmetry of the incident beam).   
@@ -201,23 +213,22 @@ npy = npx
 
 ! If the Laue group is # 7, then we need to determine the orientation of the mirror plane.
 ! The second orientation of the mirror plane is represented by "Laue group" # 12 in this program.
-switchmirror = .FALSE.
-if (isym.eq.7) then
+ switchmirror = .FALSE.
+ if (isym.eq.7) then
   do i=1,11
     if (cell%SYM_SGnum.eq.LaueTest(i)) switchmirror = .TRUE.
   end do
-end if
-if (switchmirror) then
+ end if
+ if (switchmirror) then
   isym = 12
   mess = ' Switching computational wedge to second setting for this space group'; call Message("(A)")
-end if
-write (*,*) ' Laue group # ',isym, PGTHD(j)
+ end if
+ write (*,*) ' Laue group # ',isym, PGTHD(j)
 
 ! if this point group is trigonal or hexagonal, we need to switch usehex to .TRUE. so that
 ! the program will use the hexagonal sampling method
 usehex = .FALSE.
 if (((isym.ge.6).and.(isym.le.9)).or.(isym.eq.12)) usehex = .TRUE.
-
 ! ---------- end of symmetry and crystallography section
 
 ! ---------- read Monte Carlo output file and extract necessary parameters
@@ -227,22 +238,33 @@ if (((isym.ge.6).and.(isym.le.9)).or.(isym.eq.12)) usehex = .TRUE.
 ! at the end of the computation.  We will then need to multiply by the beam current and by
 ! the dwell time to get units of electron counts.
 !
+! the datafile format is as follows (all in Lambert projections)
+! write(dataunit) numEbins, numzbins, numsx, numsy, num_el, nthreads
+! write (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
+! write(dataunit) accum_e
+! write (dataunit) accum_z
+
 mess = 'opening '//trim(energyfile)
 call Message("(A)")
 
 open(dataunit,file=trim(energyfile),status='unknown',form='unformatted')
 
 read(dataunit) numEbins, numzbins, nsx, nsy, num_el, MCnthreads
-MCnthreads = 8
+nsx = (nsx - 1)/2
+nsy = (nsy - 1)/2
+
+! MCnthreads = 8
 io_int(1:6) = (/ numEbins, numzbins, nsx, nsy, num_el, MCnthreads /)
 call WriteValue(' NumEbins, numzbins, nsx, nsy, num_el, MCnthreads ',io_int,6,"(5I,',',I)")
-etotal = num_el * MCnthreads
+etotal = num_el ! * MCnthreads
 
 read (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
 io_real(1:5) = (/ EkeV, Ehistmin, Ebinsize, depthmax, depthstep /)
 call WriteValue(' EkeV, Ehistmin, Ebinsize, depthmax, depthstep ',io_real,5,"(4F10.5,',',F10.5)")
 
-allocate(accum_e(numEbins,nsx,nsy),accum_z(numEbins,numzbins,-nsx/10:nsx/10,-nsy/10:nsy/10),stat=istat)
+! allocate(accum_e(numEbins,-nx:nx,-nx:nx),accum_z(numEbins,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
+
+allocate(accum_e(numEbins,-nsx:nsx,-nsy:nsy),accum_z(numEbins,numzbins,-nsx/10:nsx/10,-nsy/10:nsy/10),stat=istat)
 read(dataunit) accum_e
 ! actually, we do not yet need the accum_e array; that is for the actual EBSD image computation program
 ! but we need to skip it in this unformatted file...
@@ -254,12 +276,11 @@ close(dataunit,status='keep')
 mess = ' -> completed reading '//trim(energyfile)
 call Message("(A)")
 
-
 ! this is where we determine the value for the thickness integration limit for the CalcLgh3 routine...
 allocate(EkeVs(numEbins),thick(numEbins))
 
 do i=1,numEbins
-  EkeVs(i) = Ehistmin + float(i)*Ebinsize
+  EkeVs(i) = Ehistmin + float(i-1)*Ebinsize
 end do
 
 ! then, for each energy determine the 95% histogram thickness
@@ -282,7 +303,7 @@ izz = nint(maxval(thick)/depthstep)
 allocate(lambdaE(1:numEbins,1:izz),stat=istat)
 do iE=1,numEbins
  do iz=1,izz
-  lambdaE(iE,iz) = sum(accum_z(iE,iz,:,:))/etotal
+  lambdaE(iE,iz) = float(sum(accum_z(iE,iz,-nsx/10:nsx/10,-nsy/10:nsy/10)))/etotal
  end do
 end do
 
@@ -290,81 +311,72 @@ end do
 deallocate(accum_z)
 ! ---------- end of 'read Monte Carlo output file and extract necessary parameters' section
 
-! ---------- create the mast reflection list
-! Then we must determine the masterlist of reflections (also a linked list);
-! This list basically samples a large reciprocal space volume; it does not 
-! distinguish between zero and higher order Laue zones, since that 
-! distinction becomes meaningless when we consider the complete 
-! fundamental zone.  
-
-! The master list is easily created by brute force
- imh = 1
- do 
-   imh = imh + 1
-   dhkl = 1.0/CalcLength(  (/float(imh) ,0.0_sgl,0.0_sgl/), 'r')
-   if (dhkl.lt.dmin) EXIT
- end do
- imk = 1
- do 
-   imk = imk + 1
-   dhkl = 1.0/CalcLength( (/0.0_sgl,float(imk),0.0_sgl/), 'r')
-  if (dhkl.lt.dmin) EXIT
- end do
- iml = 1
- do 
-   iml = iml + 1
-   dhkl = 1.0/CalcLength( (/0.0_sgl,0.0_sgl,float(iml)/), 'r')
-   if (dhkl.lt.dmin) EXIT
- end do
- 
- io_int(1:3) = (/ imh, imk, iml /)
- call WriteValue('Range of reflections along a*, b* and c* = ',io_int,3,"(2I,',',I)")
-
-! the LUT array stores all the Fourier coefficients
-  allocate(LUT(-2*imh:2*imh,-2*imk:2*imk,-2*iml:2*iml),stat=istat)
-! ---------- end of "create the mast reflection list"
-
 ! ---------- allocate memory for the master pattern
 ! we need to sample the stereographic projection Northern hemisphere or a portion
 ! thereoff, depending on the order of the Laue group.  There are 11 Laue groups, 
 ! which leads to 9 different shapes for the stereographic asymmetric unit for the 
 ! independent incident beam directions.  
 ! allocate space for the results (needs to be altered for general symmetry case)
-   allocate(sr(-npx:npx,-npy:npy,1:numEbins),stat=istat)
-!   allocate(srkin(-npx:npx,-npy:npy),stat=istat)
+if (Esel.eq.-1) then
+  allocate(sr(-npx:npx,-npy:npy,1:numEbins),stat=istat)
+else
+  allocate(sr(-npx:npx,-npy:npy,1),stat=istat)
+end if 
 
 ! in the trigonal/hexagonal case, we need intermediate storage arrays
   if (usehex) then
    npyhex = nint(2.0*float(npy)/sqrt(3.0))
    allocate(srhex(-npx:npx,-npyhex:npyhex,1:numEbins),stat=istat)
-!   allocate(srkinhex(-npx:npx,-npyhex:npyhex),stat=istat)
   end if
-! ---------- end allocate memory for the master pattern" 
-
-! force dynamical matrix routine to read new Bethe parameters from file
-   call Set_Bethe_Parameters()
-
-! ---------- from here on, we need to repeat the entire computation for each energy value
-energyloop: do iE=1,numEbins
-! print a message to indicate where we are in the computation
-   io_int(1)=iE
-   call WriteValue('Starting computation for energy bin ',io_int,1,"(I4$)")
-   io_real(1) = EkeVs(iE)
-   call WriteValue('; energy [keV] = ',io_real,1,"(F6.2/)")
 
 ! set various arrays to zero
    sr = 0.0
-   srkin = 0.0
    if (usehex) then
      srhex = 0.0
-     srkinhex = 0.0
    end if
+! ---------- end allocate memory for the master pattern
+
+! force dynamical matrix routine to read new Bethe parameters from file
+! this will all be changed with the new version of the Bethe potentials
+   call Set_Bethe_Parameters()
+   BetheParameter%weakcutoff = 30.0
+   BetheParameter%cutoff = 60.0
+   
+   numset = cell % ATOM_ntype  
+   gzero = 1  ! index of incident beam
+   debug = 0  ! no longer used
+
+! ---------- from here on, we need to repeat the entire computation for each energy value
+energyloop: do iE=numEbins,1,-1
+! is this a single-energy run ?
+   if (Esel.ne.-1) then
+     if (Esel.ne.iE) EXIT energyloop
+   end if
+   
+! print a message to indicate where we are in the computation
+   io_int(1)=iE
+   mess = 'Starting computation for energy bin'
+   call Message("(/A$)")
+   call WriteValue(' ',io_int,1,"(I4$)")
+   io_real(1) = EkeVs(iE)
+   call WriteValue('; energy [keV] = ',io_real,1,"(F6.2/)")
+
    nat = 0
-   LUT = dcmplx(0.D0,0.D0)
+!   LUT = dcmplx(0.D0,0.D0)
 
 ! set the accelerating voltage
    skip = 3
    call CalcWaveLength(dble(EkeVs(iE)*1000.0),skip)
+
+! ---------- create the master reflection list
+! Then we must determine the masterlist of reflections (also a linked list);
+! This list basically samples a large reciprocal space volume; it does not 
+! distinguish between zero and higher order Laue zones, since that 
+! distinction becomes meaningless when we consider the complete 
+! fundamental zone.  
+ 
+  call Compute_ReflectionList(dmin,(/0,0,1/),(/1,0,0/),(/0,1,0/),'ALL',.FALSE.,0)
+! ---------- end of "create the master reflection list"
 
 ! determine all independent incident beam directions (use a linked list starting at khead)
 ! numk is the total number of k-vectors to be included in this computation
@@ -372,7 +384,8 @@ energyloop: do iE=1,numEbins
    if (usehex) then
     call Calckvectors( (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,npx,npyhex,numk,isym,ijmax,'RoscaLambert',usehex)
    else 
-    call Calckvectors( (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,npx,npy,numk,isym,ijmax,'RoscaLambert')
+! Calckvectors(k,ga,ktmax,npx,npy,numk,isym,ijmax,mapmode,usehex)
+    call Calckvectors( (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,npx,npy,numk,isym,ijmax,'RoscaLambert',usehex)
    end if
    io_int(1)=numk
    call WriteValue('# independent beam directions to be considered = ', io_int, 1, "(I8)")
@@ -383,7 +396,10 @@ energyloop: do iE=1,numEbins
    beamloop:do ik = 1,numk
 
 ! compute the dynamical matrix using Bloch waves with Bethe potentials 
-     call Compute_DynMat('BLOCHBETHE', ktmp%k, .TRUE.)
+     DynFN = ktmp%k
+     call Compute_DynMat('BLOCHBETHE', ktmp%k, ktmp%kt, .FALSE.)
+
+
 
 ! then we need to initialize the Sgh and Lgh arrays
      if (allocated(Sgh)) deallocate(Sgh)
@@ -422,30 +438,97 @@ energyloop: do iE=1,numEbins
 
 ! for now, we're disabling the kinematical part
 ! solve the dynamical eigenvalue equation for this beam direction  Lgh,thick,kn,nn,gzero,kin,debug
-     call CalcLgh3(DynMat,Lgh,thick(iE),ktmp%kn,BetheParameter%nns,gzero,kin,debug,depthstep,lambdaE(iE,1:izzmax),izzmax)
+     call CalcLgh3(DynMat,Lgh,dble(thick(iE)),ktmp%kn,BetheParameter%nns,gzero,kin,debug,depthstep,lambdaE(iE,1:izzmax),izzmax)
+
+! dynamical contribution
+     s = real(sum(Lgh*Sgh))/float(sum(nat))
+
+
+
+
+! we need to make sure that the Bethe potentials did not accidentally cause a problem (divergence);
+! so, if s is very large, then there is likely a problem and we should rerun this incident beam direction
+! without the Bethe approximation; there shouldn't be too many of these cases...
+     if (s.gt.sthr) then ! we redo this without the Bethe potentials
+
+       write (*,*) 'Warning: caught divergence; redoing computation with full DynMat for point ', ik
+ 
+! temporarily switch off the Bethe potential strong threshold
+       Bethe_store = BetheParameter%weakcutoff
+       BetheParameter%weakcutoff = BetheParameter%cutoff
+              
+! compute the dynamical matrix using Bloch waves with Bethe potentials 
+       DynFN = ktmp%k
+       call Compute_DynMat('BLOCHBETHE', ktmp%k, ktmp%kt, .FALSE.)
+
+! then we need to initialize the Sgh and Lgh arrays
+       if (allocated(Sgh)) deallocate(Sgh)
+       if (allocated(Lgh)) deallocate(Lgh)
+
+       allocate(Sgh(BetheParameter%nns,BetheParameter%nns),Lgh(BetheParameter%nns,BetheParameter%nns))
+       Sgh = czero
+
+! for each special position in the asymmetric unit ...
+       totZnsq = 0.D0
+       do ip=1,numset
+         call CalcOrbit(ip,n,ctmp)  ! get all equivalent points
+         nat(ip) = n
+! get Zn-squared for this special position and keep track of the total value
+         Znsq = float(cell%ATOM_type(ip))**2
+         totZnsq = totZnsq + Znsq
+! ir is the row index
+         do ir=1,BetheParameter%nns
+! ic is the column index
+           do ic=1,BetheParameter%nns
+                 kk = BetheParameter%stronghkl(1:3,ir) - BetheParameter%stronghkl(1:3,ic)
+! We'll assume isotropic Debye-Waller factors for now ...
+! That means we need the square of the length of s=  kk^2/4
+                 kkl = 0.25 * CalcLength(float(kk),'r')**2
+                 do ikk=1,n
+! get the argument of the complex exponential
+                   arg = tpi*sum(kk(1:3)*ctmp(ikk,1:3))
+! Debye-Waller exponential
+                   DBWF = exp(-cell%ATOM_pos(ip,5)*kkl)
+!  multiply with the prefactor and add to the structure matrix Sgh
+                   Sgh(ir,ic) = Sgh(ir,ic) + cmplx(Znsq * DBWF,0.0) * cmplx(cos(arg),sin(arg))
+                 end do
+             end do
+         end do  
+       end do
+
+! for now, we're disabling the kinematical part
+! solve the dynamical eigenvalue equation for this beam direction  Lgh,thick,kn,nn,gzero,kin,debug
+       call CalcLgh3(DynMat,Lgh,dble(thick(iE)),ktmp%kn,BetheParameter%nns,gzero,kin,debug,depthstep,lambdaE(iE,1:izzmax),izzmax)
+
+! dynamical contribution (we'll assume that this time it is ok
+       s = real(sum(Lgh*Sgh))/float(sum(nat))
+
+! and reset the weak cutoff
+       BetheParameter%weakcutoff = Bethe_store
+     end if
+
 
 ! and store the resulting values
      ipx = ktmp%i
      ipy = ktmp%j
      call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
      if (usehex) then
-! dynamical contribution
-       s = real(sum(Lgh*Sgh))/float(sum(nat))
        do ix=1,nequiv
          srhex(iequiv(1,ix),iequiv(2,ix),iE) = s
 	end do
-! kinematical contribution
-!       srkinhex(ipx,ipy) = kin * totZnsq/float(sum(nat))
      else
-! dynamical contribution
-       s = real(sum(Lgh*Sgh))/float(sum(nat))
-       do ix=1,nequiv
-         sr(iequiv(1,ix),iequiv(2,ix),iE) = s
-	end do
-! kinematical contribution
-!       srkin(ipx,ipy) = kin * totZnsq/float(sum(nat))
+        if (Esel.eq.-1) then
+         do ix=1,nequiv
+           sr(iequiv(1,ix),iequiv(2,ix),iE) = s
+	  end do
+	else
+         do ix=1,nequiv
+           sr(iequiv(1,ix),iequiv(2,ix),1) = s
+	  end do
+        endif
      end if
   
+     if (mod(ik,2500).eq.0) write (*,*) 'completed beam direction ',ik
 ! select next beam direction
      ktmp => ktmp%next
     end do beamloop
@@ -453,37 +536,12 @@ energyloop: do iE=1,numEbins
 ! stop the clock and report the total time     
 !   call Time_stop(numk)
 
- write (*,*) 'Some statistics :'
- write (*,*) 'Average number of strong beams : ',float(BetheParameter%totstrong)/float(numk)
- write (*,*) '          (min,max) : ',BetheParameter%minstrong,BetheParameter%maxstrong
- write (*,*) 'Average number of weak beams : ',float(BetheParameter%totweak)/float(numk)
- write (*,*) '          (min,max) : ',BetheParameter%minweak,BetheParameter%maxweak
+! write (*,*) 'Some statistics :'
+! write (*,*) 'Average number of strong beams : ',float(BetheParameter%totstrong)/float(numk)
+! write (*,*) '          (min,max) : ',BetheParameter%minstrong,BetheParameter%maxstrong
+! write (*,*) 'Average number of weak beams : ',float(BetheParameter%totweak)/float(numk)
+! write (*,*) '          (min,max) : ',BetheParameter%minweak,BetheParameter%maxweak
 
-! clean up the kinematical data (remove spikes); right now (8/29/12), I'm not sure why 
-! these spikes occur.  It must be because of something that's ill-defined 
-! in the perturbation approach of the Bethe potentials, but it appears to
-! only affect the kinematical part, not the dynamical part and that's rather odd.
-! For now, we look for these spikes and remove them by placing the average
-! value of the nearest neighbours in that location ... 
-!if (usehex) then ! the hexagonal array has different dimensions 
-!  do i=-npx+1,npx-1
-!   do j=-npyhex+1,npyhex-1
-!     ave = 0.25*(srkinhex(i-1,j) + srkinhex(i+1,j) + srkinhex(i,j-1) + srkinhex(i,j+1) ) 
-!     if (abs(srkinhex(i,j)).gt.ave*3.0) srkinhex(i,j)=ave
-!     if (abs(srkinhex(i,j)).lt.ave*0.333) srkinhex(i,j)=ave
-!   end do
-! end do
-!else
-!  do i=-npx+1,npx-1
-!   do j=-npy+1,npy-1
-!     ave = 0.25*(srkin(i-1,j) + srkin(i+1,j) + srkin(i,j-1) + srkin(i,j+1) ) 
-!     if (abs(srkin(i,j)).gt.ave*3.0) srkin(i,j)=ave
-!     if (abs(srkin(i,j)).lt.ave*0.333) srkin(i,j)=ave
-!   end do
-! end do
-!end if
-!! 
-!mess = 'removed spikes from kinematical array';  call Message("(A)") 
 
 ! Finally, if this was sampled on a hexagonal array, we need to do barycentric interpolation
 ! to the standard square array for final output and use of the subsequent program.
@@ -525,7 +583,15 @@ energyloop: do iE=1,numEbins
 !    end if
 !  end do
 !end if
- 
+
+if (Esel.eq.-1) then 
+  open(unit=dataunit,file='/Volumes/Drive2/playarea/EBSD/tmpresults.data',status='unknown',action='write',form = 'unformatted')
+  write (dataunit)  2*npx+1,2*npy+1,numEbins ! , isym, placeholder
+  write (dataunit) sr
+!  write (dataunit) srkin 
+  close(unit=dataunit,status='keep')
+end if
+
 end do energyloop
 !
 
@@ -537,11 +603,19 @@ end do energyloop
 ! in the next version of this program, we'll also have an extra dimension for
 ! the simulation energy, so that we can interpolate both by location and 
 ! energy, to get a more accurate distribution on the scintillator.
-  open(unit=dataunit,file=trim(fname),status='unknown',action='write',form = 'unformatted')
-  write (dataunit)  2*npx+1,2*npy+1,numEbins ! , isym, placeholder
+  open(unit=dataunit,file=trim(outname),status='unknown',action='write',form = 'unformatted')
+  if (Esel.eq.-1) then
+    write (dataunit)  2*npx+1,2*npy+1,numEbins ! , isym, placeholder
+  else
+    one = 1
+    write (dataunit)  2*npx+1,2*npy+1,one ! , isym, placeholder
+  end if
   write (dataunit) sr
 !  write (dataunit) srkin 
   close(unit=dataunit,status='keep')
+
+  mess = 'Date stored in file '//trim(outname)
+  call Message("(A/)")
 
 end subroutine ComputeMasterPattern
 
@@ -563,7 +637,7 @@ end subroutine ComputeMasterPattern
 !  -------- --- --- -----------
 !  10/13/98 MDG 1.0 original
 !   7/04/01 MDG 2.0 f90
-! 12/12/12 MDg 3.0 attempt at actual numerical integration for the matrix elements I_jk
+!  12/12/12 MDG 3.0 attempt at actual numerical integration for the matrix elements I_jk
 ! ###################################################################
 subroutine CalcLgh3(DMat,Lgh,thick,kn,nn,gzero,kin,debug,depthstep,lambdaE,izz)
 
@@ -571,74 +645,114 @@ use local
 use io
 use files
 use constants
+use error
 
 IMPLICIT NONE
 
-integer         		:: nn,i,j,IPIV(nn),gzero,debug, low, igh, ierr, izz, iz
-complex(kind=dbl) 		:: CGinv(nn,nn), Minp(nn,nn), tmp3(nn,nn),DMat(nn,nn)
+complex(kind=dbl),INTENT(IN)        :: DMat(nn,nn)
+complex(kind=dbl),INTENT(OUT)       :: Lgh(nn,nn)
+real(kind=dbl),INTENT(IN)           :: thick
+real(kind=dbl),INTENT(IN)           :: kn
+integer(kind=irg),INTENT(IN)        :: nn
+integer(kind=irg),INTENT(IN)        :: gzero
+integer(kind=irg),INTENT(IN)        :: debug
+real(kind=dbl),INTENT(OUT)          :: kin
+real(kind=dbl),INTENT(IN)           :: depthstep
+real(kind=sgl),INTENT(IN)	      :: lambdaE(izz)
+integer(kind=irg),INTENT(IN)        :: izz
 
-real(kind=dbl)  		:: kn,thick,kin, tpi, dzt, depthstep
-complex(kind=dbl) 		:: Ijk(nn,nn), Lgh(nn,nn), q, getMIWORK, qold
+integer         		:: i,j, iz
+complex(kind=dbl) 		:: CGinv(nn,nn), Minp(nn,nn), tmp3(nn,nn)
 
-integer(kind=irg)    		:: INFO, LDA, LDVR, LDVL,  JPIV(nn), MILWORK, lambdaE(izz)
-complex(kind=dbl)    		::  CGG(nn,nn), W(nn)
+real(kind=dbl)  		:: tpi, dzt
+complex(kind=dbl) 		:: Ijk(nn,nn), q, getMIWORK, qold
+
+integer(kind=irg)    		:: INFO, LDA, LDVR, LDVL,  JPIV(nn), MILWORK
+complex(kind=dbl)    		:: CGG(nn,nn), W(nn)
 complex(kind=dbl),allocatable 	:: MIWORK(:)
-real(kind=dbl),allocatable 	:: ortr(:), orti(:)
 
-! Uncomment the following two lines if the EISPACK cg routine is needed
-real(kind=dbl)       		:: ar(nn,nn), ai(nn,nn), wr(nn), wi(nn), vr(nn,nn), vi(nn,nn), scle(nn)
+integer(kind=irg),parameter   	:: LWMAX = 5000 
+complex(kind=dbl)    		:: VL(nn,nn),  WORK(LWMAX)
+real(kind=dbl)       		:: RWORK(2*nn)
+character            		:: JOBVL, JOBVR
+integer(kind=sgl)              :: LWORK
 
-intent(IN)      		:: nn,thick, kn, gzero,DMat,debug
-intent(OUT)     		:: Lgh,kin
 
 ! compute the eigenvalues and eigenvectors
 ! using the LAPACK CGEEV, CGETRF, and CGETRI routines
 ! 
-! then get the eigenvalues and eigenvectors
-!if (debug.eq.1) write (*,*) 'entered CalcLgh2'
  Minp = DMat
-!if (debug.eq.1) write (*,*) 'copied DMat'
- 
- IPIV = 0
- W = cmplx(0.D0,0.D0)
- CGG = cmplx(0.D0,0.D0)
- CGinv = cmplx(0.D0,0.D0)
 
+! set some initial LAPACK variables 
  LDA = nn
  LDVL = nn
  LDVR = nn
  INFO = 0
-! the eispack routines use the real and imaginary parts of arrays as separate arrays instead
-! of as complex variable ...  
-!if (debug.eq.1) write (*,*) 'splitting real and imaginary'
-
-ar = dble(Minp)
-ai = aimag(Minp)
-
-! first balance the matrix
-!if (debug.eq.1) write (*,*) 'cbal'
-
-call cbal(nn, ar, ai, low, igh, scle)
-! transform the upper Hessenberg form
-allocate(ortr(igh), orti(igh))
-!if (debug.eq.1) write (*,*) 'corth'
-call corth(nn, low, igh, ar, ai, ortr, orti)
-! get eigenvalues and eigenvectors
-!if (debug.eq.1) write (*,*) 'comqr2'
-call comqr2(nn, low, igh, ortr, orti, ar, ai, wr, wi, vr, vi, ierr )
-if ( ierr.ne.0) then 
-  write (*,*) 'Error in comqr2 eispack routine'
-  stop
-end if
-deallocate(ortr, orti)
-! undo the cbal transformation
-!if (debug.eq.1) write (*,*) 'cbabk2'
-call cbabk2(nn, low, igh, scle, nn, vr, vi)
-
-! return to complex variables
-W = cmplx(wr, wi)
-CGG = cmplx(vr, vi)
  
+! first initialize the parameters for the LAPACK ZGEEV, CGETRF, and CGETRI routines
+ JOBVL = 'N'   ! do not compute the left eigenvectors
+ JOBVR = 'V'   ! do compute the right eigenvectors
+ LWORK = -1 ! so that we can ask the routine for the actually needed value
+
+! call the routine to determine the optimal workspace size
+  call zgeev(JOBVL,JOBVR,nn,Minp,LDA,W,VL,LDVL,CGG,LDVR,WORK,LWORK,RWORK,INFO)
+  LWORK = MIN( LWMAX, INT( WORK( 1 ) ) )
+
+! then call the eigenvalue solver
+  call zgeev(JOBVL,JOBVR,nn,Minp,LDA,W,VL,LDVL,CGG,LDVR,WORK,LWORK,RWORK,INFO)
+  if (INFO.ne.0) call FatalError('Error in CalcLgh3: ','ZGEEV return not zero')
+
+!if (debug.eq.1) then 
+!  write (*,*) 'inside CalcLgh3'
+!  write (*,*) 'thick, depthstep ', thick, depthstep
+!  write (*,*) 'kn, nn ', kn, nn
+!  write (*,*) 'lambdaE', lambdaE
+!  write (*,*) 'gzero = ', gzero
+!  write (*,*) 'max(DMat) ', maxval(cabs(DMat))
+!end if
+
+!! then get the eigenvalues and eigenvectors
+! 
+! IPIV = 0
+! W = cmplx(0.D0,0.D0)
+! CGG = cmplx(0.D0,0.D0)
+! CGinv = cmplx(0.D0,0.D0)
+!
+! LDA = nn
+! LDVL = nn
+! LDVR = nn
+! INFO = 0
+!! the eispack routines use the real and imaginary parts of arrays as separate arrays instead
+!! of as complex variable ...  
+!!if (debug.eq.1) write (*,*) 'splitting real and imaginary'
+!
+!ar = dble(Minp)
+!ai = aimag(Minp)
+!
+!! first balance the matrix
+!!if (debug.eq.1) write (*,*) 'cbal'
+!
+!call cbal(nn, ar, ai, low, igh, scle)
+!! transform the upper Hessenberg form
+!allocate(ortr(igh), orti(igh))
+!!if (debug.eq.1) write (*,*) 'corth'
+!call corth(nn, low, igh, ar, ai, ortr, orti)
+!! get eigenvalues and eigenvectors
+!!if (debug.eq.1) write (*,*) 'comqr2'
+!call comqr2(nn, low, igh, ortr, orti, ar, ai, wr, wi, vr, vi, ierr )
+!if ( ierr.ne.0) then 
+!  write (*,*) 'Error in comqr2 eispack routine'
+!  stop
+!end if
+!deallocate(ortr, orti)
+!! undo the cbal transformation
+!!if (debug.eq.1) write (*,*) 'cbabk2'
+!call cbabk2(nn, low, igh, scle, nn, vr, vi)
+!
+!! return to complex variables
+!W = cmplx(wr, wi)
+!CGG = cmplx(vr, vi)
+! 
 
  CGinv = CGG
 
@@ -650,22 +764,31 @@ CGG = cmplx(vr, vi)
  if (.not.allocated(MIWORK)) allocate(MIWORK(MILWORK))
  MIWORK = dcmplx(0.D0,0.D0)
  call zgetri(nn,CGinv,LDA,JPIV,MIWORK,MILWORK,INFO)
-
- if ((cabs(sum(matmul(CGG,CGinv)))-dble(nn)).gt.1.E-8) write (*,*) 'Error in matrix inversion; continuing'
  deallocate(MIWORK)
-!if (debug.eq.1) write (*,*) ' -> done'
+
+! in all the time that we've used these routines, we haven't
+! had a single problem with the matrix inversion, so we don't
+! really need to do this test:
+!
+! if ((cabs(sum(matmul(CGG,CGinv)))-dble(nn)).gt.1.E-8) write (*,*) 'Error in matrix inversion; continuing'
+
 
 ! then compute the integrated intensity matrix
  W = W/cmplx(2.0*kn,0.0)
+ 
+! if (debug.eq.1) then
+!   write (*,*) 'W = ',W
+! end if
+ 
 ! recall that alpha(1:nn) = CGinv(1:nn,gzero)
 
-!if (debug.eq.1) write (*,*) 'computing B matrix'
 
 ! first the Ijk matrix (this is Winkelmann's B^{ij}(t) matrix)
 ! combined with numerical integration over [0, z0] interval,
 ! taking into account depth profiles from Monte Carlo simulations ...
 ! the depth profile lambdaE must be added to the absorption 
 ! components of the Bloch wave eigenvalues.
+
 tpi = 2.D0*cPi*depthstep
 dzt = depthstep/thick
  do i=1,nn
@@ -681,30 +804,36 @@ dzt = depthstep/thick
 
 Ijk = Ijk * dzt
 
+!if (debug.eq.1) then 
+!  write (*,*) 'tpi, dzt ', tpi, dzt
+!  write (*,*) 'maxval(Ijk) ', maxval(cabs(Ijk))
+!end if
+
+
 !if (debug.eq.1) write (*,*) ' -> done'
 
 !if (debug.eq.1) write (*,*) 'matmul operations'
 
 ! then the summations for Lgh and kin
-!tmp3 = matmul(CGG,transpose(Ijk)) 
-!Lgh = matmul(tmp3,transpose(conjg(CGG)))
+tmp3 = matmul(CGG,transpose(Ijk)) 
+Lgh = matmul(tmp3,transpose(conjg(CGG)))
 
 ! there might be a problem with the Absoft implementation of the 
 ! matmul routine...  So let's do this multiplication explicitly...
-do i=1,nn
-  do j=1,nn
-     tmp3(i,j) = sum( CGG(i,1:nn) * Ijk(j,1:nn) )
-  end do
-end do
-
-! we no longer need CGinv, so we'll use the array to store the conjugate of CGG
-CGinv = conjg(CGG)
-do i=1,nn
-  do j=1,nn
-    Lgh(i,j) = sum( tmp3(i,1:nn) * CGinv(j,1:nn) )
-  end do
-end do
-
+!do i=1,nn
+!  do j=1,nn
+!     tmp3(i,j) = sum( CGG(i,1:nn) * Ijk(j,1:nn) )
+!  end do
+!end do
+!
+!! we no longer need CGinv, so we'll use the array to store the conjugate of CGG
+!CGinv = conjg(CGG)
+!do i=1,nn
+!  do j=1,nn
+!    Lgh(i,j) = sum( tmp3(i,1:nn) * CGinv(j,1:nn) )
+!  end do
+!end do
+!
 
 ! we'll approximate this by the sum of the diagonal entries 
 ! tmp3 = matmul(transpose(CGG),conjg(CGG)) 

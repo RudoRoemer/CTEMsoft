@@ -184,7 +184,7 @@ for iref=0,data.numref-1 do begin
     d = 0.5*data.wavelength*sqrt(ip^2+jp^2)/data.scale
     ktpg[iref,ibeam] = 2000.0*asin(d)
     ang = atan(jp,ip)
-    if (ang lt 0.0) then ang = 2.0*!pi - ang
+    if (ang lt 0.0) then ang = ang + 2.0*!pi 
     ktpgang[iref,ibeam] = ang mod (2.0*!pi)
   endfor
 endfor 

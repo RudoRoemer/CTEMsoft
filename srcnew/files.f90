@@ -112,8 +112,60 @@ IMPLICIT NONE
  if (allocated(cell%LUT)) deallocate(cell%LUT)
  if (allocated(cell%dbdiff)) deallocate(cell%dbdiff)
  if (allocated(cell%apos)) deallocate(cell%apos)
+ if (associated(cell%reflist)) nullify(cell%reflist)
 
 end subroutine ResetCell
+
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: CopyFromCell
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief  copy from cell into newcell
+! 
+!> @date   01/10/14 MDG 1.0 update after new cell type
+!--------------------------------------------------------------------------
+subroutine CopyFromCell(newcell)
+
+use local
+use crystalvars
+
+IMPLICIT NONE
+
+type (unitcell),INTENT(INOUT) :: newcell
+
+newcell = cell
+newcell%reflist => cell%reflist
+
+end subroutine CopyFromCell
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: CopyToCell
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief copy from newcell to cell
+! 
+!> @date   01/10/14 MDG 1.0 update after new cell type
+!--------------------------------------------------------------------------
+subroutine CopyToCell(newcell)
+
+use local
+use crystalvars
+
+IMPLICIT NONE
+
+type (unitcell),INTENT(IN) :: newcell
+
+call ResetCell
+cell = newcell
+cell%reflist => newcell%reflist
+
+end subroutine CopyToCell
+
 
 !--------------------------------------------------------------------------
 !
@@ -220,6 +272,7 @@ use symmetry
 IMPLICIT NONE
 
 character(fnlen),OPTIONAL,INTENT(IN)  	:: fname			!< optional file name
+
 integer(kind=irg)			:: io_int(1)
 logical 				:: fr = .TRUE.
 

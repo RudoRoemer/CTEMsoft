@@ -44,6 +44,7 @@
 !> @date  10/28/13 MDG  3.1 added Interpret_Program_Arguments line
 !> @date  12/03/13 MDG  4.0 new start 
 !> @date  12/08/13 MDG  4.1 added trace (line scan) mode
+!> @date  02/10/14 MDG  4.2 added apbs
 !--------------------------------------------------------------------------
 program tryECCI
 
@@ -84,6 +85,7 @@ end program tryECCI
 !> @date 11/13/13  MDG 2.2 implementation of Pade approximation for scattering matrix computation
 !> @date 12/04/13  MDG 3.0 new implementation of the thickness integration, nmore along the lines of CTEMECP 
 !> @date 12/07/13  MDG 3.1 added line scan mode (called "trace")
+!> @date 02/10/14  MDG 3.2 added apbs
 !--------------------------------------------------------------------------
 subroutine ComputeECCI(nmlfile)
 
@@ -108,6 +110,7 @@ use dislocation
 use YSHmodule
 use void
 use inclusion
+use apb
 use defectmodule
 use rotations
 use timing
@@ -116,7 +119,7 @@ use STEMmodule
 character(fnlen),INTENT(IN)		:: nmlfile
 
 integer(kind=irg)    		        :: nn,i,j,k,npix,npiy,ii,jj,numvoids,numdisl, numset, &
-					numYdisl,numsf,numinc,dinfo,t_interval,nat(100),kkk(3), &
+					numYdisl,numsf,numinc,numapb,dinfo,t_interval,nat(100),kkk(3), &
 					DF_nums_new,DF_npix_new,DF_npiy_new, numstart,numstop, isg, TID, &
 					NTHR, isym, ir, ga(3), gb(3),kk(3),ic,g,numd,ix,iy, &
 					numk,ixp,iyp,SETNTHR, io_int(6), skip, gg(3), iSTEM, nktstep
@@ -128,7 +131,7 @@ real(kind=sgl)         		:: glen,thick, X(2), dmin, dkt, bragg, thetac, &
 					gac(3), gbc(3),zmax, ktmax, io_real(2)
 real(kind=dbl)                        :: ctmp(192,3),arg,arg2
 character(fnlen)      			:: dataname,sgname,voidname,dislname(3*maxdefects),sfname(maxdefects),ECPname, &
-					incname,dispfile,xtalname,foilnmlfile, STEMnmlfile,dislYname(3*maxdefects)
+					incname,dispfile,xtalname,foilnmlfile, STEMnmlfile,dislYname(3*maxdefects), apbname
 character(4)            		:: dispmode, summode
 character(5)                          :: progmode
 complex(kind=dbl),allocatable    	:: DHWM(:,:),DHWMvoid(:,:),DDD(:,:),Sarray(:,:,:,:)
@@ -145,7 +148,7 @@ namelist / ECCIlist / DF_L, DF_npix, DF_npiy, DF_slice, dmin, sgname, numvoids, 
                                 voidname, numdisl, dislname, numYdisl, dislYname, numsf, sfname, dinfo, &
 				 t_interval,progmode, dispfile, ktmax, dkt, ECPname, summode, lauec, lauec2, &
 				 dispmode,SETNTHR,xtalname,voltage,kk, lauec, nktstep, &
-				 dataname, foilnmlfile, STEMnmlfile
+				 dataname, foilnmlfile, STEMnmlfile, apbname
 
 ECCI = .TRUE.
 
@@ -156,7 +159,7 @@ tpi = 2.0*sngl(cPi)
 
 ! parameters specific to this run
  xtalname = 'undefined'		! initial value; MUST be present in nml file for program to execute
- voltage = 200000.0			! accelerating voltage
+ voltage = 20000.0			! accelerating voltage
  kk = (/ 0, 0, 1 /)			! incident wave vector in crystal components (omitting wave length)
  lauec = (/ 0.0,0.0 /)			! Laue center coordinates (used for single image mode, start point in trace modea)
  lauec2 = (/ 0.0,0.0 /)		! Laue center 2 coordinates (used for trace mode, end point)
@@ -193,6 +196,7 @@ tpi = 2.0*sngl(cPi)
  dislYname = ''         	! filenames for Yoffe dislocation data
  sfname = ''            	! filenames for stacking fault data
  incname = 'none'   		! filename for inclusion data
+ apbname = 'none'              ! filename for (circular) apbs
  dispfile = 'none'     	! name of the displacement field output file (will be created if different from none)
  dispmode = 'not'  		! should a diplacement file be written ('new') or read ('old') or neither ('not')?
 
@@ -390,6 +394,8 @@ if ((dispmode.eq.'new').or.(dispmode.eq.'not')) then
 ! is there an inclusion data file? if so, then read it
    if (incname.ne.'none') call read_inclusion_data(numinc,incname,DF_L,DF_npix,DF_npiy,dinfo)
 
+! is there an apb file ?
+   if (apbname.ne.'none') call read_apb_data(numapb,apbname,DF_L,DF_npix,DF_npiy,dinfo)
    
 ! the following will also have to be changed for the ZA case; it might not be necessary (or possible) 
 ! to pre-compute all the possible scattering matrices; perhaps we need to precompute an array of 
@@ -427,7 +433,7 @@ if ((dispmode.eq.'new').or.(dispmode.eq.'not')) then
     do j=1,DF_npiy
       DF_R = 0.0
 ! compute the displacement vectors DF_R for all points in the column
-      call CalcR(i,j,numvoids,numdisl,numYdisl,numsf,numinc)
+      call CalcR(i,j,numvoids,numdisl,numYdisl,numsf,numinc,numapb)
 ! loop over the fixed thickness slices
       do k=1,DF_nums
 ! then convert to the dot-product 

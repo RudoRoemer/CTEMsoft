@@ -1920,10 +1920,6 @@ end function LambertInverseDouble
 subroutine Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
 
 use local
-use io
-use diffraction
-use multibeams
-use dynamical
 
 IMPLICIT NONE
 

@@ -72,17 +72,17 @@ type reflisttype
 				   weaknum,& 		! sequential number for weak beams
 				   famnum		! family number
 ! removed 1/10/14		   nab(2)  		! decomposition with respect to ga and gb
-! removed 1/10/14  logical                    	:: dbdiff  		! double diffraction reflection ?
+  logical                    	:: dbdiff  		! double diffraction reflection ?
   real(kind=dbl)             	:: sg, &               ! excitation error
                                   xg, &              ! extinction distance
 ! removed 1/10/14                 Ucgmod, &          ! modulus of Fourier coefficient
                                   sangle, &          ! scattering angle (mrad)
                                   thetag             ! phase angle, needed for ECCI simulations
   logical	                :: strong, weak       ! is this a strong beam or not; both .FALSE. means 'do not consider'
+  complex(kind=dbl)            :: Ucg	               ! Fourier coefficient, copied from cell%LUT
   type(reflisttype),pointer 	:: next    		! connection to next entry in master linked list
   type(reflisttype),pointer 	:: nexts    		! connection to next strong entry in linked list
   type(reflisttype),pointer 	:: nextw    		! connection to next weak entry in linked list
-  type(reflisttype),pointer 	:: firstw    		! connection to first weak entry in linked list
 end type reflisttype
 
 
@@ -171,8 +171,9 @@ type unitcell
   logical,allocatable                  :: dbdiff(:,:,:)
   logical                              :: nonsymmorphic
   type(symdata)                        :: SG
-  type(reflisttype)                    :: reflist
-  integer(kind=irg)                    :: DynNbeams, DynNbeamsLinked
+  type(reflisttype),pointer            :: reflist
+  type(reflisttype),pointer 	        :: firstw    		! connection to first weak entry in linked list
+  integer(kind=irg)                    :: DynNbeams, DynNbeamsLinked, nns, nnw
 end type
 
 !> this type is used to define an orientation relation, i.e., two parallel
@@ -184,7 +185,7 @@ end type
 
 !> cell is a pointer to the generic unit cell variable used in all programs.  
 ! This pointer is allocated by the InitializeCell routine in the initializers.f90 module
-type(unitcell), pointer :: cell
+type(unitcell) :: cell
 
 
 
