@@ -126,7 +126,7 @@ complex(kind=dbl)        :: czero
 logical	                 :: distort
 
 namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, distort, abcdist, albegadist, ktmax, &
-                   startthick, thickinc, numthick, npix, outname
+                   startthick, thickinc, numthick, npix, outname, thetac
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 xtalname = 'undefined'		        ! initial value to check that the keyword is present in the nml file
@@ -138,7 +138,8 @@ dmin = 0.025			        ! smallest d-spacing to include in dynamical matrix [nm]
 distort = .FALSE.                      ! distort the input unit cell ?  
 abcdist = (/ 0.4, 0.4, 0.4/)           ! distorted a, b, c [nm]
 albegadist = (/ 90.0, 90.0, 90.0 /)    ! distorted angles [degrees]
-ktmax = 5.0                            ! beam convergence in units of |g_a|
+ktmax = 0.0                            ! beam convergence in units of |g_a|
+thetac = 0.0                           ! beam convergence in mrad (either ktmax or thetac must be given)
 startthick = 2.0		        ! starting thickness [nm]
 thickinc = 2.0			        ! thickness increment
 numthick = 10			        ! number of increments
@@ -218,7 +219,11 @@ end if
 ! construct the list of all possible reflections
  method = 'ALL'
  bragg = CalcDiffAngle(ga(1),ga(2),ga(3))*0.5
- thetac = (ktmax * 2.0 * bragg)*1000.0
+ if (ktmax.ne.0.0) then 
+   thetac = (ktmax * 2.0 * bragg)*1000.0
+ else
+   ktmax = thetac / (2000.0 * bragg)
+ end if
  io_real(1) = thetac
  call WriteValue(' Pattern convergence angle [mrad] = ',io_real,1,"(F8.3)")
  io_real(1) = bragg*1000.0

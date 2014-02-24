@@ -237,7 +237,7 @@ close,1
 
   ECCIprint,'Reading ECP data file',/blank
 
-  openu,1,strtrim(data.ECPname,2),/f77
+  openu,1,strtrim(string(data.ECPname),2),/f77
   progname = bytarr(11)
   readu,1,progname
   progname = strtrim(string(progname),2)

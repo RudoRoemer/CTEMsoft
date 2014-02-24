@@ -46,7 +46,7 @@ common ECP_data_common, data
 
 ; prefs file
   openw,1,data.prefname
-  nprefs = 7
+  nprefs = 8
   data.nprefs = nprefs
   printf,1,nprefs
   printf,1,'ECProot::'+data.ECProot
@@ -54,6 +54,7 @@ common ECP_data_common, data
   printf,1,'ecpformat::'+string(data.ecpformat,format="(I1)")
 ; grid on or off ?
   printf,1,'ecpgrid::'+string(data.ecpgrid,format="(I1)")
+  printf,1,'patrot::'+string(data.patrot,format="(F6.2)")
 
 ; window locations
   printf,1,'xlocation::'+string(data.xlocation,format="(F6.1)")

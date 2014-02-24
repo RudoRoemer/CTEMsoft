@@ -126,6 +126,28 @@ widget_s.blur=  WIDGET_TEXT(file1, $
 		UVALUE='BLUR', $
 		/ALIGN_LEFT)
 
+;----------
+file1 = WIDGET_BASE(block1, $
+			/ROW, $
+                        XSIZE=500, $
+			/ALIGN_LEFT)
+
+label4 = WIDGET_LABEL(file1, $
+			VALUE='Pattern Rotation', $
+			FONT=fontstrlarge, $
+			XSIZE=150, $
+			YSIZE=25, $
+			/ALIGN_LEFT)
+
+widget_s.patrot=  WIDGET_TEXT(file1, $
+		VALUE=string(data.patrot,FORMAT="(F6.2)"),$
+		XSIZE=10, $
+		YSIZE=1, $
+		/EDITABLE, $
+                EVENT_PRO='ECPatternWidget_event', $
+		UVALUE='PATROT', $
+		/ALIGN_LEFT)
+
 
 
 ;---------- save pattern

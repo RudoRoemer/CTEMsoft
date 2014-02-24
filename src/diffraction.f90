@@ -43,7 +43,7 @@
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date    3/14/02 MDG 2.2 added CalcDynMat routine
 !--------------------------------------------------------------------------
-module diffraction
+module diffraction 
 
 use local
 

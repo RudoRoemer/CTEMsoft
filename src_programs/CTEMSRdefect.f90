@@ -295,6 +295,7 @@ if ((dispmode.eq.'new').or.(dispmode.eq.'not')) then
   mess = ' Starting Displacement Field Computation (multi-threaded)'; call Message("(A/)")
 
   call CalcRLocal(numvoids,numdisl,numsf,numinc,DF_nums,DF_npix,DF_npiy,t_interval,disparray,SETNTHR)
+end if
 
 ! and, if needed, store the defect displacement field for re-runs
 if (dispmode.ne.'not') then
@@ -308,7 +309,10 @@ if (dispmode.ne.'not') then
   if ((dispfile.ne.'none').and.(dispmode.eq.'old')) then ! there is a pre-computed defect file, so let's load it
    allocate(disparray(DF_nums,DF_npix,DF_npiy))
    disparray = 0
-   open(unit=dataunit,file=dispfile,status='old',action='read',form='unformatted')
+   write (*,*) 'Opening old dispfile '//trim(dispfile)
+   write (*,*) 'shape(disparray) = ',shape(disparray)
+ 
+   open(unit=dataunit,file=trim(dispfile),status='old',action='read',form='unformatted')
    read (dataunit) DF_nums_new,DF_npix_new,DF_npiy_new
 ! check to make sure that these dimensions are the same as the ones used in the current run of the program
    if ((DF_nums_new.ne.DF_nums).or.(DF_npix_new.ne.DF_npix).or.(DF_npiy_new.ne.DF_npiy)) then
@@ -323,7 +327,6 @@ if (dispmode.ne.'not') then
   read (dataunit) disparray
   close(unit=dataunit,status='keep')
  end if
-end if
 end if
 
 ! next the STEMimages array; for consistency with CTEMZAdefect, we've changed the index ordering)
@@ -476,7 +479,7 @@ mainloop: do isg = numstart,numstop   ! this is the main computational loop
 ! Finally, here it is: the actual (threaded!) image computation  !
 !------------------------------------------------!
 ! NTHR = OMP_GET_NUM_THREADS()
-!  call OMP_SET_NUM_THREADS(4)
+  call OMP_SET_NUM_THREADS(SETNTHR)
 !$OMP    PARALLEL PRIVATE(TID,i,j,k,ii,jj,iCL,amp,amp2,Azz,inten,weights,ic) &
 !$OMP&   SHARED(NTHR,npix,npiy,DF_nums,disparray,DF_Sarray,DF_Svoid,progmode,iSTEM,Nmat, &
 !$OMP&   BFweightsarray,ADFweightsarray,att,images,STEMimages,t_interval,nn,numCL,izero,isg)

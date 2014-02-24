@@ -102,6 +102,7 @@ widget_s = {widgetstruct, $
             thetac:long(0), $                   ; pattern convergence angle
             wavek:long(0), $                    ; zone axis indices 
             blur:float(0.0), $                  ; blur factor widget
+            patrot:float(0.0), $                ; pattern rotation angle widget
             cx:long(0), $                       ; x-coordinate field
             cy:long(0), $                       ; y-coordinate field
             voltage:long(0), $                  ; microscope voltage
@@ -134,6 +135,7 @@ data = {datastruct, $
 	delta: float(0.0), $			; scale factor
 	gperp: fltarr(3), $			; vector normal to ga
 	blur: float(0.0), $			; blurring factor
+	patrot: float(0.0), $			; pattern rotation angle 
 	thetac: float(0.0), $			; beam divergence angle [mrad]
 	wavek: lonarr(3), $			; wave vector indices
 	fn: lonarr(3), $			; foil normal

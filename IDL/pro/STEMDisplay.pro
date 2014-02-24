@@ -108,6 +108,7 @@ widget_s = {widgetstruct, $
 	    cbedformatbgroup:long(0), $		; cbed format button group
 	    cbedmodebgroup:long(0), $		; cbed intensity mode button group
 	    saveimage:long(0), $		; save image button
+	    doseries:long(0), $			; do a series of images
 	    savecbed:long(0), $			; save cbed pattern button
 	    bfrho: long(0), $			; Bright Field radius in mrad
 	    haadfrhoin: long(0), $		; Dark Field inner radius in mrad
@@ -157,6 +158,13 @@ data = {datastruct, $
 	dataname: '', $				; filename (without pathname)
 	pathname: '', $				; pathname (obviously)
 	xtalname: '', $				; crystal structure filename (without pathname)
+	seriesfolder: '', $			; folder name for image series generation
+	seriesfoldernum: fix(0), $		; folder number for new image series folder
+	seriesroot: 'noseries', $		; root of filename for image series generation
+	seriestype: '', $			; filename extension for image series generation
+	seriesstart: fix(0), $			; first image number of series
+	serieslast: fix(0), $			; last image number of series
+	seriesnum: fix(0), $			; number of images in series
 	suffix: '', $				; filename suffix 
 	prefname: '~/.STEMgui.prefs', $		; filename of preferences file (including path)
 	filesize: long64(0), $			; input file size in bytes

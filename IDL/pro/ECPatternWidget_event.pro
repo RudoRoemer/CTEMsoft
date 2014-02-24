@@ -80,6 +80,13 @@ end else begin
 	    WIDGET_CONTROL, SET_VALUE=string(data.blur,FORMAT="(F6.3)"), widget_s.blur
 	    ECPshow
 	endcase
+
+ 'PATROT':  begin
+	    WIDGET_CONTROL, get_value=val,widget_s.patrot
+	    data.patrot = float(val[0])
+	    WIDGET_CONTROL, SET_VALUE=string(data.patrot,FORMAT="(F6.3)"), widget_s.patrot
+	    ECPshow
+	endcase
  
 
  'SAVEECP': begin

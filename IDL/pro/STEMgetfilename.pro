@@ -36,6 +36,7 @@
 ;> @brief Display an interface and ask user to select a CTEMZAdefect output file
 ;
 ;> @date 06/13/13 MDG 1.0 first attempt 
+;> @date 02/14/14 MDG 2.0 added support for image series 
 ;--------------------------------------------------------------------------
 pro STEMgetfilename,dummy
  
@@ -69,12 +70,42 @@ common STEM_data_common, data
   data.suffix = strmid(res,dpos+1)
   data.STEMroot = data.pathname
 
-WIDGET_CONTROL, SET_VALUE=data.dataname, widget_s.filename
+; finally, check whether or not this filename contains a double underscore; if it
+; does, then this file is potentially a part of an image series, and a few other 
+; parameters will need to be set as well.
+  spos = strpos(data.dataname,'__')
+  data.seriesroot = 'noseries'
+  if (spos ne -1) then begin
+; first we deal with the file name variables
+    data.seriesroot = strmid(data.dataname,0,spos)
+    next = strlen(data.dataname) - (spos+7)
+    data.seriestype = strmid(data.dataname,spos+7,next)
+    data.seriesstart= fix(strmid(data.dataname,spos+2,4))
+; how many potential images are there in this series
+    file_exists = 1
+    data.serieslast = data.seriesstart
+    while (file_exists eq 1) do begin
+      fname = data.pathname+'/'+data.seriesroot+'__'+string(data.serieslast+1,format="(I4.4)")+'.'+data.seriestype
+      if (file_test(fname) eq 1) then begin
+	data.serieslast += 1
+	  STEMprint,' found data file '+fname
+      end else begin
+	file_exists = 0
+      end
+    end
+    data.seriesnum = data.serieslast - data.seriesstart + 1
+  end
+
+  WIDGET_CONTROL, SET_VALUE=data.dataname, widget_s.filename
 
   STEMprint,' full path '+res
   STEMprint,' path '+data.pathname
   STEMprint,' data file '+data.dataname
   STEMprint,' suffix '+data.suffix
+
+  if (data.seriesroot ne 'none') then begin
+     STEMprint,' this file is part of a '+string(data.seriesnum,format="(I4)")+' part series'
+  end
 
 skip:
 end

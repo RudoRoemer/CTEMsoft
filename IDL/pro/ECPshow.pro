@@ -48,7 +48,7 @@ common ECP_rawdata, rawdata
 wset,widget_s.ECPdrawID
 
 if (data.blur eq 0.0) then begin
-  tvscl,rawdata[*,*,data.thicksel]
+  image = reform(rawdata[*,*,data.thicksel])
 end else begin
   dim = round(6.0*data.blur)
 ; make sure filter has odd size and is at least 3 pixels
@@ -63,17 +63,19 @@ end else begin
   y = rotate(x,3)
   r = x^2+y^2
   kernel = exp(-r*0.5/data.blur^2)/(2.0*!pi*data.blur^2)
-  newimage = convol(reform(rawdata[*,*,data.thicksel]),kernel,/edge_truncate)
-  tvscl,newimage
+  image = convol(reform(rawdata[*,*,data.thicksel]),kernel,/edge_truncate)
 endelse
 
 ; do we need to draw a grid ?
 if (data.ecpgrid eq 1) then begin
+  tvscl,image
 ; draw the grid lines horizontally and vertically
   for i=-data.kt,data.kt do begin
     plots,data.xmid + [i,i]*data.dgrid,[0,data.datadims[1]],/dev,color=200
     plots,[0,data.datadims[1]],data.xmid+[i,i]*data.dgrid,/dev,color=200
   end
-end 
+end else begin
+  tvscl,rot(image,data.patrot)
+endelse
 
 end 

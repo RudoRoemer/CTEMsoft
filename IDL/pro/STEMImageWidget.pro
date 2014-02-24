@@ -188,6 +188,18 @@ widget_s.saveimage = WIDGET_BUTTON(block2, $
 			UVALUE='SAVEIMAGE', $
 			/ALIGN_RIGHT)
 
+; the following option looks for a series of files with name
+; of the form name__####.data, applies the same image computation 
+; to each file (using the current program settings), and stores
+; the images in jpeg or other format so that the user can
+; subsequently generate a movie or a grid of images without having
+; to manually load each file ...
+widget_s.doseries = WIDGET_BUTTON(block2, $
+			VALUE='Series', $
+			/NO_RELEASE, $
+                        EVENT_PRO='STEMImageWidget_event', $
+			UVALUE='DOSERIES', $
+			/ALIGN_RIGHT)
 
 widget_s.closeimage = WIDGET_BUTTON(block2, $
 			VALUE='Close', $

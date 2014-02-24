@@ -67,6 +67,7 @@ if (rs eq 1) then begin
   	'ecpformat': data.ecpformat=fix(val)
 ; grid on or off ?
   	'ecpgrid': data.ecpgrid=fix(val)
+  	'patrot': data.patrot=fix(val)
 
 ; window locations
   	'xlocation': data.xlocation=float(val)

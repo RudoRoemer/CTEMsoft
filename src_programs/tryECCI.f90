@@ -86,6 +86,7 @@ end program tryECCI
 !> @date 12/04/13  MDG 3.0 new implementation of the thickness integration, nmore along the lines of CTEMECP 
 !> @date 12/07/13  MDG 3.1 added line scan mode (called "trace")
 !> @date 02/10/14  MDG 3.2 added apbs
+!> @date 02/24/14  MDG 3.3 removal of double-counted phase factor
 !--------------------------------------------------------------------------
 subroutine ComputeECCI(nmlfile)
 
@@ -575,22 +576,19 @@ end do
 ! We'll assume isotropic Debye-Waller factors for now ...
 ! That means we need the square of the length of s=  kk^2/4
         kkl = 0.25 * CalcLength(float(kkk),'r')**2
+! Debye-Waller exponential times Z^2
+        DBWF = Znsq * exp(-cell%ATOM_pos(ip,5)*kkl)
 ! here is where we should insert the proper weight factor, Z^2 exp[-M_{h-g}]
 ! and also the detector geometry...   For now, we do nothing with the detector
 ! geometry; the Rossouw et al 1994 paper lists a factor A that does not depend
 ! on anything in particular, so we assume it is 1. 
 
-! the phase factor exponential
-        arg2 = rltmpb%thetag - rltmpa%thetag
-        carg2 = cmplx(cos(arg2),sin(arg2))
         do ikk=1,n
 ! get the argument of the complex exponential
           arg = tpi*sum(kkk(1:3)*ctmp(ikk,1:3))
           carg = cmplx(cos(arg),sin(arg))
-! Debye-Waller exponential
-          DBWF = exp(-cell%ATOM_pos(ip,5)*kkl)
 ! multiply with the prefactor and add
-          Sgh(ir,ic) = Sgh(ir,ic) + carg * carg2 * cmplx(Znsq * DBWF,0.0)
+          Sgh(ir,ic) = Sgh(ir,ic) + carg * cmplx(DBWF,0.0)
         end do
       end do
       rltmpb => rltmpb%next  ! move to next column-entry

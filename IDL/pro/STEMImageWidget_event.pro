@@ -36,6 +36,7 @@
 ;> @brief main event handler
 ;
 ;> @date 06/13/13 MDG 1.0 first version
+;> @date 02/14/14 MDG 2.0 added file series output option
 ;--------------------------------------------------------------------------
 pro STEMImageWidget_event, event
 
@@ -65,6 +66,56 @@ end else begin
 		if (event.press eq 1B) then begin    ; only act on clicks, not on releases
 		  if (XRegistered("STEMCBEDWidget") EQ 0) then STEMCBEDWidget
 		  STEMcomputeCBEDpatterns,event.x,event.y
+		end
+	  endcase
+
+  'DOSERIES' : begin
+	  	 if (data.seriesroot ne 'noseries') then begin
+; this assumes that the file name has the form string__0001.data and that there is a 
+; series of consecutive files with that name; for each one, the file is read and the
+; current imaging parameters are applied; then the corresponding images are stored in
+; a folder called imageseries, with names image_0001.jpeg (tiff, bmp), so that one can
+; make a movie out of the individual frames, without having to load each individual 
+; input file manually...  [note the double underscore in the file name !]
+
+; determine which folder the image series will be stored in
+    		  data.seriesfoldernum = 1
+    		  foldername = data.pathname + '/' + data.seriesroot + string(data.seriesfoldernum,format="(I4.4)")
+    		  if (file_test(foldername,/directory) eq 1) then begin
+      		  file_exists = 1
+      		  while (file_exists eq 1) do begin
+        		  foldername = data.pathname + '/' + data.seriesroot + string(data.seriesfoldernum+1,format="(I4.4)")
+        		  if (file_test(foldername,/directory) ne 1) then begin
+          		  data.seriesfoldernum += 1
+	  		  cmd = '/bin/mkdir '+foldername
+	  		  spawn,cmd
+	  		  file_exists = 0
+			  end else data.seriesfoldernum += 1
+      		  end 
+    		  end else begin
+			  cmd = '/bin/mkdir '+foldername
+			  spawn,cmd
+    		  end
+    		  data.seriesfolder = foldername
+
+ 		  for inum=data.seriesstart,data.serieslast do begin
+		   data.dataname = data.seriesroot+'__'+string(inum,format="(I4.4)")+'.'+data.seriestype
+		   STEMreadgeometry
+	  	   STEMcomputeBFHAADF
+
+		   delist = ['jpeg','tiff','bmp']
+		   de = delist[data.imageformat]
+		   filename = data.seriesfolder+'/'+data.seriesroot+'_'+string(inum,format="(I4.4)")+'.'+de
+		   im = bytarr(2*data.datadims[0],data.datadims[1])
+		   im[0,0] = bytscl(BFimage)
+		   if (data.diffractionmode eq 0) then im[data.datadims[0],0] = bytscl(HAADFimage) else im[data.datadims[0],0] = bytscl(DFimage)
+		   case de of
+		     'jpeg': write_jpeg,filename,im,quality=100
+		     'tiff': write_tiff,filename,reverse(im,2)
+		     'bmp': write_bmp,filename,im
+		    else: MESSAGE,'unknown file format option'
+		   endcase
+		 end
 		end
 	  endcase
 
