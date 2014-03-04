@@ -619,7 +619,7 @@ IMPLICIT NONE
 real(kind=sgl),INTENT(IN)	:: xyz(3) 
 integer(kind=irg),INTENT(INOUT):: ierr
 
-real(kind=sgl)			:: res(2), q, qq, XX, YY, xx, yy
+real(kind=sgl)			:: res(2), q, qq, XX, YY, lxx, lyy
 integer(kind=irg)		:: ks
 real(kind=sgl),parameter	:: eps = 1.0E-7
 
@@ -644,20 +644,20 @@ else
   select case (ks)
     case (0,3)
         q = LPs%pree * (abs(XX)/XX) * sqrt(XX**2+YY**2)
-  	xx = q * LPs%sPio2 
-  	yy = q * LPs%pref * atan(YY/XX)
+  	lxx = q * LPs%sPio2 
+  	lyy = q * LPs%pref * atan(YY/XX)
     case (1,4)
     	q = LPs%prea * (abs(XX)/XX) * sqrt(XX**2+YY**2)
     	qq= atan((YY-LPs%rtt*XX)/(XX+LPs%rtt*YY))
-  	xx = q * LPs%rtt *( LPs%Pi/6.0 - qq )
-  	yy = q * ( 0.5*LPs%Pi + qq )
+  	lxx = q * LPs%rtt *( LPs%Pi/6.0 - qq )
+  	lyy = q * ( 0.5*LPs%Pi + qq )
     case (2,5)
     	q = LPs%prea * (abs(XX)/XX) * sqrt(XX**2+YY**2)
     	qq= atan((YY+LPs%rtt*XX)/(XX-LPs%rtt*YY))
-  	xx = q * LPs%rtt *( LPs%Pi/6.0 + qq )
-  	yy = q * ( -0.5*LPs%Pi + qq )
+  	lxx = q * LPs%rtt *( LPs%Pi/6.0 + qq )
+  	lyy = q * ( -0.5*LPs%Pi + qq )
   end select
-  res = (/ xx, yy /)
+  res = (/ lxx, lyy /)
  end if
 end if
 
@@ -686,7 +686,7 @@ IMPLICIT NONE
 real(kind=dbl),INTENT(IN)	:: xyz(3) 
 integer(kind=irg),INTENT(INOUT):: ierr
 
-real(kind=dbl)			:: res(2), q, qq, XX, YY, xx, yy
+real(kind=dbl)			:: res(2), q, qq, XX, YY, lxx, lyy
 integer(kind=irg)		:: ks
 real(kind=dbl),parameter	:: eps = 1.0E-12
 
@@ -711,20 +711,20 @@ else
   select case (ks)
     case (0,3)
         q = LPs%pree * (dabs(XX)/XX) * dsqrt(XX**2+YY**2)
-  	xx = q * LPs%sPio2 
-  	yy = q * LPs%pref * datan(YY/XX)
+  	lxx = q * LPs%sPio2 
+  	lyy = q * LPs%pref * datan(YY/XX)
     case (1,4)
     	q = LPs%prea * (dabs(XX)/XX) * dsqrt(XX**2+YY**2)
     	qq= datan((YY-LPs%rtt*XX)/(XX+LPs%rtt*YY))
-  	xx = q * LPs%rtt *( LPs%Pi/6.D0 - qq )
-  	yy = q * ( 0.5D0*LPs%Pi + qq )
+  	lxx = q * LPs%rtt *( LPs%Pi/6.D0 - qq )
+  	lyy = q * ( 0.5D0*LPs%Pi + qq )
     case (2,5)
     	q = LPs%prea * (dabs(XX)/XX) * dsqrt(XX**2+YY**2)
     	qq= datan((YY+LPs%rtt*XX)/(XX-LPs%rtt*YY))
-  	xx = q * LPs%rtt *( LPs%Pi/6.D0 + qq )
-  	yy = q * ( -0.5D0*LPs%Pi + qq )
+  	lxx = q * LPs%rtt *( LPs%Pi/6.D0 + qq )
+  	lyy = q * ( -0.5D0*LPs%Pi + qq )
   end select
-    res = (/ xx, yy /)
+    res = (/ lxx, lyy /)
 end if
 end if
 
@@ -847,18 +847,18 @@ end function GetSextantDouble
 !
 !> @brief map from 3D cubic grid to 3D ball 
 !
-!> @param xyz 3D coordinates to be considered (single precision)  
+!> @param lxyz 3D coordinates to be considered (single precision)  
 !> @param ierr error flag 0 = OK, 1 = 
 ! 
 !> @date 7/12/13    MDG 1.0 original
 !--------------------------------------------------------------------------
-recursive function Lambert3DCubeForwardSingle(xyz,ierr) result(res)
+recursive function Lambert3DCubeForwardSingle(lxyz,ierr) result(res)
 
 use local
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: xyz(3)
+real(kind=sgl),INTENT(IN)	:: lxyz(3)
 integer(kind=irg),INTENT(INOUT):: ierr
 real(kind=sgl)			:: res(3)
 
@@ -866,21 +866,21 @@ real(kind=sgl)			:: XYZ(3), sXYZ(3), T1, T2, c, s, q, LamXYZ(3)
 integer(kind=irg)		:: p
 
 ierr = 0
-if (maxval(dabs(xyz)).gt.1.0) then
+if (maxval(dabs(lxyz)).gt.1.0) then
   res = (/ 0.0, 0.0, 0.0 /)
   ierr = 1
   return
 end if
 
 ! determine which pyramid pair the point lies in and copy coordinates in correct order (see paper)
-p = GetPyramidSingle(xyz)
+p = GetPyramidSingle(lxyz)
 select case (p)
  case (1,2)
-  sXYZ = xyz
+  sXYZ = lxyz
  case (3,4)
-  sXYZ = (/ xyz(2), xyz(3), xyz(1) /)
+  sXYZ = (/ lxyz(2), lxyz(3), lxyz(1) /)
  case (5,6)
-  sXYZ = (/ xyz(3), xyz(1), xyz(2) /)
+  sXYZ = (/ lxyz(3), lxyz(1), lxyz(2) /)
 end select
 
 ! scale by grid parameter ratio sc
@@ -940,18 +940,18 @@ end function Lambert3DCubeForwardSingle
 !
 !> @brief map from 3D cubic grid to 3D ball 
 !
-!> @param xyz 3D coordinates to be considered (double precision)  
+!> @param lxyz 3D coordinates to be considered (double precision)  
 !> @param ierr error flag 0 = OK, 1 = outside of unit cube
 ! 
 !> @date 7/12/13    MDG 1.0 original
 !--------------------------------------------------------------------------
-recursive function Lambert3DCubeForwardDouble(xyz,ierr) result(res)
+recursive function Lambert3DCubeForwardDouble(lxyz,ierr) result(res)
 
 use local
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)	:: xyz(3)
+real(kind=dbl),INTENT(IN)	:: lxyz(3)
 integer(kind=irg),INTENT(INOUT):: ierr
 real(kind=dbl)			:: res(3)
 
@@ -959,21 +959,21 @@ real(kind=dbl)			:: XYZ(3), sXYZ(3), T1, T2, c, s, q, LamXYZ(3)
 integer(kind=irg)		:: p
 
 ierr = 0
-if (maxval(dabs(xyz)).gt.1.0) then
+if (maxval(dabs(lxyz)).gt.1.0) then
   res = (/ 0.D0, 0.D0, 0.D0 /)
   ierr = 1
   return
 end if
 
 ! determine which pyramid pair the point lies in and copy coordinates in correct order (see paper)
-p = GetPyramidDouble(xyz)
+p = GetPyramidDouble(lxyz)
 select case (p)
  case (1,2)
-  sXYZ = xyz
+  sXYZ = lxyz
  case (3,4)
-  sXYZ = (/ xyz(2), xyz(3), xyz(1) /)
+  sXYZ = (/ lxyz(2), lxyz(3), lxyz(1) /)
  case (5,6)
-  sXYZ = (/ xyz(3), xyz(1), xyz(2) /)
+  sXYZ = (/ lxyz(3), lxyz(1), lxyz(2) /)
 end select
 
 ! scale by grid parameter ratio sc

@@ -5,6 +5,11 @@
 !
 ! crystal structure filename
 xtalname = 'undefined'
+! computational mode 'Blochwv' for Bloch wave, 'ScatMat' for scattering matrix
+compmode = 'Blochwv'  ! 'ScatMat'
+! integration step size (only used for ScatMat mode), typically 1,0 or 0.5 nm
+! make sure zintstep properly divides into the thickness values !
+zintstep = 1.0
 ! output device (6=screen, >10 is fort.## file)
 stdout = 6
 ! smallest d-spacing to take into account [nm]

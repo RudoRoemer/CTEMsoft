@@ -170,7 +170,7 @@ READ(UNIT=dataunit,NML=EBSDmastervars)
 CLOSE(UNIT=dataunit)
 
 if (trim(xtalname).eq.'undefined') then
-  call FatalError('CTEMEBSDzE:',' structure file name is undefined in '//nmlfile)
+  call FatalError('CTEMEBSDmaster:',' structure file name is undefined in '//nmlfile)
 end if
 
 ! print some information

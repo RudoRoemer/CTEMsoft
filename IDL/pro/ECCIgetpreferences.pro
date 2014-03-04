@@ -71,6 +71,8 @@ if (rs eq 1) then begin
   	'ecpformat': ECPdata.ecpformat=fix(val)
 ; grid on or off ?
   	'ecpgrid': ECPdata.ecpgrid=fix(val)
+; grid on or off ?
+  	'blur': data.blur=fix(val)
 
 ; window locations
   	'xlocation': data.xlocation=float(val)

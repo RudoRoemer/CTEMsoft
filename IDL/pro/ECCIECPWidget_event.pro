@@ -100,6 +100,10 @@ end else begin
 		'trace': begin
 	      	    slice = reform(rawdata[*,*,q[0]])
 	      	    eccimin = min(rawdata,max=eccimax)
+		    if (data.blur ne 0.0) then begin
+  			slice = ECCIblur(slice,data.blur)
+		    endif
+
 	      	    if (data.mosaicscale eq 0) then begin
 	              im = bytscl(slice,min=eccimin,max=eccimax)
  	            end else begin
@@ -120,7 +124,11 @@ end else begin
 	              ECCIsum = fltarr(data.datadims[0],data.datadims[1])
 	              npat = 0
 	              for i=0,data.numk-1 do if (z[i] le data.avrad) then begin
-		        ECCISUM += reform(rawdata[*,*,i])
+		         if (data.blur ne 0.0) then begin
+		            ECCISUM += ECCIblur(reform(rawdata[*,*,i]),data.blur)
+			 end else begin
+		            ECCISUM += reform(rawdata[*,*,i])
+		         endelse
 	                npat += 1
 	              endif
 		        ECCIprint,'Number of patterns averaged : '+string(npat,format="(I4)")
@@ -142,6 +150,9 @@ end else begin
 		'array': begin
 	      	      slice = reform(rawdata[*,*,q[0]])
 	      	      eccimin = min(rawdata,max=eccimax)
+		      if (data.blur ne 0.0) then begin
+  			  slice = ECCIblur(slice,data.blur)
+		      endif
 	      	      if (data.mosaicscale eq 0) then begin
 	        	    im = bytscl(slice,min=eccimin,max=eccimax)
  	      	      end else begin
@@ -164,7 +175,11 @@ end else begin
 	        	ECCIsum = fltarr(data.datadims[0],data.datadims[1])
 	        	npat = 0
 	        	for i=0,data.numk-1 do if (dd[i] le data.avrad) then begin
-		  	  ECCISUM += reform(rawdata[*,*,i])
+		         if (data.blur ne 0.0) then begin
+		            ECCISUM += ECCIblur(reform(rawdata[*,*,i]),data.blur)
+			 end else begin
+		            ECCISUM += reform(rawdata[*,*,i])
+		         endelse
 	          	  npat += 1
 	        	endif
 		  	ECCIprint,'Number of patterns averaged : '+string(npat,format="(I4)")

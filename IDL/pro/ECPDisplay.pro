@@ -368,7 +368,7 @@ file7 = WIDGET_BASE(file6, $
 			/ALIGN_LEFT)
 
 label2 = WIDGET_LABEL(file7, $
-			VALUE='# of k-vectors', $
+			VALUE='# of k-vectors/Mode', $
 			FONT=fontstrlarge, $
 			XSIZE=200, $
 			YSIZE=25, $

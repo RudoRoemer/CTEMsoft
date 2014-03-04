@@ -206,7 +206,7 @@ real(kind=sgl)				:: io_real(1)
  io_int(1) = nint(100.0*TIME_t_count/(TIME_t_count+TIME_unit_count*(float(numk)-float(ik))))
  call WriteValue (' ',io_int, 1, "(1x,I3,' % completed; '$)") 
  io_real(1) = TIME_t_count
- call WriteValue(' Total computation time [s] ', io_real, 1, "(F$)")
+ call WriteValue(' Total computation time [s] ', io_real, 1, "(F10.3$)")
  mess = ';  Estimated remaining time : '; call Message("(A$)")
  call PrintTime(TIME_unit_count*(float(numk)-float(ik)))
 !
@@ -286,7 +286,7 @@ real(kind=sgl)				:: io_real(1)
   mess = '  Total computation time [s] '; call Message("(A$)")
   call PrintTime((float(TIME_loops)*float(TIME_count_max)+float(TIME_newcount-TIME_count))/float(TIME_count_rate))
   io_real(1)=(float(TIME_loops)*float(TIME_count_max)+float(TIME_newcount-TIME_count))/float(TIME_count_rate)/float(numk)
-  call WriteValue(' Time per step/pixel [s] ', io_real, 1, "(F)")
+  call WriteValue(' Time per step/pixel [s] ', io_real, 1, "(F10.3)")
 end subroutine Time_stop
 
 

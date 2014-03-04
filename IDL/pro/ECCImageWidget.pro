@@ -126,6 +126,24 @@ widget_s.ECCImosaicbgroup = CW_BGROUP(block1, $
 			SET_VALUE=data.mosaicscale)
 
 
+file1 = WIDGET_BASE(block1, /ROW, /ALIGN_LEFT)
+label4 = WIDGET_LABEL(file1, $
+			VALUE='Blur Radius', $
+			FONT=fontstrlarge, $
+			XSIZE=110, $
+			YSIZE=25, $
+			/ALIGN_LEFT)
+
+widget_s.blur=  WIDGET_TEXT(file1, $
+		VALUE=string(data.blur,FORMAT="(F6.2)"),$
+		XSIZE=10, $
+		YSIZE=1, $
+		/EDITABLE, $
+                EVENT_PRO='ECCImageWidget_event', $
+		UVALUE='BLUR', $
+		/ALIGN_LEFT)
+
+
 ;------------  coordinate display
 ; then we put in a row with two display areas and a few controls
 file3 = WIDGET_BASE(block1, /ROW, /ALIGN_LEFT)

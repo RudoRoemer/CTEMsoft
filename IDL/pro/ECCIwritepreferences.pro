@@ -51,7 +51,7 @@ common ECP_rawdata, ECPrawdata
 
 ; prefs file
   openw,1,data.prefname
-  nprefs = 9
+  nprefs = 10
   data.nprefs = nprefs
   printf,1,nprefs
   printf,1,'ECCIroot::'+data.ECCIroot
@@ -59,6 +59,8 @@ common ECP_rawdata, ECPrawdata
   printf,1,'ecpformat::'+string(ECPdata.ecpformat,format="(I1)")
 ; grid on or off ?
   printf,1,'ecpgrid::'+string(ECPdata.ecpgrid,format="(I1)")
+; blur radius for images 
+  printf,1,'blur::'+string(data.blur,format="(F6.3)")
 
 ; window locations
   printf,1,'xlocation::'+string(data.xlocation,format="(F6.1)")

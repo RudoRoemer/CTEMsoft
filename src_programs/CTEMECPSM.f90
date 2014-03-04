@@ -39,8 +39,9 @@
 !> @date 03/18/10 MDG 1.0 f90
 !> @date 08/09/10 MDG 2.0 corrected weight factors and g-vector ordering problem
 !> @date 11/18/13 MDG 3.0 major rewrite with new libraries 
+!> @date 03/03/14 MDG 3.1 rewrite with scattering matrix formalism
 !--------------------------------------------------------------------------
-program CTEMECP
+program CTEMECPSM
 
 use local
 use files
@@ -58,7 +59,7 @@ call Interpret_Program_Arguments(nmldeffile,2,(/ 0, 40 /) )
 ! perform the zone axis computations
 call ECpattern(nmldeffile)
 
-end program CTEMECP
+end program CTEMECPSM
 
 !--------------------------------------------------------------------------
 !
@@ -79,8 +80,7 @@ end program CTEMECP
 !> @param nmlfile namelist file name
 !
 !> @date 11/18/13  MDG 1.0 major rewrite from older ECP program
-!> @date 11/22/13  MDG 1.1 output modified for IDL interface
-!> @date 03/04/14  MDG 1.2 added scattering matrix mode
+!< @date 11/22/13  MDG 1.1 output modified for IDL interface
 !--------------------------------------------------------------------------
 subroutine ECpattern(nmlfile)
 
@@ -119,16 +119,15 @@ integer                  :: i,j,ir,nat(100),kk(3),&
 real(kind=sgl)           :: ktmax,& ! maximum tangential component of wave vector
                             pre,&   ! prefactors 
                             tpi,Znsq, kkl, &
-                            DBWF, frac, zintstep
+                            DBWF, frac
 real,allocatable         :: thick(:), sr(:,:,:) ! thickness array, results
 !real(kind=dbl), allocatable           :: Kossel(:)
 complex(kind=dbl),allocatable         :: Lgh(:,:,:),Sgh(:,:)
 complex(kind=dbl)        :: czero
 logical	                 :: distort
-character(7)             :: compmode
 
 namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, distort, abcdist, albegadist, ktmax, &
-                   startthick, thickinc, numthick, npix, outname, thetac, compmode, zintstep
+                   startthick, thickinc, numthick, npix, outname, thetac
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 xtalname = 'undefined'		        ! initial value to check that the keyword is present in the nml file
@@ -147,15 +146,13 @@ thickinc = 2.0			        ! thickness increment
 numthick = 10			        ! number of increments
 npix = 256			        ! output arrays will have size npix x npix
 outname = 'ecp.data'        	        ! output filename
-compmode = 'Bloch'                     ! 'Blochwv' or 'ScatMat' solution mode (Bloch is default)
-zintstep = 1.0                        ! integration step size for ScatMat mode
 
 ! init some parameters
 gzero = 1
 frac = 0.05
 
 ! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+open(UNIT=dataunit,FILE=nmlfile,DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=ECPlist)
 close(UNIT=dataunit,STATUS='keep')
 
@@ -294,6 +291,11 @@ end if
 ! useful during program testing but should probably be removed as an option altogether...
 	call Compute_DynMat('BLOCHBETHE', ktmp%k, ktmp%kt, .FALSE.)
         nn = DynNbeams
+        
+! next we need to convert the Bloch dynamical matrix to hte A matrix for the scattering matrix formalism...
+
+
+
 !write (*,*) ik, nn
 
 !if (ik.eq.1) then
@@ -340,19 +342,10 @@ end if
              end do
             end do  
           end do
-
+          
+!write (*,*)  'calling CalcLghSM'
 ! solve the dynamical eigenvalue equation
-          if (compmode.eq.'Blochwv') then 
-            allocate(W(nn),CG(nn,nn),alpha(nn))
-            call CalcLgh(nn,nt,thick,ktmp%kn,gzero,Lgh)
-            deallocate(W,CG,alpha)
-          end if
-          if (compmode.eq.'ScatMat') then 
-            call CalcLghSM(nn,nt,thick,zintstep,ktmp%kn,gzero,Lgh)
-          end if
-          if (compmode.eq.'ScanMat') then 
-            call CalcLghSMscan(nn,nt,thick,zintstep,ktmp%kn,gzero,Lgh)
-          end if
+          call CalcLghSM(nn,nt,thick,ktmp%kn,gzero,Lgh) !,Kossel)
 
 ! and store the resulting values
           ipx = ktmp%i + npx + 1
@@ -386,23 +379,11 @@ end if
   write (dataunit) 2*npix+1,2*npix+1,nt
 ! then the name of the crystal data file
   write (dataunit) xtalname
-! altered lattice parameters; also combine compmode in this parameter
-!  Bloch waves, no distortion: 0
-!  Bloch waves, distortion:    1
-!  ScatMat, no distortion      2
-!  ScatMat, distortion         3
+! altered lattice parameters
   if (distort) then 
-    if (compmode.eq.'Blochwv') then
-      write (dataunit) 1
-    else
-      write (dataunit) 3
-    end if
+    write (dataunit) 1
   else
-    if (compmode.eq.'Blochwv') then
-      write (dataunit) 0
-    else
-      write (dataunit) 2
-    end if
+    write (dataunit) 0
   end if
 ! new lattice parameters and angles
   write (dataunit) abcdist
@@ -447,7 +428,7 @@ end subroutine ECpattern
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE:CalcLgh
+! SUBROUTINE:CalcLghSM
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -459,97 +440,12 @@ end subroutine ECpattern
 !> @param kn normal component of incident wave vector
 !> @param gzero index of zero beam (should always be the first one; legacy parameter)
 !> @param Lgh output array
-!
-!> @date 11/18/13  MDG 1.0 major rewrite from older ECP program; merged with ECPz
-!--------------------------------------------------------------------------
-recursive subroutine CalcLgh(nn,nt,thick,kn,gzero,Lgh)
-
-use local
-use io
-use files
-use diffraction
-use dynamical
-use constants
-
-IMPLICIT NONE
-
-integer(kind=sgl),INTENT(IN)        :: nn
-integer(kind=sgl),INTENT(IN)        :: nt
-real(kind=sgl),INTENT(IN)           :: thick(nt)
-real(kind=dbl),INTENT(IN)           :: kn
-integer(kind=sgl),INTENT(IN)        :: gzero
-complex(kind=dbl),INTENT(OUT)       :: Lgh(nn,nn,nt)
-
-integer                             :: i,j,it,ig,ih,IPIV(nn)
-complex(kind=dbl),allocatable       :: CGinv(:,:), Minp(:,:),tmp3(:,:)
-complex(kind=dbl)                   :: Ijk(nn,nn),q
-
-allocate(CGinv(nn,nn),Minp(nn,nn),tmp3(nn,nn))
-
-! compute the eigenvalues and eigenvectors
-! using the LAPACK CGEEV, CGETRF, and CGETRI routines
-! 
-! then get the eigenvalues and eigenvectors
- Minp = DynMat
- IPIV = 0
-
- call BWsolve(Minp,W,CG,CGinv,nn,IPIV)
-
-! then compute the integrated intensity matrix
- W = W/cmplx(2.0*kn,0.0)
-
-! first do the Lgh matrices, looping over the thickness
-do it=1,nt
-! recall that alpha(1:nn) = CGinv(1:nn,gzero)
-! first the Ijk matrix
- do i=1,nn
-  do j=1,nn
-    q = 2.0*cPi*thick(it)*cmplx(aimag(W(i))+aimag(W(j)),real(W(i))-real(W(j)))
-    Ijk(i,j) = conjg(CGinv(i,gzero)) * (1.0-exp(-q))/q * CGinv(j,gzero)
-  end do
- end do
-
-! then the summations for Lgh
- do ih=1,nn
-   do i=1,nn
-      tmp3(ih,i) = sum(Ijk(i,1:nn)*CG(ih,1:nn))
-   end do
- end do
- do ig=1,nn
-  do ih=1,nn
-     Lgh(ih,ig,it) = sum(conjg(CG(ig,1:nn))*tmp3(ih,1:nn))
-  end do
- end do
-end do ! thickness loop
-
-deallocate(CGinv,Minp,tmp3)
-
-end subroutine CalcLgh
-
-
-!--------------------------------------------------------------------------
-!
-! SUBROUTINE:CalcLghSM
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief integrate the scattering matrix wave function over the foil thickness
-!
-!> @param nn number of strong beams
-!> @param nt number of thickness values
-!> @param thick array of thickness values
-!> @param zintstep integration step size
-!> @param kn normal component of incident wave vector
-!> @param gzero index of zero beam (should always be the first one; legacy parameter)
-!> @param Lgh output array
-!
-!> @todo verify that the outer product is properly computed using the spread functions;
-!> it is possible that this expression may need to be transposed.
+!> @param Kossel Kossel intensity array
 !
 !> @date 11/18/13  MDG 1.0 major rewrite from older ECP program; merged with ECPz
 !> @date 03/03/14  MDG 2.0 version that works with the scattering matrix...
 !--------------------------------------------------------------------------
-recursive subroutine CalcLghSM(nn,nt,thick,zintstep,kn,gzero,Lgh)
+recursive subroutine CalcLghSM(nn,nt,thick,kn,gzero,Lgh) !,Kossel)
 
 use local
 use io
@@ -564,134 +460,46 @@ IMPLICIT NONE
 integer(kind=sgl),INTENT(IN)        :: nn
 integer(kind=sgl),INTENT(IN)        :: nt
 real(kind=sgl),INTENT(IN)           :: thick(nt)
-real(kind=sgl),INTENT(IN)           :: zintstep
 real(kind=dbl),INTENT(IN)           :: kn
 integer(kind=sgl),INTENT(IN)        :: gzero
 complex(kind=dbl),INTENT(OUT)       :: Lgh(nn,nn,nt)
+!real(kind=dbl),INTENT(OUT)          :: Kossel(nt)
 
-integer(kind=irg)                   :: i, numt, tval
-complex(kind=dbl),allocatable       :: Minp(:,:),Azz(:,:),ampl(:),ampl2(:),Lghsum(:,:)
-integer(kind=irg),allocatable	      :: tvals(:)
+integer                             :: i
+complex(kind=dbl),allocatable       :: Minp(:,:),Azz(:,:),ampl(:),ampl2(:)
+real(kind=sgl)                      :: dthick
   
-  allocate(Minp(nn,nn),Azz(nn,nn),ampl(nn),ampl2(nn),tvals(nt),Lghsum(nn,nn))
+  allocate(Minp(nn,nn),Azz(nn,nn),ampl(nn),ampl2(nn))
 
-! get the scattering matrix (first multiply the Bloch dynamical matrix by i pi lambda, then exponentiate)
+  dthick = thick(2)-thick(1)
   Minp = DynMat * dcmplx(0.D0,cPi * mLambda)
-  call MatrixExponential(Minp, Azz, dble(zintstep), 'Pade', nn)  
+  call MatrixExponential(Minp, Azz, dble(dthick), 'Pade', nn)  
 
-! initialize the wave function vector and output arrays
   ampl = dcmplx(0.D0,0.D0)
   ampl(1) = dcmplx(1.0D0,0.D0)
   Lgh = dcmplx(0.D0,0.D0)
-  Lghsum = dcmplx(0.D0,0.D0)
 
-! first get the sequential numbers of the requested thicknesses in units of zintstep
-  tvals = nint(thick/zintstep)
-  tval = 1
-  numt = nint(maxval(thick)/zintstep)
+! add some thickness handling here !!!
+! thge integration uses a small step size, but there might
+! be only a small number of thicknesses for which output is
+! requested !
 
-! and integrate over the thickness, storing selected values
-! Note that the use of the spread routines may need to be verified (may need to be transposed) 
-  do i=1,numt
+  do i=1,nt
     ampl2 = matmul(Azz,ampl)
     if (i.eq.1) then 
-        Lghsum = spread(ampl2(1:nn),dim=2,ncopies=nn)*spread(conjg(ampl2(1:nn)),dim=1,ncopies=nn)
+      Lgh(1:nn,1:nn,i) = spread(ampl2(1:nn),dim=2,ncopies=nn)*spread(conjg(ampl2(1:nn)),dim=1,ncopies=nn)
     else
-        Lghsum = Lghsum + spread(ampl2(1:nn),dim=2,ncopies=nn)* spread(conjg(ampl2(1:nn)),dim=1,ncopies=nn)
+      Lgh(1:nn,1:nn,i) = Lgh(1:nn,1:nn,i-1)+spread(ampl2(1:nn),dim=2,ncopies=nn)*spread(conjg(ampl2(1:nn)),dim=1,ncopies=nn)
     end if
-    if (i.eq.tvals(tval)) then
-      Lgh(1:nn,1:nn,tval) = Lghsum
-      tval = tval+1
-    end if
+!    do ih=1,nn
+!      do ig=1,nn
+!        Lgh(ig,ih,i) = Lgh(ig,ih,i) + ampl2(ih) * conjg(ampl2(ig))
+!      end do
+!    end do
     ampl = ampl2
   end do
 
-  deallocate(Minp,Azz,ampl,ampl2,tvals,Lghsum)
-
-end subroutine CalcLghSM
-
-
-
-
-
-!--------------------------------------------------------------------------
-!
-! SUBROUTINE:CalcLghSMscan
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief used to get the individual layer contributions (undocumented option)
-!
-!> @param nn number of strong beams
-!> @param nt number of thickness values
-!> @param thick array of thickness values
-!> @param zintstep integration step size
-!> @param kn normal component of incident wave vector
-!> @param gzero index of zero beam (should always be the first one; legacy parameter)
-!> @param Lgh output array
-!
-!> @todo verify that the outer product is properly computed using the spread functions;
-!> it is possible that this expression may need to be transposed.
-!
-!> @date 11/18/13  MDG 1.0 major rewrite from older ECP program; merged with ECPz
-!> @date 03/03/14  MDG 2.0 version that works with the scattering matrix...
-!--------------------------------------------------------------------------
-recursive subroutine CalcLghSMscan(nn,nt,thick,zintstep,kn,gzero,Lgh)
-
-use local
-use io
-use files
-use diffraction
-use dynamical
-use constants
-use math
-
-IMPLICIT NONE
-
-integer(kind=sgl),INTENT(IN)        :: nn
-integer(kind=sgl),INTENT(IN)        :: nt
-real(kind=sgl),INTENT(IN)           :: thick(nt)
-real(kind=sgl),INTENT(IN)           :: zintstep
-real(kind=dbl),INTENT(IN)           :: kn
-integer(kind=sgl),INTENT(IN)        :: gzero
-complex(kind=dbl),INTENT(OUT)       :: Lgh(nn,nn,nt)
-
-integer(kind=irg)                   :: i, numt, tval
-complex(kind=dbl),allocatable       :: Minp(:,:),Azz(:,:),ampl(:),ampl2(:),Lghsum(:,:)
-integer(kind=irg),allocatable	      :: tvals(:)
   
-  allocate(Minp(nn,nn),Azz(nn,nn),ampl(nn),ampl2(nn),tvals(nt),Lghsum(nn,nn))
-
-! get the scattering matrix (first multiply the Bloch dynamical matrix by i pi lambda, then exponentiate)
-  Minp = DynMat * dcmplx(0.D0,cPi * mLambda)
-  call MatrixExponential(Minp, Azz, dble(zintstep), 'Pade', nn)  
-
-! initialize the wave function vector and output arrays
-  ampl = dcmplx(0.D0,0.D0)
-  ampl(1) = dcmplx(1.0D0,0.D0)
-  Lgh = dcmplx(0.D0,0.D0)
-  Lghsum = dcmplx(0.D0,0.D0)
-
-! first get the sequential numbers of the requested thicknesses in units of zintstep
-  tvals = nint(thick/zintstep)
-  tval = 1
-  numt = nint(maxval(thick)/zintstep)
-
-! and integrate over the thickness, storing selected values
-! Note that the use of the spread routines may need to be verified (may need to be transposed) 
-  do i=1,numt
-    ampl2 = matmul(Azz,ampl)
-        Lghsum = spread(ampl2(1:nn),dim=2,ncopies=nn)*spread(conjg(ampl2(1:nn)),dim=1,ncopies=nn)
-    if (i.eq.tvals(tval)) then
-      Lgh(1:nn,1:nn,tval) = Lghsum
-      tval = tval+1
-    end if
-    ampl = ampl2
-  end do
-
-  deallocate(Minp,Azz,ampl,ampl2,tvals,Lghsum)
-
-end subroutine CalcLghSMscan
-
-
+  deallocate(Minp,Azz,ampl,ampl2)
+end subroutine
 

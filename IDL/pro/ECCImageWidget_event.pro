@@ -81,6 +81,11 @@ end else begin
 	    WIDGET_CONTROL, SET_VALUE=string(data.avrad,FORMAT="(F6.3)"), widget_s.avrad
 	endcase
 
+ 'BLUR':  begin
+	    WIDGET_CONTROL, get_value=val,widget_s.blur
+	    data.blur= float(val[0])
+	    WIDGET_CONTROL, SET_VALUE=string(data.blur,FORMAT="(F6.3)"), widget_s.blur
+	endcase
 
  'DOMOSAIC': begin
 ; make a large image that contains the ECCI mosaic and then rescale it to the requested size and store it in a file

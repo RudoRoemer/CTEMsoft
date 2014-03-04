@@ -14,6 +14,7 @@
 @ECCIECPWidget_event            ; ECP widget event handler
 @ECCImageWidget			; ECCI display widget
 @ECCImageWidget_event		; ECCI display widget event handler
+@ECCIblur			; Gaussian blurring of ECCI images
 
 ;
 ; Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
@@ -91,6 +92,7 @@ widget_s = {widgetstruct, $
             loadfile:long(0), $                 ; load file button
             numref:long(0), $                   ; number of reflections widget ID
             xtalname:long(0), $                 ; structure file name widget ID
+            blur:long(0), $                     ; image blur widget ID
             numk:long(0), $                     ; number of wave vectors widget ID
 	    ECCImagebase:long(0), $             ; base widget for ECCI Image display
 	    ECCIECPbase:long(0), $              ; base widget for ECP Image display
@@ -145,8 +147,9 @@ data = {datastruct, $
 	ktmax: float(0.0), $			; max beam tilt 
 	dkt: float(0.0), $			; beam tilt step size
 	dfl: float(0.0), $			; image pixel size
-	numref: long(0), $				; number of reflections
-	numk: long(0), $				; number of wave vectors
+	numref: long(0), $			; number of reflections
+	numk: long(0), $			; number of wave vectors
+	blur: float(0),$			; blurring radius (Gaussian filter)
 	suffix: '', $				; filename suffix 
 	prefname: '~/.ECCIgui.prefs', $		; filename of preferences file (including path)
 	filesize: long64(0), $			; input file size in bytes

@@ -136,8 +136,12 @@ common PointGroups, PGTHD, PGTWD, DG
   numk = 0L
   readu,1,numk
   data.numk = numk
-  WIDGET_CONTROL, SET_VALUE=string(data.numk,FORMAT="(I8)"), widget_s.numk
-
+  if (data.distort le 1) then begin
+    WIDGET_CONTROL, SET_VALUE=string(data.numk,FORMAT="(I8)")+'/Bloch', widget_s.numk
+  end else begin
+    WIDGET_CONTROL, SET_VALUE=string(data.numk,FORMAT="(I8)")+'/ScatMat', widget_s.numk
+  end
+  
 ; dmin value (not editable or viewable)
   dmin = 0.0
   readu,1,dmin
