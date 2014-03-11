@@ -199,11 +199,15 @@ end else begin
   	          z = sqrt( (reform(kperp[0,*])-ECPdata.cx)^2 + (reform(kperp[1,*])-ECPdata.cy)^2 )
   	          q = where(z eq min(z),cnt)
 	      	  eccimin = min(rawdata,max=eccimax)
-
+		  if (data.blur ne 0.0) then begin
+  		    slice = ECCIblur(reform(rawdata[*,*,q[0]]),data.blur)
+		  end else begin
+  		    slice = reform(rawdata[*,*,q[0]])
+		  endelse
    	          if (data.mosaicscale eq 0) then begin
-	            im = bytscl(rawdata[*,*,q[0]],min=eccimin,max=eccimax)
+	            im = bytscl(slice,min=eccimin,max=eccimax)
  	          end else begin
-	            im = bytscl(rawdata[*,*,q[0]])
+	            im = bytscl(slice)
 	          endelse
 		  case de of
 		    'jpeg': write_jpeg,filename,im,quality=100

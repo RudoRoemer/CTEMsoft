@@ -192,7 +192,7 @@ kj = 0.0
 kperp=fltarr(2,data.numk)
 for i=0,data.numk-1 do begin
   readu,1,ki,kj
-  kperp[0:1,i] = [ki,kj]
+  kperp[0:1,i] = [-ki,kj]
 ;print,i,ki,kj
 endfor
 

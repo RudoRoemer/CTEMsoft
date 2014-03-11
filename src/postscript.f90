@@ -116,7 +116,7 @@ character(55),parameter,private :: PSpreamble(23) = (/ &
 type postscript_type
  integer(kind=irg)   	:: pspage
  real(kind=sgl)      	:: psdash(20),psfigwidth,psfigheight,psscale
- character(20)      	:: psname
+ character(fnlen)      	:: psname
 end type
 
 ! used by axonometry-related routines

@@ -147,7 +147,7 @@ thickinc = 2.0			        ! thickness increment
 numthick = 10			        ! number of increments
 npix = 256			        ! output arrays will have size npix x npix
 outname = 'ecp.data'        	        ! output filename
-compmode = 'Bloch'                     ! 'Blochwv' or 'ScatMat' solution mode (Bloch is default)
+compmode = 'Blochwv'                   ! 'Blochwv' or 'ScatMat' solution mode (Bloch is default)
 zintstep = 1.0                        ! integration step size for ScatMat mode
 
 ! init some parameters
@@ -254,6 +254,13 @@ end if
   io_int(1)=numk
   call WriteValue('Starting computation for # beam directions = ', io_int, 1, "(I8)")
 
+!  ktmp => khead
+!  do ik=1,numk
+!    write (*,*) ktmp%k, ktmp%kt
+!    ktmp => ktmp%next
+!  end do
+!
+
 ! force dynamical matrix routine to read new Bethe parameters from file
   call Set_Bethe_Parameters(.TRUE.)
 
@@ -294,13 +301,13 @@ end if
 ! useful during program testing but should probably be removed as an option altogether...
 	call Compute_DynMat('BLOCHBETHE', ktmp%k, ktmp%kt, .FALSE.)
         nn = DynNbeams
-!write (*,*) ik, nn
-
-!if (ik.eq.1) then
-!  do ir=1,nn
-!    write (*,*)  ir,' : ',BetheParameter%stronghkl(1:3,ir) 
-!  end do
-!end if
+        
+        if (ik.eq.1) then
+	  open(unit=dataunit,file='ECPmatrix.data',status='unknown',form='unformatted')
+	  write (dataunit) nn
+	  write (dataunit) DynMat
+	  close(unit=dataunit,status='keep')
+	end if
 
 ! then we need to initialize the Sgh array for the strong beams;
 ! this may need to be modified if we want to include real detector
