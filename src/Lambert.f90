@@ -855,6 +855,7 @@ end function GetSextantDouble
 recursive function Lambert3DCubeForwardSingle(lxyz,ierr) result(res)
 
 use local
+use constants
 
 IMPLICIT NONE
 
@@ -862,11 +863,13 @@ real(kind=sgl),INTENT(IN)	:: lxyz(3)
 integer(kind=irg),INTENT(INOUT):: ierr
 real(kind=sgl)			:: res(3)
 
-real(kind=sgl)			:: XYZ(3), sXYZ(3), T1, T2, c, s, q, LamXYZ(3)
+real(kind=sgl)			:: XYZ(3), sXYZ(3), T1, T2, c, s, q, LamXYZ(3), edge
 integer(kind=irg)		:: p
 
 ierr = 0
-if (maxval(dabs(lxyz)).gt.1.0) then
+edge = 0.D0 * (sngl(cPi))**(2.0/3.0)
+
+if (maxval(dabs(lxyz)).gt.edge) then
   res = (/ 0.0, 0.0, 0.0 /)
   ierr = 1
   return
@@ -948,6 +951,7 @@ end function Lambert3DCubeForwardSingle
 recursive function Lambert3DCubeForwardDouble(lxyz,ierr) result(res)
 
 use local
+use constants
 
 IMPLICIT NONE
 
@@ -955,11 +959,12 @@ real(kind=dbl),INTENT(IN)	:: lxyz(3)
 integer(kind=irg),INTENT(INOUT):: ierr
 real(kind=dbl)			:: res(3)
 
-real(kind=dbl)			:: XYZ(3), sXYZ(3), T1, T2, c, s, q, LamXYZ(3)
+real(kind=dbl)			:: XYZ(3), sXYZ(3), T1, T2, c, s, q, LamXYZ(3), edge
 integer(kind=irg)		:: p
 
 ierr = 0
-if (maxval(dabs(lxyz)).gt.1.0) then
+edge = 0.5D0 * (cPi)**(2.D0/3.D0)
+if (maxval(dabs(lxyz)).gt.edge) then
   res = (/ 0.D0, 0.D0, 0.D0 /)
   ierr = 1
   return

@@ -363,14 +363,9 @@ widget_s.base = WIDGET_BASE(TITLE='Zone Axis CBED Display Program', $
 
 block0 = WIDGET_BASE(widget_s.base, /COLUMN)
 
-block1 = WIDGET_BASE(block0, $
-			/FRAME, $
-			/COLUMN)
+block1 = WIDGET_BASE(block0, /FRAME, /COLUMN)
 
-file1 = WIDGET_BASE(block1, $
-			/ROW, $
-                        XSIZE=650, $
-			/ALIGN_LEFT)
+file1 = WIDGET_BASE(block1, /ROW, XSIZE=650, /ALIGN_LEFT)
 
 widget_s.logodraw = WIDGET_DRAW(block1, $
 			COLOR_MODEL=2, $
@@ -589,8 +584,6 @@ widget_s.logfile= CW_BGROUP(file11, $
 WIDGET_CONTROL,widget_s.base,/REALIZE
 
 ; realize the draw widgets
-;WIDGET_CONTROL, widget_s.detdraw, GET_VALUE=drawID
-;widget_s.detdrawID = drawID
 WIDGET_CONTROL, widget_s.progress, GET_VALUE=drawID
 widget_s.progressdrawID = drawID
 WIDGET_CONTROL, widget_s.logodraw, GET_VALUE=drawID
@@ -604,7 +597,7 @@ tvscl,logo,true=1
 XMANAGER,"CBEDDisplay",widget_s.base,/NO_BLOCK
 
 ; init the status text window
-CBEDprint,'Zone Axis CBED Display Program [M. De Graef, 2013]',/blank
+CBEDprint,'Zone Axis CBED Display Program [M. De Graef, 2013 and counting...]',/blank
 CBEDprint,'',/blank
 CBEDprint,'Please load a file'
 

@@ -44,6 +44,8 @@
 !>	Lambert projection array, which needs to be sufficiently fine in
 !>	terms of sampling so that we can deal with a detector that's relatively
 !>	far away.
+!
+!> @todo implement more detailed Monte Carlo scheme in addition to CSDA.
 !                
 !> @date 11/**/12  PGC 1.0 IDL version
 !> @date 12/04/12  MDG 1.1 conversion to Fortran-90
@@ -53,6 +55,7 @@
 !> @date 03/11/13  MDG 2.0 replaced regular storage by modified Lambert projection
 !> @date 07/23/13  MDG 3.0 complete rewrite
 !> @date 09/25/13  MDG 3.1 modified output file format
+!> @date 03/17/14  MDG 3.2 modified output file format for IDL GUI
 !--------------------------------------------------------------------------
 program CTEMMC
 
@@ -90,6 +93,7 @@ end program CTEMMC
 !> @date 07/23/13  MDG 3.0 complete rewrite
 !> @date 07/30/13  MDG 3.1 added Patrick's code for double sample tilt (sigma, omega)
 !> @date 09/25/13  MDG 3.2 added a few parameters to the output file 
+!> @date 03/17/14  MDG 3.3 added a few more for the IDL visualization program
 !--------------------------------------------------------------------------
 subroutine DoMCsimulation(nmlfile)
 
@@ -125,6 +129,7 @@ real(kind=dbl)		:: Ebinsize  	! binsize in keV
 integer(kind=irg)	:: numEbins, numzbins
 real(kind=dbl)		:: depthmax 	! maximum depth for which to keep track of exit energy statistics [in nm]
 real(kind=dbl)		:: depthstep 	! stepsize for depth-energy accumulator array [in nm]
+character(4)		:: MCmode	! Monte Carlo mode
 
 ! material parameters (some of these can be computed automatically when merged with CTEM source code)
 character(60)		:: dataname	! output file name
@@ -150,9 +155,10 @@ integer(kind=irg)	:: istat
 
 ! define the IO namelist to facilitate passing variables to the program.
 namelist  / MCdata / xtalname, sig, numsx, num_el, primeseed, EkeV, &
-		dataname, nthreads, Ehistmin, Ebinsize, depthmax, depthstep, omega
+		dataname, nthreads, Ehistmin, Ebinsize, depthmax, depthstep, omega, MCmode
  
 ! define reasonable default values for the namelist parameters
+MCmode = 'CSDA'			! default is Continuous Slowing Down Approximation; alternate = 
 xtalname = 'undefined'
 sig = 70.0
 omega = 0.0
@@ -254,11 +260,13 @@ dataname = 'undefined.data'
  write (*,*) ' Number of electrons on detector       = ',sum(accum_e)
 
  open(dataunit,file=trim(dataname),status='unknown',form='unformatted')
- write(dataunit) numEbins, numzbins, numsx, numsy, num_el*nthreads, nthreads
+ write (dataunit) numEbins, numzbins, numsx, numsy, num_el*NUMTHREADS, NUMTHREADS
  write (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
- write(dataunit) accum_e
+ write (dataunit) sig, omega
+ write (dataunit) MCmode
+ write (dataunit) accum_e
  write (dataunit) accum_z
- close(dataunit,status='keep')
+ close (dataunit,status='keep')
 ! this is the end of the main subroutine
 
 

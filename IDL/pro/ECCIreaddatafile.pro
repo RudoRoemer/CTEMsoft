@@ -192,8 +192,8 @@ kj = 0.0
 kperp=fltarr(2,data.numk)
 for i=0,data.numk-1 do begin
   readu,1,ki,kj
-  kperp[0:1,i] = [-ki,kj]
-;print,i,ki,kj
+  kperp[0:1,i] = [ki,kj]
+  print,i,ki,kj
 endfor
 
 ; read the dimensions of the images 
@@ -368,22 +368,31 @@ close,1
   readu,1,gperp
   ECPdata.gperp = gperp
 
+goto, skiptheselines
 ; convert the coordinates of the beams to the ECP reference frame
   m = [[ga[0]/galen,-gperp[0]],[ga[1]/galen,-gperp[1]]]
   ivm = invert(m)
+
+print, ga
+print, galen
+print, gperp
+print, ivm
   if (data.progmode eq 'array') then begin
     delta = data.dkt*galen
   end else begin
     delta = galen
   endelse
 ;print,'delta = ',delta
+print,' transformed coordinates'
   for i=0,data.numk-1 do begin
     kk = reform(kperp[*,i])/delta
     ij = ivm ## kk
     kperp[0:1,i] = ij[0:1]
+print,kperp[0,i],kperp[1,i]
 ;print,i,transpose(ij)
   endfor
   
+skiptheselines:
 
 ; various symmetry group numbers 
   symgroups = lonarr(8)

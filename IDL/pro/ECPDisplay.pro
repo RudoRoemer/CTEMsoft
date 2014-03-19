@@ -223,237 +223,66 @@ widget_s.logodraw = WIDGET_DRAW(block1, $
 
 ;----------
 
-block1 = WIDGET_BASE(widget_s.base, $
-			/FRAME, $
-			/COLUMN)
+block1 = WIDGET_BASE(widget_s.base, /FRAME, /COLUMN)
+file1 = WIDGET_BASE(block1, /ROW, XSIZE=700, /ALIGN_CENTER)
+widget_s.filename = Core_WText(file1, 'Data File Name ',fontstrlarge, 200, 25, 77, 1, data.dataname)
 
-;----------
-file1 = WIDGET_BASE(block1, $
-			/ROW, $
-                        XSIZE=700, $
-			/ALIGN_CENTER)
+file1 = WIDGET_BASE(block1, /ROW, XSIZE=700, /ALIGN_CENTER)
+widget_s.filesize = Core_WText(file1, 'Data File Size ',fontstrlarge, 200, 25, 40, 1, string(data.filesize,FORMAT="(I)")+' bytes', /aright)
 
-label2 = WIDGET_LABEL(file1, $
-			VALUE='Data File Name', $
-			FONT=fontstrlarge, $
-			XSIZE=200, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.filename = WIDGET_TEXT(file1, $
-			VALUE=data.dataname,$
-			XSIZE=77, $
-			/ALIGN_LEFT)
-
-;----------
-file3 = WIDGET_BASE(block1, $
-			/ROW, $
-			/BASE_ALIGN_BOTTOM, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file3, $
-			VALUE='Data File Size', $
-			FONT=fontstrlarge, $
-			XSIZE=200, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.filesize = WIDGET_TEXT(file3, $
-			VALUE=string(data.filesize,FORMAT="(I)")+' bytes', $
-			XSIZE=40, $
-			/ALIGN_RIGHT)
-
-file3 = WIDGET_BASE(block1, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label4 = WIDGET_LABEL(file3, $
-			VALUE='Pattern Dimensions', $
-			FONT=fontstrlarge, $
-			XSIZE=200, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.imx= WIDGET_TEXT(file3, $
-			VALUE=string(data.imx,format="(I5)"),$
-			XSIZE=10, $
-			/ALIGN_LEFT)
-
-labela = WIDGET_LABEL(file3, $
-			VALUE='by', $
-			FONT=fontstrlarge, $
-			XSIZE=25, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.imy= WIDGET_TEXT(file3, $
-			VALUE=string(data.imy,format="(I5)"),$
-			XSIZE=10, $
-			/ALIGN_LEFT)
+file2 = WIDGET_BASE(block1, /ROW, /ALIGN_LEFT)
+widget_s.imx = Core_WText(file2, 'Pattern Dimensions',fontstrlarge, 200, 25, 10, 1, string(data.imx,FORMAT="(I5)"))
+widget_s.imy = Core_WText(file2, ' by ',fontstrlarge, 25, 25, 10, 1, string(data.imy,FORMAT="(I5)"))
 
 ;----------- next we have a series of parameters that are 
 ; derived from the input file and can not be changed by
 ; the user...
 
-block2 = WIDGET_BASE(widget_s.base, $
-			/FRAME, $
-			/ROW)
-
-file4 = WIDGET_BASE(block2, $
-			/COLUMN, $
-			/ALIGN_LEFT)
+block2 = WIDGET_BASE(widget_s.base, /FRAME, /ROW)
+file4 = WIDGET_BASE(block2, /COLUMN, /ALIGN_LEFT)
 
 ;-------------
-file5 = WIDGET_BASE(file4, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file5, $
-			VALUE='# of thicknesses', $
-			FONT=fontstrlarge, $
-			XSIZE=230, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.numthick= WIDGET_TEXT(file5, $
-			VALUE=string(data.datadims[2],format="(I5)"),$
-			XSIZE=10, $
-			/ALIGN_LEFT)
+file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
+widget_s.numthick = Core_WText(file5, '# of thicknesses',fontstrlarge, 230, 25, 10, 1, string(data.datadims[2],FORMAT="(I5)"))
 
 ;-------------
-file5 = WIDGET_BASE(file4, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file5, $
-			VALUE='Beam Convergence [mrad]', $
-			FONT=fontstrlarge, $
-			XSIZE=230, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.thetac= WIDGET_TEXT(file5, $
-			VALUE=string(data.thetac,format="(F6.3)"),$
-			XSIZE=10, $
-			/ALIGN_LEFT)
+file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
+widget_s.thetac = Core_WText(file5, 'Beam Convergence [mrad]',fontstrlarge, 230, 25, 10, 1, string(data.thetac,FORMAT="(F6.3)"))
 
 ;-------------
-file5 = WIDGET_BASE(file4, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file5, $
-			VALUE='Voltage [V]', $
-			FONT=fontstrlarge, $
-			XSIZE=230, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.voltage = WIDGET_TEXT(file5, $
-			VALUE=string(data.voltage,format="(F7.1)"),$
-			XSIZE=10, $
-			/ALIGN_LEFT)
-
+file5 = WIDGET_BASE(file4, /ROW, /ALIGN_LEFT)
+widget_s.voltage = Core_WText(file5, 'Voltage [V]',fontstrlarge, 230, 25, 10, 1, string(data.voltage,FORMAT="(F7.1)"))
 
 
 ;-------------
 ;-------------
-file6 = WIDGET_BASE(block2, $
-			/COLUMN, $
-			/ALIGN_LEFT)
+file6 = WIDGET_BASE(block2, /COLUMN, /ALIGN_LEFT)
 
 ;-------------
-file7 = WIDGET_BASE(file6, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file7, $
-			VALUE='# of k-vectors/Mode', $
-			FONT=fontstrlarge, $
-			XSIZE=200, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.numk= WIDGET_TEXT(file7, $
-			VALUE=string(data.numk,format="(I5)"),$
-			XSIZE=20, $
-			/ALIGN_LEFT)
+file7 = WIDGET_BASE(file6, /ROW, /ALIGN_LEFT)
+widget_s.numk= Core_WText(file5, '# of k-vectors/Mode',fontstrlarge, 200, 25, 20, 1, string(data.numk,FORMAT="(I5)"))
 
 ;-------------
-file7 = WIDGET_BASE(file6, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file7, $
-			VALUE='Structure File', $
-			FONT=fontstrlarge, $
-			XSIZE=200, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-widget_s.xtalname= WIDGET_TEXT(file7, $
-			VALUE=data.xtalname,$
-			XSIZE=20, $
-			/ALIGN_LEFT)
+file7 = WIDGET_BASE(file6, /ROW, /ALIGN_LEFT)
+widget_s.xtalname = Core_WText(file5, 'Structure File',fontstrlarge, 200, 25, 20, 1, data.xtalname)
 
 ;-------------
-file7 = WIDGET_BASE(file6, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file7, $
-			VALUE='Zone Axis [uvw]', $
-			FONT=fontstrlarge, $
-			XSIZE=200, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
+file7 = WIDGET_BASE(file6, /ROW, /ALIGN_LEFT)
 wv = '['+string(data.wavek[0],format="(I2)")+' '+ string(data.wavek[1],format="(I2)")+' '+ string(data.wavek[2],format="(I2)")+']'
-widget_s.wavek= WIDGET_TEXT(file7, $
-			VALUE=wv,$
-			XSIZE=20, $
-			/ALIGN_LEFT)
+widget_s.wavek= Core_WText(file7, 'Zone Axis [uvw]',fontstrlarge, 200, 25, 20, 1, wv)
 
 
 ;----------- next we have the lattice parameters
 
-block2 = WIDGET_BASE(widget_s.base, $
-			/FRAME, $
-			/COLUMN)
-
-file4 = WIDGET_BASE(block2, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file4, $
-			VALUE='Lattice parameters ', $
-			FONT=fontstrlarge, $
-			XSIZE=200, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
+block2 = WIDGET_BASE(widget_s.base, /FRAME, /COLUMN)
+file4 = WIDGET_BASE(block2, /ROW, /ALIGN_LEFT)
 
 pp = string(data.abcdist[0],format="(F10.5)")+', '+ string(data.abcdist[1],format="(F10.5)")+', '+ string(data.abcdist[2],format="(F10.5)")+' [nm]'
-widget_s.abcdist= WIDGET_TEXT(file4, $
-			VALUE=pp,$
-			XSIZE=45, $
-			/ALIGN_LEFT)
+widget_s.abcdist = Core_WText(file4, 'Lattice Parameters',fontstrlarge, 200, 25, 45, 1, pp)
 
-file4 = WIDGET_BASE(block2, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file4, $
-			VALUE='                   ', $
-			FONT=fontstrlarge, $
-			XSIZE=200, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
+file4 = WIDGET_BASE(block2, /ROW, /ALIGN_LEFT)
 pp = string(data.albegadist[0],format="(F10.5)")+', '+ string(data.albegadist[1],format="(F10.5)")+', '+ string(data.albegadist[2],format="(F10.5)")+' [degrees]'
-widget_s.albegadist= WIDGET_TEXT(file4, $
-			VALUE=pp,$
-			XSIZE=45, $
-			/ALIGN_LEFT)
+widget_s.albegadist = Core_WText(file4, '                  ',fontstrlarge, 200, 25, 45, 1, pp)
 
 ;------------------------------------------------------------
 block3 = WIDGET_BASE(widget_s.base, /FRAME, /ROW)

@@ -127,12 +127,12 @@ real(kind=dbl)		:: beamcurrent, dwelltime, prefactor
 
 ! allocatable arrays
 real(kind=sgl),allocatable		:: scin_x(:), scin_y(:) 		! scintillator coordinate ararays [microns]
-real(kind=sgl),allocatable		:: rgx(:,:), rgy(:,:), rgz(:,:)  ! auxiliary arrays needed for interpolation
-real(kind=sgl),allocatable		:: eulang(:,:)			! euler angle array
+real(kind=sgl),allocatable		:: rgx(:,:), rgy(:,:), rgz(:,:)  	! auxiliary arrays needed for interpolation
+real(kind=sgl),allocatable		:: eulang(:,:)				! euler angle array
 real(kind=sgl),allocatable		:: EBSDpattern(:,:),binned(:,:),bgprofile(:,:)		! array with EBSD pattern
 real(kind=sgl),allocatable 		:: sr(:,:,:), srcopy(:,:)		! dynamical and kinematical parts of the FZ intensities
-integer(kind=irg),allocatable		:: imagestack(:,:,:)		! used to store the computed patterns before writing to disk
-integer(kind=irg),allocatable		:: accum_e(:,:,:)
+real(kind=sgl),allocatable		:: imagestack(:,:,:)			! used to store the computed patterns before writing to disk
+integer(kind=irg),allocatable		:: accum_e(:,:,:),accum_e_detector(:,:,:)
 
 ! quaternion variables
 real(kind=sgl),allocatable		:: quatang(:,:)
@@ -142,7 +142,7 @@ real(kind=sgl)				:: qq(4), qq1(4), qq2(4), qq3(4)
 integer(kind=irg)	:: numeuler	! number of Euler angle triplets in file
 integer(kind=irg)	:: i, j, iang,k		! various counters
 integer(kind=irg)	:: istat		! status for allocate operations
-integer(kind=irg)	:: nix, niy, npx, npy, offx, offy, binx, biny, imcnt, storemax,firstfile, saveid		! various parameters
+integer(kind=irg)	:: nix, niy, npx, npy, offx, offy, binx, biny, imcnt, storemax,firstfile, saveid, ixy(2)	! various parameters
 integer(kind=irg)	:: binning		! camera binning factor ([1,2,4,8] are supported)
 real(kind=sgl),parameter 	:: dtor = 0.0174533  ! convert from degrees to radians
 real(kind=dbl),parameter	:: nAmpere = 6.241D+18   ! Coulomb per second
@@ -243,9 +243,11 @@ if (anglemode.eq.'euler') then
 	end do
 	close(unit=dataunit,status='keep')
 	
-	mess = '  -> converting Euler angles to TSL representation'
-	call Message("(A/)")
-	if (eulerconvention.eq.'hkl') eulang(1,1:numeuler) = eulang(1,1:numeuler) + 90.0
+	if (eulerconvention.eq.'hkl') then
+	  mess = '  -> converting Euler angles to TSL representation'
+	  call Message("(A/)")
+	  eulang(1,1:numeuler) = eulang(1,1:numeuler) + 90.0
+	end if
 	
 	! convert the euler angle triplets to quaternions
 	allocate(quatang(4,numeuler),stat=istat)
@@ -268,6 +270,14 @@ else
 	end do
 	close(unit=dataunit,status='keep')
 end if
+!====================================
+
+!====================================
+! for the creation of an EBSD dictionary, we'll need some special code
+! here instead of the above reading in of Euler angles/quaternions; the
+! program should create a uniform sampling in the appropriate fundamental
+! zone (we should aim for Rodrigues) and then perform the dictionary
+! computation for that representation and sampling.
 !====================================
 
 
@@ -314,16 +324,6 @@ close(dataunit,status='keep')
 
 mess = ' -> completed reading '//trim(energyfile)
 call Message("(A)")
-!====================================
-
-
-
-
-
-
-
-
-
 
 ! get the indices of the minimum and maximum energy
 Emin = nint((energymin - Ehistmin)/Ebinsize) +1
@@ -335,17 +335,12 @@ if (Emax.lt.1)  Emax=1
 if (Emax.gt.numEbins)  Emax=numEbins
 
 write (*,*) 'energy range from bin ',Emin, ' to bin ',Emax
+!====================================
 
 
-
-!write (*,*) 'Performing sleep test fo five seconds'
-!call system('/bin/sleep 5')
-!write (*,*) 'and we''re back...'
-
-
-
-! ok, so we have the energy histogram.  Next we need to load the energy-dispersed Lambert
-! projections.  There is no kinematical part for now, so we only read a single array
+!====================================
+! ----- Read energy-dispersed Lambert projections (master pattern)
+!====================================
 open(unit=dataunit,file=FZfile,status='old',form='unformatted')
   read (dataunit)  nE,npx,npy
 ! make sure that the number of energybins is the same as for the energy histogram
@@ -358,71 +353,103 @@ open(unit=dataunit,file=FZfile,status='old',form='unformatted')
   allocate(sr(nE,npx,npy),stat=istat)
   read (dataunit) sr
 close(unit=dataunit,status='keep')
+!====================================
 
 
-! next, allocate all necessary arrays and fill them up
+!====================================
+! ------ generate the detector arrays
+!====================================
+! This needs to be done only once for a given detector geometry
 allocate(scin_x(numsx),scin_y(numsy),stat=istat)
 ! if (istat.ne.0) then ...
-do i=1,numsx
-  scin_x(i) = xpc*delta - ( (i-1) - numsx*0.5 + 0.5)*delta 
-end do
-do i=1,numsy
-  scin_y(i) = ypc*delta - ( (i-1) - numsy*0.5 + 0.5)*delta 
-end do
+scin_x = ( xpc - ( 1.0 - numsx ) * 0.5 - (/ (i-1, i=1:numsx) /) ) * delta
+scin_y = ( ypc - ( 1.0 - numsy ) * 0.5 - (/ (i-1, i=1:numsy) /) ) * delta
 
 ! auxilliary angle to rotate between reference frames
-alp = 0.5*cPi - (sig - thetac)*dtor
+alp = 0.5 * cPi - (sig - thetac) * dtor
 ca = cos(alp)
 sa = sin(alp)
 
 ! we will need to incorporate a series of possible distortions 
-! here, as described in Gert nolze's paper
+! here as well, as described in Gert nolze's paper; for now we 
+! just leave this indicator comment instead
 
 ! compute auxilliary interpolation arrays
 allocate(rgx(numsx,numsy), rgy(numsx,numsy), rgz(numsx,numsy), stat=istat)
 ! if (istat.ne.0) then ...
-L2 = L*L
+L2 = L * L
 do j=1,numsy
-  sx = L2+scin_y(j)*scin_y(j)
-  Ls = ca*scin_y(j) + L*sa
-  Lc = -sa*scin_y(j)+L*ca
+  sx = L2 + scin_y(j) * scin_y(j)
+  Ls = ca * scin_y(j) + L*sa
+  Lc = -sa * scin_y(j) + L*ca
   do i=1,numsx
    rhos = 1.0/sqrt(sx + scin_x(i)**2)
-   rgx(i,j) = Ls*rhos
-   rgy(i,j) = scin_x(i)*rhos
-   rgz(i,j) = Lc*rhos
+   rgx(i,j) = Ls * rhos
+   rgy(i,j) = scin_x(i) * rhos
+   rgz(i,j) = Lc * rhos
   end do
 end do
-
-! allocate the array that will hold the computed pattern
-allocate(EBSDpattern(numsx,numsy),stat=istat)
-! if (istat.ne.0) then ...
-EBSDpattern = 0.0
+!====================================
 
 
-! scale factors for Lambert projection; we'll only allow the modified Lambert projection
-  xscale = float(npx-1)/sqrt(2.0)/sqrt(cPi)
-  yscale = xscale  
-
-
-  offx = (npx-1)/2+1
-  offy = offx
-
-  write (*,*) 'precomputed Lambert projection dimensions = ',npx, npy
-
+!====================================
+! ------ create the equivalent detector energy array
+!====================================
+! from the Monte Carlo energy data, we need to extract the relevant
+! entries for the detector geometry defined above.  Once that is 
+! done, we can get rid of the larger energy arrays
+!
 ! in the old version, we either computed the background model here, or 
 ! we would load a background pattern from file.  In this version, we are
 ! using the background that was computed by the MC program, and has 
 ! an energy histogram embedded in it, so we need to interpolate this 
-! histogram to the pixels of the scintillator.
+! histogram to the pixels of the scintillator.  In other ords, we need
+! to initialize a new accum_e array for the detector by interpolating
+! from the Lambert projection of the MC results.
+!
+  offx = (npx-1)/2+1
+  offy = offx
+
+  allocate(accum_e_detector(numEbins,numsx,numsy), stat=istat)
+  do i=1,numsx
+    do j=1,numsy
+!  do the coordinate transformation for this detector pixel
+       dc = (/ rgx(i,j),rgy(i,j),rgz(i,j) /)
+! make sure the third one is positive; if not, switch all 
+       dc = dc/sqrt(sum(dc**2))
+       if (dc(3).lt.0.0) dc = -dc
+! convert these direction cosines to coordinates in the Rosca-Lambert projection
+	ixy = LambertSphereToSquare( dc, istat )
+! four-point interpolation (bi-quadratic)
+        nix = int(offx+ixy(1))-offx
+        niy = int(offy+ixy(2))-offy
+        dx = ixy(1)-nix
+        dy = ixy(2)-niy
+        dxm = 1.0-dx
+        dym = 1.0-dy
+        nix = nix+offx
+        niy = niy+offy
+ ! interpolate the intensity 
+        do k=Emin,Emax 
+          accum_e_detector(k,i,j) =  accum_e(k,nix,niy) * dxm * dym + &
+                           accum_e(k,nix+1,niy) * dx * dym + accum_e(k,nix,niy+1) * dxm * dy + &
+                          accum_e(k,nix+1,niy+1) * dx * dy
+        end do
+    end do
+  end do 
+  accum_e_detector = accum_e_detector * 0.25
+! and finally, get rid of the original accum_e array which is no longer needed
+  deallocate(accum_e)
+!====================================
 
 
-
-
-
-
-
-
+!====================================
+! init a bunch of parameters
+!====================================
+! allocate the array that will hold the computed pattern
+allocate(EBSDpattern(numsx,numsy),stat=istat)
+! if (istat.ne.0) then ...
+EBSDpattern = 0.0
 idum = -1		! to initialize the random number generator
 
 ! set up the binning parameters
@@ -444,18 +471,29 @@ end if
 allocate(imagestack(binx,biny,storemax),stat=istat)
 imcnt = 1
 
-! start the timer  [something's not quite right here...]
-call Time_start
 
+prefactor = 0.25D0 * nAmpere * beamcurrent * dwelltime / dble(numelectrons)
+write (*,*) 'intensity prefactor = ',prefactor
+write (*,*) 'max count = ',maxval(accum_e)
+!====================================
+
+!====================================
+! ------ and open the output file for IDL visualization
+!====================================
 firstfile = 1
 if (outputmode.eq.'data') then
  open(unit=dataunit,file=trim(prefix)//'.data',status='replace',form='unformatted',action='write')
 end if
 
-! ok, we're done with the pre work.  Now we can compute the EBSD patterns
-prefactor = 0.25D0 * nAmpere * beamcurrent * dwelltime / dble(numelectrons)
-write (*,*) 'intensity prefactor = ',prefactor
-write (*,*) 'max count = ',maxval(accum_e)
+
+
+!====================================
+! ------ start the actual image computation loop
+!====================================
+! start the timer
+call Time_start
+
+
 
 do iang=1,numeuler
 ! convert the direction cosines to quaternions, include the 
@@ -466,27 +504,19 @@ do iang=1,numeuler
 	do i=1,numsx
 	    do j=1,numsy
 !  do the coordinate transformation for this euler agle
-              qq = quaternion( 0.0, rgx(i,j),rgy(i,j),rgz(i,j) )
-              qq3 = qq2 * (qq * qq1)
-              dc(1:3) = (/ qq3%b, qq3%c, qq3%d /) ! these are the direction cosines 
+              qq = (/ 0.0, rgx(i,j),rgy(i,j),rgz(i,j) \)
+              qq3 = quat_mult(qq2, quat_mult(qq,qq1) )
+              dc(1:3) = (/ qq3(2), qq3(3), qq3(4) /) ! these are the direction cosines 
 ! make sure the third one is positive; if not, switch all 
               dc = dc/sqrt(sum(dc**2))
               if (dc(3).lt.0.0) dc = -dc
-! and finally do the interpolation part using Lambert equal area projection coordinates
-	  	dd = sqrt(2.0*(1.0-dc(3)))
-                if ( (abs(dc(2)).le.dc(1)) .or. (dc(1).le.-abs(dc(2))) ) then
- 		  ix = ( abs(dc(1))/dc(1) ) * sqrt(cPi) * 0.5 * dd * xscale
-		  iy = 2.0/sqrt(cPi) * atan2(dc(2),abs(dc(1))) * dd * yscale
-	        else
-		  ix = 2.0/sqrt(cPi) * atan2(dc(1),abs(dc(2))) * dd * xscale
-		  iy = ( abs(dc(2))/dc(2) ) * sqrt(cPi) * 0.5 * dd * yscale
-		end if
+! convert these direction cosines to coordinates in the Rosca-Lambert projection
+	      ixy = LambertSphereToSquare( dc, istat )
 ! four-point interpolation (bi-quadratic)
-! needs to be adapted to the Lambert projection circle ... 
-              nix = int(offx+ix)-offx
-              niy = int(offy+iy)-offy
-              dx = ix-nix
-              dy = iy-niy
+              nix = int(offx+ixy(1))-offx
+              niy = int(offy+ixy(2))-offy
+              dx = ixy(1)-nix
+              dy = ixy(2)-niy
               dxm = 1.0-dx
               dym = 1.0-dy
               nix = nix+offx
@@ -497,17 +527,32 @@ do iang=1,numeuler
                                            sr(k,nix+1,niy) * dx * dym + sr(k,nix,niy+1) * dxm * dy + &
                                            sr(k,nix+1,niy+1) * dx * dy )
               end do
-              EBSDpattern(i,j) = prefactor * EBSDpattern(i,j)
           end do
        end do
-
+       EBSDpattern = prefactor * EBSDpattern
+ 
 ! add sampling noise (Poisson noise in this case, so multiplicative, sort of)
 	do i=1,numsx
  	  do j=1,numsy
               EBSDpattern(i,j) = POIDEV(EBSDpattern(i,j),idum)
 	  end do
 	end do      
+
+! we may need to deal with the energy sensitivity of the scintillator as well...
+
+
+! all the following things should really be done in the IDL visualization program:
+!
+! - point spread function of camera
+! - binning
+! - brightness/contrast scaling
+! - storage in image files of large HDF5 ? file
+!  
+! that means that at this point, we really only need to store all the patterns in a single
+! file, at full resolution, as observed at the scintillator stage.
        
+       
+
 ! next, apply the optical point spread function to this pattern
 ! [to optimize the speed, we may want to change the size of the array to a square shape]
 

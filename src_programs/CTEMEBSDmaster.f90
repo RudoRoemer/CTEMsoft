@@ -126,7 +126,7 @@ integer(kind=irg)      :: isym,i,j,ik,npx,npy,ipx,ipy,debug,iE,izz, izzmax, iequ
                     	numset,n,ix,iy,iz, io_int(6),  &
                     	istat,gzero,ic,ip,ikk     ! counters
 real(kind=dbl)         :: tpi,Znsq, kkl, DBWF,  totZnsq, kin, s, sthr, Bethe_store !
-real(kind=sgl) 		:: dmin, io_real(5)
+real(kind=sgl) 		:: dmin, io_real(5), selE
 real(kind=sgl),allocatable 	:: sr(:,:,:), srkin(:,:), srhex(:,:,:), srkinhex(:,:), EkeVs(:) ! results
 complex(kind=dbl)  		:: czero
 complex(kind=dbl),allocatable 	:: Lgh(:,:), Sgh(:,:)
@@ -350,7 +350,7 @@ end if
 energyloop: do iE=numEbins,1,-1
 ! is this a single-energy run ?
    if (Esel.ne.-1) then
-     if (Esel.ne.iE) EXIT energyloop
+     if (Esel.ne.iE) CYCLE energyloop
    end if
    
 ! print a message to indicate where we are in the computation
@@ -360,6 +360,7 @@ energyloop: do iE=numEbins,1,-1
    call WriteValue(' ',io_int,1,"(I4$)")
    io_real(1) = EkeVs(iE)
    call WriteValue('; energy [keV] = ',io_real,1,"(F6.2/)")
+   selE = EkeVs(iE)
 
    nat = 0
 !   LUT = dcmplx(0.D0,0.D0)
@@ -584,38 +585,53 @@ energyloop: do iE=numEbins,1,-1
 !  end do
 !end if
 
-if (Esel.eq.-1) then 
-  open(unit=dataunit,file='/Volumes/Drive2/playarea/EBSD/tmpresults.data',status='unknown',action='write',form = 'unformatted')
-  write (dataunit)  2*npx+1,2*npy+1,numEbins ! , isym, placeholder
-  write (dataunit) sr
-!  write (dataunit) srkin 
-  close(unit=dataunit,status='keep')
-end if
+! since these computations can take a long time, here we store 
+! all the output at the end of each pass through the energyloop.
 
-end do energyloop
-!
-
-! save the results  
-! this file format was revised to account for the different sampling/mapping 
-! modes; the file now contains 4 integers, the first two provide the dimensions
-! of the array, the the third provides the Laue group, and the last one the 
-! particular Lambert map mode (square, hexagonal or triangular).
-! in the next version of this program, we'll also have an extra dimension for
-! the simulation energy, so that we can interpolate both by location and 
-! energy, to get a more accurate distribution on the scintillator.
   open(unit=dataunit,file=trim(outname),status='unknown',action='write',form = 'unformatted')
+! write the program identifier
+  write (dataunit) trim(progname)
+! write the version number
+  write (dataunit) scversion
+! then the name of the crystal data file
+  write (dataunit) xtalname
+! then the name of the corresponding Monte Carlo data file
+  write (dataunit) energyfile
+! energy information and array size    
   if (Esel.eq.-1) then
-    write (dataunit)  2*npx+1,2*npy+1,numEbins ! , isym, placeholder
+    write (dataunit) npx,npy,numEbins 
+    write (dataunit) EkeVs
   else
     one = 1
-    write (dataunit)  2*npx+1,2*npy+1,one ! , isym, placeholder
+    write (dataunit) npx,npy,one 
+    write (dataunit) selE
   end if
+! is this a regular (square) or hexagonal projection ?
+  if (usehex) then 
+    write (dataunit) 'hexago'
+  else
+    write (dataunit) 'square'
+  end if
+! and finally the results array
   write (dataunit) sr
-!  write (dataunit) srkin 
   close(unit=dataunit,status='keep')
 
-  mess = 'Date stored in file '//trim(outname)
+ if ((Esel.eq.-1).and.(iE.ne.1)) then 
+  mess = 'Intermediate data stored in file '//trim(outname)
   call Message("(A/)")
+ end if
+
+ if ((Esel.eq.-1).and.(iE.eq.1)) then 
+  mess = 'Final data stored in file '//trim(outname)
+  call Message("(A/)")
+ end if
+
+end do energyloop
+
+if (Esel.ne.-1) then
+  mess = 'Final data stored in file '//trim(outname)
+  call Message("(A/)")
+end if
 
 end subroutine ComputeMasterPattern
 
