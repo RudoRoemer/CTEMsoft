@@ -140,7 +140,7 @@ integer(kind=irg)   	:: numEbins, numzbins, nsx, nsy    ! variables used in MC e
 real(kind=dbl)     	:: EkeV, Ehistmin, Ebinsize, depthmax, depthstep, etotal ! enery variables from MC program
 integer(kind=irg),allocatable :: accum_e(:,:,:), accum_z(:,:,:,:), thick(:)
 real(kind=sgl),allocatable :: lambdaE(:,:)
-character(80) 		:: energyfile
+character(fnlen) 	:: energyfile
 character(fnlen)       :: oldprogname
 character(8)  		:: MCscversion
 character(4)		:: MCmode
@@ -232,11 +232,6 @@ read(dataunit) accum_z    ! we only need this array for the depth integrations
 close(dataunit,status='keep')
 mess = ' -> completed reading '//trim(energyfile)
 call Message("(A)")
-
-
-
-
-
 
 
 
@@ -607,7 +602,7 @@ energyloop: do iE=numEbins,1,-1
 
   open(unit=dataunit,file=trim(outname),status='unknown',action='write',form = 'unformatted')
 ! write the program identifier
-  write (dataunit) trim(progname)
+  write (dataunit) progname
 ! write the version number
   write (dataunit) scversion
 ! then the name of the crystal data file
