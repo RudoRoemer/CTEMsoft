@@ -119,7 +119,7 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)	:: nmlfile
 
 
-real(kind=dbl)   	:: ctmp(192,3),arg
+real(kind=dbl)   	:: ctmp(192,3),arg, sig, omega
 integer(kind=irg)      :: isym,i,j,ik,npx,npy,ipx,ipy,debug,iE,izz, izzmax, iequiv(2,12), nequiv, num_el, MCnthreads, & ! counters
                     	numk, & ! number of independent incident beam directions
                     	ir,nat(100),kk(3), npyhex, skip, ijmax, Esel, one, &
@@ -127,7 +127,7 @@ integer(kind=irg)      :: isym,i,j,ik,npx,npy,ipx,ipy,debug,iE,izz, izzmax, iequ
                     	istat,gzero,ic,ip,ikk     ! counters
 real(kind=dbl)         :: tpi,Znsq, kkl, DBWF,  totZnsq, kin, s, sthr, Bethe_store !
 real(kind=sgl) 		:: dmin, io_real(5), selE
-real(kind=sgl),allocatable 	:: sr(:,:,:), srkin(:,:), srhex(:,:,:), srkinhex(:,:), EkeVs(:) ! results
+real(kind=sgl),allocatable 	:: sr(:,:,:), srhex(:,:,:), EkeVs(:) ! results
 complex(kind=dbl)  		:: czero
 complex(kind=dbl),allocatable 	:: Lgh(:,:), Sgh(:,:)
 logical 		:: usehex, switchmirror
@@ -141,9 +141,11 @@ real(kind=dbl)     	:: EkeV, Ehistmin, Ebinsize, depthmax, depthstep, etotal ! e
 integer(kind=irg),allocatable :: accum_e(:,:,:), accum_z(:,:,:,:), thick(:)
 real(kind=sgl),allocatable :: lambdaE(:,:)
 character(80) 		:: energyfile
+character(fnlen)       :: oldprogname
+character(8)  		:: MCscversion
+character(4)		:: MCmode
 
-
-namelist /EBSDmastervars/ xtalname,dmin,npx,outname,energyfile, Esel
+namelist /EBSDmastervars/ dmin,npx,outname,energyfile,Esel
 
 ! note that the CTEMMC.f90 program creates a statistical output file that 
 ! must be read by the present program, so that things like energy etc are 
@@ -157,11 +159,10 @@ namelist /EBSDmastervars/ xtalname,dmin,npx,outname,energyfile, Esel
 
 ! read namelist file with all input parameters
 ! here are the default values in case some parameters are absent from the file
-xtalname 	= 'undefined'	! program must read existing structure file name
 dmin 		= 0.015   	! minimum d-spacing in order to be admitted to the list (must become user entry)
 npx		= 500		! Nx pixels (total = 2Nx+1)
 outname		= 'EBSDmasterout.data'	! default filename for final output
-energyfile	= 'z0E.data' 	! default filename for z_0(E_e) data from CTEMMC Monte Carlo simulations
+energyfile	= 'undefined' 	! default filename for z_0(E_e) data from CTEMMC Monte Carlo simulations
 Esel           = -1            ! selected energy value for single energy run
 
 ! then we read the rundata namelist, which may override some of these defaults  
@@ -169,14 +170,75 @@ OPEN(UNIT=dataunit,FILE=nmlfile,DELIM='APOSTROPHE')
 READ(UNIT=dataunit,NML=EBSDmastervars)
 CLOSE(UNIT=dataunit)
 
-if (trim(xtalname).eq.'undefined') then
-  call FatalError('CTEMEBSDmaster:',' structure file name is undefined in '//nmlfile)
+if (trim(energyfile).eq.'undefined') then
+  call FatalError('CTEMEBSDmaster:',' energy file name is undefined in '//nmlfile)
 end if
 
 ! print some information
 progname = 'CTEMEBSDmaster.f90'
 progdesc = 'EBSD Energy-dependent Master Pattern Simulation'
 call CTEMsoft
+
+! ---------- read Monte Carlo output file and extract necessary parameters
+! first, we need to load the data from the MC program.  
+mess = 'opening '//trim(energyfile)
+call Message("(A)")
+
+open(dataunit,file=trim(energyfile),status='unknown',form='unformatted')
+
+! lines from CTEMMC.f90... these are the things we need to read in...
+! write (dataunit) progname
+!! write the version number
+! write (dataunit) scversion
+!! then the name of the crystal data file
+! write (dataunit) xtalname
+!! energy information etc...
+! write (dataunit) numEbins, numzbins, numsx, numsy, num_el*NUMTHREADS, NUMTHREADS
+! write (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
+! write (dataunit) sig, omega
+! write (dataunit) MCmode
+!! and here are the actual results
+! write (dataunit) accum_e
+! write (dataunit) accum_z
+
+read (dataunit) oldprogname
+read (dataunit) MCscversion
+read (dataunit) xtalname
+
+read(dataunit) numEbins, numzbins, nsx, nsy, num_el, MCnthreads
+nsx = (nsx - 1)/2
+nsy = (nsy - 1)/2
+
+! MCnthreads = 8
+io_int(1:6) = (/ numEbins, numzbins, nsx, nsy, num_el, MCnthreads /)
+call WriteValue(' NumEbins, numzbins, nsx, nsy, num_el, MCnthreads ',io_int,6,"(5I,',',I)")
+etotal = num_el 
+
+read (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
+io_real(1:5) = (/ EkeV, Ehistmin, Ebinsize, depthmax, depthstep /)
+call WriteValue(' EkeV, Ehistmin, Ebinsize, depthmax, depthstep ',io_real,5,"(4F10.5,',',F10.5)")
+
+read (dataunit) sig, omega
+read (dataunit) MCmode
+
+allocate(accum_e(numEbins,-nsx:nsx,-nsy:nsy),accum_z(numEbins,numzbins,-nsx/10:nsx/10,-nsy/10:nsy/10),stat=istat)
+read(dataunit) accum_e
+! actually, we do not yet need the accum_e array; that is for the actual EBSD image computation program
+! but we need to skip it in this unformatted file...
+deallocate(accum_e)
+
+read(dataunit) accum_z    ! we only need this array for the depth integrations
+
+close(dataunit,status='keep')
+mess = ' -> completed reading '//trim(energyfile)
+call Message("(A)")
+
+
+
+
+
+
+
 
 ! square master pattern
 npy = npx
@@ -230,51 +292,6 @@ sthr = 10.D0
 usehex = .FALSE.
 if (((isym.ge.6).and.(isym.le.9)).or.(isym.eq.12)) usehex = .TRUE.
 ! ---------- end of symmetry and crystallography section
-
-! ---------- read Monte Carlo output file and extract necessary parameters
-! first, we need to load the data from the MC program.  This is an array of integers, which
-! has an energy histogram for each scintillator pixel.  These are integer values to minimize
-! storage, but they should all be divided by the total number of counts, which can be done 
-! at the end of the computation.  We will then need to multiply by the beam current and by
-! the dwell time to get units of electron counts.
-!
-! the datafile format is as follows (all in Lambert projections)
-! write(dataunit) numEbins, numzbins, numsx, numsy, num_el, nthreads
-! write (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
-! write(dataunit) accum_e
-! write (dataunit) accum_z
-
-mess = 'opening '//trim(energyfile)
-call Message("(A)")
-
-open(dataunit,file=trim(energyfile),status='unknown',form='unformatted')
-
-read(dataunit) numEbins, numzbins, nsx, nsy, num_el, MCnthreads
-nsx = (nsx - 1)/2
-nsy = (nsy - 1)/2
-
-! MCnthreads = 8
-io_int(1:6) = (/ numEbins, numzbins, nsx, nsy, num_el, MCnthreads /)
-call WriteValue(' NumEbins, numzbins, nsx, nsy, num_el, MCnthreads ',io_int,6,"(5I,',',I)")
-etotal = num_el ! * MCnthreads
-
-read (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
-io_real(1:5) = (/ EkeV, Ehistmin, Ebinsize, depthmax, depthstep /)
-call WriteValue(' EkeV, Ehistmin, Ebinsize, depthmax, depthstep ',io_real,5,"(4F10.5,',',F10.5)")
-
-! allocate(accum_e(numEbins,-nx:nx,-nx:nx),accum_z(numEbins,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
-
-allocate(accum_e(numEbins,-nsx:nsx,-nsy:nsy),accum_z(numEbins,numzbins,-nsx/10:nsx/10,-nsy/10:nsy/10),stat=istat)
-read(dataunit) accum_e
-! actually, we do not yet need the accum_e array; that is for the actual EBSD image computation program
-! but we need to skip it in this unformatted file...
-deallocate(accum_e)
-
-read(dataunit) accum_z    ! we only need this array for the depth integrations
-
-close(dataunit,status='keep')
-mess = ' -> completed reading '//trim(energyfile)
-call Message("(A)")
 
 ! this is where we determine the value for the thickness integration limit for the CalcLgh3 routine...
 allocate(EkeVs(numEbins),thick(numEbins))

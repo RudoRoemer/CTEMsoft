@@ -260,10 +260,18 @@ dataname = 'undefined.data'
  write (*,*) ' Number of electrons on detector       = ',sum(accum_e)
 
  open(dataunit,file=trim(dataname),status='unknown',form='unformatted')
+! write the program identifier
+ write (dataunit) progname
+! write the version number
+ write (dataunit) scversion
+! then the name of the crystal data file
+ write (dataunit) xtalname
+! energy information etc...
  write (dataunit) numEbins, numzbins, numsx, numsy, num_el*NUMTHREADS, NUMTHREADS
  write (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
  write (dataunit) sig, omega
  write (dataunit) MCmode
+! and here are the actual results
  write (dataunit) accum_e
  write (dataunit) accum_z
  close (dataunit,status='keep')
