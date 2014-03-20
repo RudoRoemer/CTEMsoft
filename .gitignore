@@ -16,6 +16,9 @@
 *.amake
 *.amake.bk
 *.f90.bak
+*.data
+*.xtal
+*.nml
 
 # DOxygen files
 /doc/
@@ -60,4 +63,13 @@ absoft_run_env.sh
 # xtal
 /xtal/
 
+#lib030414 and other temp test folders #PGC
+/lib030414
+/test_cmp
+/test_lib
+/test_makefile
+/mktest
 
+# .mod’s and .o’s
+*.mod
+*.o

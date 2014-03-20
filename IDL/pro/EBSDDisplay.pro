@@ -188,7 +188,7 @@ device,decomposed = 0
 device, GET_SCREEN_SIZE = scr
 
 sar = float(scr[0])/float(scr[1])
-if (sar.gt.(1.1*16.0/9.0) then begin
+if sar gt (1.1*16.0/9.0) then begin !PGC
 	scr[0] = scr[0]/2
 end
 EBSDdata.scrdimy = scr[1] * 0.8
