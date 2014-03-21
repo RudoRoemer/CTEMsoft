@@ -45,6 +45,8 @@ common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
+common EBSD_rawdata, accum_e, accum_z, MParray
+
 if (EBSDdata.eventverbose eq 1) then help,event,/structure
 
 
@@ -83,6 +85,16 @@ CASE eventval OF
   'MPLS': begin
 		WIDGET_CONTROL, get_value=val,EBSDwidget_s.MPLambertSelector
 		EBSDdata.MPLSmode= fix(val[0])
+	  endcase
+
+  'MCLsum': begin
+		WIDGET_CONTROL, get_value=val,EBSDwidget_s.MCLambertMode
+		EBSDdata.MCLSum =  fix(val[0])
+		if (EBSDdata.MCLSum eq 1) then begin
+		  EBSDshowMC, reform(total(accum_e,1))
+		end else begin
+		  EBSDshowMC, reform(accum_e[EBSDdata.Esel,*,*])
+		end
 	  endcase
 
  

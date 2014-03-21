@@ -1,4 +1,5 @@
-; Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
+;
+; Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are 
@@ -25,81 +26,94 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDDisplay_event.pro
+; CTEMsoft2013:EBSDMCDisplayWidget_event.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: EBSDDisplay_event.pro
+; PROGRAM: EBSDMCDisplayWidget_event.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief Electron backscatter diffraction pattern display event handler
+;> @brief main event handler for Monte Carlo Display mode
 ;
-;
-;> @date 03/19/14 MDG 1.0 initial version
+;> @date 10/15/13 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro EBSDDisplay_event, event
+pro EBSDMCDisplayWidget_event, event
 
 ;------------------------------------------------------------
 ; common blocks
 common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
+common fontstrings, fontstr, fontstrlarge, fontstrsmall
+
+common EBSD_rawdata, accum_e, accum_z, MParray
+common projections, mcxcircle, mcycircle, mpxcircle, mpycircle
 
 
 if (EBSDdata.eventverbose eq 1) then help,event,/structure
 
-if (event.id eq EBSDwidget_s.base) then begin
-  EBSDdata.xlocation = event.x
-  EBSDdata.ylocation = event.y-25
+; intercept the image widget movement here 
+if (event.id eq EBSDwidget_s.MCdisplaybase) then begin
+  EBSDdata.MCxlocation = event.x
+  EBSDdata.MCylocation = event.y-25
+    EBSDprint,' Window moved to location ('+string(fix(EBSDdata.MCxlocation),format="(I4)")+','+string(fix(EBSDdata.MCylocation),format="(I4)")+')'
 end else begin
 
   WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
-  
+
+; IF N_ELEMENTS(eventval) EQ 0 THEN RETURN,eventval
+
   CASE eventval OF
-  	'MCDISPLAY': begin
-; create the Monte Carlo display widget
-		EBSDMCDisplayWidget
+
+  'MCSLIDER':  begin
+		WIDGET_CONTROL, get_value=val,EBSDwidget_s.mcslider
+		EBSDdata.Esel = fix(val[0]) - 1
+		EBSDshowMC,EBSDwidget_s.MCdrawID
 	endcase
 
-  	'MPDISPLAY': begin
-; create the Master Pattern display widget
-		EBSDMCDisplayWidget,/both
+  'DISPEBIN': begin
+		EBSDdata.MCLSum = 0
+		EBSDshowMC,EBSDwidget_s.MCdrawID
+		WIDGET_CONTROL, EBSDwidget_s.MCslider, sensitive=1
 	endcase
 
-  	'MCFILE': begin
-; ask the user to select the data file
-		EBSDgetfilename,validfile,/MCFILE
-; read the data file and populate all the relevant fields
-		if (validfile eq 1) then EBSDreaddatafile,/MCFILE
-; activate the MC Display button
-
-; and close any other open widgets
+  'DISPESUM': begin
+		EBSDdata.MCLSum = 1
+		EBSDshowMC,EBSDwidget_s.MCdrawID
+		WIDGET_CONTROL, EBSDwidget_s.MCslider, sensitive=0
 	endcase
 
-  	'MPFILE': begin
-; ask the user to select the data file
-		EBSDgetfilename,validfile,/MPFILE
-; read the data file and populate all the relevant fields
-		if (validfile eq 1) then EBSDreaddatafile,/MPFILE
-; activate both the MC and MP Display buttons
-
-; and close any other open widgets
+  'DISPESUMRGB': begin
+		EBSDdata.MCLSum = 2
+		EBSDshowMC,EBSDwidget_s.MCdrawID
+		WIDGET_CONTROL, EBSDwidget_s.MCslider, sensitive=0
 	endcase
 
- 	'QUIT': begin
-		EBSDwritepreferences
-; do a general cleanup of potentially open widgets
- 		EBSDprint,'Quitting program',/blank
-		WIDGET_CONTROL, EBSDwidget_s.base, /DESTROY
-		!EXCEPT=1
+  'DISPWSUM': begin
+		EBSDdata.MCLSum = 3
+		WIDGET_CONTROL, EBSDwidget_s.MCslider, sensitive=0
+	endcase
+
+  'LAMBERTS': begin
+		EBSDdata.MCLSmode = 0
+		EBSDshowMC,EBSDwidget_s.MCdrawID
+	endcase
+
+  'LAMBERTC': begin
+		EBSDdata.MCLSmode = 1
+		EBSDshowMC,EBSDwidget_s.MCdrawID
+	endcase
+
+  'CLOSEMC': begin
+; kill the base widget
+	WIDGET_CONTROL, EBSDwidget_s.MCdisplaybase, /DESTROY
+	  EBSDprint,'EBSD Monte Carlo Widget closed'
 	endcase
 
   else: MESSAGE, "Event User Value Not Found"
 
-  endcase
+  END
 
 endelse
 
-end 
 
-
-
+end

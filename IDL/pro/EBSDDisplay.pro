@@ -3,11 +3,14 @@
 @EBSDprint			; prints messages to the program status window
 @EBSDreaddatafile		; read geometry and data files
 @EBSDMCDisplayWidget		; MC display widget
-;@EBSDatternWidget_event	; event handler
-;@EBSDshow			; show an EBSDattern (with grid)
+@EBSDMCDisplayWidget_event	; MC display widget event handler
 @EBSDevent			; event handler for button groups
+@EBSDshowMC			; display a Lambert projection image
 @EBSDgetpreferences		; read preferences file
 @EBSDwritepreferences		; write preferences file
+@Core_LambertS2C		; modified Lambert to Lambert projection
+@Core_colorwheel		; color representation of energy distribution
+@Core_WText			; generate a text widget with a label
 ;
 ; Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
@@ -66,6 +69,8 @@ common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 common PointGroups, PGTHD, PGTWD, DG
+
+common projections, xcircle, ycircle
 
 PGTWD = [ 'none',' 1',' 2',' m',' 2mm',' 4',' 4mm',' 3',' 3m1',' 31m',' 6',' 6mm'] 
 PGTHD = ['  ' ,' 1',' -1',' 2',' m',' 2/m',' 222', $
@@ -127,10 +132,13 @@ EBSDwidget_s = {widgetstruct, $
 
 	; other collected items
 	MCdisplaybase: long(0), $		; Monte Carlo display base
+	MPdisplaybase: long(0), $		; Master Pattern & Monte Carlo display base
 	status:long(0), $                       ; status window
 	logfile: long(0), $			; logfile toggle widget ID
 	detector:long(0), $                     ; detector widget
 	MCbutton:long(0), $                     ; MC button ID
+	MCslider:long(0), $                     ; MC slider ID
+	MCenergyval: long(0), $			; MC energy value
 	MPbutton:long(0), $                     ; MP button ID
 	MCDraw:long(0), $                       ; pattern draw widget
 	MCDrawID:long(0), $                     ; pattern draw widget
@@ -161,6 +169,7 @@ EBSDdata = {EBSDdatastruct, $
 	mcvangle: float(0.0), $			; vertical sample tilt angle (around TD)
 	mchangle: float(0.0), $			; horizontal sample tilt angle (around RD)
 	mcmode: '', $				; 'CSDA' (continuous slowing down approximation) or 'DLOS' (discrete losses)
+	Esel: long(0), $			; energy selection for slider in MC and MP display routines
 	mcprogname: '', $ 			; MC program name
 	mcscversion: '', $ 			; source code version number
 	mcdataedims: lon64arr(3), $		; dimensions of accum_e
@@ -233,7 +242,7 @@ EBSDdata.ylocation = EBSDdata.scrdimx / 8.0
 
 ;------------------------------------------------------------
 ; does the preferences file exist ?  If not, create it, otherwise read it
-EBSDgetpreferences
+EBSDgetpreferences,/noprint
 
 ;------------------------------------------------------------
 ; create the top level widget

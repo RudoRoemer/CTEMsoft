@@ -1,3 +1,4 @@
+;
 ; Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
@@ -25,81 +26,74 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDDisplay_event.pro
+; CTEMsoft2013:Core_LambertS2C.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: EBSDDisplay_event.pro
+; PROGRAM: Core_LambertS2C.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief Electron backscatter diffraction pattern display event handler
+;> @brief modified lambert to regular lambert conversion routine; inits the xcircle and ycircle arrays
 ;
-;
-;> @date 03/19/14 MDG 1.0 initial version
+;> @date 03/20/14 MDG 1.0 initial implementation 
 ;--------------------------------------------------------------------------
-pro EBSDDisplay_event, event
+pro Core_LambertS2C,image,mc=mc,mp=mp
 
-;------------------------------------------------------------
-; common blocks
-common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, EBSDdata
+common projections, mcxcircle, mcycircle, mpxcircle, mpycircle
 
+; first the square to circle mapping using the bilinear function.
+; we need two arrays that contain for each point in the circle map
+; the equivalent point in the square map.
+sz = size(image,/dimensions)
+nx = sz[0]
+ny = sz[1]
+nx2 = (nx-1)/2
+ny2 = (ny-1)/2
 
-if (EBSDdata.eventverbose eq 1) then help,event,/structure
+Rmax = float(nx2)^2
+line = findgen(nx)-(nx-1)/2
+xsquare = line # replicate(1,nx)
+ysquare = replicate(1,ny) # line
+xcircle = fltarr(nx,ny)
+ycircle = fltarr(nx,ny)
 
-if (event.id eq EBSDwidget_s.base) then begin
-  EBSDdata.xlocation = event.x
-  EBSDdata.ylocation = event.y-25
-end else begin
+sp2 = sqrt(!pi)/2.0
+spi = 1.0/sp2
+for i=0,nx-1 do begin
+  A = float(i-nx2)
+  for j=0,ny-1 do begin
+    B = float(j-ny2)
+    if (A^2+B^2 le Rmax) then begin
+      if ( (0 le abs(B)) and (abs(B) le abs(A)) and (abs(A)+abs(B) ne 0) ) then begin
+        xcircle[i,j] = (A/abs(A)) * sqrt(A^2+B^2) * sp2
+        ycircle[i,j] = (A/abs(A)) * sqrt(A^2+B^2) * spi * atan(B/A)
+      end
 
-  WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
+      if ( (0 le abs(A)) and (abs(A) le abs(B)) and (abs(A)+abs(B) ne 0) ) then begin
+        xcircle[i,j] = (B/abs(B)) * sqrt(A^2+B^2) * spi * atan(A/B)
+        ycircle[i,j] = (B/abs(B)) * sqrt(A^2+B^2) * sp2
+      end
+
+    endif
+  endfor
+endfor
+
+xcircle *= spi
+ycircle *= spi
+
+xcircle += nx2
+ycircle += ny2
+
+if keyword_set(mc) then begin
+	mcxcircle = xcircle
+	mcycircle = ycircle
+end
   
-  CASE eventval OF
-  	'MCDISPLAY': begin
-; create the Monte Carlo display widget
-		EBSDMCDisplayWidget
-	endcase
+if keyword_set(mp) then begin
+	mpxcircle = xcircle
+	mpycircle = ycircle
+end
+  
 
-  	'MPDISPLAY': begin
-; create the Master Pattern display widget
-		EBSDMCDisplayWidget,/both
-	endcase
-
-  	'MCFILE': begin
-; ask the user to select the data file
-		EBSDgetfilename,validfile,/MCFILE
-; read the data file and populate all the relevant fields
-		if (validfile eq 1) then EBSDreaddatafile,/MCFILE
-; activate the MC Display button
-
-; and close any other open widgets
-	endcase
-
-  	'MPFILE': begin
-; ask the user to select the data file
-		EBSDgetfilename,validfile,/MPFILE
-; read the data file and populate all the relevant fields
-		if (validfile eq 1) then EBSDreaddatafile,/MPFILE
-; activate both the MC and MP Display buttons
-
-; and close any other open widgets
-	endcase
-
- 	'QUIT': begin
-		EBSDwritepreferences
-; do a general cleanup of potentially open widgets
- 		EBSDprint,'Quitting program',/blank
-		WIDGET_CONTROL, EBSDwidget_s.base, /DESTROY
-		!EXCEPT=1
-	endcase
-
-  else: MESSAGE, "Event User Value Not Found"
-
-  endcase
-
-endelse
-
-end 
-
-
+end
 

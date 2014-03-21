@@ -111,15 +111,21 @@ if keyword_set(MPFILE) then begin
   Ltype = bytarr(6)
   readu,1,Ltype
   Ltype = strtrim(string(Ltype))
-  if (Ltype eq 'hexago') then EBSDdata.mpgridmode = 'Hexagonal' else EBSDdata.mpgridmode = 'Square'
+  if (Ltype eq 'hexago') then EBSDdata.mpgridmode = ' Hexagonal' else EBSDdata.mpgridmode = ' Square'
   WIDGET_CONTROL, SET_VALUE=EBSDdata.mpgridmode, EBSDwidget_s.mpgridmode
 
 ; and finally the results array
   MParray = fltarr(2L*EBSDdata.mpimx+1L,2L*EBSDdata.mpimy+1L,EBSDdata.mcenergynumbin)
   readu,1,MParray
 
+  sz = size(MParray,/dimensions)
+    EBSDprint,' Size of MParray data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)")+' x'+string(sz[2],format="(I5)")
+
 ; and close the file
   close,1
+
+; and initialize the coordinate arrays for the Lambert transformation
+  Core_LambertS2C,reform(MParray[*,*,0]),/mp
 
    WIDGET_CONTROL, EBSDwidget_s.MPbutton, sensitive=1
    WIDGET_CONTROL, EBSDwidget_s.detector, sensitive=1
@@ -219,8 +225,17 @@ if (keyword_set(MCFILE) or (MCalso eq 1)) then begin
   EBSDdata.mcbse = total(accum_e)
   WIDGET_CONTROL, SET_VALUE=string(EBSDdata.mcbse,format="(I12)"), EBSDwidget_s.mcbse
 
+
+  sz = size(accum_e,/dimensions)
+    EBSDprint,' Size of accum_e data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)")+' x'+string(sz[2],format="(I5)")
+  sz = size(accum_z,/dimensions)
+    EBSDprint,' Size of accum_z data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") +' x'+string(sz[3],format="(I5)")
+
 ; and close the file
   close,1
+
+; and initialize the coordinate arrays for the Lambert transformation
+  Core_LambertS2C,reform(accum_e[0,*,*]),/mc
 
 ; (de)activate buttons
    WIDGET_CONTROL, EBSDwidget_s.MCbutton, sensitive=1

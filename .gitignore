@@ -11,6 +11,9 @@
 # executables
 /exe/
 
+# ORR folder
+/ORR/
+
 # libs, makefiles, editor backup files, etc
 *.a
 *.amake

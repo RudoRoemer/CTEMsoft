@@ -36,7 +36,7 @@
 ;
 ;> @date 03/19/14 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro EBSDMCDisplayWidget,dummy
+pro EBSDMCDisplayWidget,both=both
 ;
 ;------------------------------------------------------------
 ; common blocks
@@ -47,15 +47,51 @@ common EBSD_data_common, EBSDdata
 common EBSD_rawdata, accum_e, accum_z, MParray
 
 ;------------------------------------------------------------
+; make sure that this program isn't already running
+if (XRegistered("EBSDMCDisplayWidget") NE 0) then begin
+  print,'EBSDMCDisplayWidget is already running ... (if it is not, please restart your IDL session)'
+  return
+end
+
+; MCMP = 0 means MC only, otherwise both MC and MP
+MCMP = 0
+if keyword_set(both) then MCMP = 1
+
+
+;------------------------------------------------------------
 ; create the top level widget
-EBSDwidget_s.MCdisplaybase = WIDGET_BASE(TITLE='Monte Carlo Display Widget', $
+if (MCMP eq 0) then begin
+  EBSDwidget_s.MCdisplaybase = WIDGET_BASE(TITLE='Monte Carlo Display Widget', $
                         /COLUMN, $
                         XSIZE=20+max([ 500, 2*EBSDdata.mcimx+1 ]), $
                         /ALIGN_CENTER, $
+			MBAR = menubar, $
 			/TLB_MOVE_EVENTS, $
 			EVENT_PRO='EBSDMCDisplayWidget_event', $
                         XOFFSET=EBSDdata.MCxlocation, $
                         YOFFSET=EBSDdata.MCylocation)
+end else begin
+  EBSDwidget_s.MCdisplaybase = WIDGET_BASE(TITLE='Master Pattern & Monte Carlo Display Widget', $
+                        /COLUMN, $
+                        XSIZE=20+max([ 500, 2*EBSDdata.mcimx+1 ]), $
+                        /ALIGN_CENTER, $
+			MBAR = menubar, $
+			/TLB_MOVE_EVENTS, $
+			EVENT_PRO='EBSDMCDisplayWidget_event', $
+                        XOFFSET=EBSDdata.MCxlocation, $
+                        YOFFSET=EBSDdata.MCylocation)
+end
+
+menu1 = WIDGET_BUTTON(menubar, VALUE='Projection Mode', /MENU)
+b1 = WIDGET_BUTTON(menu1, VALUE='Lambert [square]', UVALUE='LAMBERTS')
+b2 = WIDGET_BUTTON(menu1, VALUE='Lambert [circle]', UVALUE='LAMBERTC')
+
+menu2 = WIDGET_BUTTON(menubar, VALUE='Display Mode', /MENU)
+b2 = WIDGET_BUTTON(menu2, VALUE='Individual Energy Bin', UVALUE='DISPEBIN')
+b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum', UVALUE='DISPESUM')
+b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum RGB', UVALUE='DISPESUMRGB')
+b2 = WIDGET_BUTTON(menu2, VALUE='Weighted Energy Sum', UVALUE='DISPWSUM')
+
 
 block1 = WIDGET_BASE(EBSDwidget_s.MCdisplaybase, $
 			/FRAME, $
@@ -63,40 +99,27 @@ block1 = WIDGET_BASE(EBSDwidget_s.MCdisplaybase, $
 			/ALIGN_CENTER, $
 			/COLUMN)
 
-values = ['Lambert', 'Modified Lambert']
-EBSDwidget_s.MCLambertSelector = CW_BGROUP(block1, $
-			values, $
-			/FRAME, $
-                        LABEL_LEFT='Projection Mode', $
-			/COLUMN, $
-			/NO_RELEASE, $
-			/EXCLUSIVE, $
-			SET_VALUE=EBSDdata.MCLSmode, $
-                        EVENT_FUNC='EBSDevent', $
-			UVALUE='MCLS')
-
-values = ['Individual', 'Sum']
-EBSDwidget_s.MCLambertMode = CW_BGROUP(block1, $
-			values, $
-			/FRAME, $
-                        LABEL_LEFT='Pattern Mode ', $
-			/COLUMN, $
-			/NO_RELEASE, $
-			/EXCLUSIVE, $
-			SET_VALUE=EBSDdata.MCLsum, $
-                        EVENT_FUNC='EBSDevent', $
-			UVALUE='MCLsum')
+block2 = WIDGET_BASE(block1, /ROW, /ALIGN_CENTER)
 
 ; here's a slider to select the energy window ...
-file1 = WIDGET_SLIDER(block1, $
+EBSDwidget_s.MCslider = WIDGET_SLIDER(block2, $
 			EVENT_PRO='EBSDMCDisplayWidget_event', $
 			MINIMUM = 1, $
 			MAXIMUM = EBSDdata.mcenergynumbin, $
+			SENSITIVE = 1, $
 			TITLE = 'Select an energy', $
 			XSIZE = 400, $
 			VALUE = 1, $
 			UVALUE = 'MCSLIDER', $
 			/ALIGN_CENTER)
+
+; and right next to it we display the actual energy in a text box
+energy = EBSDdata.mcenergymin + EBSDdata.Esel * EBSDdata.mcenergybinsize
+EBSDwidget_s.MCenergyval =  WIDGET_TEXT(block2, $
+			VALUE=string(energy,format="(F5.2)"), $
+			XSIZE=10, $
+			YSIZE=1, $
+			/ALIGN_RIGHT)
 
 ; and here's the display window itself
 EBSDwidget_s.MCdraw = WIDGET_DRAW(block1, $
@@ -106,13 +129,33 @@ EBSDwidget_s.MCdraw = WIDGET_DRAW(block1, $
 			XSIZE=2*EBSDdata.mcimx+1, $
 			YSIZE=2*EBSDdata.mcimy+1)
 
+; and finally a close button
+file1 = WIDGET_BASE(block1, $
+			XSIZE=500, $
+			/FRAME, $
+			/ROW)
+
+file2 = WIDGET_BUTTON(file1, $
+                        VALUE='Close', $
+                        UVALUE='CLOSEMC', $
+                        EVENT_PRO='EBSDMCDisplayWidget_event', $
+                        SENSITIVE=1, $
+                        /FRAME)
+
+
 ;------------------------------------------------------------
 ; realize the widget structure
 WIDGET_CONTROL,EBSDwidget_s.MCdisplaybase,/REALIZE
 
 ; realize the draw widget
 WIDGET_CONTROL, EBSDwidget_s.MCdraw, GET_VALUE=drawID
-EBSDdata.MCdrawID = drawID
+EBSDwidget_s.MCdrawID = drawID
+
+; and next we draw the first entry of the accum_e array
+wset,EBSDwidget_s.MCdrawID
+tvscl,reform(accum_e[0,*,*])
+
+; add a min/max indicator as well as a save button
 
 
 ; and hand over control to the xmanager
