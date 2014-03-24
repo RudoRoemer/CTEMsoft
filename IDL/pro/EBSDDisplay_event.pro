@@ -62,7 +62,7 @@ end else begin
 
   	'MPDISPLAY': begin
 ; create the Master Pattern display widget
-		EBSDMCDisplayWidget,/both
+		EBSDMCDisplayWidget
 	endcase
 
   	'MCFILE': begin

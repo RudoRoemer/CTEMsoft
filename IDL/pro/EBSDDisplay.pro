@@ -139,12 +139,19 @@ EBSDwidget_s = {widgetstruct, $
 	MCbutton:long(0), $                     ; MC button ID
 	MCslider:long(0), $                     ; MC slider ID
 	MCenergyval: long(0), $			; MC energy value
-	MPbutton:long(0), $                     ; MP button ID
+        MCmin: long(0), $                       ; MC display minimum
+        MCmax: long(0), $                       ; MC display maximum
+        MPbutton:long(0), $                     ; MP button ID
+        MPmin: long(0), $                       ; MP display minimum
+        MPmax: long(0), $                       ; MP display maximum
 	MCDraw:long(0), $                       ; pattern draw widget
 	MCDrawID:long(0), $                     ; pattern draw widget
+	MPDraw:long(0), $                       ; pattern draw widget
+	MPDrawID:long(0), $                     ; pattern draw widget
 	mainstop:long(0), $                     ; program quit button
 	logodraw:long(0), $                     ; logo widget 
 	logodrawID:long(0),$                    ; logo widget ID
+	EBSDformatbgroup: long(0), $		; image file format widget
 	MCLambertSelector:long(0),$             ; Lambert Selector widget ID
 	MPLambertSelector:long(0),$             ; Lambert Selector widget ID
 	MCLambertMode: long(0) $		; Lambert sum or individual image mode
@@ -199,6 +206,12 @@ EBSDdata = {EBSDdatastruct, $
 	MCLSmode: fix(0), $			; Monte Carlo Lambert Selector tag
 	MCLSum: fix(0), $			; Monte Carlo Lambert sum or individual tag
 	MPLSmode: fix(0), $			; Master Pattern Lambert Selector tag
+        MCMPboth: long(0), $                    ; switch for MC or MC/MP display
+        MCmin: long(0), $                       ; min value for MC display
+        MCmax: long(0), $                       ; max value for MC display
+        MPmin: float(0), $                      ; min value for MP display
+        MPmax: float(0), $                      ; max value for MP display
+        imageformat: long(0), $                 ; image format 'jpeg', 'tiff', 'bmp'
 	logmode: fix(0), $			; keep a log file or not
 	logunit: fix(13), $			; logical file unit for log file
 	logname: '', $				; filename for log output

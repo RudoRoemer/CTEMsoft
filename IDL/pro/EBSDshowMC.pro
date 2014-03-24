@@ -40,7 +40,7 @@
 ;
 ;> @date 03/20/14 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro EBSDshowMC, target
+pro EBSDshowMC, dummy
 
 ;------------------------------------------------------------
 ; common blocks
@@ -52,7 +52,8 @@ common Image_common, MCimage, MPimage
 common EBSD_rawdata, accum_e, accum_z, MParray
 common projections, mcxcircle, mcycircle, mpxcircle, mpycircle
 
-wset,target
+wset,EBSDwidget_s.MCdrawID
+
 energy = EBSDdata.mcenergymin + EBSDdata.Esel * EBSDdata.mcenergybinsize
 if (EBSDdata.MCLSum eq 0) then begin
   image = reform(accum_e[EBSDdata.Esel,*,*])
@@ -113,13 +114,52 @@ end
 
 if (EBSDdata.MCLSum ne 2) then begin
   tvscl, image 
+  WIDGET_CONTROL, set_value=string(min(image),format="(F9.1)"), EBSDwidget_s.MCmin
+  WIDGET_CONTROL, set_value=string(max(image),format="(F9.1)"), EBSDwidget_s.MCmax
   MCimage = image
 end else begin
   tvscl, cimage, true=1
 ; and add the color legend
   tvscl, clegend, dims2-25, dims3-50, true=1
+  WIDGET_CONTROL, set_value='', EBSDwidget_s.MCmin
+  WIDGET_CONTROL, set_value='', EBSDwidget_s.MCmax
   MCimage = cimage
+  MCimage[0:2,dims2-25:*,dims3-50:*] = clegend[0:*,0:*,0:*]
 end
+
+; should we also display the Master Pattern ?
+if (EBSDdata.MCMPboth eq 1) then begin
+  wset,EBSDwidget_s.MPdrawID
+  if (EBSDdata.MCLSum eq 0) then begin
+    image = reform(MParray[*,*,EBSDdata.Esel])
+  end 
+
+  if (EBSDdata.MCLSum eq 1) then begin
+; here, we want to display the energy-weighted master pattern as an example
+    image = MParray[0:*,0:*,0] * congrid(reform(float(accum_e[0,0:*,0:*])),2*EBSDdata.MPimx+1,2*EBSDdata.MPimy+1)
+    for i=1,EBSDdata.MCenergynumbin-1 do image += MParray[0:*,0:*,i] * congrid(reform(float(accum_e[i,0:*,0:*])),2*EBSDdata.MPimx+1,2*EBSDdata.MPimy+1)
+  end
+
+  if (EBSDdata.MCLSum eq 2) then begin   ; RGB display, for now left blank
+    MPimage = 0
+    erase
+    empty
+  end
+
+  if ((EBSDdata.MCLSmode eq 1) and (EBSDdata.MCLSum ne 2)) then begin
+    image = bilinear(image,mpxcircle,mpycircle,missing = 0)
+  end 
+
+; if ((EBSDdata.MCLSmode eq 1) and (EBSDdata.MCLSum eq 2)) then begin
+; end 
+
+  if (EBSDdata.MCLSum ne 2) then begin
+    tvscl, image 
+    WIDGET_CONTROL, set_value=string(min(image),format="(F9.1)"), EBSDwidget_s.MPmin
+    WIDGET_CONTROL, set_value=string(max(image),format="(F9.1)"), EBSDwidget_s.MPmax
+    MPimage = image
+  end 
+endif
 
 end
 

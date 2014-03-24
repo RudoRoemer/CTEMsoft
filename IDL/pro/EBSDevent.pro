@@ -77,6 +77,12 @@ CASE eventval OF
 		endelse
 	  endcase
 
+  'EBSDFORMAT': begin
+                WIDGET_CONTROL, get_value=val,EBSDwidget_s.EBSDformatbgroup
+                EBSDdata.imageformat = fix(val[0])
+          endcase
+
+
   'MCLS': begin
 		WIDGET_CONTROL, get_value=val,EBSDwidget_s.MCLambertSelector
 		EBSDdata.MCLSmode= fix(val[0])

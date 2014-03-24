@@ -49,7 +49,7 @@ common EBSD_rawdata, accum_e, accum_z, MParray
 
 
   EBSDprint,' ',/blank
-  MCalso = 0
+  EBSDdata.MCMPboth = 0
 
 if keyword_set(MPFILE) then begin
   EBSDprint,'Reading data file '+EBSDdata.mpfilename
@@ -129,7 +129,7 @@ if keyword_set(MPFILE) then begin
 
    WIDGET_CONTROL, EBSDwidget_s.MPbutton, sensitive=1
    WIDGET_CONTROL, EBSDwidget_s.detector, sensitive=1
-  MCalso = 1
+  EBSDdata.MCMPboth = 1
 endif
 
 
@@ -138,7 +138,7 @@ endif
 
 
 ; read the Monte Carlo data file
-if (keyword_set(MCFILE) or (MCalso eq 1)) then begin
+if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
   EBSDprint,'Reading data file '+EBSDdata.mcfilename
 
   openu,1,EBSDdata.pathname+'/'+EBSDdata.mcfilename,/f77
@@ -239,7 +239,7 @@ if (keyword_set(MCFILE) or (MCalso eq 1)) then begin
 
 ; (de)activate buttons
    WIDGET_CONTROL, EBSDwidget_s.MCbutton, sensitive=1
-   if (MCalso eq 0) then begin
+   if (EBSDdata.MCMPboth eq 0) then begin
      WIDGET_CONTROL, EBSDwidget_s.MPbutton, sensitive=0
      WIDGET_CONTROL, EBSDwidget_s.detector, sensitive=0
      WIDGET_CONTROL, SET_VALUE=' ', EBSDwidget_s.mpfilename

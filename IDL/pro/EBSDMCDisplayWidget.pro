@@ -36,7 +36,7 @@
 ;
 ;> @date 03/19/14 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro EBSDMCDisplayWidget,both=both
+pro EBSDMCDisplayWidget,dummy
 ;
 ;------------------------------------------------------------
 ; common blocks
@@ -53,14 +53,9 @@ if (XRegistered("EBSDMCDisplayWidget") NE 0) then begin
   return
 end
 
-; MCMP = 0 means MC only, otherwise both MC and MP
-MCMP = 0
-if keyword_set(both) then MCMP = 1
-
-
 ;------------------------------------------------------------
 ; create the top level widget
-if (MCMP eq 0) then begin
+if (EBSDdata.MCMPboth eq 0) then begin
   EBSDwidget_s.MCdisplaybase = WIDGET_BASE(TITLE='Monte Carlo Display Widget', $
                         /COLUMN, $
                         XSIZE=20+max([ 500, 2*EBSDdata.mcimx+1 ]), $
@@ -73,7 +68,7 @@ if (MCMP eq 0) then begin
 end else begin
   EBSDwidget_s.MCdisplaybase = WIDGET_BASE(TITLE='Master Pattern & Monte Carlo Display Widget', $
                         /COLUMN, $
-                        XSIZE=20+max([ 500, 2*EBSDdata.mcimx+1 ]), $
+                        XSIZE=20+max([ 500, 2*EBSDdata.mcimx+1 ]) + max( [ 500, 2*EBSDdata.mpimx+1 ] ), $
                         /ALIGN_CENTER, $
 			MBAR = menubar, $
 			/TLB_MOVE_EVENTS, $
@@ -87,17 +82,30 @@ b1 = WIDGET_BUTTON(menu1, VALUE='Lambert [square]', UVALUE='LAMBERTS')
 b2 = WIDGET_BUTTON(menu1, VALUE='Lambert [circle]', UVALUE='LAMBERTC')
 
 menu2 = WIDGET_BUTTON(menubar, VALUE='Display Mode', /MENU)
-b2 = WIDGET_BUTTON(menu2, VALUE='Individual Energy Bin', UVALUE='DISPEBIN')
-b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum', UVALUE='DISPESUM')
-b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum RGB', UVALUE='DISPESUMRGB')
-b2 = WIDGET_BUTTON(menu2, VALUE='Weighted Energy Sum', UVALUE='DISPWSUM')
+if (EBSDdata.MCMPboth eq 1) then begin
+  b2 = WIDGET_BUTTON(menu2, VALUE='Individual Energy/Master Bin', UVALUE='DISPEBIN')
+  b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum/Weighted Master', UVALUE='DISPESUM')
+  b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum RGB/blank', UVALUE='DISPESUMRGB')
+end else begin
+  b2 = WIDGET_BUTTON(menu2, VALUE='Individual Energy Bin', UVALUE='DISPEBIN')
+  b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum', UVALUE='DISPESUM')
+  b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum RGB', UVALUE='DISPESUMRGB')
+endelse
 
-
-block1 = WIDGET_BASE(EBSDwidget_s.MCdisplaybase, $
+;------------------------------------------------------------
+if (EBSDdata.MCMPboth eq 0) then begin
+	block1 = WIDGET_BASE(EBSDwidget_s.MCdisplaybase, $
 			/FRAME, $
-                        XSIZE=max([ 500, 2*EBSDdata.mcimx+1 ]), $
+                        XSIZE=max([ 500, 2*EBSDdata.mcimx+1 ]) , $
 			/ALIGN_CENTER, $
 			/COLUMN)
+end else begin
+	block1 = WIDGET_BASE(EBSDwidget_s.MCdisplaybase, $
+			/FRAME, $
+                        XSIZE=max([ 500, 2*EBSDdata.mcimx+1 ]) + max( [ 500, 2*EBSDdata.mpimx+1 ] ), $
+			/ALIGN_CENTER, $
+			/COLUMN)
+endelse
 
 block2 = WIDGET_BASE(block1, /ROW, /ALIGN_CENTER)
 
@@ -120,15 +128,62 @@ EBSDwidget_s.MCenergyval =  WIDGET_TEXT(block2, $
 			XSIZE=10, $
 			YSIZE=1, $
 			/ALIGN_RIGHT)
+;------------------------------------------------------------
+block2 = WIDGET_BASE(block1, /ROW, /ALIGN_CENTER)
+block3 = WIDGET_BASE(block2, /COLUMN, /ALIGN_CENTER)
 
-; and here's the display window itself
-EBSDwidget_s.MCdraw = WIDGET_DRAW(block1, $
-			COLOR_MODEL=2, $
-			RETAIN=2, $
-			/FRAME, $
-			XSIZE=2*EBSDdata.mcimx+1, $
-			YSIZE=2*EBSDdata.mcimy+1)
+; and here's the MC display window itself
+EBSDwidget_s.MCdraw = WIDGET_DRAW(block3, $
+                        COLOR_MODEL=2, $
+                        RETAIN=2, $
+                        /FRAME, $
+                        XSIZE=2*EBSDdata.mcimx+1, $
+                        YSIZE=2*EBSDdata.mcimy+1)
 
+; and the min-max indicators
+block4 = WIDGET_BASE(block3, /ROW, /ALIGN_CENTER)
+EBSDwidget_s.MCmin = Core_WText(block4, 'min/max ',fontstr, 75, 25, 15, 1, string(EBSDdata.MCmin,FORMAT="(F9.1)"))
+EBSDwidget_s.MCmax = Core_WText(block4, '/',fontstr, 5, 25, 15, 1, string(EBSDdata.MCmax,FORMAT="(F9.1)"))
+
+; and a save button
+saveEBSDMC = WIDGET_BUTTON(block4, $
+                        VALUE='Save', $
+                        /NO_RELEASE, $
+                        EVENT_PRO='EBSDMCDisplayWidget_event', $
+                        /FRAME, $
+                        UVALUE='SAVEEBSDMC', $
+                        /ALIGN_LEFT)
+
+
+
+;------------------------------------------------------------
+; and the MP window, if needed
+if (EBSDdata.MCMPboth eq 1) then begin
+        block3 = WIDGET_BASE(block2, /COLUMN, /ALIGN_CENTER)
+        EBSDwidget_s.MPdraw = WIDGET_DRAW(block3, $
+                        COLOR_MODEL=2, $
+                        RETAIN=2, $
+                        /FRAME, $
+                        XSIZE=2*EBSDdata.mpimx+1, $
+                        YSIZE=2*EBSDdata.mpimy+1)
+
+; and the min-max indicators
+        block4 = WIDGET_BASE(block3, /ROW, /ALIGN_CENTER)
+        EBSDwidget_s.MPmin = Core_WText(block4, 'min/max ',fontstr, 75, 25, 15, 1, string(EBSDdata.MPmin,FORMAT="(F9.1)"))
+        EBSDwidget_s.MPmax = Core_WText(block4, '/',fontstr, 5, 25, 15, 1, string(EBSDdata.MPmax,FORMAT="(F9.1)"))
+
+; and a save button
+        saveEBSDMP = WIDGET_BUTTON(block4, $
+                        VALUE='Save', $
+                        /NO_RELEASE, $
+                        EVENT_PRO='EBSDMCDisplayWidget_event', $
+                        /FRAME, $
+                        UVALUE='SAVEEBSDMP', $
+                        /ALIGN_LEFT)
+endif
+
+
+;------------------------------------------------------------
 ; and finally a close button
 file1 = WIDGET_BASE(block1, $
 			XSIZE=500, $
@@ -142,6 +197,18 @@ file2 = WIDGET_BUTTON(file1, $
                         SENSITIVE=1, $
                         /FRAME)
 
+vals = ['jpeg','tiff','bmp']
+EBSDwidget_s.EBSDformatbgroup = CW_BGROUP(file1, $
+                        vals, $
+                        /ROW, $
+                        /NO_RELEASE, $
+                        /EXCLUSIVE, $
+                        FONT=fontstrlarge, $
+                        LABEL_LEFT = 'File Format', $
+                        /FRAME, $
+                        EVENT_FUNC ='EBSDevent', $
+                        UVALUE='EBSDFORMAT', $
+                        SET_VALUE=EBSDdata.imageformat)
 
 ;------------------------------------------------------------
 ; realize the widget structure
@@ -150,6 +217,10 @@ WIDGET_CONTROL,EBSDwidget_s.MCdisplaybase,/REALIZE
 ; realize the draw widget
 WIDGET_CONTROL, EBSDwidget_s.MCdraw, GET_VALUE=drawID
 EBSDwidget_s.MCdrawID = drawID
+if (EBSDdata.MCMPboth eq 1) then begin
+	WIDGET_CONTROL, EBSDwidget_s.MPdraw, GET_VALUE=drawID
+	EBSDwidget_s.MPdrawID = drawID
+endif
 
 ; and next we draw the first entry of the accum_e array
 wset,EBSDwidget_s.MCdrawID

@@ -228,11 +228,11 @@ file1 = WIDGET_BASE(block1, /ROW, XSIZE=700, /ALIGN_CENTER)
 widget_s.filename = Core_WText(file1, 'Data File Name ',fontstrlarge, 200, 25, 77, 1, data.dataname)
 
 file1 = WIDGET_BASE(block1, /ROW, XSIZE=700, /ALIGN_CENTER)
-widget_s.filesize = Core_WText(file1, 'Data File Size ',fontstrlarge, 200, 25, 40, 1, string(data.filesize,FORMAT="(I)")+' bytes', /aright)
+widget_s.filesize = Core_WText(file1, 'Data File Size ',fontstrlarge, 200, 25, 40, 1, string(data.filesize,FORMAT="(I)")+' bytes')
 
 file2 = WIDGET_BASE(block1, /ROW, /ALIGN_LEFT)
 widget_s.imx = Core_WText(file2, 'Pattern Dimensions',fontstrlarge, 200, 25, 10, 1, string(data.imx,FORMAT="(I5)"))
-widget_s.imy = Core_WText(file2, ' by ',fontstrlarge, 25, 25, 10, 1, string(data.imy,FORMAT="(I5)"))
+widget_s.imy = Core_WText(file2, ' by ',fontstrlarge, 35, 25, 10, 1, string(data.imy,FORMAT="(I5)"))
 
 ;----------- next we have a series of parameters that are 
 ; derived from the input file and can not be changed by
@@ -260,11 +260,11 @@ file6 = WIDGET_BASE(block2, /COLUMN, /ALIGN_LEFT)
 
 ;-------------
 file7 = WIDGET_BASE(file6, /ROW, /ALIGN_LEFT)
-widget_s.numk= Core_WText(file5, '# of k-vectors/Mode',fontstrlarge, 200, 25, 20, 1, string(data.numk,FORMAT="(I5)"))
+widget_s.numk= Core_WText(file7, '# of k-vectors/Mode',fontstrlarge, 200, 25, 20, 1, string(data.numk,FORMAT="(I5)"))
 
 ;-------------
 file7 = WIDGET_BASE(file6, /ROW, /ALIGN_LEFT)
-widget_s.xtalname = Core_WText(file5, 'Structure File',fontstrlarge, 200, 25, 20, 1, data.xtalname)
+widget_s.xtalname = Core_WText(file7, 'Structure File',fontstrlarge, 200, 25, 20, 1, data.xtalname)
 
 ;-------------
 file7 = WIDGET_BASE(file6, /ROW, /ALIGN_LEFT)

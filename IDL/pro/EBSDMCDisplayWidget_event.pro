@@ -47,6 +47,7 @@ common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
 common EBSD_rawdata, accum_e, accum_z, MParray
 common projections, mcxcircle, mcycircle, mpxcircle, mpycircle
+common Image_common, MCimage, MPimage
 
 
 if (EBSDdata.eventverbose eq 1) then help,event,/structure
@@ -67,46 +68,92 @@ end else begin
   'MCSLIDER':  begin
 		WIDGET_CONTROL, get_value=val,EBSDwidget_s.mcslider
 		EBSDdata.Esel = fix(val[0]) - 1
-		EBSDshowMC,EBSDwidget_s.MCdrawID
+		EBSDshowMC
 	endcase
 
   'DISPEBIN': begin
 		EBSDdata.MCLSum = 0
-		EBSDshowMC,EBSDwidget_s.MCdrawID
+		EBSDshowMC
 		WIDGET_CONTROL, EBSDwidget_s.MCslider, sensitive=1
 	endcase
 
   'DISPESUM': begin
 		EBSDdata.MCLSum = 1
-		EBSDshowMC,EBSDwidget_s.MCdrawID
+		EBSDshowMC
 		WIDGET_CONTROL, EBSDwidget_s.MCslider, sensitive=0
 	endcase
 
   'DISPESUMRGB': begin
 		EBSDdata.MCLSum = 2
-		EBSDshowMC,EBSDwidget_s.MCdrawID
+		EBSDshowMC
 		WIDGET_CONTROL, EBSDwidget_s.MCslider, sensitive=0
 	endcase
 
   'DISPWSUM': begin
 		EBSDdata.MCLSum = 3
+		EBSDshowMC
 		WIDGET_CONTROL, EBSDwidget_s.MCslider, sensitive=0
 	endcase
 
   'LAMBERTS': begin
 		EBSDdata.MCLSmode = 0
-		EBSDshowMC,EBSDwidget_s.MCdrawID
+		EBSDshowMC
 	endcase
 
   'LAMBERTC': begin
 		EBSDdata.MCLSmode = 1
-		EBSDshowMC,EBSDwidget_s.MCdrawID
+		EBSDshowMC
+	endcase
+
+  'SAVEEBSDMC': begin
+; display a filesaving widget in the data folder with the file extension filled in
+		delist = ['jpeg','tiff','bmp']
+		de = delist[EBSDdata.imageformat]
+		filename = DIALOG_PICKFILE(/write,default_extension=de,path=EBSDdata.pathname,title='enter filename without extension')
+		sz = size(MCimage,/dimensions)
+		if (sz[0] eq 3) then begin
+                 case de of
+                    'jpeg': write_jpeg,filename,MCimage,true=1,quality=100
+                    'tiff': begin
+                        rgb = MCimage 
+                        for i=0,2 do begin
+                          slice = reform(rgb[i,*,*])
+                          rgb[i,0:*,0:*] = reverse(slice,2)
+                        end
+                        write_tiff,filename,rgb
+                      endcase
+                    'bmp': write_bmp,filename,MCimage,/RGB
+                   else: MESSAGE,'unknown file format option'
+                  endcase
+		end else begin
+		  im = bytscl(MCimage)
+		  case de of
+		    'jpeg': write_jpeg,filename,im,quality=100
+		    'tiff': write_tiff,filename,reverse(im,2)
+		    'bmp': write_bmp,filename,im
+		   else: MESSAGE,'unknown file format option'
+		  endcase
+		endelse
+	endcase
+
+  'SAVEEBSDMP': begin
+; display a filesaving widget in the data folder with the file extension filled in
+		delist = ['jpeg','tiff','bmp']
+		de = delist[EBSDdata.imageformat]
+		filename = DIALOG_PICKFILE(/write,default_extension=de,path=EBSDdata.pathname,title='enter filename without extension')
+		im = bytscl(MPimage)
+		case de of
+		    'jpeg': write_jpeg,filename,im,quality=100
+		    'tiff': write_tiff,filename,reverse(im,2)
+		    'bmp': write_bmp,filename,im
+		 else: MESSAGE,'unknown file format option'
+		endcase
 	endcase
 
   'CLOSEMC': begin
 ; kill the base widget
-	WIDGET_CONTROL, EBSDwidget_s.MCdisplaybase, /DESTROY
-	  EBSDprint,'EBSD Monte Carlo Widget closed'
+		WIDGET_CONTROL, EBSDwidget_s.MCdisplaybase, /DESTROY
+		  EBSDprint,'EBSD Display Widget closed'
 	endcase
 
   else: MESSAGE, "Event User Value Not Found"
