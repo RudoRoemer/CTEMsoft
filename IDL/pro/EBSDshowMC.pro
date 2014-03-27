@@ -161,5 +161,7 @@ if (EBSDdata.MCMPboth eq 1) then begin
   end 
 endif
 
+stop
+
 end
 

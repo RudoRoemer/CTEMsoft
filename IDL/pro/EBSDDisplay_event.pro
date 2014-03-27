@@ -85,6 +85,10 @@ end else begin
 ; and close any other open widgets
 	endcase
 
+	'DETECTOR': begin
+		EBSDDetectorWidget
+	endcase
+
  	'QUIT': begin
 		EBSDwritepreferences
 ; do a general cleanup of potentially open widgets

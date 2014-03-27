@@ -290,10 +290,11 @@ IMPLICIT NONE
 real(kind=sgl),INTENT(IN)		:: xy(2)
 integer(kind=irg),INTENT(INOUT)	:: ierr
 real(kind=sgl)				:: res(3), q, qq
+real(kind=sgl),parameter		:: eps = 1.0E-6
 
 ierr = 0
 ! check to make sure that the input point lies inside the square of edge length 2 sqrt(pi/2)
-if (maxval(abs(xy)).gt.LPs%sPio2) then
+if ((maxval(abs(xy))-LPs%sPio2).gt.eps) then
   res = (/ 0.0, 0.0, 0.0 /)		
   ierr = 1
 else
@@ -342,10 +343,11 @@ IMPLICIT NONE
 real(kind=dbl),INTENT(IN)		:: xy(2)
 integer(kind=irg),INTENT(INOUT)	:: ierr
 real(kind=dbl)				:: res(3), q, qq
+real(kind=dbl),parameter		:: eps = 1.0D-12
 
 ierr = 0
 ! check to make sure that the input point lies inside the square of edge length 2 sqrt(pi)
-if (maxval(dabs(xy)).gt.LPs%sPio2) then
+if ((maxval(dabs(xy))-LPs%sPio2).gt.eps) then
   res = (/ 0.D0, 0.D0, 0.D0 /)
   ierr = 1   ! input point does not lie inside square with edge length 2 sqrt(pi/2)
 else

@@ -103,6 +103,10 @@ CASE eventval OF
 		end
 	  endcase
 
+  'EBSDEULERCONVENTION': begin
+                WIDGET_CONTROL, get_value=val,EBSDwidget_s.EulerConvention
+                EBSDdata.EulerConvention = fix(val[0])
+	endcase
  
 else: MESSAGE, "Event User Value Not Found"
 

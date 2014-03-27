@@ -41,6 +41,7 @@
 !> @date  09/25/12  MDG 1.3 prepared for multithreaded version by separating computation steps
 !> @date  12/11/12  MDG 2.0 new branch with energy-dependent Lambert projections (cubic only for now)
 !> @date  02/26/14  MDG 3.0 incorporation into git and adapted to new libraries
+!> @date  03/26/14  MDG 3.1 modification of file formats; made compatible with IDL visualization interface
 ! ###################################################################
 ! 
 
@@ -80,6 +81,7 @@ end program CTEMEBSD
 !> @date 08/01/13  MDG 3.0 complete rewrite, eliminated old Lambert projection
 !> @date 09/25/13  MDG 3.1 replaced k-vector code by kvectors module
 !> @date 02/26/14  MDG 4.0 new version
+!> @date 03/26/14  MDG 4.1 adapted to new input and out file formats
 !--------------------------------------------------------------------------
 subroutine ComputeEBSDPatterns(nmlfile)
 
@@ -96,10 +98,9 @@ use diffraction
 use multibeams
 use dynamical
 use timing
+use Lambert
 use quaternions
 use rotations
-use tiff_global
-use tiff_f90
 use noise
 
 IMPLICIT NONE
@@ -115,62 +116,57 @@ integer(kind=irg)	:: numsx 	! number of scintillator points along x
 integer(kind=irg)	:: numsy	! number of scintillator points along y
 real(kind=sgl)		:: xpc		! pattern center x [pixels]
 real(kind=sgl)		:: ypc		! pattern center y [pixels]
-real(kind=sgl)		:: xscale, yscale  ! scale factors (only needed for current stereographic coordinates)
-real(kind=sgl)		:: sigx, sigy 	! forward scattering Gaussian model FWHMs
-real(kind=sgl)		:: posx, posy	! Gaussian peak position components
-real(kind=sgl)		:: contrast	! contrast factor for camera, 1 = max contrast, 0 = no contrast
-character(fnlen)	:: eulerfile, FZfile, prefix, energyfile
+character(fnlen)	:: eulerfile, FZfile, datafile, energyfile
 real(kind=sgl)		:: energymin, energymax ! energy window for energy-filtered EBSD
 integer(kind=irg)	:: numEbins, numzbins, nsx, nsy, nE, Emin, Emax, numelectrons  ! variables used in MC energy file
 real(kind=dbl)		:: EkeV, Ehistmin, Ebinsize, depthmax, depthstep ! enery variables from MC program
-real(kind=dbl)		:: beamcurrent, dwelltime, prefactor
+real(kind=dbl)		:: beamcurrent, dwelltime, prefactor, MCsig, MComega
+character(4)		:: MCmode	! Monte Carlo mode
 
 ! allocatable arrays
 real(kind=sgl),allocatable		:: scin_x(:), scin_y(:) 		! scintillator coordinate ararays [microns]
 real(kind=sgl),allocatable		:: rgx(:,:), rgy(:,:), rgz(:,:)  	! auxiliary arrays needed for interpolation
 real(kind=sgl),allocatable		:: eulang(:,:)				! euler angle array
-real(kind=sgl),allocatable		:: EBSDpattern(:,:),binned(:,:),bgprofile(:,:)		! array with EBSD pattern
-real(kind=sgl),allocatable 		:: sr(:,:,:), srcopy(:,:)		! dynamical and kinematical parts of the FZ intensities
-real(kind=sgl),allocatable		:: imagestack(:,:,:)			! used to store the computed patterns before writing to disk
-integer(kind=irg),allocatable		:: accum_e(:,:,:),accum_e_detector(:,:,:)
+real(kind=sgl),allocatable		:: EBSDpattern(:,:)			! array with EBSD pattern
+real(kind=sgl),allocatable 		:: sr(:,:,:), EkeVs(:)			! dynamical and kinematical parts of the FZ intensities
+real(kind=sgl),allocatable		:: imagestack(:,:,:), z(:,:)		! used to store the computed patterns before writing to disk
+integer(kind=irg),allocatable		:: accum_e(:,:,:)
+real(kind=sgl),allocatable 		:: accum_e_detector(:,:,:)
 
 ! quaternion variables
 real(kind=sgl),allocatable		:: quatang(:,:)
 real(kind=sgl)				:: qq(4), qq1(4), qq2(4), qq3(4)
 
 ! various items
-integer(kind=irg)	:: numeuler	! number of Euler angle triplets in file
-integer(kind=irg)	:: i, j, iang,k		! various counters
+integer(kind=irg)	:: numeuler, numstacks	! number of Euler angle triplets in file
+integer(kind=irg)	:: i, j, iang,k, io_int(6), num_el, MCnthreads, etotal		! various counters
 integer(kind=irg)	:: istat		! status for allocate operations
-integer(kind=irg)	:: nix, niy, npx, npy, offx, offy, binx, biny, imcnt, storemax,firstfile, saveid, ixy(2)	! various parameters
-integer(kind=irg)	:: binning		! camera binning factor ([1,2,4,8] are supported)
+integer(kind=irg)	:: nix, niy, npx, npy, offx, offy, imcnt	! various parameters
 real(kind=sgl),parameter 	:: dtor = 0.0174533  ! convert from degrees to radians
 real(kind=dbl),parameter	:: nAmpere = 6.241D+18   ! Coulomb per second
+integer(kind=irg),parameter	:: storemax = 20	! number of EBSD patterns stored in one output block
 real(kind=sgl)		:: alp, sa, ca		! angle and cosine and sine of alpha
-real(kind=sgl)		:: dc(3)		! direction cosine array
-real(kind=sgl)		:: ix, iy, sx, dx, dxm, dy, dym, dd, EBSDmax, EBSDmin, bindx, rhos, rx, ry	! various parameters
-character(4)		:: filenumber	! used to number files (obviously)
+real(kind=sgl)		:: dc(3), scl		! direction cosine array
+real(kind=sgl)		:: sx, dx, dxm, dy, dym, rhos, io_real(6), x 	! various parameters
+real(kind=sgl)		:: ixy(2)
 character(3)		:: eulerconvention
 character(5)		:: anglemode	! 'quats' or 'euler' for angular input
-character(fnlen)	:: LambertPattern	! string for filename of Lambert projection (tiff format)
-character(fnlen)	:: BackgroundPattern	! string for filename of background intensity pattern
-character(12)		:: mapmode 	! 'PlainLambert' or 'RoscaLambert'  (mode of the input map)
+character(6)		:: sqorhe	! from Master file, square or hexagonal Lmabert projection
+character(8)		:: Masterscversion, MCscversion
+character(fnlen)	:: Masterprogname, Masterxtalname, Masterenergyfile, MCprogname, MCxtalname
 
 ! parameter for random number generator
 integer, parameter 	:: K4B=selected_int_kind(9)      ! used by ran function in math.f90
 integer(K4B) 		:: idum
 
 ! define the IO namelist to facilitate passing variables to the program.
-namelist  / EBSDdata / L, sig, thetac, delta, numsx, numsy, xpc, ypc, eulerfile, FZfile, prefix, binning, &
-                       storemax, eulerconvention, LambertPattern, &
-			BackgroundPattern, anglemode, outputmode, saveid, mapmode, energymin, energymax, &
-			energyfile, beamcurrent, dwelltime, numelectrons
- 
-! spit out some information about the program 
- progname = 'CTEMEBSD.f90'
- progdesc = 'Dynamical EBSD patterns, using precomputed MC and master Lambert projections'
- call CTEMsoft
+namelist  / EBSDdata / L, sig, thetac, delta, numsx, numsy, xpc, ypc, anglemode, eulerfile, eulerconvention, FZfile, &
+			energyfile, datafile, beamcurrent, dwelltime, energymin, energymax
 
+! spit out some information about the program 
+progname = 'CTEMEBSD.f90'
+progdesc = 'Dynamical EBSD patterns, using precomputed MC and master Lambert projections'
+call CTEMsoft
 
 ! define reasonable default values for the namelist parameters
 L		= 20000.0 	! [microns]
@@ -181,30 +177,23 @@ numsx		= 640		! [dimensionless]
 numsy		= 480		! [dimensionless]
 xpc		= 0.0		! [pixels]
 ypc		= 0.0		! [pixels]
-binning		= 8		! [dimensionless]
-storemax	= 100		! every storemax patterns, save them to disk
-outputmode 	= 'tiff'	! output patterns in individual tiff files or single 'data' file
 anglemode 	= 'euler'	! mode of the angular input data ('euler' or 'quats')
+energymin	= 15.0		! minimum energy to consider
+energymax	= 30.0		! maximum energy to consider
 eulerfile	= 'euler.txt'	! filename
 eulerconvention = 'tsl'	! convention for the first Euler angle ['tsl' or 'hkl']
 FZfile		= 'FZ.data'	! filename
-prefix		= 'EBSD_'	! prefix for tiff output filenames
-LambertPattern = 'none'	! don't store a Lambert projectionl if different from 'none', then this is the filename
-BackgroundPattern = 'none'	! don't load a preexisiting background profile file
-saveid		= -1		! -1 if no single image intermediate data needs to be stored, positive with image number
-energymin 	= 0.0		! minimum energy that contributes to the pattern(s)
-energymax 	= 30.0		! maximum energy (both in keV)
 energyfile 	= 'energy.data' ! name of file that contains energy histograms for all scintillator pixels (output from MC program)
+datafile	= 'EBSDout.data'	! output file name
 beamcurrent 	= 14.513D-9	! beam current (actually emission current) in ampere
 dwelltime 	= 100.0D-6	! in seconds
-numelectrons 	= 1.0D9		! number of incident electrons in MonteCarlo simulation (to be removed)
  
 ! then we read the rundata namelist, which may override some of these defaults  
- OPEN(UNIT=dataunit,FILE='CTEMEBSD.nml',DELIM='APOSTROPHE')
+! this could also be replaced (or duplicated) by the ability to directly call
+! this program from IDL ?
+ OPEN(UNIT=dataunit,FILE=trim(nmlfile),DELIM='APOSTROPHE')
  READ(UNIT=dataunit,NML=EBSDdata)
  CLOSE(UNIT=dataunit)
-! if (contrast.lt.0.01) contrast = 0.01
-! if (contrast.gt.1.0) contrast = 1.0
 
 ! this routine should work as follows: the main routine sets up all relevant
 ! variables and geometry, so that the computation of a single EBSD pattern
@@ -301,18 +290,31 @@ call Message("(A)")
 
 open(dataunit,file=trim(energyfile),status='unknown',form='unformatted')
 
+
+! write the program identifier
+ read (dataunit) MCprogname
+! write the version number
+ read (dataunit) MCscversion
+! then the name of the crystal data file
+ read (dataunit) MCxtalname
+! energy information etc...
+
+
+
 read(dataunit) numEbins, numzbins, nsx, nsy, num_el, MCnthreads
 nsx = (nsx - 1)/2
 nsy = (nsy - 1)/2
 
-io_int(1:6) = (/ numEbins, numzbins, nsx, nsy, num_el, MCnthreads /)
-call WriteValue(' NumEbins, numzbins, nsx, nsy, num_el, MCnthreads ',io_int,6,"(5I,',',I)")
-etotal = num_el * MCnthreads
+!io_int(1:6) = (/ numEbins, numzbins, nsx, nsy, num_el, MCnthreads /)
+!call WriteValue(' NumEbins, numzbins, nsx, nsy, num_el, MCnthreads ',io_int,6,"(5I,',',I)")
+etotal = num_el ! * MCnthreads
 
 read (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
-io_real(1:5) = (/ EkeV, Ehistmin, Ebinsize, depthmax, depthstep /)
-call WriteValue(' EkeV, Ehistmin, Ebinsize, depthmax, depthstep ',io_real,5,"(4F10.5,',',F10.5)")
+!io_real(1:5) = (/ EkeV, Ehistmin, Ebinsize, depthmax, depthstep /)
+!call WriteValue(' EkeV, Ehistmin, Ebinsize, depthmax, depthstep ',io_real,5,"(4F10.5,',',F10.5)")
 
+ read (dataunit) MCsig, MComega
+ read (dataunit) MCmode
 
 allocate(accum_e(numEbins,-nsx:nsx,-nsy:nsy),stat=istat)
 read(dataunit) accum_e
@@ -333,26 +335,40 @@ if (Emin.gt.numEbins)  Emin=numEbins
 Emax = nint((energymax - Ehistmin)/Ebinsize) +1
 if (Emax.lt.1)  Emax=1
 if (Emax.gt.numEbins)  Emax=numEbins
-
-write (*,*) 'energy range from bin ',Emin, ' to bin ',Emax
 !====================================
 
+write (*,*) 'shape(accum_e) = ',shape(accum_e)
 
 !====================================
 ! ----- Read energy-dispersed Lambert projections (master pattern)
+! this has been updated on 3/26/14 to accommodate the new EBSDmaster file format
+! but will need to be redone in HDF5 at a later time.
 !====================================
 open(unit=dataunit,file=FZfile,status='old',form='unformatted')
-  read (dataunit)  nE,npx,npy
-! make sure that the number of energybins is the same as for the energy histogram
+  read (dataunit) Masterprogname
+! write the version number
+  read (dataunit) Masterscversion
+! then the name of the crystal data file
+  read (dataunit) Masterxtalname
+! then the name of the corresponding Monte Carlo data file
+  read (dataunit) Masterenergyfile
+! energy information and array size    
+  read (dataunit) npx,npy,nE 
   if (numEbins.ne.nE) then
     write (*,*) 'Energy histogram and Lambert stack have different energy dimension; aborting program'
     write (*,*) 'energy histogram = ',shape(accum_e)
-    write (*,*) 'Lambert stack = ',nE, npx, npy
+    write (*,*) 'Lambert stack = ', nE, npx, npy
     stop
   end if
-  allocate(sr(nE,npx,npy),stat=istat)
+  allocate(sr(-npx:npx,-npy:npy,nE),EkeVs(nE),stat=istat)
+  read (dataunit) EkeVs
+! is this a regular (square) or hexagonal projection ?
+  read (dataunit) sqorhe
+! and finally the results array
   read (dataunit) sr
 close(unit=dataunit,status='keep')
+mess = ' -> completed reading Master EBSD pattern file'
+call Message("(A)")
 !====================================
 
 
@@ -362,17 +378,17 @@ close(unit=dataunit,status='keep')
 ! This needs to be done only once for a given detector geometry
 allocate(scin_x(numsx),scin_y(numsy),stat=istat)
 ! if (istat.ne.0) then ...
-scin_x = ( xpc - ( 1.0 - numsx ) * 0.5 - (/ (i-1, i=1:numsx) /) ) * delta
-scin_y = ( ypc - ( 1.0 - numsy ) * 0.5 - (/ (i-1, i=1:numsy) /) ) * delta
+scin_x = - ( xpc - ( 1.0 - numsx ) * 0.5 - (/ (i-1, i=1,numsx) /) ) * delta
+scin_y = ( ypc - ( 1.0 - numsy ) * 0.5 - (/ (i-1, i=1,numsy) /) ) * delta
 
-! auxilliary angle to rotate between reference frames
+! auxiliary angle to rotate between reference frames
 alp = 0.5 * cPi - (sig - thetac) * dtor
 ca = cos(alp)
 sa = sin(alp)
 
 ! we will need to incorporate a series of possible distortions 
 ! here as well, as described in Gert nolze's paper; for now we 
-! just leave this indicator comment instead
+! just leave this place holder comment instead
 
 ! compute auxilliary interpolation arrays
 allocate(rgx(numsx,numsy), rgy(numsx,numsy), rgz(numsx,numsy), stat=istat)
@@ -389,8 +405,21 @@ do j=1,numsy
    rgz(i,j) = Lc * rhos
   end do
 end do
+
+! normalize the direction cosines.
+allocate(z(numsx,numsy))
+z = sqrt(rgx**2+rgy**2+rgz**2)
+rgx = rgx/z
+rgy = rgy/z
+rgz = rgz/z
+deallocate(z)
 !====================================
 
+!open(dataunit,file='test.data',status='unknown',form='unformatted')
+!write (dataunit) rgx
+!write (dataunit) rgy
+!write (dataunit) rgz
+!close(unit=dataunit,status='keep')
 
 !====================================
 ! ------ create the equivalent detector energy array
@@ -403,45 +432,57 @@ end do
 ! we would load a background pattern from file.  In this version, we are
 ! using the background that was computed by the MC program, and has 
 ! an energy histogram embedded in it, so we need to interpolate this 
-! histogram to the pixels of the scintillator.  In other ords, we need
+! histogram to the pixels of the scintillator.  In other words, we need
 ! to initialize a new accum_e array for the detector by interpolating
 ! from the Lambert projection of the MC results.
 !
-  offx = (npx-1)/2+1
-  offy = offx
-
+  call InitLambertParameters
   allocate(accum_e_detector(numEbins,numsx,numsy), stat=istat)
+
+write (*,*) 'shape(accum_e_detector) = ',shape(accum_e_detector), nsx
+
+! determine the scale factor for the Lambert interpolation; the square has
+! an edge length of 2 x sqrt(pi/2)
+  scl = float(nsx) / LPs%sPio2
+
   do i=1,numsx
     do j=1,numsy
-!  do the coordinate transformation for this detector pixel
+! do the coordinate transformation for this detector pixel
        dc = (/ rgx(i,j),rgy(i,j),rgz(i,j) /)
 ! make sure the third one is positive; if not, switch all 
-       dc = dc/sqrt(sum(dc**2))
        if (dc(3).lt.0.0) dc = -dc
 ! convert these direction cosines to coordinates in the Rosca-Lambert projection
-	ixy = LambertSphereToSquare( dc, istat )
+	ixy = scl * LambertSphereToSquare( dc, istat )
+	x = ixy(1)
+	ixy(1) = ixy(2)
+	ixy(2) = -x
 ! four-point interpolation (bi-quadratic)
-        nix = int(offx+ixy(1))-offx
-        niy = int(offy+ixy(2))-offy
+        nix = int(nsx+ixy(1))-nsx
+        niy = int(nsy+ixy(2))-nsy
         dx = ixy(1)-nix
         dy = ixy(2)-niy
         dxm = 1.0-dx
         dym = 1.0-dy
-        nix = nix+offx
-        niy = niy+offy
- ! interpolate the intensity 
+! interpolate the intensity 
         do k=Emin,Emax 
-          accum_e_detector(k,i,j) =  accum_e(k,nix,niy) * dxm * dym + &
-                           accum_e(k,nix+1,niy) * dx * dym + accum_e(k,nix,niy+1) * dxm * dy + &
-                          accum_e(k,nix+1,niy+1) * dx * dy
+          accum_e_detector(k,i,j) =   accum_e(k,nix,niy) * dxm * dym + &
+                          		accum_e(k,nix+1,niy) * dx * dym + &
+					accum_e(k,nix,niy+1) * dxm * dy + &
+                          		accum_e(k,nix+1,niy+1) * dx * dy
         end do
     end do
   end do 
   accum_e_detector = accum_e_detector * 0.25
 ! and finally, get rid of the original accum_e array which is no longer needed
   deallocate(accum_e)
+  write (*,*) 'detector generation completed'
 !====================================
 
+open(dataunit,file='test.data',status='unknown',form='unformatted')
+write (dataunit) accum_e_detector
+close(unit=dataunit,status='keep')
+
+!
 
 !====================================
 ! init a bunch of parameters
@@ -449,43 +490,28 @@ end do
 ! allocate the array that will hold the computed pattern
 allocate(EBSDpattern(numsx,numsy),stat=istat)
 ! if (istat.ne.0) then ...
-EBSDpattern = 0.0
 idum = -1		! to initialize the random number generator
 
-! set up the binning parameters
-binx = numsx/binning
-biny = numsy/binning
-bindx = 1.0/float(binning)**2
-allocate(binned(binx,biny),stat=istat)
-
-! declare TIFF variables in TIFF_global if needed
-if (outputmode.eq.'tiff') then
- TIFF_nx = binx
- TIFF_ny = biny
- allocate(TIFF_Image(0:TIFF_nx-1,0:TIFF_ny-1))
-end if
 
 ! and allocate an array to store, say, 100 images; after every 100, all of them
 ! are stored in tiff format;  this is done to make sure that disk I/O doesn't
 ! become a bottleneck.
-allocate(imagestack(binx,biny,storemax),stat=istat)
+allocate(imagestack(numsx,numsy,storemax),stat=istat)
 imcnt = 1
 
+write (*,*) 'shape(imagestack) = ',shape(imagestack)
+write (*,*) 'shape(Lambertstack) = ',shape(sr)
 
-prefactor = 0.25D0 * nAmpere * beamcurrent * dwelltime / dble(numelectrons)
-write (*,*) 'intensity prefactor = ',prefactor
-write (*,*) 'max count = ',maxval(accum_e)
+prefactor = 0.25D0 * nAmpere * beamcurrent * dwelltime / dble(num_el)
 !====================================
 
 !====================================
 ! ------ and open the output file for IDL visualization
 !====================================
-firstfile = 1
-if (outputmode.eq.'data') then
- open(unit=dataunit,file=trim(prefix)//'.data',status='replace',form='unformatted',action='write')
-end if
-
-
+open(unit=dataunit,file=trim(datafile),status='unknown',form='unformatted',action='write')
+! we need to write the imagestack dimensions, and also how many of those there are...
+numstacks = numeuler/storemax + 1
+write (dataunit) numsx, numsy, storemax, numstacks, numeuler
 
 !====================================
 ! ------ start the actual image computation loop
@@ -493,50 +519,59 @@ end if
 ! start the timer
 call Time_start
 
-
+! determine the scale factor for the Lambert interpolation; the square has
+! an edge length of 2 x sqrt(pi/2)
+  scl = float(npx) / LPs%sPio2
 
 do iang=1,numeuler
 ! convert the direction cosines to quaternions, include the 
 ! sample quaternion orientation, and then back to direction cosines...
 ! then convert these individually to the correct EBSD pattern location
-        qq1 = conjg(quatang(iang))
-        qq2 = quatang(iang)
+        qq1 = conjg(quatang(1:4,iang))
+        qq2 = quatang(1:4,iang)
+        EBSDpattern = 0.0
+
 	do i=1,numsx
 	    do j=1,numsy
 !  do the coordinate transformation for this euler agle
-              qq = (/ 0.0, rgx(i,j),rgy(i,j),rgz(i,j) \)
+              qq = (/ 0.0, rgx(i,j),rgy(i,j),rgz(i,j) /)
               qq3 = quat_mult(qq2, quat_mult(qq,qq1) )
               dc(1:3) = (/ qq3(2), qq3(3), qq3(4) /) ! these are the direction cosines 
 ! make sure the third one is positive; if not, switch all 
               dc = dc/sqrt(sum(dc**2))
               if (dc(3).lt.0.0) dc = -dc
 ! convert these direction cosines to coordinates in the Rosca-Lambert projection
-	      ixy = LambertSphereToSquare( dc, istat )
+	      ixy = scl * LambertSphereToSquare( dc, istat )
+!	x = ixy(1)
+!	ixy(1) = -ixy(2)
+!	ixy(2) = x
 ! four-point interpolation (bi-quadratic)
-              nix = int(offx+ixy(1))-offx
-              niy = int(offy+ixy(2))-offy
+              nix = int(npx+ixy(1))-npx
+              niy = int(npy+ixy(2))-npy
               dx = ixy(1)-nix
               dy = ixy(2)-niy
               dxm = 1.0-dx
               dym = 1.0-dy
-              nix = nix+offx
-              niy = niy+offy
+!              nix = nix+offx
+!              niy = niy+offy
+              
+!              write (*,*) dc, ixy, nix, niy, i, j
+
  ! interpolate the intensity 
               do k=Emin,Emax 
-                EBSDpattern(i,j) = EBSDpattern(i,j) + accum_e(k,i,j) * ( sr(k,nix,niy) * dxm * dym + &
-                                           sr(k,nix+1,niy) * dx * dym + sr(k,nix,niy+1) * dxm * dy + &
-                                           sr(k,nix+1,niy+1) * dx * dy )
+                EBSDpattern(i,j) = EBSDpattern(i,j) + accum_e_detector(k,i,j) * ( sr(nix,niy,k) * dxm * dym + &
+                                           sr(nix+1,niy,k) * dx * dym + sr(nix,niy+1,k) * dxm * dy + &
+                                           sr(nix+1,niy+1,k) * dx * dy )
               end do
           end do
        end do
-       EBSDpattern = prefactor * EBSDpattern
- 
+
 ! add sampling noise (Poisson noise in this case, so multiplicative, sort of)
-	do i=1,numsx
- 	  do j=1,numsy
-              EBSDpattern(i,j) = POIDEV(EBSDpattern(i,j),idum)
-	  end do
-	end do      
+!	do i=1,numsx
+! 	  do j=1,numsy
+!              EBSDpattern(i,j) = POIDEV(EBSDpattern(i,j),idum)
+!	  end do
+!	end do      
 
 ! we may need to deal with the energy sensitivity of the scintillator as well...
 
@@ -560,63 +595,45 @@ do iang=1,numeuler
 
 
 ! and apply any camera binning
-	if (binning.ne.1) then 
-	  do i=1,numsx,binning
-	    do j=1,numsy,binning
-	        binned(i/binning+1,j/binning+1) = sum(EBSDpattern(i:i+binning-1,j:j+binning-1))
-	    end do
-	  end do  
-	else
-  	  binned = EBSDpattern
-	end if
-! and divide by binning^2
-	binned = binned * bindx
+!	if (binning.ne.1) then 
+!	  do i=1,numsx,binning
+!	    do j=1,numsy,binning
+!	        binned(i/binning+1,j/binning+1) = sum(EBSDpattern(i:i+binning-1,j:j+binning-1))
+!	    end do
+!	  end do  
+!	else
+!  	  binned = EBSDpattern
+!	end if
+!! and divide by binning^2
+!	binned = binned * bindx
 	
 
 ! this must also be removed; we're not going to apply contrast/brightness acling at this point;
 ! we'll allow the user to do this in the visualization code.
 ! and finally, before saving the patterns, apply the contrast function and scale between 0 and 255
-	EBSDmax = maxval(binned)
-	EBSDmin = minval(binned)
-	if (iang.eq.1) write (*,*) 'Limit Intensity Values : ',EBSDmin,EBSDmax
+!	EBSDmax = maxval(binned)
+!	EBSDmin = minval(binned)
+!	if (iang.eq.1) write (*,*) 'Limit Intensity Values : ',EBSDmin,EBSDmax
 !	imagestack(1:binx,1:biny,imcnt) = int(255*(contrast * ( (binned - EBSDmin)/(EBSDmax-EBSDmin) - 1.0) + 1.0))
 
 ! the following is a "best fit" solution without any basis in physics and is used just as a place holder ... 
-	imagestack(1:binx,1:biny,imcnt) = int(35 + (242-35) * ((binned - EBSDmin)/(EBSDmax-EBSDmin))**contrast )
-
+	imagestack(1:numsx,1:numsy,imcnt) = EBSDpattern(1:numsx,1:numsy)
 	imcnt = imcnt+1
-
 
 ! this will need to become an HDF5 formatted file with all the program output
 ! it should be reable in IDL as well as DREAM.3D.
 
 	if ((imcnt.gt.storemax).or.(iang.eq.numeuler)) then 
 	  write (*,*) 'storing EBSD patterns at angle ',iang,' of ',numeuler
-	  if (outputmode.eq.'tiff') then
-! and spit the images out in tiff format ... 
- 	    do i=1,imcnt-1
-     	   	  write (filenumber,"(I4.4)") iang-(imcnt-1)+i
-	   	  TIFF_filename = trim(prefix)//filenumber//'.tiff'
-! allocate memory for image
-! fill the image with whatever data you have (between 0 and 255)
-   	         TIFF_Image(0:TIFF_nx-1,0:TIFF_ny-1) = imagestack(1:TIFF_nx,1:TIFF_ny,i)
-! create the file
- 	 	  call TIFF_Write_File 
-	     end do
-	  else
-	  do i=1,imcnt-1
-	    write (dataunit) char(imagestack(1:binx,1:biny,i))
- 	  end do
-!          close(unit=dataunit,status='keep')
+	  write (dataunit) imagestack*sngl(prefactor)
 	  imcnt = 1
-	 end if
 	end if
 ! that's it for this pattern ... 
 end do
 
-if (outputmode.eq.'data') then 
+write (dataunit) accum_e_detector
+
   close(unit=dataunit,status='keep')
-end if
 
  call Time_stop(numeuler)
 

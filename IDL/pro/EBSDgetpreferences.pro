@@ -72,6 +72,8 @@ if (rs eq 1) then begin
   	'MCylocation': EBSDdata.MCylocation = float(val)
   	'MPxlocation': EBSDdata.MPxlocation = float(val)
   	'MPylocation': EBSDdata.MPylocation = float(val)
+  	'Detectorxlocation': EBSDdata.Detectorxlocation = float(val)
+  	'Detectorylocation': EBSDdata.Detectorylocation = float(val)
 
     else: MESSAGE,'unknown option for preferences file'
     endcase

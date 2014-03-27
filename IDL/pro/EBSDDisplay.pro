@@ -4,6 +4,7 @@
 @EBSDreaddatafile		; read geometry and data files
 @EBSDMCDisplayWidget		; MC display widget
 @EBSDMCDisplayWidget_event	; MC display widget event handler
+@EBSDDetectorWidget		; detector widget
 @EBSDevent			; event handler for button groups
 @EBSDshowMC			; display a Lambert projection image
 @EBSDgetpreferences		; read preferences file
@@ -130,9 +131,29 @@ EBSDwidget_s = {widgetstruct, $
 	xtalname: long(0), $			; file name for crystal structure data
 	mploadfile: long(0), $                  ; load file button
 
+	; detector parameter widget ids
+	detL: long(0), $			; sample scintillator distance [microns]
+	dettheta: long(0), $			; detector tilt angle [degrees]
+	detdelta: long(0), $			; detector pixel size [microns]
+	detnumsx: long(0), $			; number of x-pixels
+	detnumsy: long(0), $			; number of y-pixels
+	detxpc: long(0), $			; x -pattern center [pixels]
+	detypc: long(0), $			; y -pattern center [pixels]
+	detbinning: long(0), $			; binning
+	detbeamcurrent: long(0), $		; beam current [A]
+	detdwelltime: long(0), $		; dwell time [s]
+	detphi1: long(0), $			; phi1 Euler angle 
+	detphi: long(0), $			; phi Euler angle 
+	detphi2: long(0), $			; phi2 Euler angle 
+	EulerConvention: long(0), $		; Euler angle convention for phi2 (TSL or HKL)
+	BGmode: long(0), $			; background/full display mode
+	EBSDminenergylist: long(0), $		; min energy widget
+	EBSDmaxenergylist: long(0), $		; max energy widget
+
 	; other collected items
 	MCdisplaybase: long(0), $		; Monte Carlo display base
 	MPdisplaybase: long(0), $		; Master Pattern & Monte Carlo display base
+	detectorbase: long(0), $		; detector base widget
 	status:long(0), $                       ; status window
 	logfile: long(0), $			; logfile toggle widget ID
 	detector:long(0), $                     ; detector widget
@@ -194,6 +215,25 @@ EBSDdata = {EBSDdatastruct, $
 	mpscversion: '', $ 			; source code version number
 	mpdatadims: lon64arr(3), $		; dimensions of raw data array
 
+	; detector parameters
+	detL: float(0), $			; scintillator - sample distance [microns]
+	dettheta: float(0), $			; detector tilt angle [degrees]
+	detdelta: float(0), $			; scintillator pixel size [microns]
+	detnumsx: long(0), $			; number of x-pixels
+	detnumsy: long(0), $			; number of y-pixels
+	detxpc: float(0), $			; x-pattern center [pixels]
+	detypc: float(0), $			; y-pattern center [pixels]
+	detbinning: long(0), $			; binning
+	detbeamcurrent: float(0), $		; beam current [A]
+	detdwelltime: float(0), $		; dwell time [s]
+	detphi1: float(0), $			; phi1 Euler angle 
+	detphi: float(0), $			; phi Euler angle 
+	detphi2: float(0), $			; phi2 Euler angle 
+	EulerConvention: long(0), $		; Euler angle convention (TSL = 0, HKL = 2)
+	BGmode: long(0), $			; background/full pattern display mode
+	Eminsel: long(0), $			; min energy selection 
+	Emaxsel: long(0), $			; max energy selection 
+
 	; then general program parameters
 	eventverbose: fix(0), $			; used for event debugging (0=off, 1=on)
 	scversion: '', $			; source code version number
@@ -227,6 +267,8 @@ EBSDdata = {EBSDdatastruct, $
 	MCylocation: float(100.0), $		; Monte Carlo widget y-location 
 	MPxlocation: float(600.0), $		; Master Pattern widget x-location (can be modified and stored in preferences file)
 	MPylocation: float(100.0), $		; Master Pattern widget y-location 
+	Detectorxlocation: float(600.0), $	; detector widget x-location (can be modified and stored in preferences file)
+	Detectorylocation: float(100.0), $	; detector widget y-location 
         scrdimx:0L, $                           ; display area x size in pixels 
         scrdimy:0L $                            ; display area y size in pixels 
         }
