@@ -128,6 +128,7 @@ EBSDwidget_s = {widgetstruct, $
 	mpimx: long(0), $			; x-pixels N as in (2N+1)
 	mpimy: long(0), $			; y-pixels (should be equal to mpimx)
 	mpgridmode: long(0), $			; Lambert grid mode
+	asymunit: long(0), $			; widget for asymmetric unit position selection
 	xtalname: long(0), $			; file name for crystal structure data
 	mploadfile: long(0), $                  ; load file button
 
@@ -208,6 +209,9 @@ EBSDdata = {EBSDdatastruct, $
 	mpfilesize: long(0), $			; size (in bytes) of master pattern file
 	mpimx: long(0), $			; number of x-pixels in master pattern (N in 2N+1)
 	mpimy: long(0), $			; same along y
+	numset: long(0), $			; number of positions in asymmetric unit
+	Asymsel: long(-1), $			; which asymmetric unit position to display?
+	atnum: lonarr(250), $			; number of atoms in asymmetric unit 
 	mpenergynumbin: long(0), $		; number of energy bins (may be different from MC file)
 	mpgridmode: '', $			; 'hex' or 'squ' for Lambert grid type
 	xtalname: '', $				; crystal structure filename

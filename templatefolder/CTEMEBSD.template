@@ -1,0 +1,35 @@
+&EBSDdata
+! template file for the CTEMEBSD program
+! Please refer to the figures in the EBSD manual for details on the parameters below
+!
+! distance between scintillator and illumination point [microns]
+L = 15250.0
+! tilt angle of the sample (measured from horizontal, [degrees])
+sig = 70.0
+! tilt angle of the camera (positive below horizontal, [degrees])
+thetac = 0.0
+! CCD pixel size on the scintillator surface [microns]
+delta = 49.375
+! number of CCD pixels along x and y
+numsx = 640
+numsy = 480
+! pattern center coordinates in units of pixels
+xpc = 3.57
+ypc = 113.45
+! orientation type in input file 'euler' or 'quaternion'
+anglemode = 'euler'
+! name of euler angle file (or quaternions)
+eulerfile = 'testeuler.txt'
+! 'tsl' or 'hkl' Euler angle convention parameter
+eulerconvention = 'hkl'
+! name of EBSD master output file
+FZfile = '/Volumes/Drive2/playarea/EBSD/Cu_master.data'
+! name of Monte Carlo output file
+energyfile = '/Volumes/Drive2/playarea/EBSD/Cu_MC.data'
+! name of output file
+datafile = 'EBSDtest.data'
+! incident beam current [A]
+beamcurrent = 15.D-9
+! beam dwell time [s]
+dwelltime = 1.0D-4
+/

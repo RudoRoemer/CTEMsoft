@@ -318,6 +318,7 @@ read (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
 
 allocate(accum_e(numEbins,-nsx:nsx,-nsy:nsy),stat=istat)
 read(dataunit) accum_e
+num_el = sum(accum_e)
 
 ! we do not need the other array in this energyfile
 ! read(dataunit) accum_z    ! we only need this array for the depth integrations
@@ -338,6 +339,7 @@ if (Emax.gt.numEbins)  Emax=numEbins
 !====================================
 
 write (*,*) 'shape(accum_e) = ',shape(accum_e)
+write (*,*) 'energy range (Emin, Emax) = ', Emin, Emax, num_el
 
 !====================================
 ! ----- Read energy-dispersed Lambert projections (master pattern)
@@ -478,6 +480,8 @@ write (*,*) 'shape(accum_e_detector) = ',shape(accum_e_detector), nsx
   write (*,*) 'detector generation completed'
 !====================================
 
+num_el = nint(sum(accum_e_detector))
+
 open(dataunit,file='test.data',status='unknown',form='unformatted')
 write (dataunit) accum_e_detector
 close(unit=dataunit,status='keep')
@@ -503,6 +507,8 @@ write (*,*) 'shape(imagestack) = ',shape(imagestack)
 write (*,*) 'shape(Lambertstack) = ',shape(sr)
 
 prefactor = 0.25D0 * nAmpere * beamcurrent * dwelltime / dble(num_el)
+write (*,*) 'prefactor = ',prefactor
+
 !====================================
 
 !====================================
@@ -542,9 +548,6 @@ do iang=1,numeuler
               if (dc(3).lt.0.0) dc = -dc
 ! convert these direction cosines to coordinates in the Rosca-Lambert projection
 	      ixy = scl * LambertSphereToSquare( dc, istat )
-!	x = ixy(1)
-!	ixy(1) = -ixy(2)
-!	ixy(2) = x
 ! four-point interpolation (bi-quadratic)
               nix = int(npx+ixy(1))-npx
               niy = int(npy+ixy(2))-npy
@@ -552,11 +555,6 @@ do iang=1,numeuler
               dy = ixy(2)-niy
               dxm = 1.0-dx
               dym = 1.0-dy
-!              nix = nix+offx
-!              niy = niy+offy
-              
-!              write (*,*) dc, ixy, nix, niy, i, j
-
  ! interpolate the intensity 
               do k=Emin,Emax 
                 EBSDpattern(i,j) = EBSDpattern(i,j) + accum_e_detector(k,i,j) * ( sr(nix,niy,k) * dxm * dym + &
@@ -617,11 +615,11 @@ do iang=1,numeuler
 !	imagestack(1:binx,1:biny,imcnt) = int(255*(contrast * ( (binned - EBSDmin)/(EBSDmax-EBSDmin) - 1.0) + 1.0))
 
 ! the following is a "best fit" solution without any basis in physics and is used just as a place holder ... 
-	imagestack(1:numsx,1:numsy,imcnt) = EBSDpattern(1:numsx,1:numsy)
+	imagestack(1:numsx,1:numsy,imcnt) = prefactor * EBSDpattern(1:numsx,1:numsy)
 	imcnt = imcnt+1
 
 ! this will need to become an HDF5 formatted file with all the program output
-! it should be reable in IDL as well as DREAM.3D.
+! it should be readable in IDL as well as DREAM.3D.
 
 	if ((imcnt.gt.storemax).or.(iang.eq.numeuler)) then 
 	  write (*,*) 'storing EBSD patterns at angle ',iang,' of ',numeuler

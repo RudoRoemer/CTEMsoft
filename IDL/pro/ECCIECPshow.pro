@@ -56,6 +56,10 @@ if (data.progmode eq 'trace') then begin
 end else begin
   dkt = data.dkt
 endelse
+
+dkt = 1.0
+
+
 ECPimage = bytarr(3,ECPdata.datadims[0],ECPdata.datadims[1])
 
 ; do all the drawing in the Z-buffer
@@ -78,7 +82,7 @@ if keyword_set(point) then begin
   if (cnt ne 0) then ignore = q[0]
   plots,ECPdata.xmid + bx*ECPdata.dgrid*dkt, ECPdata.xmid + by*ECPdata.dgrid*dkt,psym=2,/dev,color=255
   if (data.avrad ne 0.0) then begin
-    rad = data.avrad*ECPdata.dgrid*data.dkt
+    rad = data.avrad*ECPdata.dgrid *data.dkt
     th = findgen(180)*2.0*!dtor
     ct = cos(th)
     st = sin(th)

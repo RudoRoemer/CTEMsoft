@@ -1,6 +1,4 @@
 &EBSDmastervars
-! crystal structure filename; must be defined here
-xtalname = 'undefined'
 ! smallest d-spacing to take into account [nm]
 dmin = 0.015
 ! number of pixels along x-direction of the square master pattern  (2*npx+1 = total number)
@@ -10,7 +8,4 @@ outname	= '/some/folder/somewhere/EBSDmasterout.data'
 ! name of the energy statistics file produced by CTEMMC program [note that
 ! this file will also contain parameters such as the microscope accelerating voltage]
 energyfile = '/some/folder/somewhere/MCoutput.data'
-! if the user wants only one specific energy, then set this variable to the relevant number
-! otherwise comment out or set to -1
-Esel = -1
 /

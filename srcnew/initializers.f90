@@ -139,7 +139,7 @@ real(kind=sgl)                             :: dhkl, io_real(3), ddt
 ! next, we compute the overall lookup table cell%LUT; we do not, at this point, create a 
 ! list of linked reflections; in the old code, this was done at the same time, but it appears
 ! it is better to decouple these two computations. In this new approach, we'll compute a much
-! shorted linked list based on the incident wave vector direction.
+! shorter linked list based on the incident wave vector direction.
 
 ! first, we deal with the transmitted beam
  gg = (/ 0,0,0 /)
@@ -250,6 +250,7 @@ integer(kind=irg)				:: io_int(3), gshort(3), gp(3)
 ! transmitted beam has excitation error zero
   gg = (/ 0,0,0 /)
   call AddReflection( gg )   ! this guarantees that 000 is always the first reflection
+  rltail%sg = 0.0
 
 ! now compute |sg|/|U_g|/lambda for the other allowed reflections; if this parameter is less than
 ! the threshhold, rBethe_i, then add the reflection to the list of potential reflections

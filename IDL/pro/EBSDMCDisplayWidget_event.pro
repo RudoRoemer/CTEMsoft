@@ -45,7 +45,7 @@ common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
-common EBSD_rawdata, accum_e, accum_z, MParray
+common EBSD_rawdata, accum_e, accum_z, MParray, MParraysum
 common projections, mcxcircle, mcycircle, mpxcircle, mpycircle
 common Image_common, MCimage, MPimage
 
@@ -102,6 +102,12 @@ end else begin
 
   'LAMBERTC': begin
 		EBSDdata.MCLSmode = 1
+		EBSDshowMC
+	endcase
+
+  'ASYMPOS':  begin
+		val = event.index
+		if (val eq 0) then EBSDdata.Asymsel = -1 else EBSDdata.Asymsel = fix(val)-1
 		EBSDshowMC
 	endcase
 

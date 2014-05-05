@@ -46,6 +46,7 @@
 !> @date 11/27/01 MDG 2.1 added kind support
 !> @date 03/19/13 MDG 3.0 added atomic weights 
 !> @date 01/10/14 MDG 4.0 new version
+!> @date 04/29/14 MDG 4.1 constants updated from NIST physical constants tables
 !--------------------------------------------------------------------------
 
 module constants
@@ -68,11 +69,11 @@ IMPLICIT NONE
 !> cAvogadro	= Avogadro's constant [mol^-1]
 
 real(kind=dbl), parameter :: cPi=3.141592653589793238D0, cLight = 299792458.D0, &
-                             cPlanck = 6.626075D-34, cBoltzmann = 1.380658D-23,  &
-                             cPermea = 1.2566371D-6, cPermit = 8.854187817D-12, &
-                             cCharge = 1.602177D-19, cRestmass = 9.109389D-31, &
-                             cMoment = 9.284770D-24, cJ2eV = 1.602177D-19, &
-			      cAvogadro = 6.0221413D23
+                             cPlanck = 6.62606957D-34, cBoltzmann = 1.3806488D-23,  &
+                             cPermea = 1.2566370614D-6, cPermit = 8.854187817D-12, &
+                             cCharge = 1.602176565D-19, cRestmass = 9.10938291D-31, &
+                             cMoment = 9.28476430D-24, cJ2eV = 1.602176565D-19, &
+			      cAvogadro = 6.02214129D23
 
 !> element symbols (we'll do 1-98 for all parameter lists)
 character(2), parameter :: ATOM_sym(98)=(/' H','He','Li','Be',' B',' C',' N',' O',' F','Ne', &

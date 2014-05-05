@@ -49,7 +49,7 @@ common EBSD_data_common, EBSDdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
 common Image_common, MCimage, MPimage
-common EBSD_rawdata, accum_e, accum_z, MParray
+common EBSD_rawdata, accum_e, accum_z, MParray, MParraysum
 common projections, mcxcircle, mcycircle, mpxcircle, mpycircle
 
 wset,EBSDwidget_s.MCdrawID
@@ -131,13 +131,18 @@ end
 if (EBSDdata.MCMPboth eq 1) then begin
   wset,EBSDwidget_s.MPdrawID
   if (EBSDdata.MCLSum eq 0) then begin
-    image = reform(MParray[*,*,EBSDdata.Esel])
+    if (EBSDdata.Asymsel lt 0) then image = reform(MParraysum[*,*,EBSDdata.Esel]) else image = reform(MParray[*,*,EBSDdata.Esel,EBSDdata.Asymsel])
   end 
 
   if (EBSDdata.MCLSum eq 1) then begin
 ; here, we want to display the energy-weighted master pattern as an example
-    image = MParray[0:*,0:*,0] * congrid(reform(float(accum_e[0,0:*,0:*])),2*EBSDdata.MPimx+1,2*EBSDdata.MPimy+1)
-    for i=1,EBSDdata.MCenergynumbin-1 do image += MParray[0:*,0:*,i] * congrid(reform(float(accum_e[i,0:*,0:*])),2*EBSDdata.MPimx+1,2*EBSDdata.MPimy+1)
+    if (EBSDdata.Asymsel lt 0) then begin
+      image = MParraysum[0:*,0:*,0] * congrid(reform(float(accum_e[0,0:*,0:*])),2*EBSDdata.MPimx+1,2*EBSDdata.MPimy+1)
+      for i=1,EBSDdata.MCenergynumbin-1 do image += MParraysum[0:*,0:*,i] * congrid(reform(float(accum_e[i,0:*,0:*])),2*EBSDdata.MPimx+1,2*EBSDdata.MPimy+1)
+    end else begin
+      image = MParray[0:*,0:*,0,EBSDdata.Asymsel] * congrid(reform(float(accum_e[0,0:*,0:*])),2*EBSDdata.MPimx+1,2*EBSDdata.MPimy+1)
+      for i=1,EBSDdata.MCenergynumbin-1 do image += MParray[0:*,0:*,i,EBSDdata.Asymsel] * congrid(reform(float(accum_e[i,0:*,0:*])),2*EBSDdata.MPimx+1,2*EBSDdata.MPimy+1)
+    end
   end
 
   if (EBSDdata.MCLSum eq 2) then begin   ; RGB display, for now left blank
@@ -155,13 +160,12 @@ if (EBSDdata.MCMPboth eq 1) then begin
 
   if (EBSDdata.MCLSum ne 2) then begin
     tvscl, image 
-    WIDGET_CONTROL, set_value=string(min(image),format="(F9.1)"), EBSDwidget_s.MPmin
-    WIDGET_CONTROL, set_value=string(max(image),format="(F9.1)"), EBSDwidget_s.MPmax
+    WIDGET_CONTROL, set_value=string(min(image),format="(E12.4)"), EBSDwidget_s.MPmin
+    WIDGET_CONTROL, set_value=string(max(image),format="(E12.4)"), EBSDwidget_s.MPmax
     MPimage = image
   end 
 endif
 
-stop
 
 end
 

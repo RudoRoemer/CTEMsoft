@@ -390,20 +390,21 @@ real(kind=dbl), parameter :: cPi=3.141592653589D0, cAvogadro = 6.0221415D+23, cD
  pre =  at_wt/cAvogadro/density
  prealpha = 3.4D-3 * Ze**(0.67) 
  J = (9.76D0 * Ze+58.5D0 / Ze**(0.19D0) )*1.0D-3 / 1.166
+ J = 1.D0/J
  predEds = -78500.0D0 * density * Ze / at_wt 
 
 ! initialize max number of scattering events along a single trajectory
  num = 5000
  tpi = 2.D0 * cPi
  tano = tan(omega * cDtoR)
- 
+
 ! parameter for the Lambert projection scaling
  delta = dble(nx) / LPs%sPio2
 
 ! beam direction cosines
  cxstart = dcos( (90.D0-sig) * cDtoR)
  czstart = -dsin( (90.D0-sig) * cDtoR)
-
+ 
 ! and here is the main loop
  mainloop: do el = 1,num_el
 
@@ -433,7 +434,7 @@ real(kind=dbl), parameter :: cPi=3.141592653589D0, cAvogadro = 6.0221415D+23, cD
   traj = 0
   trajloop: do while (traj.lt.num)
 ! Subtract the energy that is lost for path length lambda.
-    dEds = predEds * alog( Ec / J+1.0D0 ) / Ec
+    dEds = predEds * alog( Ec * J + 1.0D0 ) / Ec
     dE = dEds * step
     Ec = Ec+dE
 
@@ -443,7 +444,7 @@ real(kind=dbl), parameter :: cPi=3.141592653589D0, cAvogadro = 6.0221415D+23, cD
 !  Find the angle the electron is deflected through by the scattering event.
     rr = rng_uniform(rngt)
     cphi = 1.D0-2.D0*alpha*rr/(1.D0+alpha-rr)
-    sphi = dsqrt(1.D0-cphi*cphi)
+    sphi = dsin(dacos(cphi)) !  dsqrt(1.D0-cphi*cphi)
 
 ! Find the azimuthal scattering angle psi
     rr = rng_uniform(rngt)
@@ -451,6 +452,7 @@ real(kind=dbl), parameter :: cPi=3.141592653589D0, cAvogadro = 6.0221415D+23, cD
     spsi = dsin(psi)
     cpsi = dcos(psi)
 
+! compute the new direction cosines
 ! From MCML paper START
     if (dabs(cxyz(3)).gt.0.99999D0) then
       cxyzp = (/ sphi * cpsi, sphi * spsi, (cxyz(3)/dabs(cxyz(3))) * cphi /)
@@ -486,6 +488,7 @@ real(kind=dbl), parameter :: cPi=3.141592653589D0, cAvogadro = 6.0221415D+23, cD
 !    if (xyzn(3).gt.0.D0) then    ! old line
         bsct = bsct + 1  ! yes, we have a back-scattered electron
 
+	
 ! Let's figure out where in the Lambert array this point should be projected ...   
 ! We know the direction cosines were normalized, so no reason to check the error flag
 	dxy = delta * LambertSphereToSquare( cxyzp, ierr )       
@@ -521,6 +524,7 @@ real(kind=dbl), parameter :: cPi=3.141592653589D0, cAvogadro = 6.0221415D+23, cD
   end do trajloop
 
 end do mainloop
+
 
 end subroutine single_run
 

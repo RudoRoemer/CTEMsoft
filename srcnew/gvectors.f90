@@ -66,7 +66,7 @@ integer(kind=ish),allocatable	:: refdone(:,:,:)	! used to keep track of which re
 type BetheParameterType
         real(kind=sgl)                :: c1 = 20.0_sgl
         real(kind=sgl)                :: c2 = 40.0_sgl
-        real(kind=sgl)                :: c3 = 250.0_sgl
+        real(kind=sgl)                :: c3 = 1000.0_sgl
         real(kind=sgl)                :: sgdbdiff = 0.05_sgl
 	real(kind=sgl)			:: weakcutoff = 0.0_sgl
 	real(kind=sgl)			:: cutoff = 0.0_sgl
@@ -288,7 +288,7 @@ end subroutine Printrlp
 !> @brief tag weak and strong reflections in cell%reflist
 !
 !> @details This routine steps through the cell%reflist linked list and 
-!> determine for each reflection whether it is strong or weak or should be
+!> determines for each reflection whether it is strong or weak or should be
 !> ignored.  Strong and weak reflections are then linked in a new list via
 !> the nexts and nextw pointers, along with the nns and nnw counters.
 !> This routine produces no output parameters, and makes use of the

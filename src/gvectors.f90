@@ -202,7 +202,7 @@ integer(kind=irg)  		:: istat
  rltail%famnum = 0				! init this value for Prune_ReflectionList
  rltail%Ucgmod = cabs(rlp%Ucg)   		! added on 2/29/2012 for Bethe potential computations
  rltail%sangle = 1000.0*dble(CalcDiffAngle(hkl(1),hkl(2),hkl(3)))    ! added 4/18/2012 for EIC project HAADF/BF tomography simulations
- rltail%thetag = rlp%Vphase                   ! added 12/104/2013 for CTEMECCI program
+ rltail%thetag = rlp%Vphase                   ! added 12/14/2013 for CTEMECCI program
 
 end subroutine AddReflection
 

@@ -56,6 +56,8 @@ end else begin
   dkt = data.dkt
 endelse
 
+dkt = 1.0
+
 if (data.eventverbose eq 1) then help,event,/structure
 
 ; intercept the image widget movement here 

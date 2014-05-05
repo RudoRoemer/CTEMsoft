@@ -40,7 +40,7 @@
 !> module once I realized that I had several versions of the Calckvectors subroutine.
 !> From now on, there is only one single version that can deal with all possible cases.
 ! 
-!> @date   04/29/13 MDG 1.0 original
+!> @date   04/29/13 MDG 1.0 original 
 !--------------------------------------------------------------------------
 module kvectors
 

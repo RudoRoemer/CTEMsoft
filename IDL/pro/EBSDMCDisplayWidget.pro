@@ -44,7 +44,20 @@ common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
 
 ; the next common block contains all the raw data needed to generate the EBSD patterns
-common EBSD_rawdata, accum_e, accum_z, MParray
+common EBSD_rawdata, accum_e, accum_z, MParray, MParraysum
+
+
+ATOMsym=[' H','He','Li','Be',' B',' C',' N',' O',' F','Ne', $
+         'Na','Mg','Al','Si',' P',' S','Cl','Ar',' K','Ca', $
+         'Sc','Ti',' V','Cr','Mn','Fe','Co','Ni','Cu','Zn', $
+         'Ga','Ge','As','Se','Br','Kr','Rb','Sr',' Y','Zr', $
+         'Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn', $
+         'Sb','Te',' I','Xe','Cs','Ba','La','Ce','Pr','Nd', $
+         'Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb', $
+         'Lu','Hf','Ta',' W','Re','Os','Ir','Pt','Au','Hg', $
+         'Tl','Pb','Bi','Po','At','Rn','Fr','Ra','Ac','Th', $
+         'Pa',' U','Np','Pu','Am','Cm','Bk','Cf']
+
 
 ;------------------------------------------------------------
 ; make sure that this program isn't already running
@@ -128,6 +141,23 @@ EBSDwidget_s.MCenergyval =  WIDGET_TEXT(block2, $
 			XSIZE=10, $
 			YSIZE=1, $
 			/ALIGN_RIGHT)
+
+; in the same block we also generate a list of all the asymmetric unit positions
+; along with a SUM option to display the total EBSD pattern
+vals = strarr(EBSDdata.numset+1)
+vals[0] = 'SUM all sites'
+for i=1,EBSDdata.numset do vals[i] = string(i,format="(I3)")+' '+ATOMsym[EBSDdata.atnum[i-1]-1]+' ('+string(EBSDdata.atnum[i-1],format="(I2)")+')'
+
+EBSDwidget_s.asymunit = WIDGET_DROPLIST(block2, $
+			EVENT_PRO='EBSDMCDisplayWidget_event', $
+			VALUE=vals,$
+			/FRAME, $
+			UVALUE='ASYMPOS', $
+			/ALIGN_LEFT)
+
+WIDGET_CONTROL, set_droplist_select=0, EBSDwidget_s.asymunit
+
+
 ;------------------------------------------------------------
 block2 = WIDGET_BASE(block1, /ROW, /ALIGN_CENTER)
 block3 = WIDGET_BASE(block2, /COLUMN, /ALIGN_CENTER)

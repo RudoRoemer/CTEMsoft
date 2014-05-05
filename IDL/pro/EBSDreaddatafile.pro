@@ -45,7 +45,7 @@ common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
 
 ; the next common block contains all the raw data needed to generate the EBSD patterns
-common EBSD_rawdata, accum_e, accum_z, MParray
+common EBSD_rawdata, accum_e, accum_z, MParray, MParraysum
 
 
   EBSDprint,' ',/blank
@@ -92,12 +92,13 @@ if keyword_set(MPFILE) then begin
     EBSDprint,'MC filename = ->'+EBSDdata.mcfilename+'<-'
   WIDGET_CONTROL, SET_VALUE=EBSDdata.mcfilename, EBSDwidget_s.mcfilename
 
-; npx, npy, numEbins
-  dims = lonarr(3)
+; npx, npy, numEbins, numset
+  dims = lonarr(4)
   readu,1,dims
   EBSDdata.mpimx = dims[0]
   EBSDdata.mpimy = dims[1]
   EBSDdata.mcenergynumbin = dims[2]
+  EBSDdata.numset= dims[3]
 
   WIDGET_CONTROL, SET_VALUE=string(2*dims[0]+1,format="(I5)"), EBSDwidget_s.mpimx
   WIDGET_CONTROL, SET_VALUE=string(2*dims[1]+1,format="(I5)"), EBSDwidget_s.mpimy
@@ -107,6 +108,11 @@ if keyword_set(MPFILE) then begin
   EkeVs = fltarr(EBSDdata.mcenergynumbin)
   readu,1,EkeVs
 
+; atomic numbers for asymmetric unit
+  atnum = lonarr(EBSDdata.numset)
+  readu,1,atnum
+  EBSDdata.atnum(0:EBSDdata.numset-1) = atnum(0:EBSDdata.numset-1)
+
 ; Lambert projection type
   Ltype = bytarr(6)
   readu,1,Ltype
@@ -115,17 +121,18 @@ if keyword_set(MPFILE) then begin
   WIDGET_CONTROL, SET_VALUE=EBSDdata.mpgridmode, EBSDwidget_s.mpgridmode
 
 ; and finally the results array
-  MParray = fltarr(2L*EBSDdata.mpimx+1L,2L*EBSDdata.mpimy+1L,EBSDdata.mcenergynumbin)
+  MParray = fltarr(2L*EBSDdata.mpimx+1L,2L*EBSDdata.mpimy+1L,EBSDdata.mcenergynumbin,EBSDdata.numset)
   readu,1,MParray
+  MParraysum = total(MParray,4)
 
   sz = size(MParray,/dimensions)
-    EBSDprint,' Size of MParray data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)")+' x'+string(sz[2],format="(I5)")
+    EBSDprint,' Size of MParray data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") +' x'+string(sz[3],format="(I5)")
 
 ; and close the file
   close,1
 
 ; and initialize the coordinate arrays for the Lambert transformation
-  Core_LambertS2C,reform(MParray[*,*,0]),/mp
+  Core_LambertS2C,reform(MParray[*,*,0,0]),/mp
 
    WIDGET_CONTROL, EBSDwidget_s.MPbutton, sensitive=1
    WIDGET_CONTROL, EBSDwidget_s.detector, sensitive=1

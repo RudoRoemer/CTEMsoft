@@ -49,7 +49,7 @@ module symmetry
 
 use local
 use symmetryvars
-
+ 
 contains
 
 !--------------------------------------------------------------------------
