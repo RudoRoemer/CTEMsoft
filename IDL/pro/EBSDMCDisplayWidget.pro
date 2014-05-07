@@ -252,12 +252,8 @@ if (EBSDdata.MCMPboth eq 1) then begin
 	EBSDwidget_s.MPdrawID = drawID
 endif
 
-; and next we draw the first entry of the accum_e array
-wset,EBSDwidget_s.MCdrawID
-tvscl,reform(accum_e[0,*,*])
-
-; add a min/max indicator as well as a save button
-
+EBSDdata.MCLSum = 0
+EBSDshowMC
 
 ; and hand over control to the xmanager
 XMANAGER,"EBSDMCDisplayWidget",EBSDwidget_s.MCdisplaybase,/NO_BLOCK

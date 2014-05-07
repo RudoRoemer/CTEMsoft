@@ -56,7 +56,7 @@ if (EBSDdata.eventverbose eq 1) then help,event,/structure
 if (event.id eq EBSDwidget_s.MCdisplaybase) then begin
   EBSDdata.MCxlocation = event.x
   EBSDdata.MCylocation = event.y-25
-    EBSDprint,' Window moved to location ('+string(fix(EBSDdata.MCxlocation),format="(I4)")+','+string(fix(EBSDdata.MCylocation),format="(I4)")+')'
+    Core_Print,' Window moved to location ('+string(fix(EBSDdata.MCxlocation),format="(I4)")+','+string(fix(EBSDdata.MCylocation),format="(I4)")+')'
 end else begin
 
   WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
@@ -159,7 +159,7 @@ end else begin
   'CLOSEMC': begin
 ; kill the base widget
 		WIDGET_CONTROL, EBSDwidget_s.MCdisplaybase, /DESTROY
-		  EBSDprint,'EBSD Display Widget closed'
+		  Core_Print,'EBSD Display Widget closed'
 	endcase
 
   else: MESSAGE, "Event User Value Not Found"

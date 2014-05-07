@@ -26,30 +26,27 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDprint.pro
+; CTEMsoft2013:Core_Print.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: EBSDprint.pro
+; PROGRAM: Core_Print.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief Appends a string to the status text widget
+;> @brief Print a message to the log/status window and, if necessary, to the log file
 ;
-;> @date 09/25/13 MDG 1.0 first attempt 
+;> @date 05/07/14 MDG 1.0 first attempt at a user-friendly interface
 ;--------------------------------------------------------------------------
-pro EBSDprint,output,blank=blank
-;
-;------------------------------------------------------------
-; common blocks
-common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, EBSDdata
+pro Core_Print, output, blank=blank
 
-WIDGET_CONTROL, SET_VALUE=output, EBSDwidget_s.status, /APPEND
-if keyword_set(blank) then WIDGET_CONTROL, SET_VALUE=' ', EBSDwidget_s.status, /APPEND
+common CommonCore, status, logmode, logunit
 
-if (EBSDdata.logmode eq 1) then begin
-  printf,EBSDdata.logunit,output
-  if keyword_set(blank) then printf,EBSDdata.logunit,''
+WIDGET_CONTROL, SET_VALUE=output, status, /APPEND
+if keyword_set(blank) then WIDGET_CONTROL, SET_VALUE=' ',  status, /APPEND
+
+if (logmode eq 1) then begin
+  printf,logunit,output
+  if keyword_set(blank) then printf,logunit,''
 endif
 
 end

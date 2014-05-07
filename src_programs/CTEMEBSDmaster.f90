@@ -58,6 +58,7 @@
 !>                          implementation does the complete energy-dependent master pattern
 !> @date  01/27/14  MDG 4.1 continued rewrite, fixed problem with kvector list, replaced gvector routines
 !>		   	     with updated routines; changed program name to CTEMEBSDmaster.
+!> @date  05/03/14  MDG 4.2 test version to resolve bug in the Sgh matrix part (solved)
 !--------------------------------------------------------------------------
 program CTEMEBSDmaster
 
@@ -119,17 +120,17 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)	:: nmlfile
 
 
-real(kind=dbl)   	:: ctmp(192,3),arg, sig, omega
+real(kind=dbl)   	:: ctmp(192,3), arg, sig, omega
 integer(kind=irg)      :: isym,i,j,ik,npx,npy,ipx,ipy,debug,iE,izz, izzmax, iequiv(2,12), nequiv, num_el, MCnthreads, & ! counters
-                    	numk, dgn, pgnum, & ! number of independent incident beam directions
+                    	numk, & ! number of independent incident beam directions
                     	ir,nat(100),kk(3), npyhex, skip, ijmax, Esel, one, &
                     	numset,n,ix,iy,iz, io_int(6),  &
                     	istat,gzero,ic,ip,ikk     ! counters
-real(kind=dbl)         :: tpi,Znsq, kkl, DBWF,  totZnsq, kin, s, sthr, Bethe_store !
+real(kind=dbl)         :: tpi,Znsq, kkl, DBWF, kin !
 real(kind=sgl) 		:: dmin, io_real(5), selE
-real(kind=sgl),allocatable 	:: sr(:,:,:), srhex(:,:,:), EkeVs(:) ! results
+real(kind=sgl),allocatable 	:: sr(:,:,:,:), srhex(:,:,:,:), EkeVs(:), svals(:) ! results
 complex(kind=dbl)  		:: czero
-complex(kind=dbl),allocatable 	:: Lgh(:,:), Sgh(:,:)
+complex(kind=dbl),allocatable 	:: Lgh(:,:), Sgh(:,:,:)
 logical 		:: usehex, switchmirror
 character(fnlen) 	:: xtalname, outname
 ! the following will need to be moved elsewhere at some point...
@@ -164,6 +165,8 @@ npx		= 500		! Nx pixels (total = 2Nx+1)
 outname		= 'EBSDmasterout.data'	! default filename for final output
 energyfile	= 'undefined' 	! default filename for z_0(E_e) data from CTEMMC Monte Carlo simulations
 Esel           = -1            ! selected energy value for single energy run
+
+tpi = 2.D0*cPi
 
 ! then we read the rundata namelist, which may override some of these defaults  
 OPEN(UNIT=dataunit,FILE=nmlfile,DELIM='APOSTROPHE')
@@ -233,11 +236,8 @@ close(dataunit,status='keep')
 mess = ' -> completed reading '//trim(energyfile)
 call Message("(A)")
 
-
-
 ! square master pattern
 npy = npx
-sthr = 100.D0
 
 ! ---------- start of symmetry and crystallography section
 ! first get the crystal data and some other crystallographic and symmetry information 
@@ -256,13 +256,7 @@ sthr = 100.D0
   if (SGPG(i).le.cell % SYM_SGnum) j=i
  end do
  isym = j
- 
-! use the new routine to get the whole pattern 2D symmetry group, since that
-! is the one that determines the independent beam directions.
-! dgn = GetPatternSymmetry( (/ 0, 0, 1 /),j,.TRUE.)
-! pgnum = j
-! isym = WPPG(dgn) ! WPPG lists the whole pattern point group numbers vs. diffraction group numbers
- 
+  
 ! and convert this to the corresponding  Laue point group number since diffraction 
 ! patterns are always centrosymmetric (hence, there are only 11 different cases for
 ! the symmetry of the incident beam).   
@@ -287,6 +281,7 @@ sthr = 100.D0
 usehex = .FALSE.
 if (((isym.ge.6).and.(isym.le.9)).or.(isym.eq.12)) usehex = .TRUE.
 ! ---------- end of symmetry and crystallography section
+
 
 ! this is where we determine the value for the thickness integration limit for the CalcLgh3 routine...
 allocate(EkeVs(numEbins),thick(numEbins))
@@ -319,15 +314,16 @@ do iE=1,numEbins
  end do
 end do
 
-write (*,*) 'lambdaE : '
-do i=1,izz 
-  write (*,*) lambdaE(numEbins,i),thick(numEbins)
-end do
-write (*,*) '-----------'
-
 ! and get rid of the accum_z array
 deallocate(accum_z)
 ! ---------- end of 'read Monte Carlo output file and extract necessary parameters' section
+
+! ---------- a couple of initializations
+   numset = cell % ATOM_ntype  
+   allocate(svals(numset),stat=istat)
+   gzero = 1  ! index of incident beam
+   debug = 0  ! no longer used
+! ----------
 
 ! ---------- allocate memory for the master pattern
 ! we need to sample the stereographic projection Northern hemisphere or a portion
@@ -336,15 +332,15 @@ deallocate(accum_z)
 ! independent incident beam directions.  
 ! allocate space for the results (needs to be altered for general symmetry case)
 if (Esel.eq.-1) then
-  allocate(sr(-npx:npx,-npy:npy,1:numEbins),stat=istat)
+  allocate(sr(-npx:npx,-npy:npy,1:numEbins,1:numset),stat=istat)
 else
-  allocate(sr(-npx:npx,-npy:npy,1),stat=istat)
+  allocate(sr(-npx:npx,-npy:npy,1,1:numset),stat=istat)
 end if 
 
 ! in the trigonal/hexagonal case, we need intermediate storage arrays
   if (usehex) then
    npyhex = nint(2.0*float(npy)/sqrt(3.0))
-   allocate(srhex(-npx:npx,-npyhex:npyhex,1:numEbins),stat=istat)
+   allocate(srhex(-npx:npx,-npyhex:npyhex,1:numEbins,1:numset),stat=istat)
   end if
 
 ! set various arrays to zero
@@ -357,12 +353,6 @@ end if
 ! force dynamical matrix routine to read new Bethe parameters from file
 ! this will all be changed with the new version of the Bethe potentials
    call Set_Bethe_Parameters()
-!   BetheParameter%weakcutoff = 30.0
-!   BetheParameter%cutoff = 60.0
-   
-   numset = cell % ATOM_ntype  
-   gzero = 1  ! index of incident beam
-   debug = 0  ! no longer used
 
 ! ---------- from here on, we need to repeat the entire computation for each energy value
 energyloop: do iE=numEbins,1,-1
@@ -381,7 +371,6 @@ energyloop: do iE=numEbins,1,-1
    selE = EkeVs(iE)
 
    nat = 0
-!   LUT = dcmplx(0.D0,0.D0)
 
 ! set the accelerating voltage
    skip = 3
@@ -397,8 +386,10 @@ energyloop: do iE=numEbins,1,-1
   call Compute_ReflectionList(dmin,(/0,0,1/),(/1,0,0/),(/0,1,0/),'ALL',.FALSE.,0)
 ! ---------- end of "create the master reflection list"
 
+! ---------- create the incident beam directions list
 ! determine all independent incident beam directions (use a linked list starting at khead)
-! numk is the total number of k-vectors to be included in this computation
+! numk is the total number of k-vectors to be included in this computation;
+! note that this needs to be redone for each energy, since the wave vector changes with energy
 
    if (usehex) then
     call Calckvectors( (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,npx,npyhex,numk,isym,ijmax,'RoscaLambert',usehex)
@@ -408,33 +399,33 @@ energyloop: do iE=numEbins,1,-1
    end if
    io_int(1)=numk
    call WriteValue('# independent beam directions to be considered = ', io_int, 1, "(I8)")
+! ---------- end of "create the incident beam directions list"
 
+! ---------- and here we start the beam direction loop
 ! point to the first beam direction
    ktmp => khead
 ! loop over all beam orientations, selecting them from the linked list
    beamloop:do ik = 1,numk
 
 ! compute the dynamical matrix using Bloch waves with Bethe potentials 
+! we will put the foil normal equal to the beam direction for each direction
      DynFN = ktmp%k
      call Compute_DynMat('BLOCHBETHE', ktmp%k, ktmp%kt, .FALSE.)
-
-
 
 ! then we need to initialize the Sgh and Lgh arrays
      if (allocated(Sgh)) deallocate(Sgh)
      if (allocated(Lgh)) deallocate(Lgh)
-
-     allocate(Sgh(BetheParameter%nns,BetheParameter%nns),Lgh(BetheParameter%nns,BetheParameter%nns))
+     allocate(Sgh(BetheParameter%nns,BetheParameter%nns,numset),Lgh(BetheParameter%nns,BetheParameter%nns))
      Sgh = czero
 
+! this should become a function call, since a similar routine is used in other programs as well
+
 ! for each special position in the asymmetric unit ...
-     totZnsq = 0.D0
      do ip=1,numset
        call CalcOrbit(ip,n,ctmp)  ! get all equivalent points
        nat(ip) = n
 ! get Zn-squared for this special position and keep track of the total value
        Znsq = float(cell%ATOM_type(ip))**2
-       totZnsq = totZnsq + Znsq
 ! ir is the row index
        do ir=1,BetheParameter%nns
 ! ic is the column index
@@ -449,7 +440,7 @@ energyloop: do iE=numEbins,1,-1
 ! Debye-Waller exponential
                  DBWF = exp(-cell%ATOM_pos(ip,5)*kkl)
 !  multiply with the prefactor and add to the structure matrix Sgh
-                 Sgh(ir,ic) = Sgh(ir,ic) + cmplx(Znsq * DBWF,0.0) * cmplx(cos(arg),sin(arg))
+                 Sgh(ir,ic,ip) = Sgh(ir,ic,ip) + cmplx(Znsq * DBWF,0.0) * cmplx(cos(arg),sin(arg))
                end do
            end do
        end do  
@@ -460,89 +451,27 @@ energyloop: do iE=numEbins,1,-1
      call CalcLgh3(DynMat,Lgh,dble(thick(iE)),ktmp%kn,BetheParameter%nns,gzero,kin,debug,depthstep,lambdaE(iE,1:izzmax),izzmax)
 
 ! dynamical contribution
-     s = real(sum(Lgh*Sgh))/float(sum(nat))
+     do ip=1,numset
+       svals(ip) = real(sum(Lgh(1:BetheParameter%nns,1:BetheParameter%nns)*Sgh(1:BetheParameter%nns,1:BetheParameter%nns,ip)))
+     end do
+     svals = svals/float(sum(nat))
 
-
-
-
-! we need to make sure that the Bethe potentials did not accidentally cause a problem (divergence);
-! so, if s is very large, then there is likely a problem and we should rerun this incident beam direction
-! without the Bethe approximation; there shouldn't be too many of these cases...
-     if (s.gt.sthr) then ! we redo this without the Bethe potentials
-
-       write (*,*) 'Warning: caught divergence; redoing computation with full DynMat for point ', ik, s
- 
-! temporarily switch off the Bethe potential strong threshold
-       Bethe_store = BetheParameter%weakcutoff
-       BetheParameter%weakcutoff = BetheParameter%cutoff
-              
-! compute the dynamical matrix using Bloch waves with Bethe potentials 
-       DynFN = ktmp%k
-       call Compute_DynMat('BLOCHBETHE', ktmp%k, ktmp%kt, .FALSE.)
-
-! then we need to initialize the Sgh and Lgh arrays
-       if (allocated(Sgh)) deallocate(Sgh)
-       if (allocated(Lgh)) deallocate(Lgh)
-
-       allocate(Sgh(BetheParameter%nns,BetheParameter%nns),Lgh(BetheParameter%nns,BetheParameter%nns))
-       Sgh = czero
-
-! for each special position in the asymmetric unit ...
-       totZnsq = 0.D0
-       do ip=1,numset
-         call CalcOrbit(ip,n,ctmp)  ! get all equivalent points
-         nat(ip) = n
-! get Zn-squared for this special position and keep track of the total value
-         Znsq = float(cell%ATOM_type(ip))**2
-         totZnsq = totZnsq + Znsq
-! ir is the row index
-         do ir=1,BetheParameter%nns
-! ic is the column index
-           do ic=1,BetheParameter%nns
-                 kk = BetheParameter%stronghkl(1:3,ir) - BetheParameter%stronghkl(1:3,ic)
-! We'll assume isotropic Debye-Waller factors for now ...
-! That means we need the square of the length of s=  kk^2/4
-                 kkl = 0.25 * CalcLength(float(kk),'r')**2
-                 do ikk=1,n
-! get the argument of the complex exponential
-                   arg = tpi*sum(kk(1:3)*ctmp(ikk,1:3))
-! Debye-Waller exponential
-                   DBWF = exp(-cell%ATOM_pos(ip,5)*kkl)
-!  multiply with the prefactor and add to the structure matrix Sgh
-                   Sgh(ir,ic) = Sgh(ir,ic) + cmplx(Znsq * DBWF,0.0) * cmplx(cos(arg),sin(arg))
-                 end do
-             end do
-         end do  
-       end do
-
-! for now, we're disabling the kinematical part
-! solve the dynamical eigenvalue equation for this beam direction  Lgh,thick,kn,nn,gzero,kin,debug
-       call CalcLgh3(DynMat,Lgh,dble(thick(iE)),ktmp%kn,BetheParameter%nns,gzero,kin,debug,depthstep,lambdaE(iE,1:izzmax),izzmax)
-
-! dynamical contribution (we'll assume that this time it is ok
-       s = real(sum(Lgh*Sgh))/float(sum(nat))
-
-! and reset the weak cutoff
-       BetheParameter%weakcutoff = Bethe_store
-     end if
-
-
-! and store the resulting values
+! and store the resulting values, applying point group symmetry where needed.
      ipx = ktmp%i
      ipy = ktmp%j
      call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
      if (usehex) then
        do ix=1,nequiv
-         srhex(iequiv(1,ix),iequiv(2,ix),iE) = s
+         srhex(iequiv(1,ix),iequiv(2,ix),iE,1:numset) = svals(1:numset)
 	end do
      else
         if (Esel.eq.-1) then
          do ix=1,nequiv
-           sr(iequiv(1,ix),iequiv(2,ix),iE) = s
+           sr(iequiv(1,ix),iequiv(2,ix),iE,1:numset) = svals(1:numset)
 	  end do
 	else
          do ix=1,nequiv
-           sr(iequiv(1,ix),iequiv(2,ix),1) = s
+           sr(iequiv(1,ix),iequiv(2,ix),1,1:numset) = svals(1:numset)
 	  end do
         endif
      end if
@@ -617,13 +546,15 @@ energyloop: do iE=numEbins,1,-1
   write (dataunit) energyfile
 ! energy information and array size    
   if (Esel.eq.-1) then
-    write (dataunit) npx,npy,numEbins 
+    write (dataunit) npx,npy,numEbins,numset
     write (dataunit) EkeVs
   else
     one = 1
-    write (dataunit) npx,npy,one 
+    write (dataunit) npx,npy,one,numset 
     write (dataunit) selE
   end if
+! atom type array for asymmetric unit  
+  write (dataunit) cell%ATOM_type(1:numset)
 ! is this a regular (square) or hexagonal projection ?
   if (usehex) then 
     write (dataunit) 'hexago'
@@ -672,6 +603,7 @@ end subroutine ComputeMasterPattern
 !  10/13/98 MDG 1.0 original
 !   7/04/01 MDG 2.0 f90
 !  12/12/12 MDG 3.0 attempt at actual numerical integration for the matrix elements I_jk
+!  05/04/14 MDG 3.1 minor clean up
 ! ###################################################################
 subroutine CalcLgh3(DMat,Lgh,thick,kn,nn,gzero,kin,debug,depthstep,lambdaE,izz)
 
@@ -736,58 +668,6 @@ integer(kind=sgl)              :: LWORK
   call zgeev(JOBVL,JOBVR,nn,Minp,LDA,W,VL,LDVL,CGG,LDVR,WORK,LWORK,RWORK,INFO)
   if (INFO.ne.0) call FatalError('Error in CalcLgh3: ','ZGEEV return not zero')
 
-!if (debug.eq.1) then 
-!  write (*,*) 'inside CalcLgh3'
-!  write (*,*) 'thick, depthstep ', thick, depthstep
-!  write (*,*) 'kn, nn ', kn, nn
-!  write (*,*) 'lambdaE', lambdaE
-!  write (*,*) 'gzero = ', gzero
-!  write (*,*) 'max(DMat) ', maxval(cabs(DMat))
-!end if
-
-!! then get the eigenvalues and eigenvectors
-! 
-! IPIV = 0
-! W = cmplx(0.D0,0.D0)
-! CGG = cmplx(0.D0,0.D0)
-! CGinv = cmplx(0.D0,0.D0)
-!
-! LDA = nn
-! LDVL = nn
-! LDVR = nn
-! INFO = 0
-!! the eispack routines use the real and imaginary parts of arrays as separate arrays instead
-!! of as complex variable ...  
-!!if (debug.eq.1) write (*,*) 'splitting real and imaginary'
-!
-!ar = dble(Minp)
-!ai = aimag(Minp)
-!
-!! first balance the matrix
-!!if (debug.eq.1) write (*,*) 'cbal'
-!
-!call cbal(nn, ar, ai, low, igh, scle)
-!! transform the upper Hessenberg form
-!allocate(ortr(igh), orti(igh))
-!!if (debug.eq.1) write (*,*) 'corth'
-!call corth(nn, low, igh, ar, ai, ortr, orti)
-!! get eigenvalues and eigenvectors
-!!if (debug.eq.1) write (*,*) 'comqr2'
-!call comqr2(nn, low, igh, ortr, orti, ar, ai, wr, wi, vr, vi, ierr )
-!if ( ierr.ne.0) then 
-!  write (*,*) 'Error in comqr2 eispack routine'
-!  stop
-!end if
-!deallocate(ortr, orti)
-!! undo the cbal transformation
-!!if (debug.eq.1) write (*,*) 'cbabk2'
-!call cbabk2(nn, low, igh, scle, nn, vr, vi)
-!
-!! return to complex variables
-!W = cmplx(wr, wi)
-!CGG = cmplx(vr, vi)
-! 
-
  CGinv = CGG
 
 !if (debug.eq.1) write (*,*) 'inverting matrix'
@@ -809,13 +689,8 @@ integer(kind=sgl)              :: LWORK
 
 ! then compute the integrated intensity matrix
  W = W/cmplx(2.0*kn,0.0)
- 
-! if (debug.eq.1) then
-!   write (*,*) 'W = ',W
-! end if
- 
+  
 ! recall that alpha(1:nn) = CGinv(1:nn,gzero)
-
 
 ! first the Ijk matrix (this is Winkelmann's B^{ij}(t) matrix)
 ! combined with numerical integration over [0, z0] interval,
@@ -838,53 +713,9 @@ dzt = depthstep/thick
 
 Ijk = Ijk * dzt
 
-!if (debug.eq.1) then 
-!  write (*,*) 'tpi, dzt ', tpi, dzt
-!  write (*,*) 'maxval(Ijk) ', maxval(cabs(Ijk))
-!end if
-
-
-!if (debug.eq.1) write (*,*) ' -> done'
-
-!if (debug.eq.1) write (*,*) 'matmul operations'
-
 ! then the summations for Lgh and kin
 tmp3 = matmul(CGG,transpose(Ijk)) 
 Lgh = matmul(tmp3,transpose(conjg(CGG)))
-
-! there might be a problem with the Absoft implementation of the 
-! matmul routine...  So let's do this multiplication explicitly...
-!do i=1,nn
-!  do j=1,nn
-!     tmp3(i,j) = sum( CGG(i,1:nn) * Ijk(j,1:nn) )
-!  end do
-!end do
-!
-!! we no longer need CGinv, so we'll use the array to store the conjugate of CGG
-!CGinv = conjg(CGG)
-!do i=1,nn
-!  do j=1,nn
-!    Lgh(i,j) = sum( tmp3(i,1:nn) * CGinv(j,1:nn) )
-!  end do
-!end do
-!
-
-! we'll approximate this by the sum of the diagonal entries 
-! tmp3 = matmul(transpose(CGG),conjg(CGG)) 
-! kin = 1.D0-real(sum(Ijk * tmp3))
-!if (debug.eq.1) write (*,*) ' -> done'
-
-! there may be an issue with this part of the routine ... 
-!do i=1,nn
-!  do j=1,nn
-!    tmp3(i,j) = sum( CGG(1:nn,i) * CGinv(1:nn,j) )
-!  end do
-!end do
-!kin = 1.D0-real(sum(Ijk * tmp3))
-!
-
-
-!deallocate(CGinv,Minp,diag,tmp3)
 
 end subroutine CalcLgh3
 

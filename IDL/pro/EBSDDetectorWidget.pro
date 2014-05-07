@@ -111,7 +111,7 @@ EBSDwidget_s.detnumsy = Core_WTextE(file1,' by ', fontstr, 30, 25, 5, 1, string(
 ;---------- 
 file1 = WIDGET_BASE(block1, /ROW, XSIZE=340, /ALIGN_CENTER)
 EBSDwidget_s.detxpc = Core_WTextE(file1,'PC [pixels] ', fontstr, 140, 25,  8, 1, string(EBSDdata.detxpc,format="(F7.2)"),'DETXPC','EBSDDetectorWidget_event')
-EBSDwidget_s.detypc = Core_WTextE(file1,' , ', fontstr, 20, 25,  8, 1, string(EBSDdata.detxpc,format="(F7.2)"),'DETXPY','EBSDDetectorWidget_event')
+EBSDwidget_s.detypc = Core_WTextE(file1,' , ', fontstr, 20, 25,  8, 1, string(EBSDdata.detypc,format="(F7.2)"),'DETYPC','EBSDDetectorWidget_event')
 
 ;---------- 
 file1 = WIDGET_BASE(block1, /ROW, XSIZE=340, /ALIGN_CENTER)
@@ -180,23 +180,19 @@ end
 
 file2 = WIDGET_LABEL(file1, VALUE='Energy Window:   Min ', font=fontstr)
 EBSDwidget_s.EBSDminenergylist = WIDGET_DROPLIST(file1, $
-			EVENT_PRO='EBSDDectectorWidget_event', $
+			EVENT_PRO='EBSDDetectorWidget_event', $
 			VALUE=tvals,$
 			UVALUE='EBSDMINENERGYLIST', $
 			/ALIGN_LEFT)
-EBSDdata.Eminsel = 0
 WIDGET_CONTROL, set_droplist_select=EBSDdata.Eminsel, EBSDwidget_s.EBSDminenergylist
 
 file2 = WIDGET_LABEL(file1, VALUE='Max ', font=fontstr)
 EBSDwidget_s.EBSDmaxenergylist = WIDGET_DROPLIST(file1, $
-			EVENT_PRO='EBSDDectectorWidget_event', $
+			EVENT_PRO='EBSDDetectorWidget_event', $
 			VALUE=tvals,$
 			UVALUE='EBSDMAXENERGYLIST', $
 			/ALIGN_LEFT)
-EBSDdata.Emaxsel = EBSDdata.mcenergynumbin-1
 WIDGET_CONTROL, set_droplist_select=EBSDdata.Emaxsel, EBSDwidget_s.EBSDmaxenergylist
-
-
 
 ;------------------------------------------------------------
 file1 = WIDGET_BASE(block2, /ROW, XSIZE=440, /ALIGN_CENTER)

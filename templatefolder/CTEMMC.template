@@ -1,6 +1,6 @@
 &MCdata
 ! name of the crystal structure file
-xtalname = 'W.xtal'
+xtalname = 'somestructure.xtal'
 ! sample tilt angle from horizontal [degrees]
 sig = 70.0
 ! sample tilt angle around RD axis [degrees]
@@ -18,12 +18,12 @@ EkeV = 30.D0
 ! minimum energy to consider [keV]
 Ehistmin = 5.D0
 ! energy binsize [keV]
-Ebinsize = 0.25D0
+Ebinsize = 0.5D0
 ! maximum depth to consider for exit depth statistics [nm]
-depthmax = 50.D0
+depthmax = 100.D0
 ! depth step size [nm]
-depthstep = 0.5D0
+depthstep = 1.0D0
 ! output data file name
-dataname = '/Volumes/Drive2/playarea/EBSD/W30kV.data'
+dataname = '/some/folder/somewhere/MCoutput.data'
 /
 

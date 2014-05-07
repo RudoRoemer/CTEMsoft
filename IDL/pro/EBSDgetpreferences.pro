@@ -63,6 +63,18 @@ if (rs eq 1) then begin
     case nm of 
 ; root folder
 	'EBSDroot': EBSDdata.EBSDroot=val
+; various parameters
+  	'detl': EBSDdata.detL = float(val)
+  	'dettheta': EBSDdata.dettheta = float(val)
+  	'detdelta': EBSDdata.detdelta = float(val)
+  	'detnumsx': EBSDdata.detnumsx = long(val)
+  	'detnumsy': EBSDdata.detnumsy = long(val)
+  	'detxpc': EBSDdata.detxpc = float(val)
+  	'detypc': EBSDdata.detypc = float(val)
+  	'detbinning': EBSDdata.detbinning = long(val)
+  	'detbeamcurrent': EBSDdata.detbeamcurrent = float(val)
+  	'detdwelltime': EBSDdata.detdwelltime = float(val)
+
 ; window locations
   	'xlocation': EBSDdata.xlocation = float(val)
   	'ylocation': EBSDdata.ylocation = float(val)
@@ -85,7 +97,7 @@ end else begin
   cd,current=s
   EBSDdata.EBSDroot=s
 ; prefs file does not exist yet, so let's create it with default values
-  if not keyword_set(noprint) then EBSDprint,'Creating preferences file '+EBSDdata.prefname
+  if not keyword_set(noprint) then Core_Print,'Creating preferences file '+EBSDdata.prefname
   if keyword_set(noprint) then EBSDwritepreferences,/noprint else EBSDwritepreferences
 endelse
 

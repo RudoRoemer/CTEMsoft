@@ -45,6 +45,8 @@ common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
+common CommonCore, status, logmode, logunit
+
 common EBSD_rawdata, accum_e, accum_z, MParray
 
 if (EBSDdata.eventverbose eq 1) then help,event,/structure
@@ -59,21 +61,23 @@ CASE eventval OF
  'LOGFILE':  begin
 ; toggle the log mode 
 		if (EBSDdata.logmode eq 0) then begin
-		   EBSDprint,'Turning log mode on',/blank
+		   Core_Print,'Turning log mode on',/blank
 		 q = systime()
  		 z = strsplit(q,' ',/extract,/regex)
  		 EBSDdata.logname = 'EBSDDisplay'+z[0]+z[1]+z[2]+'_'+z[4]+'_'+z[3]+'.log'
-		   EBSDprint,'Log file: '+EBSDdata.logname
+		   Core_Print,'Log file: '+EBSDdata.logname
 		 EBSDdata.logmode = 1
+		 logmode = 1
 		 openw,EBSDdata.logunit,EBSDdata.logname
 		 EBSDdata.logfileopen = 1
 		end else begin
-		   EBSDprint,'Turning log mode off',/blank
+		   Core_rint,'Turning log mode off',/blank
 		 if (EBSDdata.logfileopen eq 1) then begin
 		   close,EBSDdata.logunit
 		   EBSDdata.logfileopen = 0
 		 endif
 	    	 EBSDdata.logmode = 0
+		 logmode = 0
 		endelse
 	  endcase
 
@@ -107,7 +111,20 @@ CASE eventval OF
                 WIDGET_CONTROL, get_value=val,EBSDwidget_s.EulerConvention
                 EBSDdata.EulerConvention = fix(val[0])
 	endcase
- 
+
+  'PATTERNMODE': begin
+                WIDGET_CONTROL, get_value=val,EBSDwidget_s.BGmode
+                EBSDdata.BGmode= fix(val[0])
+	endcase
+
+  'EBSPATTERNORIGIN': begin
+                WIDGET_CONTROL, get_value=val,EBSDwidget_s.PatternOrigin
+                EBSDdata.PatternOrigin = fix(val[0])
+		vals = ['Upper Left','Lower Left','Upper Right','Lower Right']
+		  Core_Print, 'Pattern origin set to '+vals[EBSDdata.PatternOrigin]
+	endcase
+
+
 else: MESSAGE, "Event User Value Not Found"
 
 endcase

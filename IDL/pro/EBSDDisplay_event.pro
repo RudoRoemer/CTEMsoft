@@ -92,7 +92,7 @@ end else begin
  	'QUIT': begin
 		EBSDwritepreferences
 ; do a general cleanup of potentially open widgets
- 		EBSDprint,'Quitting program',/blank
+ 		Core_Print,'Quitting program',/blank
 		WIDGET_CONTROL, EBSDwidget_s.base, /DESTROY
 		!EXCEPT=1
 	endcase

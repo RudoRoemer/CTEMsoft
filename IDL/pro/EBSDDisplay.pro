@@ -1,10 +1,10 @@
 @EBSDDisplay_event    		; EBSD event handler
 @EBSDgetfilename		; select a geometry file
-@EBSDprint			; prints messages to the program status window
 @EBSDreaddatafile		; read geometry and data files
 @EBSDMCDisplayWidget		; MC display widget
 @EBSDMCDisplayWidget_event	; MC display widget event handler
 @EBSDDetectorWidget		; detector widget
+@EBSDDetectorWidget_event	; detector widget event handler
 @EBSDevent			; event handler for button groups
 @EBSDshowMC			; display a Lambert projection image
 @EBSDgetpreferences		; read preferences file
@@ -12,6 +12,8 @@
 @Core_LambertS2C		; modified Lambert to Lambert projection
 @Core_colorwheel		; color representation of energy distribution
 @Core_WText			; generate a text widget with a label
+@Core_Print			; print messages to status window and log file
+@Core_WidgetEvent		; general data handler for various widget events
 ;
 ; Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
@@ -70,6 +72,8 @@ common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 common PointGroups, PGTHD, PGTWD, DG
+
+common CommonCore, status, logmode, logunit
 
 common projections, xcircle, ycircle
 
@@ -150,6 +154,7 @@ EBSDwidget_s = {widgetstruct, $
 	BGmode: long(0), $			; background/full display mode
 	EBSDminenergylist: long(0), $		; min energy widget
 	EBSDmaxenergylist: long(0), $		; max energy widget
+	PatternOrigin: long(0), $		; pattern origin widget
 
 	; other collected items
 	MCdisplaybase: long(0), $		; Monte Carlo display base
@@ -237,6 +242,7 @@ EBSDdata = {EBSDdatastruct, $
 	BGmode: long(0), $			; background/full pattern display mode
 	Eminsel: long(0), $			; min energy selection 
 	Emaxsel: long(0), $			; max energy selection 
+	PatternOrigin: long(0), $		; pattern origin indicator
 
 	; then general program parameters
 	eventverbose: fix(0), $			; used for event debugging (0=off, 1=on)
@@ -452,14 +458,14 @@ EBSDwidget_s.status= WIDGET_TEXT(block2, $
 			VALUE=' ',$
 			/ALIGN_LEFT)
 
+; the following is needed by the Core_Print routine
+status = EBSDwidget_s.status 
+
 ;------------------------------------------------------------
 ;------------------------------------------------------------
 ; finally we need a couple of control buttons: Quit, LoadMC, LoadMaster, Detector
 
-file11 = WIDGET_BASE(block2, $
-			XSIZE=590, $
-			/FRAME, $
-			/ROW)
+file11 = WIDGET_BASE(block2, XSIZE=590, /FRAME, /ROW)
 
 EBSDwidget_s.mainstop = WIDGET_BUTTON(file11, $
                                 VALUE='Quit', $
@@ -500,6 +506,10 @@ EBSDwidget_s.logfile= CW_BGROUP(file11, $
 			SET_VALUE=EBSDdata.logmode, $
                         EVENT_FUNC='EBSDevent', $
 			UVALUE='LOGFILE')
+
+; the following is needed by the Core_Print routine
+logmode = EBSDdata.logmode
+logunit = EBSDdata.logunit
 
 ;------------------------------------------------------------
 ; realize the widget structure

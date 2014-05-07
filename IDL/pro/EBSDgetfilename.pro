@@ -58,7 +58,7 @@ common EBSD_data_common, EBSDdata
   if keyword_set(MCFILE) then begin
     res=dialog_pickfile(title='Select a valid Monte Carlo data file',path=rootpath)
     if (res eq '') then begin
-	  EBSDprint,'No selection made'
+	  Core_Print,'No selection made'
 	  goto, skip
     end
 ; check to make sure that this file is of the correct type
@@ -84,18 +84,18 @@ common EBSD_data_common, EBSDdata
 
   	WIDGET_CONTROL, SET_VALUE=EBSDdata.mcfilename, EBSDwidget_s.mcfilename
 
-  	EBSDprint,' full path '+res
-  	EBSDprint,' path '+EBSDdata.pathname
-  	EBSDprint,' data file '+EBSDdata.mcfilename
-  	EBSDprint,' suffix '+EBSDdata.suffix
+  	Core_Print,' full path '+res
+  	Core_Print,' path '+EBSDdata.pathname
+  	Core_Print,' data file '+EBSDdata.mcfilename
+  	Core_Print,' suffix '+EBSDdata.suffix
     end else begin
-  	EBSDprint,' This file is not of the correct Monte Carlo data type ',/blank
+  	Core_Print,' This file is not of the correct Monte Carlo data type ',/blank
         goto, skip
     endelse
   end else begin
     res=dialog_pickfile(title='Select a valid Master Pattern data file',path=rootpath)
     if (res eq '') then begin
-	  EBSDprint,'No selection made'
+	  Core_Print,'No selection made'
 	  goto, skip
     end
 ; check to make sure that this file is of the correct type
@@ -121,12 +121,12 @@ common EBSD_data_common, EBSDdata
 
   	WIDGET_CONTROL, SET_VALUE=EBSDdata.mpfilename, EBSDwidget_s.mpfilename
 
-  	EBSDprint,' full path '+res
-  	EBSDprint,' path '+EBSDdata.pathname
-  	EBSDprint,' data file '+EBSDdata.mpfilename
-  	EBSDprint,' suffix '+EBSDdata.suffix
+  	Core_Print,' full path '+res
+  	Core_Print,' path '+EBSDdata.pathname
+  	Core_Print,' data file '+EBSDdata.mpfilename
+  	Core_Print,' suffix '+EBSDdata.suffix
     end else begin
-  	EBSDprint,' This file is not of the correct Master Pattern data type ',/blank
+  	Core_Print,' This file is not of the correct Master Pattern data type ',/blank
         goto, skip
     endelse
   endelse
