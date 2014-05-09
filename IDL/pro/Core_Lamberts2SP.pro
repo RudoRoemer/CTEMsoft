@@ -26,18 +26,18 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:Core_LambertS2C.pro
+; CTEMsoft2013:Core_LambertS2SP.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: Core_LambertS2C.pro
+; PROGRAM: Core_LambertS2SP.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief modified lambert to regular lambert conversion routine; inits the xcircle and ycircle arrays
+;> @brief modified lambert to Stereographic Projection conversion routine; inits the xcircle and ycircle arrays
 ;
 ;> @date 03/20/14 MDG 1.0 initial implementation 
 ;--------------------------------------------------------------------------
-pro Core_LambertS2C,image,mc=mc,mp=mp
+pro Core_LambertS2SP,image,mc=mc,mp=mp
 
 common projections, mcxcircle, mcycircle, mpxcircle, mpycircle, mcSPxcircle, mcSPycircle, mpSPxcircle, mpSPycircle 
 
@@ -50,50 +50,51 @@ ny = sz[1]
 nx2 = (nx-1)/2
 ny2 = (ny-1)/2
 
-Rmax = float(nx2)^2
-line = findgen(nx)-(nx-1)/2
-xsquare = line # replicate(1,nx)
-ysquare = replicate(1,ny) # line
-xcircle = fltarr(nx,ny)
-ycircle = fltarr(nx,ny)
+sp = sqrt(!pi/2.0)
+spi = 1.0/sp
 
-sp2 = sqrt(!pi)/2.0
-spi = 1.0/sp2
+Rmax = 2.0; float(nx2)^2
+xcc = fltarr(nx,ny)
+ycc = fltarr(nx,ny)
+
 for i=0,nx-1 do begin
-  A = float(i-nx2)
+  A = float(i-nx2)/float(nx2)
   for j=0,ny-1 do begin
-    B = float(j-ny2)
-    if (A^2+B^2 le Rmax) then begin
+    B = float(j-ny2)/float(ny2)
+    q = A^2+B^2
+    if (q le Rmax) then begin
       if ( (0 le abs(B)) and (abs(B) le abs(A)) and (abs(A)+abs(B) ne 0) ) then begin
-        xcircle[i,j] = (A/abs(A)) * sqrt(A^2+B^2) * sp2
-        ycircle[i,j] = (A/abs(A)) * sqrt(A^2+B^2) * spi * atan(B/A)
+	r = (A/abs(A)) * sqrt(2.0*q/(1.0+q))
+        xcc[i,j] = r * sp
+        ycc[i,j] = r * 2.0 * spi * atan(B/A)
       end
 
       if ( (0 le abs(A)) and (abs(A) le abs(B)) and (abs(A)+abs(B) ne 0) ) then begin
-        xcircle[i,j] = (B/abs(B)) * sqrt(A^2+B^2) * spi * atan(A/B)
-        ycircle[i,j] = (B/abs(B)) * sqrt(A^2+B^2) * sp2
+	r = (B/abs(B)) * sqrt(2.0*q/(1.0+q))
+        xcc[i,j] = r * 2.0 * spi * atan(A/B)
+        ycc[i,j] = r * sp
       end
 
     endif
   endfor
 endfor
 
-xcircle *= spi
-ycircle *= spi
+xcc *= (spi*float(nx2))
+ycc *= (spi*float(ny2))
 
-xcircle += nx2
-ycircle += ny2
+xcc += nx2
+ycc += ny2
 
 if keyword_set(mc) then begin
-	mcxcircle = xcircle
-	mcycircle = ycircle
+	mcSPxcircle = xcc
+	mcSPycircle = ycc
 end
   
 if keyword_set(mp) then begin
-	mpxcircle = xcircle
-	mpycircle = ycircle
+	mpSPxcircle = xcc
+	mpSPycircle = ycc
 end
-  
+
 
 end
 

@@ -50,7 +50,7 @@ common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
 common Image_common, MCimage, MPimage
 common EBSD_rawdata, accum_e, accum_z, MParray, MParraysum
-common projections, mcxcircle, mcycircle, mpxcircle, mpycircle
+common projections, mcxcircle, mcycircle, mpxcircle, mpycircle, mcSPxcircle, mcSPycircle, mpSPxcircle, mpSPycircle 
 
 wset,EBSDwidget_s.MCdrawID
 
@@ -104,6 +104,10 @@ if ((EBSDdata.MCLSmode eq 1) and (EBSDdata.MCLSum ne 2)) then begin
   image = bilinear(image,mcxcircle,mcycircle,missing = 0)
 end 
 
+if ((EBSDdata.MCLSmode eq 2) and (EBSDdata.MCLSum ne 2)) then begin
+  image = bilinear(image,mcSPxcircle,mcSPycircle,missing = 0)
+end 
+
 if ((EBSDdata.MCLSmode eq 1) and (EBSDdata.MCLSum eq 2)) then begin
   for i=0,2 do begin
     image = reform(cimage[i,*,*])
@@ -153,6 +157,10 @@ if (EBSDdata.MCMPboth eq 1) then begin
 
   if ((EBSDdata.MCLSmode eq 1) and (EBSDdata.MCLSum ne 2)) then begin
     image = bilinear(image,mpxcircle,mpycircle,missing = 0)
+  end 
+
+  if ((EBSDdata.MCLSmode eq 2) and (EBSDdata.MCLSum ne 2)) then begin
+    image = bilinear(image,mpSPxcircle,mpSPycircle,missing = 0)
   end 
 
 ; if ((EBSDdata.MCLSmode eq 1) and (EBSDdata.MCLSum eq 2)) then begin

@@ -1,5 +1,5 @@
 ;
-; Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
+; Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are 
@@ -26,74 +26,30 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:Core_LambertS2C.pro
+; CTEMsoft2013:EBSDprint.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: Core_LambertS2C.pro
+; PROGRAM: EBSDprint.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief modified lambert to regular lambert conversion routine; inits the xcircle and ycircle arrays
+;> @brief Appends a string to the status text widget
 ;
-;> @date 03/20/14 MDG 1.0 initial implementation 
+;> @date 09/25/13 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------
-pro Core_LambertS2C,image,mc=mc,mp=mp
+pro EBSDprint,output,blank=blank
+;
+;------------------------------------------------------------
+; common blocks
+common EBSD_widget_common, EBSDwidget_s
+common EBSD_data_common, EBSDdata
 
-common projections, mcxcircle, mcycircle, mpxcircle, mpycircle, mcSPxcircle, mcSPycircle, mpSPxcircle, mpSPycircle 
+WIDGET_CONTROL, SET_VALUE=output, EBSDwidget_s.status, /APPEND
+if keyword_set(blank) then WIDGET_CONTROL, SET_VALUE=' ', EBSDwidget_s.status, /APPEND
 
-; first the square to circle mapping using the bilinear function.
-; we need two arrays that contain for each point in the circle map
-; the equivalent point in the square map.
-sz = size(image,/dimensions)
-nx = sz[0]
-ny = sz[1]
-nx2 = (nx-1)/2
-ny2 = (ny-1)/2
-
-Rmax = float(nx2)^2
-line = findgen(nx)-(nx-1)/2
-xsquare = line # replicate(1,nx)
-ysquare = replicate(1,ny) # line
-xcircle = fltarr(nx,ny)
-ycircle = fltarr(nx,ny)
-
-sp2 = sqrt(!pi)/2.0
-spi = 1.0/sp2
-for i=0,nx-1 do begin
-  A = float(i-nx2)
-  for j=0,ny-1 do begin
-    B = float(j-ny2)
-    if (A^2+B^2 le Rmax) then begin
-      if ( (0 le abs(B)) and (abs(B) le abs(A)) and (abs(A)+abs(B) ne 0) ) then begin
-        xcircle[i,j] = (A/abs(A)) * sqrt(A^2+B^2) * sp2
-        ycircle[i,j] = (A/abs(A)) * sqrt(A^2+B^2) * spi * atan(B/A)
-      end
-
-      if ( (0 le abs(A)) and (abs(A) le abs(B)) and (abs(A)+abs(B) ne 0) ) then begin
-        xcircle[i,j] = (B/abs(B)) * sqrt(A^2+B^2) * spi * atan(A/B)
-        ycircle[i,j] = (B/abs(B)) * sqrt(A^2+B^2) * sp2
-      end
-
-    endif
-  endfor
-endfor
-
-xcircle *= spi
-ycircle *= spi
-
-xcircle += nx2
-ycircle += ny2
-
-if keyword_set(mc) then begin
-	mcxcircle = xcircle
-	mcycircle = ycircle
-end
-  
-if keyword_set(mp) then begin
-	mpxcircle = xcircle
-	mpycircle = ycircle
-end
-  
+if (EBSDdata.logmode eq 1) then begin
+  printf,EBSDdata.logunit,output
+  if keyword_set(blank) then printf,EBSDdata.logunit,''
+endif
 
 end
-

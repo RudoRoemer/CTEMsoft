@@ -10,6 +10,7 @@
 @EBSDgetpreferences		; read preferences file
 @EBSDwritepreferences		; write preferences file
 @Core_LambertS2C		; modified Lambert to Lambert projection
+@Core_LambertS2SP		; modified Lambert to stereographic projection
 @Core_colorwheel		; color representation of energy distribution
 @Core_WText			; generate a text widget with a label
 @Core_Print			; print messages to status window and log file
@@ -75,7 +76,7 @@ common PointGroups, PGTHD, PGTWD, DG
 
 common CommonCore, status, logmode, logunit
 
-common projections, xcircle, ycircle
+common projections, mcxcircle, mcycircle, mpxcircle, mpycircle, mcSPxcircle, mcSPycircle, mpSPxcircle, mpSPycircle 
 
 PGTWD = [ 'none',' 1',' 2',' m',' 2mm',' 4',' 4mm',' 3',' 3m1',' 31m',' 6',' 6mm'] 
 PGTHD = ['  ' ,' 1',' -1',' 2',' m',' 2/m',' 222', $

@@ -46,7 +46,8 @@ common EBSD_data_common, EBSDdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
 common EBSD_rawdata, accum_e, accum_z, MParray, MParraysum
-common projections, mcxcircle, mcycircle, mpxcircle, mpycircle
+common projections, mcxcircle, mcycircle, mpxcircle, mpycircle, mcSPxcircle, mcSPycircle, mpSPxcircle, mpSPycircle 
+
 common Image_common, MCimage, MPimage
 
 
@@ -102,6 +103,11 @@ end else begin
 
   'LAMBERTC': begin
 		EBSDdata.MCLSmode = 1
+		EBSDshowMC
+	endcase
+
+  'STEREOP': begin
+		EBSDdata.MCLSmode = 2
 		EBSDshowMC
 	endcase
 

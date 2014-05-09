@@ -47,7 +47,8 @@ common EBSD_data_common, EBSDdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 common PointGroups, PGTHD, PGTWD, DG
 
-common projections, xcircle, ycircle
+common projections, mcxcircle, mcycircle, mpxcircle, mpycircle, mcSPxcircle, mcSPycircle, mpSPxcircle, mpSPycircle 
+
 
 ;------------------------------------------------------------
 ; make sure that this program isn't already running

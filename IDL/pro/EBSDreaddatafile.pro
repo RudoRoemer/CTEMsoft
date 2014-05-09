@@ -134,6 +134,7 @@ if keyword_set(MPFILE) then begin
 
 ; and initialize the coordinate arrays for the Lambert transformation
   Core_LambertS2C,reform(MParray[*,*,0,0]),/mp
+  Core_LambertS2SP,reform(MParray[*,*,0,0]),/mp
 
    WIDGET_CONTROL, EBSDwidget_s.MPbutton, sensitive=1
    WIDGET_CONTROL, EBSDwidget_s.detector, sensitive=1
@@ -148,6 +149,7 @@ endif
 ; read the Monte Carlo data file
 if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
   Core_Print,'Reading data file '+EBSDdata.mcfilename
+  EBSDdata.Esel = 0
 
   openu,1,EBSDdata.pathname+'/'+EBSDdata.mcfilename,/f77
 ; first a string of 132 characters
@@ -244,6 +246,7 @@ if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
 
 ; and initialize the coordinate arrays for the Lambert transformation
   Core_LambertS2C,reform(accum_e[0,*,*]),/mc
+  Core_LambertS2SP,reform(accum_e[0,*,*]),/mc
 
 ; (de)activate buttons
    WIDGET_CONTROL, EBSDwidget_s.MCbutton, sensitive=1
