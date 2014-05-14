@@ -74,5 +74,16 @@ absoft_run_env.sh
 *.mod
 *.o
 
-#
-/Build/*
+#ignoring cmake and other build systems
+CMakeLists.txt.user
+/Build/
+/zRel/
+/CleanBuild/
+.cproject
+.project
+/clang/
+/xcode/
+/x64/
+/i386/
+/qtcreator/
+/Debug
