@@ -88,7 +88,6 @@ end program tryECCI
 !> @date 02/10/14  MDG 3.2 added apbs
 !> @date 02/24/14  MDG 3.3 removal of double-counted phase factor
 !> @date 03/05/14  MDG 3.4 correction of integration to double integration for Lgh array
-!> @date 03/12/14  MDG 3.5 conversion of Sgh and Lgh arrays to diagonal only
 !--------------------------------------------------------------------------
 subroutine ComputeECCI(nmlfile)
 
@@ -130,11 +129,11 @@ integer(kind=irg)    		        :: nn,i,j,k,npix,npiy,ii,jj,numvoids,numdisl, num
 					numk,ixp,iyp,SETNTHR, io_int(6), skip, gg(3), iSTEM, nktstep, ip, n, ikk
 !                                  OMP_GET_THREAD_NUM,OMP_GET_NUM_THREADS
 integer(kind=irg),parameter 		:: numdd=360 ! 180
-real(kind=sgl)         		:: thick, X(2), dmin, dkt, bragg, thetac, kstar(3), gperp(3), &
+real(kind=sgl)         		:: thick, X(2), dmin, dkt, bragg, thetac, &
 					lauec(2),lauec2(2),gdotR,DF_gf(3),Znsq,tpi, &
 					DM(2,2), DD, ll(3), c(3), gx(3), gy(3), DBWF, &
 					gac(3), gbc(3),zmax, ktmax, io_real(2), kkl, voltage, ijmax
-real(kind=dbl)                        :: ctmp(192,3),arg, glen
+real(kind=dbl)                        :: ctmp(192,3),arg
 character(fnlen)      			:: dataname,sgname,voidname,dislname(3*maxdefects),sfname(maxdefects),ECPname, &
 					incname,dispfile,xtalname,foilnmlfile, STEMnmlfile,dislYname(3*maxdefects), apbname
 character(4)            		:: dispmode, summode
@@ -146,7 +145,7 @@ complex(kind=dbl)                	:: para(0:numdd),dx,dy,dxm,dym, xgp
 real(kind=sgl),allocatable       	:: sgarray(:,:)
 real(kind=sgl),allocatable    		:: disparray(:,:,:,:),imatvals(:,:), ECCIimages(:,:)
 integer(kind=sgl),allocatable    	:: expval(:,:,:)
-complex(kind=dbl),allocatable         :: Lgh(:),Sgh(:) ! Lgh(:,:),Sgh(:,:)
+complex(kind=dbl),allocatable         :: Lgh(:,:),Sgh(:,:)
 logical	                               :: ECCI, NANCHK
 
 namelist / ECCIlist / DF_L, DF_npix, DF_npiy, DF_slice, dmin, sgname, numvoids, incname, stdout, &
@@ -158,7 +157,8 @@ namelist / ECCIlist / DF_L, DF_npix, DF_npiy, DF_slice, dmin, sgname, numvoids, 
 ECCI = .TRUE.
 
 ! first we define the default values
-czero=dcmplx(0.D0,0.D0)
+!czero=dcmplx(0.D0,0.D0)
+czero=cmplx(0.0,0.0,dbl) !PGC
 cone=dcmplx(1.D0,0.D0)
 tpi = 2.0*sngl(cPi)
 
@@ -173,7 +173,7 @@ tpi = 2.0*sngl(cPi)
  ktmax = 5.0
  dkt = 0.5
  progmode = 'array'                   ! 'array' for array of images, 'trace' for line scan
- summode = 'diag'                     ! 'full' for complete summation, 'diag' for diagonal only
+ summode = 'full'                     ! 'full' for complete summation, 'diag' for diagonal only
 
 ! CTEM or STEM ?
  progmode = 'CTEM'  		        ! default illumination mode (can be 'CTEM' or 'STEM')
@@ -310,7 +310,7 @@ end if
   call Message("(A)")
   call Prune_ReflectionList(numk,nbeams)
   io_int(1) = nbeams
-  call WriteValue('Number of contributing beams  : ', io_int, 1, '(I)')
+  call WriteValue('Number of contributing beams  : ', io_int, 1, '(I8)')
   nn = nbeams
 
 ! print the list for debugging purposes...
@@ -321,16 +321,23 @@ end if
     rltmpa => rltmpa%next
   end do
 
-
 ! ideally, we should use Bethe potentials to reduce the size of the dynamical matrix;
 ! while the theory has been worked out to do this, it would require tremendous changes
 ! to the program starting about here; given the time limitations, there won't be any 
 ! chance to do this before the end of the year (2013), so we'll leave that for some other time...
   
+! allocate and initialize DF_Sarray, theta, and DF_Svoid
+
+write (*,*) "LINE 330"
+  allocate(theta(-nn:nn))!,DF_Svoid(nn,nn)) !PGC
+!write (*,*) "DEBUG, is the allocation part crashing"
+!  DF_Sarray = czero; theta = czero ! PGC Remove this line
+ theta = czero
+write (*,*) "Debug, line 334"
 ! allocate the various DHW Matrices
   allocate(DHWMz(nn,nn),DHWM(nn,nn),DHWMvoid(nn,nn))
   DHWMvoid = czero; DHWMz=czero; DHWM(nn,nn)=czero
-  
+  write (*,*) "Debug, LINE 338"
  ! Compute the off-diagonal part of the complex DHW matrix (factor i is included)
  ! We can precompute those because they will not change at all during the run
  !       (these lines implement the equations on page 476 of the CTEM book)
@@ -462,10 +469,12 @@ if ((dispmode.eq.'new').or.(dispmode.eq.'not')) then
          gdotR = Dot_Product(gac,DF_R(k,1:3))
 ! due to the logarithmic singularity at a dislocation core, it is possible for gdotR to be NaN; we need
 ! to intercept these cases, and replace the value of gdotR by 0.0
-         if (NANCHK(gdotR)) gdotR = 0.0         
+!         if (NANCHK(gdotR)) gdotR = 0.0         
+         if (ISNAN(gdotR)) gdotR = 0.0         ! PGC replaced NANCHK with GNU ISNAN
          imatvals(1,k) = numd*amod(gdotR+1000.0,1.0)
          gdotR = Dot_Product(gbc,DF_R(k,1:3))
-         if (NANCHK(gdotR)) gdotR = 0.0         
+!         if (NANCHK(gdotR)) gdotR = 0.0         
+         if (ISNAN(gdotR)) gdotR = 0.0        ! PGC replaced NANCHK with GNU ISNAN 
          imatvals(2,k) = numd*amod(gdotR+1000.0,1.0)
        end if
      end do ! k loop
@@ -573,7 +582,7 @@ end do
 
   numset = cell % ATOM_ntype  ! number of special positions in the unit cell
 
-  allocate(Sgh(nn))
+  allocate(Sgh(nn,nn))
   call CalcSgh(nn,Sgh,nat)
   
 
@@ -624,36 +633,13 @@ end do
   
   write (dataunit) nn   ! number of reflections
 
-
-! this needs to be fixed !!!!!
-
-  call TransSpace(float(kk),kstar,'d','r')        ! transform incident direction to reciprocal space
-  call CalcCross(float(ga),kstar,gperp,'r','r',0)! compute g_perp = ga x k
-  call NormVec(gperp,'r')                        ! normalize g_perp
-
- DM(1,1) = CalcDot(gperp,gperp,'c')
- DM(1,2) = -CalcDot(float(ga),gperp,'c')
- DM(2,1) = DM(1,2)
- DM(2,2) = CalcDot(float(ga),float(ga),'c')
- DM = transpose(DM)
- DD = DM(1,1)*DM(2,2) - DM(1,2)*DM(2,1)
- glen = CalcLength(float(ga),'r')
-
-
-
 ! number of wave vectors, tangential components, etc...
   write (dataunit) numk   ! number of wave vectors
   ktmp => khead
-!  if (progmode.eq.'trace') then  
-    do ic=1,numk
-      X(1) = -CalcDot(sngl(ktmp%kt),float(ga),'c') ! / glen
-      X(2) = -CalcDot(sngl(ktmp%kt),gperp,'c') * glen
-!      write (*,*) X(1), X(2), ktmp%kt
-      write (dataunit) X(1), X(2)
-      ktmp => ktmp%next
-    end do
-!  end if
-
+  do ic=1,numk
+    write (dataunit) sngl(ktmp%kt(1)),sngl(ktmp%kt(2))
+    ktmp => ktmp%next
+  end do
   
   write (dataunit) DF_npix,DF_npiy
   
@@ -749,7 +735,7 @@ mess = ' Scattering matrices precomputed '; call Message("(A,' ',$)")
 !$OMP  PARALLEL NUM_THREADS(NTHR) DEFAULT(SHARED) PRIVATE(TID,i,j,k,ii,Azz,amp,amp2,ix,iy,dx,dy,dxm,dym,ixp,iyp,Lgh,ir,ic)
  TID = OMP_GET_THREAD_NUM() 
 ! TID = 0 
- allocate(Azz(nn,nn),amp(nn),amp2(nn),Lgh(nn))
+ allocate(Azz(nn,nn),amp(nn),amp2(nn),Lgh(nn,nn))
  
 !$OMP DO SCHEDULE (STATIC)
  donpix: do i=1,npix
@@ -771,7 +757,7 @@ mess = ' Scattering matrices precomputed '; call Message("(A,' ',$)")
     doslices: do k=1,DF_nums    ! loop over the fixed thickness slices
 ! compute the appropriate scattering matrix to propagate with (see section 8.3.3 in the book)
        if (disparray(1,k,i,j).eq.-10000) then  ! this is point inside a void
- 	 Azz = DHWMvoid    ! so we use the void propagator matrix
+ 	 Azz = DHWMvoid    ! so we use the void propagator matrix !MDG and PGC Edit
        else  ! it is not a void
 ! in this version, we use complex bi-variate interpolation to select the appropriate Azz 
 ! matrix from the pre-computed Sarray.
@@ -791,12 +777,32 @@ mess = ' Scattering matrices precomputed '; call Message("(A,' ',$)")
 
        amp2 = matmul(Azz,amp)
 
-       if (k.eq.1) then 
-	  Lgh = abs(amp2)**2
-       else
-	  Lgh = Lgh + abs(amp2)**2
-       end if
+!       amp = conjg(amp2)
+! next we need to compute the contribution to the Lgh matrix
+! this turns out to be a double integration, since Lgh is an integration
+! (represented by a discrete sum), and so are the amplitudes, which are 
+! integrated via the multiplication with the scattering matrix above.
+! So, we need to keep track of the cumulative Lgh array which we store in 
+! Lghsum, and we'll use Lgh for the slice arrays, just as we do in the CalcLghSM
+! routine in the CTEMECP.f90 program (which uses only a single scattering
+! matrix instead of the array used here).
 
+	      if (k.eq.1) then 
+        	forall (ir=1:nn)
+		  Lgh(ir,ir) = abs(amp2(ir))**2
+		end forall
+   	      else
+        	forall (ir=1:nn)
+		  Lgh(ir,ir) = Lgh(ir,ir) + abs(amp2(ir))**2
+		end forall
+   	      end if
+
+
+!       if (k.eq.1) then 
+!        Lgh = spread(amp2(1:nn),dim=2,ncopies=nn) * spread(amp(1:nn),dim=1,ncopies=nn)
+!       else
+!        Lgh = Lgh + spread(amp2(1:nn),dim=2,ncopies=nn) * spread(amp(1:nn),dim=1,ncopies=nn)
+!       end if
 
        amp = amp2
        
@@ -1026,8 +1032,6 @@ integer(kind=irg),INTENT(OUT)       :: numk
 integer                             :: istat,j
 real                                :: kr(3),glen,delta,kstar(3),kt(3),gan(3),gperp(3),ktlen, dktx, dkty
 
-!write (*,*) 'ktx,kty: ', ktx, kty, kt2x, kt2y
-
 ! compute geometrical factors 
  glen = CalcLength(float(ga),'r')              ! length of ga
  gan = ga/glen                                 ! normalized ga
@@ -1037,7 +1041,6 @@ real                                :: kr(3),glen,delta,kstar(3),kt(3),gan(3),gp
  call NormVec(gperp,'r')                       ! normalize g_perp
  call NormVec(kstar,'r')                       ! normalize reciprocal beam vector
 
-!write (*,*) 'Calckvectortrace: ',gan, gperp, glen, kstar 
 
 ! kt = -(klaue(1)+float(i)*delta)*gan - (klaue(2)+float(j)*delta)*gperp  ! tangential component of k
 
@@ -1058,12 +1061,9 @@ real                                :: kr(3),glen,delta,kstar(3),kt(3),gan(3),gp
    ktail%k = kr                            ! store in pointer list
    ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
  end if
-! write (*,*) 'kt start = ',kt
- 
  dktx = (kt2x - ktx)/float(ktstep-1)
  dkty = (kt2y - kty)/float(ktstep-1)
 
-! write (*,*) 'stepsizes :', dktx, dkty
  do j=1,ktstep-1
       allocate(ktail%next,stat=istat)  ! allocate new value
       if (istat.ne.0) call FatalError('Calckvectortrace: unable to allocate pointer',' ')
@@ -1096,7 +1096,6 @@ end subroutine Calckvectortrace
 !> @param nat normalization array
 !
 !> @date 03/05/14  MDG 1.0 original (used to be in-line in ECP and ECCI programs)
-!> @date 03/11/14  MDG 1.1 converted to diagonal Sgh array only
 !--------------------------------------------------------------------------
 subroutine CalcSgh(nn,Sgh,nat)
 
@@ -1203,18 +1202,18 @@ end subroutine CalcSgh
 !C      f90 -c naninfchk.f -YBOZTYPE=INT
 !C
 !C***********************************************************************
-RECURSIVE LOGICAL FUNCTION NANCHK(X)
-IMPLICIT NONE
-REAL,INTENT(IN)      :: X
-REAL                 :: Y
-INTEGER              :: I
-EQUIVALENCE(Y,I)
-
-Y = X
-NANCHK = ((I .AND. z'7f80 0000') .EQ. z'7f80 0000') .AND.((I .AND. z'007f ffff') .NE. z'0000 0000')
-
-RETURN
-END
+!RECURSIVE LOGICAL FUNCTION NANCHK(X)
+!IMPLICIT NONE
+!REAL,INTENT(IN)      :: X
+!REAL                 :: Y
+!INTEGER              :: I
+!EQUIVALENCE(Y,I)
+!
+!Y = X
+!NANCHK = ((I .AND. z'7f80 0000') .EQ. z'7f80 0000') .AND.((I .AND. z'007f ffff') .NE. z'0000 0000')
+!
+!RETURN
+!END
 
 
 

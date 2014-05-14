@@ -225,7 +225,7 @@ real(kind=dbl)              			:: dxold,errr,abx,cdx
           if (abs(dx).le.eps*abs(x)) return
 	end if
      end do
-     pause 'too many iterations'
+!     pause 'too many iterations' ! PGC, Deleted feature-pause
      return
 end subroutine laguer
 
@@ -493,10 +493,10 @@ end if
 DL(inum)%a_di = quat_mult( DL(inum)%a_dc, conjg(foil%a_ic) )
 DL(inum)%a_id = conjg(DL(inum)%a_di)
 
-if (dinfo.eq.1) then
-  call print_orientation(init_orientation(DL(inum)%a_di,'qu'),'om','a_di: ')
-  call print_orientation(init_orientation(DL(inum)%a_id,'qu'),'om','a_id: ')
-end if
+!if (dinfo.eq.1) then ! PGC error no specific subroutine
+!  call print_orientation(init_orientation(DL(inum)%a_di,'qu'),'om','a_di: ')! PGC error no specific subroutine
+!  call print_orientation(init_orientation(DL(inum)%a_id,'qu'),'om','a_id: ')! PGC error no specific subroutine
+!end if! PGC error no specific subroutine
 
 ! finally, get the foil to defect transformation (used in defect module)
 DL(inum)%a_df = quat_mult( DL(inum)%a_di, conjg(foil%a_fi) )
@@ -756,7 +756,7 @@ end if
     DL(i)%u = u
     DL(i)%burg = bv
     DL(i)%g = DF_gf
-    DL(i)%zfrac = zfrac - 0.5
+    DL(i)%zfrac = zfrac ! - 0.5
      
 ! and pre-compute the dislocation displacement field parameters
        call makedislocation(i,dinfo, L)

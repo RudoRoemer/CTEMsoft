@@ -214,13 +214,13 @@ integer(kind=irg),parameter		:: jPade(6) = (/ 0, 0, 1, 5, 8, 11 /)
 E = dcmplx(0.D0,0.D0)
 
 !get the max( ||A|| ) value and determine index into (k,j) or (q,j) pairs
-modA = maxval(cabs(A)*z0)
-ilev = nint(alog10(modA))+3
+modA = maxval(abs(A)*z0) !PGC cabs() -> abs()
+ilev = nint(log10(modA))+3
 if (ilev.le.0) ilev = 1		! can not be smaller than 1
 
 ! if modA gets to be too large, abort with a message
-if (modA.gt.10000.D0) then
-  mess = 'MatrixExponential routine can not deal with ||A|| > 10000.0'
+if (modA.gt.1000.D0) then
+  mess = 'MatrixExponential routine can not deal with ||A|| > 1000.0'
   call Message("(/A/)")
   stop 'Program aborted'
 end if

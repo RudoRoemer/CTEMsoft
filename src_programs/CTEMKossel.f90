@@ -299,7 +299,7 @@ outname = 'Kosselout.data'	! output filename
   call system_clock(newcount,count_rate,count_max)
   io_real(1)=float(newcount-cnt)/float(count_rate)
   mess = ' Program run completed '; call Message("(/A/)")
-  call WriteValue('Total computation time [s] ' , io_real, 1, "(F)")
+  call WriteValue('Total computation time [s] ' , io_real, 1, "(F10.3)")
   
   
 ! store additional information for the IDL interface  

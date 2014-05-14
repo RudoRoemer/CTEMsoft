@@ -513,7 +513,7 @@ frac = 0.05
 	    amp = matmul( (1.0-microstructure(ip,jp,iz))*ScatMat + microstructure(ip,jp,iz)*ScatMat0, amp )
  	  end do
  	end if
- 	inten = cabs(amp)**2
+ 	inten = abs(amp)**2 ! PGC cabs -> abs
 
 !write (*,*) ik, maxval(cabs(ScatMat)),maxval(cabs(DynMat)), maxval(inten), DynNbeams
 
@@ -682,7 +682,7 @@ BetheParameter%weakreflistindex = 0
 !  cutoff lambda |Ug| > |sg|  -> strong reflection
 !
       sgp = abs(rltmpa%sg) 
-      lUg = cabs(rltmpa%Ucg) * mLambda
+      lUg = abs(rltmpa%Ucg) * mLambda ! PGC cabs -> abs
       cut1 = BetheParameter%cutoff * lUg
       cut2 = BetheParameter%weakcutoff * lUg
 
@@ -792,7 +792,7 @@ do ic=1,BetheParameter%nns
          ughp = gammaLUT(ll(1),ll(2),ll(3)) 
          ll = BetheParameter%weakhkl(1:3,iw) - BetheParameter%stronghkl(1:3,ic)
          uhph = gammaLUT(ll(1),ll(2),ll(3)) 
-         if (cabs(ughp*uhph).ne.0.D0) then 
+         if (abs(ughp*uhph).ne.0.D0) then ! PGC cabs -> abs 
 !           weaksum = weaksum +  ughp * uhph *cmplx(1.D0/(BetheParameter%weaksg(iw)-BetheParameter%strongsg(ic)),0.0,dbl)
            weaksum = weaksum +  ughp * uhph *cmplx(1.D0/BetheParameter%weaksg(iw),0.0,dbl)
          end if
@@ -809,7 +809,7 @@ do ic=1,BetheParameter%nns
          ughp = gammapLUT(ll(1),ll(2),ll(3)) 
          ll = BetheParameter%weakhkl(1:3,iw) - BetheParameter%stronghkl(1:3,ic)
          uhph = gammapLUT(ll(1),ll(2),ll(3)) 
-         if (cabs(ughp*uhph).ne.0.D0) then 
+         if (abs(ughp*uhph).ne.0.D0) then ! PGC cabs -> abs 
 !           weaksum = weaksum +  ughp * uhph *cmplx(1.D0/(BetheParameter%weaksg(iw)-BetheParameter%strongsg(ic)),0.0,dbl)
            weaksum = weaksum +  ughp * uhph *cmplx(1.D0/BetheParameter%weaksg(iw),0.0,dbl)
          end if
@@ -824,9 +824,9 @@ do ic=1,BetheParameter%nns
       do iw=1,BetheParameter%nnw
          ll = BetheParameter%stronghkl(1:3,ir) - BetheParameter%weakhkl(1:3,iw)
          ughp = gammaLUT(ll(1),ll(2),ll(3)) 
-         if (cabs(ughp).ne.0.D0) then 
+         if (abs(ughp).ne.0.D0) then ! PGC cabs -> abs 
 !           weaksgsum = weaksgsum +  cabs(ughp)**2/(BetheParameter%weaksg(iw)-BetheParameter%strongsg(ir))
-           weaksgsum = weaksgsum +  cabs(ughp)**2/BetheParameter%weaksg(iw)
+           weaksgsum = weaksgsum +  abs(ughp)**2/BetheParameter%weaksg(iw) ! PGC cabs -> abs
          end if
       end do
       DynMat(ir,ir) = DynMat(ir,ir) - pre2*weaksgsum
@@ -837,9 +837,9 @@ do ic=1,BetheParameter%nns
       do iw=1,BetheParameter%nnw
          ll = BetheParameter%stronghkl(1:3,ir) - BetheParameter%weakhkl(1:3,iw)
          ughp = gammapLUT(ll(1),ll(2),ll(3)) 
-         if (cabs(ughp).ne.0.D0) then 
+         if (abs(ughp).ne.0.D0) then ! PGC cabs -> abs 
 !           weaksgsum = weaksgsum +  cabs(ughp)**2/(BetheParameter%weaksg(iw)-BetheParameter%strongsg(ir))
-           weaksgsum = weaksgsum +  cabs(ughp)**2/BetheParameter%weaksg(iw)
+           weaksgsum = weaksgsum +  abs(ughp)**2/BetheParameter%weaksg(iw) ! PGC cabs -> abs 
          end if
       end do
       DynMat0(ir,ir) = DynMat0(ir,ir) - pre2*weaksgsum
@@ -1039,7 +1039,7 @@ rltmpa => reflist
 !  cutoff lambda |Ug| > |sg|  -> strong reflection
 !
       sgp = abs(rltmpa%sg) 
-      lUg = cabs(rltmpa%Ucg) * mLambda
+      lUg = abs(rltmpa%Ucg) * mLambda ! PGC cabs -> abs
       cut1 = BetheParameter%cutoff * lUg
 
       if (sgp.le.cut1) then  ! count this beam

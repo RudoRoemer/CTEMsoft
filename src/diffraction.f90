@@ -43,7 +43,7 @@
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date    3/14/02 MDG 2.2 added CalcDynMat routine
 !--------------------------------------------------------------------------
-module diffraction 
+module diffraction
 
 use local
 
@@ -236,10 +236,10 @@ use dynamical
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)   		:: voltage		!< accelerating voltage [V]
+real(kind=dbl),INTENT(IN)   			:: voltage			!< accelerating voltage [V]
 integer(kind=irg),INTENT(IN),OPTIONAL 	:: skip			!< scattering set identifier
-real(kind=dbl)   			:: temp1,temp2, oi_real(1)
-integer(kind=irg)			:: hkl(3), io_int(1)
+real(kind=dbl)   					:: temp1,temp2, oi_real(1)
+integer(kind=irg)					:: hkl(3), io_int(1)
 
 ! store voltage in common block
  mAccvol = voltage
@@ -282,22 +282,22 @@ integer(kind=irg)			:: hkl(3), io_int(1)
   hkl=(/0,0,0/)
   call CalcUcg(hkl) 
   oi_real(1) = rlp%Vmod
-  call WriteValue('Mean inner potential [V] ', oi_real, 1, "(F6.2)")
+  call WriteValue('Mean inner potential [V] ', oi_real, 1)
   mPsihat = mPsihat + dble(rlp%Vmod)
   mess = ' Wavelength corrected for refraction'; call Message("(A)")
  endif
  oi_real(1) = mRelcor
- call WriteValue('Relativistic correction factor [gamma]  ', oi_real, 1, "(F8.6)")
+ call WriteValue('Relativistic correction factor [gamma]  ', oi_real, 1)
  oi_real(1) = mPsihat
- call WriteValue('Relativistic Accelerating Potential [V] ', oi_real, 1, "(F12.2)")
+ call WriteValue('Relativistic Accelerating Potential [V] ', oi_real, 1)
  mLambda = temp1/dsqrt(mPsihat)
  oi_real(1) = mLambda
- call WriteValue('Electron Wavelength [nm]                ', oi_real, 1, "(E13.5)")
+ call WriteValue('Electron Wavelength [nm]                ', oi_real, 1)
 ! interaction constant sigma
  mSigma = 2.D0*cPi*cRestmass*mRelcor*cCharge*mLambda
  mSigma = 1.0D-18*mSigma/cPlanck**2
  oi_real(1) = mSigma
- call WriteValue('Interaction constant [V nm]^(-1)        ', oi_real, 1, "(E13.5)")
+ call WriteValue('Interaction constant [V nm]^(-1)        ', oi_real, 1)
  
 end subroutine
 
@@ -1675,6 +1675,7 @@ end subroutine
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date  08/09/10  MDG 2.2  rewritten to include both ZGEEV and ZGEES/ZTREVC
 !> @date  03/26/13  MDG  3.0 clean up of old comments
+!> @date  03/04/14  PGC  3.1 Change cabs -> abs for gfortran compatability
 !--------------------------------------------------------------------------
 recursive subroutine BWsolve(M,W,CGG,CGinv,nn,IPIV,keeporder)
 
@@ -1684,19 +1685,19 @@ use io
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(IN)	:: nn			!< number of beams
+integer(kind=irg),INTENT(IN)		:: nn			!< number of beams
 complex(kind=dbl),INTENT(IN)	:: M(nn,nn)	!< input dynamical matrix
 complex(kind=dbl),INTENT(OUT)	:: W(nn)		!< Bloch eigenvalues
 complex(kind=dbl),INTENT(OUT)	:: CGG(nn,nn)	!< Bloch eigenvectors
 complex(kind=dbl),INTENT(OUT)	:: CGinv(nn,nn)	!< inverse of eigenvector array
-integer(kind=irg),INTENT(IN)	:: IPIV(nn)		!< pivot array, currently unused
-logical,INTENT(IN),OPTIONAL	:: keeporder	!< optional legacy parameter, should be removed
+integer(kind=irg),INTENT(IN)		:: IPIV(nn)		!< pivot array, currently unused
+logical,INTENT(IN),OPTIONAL		:: keeporder	!< optional legacy parameter, should be removed
 
-integer(kind=irg)    		:: INFO, LDA, LDVR, LDVL, LWORK, JPIV(nn),MILWORK, i
-integer(kind=irg),parameter   	:: LWMAX = 5000 
-complex(kind=dbl)    		:: VL(nn,nn),  WORK(LWMAX), normsum
-real(kind=dbl)       		:: RWORK(2*nn), io_real(1)
-character            		:: JOBVL, JOBVR
+integer(kind=irg)    				:: INFO, LDA, LDVR, LDVL, LWORK, JPIV(nn),MILWORK, i
+integer(kind=irg),parameter   		:: LWMAX = 5000 
+complex(kind=dbl)    			:: VL(nn,nn),  WORK(LWMAX), normsum
+real(kind=dbl)       				:: RWORK(2*nn), io_real(1)
+character            				:: JOBVL, JOBVR
 complex(kind=dbl),allocatable 	:: MIWORK(:)
 
 !----------------------------------------------------------------
@@ -1730,7 +1731,7 @@ complex(kind=dbl),allocatable 	:: MIWORK(:)
 ! it appears that the eigenvectors may not always be normalized ...
 ! so we renormalize them here...
 do i=1,nn
-  normsum = sum(cabs(CGG(1:nn,i))**2)
+  normsum = sum(abs(CGG(1:nn,i))**2) !PGC cabs -> abs
   normsum = cmplx(1.0,0.0,dbl)/sqrt(normsum)
   CGG(1:nn,i) = CGG(1:nn,i)*normsum
 end do
@@ -1750,9 +1751,9 @@ end do
  call zgetri(nn,CGinv,LDA,JPIV,MIWORK,MILWORK,INFO)
  if (INFO.ne.0) call FatalError('Error in BWsolve: ','ZGETRI return not zero')
 
- if ((cabs(sum(matmul(CGG,CGinv)))-dble(nn)).gt.1.E-8) then
+ if ((abs(sum(matmul(CGG,CGinv)))-dble(nn)).gt.1.E-8) then ! PGC cabs -> abs
   mess= 'Error in matrix inversion; continuing'; call Message("(A)")
-  io_real(1) = cabs(sum(matmul(CGG,CGinv)))-dble(nn)
+  io_real(1) = abs(sum(matmul(CGG,CGinv)))-dble(nn) ! PGC cabs -> abs
   call WriteValue('   Matrix inversion error; this number should be zero: ',io_real,1,"(F)")
  endif
   

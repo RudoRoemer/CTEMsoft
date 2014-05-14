@@ -433,7 +433,7 @@ real(kind=dbl), parameter :: cPi=3.141592653589D0, cAvogadro = 6.0221415D+23, cD
   traj = 0
   trajloop: do while (traj.lt.num)
 ! Subtract the energy that is lost for path length lambda.
-    dEds = predEds * alog( Ec / J+1.0D0 ) / Ec
+    dEds = predEds * dlog( Ec / J+1.0D0 ) / Ec
     dE = dEds * step
     Ec = Ec+dE
 

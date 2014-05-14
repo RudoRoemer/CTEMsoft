@@ -193,7 +193,7 @@ T0 = SECNDS(0.0)
   T1 = SECNDS(T0)
   mess = 'done'; call Message("(A)")
   io_real(1) = T1
-  call WriteValue('  Total computation time [s] ', io_real, 1, "(F)")
+  call WriteValue('  Total computation time [s] ', io_real, 1, "(F10.5)") ! PGC F -> F10.5
   mess = 'Starting direct analytical solution'; call Message("(/A)")
 
 ! next, redo the computation, but this time use TBCalcInten
@@ -214,7 +214,7 @@ T0 = SECNDS(0.0)
   T2 = SECNDS(T0)
   mess = 'done'; call Message("(A)")
   io_real(1) = T2
-  call WriteValue('  Total computation time [s] ', io_real, 1, "(F)")
+  call WriteValue('  Total computation time [s] ', io_real, 1, "(F10.5)") !PGC
 
 ! compare the two computations
   bfdiff = 0.0
@@ -228,9 +228,9 @@ T0 = SECNDS(0.0)
   bfdiff = bfdiff/float(ns)/float(nt)
   dfdiff = dfdiff/float(ns)/float(nt)
   io_real(1) = bfdiff
-  call WriteValue(' Average difference in BF ', io_real, 1, "(F)")
+  call WriteValue(' Average difference in BF ', io_real, 1, "(F10.4)") ! PGC
   io_real(1) = dfdiff
-  call WriteValue(' Average difference in DF ', io_real, 1, "(F)")
+  call WriteValue(' Average difference in DF ', io_real, 1, "(F10.4)") ! PGC
   mess = 'Images computed, preparing for PS output'; call Message("(A)")
 
 ! open PostScript file

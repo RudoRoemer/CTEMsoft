@@ -211,7 +211,7 @@ nsy = (nsy - 1)/2
 
 ! MCnthreads = 8
 io_int(1:6) = (/ numEbins, numzbins, nsx, nsy, num_el, MCnthreads /)
-call WriteValue(' NumEbins, numzbins, nsx, nsy, num_el, MCnthreads ',io_int,6,"(5I,',',I)")
+call WriteValue(' NumEbins, numzbins, nsx, nsy, num_el, MCnthreads ',io_int,6,"(I5,',',I8)")
 etotal = num_el 
 
 read (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
@@ -410,9 +410,14 @@ energyloop: do iE=numEbins,1,-1
 
 ! point to the first beam direction
    ktmp => khead
+write (*,*) "Debug"! PGC debug
 ! loop over all beam orientations, selecting them from the linked list
    beamloop:do ik = 1,numk
 
+     if (ik.le.2) write (*,*) 'ik=',ik,"ktmp%k=",ktmp%k
+     if (ik.le.2) write (*,*) 'ik=',ik,"ktmp%kn=",ktmp%kn
+     if (ik.le.2) write (*,*) 'ktmp%i=',ktmp%i,"ktmp%j=",ktmp%j
+     if (ik.eq.numk) write (*,*) 'ik=',ik,"ktmp%k=",ktmp%k
 ! compute the dynamical matrix using Bloch waves with Bethe potentials 
      DynFN = ktmp%k
      call Compute_DynMat('BLOCHBETHE', ktmp%k, ktmp%kt, .FALSE.)
@@ -422,8 +427,9 @@ energyloop: do iE=numEbins,1,-1
 ! then we need to initialize the Sgh and Lgh arrays
      if (allocated(Sgh)) deallocate(Sgh)
      if (allocated(Lgh)) deallocate(Lgh)
-
+     if (ik.le.2) write (*,*) "Line 428 Check, Does it get to here?" ! PGC Debug. Yes, it gets to here
      allocate(Sgh(BetheParameter%nns,BetheParameter%nns),Lgh(BetheParameter%nns,BetheParameter%nns))
+     if (ik.le.2) write (*,*) "Line 430 Check, Does it get to here?" ! PGC Debug. Yes, it gets to here
      Sgh = czero
 
 ! for each special position in the asymmetric unit ...
@@ -456,13 +462,16 @@ energyloop: do iE=numEbins,1,-1
 
 ! for now, we're disabling the kinematical part
 ! solve the dynamical eigenvalue equation for this beam direction  Lgh,thick,kn,nn,gzero,kin,debug
+     if (ik.le.2) write (*,*) "Line 463 Check, Does it get to here?" ! PGC Debug.
+     if (ik.le.2) write (*,*) "shape(lambdae)=",shape(lambdae) ! PGC Debug.
+!     if (izzmax.gt.74) izzmax=74 
      call CalcLgh3(DynMat,Lgh,dble(thick(iE)),ktmp%kn,BetheParameter%nns,gzero,kin,debug,depthstep,lambdaE(iE,1:izzmax),izzmax)
-
+     if (ik.le.2) write (*,*) "Line 465 Check, Does it get to here?" ! PGC Debug.
 ! dynamical contribution
      s = real(sum(Lgh*Sgh))/float(sum(nat))
 
 
-
+     if (ik.le.2) write (*,*) "Line 471 Check, Does it get to here?" ! PGC Debug.
 
 ! we need to make sure that the Bethe potentials did not accidentally cause a problem (divergence);
 ! so, if s is very large, then there is likely a problem and we should rerun this incident beam direction
@@ -524,7 +533,7 @@ energyloop: do iE=numEbins,1,-1
 ! and reset the weak cutoff
        BetheParameter%weakcutoff = Bethe_store
      end if
-
+     if (ik.le.2) write (*,*) "Line 532 Check, Does it get to here?" ! PGC Debug.
 
 ! and store the resulting values
      ipx = ktmp%i
@@ -548,6 +557,7 @@ energyloop: do iE=numEbins,1,-1
   
      if (mod(ik,2500).eq.0) write (*,*) 'completed beam direction ',ik
 ! select next beam direction
+     if (ik.le.2) write (*,*) "LINE 558" ! PGC Debug.
      ktmp => ktmp%next
     end do beamloop
 
@@ -794,6 +804,7 @@ integer(kind=sgl)              :: LWORK
  MILWORK = -1
  call zgetri(nn,CGinv,LDA,JPIV,getMIWORK,MILWORK,INFO)
  MILWORK =  INT(real(getMIWORK))
+! if (allocated(MIWORK)) deallocate(MIWORK) ! PGC added...
  if (.not.allocated(MIWORK)) allocate(MIWORK(MILWORK))
  MIWORK = dcmplx(0.D0,0.D0)
  call zgetri(nn,CGinv,LDA,JPIV,MIWORK,MILWORK,INFO)
@@ -829,7 +840,7 @@ dzt = depthstep/thick
      q =  cmplx(0.D0,0.D0)
      qold = tpi * dcmplx(aimag(W(i))+aimag(W(j)),real(W(i))-real(W(j)))
      do iz = 1,izz
-       q = q + dble(lambdaE(iz)) * cexp( - qold * dble(iz) )
+       q = q + dble(lambdaE(iz)) * cdexp( - qold * dble(iz) ) ! PGC cexp -> cdexp
      end do
      Ijk(i,j) = conjg(CGinv(i,gzero)) * q * CGinv(j,gzero)
   end do

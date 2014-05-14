@@ -206,7 +206,7 @@ end if
   call Message("(A)")
   call Prune_ReflectionList(numk,nbeams)
   io_int(1) = nbeams
-  call WriteValue('Number of contributing beams  : ', io_int, 1, '(I)')
+  call WriteValue('Number of contributing beams  : ', io_int, 1, '(I8)')
 
 
 ! set the scale parameter for a default camera length of 1000 mm.
@@ -384,7 +384,7 @@ end if
   call system_clock(newcount,count_rate,count_max)
   io_real(1)=float(newcount-cnt)/float(count_rate)
   mess = ' Program run completed '; call Message("(/A/)")
-  call WriteValue('Total computation time [s] ' , io_real, 1, "(F)")
+  call WriteValue('Total computation time [s] ' , io_real, 1, "(F10.5)")
 
 
 ! remove all the computed intensities for per pattern storage    
@@ -399,6 +399,7 @@ if (filemode.eq.'total') then
   end do
 
 ! write refcnt
+write (*,*) "LINE 402 DEBUG" !PGC
   write (dataunit) refcnt
   rltmpa => reflist%next
   do i=1,DynNbeamsLinked

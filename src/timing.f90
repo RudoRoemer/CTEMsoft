@@ -152,7 +152,7 @@ real(kind=sgl)				:: io_real(1)
  TIME_t_count = float(TIME_newcount-TIME_count)/float(TIME_count_rate)
  TIME_unit_count = TIME_t_count
  io_real(1) = TIME_unit_count
- call WriteValue(' Time for first computation step [s, typically overestimate] :', io_real, 1, "(F10.5)")
+ call WriteValue(' Time for first computation step [s, typically overestimate] :', io_real, 1, "(F10.3)")
  mess = '  Anticipated total computation time :'; call Message("(A$)")
  call PrintTime(TIME_unit_count*float(numk))
  

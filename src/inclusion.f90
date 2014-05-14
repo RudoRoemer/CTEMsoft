@@ -91,7 +91,7 @@ real(kind=sgl)                 :: Vx,Vy,Vz,Vrad,C,tmp(3)
 ! open the inclusion data file
 mess = 'Opening '//incname; call Message("(A)")
 open(unit=dataunit,file=incname,form='formatted')
-read(unit=dataunit,*) numinc
+read(dataunit,*) numinc ! PGC unit=dataunit -> dataunit
 allocate(inclusions(numinc))
 if (dinfo.eq.1) then
   io_int(1) = numinc
@@ -101,7 +101,7 @@ end if
 
 ! read each subsequent line 
 do i=1,numinc
-  read(unit=dataunit,*) Vx,Vy,Vz,Vrad,C
+  read(dataunit,*) Vx,Vy,Vz,Vrad,C ! PGC unit=dataunit -> dataunit
   inclusions(i)%xpos = Vx * 0.5 * float(DF_npix)*DF_L
   inclusions(i)%ypos = Vy * 0.5 * float(DF_npiy)*DF_L
   inclusions(i)%zpos = Vz * foil%z0         ! vertical fractional location in interval [-1,1]
