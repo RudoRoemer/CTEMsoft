@@ -73,3 +73,6 @@ absoft_run_env.sh
 # .mod’s and .o’s
 *.mod
 *.o
+
+#
+/Build/*
