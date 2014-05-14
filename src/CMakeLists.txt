@@ -48,5 +48,6 @@ set(CTEMSoftLib_SRCS
 )
 
 ADD_LIBRARY(CTEMSoftLib ${LIB_TYPE} ${CTEMSoftLib_SRCS})
+ADD_LIBRARY(local ${CTEMSoftLib_SOURCE_DIR}/local.f90)
 TARGET_LINK_LIBRARIES(CTEMSoftLib blas lapack)
 

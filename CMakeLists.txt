@@ -43,6 +43,8 @@ if(BUILD_SHARED_LIBS)
     endif()
 endif(BUILD_SHARED_LIBS)
 
+include_directories(${CTEMsoft_PROJECT_DIR}/src)
+include_directories(${CTEMsoft_BINARY_DIR}/src)
 
 ## THIS WILL BE NEEDED FOR WINDOWS
 	#cmake_minimum_required(VERSION 2.8.7.20120206)
