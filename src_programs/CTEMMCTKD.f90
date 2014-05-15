@@ -459,7 +459,7 @@ mainloop: do el = 1,num_el
   trajloop: do while (traj.lt.num)
 
 ! Subtract the energy that is lost for path length lambda.
-    dEds = predEds * alog( Ec / J+1.0D0 ) / Ec
+    dEds = predEds * dlog( Ec / J+1.0D0 ) / Ec
     dE = dEds * step
     Ec = Ec+dE
 

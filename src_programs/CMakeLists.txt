@@ -10,6 +10,7 @@ endmacro (Create_exe_and_tll)
 
 
 Create_exe_and_tll(CTEMBWshow)
+#need ctembethe.f95
 Create_exe_and_tll(CTEMEBSD)
 Create_exe_and_tll(CTEMEBSDmaster)
 ##Create_exe_and_tll(CTEMECCI) #read_stacking_fault_data has wrong number of args passed to it
@@ -17,7 +18,7 @@ Create_exe_and_tll(CTEMECP)
 Create_exe_and_tll(CTEMECPSM)
 Create_exe_and_tll(CTEMKossel)
 Create_exe_and_tll(CTEMMC)  #MP
-##Create_exe_and_tll(CTEMMCTKD) #arg to alog needs to be real(4) not real(8)
+Create_exe_and_tll(CTEMMCTKD) #arg to alog needs to be real(4) not real(8)
 ##Create_exe_and_tll(CTEMSRBW) #Explicit interface required for 'extractbwdata' 
 Create_exe_and_tll(CTEMSRCBED)
 Create_exe_and_tll(CTEMSRdefect) #MP 
@@ -34,7 +35,7 @@ Create_exe_and_tll(CTEMgammadefect)
 Create_exe_and_tll(CTEMholz)
 #Create_exe_and_tll(CTEMlacbed)
 Create_exe_and_tll(CTEMlatgeom)
-Create_exe_and_tll(CTEMlens) #can't open rksuite
+##Create_exe_and_tll(CTEMlens) #can't open rksuite
 Create_exe_and_tll(CTEMlistSG)
 Create_exe_and_tll(CTEMmbcbed)
 Create_exe_and_tll(CTEMmkxtal)

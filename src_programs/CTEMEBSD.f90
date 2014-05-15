@@ -219,7 +219,7 @@ if (anglemode.eq.'euler') then
 ! open the euler angle file and read the entries; there should be three reals on each line
 ! with the first line an integer indicating how many triplets there are in the file ... 
 	open(unit=dataunit,file=trim(eulerfile),status='old',action='read')
-	read(unit=dataunit,*) numeuler
+	read(dataunit,*) numeuler  !MNS changed unit = dataunit to dataunit to be compatible with gfortran
 
 	io_int(1) = numeuler
 	call WriteValue('Number of euler angles = ',io_int,1)
@@ -228,7 +228,7 @@ if (anglemode.eq.'euler') then
 	allocate(eulang(3,numeuler),stat=istat)
 	! if istat.ne.0 then do some error handling ... 
 	do i=1,numeuler
-	  read(unit=dataunit,*) eulang(1:3,i)
+	  read(dataunit,*) eulang(1:3,i)
 	end do
 	close(unit=dataunit,status='keep')
 	
@@ -250,12 +250,12 @@ if (anglemode.eq.'euler') then
 	end do
 else
 	open(unit=dataunit,file=trim(eulerfile),status='old',action='read')
-	read(unit=dataunit,*) numeuler
+	read(dataunit,*) numeuler
 	io_int(1) = numeuler
 	call WriteValue('Number of quaternions = ',io_int,1)
 	allocate(quatang(4,numeuler),stat=istat)
 	do i=1,numeuler
-	  read(unit=dataunit,*) quatang(1:4,i)
+	  read(dataunit,*) quatang(1:4,i)
 	end do
 	close(unit=dataunit,status='keep')
 end if

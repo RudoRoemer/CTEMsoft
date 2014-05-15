@@ -705,7 +705,7 @@ dzt = depthstep/thick
      q =  cmplx(0.D0,0.D0)
      qold = tpi * dcmplx(aimag(W(i))+aimag(W(j)),real(W(i))-real(W(j)))
      do iz = 1,izz
-       q = q + dble(lambdaE(iz)) * cexp( - qold * dble(iz) )
+       q = q + dble(lambdaE(iz)) * cdexp( - qold * dble(iz) ) !MNS changed cexp to cdexp to be compatible with gfortran
      end do
      Ijk(i,j) = conjg(CGinv(i,gzero)) * q * CGinv(j,gzero)
   end do
