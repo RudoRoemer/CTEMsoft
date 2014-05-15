@@ -5,7 +5,7 @@ project (CTEMsoft C CXX Fortran)
 #enable_language (Fortran)
 
 include(CMakeParseArguments)
-
+#find_package(OpenMP_Fortran)
 
    
    
@@ -43,7 +43,7 @@ if(BUILD_SHARED_LIBS)
     endif()
 endif(BUILD_SHARED_LIBS)
 
-include_directories(${CTEMsoft_PROJECT_DIR}/src)
+#include_directories(${CTEMsoft_SOURCE_DIR}/src)
 include_directories(${CTEMsoft_BINARY_DIR}/src)
 
 ## THIS WILL BE NEEDED FOR WINDOWS
@@ -61,6 +61,30 @@ include_directories(${CTEMsoft_BINARY_DIR}/src)
 	  LINK_LIBRARIES blas lapack  # link interface libraries
 	  LINK_LIBS  CTEMSoftLib blas lapack 
 	   )
+	   
+# FFLAGS depend on the compiler
+get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
+
+if (Fortran_COMPILER_NAME MATCHES "gfortran.*")
+  # gfortran
+  set (CMAKE_Fortran_FLAGS ${CMAKE_Fortran_FLAGS} "-fopenmp")
+  set (CMAKE_Fortran_FLAGS_RELEASE ${CMAKE_Fortran_FLAGS_RELEASE} "-funroll-all-loops -fno-f2c -O3 -fopenmp")
+  set (CMAKE_Fortran_FLAGS_DEBUG ${CMAKE_Fortran_FLAGS_DEBUG}  "-fno-f2c -O0 -g -fopenmp")
+elseif (Fortran_COMPILER_NAME MATCHES "ifort.*")
+  # ifort (untested)
+  set (CMAKE_Fortran_FLAGS_RELEASE "-f77rtl -O3")
+  set (CMAKE_Fortran_FLAGS_DEBUG   "-f77rtl -O0 -g")
+elseif (Fortran_COMPILER_NAME MATCHES "g77")
+  # g77
+  set (CMAKE_Fortran_FLAGS_RELEASE "-funroll-all-loops -fno-f2c -O3 -m32")
+  set (CMAKE_Fortran_FLAGS_DEBUG   "-fno-f2c -O0 -g -m32")
+else (Fortran_COMPILER_NAME MATCHES "gfortran.*")
+  message ("CMAKE_Fortran_COMPILER full path: " ${CMAKE_Fortran_COMPILER})
+  message ("Fortran compiler: " ${Fortran_COMPILER_NAME})
+  message ("No optimized Fortran compiler flags are known, we just try -O2...")
+  set (CMAKE_Fortran_FLAGS_RELEASE "-O2")
+  set (CMAKE_Fortran_FLAGS_DEBUG   "-O0 -g")
+endif (Fortran_COMPILER_NAME MATCHES "gfortran.*")
 
 #ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/src ${PROJECT_BINARY_DIR}/src)
 ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/src_programs ${PROJECT_BINARY_DIR}/src_programs)

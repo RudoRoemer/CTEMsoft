@@ -12,15 +12,15 @@ endmacro (Create_exe_and_tll)
 Create_exe_and_tll(CTEMBWshow)
 Create_exe_and_tll(CTEMEBSD)
 Create_exe_and_tll(CTEMEBSDmaster)
-Create_exe_and_tll(CTEMECCI)
+##Create_exe_and_tll(CTEMECCI)
 Create_exe_and_tll(CTEMECP)
 Create_exe_and_tll(CTEMECPSM)
 Create_exe_and_tll(CTEMKossel)
-##Create_exe_and_tll(CTEMMC)  #MP
+Create_exe_and_tll(CTEMMC)  #MP
 ##Create_exe_and_tll(CTEMMCTKD)
 #Create_exe_and_tll(CTEMSRBW)
 ##Create_exe_and_tll(CTEMSRCBED)
-##Create_exe_and_tll(CTEMSRdefect) #MP 
+Create_exe_and_tll(CTEMSRdefect) #MP 
 Create_exe_and_tll(CTEMTBBFDF)
 Create_exe_and_tll(CTEMTBBW)
 Create_exe_and_tll(CTEMTBSM)
@@ -46,5 +46,5 @@ Create_exe_and_tll(CTEMqg)
 Create_exe_and_tll(CTEMstar)
 Create_exe_and_tll(CTEMstereo)
 Create_exe_and_tll(CTEMvr)
-#Create_exe_and_tll(CTEMvrfft)  #need fft? 
+##Create_exe_and_tll(CTEMvrfft)  #need fft? 
 Create_exe_and_tll(CTEMzap)
