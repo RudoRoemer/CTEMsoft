@@ -25,7 +25,7 @@ Create_exe_and_tll(CTEMSRdefect) #MP
 Create_exe_and_tll(CTEMTBBFDF)
 Create_exe_and_tll(CTEMTBBW)
 Create_exe_and_tll(CTEMTBSM)
-##Create_exe_and_tll(CTEMZAdefect) #Generic function 'cabs' at (1) is not consistent with a specific intrinsic interface
+Create_exe_and_tll(CTEMZAdefect) #Generic function 'cabs' at (1) is not consistent with a specific intrinsic interface
 Create_exe_and_tll(CTEMZAgeom)
 Create_exe_and_tll(CTEMdrawcell)
 Create_exe_and_tll(CTEMexpeditions)
@@ -33,7 +33,7 @@ Create_exe_and_tll(CTEMfamily)
 Create_exe_and_tll(CTEMgamma)
 Create_exe_and_tll(CTEMgammadefect)
 Create_exe_and_tll(CTEMholz)
-#Create_exe_and_tll(CTEMlacbed)
+Create_exe_and_tll(CTEMlacbed)
 Create_exe_and_tll(CTEMlatgeom)
 ##Create_exe_and_tll(CTEMlens) #can't open rksuite
 Create_exe_and_tll(CTEMlistSG)
