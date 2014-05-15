@@ -92,7 +92,7 @@ real(kind=sgl)      			:: Vx,Vy,Vz,Vrad,tmp(3)
 ! open the void data file
 mess = 'Opening '//voidname; call Message("(A)")
 open(unit=dataunit,file=voidname,form='formatted')
-read(unit=dataunit,*) numvoid
+read(dataunit,*) numvoid ! PGC unit=dataunit -> dataunit
 allocate(voids(numvoid))
 if (dinfo.eq.1) then
   io_int(1) = numvoid
@@ -101,7 +101,7 @@ end if
 
 ! read each subsequent line 
 do i=1,numvoid
-  read(unit=dataunit,*) Vx,Vy,Vz,Vrad
+  read(dataunit,*) Vx,Vy,Vz,Vrad ! PGC unit=dataunit -> dataunit
   voids(i)%xpos = Vx * 0.5 * float(DF_npix) * DF_L
   voids(i)%ypos = Vy * 0.5 * float(DF_npiy) * DF_L
   voids(i)%zpos = Vz * foil%z0

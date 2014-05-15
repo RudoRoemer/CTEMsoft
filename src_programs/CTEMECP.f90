@@ -602,9 +602,9 @@ integer(kind=irg),allocatable	      :: tvals(:)
   do i=1,numt
     ampl2 = matmul(Azz,ampl)
     if (i.eq.1) then 
- 	Lghsum = spread(ampl2(1:nn),dim=2,ncopies=nn)*spread(conjg(ampl2(1:nn)),dim=1,ncopies=nn)
+        Lghsum = spread(ampl2(1:nn),dim=2,ncopies=nn)*spread(conjg(ampl2(1:nn)),dim=1,ncopies=nn)
     else
- 	Lghsum = Lghsum + spread(ampl2(1:nn),dim=2,ncopies=nn)* spread(conjg(ampl2(1:nn)),dim=1,ncopies=nn)
+        Lghsum = Lghsum + spread(ampl2(1:nn),dim=2,ncopies=nn)* spread(conjg(ampl2(1:nn)),dim=1,ncopies=nn)
     end if
     if (i.eq.tvals(tval)) then
       Lgh(1:nn,1:nn,tval) = Lghsum

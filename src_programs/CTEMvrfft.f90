@@ -207,7 +207,9 @@ real(kind=sgl)			:: io_real(1)
 ! and save the entire array in a file, containing coordinates
 ! (cartesian) and potential value.
 !
- open (unit=8,name='vrfft.out',status='unknown',form='unformatted')
+! open (unit=8,name='vrfft.out',status='unknown',form='unformatted')
+ open (unit=8,file='vrfft.out',status='unknown',form='unformatted')
+! open (8,name='vrfft.out',form='unformatted') ! PGC removed status='unknown'
  write (8) Vreal
  close (unit=8,status='keep') 
  mess = 'potential saved in file vrfft.out'; call Message("(A)")

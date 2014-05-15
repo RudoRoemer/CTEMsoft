@@ -871,7 +871,7 @@ integer(kind=irg)		:: p
 ierr = 0
 edge = 0.D0 * (sngl(cPi))**(2.0/3.0)
 
-if (maxval(dabs(lxyz)).gt.edge) then
+if (maxval(abs(lxyz)).gt.edge) then ! PGC dabs -> abs
   res = (/ 0.0, 0.0, 0.0 /)
   ierr = 1
   return

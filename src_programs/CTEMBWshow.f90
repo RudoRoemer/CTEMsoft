@@ -103,6 +103,7 @@ character(15)      		:: fname
  close (unit=15,status='keep')
 
 ! PostScript output file
+ write (*,*) "PS_openfile"
  call PS_openfile
  PS % pspage=0
 !

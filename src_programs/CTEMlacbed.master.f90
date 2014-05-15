@@ -240,7 +240,7 @@ end if
 
 ! allocate the offset array
 ! to get this array, we need to do a mock initialization of the dynamical matrix in zone axis orientation
-  call Compute_DynMat('BLOCHBETHE', khead%k, .TRUE.)
+  call Compute_DynMat('BLOCHBETHE', khead%k,khead%kt, .TRUE.) ! PGC added khead.kt
   frac = 0.05
 
 
@@ -252,7 +252,7 @@ end if
   call Message("(A)")
   call Prune_ReflectionList(numk,nstrong)
   io_int(1) = nstrong
-  call WriteValue('Number of strong beams overall : ', io_int, 1, '(I)')
+  call WriteValue('Number of strong beams overall : ', io_int, 1, '(I8)') ! PGC I->I8
 
 ! compute the offset parameters for all diffraction disks (for the zone-axis orientation !!!)
 ! first normalize the zone axis in cartesian components; this is the z-axis
@@ -319,7 +319,7 @@ end if
 ! loop over all beam orientations, selecting them from the linked list
   do ik = 1,numk
 ! compute the dynamical matrix using Bloch waves with Bethe potentials 
-        call Compute_DynMat('BLOCHBETHE', ktmp%k, .TRUE.)
+        call Compute_DynMat('BLOCHBETHE', ktmp%k,ktmp%kt, .TRUE.) ! PGC added ktmp%kt
 
 ! allocate a bunch of arrays for the Bloch wave eigenvalue computation
         allocate(CGinv(DynNbeams,DynNbeams), Wloc(DynNbeams), lCG(DynNbeams,DynNbeams), IPIV(DynNbeams))
@@ -397,7 +397,7 @@ end if
   call system_clock(newcount,count_rate,count_max)
   io_real(1)=float(newcount-cnt)/float(count_rate)
   mess = ' Program run completed '; call Message("(/A/)")
-  call WriteValue('Total computation time [s] ' , io_real, 1, "(F)")
+  call WriteValue('Total computation time [s] ' , io_real, 1, "(F10.5)")
 
 ! close the output file
   close(UNIT=dataunit,STATUS='keep')  

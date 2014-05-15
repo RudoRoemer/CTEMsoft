@@ -328,9 +328,9 @@ do ir=1,nn
       call CalcUcg(gmgp)
       DynMat(ir,ic) = cPi * rlp%qg
     else  ! it is a diagonal entry, so we need the excitation error and the absorption length
-      sg = Calcsg(dble(rltmpa%hkl),dble(kr),dble(DynFN))	
-write (*,*) rltmpa%hkl, sg
-      DynMat(ir,ir) = cmplx(2.D0*cPi*sg,cPi/xgp,dbl)
+      sg_pgc = Calcsg(dble(rltmpa%hkl),dble(kr),dble(DynFN)) ! PGC sg -> sg_pgc
+write (*,*) rltmpa%hkl, sg_pgc
+      DynMat(ir,ir) = cmplx(2.D0*cPi*sg_pgc,cPi/xgp,dbl) ! PGC sg -> sg_pgc
       write (*,*) DynMat(ir,ir)
     end if
     rltmpb => rltmpb%next
@@ -339,7 +339,7 @@ write (*,*) rltmpa%hkl, sg
 end do
 
 do i=1,7 
-  write (*,*) cabs(DynMat(i,1:7))**2
+  write (*,*) abs(DynMat(i,1:7))**2 ! PGC cabs -> abs
 end do
 
 fid = 'Dynarray.txt'
@@ -409,7 +409,7 @@ real(kind=dbl)        			:: dis,xpos,ypos,zpos,sumR(3),thick,tmp(3),tmp2(3), &
                          			 
 complex(kind=dbl)     			:: za(3)
 complex(kind=sgl)     			:: zero
-logical               			:: void
+logical               			:: lvoid ! PGC void -> lvoid
 
 ! scale the image coordinates with respect to the origin at the center of the image
  xpos = float(i-DF_npix/2)*DF_L
