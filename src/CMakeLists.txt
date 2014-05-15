@@ -9,17 +9,17 @@ set(CTEMSoftLib_SRCS
 	${CTEMSoftLib_SOURCE_DIR}/defectmodule.f90
 	${CTEMSoftLib_SOURCE_DIR}/diffraction.f90
 	${CTEMSoftLib_SOURCE_DIR}/dislocation.f90
-	#${CTEMSoftLib_SOURCE_DIR}/dispfield.f90
+	#${CTEMSoftLib_SOURCE_DIR}/dispfield.f90  #also named ysh model at top
 	${CTEMSoftLib_SOURCE_DIR}/doublediff.f90
 	${CTEMSoftLib_SOURCE_DIR}/dynamical.f90
-	#${CTEMSoftLib_SOURCE_DIR}/eispack.f90
+	${CTEMSoftLib_SOURCE_DIR}/eispack.f90
 	${CTEMSoftLib_SOURCE_DIR}/error.f90
-	#${CTEMSoftLib_SOURCE_DIR}/family.f90
+	##${CTEMSoftLib_SOURCE_DIR}/family.f90 #For Marc's book 
 	${CTEMSoftLib_SOURCE_DIR}/files.f90
 	${CTEMSoftLib_SOURCE_DIR}/foilmodule.f90
 	${CTEMSoftLib_SOURCE_DIR}/graphics.f90
 	${CTEMSoftLib_SOURCE_DIR}/gvectors.f90
-	#${CTEMSoftLib_SOURCE_DIR}/HDF5Utilities.f90
+	#${CTEMSoftLib_SOURCE_DIR}/HDF5Utilities.f90 #Need HDF5 library from somewhere
 	${CTEMSoftLib_SOURCE_DIR}/inclusion.f90
 	${CTEMSoftLib_SOURCE_DIR}/io.f90
 	${CTEMSoftLib_SOURCE_DIR}/kvectors.f90
