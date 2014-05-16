@@ -278,7 +278,7 @@ integer(kind=irg)    :: I, Row, Col
  call TIFF_Write_Word(1,4)
 
 ! pad with zeroes to fill first 256 bytes of file
- do i=L+1,256
+ do I=L+1,256
   call TIFF_Write_Byte_Into_Buffer(char(0))
  end do
 
