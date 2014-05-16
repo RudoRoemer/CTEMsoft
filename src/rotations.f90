@@ -2512,7 +2512,7 @@ use local
 real(kind=sgl), intent(in) 		:: h(3)
 real(kind=sgl)				:: res(3)
 
-res = ax2eu(ho2ax(h))
+res = ro2eu(ho2ro(h))
 
 end function ho2eu
 
@@ -2585,13 +2585,14 @@ res = ax2om_d(ho2ax_d(h))
 
 end function ho2om_d
 
+
 !--------------------------------------------------------------------------
 !
 ! FUNCTION: ho2ro
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief convert homochoric to Rodrigues
+!> @brief convert homochoric to Rodrigues (similar to ho2ax)
 !
 !> @param h homochoric coordinates (single precision)
 ! 
@@ -2599,12 +2600,38 @@ end function ho2om_d
 !--------------------------------------------------------------------------
 function ho2ro(h) result (res)
 
-use local 
+IMPLICIT NONE
 
-real(kind=sgl), intent(in) 		:: h(3)
-real(kind=sgl)				:: res(3)
+real(kind=sgl),INTENT(IN)	:: h(3)		!< homochoric coordinates
+real(kind=sgl)			:: res(3)
 
-res = ax2ro(ho2ax(h))
+integer(kind=irg)		:: i
+real(kind=sgl)			:: hn(3), hmag, s, hm
+
+! fit parameters determined with Mathematica
+real(kind=dbl),parameter	:: c(7) = (/ -0.5000096149170321D0, -0.02486606148871731D0, &
+              				-0.004549381779362819D0, 0.0005118668366387526D0, &
+              				-0.0016500827333575548D0, 0.0007593352203388718D0, &
+              				-0.0002040422502566876D0 /)
+
+! normalize h and store the magnitude
+hmag = sum(h*h)
+if (hmag.eq.0.0) then
+  res = (/ 0.0, 0.0, 0.0, 0.0 /)
+else
+  hm = hmag
+  hn = h/sqrt(hmag)
+
+! convert the magnitude to the rotation angle
+  s = c(1) * hmag
+  do i=2,7
+    hm = hm*hmag
+    s = s + c(i) * hm
+  end do
+  
+  s = cos( 2.0*acos(1.0+s) )
+  res = (/ hn(1), hn(2), hn(3) /) * s
+end if
 
 end function ho2ro
 
@@ -2622,14 +2649,41 @@ end function ho2ro
 !--------------------------------------------------------------------------
 function ho2ro_d(h) result (res)
 
-use local 
+IMPLICIT NONE
 
-real(kind=dbl), intent(in) 		:: h(3)
-real(kind=dbl)				:: res(3)
+real(kind=dbl),INTENT(IN)	:: h(3)		!< homochoric coordinates
+real(kind=dbl)			:: res(3)
 
-res = ax2ro_d(ho2ax_d(h))
+integer(kind=irg)		:: i
+real(kind=dbl)			:: hn(3), hmag, s, hm
+
+! fit parameters determined with Mathematica
+real(kind=dbl),parameter	:: c(7) = (/ -0.5000096149170321D0, -0.02486606148871731D0, &
+              				-0.004549381779362819D0, 0.0005118668366387526D0, &
+              				-0.0016500827333575548D0, 0.0007593352203388718D0, &
+              				-0.0002040422502566876D0 /)
+
+! normalize h and store the magnitude
+hmag = sum(h*h)
+if (hmag.eq.0.D0) then
+  res = (/ 0.D0, 0.D0, 0.D0, 0.D0 /)
+else
+  hm = hmag
+  hn = h/dsqrt(hmag)
+
+! convert the magnitude to the rotation angle
+  s = c(1) * hmag
+  do i=2,7
+    hm = hm*hmag
+    s = s + c(i) * hm
+  end do
+
+  s = dcos( 2.D0*dacos(1.D0+s) )
+  res = (/ hn(1), hn(2), hn(3) /) * s
+end if
 
 end function ho2ro_d
+
 
 !--------------------------------------------------------------------------
 !

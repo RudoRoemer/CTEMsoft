@@ -869,7 +869,7 @@ real(kind=sgl)			:: XYZ(3), sXYZ(3), T1, T2, c, s, q, LamXYZ(3), edge
 integer(kind=irg)		:: p
 
 ierr = 0
-edge = 0.D0 * (sngl(cPi))**(2.0/3.0)
+edge = 0.50 * (sngl(cPi))**(2.0/3.0)
 
 if (maxval(dabs(lxyz)).gt.edge) then
   res = (/ 0.0, 0.0, 0.0 /)
