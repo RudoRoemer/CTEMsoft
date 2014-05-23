@@ -1,5 +1,4 @@
-;
-; Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
+; Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are 
@@ -26,64 +25,24 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDshowPattern.pro
+; CTEMsoft2013:Core_quatmult.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: EBSDshowPattern.pro
+; PROGRAM: Core_quatmult.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief main routine for display of EBSD patterns
+;> @brief returns the quaternion product.
 ;
-;> @date 05/22/14 MDG 1.0 first version
+;
+;> @date 03/19/14 MDG 1.0 initial version
 ;--------------------------------------------------------------------------
-pro EBSDshowPattern, single=single
+function Core_quatmult, x, y
 
-; the keyword /single indicates that only one pattern is available 
+qm = [ x[0]*y[0] - x[1]*y[1] - x[2]*y[2] - x[3]*y[3], $
+             x[0]*y[1] + x[1]*y[0] + x[2]*y[3] - x[3]*y[2], $
+             x[0]*y[2] - x[1]*y[3] + x[2]*y[0] + x[3]*y[1], $
+             x[0]*y[3] + x[1]*y[2] - x[2]*y[1] + x[3]*y[0] ]
 
-;------------------------------------------------------------
-; common blocks
-common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, EBSDdata
-common EBSDpatterns, pattern, image, finalpattern
-
-wset,EBSDwidget_s.PatternDrawID
-erase
-empty
-
-; set the min and max fields
-EBSDdata.Patternmin = min(pattern)
-EBSDdata.Patternmax = max(pattern)
-
-WIDGET_CONTROL, set_value=string(EBSDdata.Patternmin,format="(F7.2)"), EBSDwidget_s.Patternmin
-WIDGET_CONTROL, set_value=string(EBSDdata.Patternmax,format="(F7.2)"), EBSDwidget_s.Patternmax
-
-; display the pattern
-if keyword_set(single) then begin
-; first apply the necessary intensity scaling to the current pattern
-
-; what kind of intensity scaling do we need?
-  if (EBSDdata.PatternScaling eq 0) then begin  ; this is regular linear scaling
-    finalpattern = bytscl(pattern,min=EBSDdata.Patternmin,max=EBSDdata.Patternmax)
-  end else begin
-    image = pattern^EBSDdata.gammavalue
-    finalpattern = bytscl(image)
-  end
-
-; then we apply the pattern origin (not sure if this is a useful operation or not)
-
-
-
-; finally, we use the binning factor
-  if (EBSDdata.detbinning ne 0) then finalpattern = congrid(finalpattern,EBSDdata.detnumsx/2^EBSDdata.detbinning,EBSDdata.detnumsy/2^EBSDdata.detbinning)
-
-; and we display the result
-  tv,finalpattern
-
-end else begin
-; this is a pre-computed series of patterns, so we can do direct display
-
-end
-
-
+return,qm
 end

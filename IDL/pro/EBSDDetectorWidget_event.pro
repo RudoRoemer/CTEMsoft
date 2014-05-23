@@ -73,6 +73,10 @@ end else begin
  'DETBEAMCURRENT': EBSDdata.detbeamcurrent = Core_WidgetEvent( EBSDwidget_s.detbeamcurrent, 'Beam current set to [nA] ', '(F7.3)', /flt)
  'DETDWELLTIME': EBSDdata.detdwelltime = Core_WidgetEvent( EBSDwidget_s.detdwelltime, 'Dwell time set to [mu s] ', '(F7.3)', /flt)
 
+ 'DETax1': EBSDdata.detax1 = Core_WidgetEvent( EBSDwidget_s.detax1, 'Axis-angle entry 1 set to ', '(F6.2)', /flt)
+ 'DETax2': EBSDdata.detax2 = Core_WidgetEvent( EBSDwidget_s.detax2, 'Axis-angle entry 2 set to ', '(F6.2)', /flt)
+ 'DETax3': EBSDdata.detax3 = Core_WidgetEvent( EBSDwidget_s.detax3, 'Axis-angle entry 3 set to ', '(F6.2)', /flt)
+ 'DETax4': EBSDdata.detax4 = Core_WidgetEvent( EBSDwidget_s.detax4, 'Axis-angle entry 4 set to [deg] ', '(F6.2)', /flt)
 
  'EBSDMINENERGYLIST': begin
 		EBSDdata.Eminsel = fix(event.index)
@@ -157,7 +161,6 @@ print,'executable pathname = ',EBSDdata.f90exepath
 	endcase
 
  'DISPLAYEBSD': begin
-print,'DisplayEBSD selected'
 
 ; this does two things.  First of all, the CTEMEBSD program is called with the current
 ; parameters for the detector and microscope geometry, and the single set of Euler angles

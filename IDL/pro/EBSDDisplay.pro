@@ -66,9 +66,18 @@
 ;> binning, and brightness/contrast controls are available.  The other options 
 ;> will be included in the next version (as will be the dictionary generation option).
 ;
+;> @todo Long list of things to be added:
+;> - quaternion rotation (via axis-angle pair) of Euler angles for single pattern mode
+;> - add aperture to pattern, with on-off switch
+;> - complete angle file stuff
+;> - complete Rodrigues Fundamental Zone handling
+;> - incorporate automated calibration of pattern parameters
+;> - allow user to save setup for different microscopes
+;
 ;> @date 01/27/14 MDG 1.0 first attempt at a user-friendly interface
 ;> @date 03/17/14 MDG 1.1 main widget rewrite; prepended 'EBSD' to widget_s and data structures for future merge with other IDL routines
 ;> @date 03/19/14 MDG 1.2 implementation of Monte Carlo and master EBSD widgets
+;> @date 05/22/14 MDG 1.3 completion of single pattern display mode
 ;--------------------------------------------------------------------------
 pro EBSDDisplay,dummy
 ;
@@ -163,6 +172,10 @@ EBSDwidget_s = {widgetstruct, $
 	PatternOrigin: long(0), $		; pattern origin widget
 	Patternmin: long(0), $			; pattern min widget
 	Patternmax: long(0), $			; pattern max widget
+	detax1: long(0), $			; axis angle pair component
+	detax2: long(0), $			; axis angle pair component
+	detax3: long(0), $			; axis angle pair component
+	detax4: long(0), $			; axis angle pair component
 
 	; pattern parameters for display
 	Pmode: long(0), $			; pattern mode widget
@@ -281,6 +294,10 @@ EBSDdata = {EBSDdatastruct, $
 	gammavalue: float(0), $			; gamma correction factor
 	Patternmin: float(0), $			; pattern min indicator
 	Patternmax: float(0), $			; pattern max indicator
+	detax1: float(0), $			; axis angle pair component
+	detax2: float(0), $			; axis angle pair component
+	detax3: float(0), $			; axis angle pair component
+	detax4: float(0), $			; axis angle pair component
 
 	; pattern parameters for display
 	Pmode: long(0), $			; pattern mode (0=single, 1=angle file, 2=dictionary)

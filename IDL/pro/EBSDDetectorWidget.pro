@@ -96,7 +96,7 @@ EBSDwidget_s.detL = Core_WTextE(file2,'Scintillator Distance [micron]', fontstr,
 
 ;---------- 
 file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
-EBSDwidget_s.dettheta = Core_WTextE(file2,'Detector Tilt Angile [deg]', fontstr, 250, 25, 10, 1, string(EBSDdata.dettheta,format="(F6.2)"),'DETTHETA','EBSDDetectorWidget_event')
+EBSDwidget_s.dettheta = Core_WTextE(file2,'Detector Tilt Angle [deg]', fontstr, 250, 25, 10, 1, string(EBSDdata.dettheta,format="(F6.2)"),'DETTHETA','EBSDDetectorWidget_event')
 
 ;---------- 
 file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
@@ -228,6 +228,12 @@ file2 = WIDGET_BASE(file1, /ROW, XSIZE=430, /ALIGN_CENTER)
 EBSDwidget_s.detphi1 = Core_WTextE(file2,'Euler [deg] phi1', fontstr, 120, 25, 8, 1, string(EBSDdata.detphi1,format="(F6.2)"),'DETphi1','EBSDDetectorWidget_event')
 EBSDwidget_s.detphi = Core_WTextE(file2,' Phi', fontstr, 40, 25, 8, 1, string(EBSDdata.detphi,format="(F6.2)"),'DETPhi','EBSDDetectorWidget_event')
 EBSDwidget_s.detphi2 = Core_WTextE(file2,' phi2', fontstr, 40, 25, 8, 1, string(EBSDdata.detphi2,format="(F6.2)"),'DETphi2','EBSDDetectorWidget_event')
+
+file2 = WIDGET_BASE(file1, /ROW, XSIZE=430, /ALIGN_CENTER)
+EBSDwidget_s.detax1 = Core_WTextE(file2,'axis', fontstr, 40, 25, 8, 1, string(EBSDdata.detax1,format="(F6.2)"),'DETax1','EBSDDetectorWidget_event')
+EBSDwidget_s.detax2 = Core_WTextE(file2,'', fontstr, 4, 25, 8, 1, string(EBSDdata.detax2,format="(F6.2)"),'DETax2','EBSDDetectorWidget_event')
+EBSDwidget_s.detax3 = Core_WTextE(file2,'', fontstr, 4, 25, 8, 1, string(EBSDdata.detax2,format="(F6.2)"),'DETax3','EBSDDetectorWidget_event')
+EBSDwidget_s.detax4 = Core_WTextE(file2,'angle [deg]', fontstr, 85, 25, 8, 1, string(EBSDdata.detax4,format="(F6.2)"),'DETax4','EBSDDetectorWidget_event')
 
 EBSDwidget_s.DisplayEBSD = WIDGET_BUTTON(file1, $
                                 VALUE='Display Pattern', $
