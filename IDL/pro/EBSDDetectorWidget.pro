@@ -59,7 +59,7 @@ end
 
 ;------------------------------------------------------------
 ; create the top level widget
-EBSDwidget_s.detectorbase = WIDGET_BASE(TITLE='Detector Widget', $
+EBSDwidget_s.detectorbase = WIDGET_BASE(TITLE='Detector and Pattern Mode Widget', $
                         /ROW, $
                         XSIZE=810, $
                         /ALIGN_LEFT, $
@@ -71,21 +71,19 @@ EBSDwidget_s.detectorbase = WIDGET_BASE(TITLE='Detector Widget', $
 ;------------------------------------------------------------
 ; create the two main columns
 block1 = WIDGET_BASE(EBSDwidget_s.detectorbase, $
-			/FRAME, $
 			XSIZE=350, $
 			/ALIGN_TOP, $
 			/COLUMN)
 
 block2 = WIDGET_BASE(EBSDwidget_s.detectorbase, $
-			/FRAME, $
-			XSIZE=450, $
+			XSIZE=440, $
 			/ALIGN_TOP, $
 			/COLUMN)
 
 ;------------------------------------------------------------
 ;------------------------------------------------------------
-file1 = WIDGET_BASE(block1, /ROW, XSIZE=340, /ALIGN_RIGHT)
-file2 = WIDGET_LABEL(file1, VALUE='Detector & Microscope Geometry', font=fontstrlarge, /ALIGN_RIGHT, /FRAME)
+file1 = WIDGET_BASE(block1, /COLUMN, /FRAME, YPAD=8, XSIZE=340, /ALIGN_LEFT)
+file2 = WIDGET_LABEL(file1, VALUE='Detector & Microscope Geometry', font=fontstrlarge, /ALIGN_LEFT, /FRAME)
 
 ; we'll create two columns, one with all the detector geometry parameters,
 ; the other with pattern variables, including Euler angles, Euler angle
@@ -93,58 +91,39 @@ file2 = WIDGET_LABEL(file1, VALUE='Detector & Microscope Geometry', font=fontstr
 ; energy filter window, ...
 
 ;---------- 
-file1 = WIDGET_BASE(block1, /ROW, XSIZE=340, /ALIGN_CENTER)
-EBSDwidget_s.detL = Core_WTextE(file1,'Scintillator Distance [micron]', fontstr, 250, 25, 10, 1, string(EBSDdata.detL,format="(F9.2)"),'DETL','EBSDDetectorWidget_event')
+file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
+EBSDwidget_s.detL = Core_WTextE(file2,'Scintillator Distance [micron]', fontstr, 250, 25, 10, 1, string(EBSDdata.detL,format="(F9.2)"),'DETL','EBSDDetectorWidget_event')
 
 ;---------- 
-file1 = WIDGET_BASE(block1, /ROW, XSIZE=340, /ALIGN_CENTER)
-EBSDwidget_s.dettheta = Core_WTextE(file1,'Detector Tilt Ange [deg]', fontstr, 250, 25, 10, 1, string(EBSDdata.dettheta,format="(F6.2)"),'DETTHETA','EBSDDetectorWidget_event')
+file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
+EBSDwidget_s.dettheta = Core_WTextE(file2,'Detector Tilt Angile [deg]', fontstr, 250, 25, 10, 1, string(EBSDdata.dettheta,format="(F6.2)"),'DETTHETA','EBSDDetectorWidget_event')
 
 ;---------- 
-file1 = WIDGET_BASE(block1, /ROW, XSIZE=340, /ALIGN_CENTER)
-EBSDwidget_s.detdelta = Core_WTextE(file1,'Scintillator Pixel Size [micron]', fontstr, 250, 25, 10, 1, string(EBSDdata.detdelta,format="(F7.2)"),'DETDELTA','EBSDDetectorWidget_event')
+file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
+EBSDwidget_s.detdelta = Core_WTextE(file2,'Scintillator Pixel Size [micron]', fontstr, 250, 25, 10, 1, string(EBSDdata.detdelta,format="(F7.2)"),'DETDELTA','EBSDDetectorWidget_event')
 
 ;---------- 
-file1 = WIDGET_BASE(block1, /ROW, XSIZE=340, /ALIGN_CENTER)
-EBSDwidget_s.detnumsx = Core_WTextE(file1,'Number of pixels ', fontstr, 140, 25, 5, 1, string(EBSDdata.detnumsx,format="(I4)"),'DETNUMSX','EBSDDetectorWidget_event')
-EBSDwidget_s.detnumsy = Core_WTextE(file1,' by ', fontstr, 30, 25, 5, 1, string(EBSDdata.detnumsy,format="(I4)"),'DETNUMSY','EBSDDetectorWidget_event')
+file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
+EBSDwidget_s.detnumsx = Core_WTextE(file2,'Number of pixels ', fontstr, 140, 25, 5, 1, string(EBSDdata.detnumsx,format="(I4)"),'DETNUMSX','EBSDDetectorWidget_event')
+EBSDwidget_s.detnumsy = Core_WTextE(file2,' by ', fontstr, 30, 25, 5, 1, string(EBSDdata.detnumsy,format="(I4)"),'DETNUMSY','EBSDDetectorWidget_event')
 
 ;---------- 
-file1 = WIDGET_BASE(block1, /ROW, XSIZE=340, /ALIGN_CENTER)
-EBSDwidget_s.detxpc = Core_WTextE(file1,'PC [pixels] ', fontstr, 140, 25,  8, 1, string(EBSDdata.detxpc,format="(F7.2)"),'DETXPC','EBSDDetectorWidget_event')
-EBSDwidget_s.detypc = Core_WTextE(file1,' , ', fontstr, 20, 25,  8, 1, string(EBSDdata.detypc,format="(F7.2)"),'DETYPC','EBSDDetectorWidget_event')
+file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
+EBSDwidget_s.detxpc = Core_WTextE(file2,'PC [pixels] ', fontstr, 140, 25,  8, 1, string(EBSDdata.detxpc,format="(F7.2)"),'DETXPC','EBSDDetectorWidget_event')
+EBSDwidget_s.detypc = Core_WTextE(file2,' , ', fontstr, 20, 25,  8, 1, string(EBSDdata.detypc,format="(F7.2)"),'DETYPC','EBSDDetectorWidget_event')
 
 ;---------- 
-file1 = WIDGET_BASE(block1, /ROW, XSIZE=340, /ALIGN_CENTER)
-EBSDwidget_s.detbinning = Core_WTextE(file1,'Detector Binning', fontstr, 140, 25, 5, 1, string(EBSDdata.detbinning,format="(I3)"),'DETBINNING','EBSDDetectorWidget_event')
+file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
+EBSDwidget_s.detbeamcurrent = Core_WTextE(file2,'Beam current [nA]', fontstr, 140, 25, 10, 1, string(EBSDdata.detbeamcurrent,format="(F7.3)"),'DETBEAMCURRENT','EBSDDetectorWidget_event')
 
 ;---------- 
-file1 = WIDGET_BASE(block1, /ROW, XSIZE=340, /ALIGN_CENTER)
-EBSDwidget_s.detbeamcurrent = Core_WTextE(file1,'Beam current [A]', fontstr, 140, 25, 10, 1, string(EBSDdata.detbeamcurrent,format="(D9.2)"),'DETBEAMCURRENT','EBSDDetectorWidget_event')
-
-;---------- 
-file1 = WIDGET_BASE(block1, /ROW, XSIZE=340, /ALIGN_CENTER)
-EBSDwidget_s.detdwelltime = Core_WTextE(file1,'Dwell Time [s] ', fontstr, 140, 25, 10, 1, string(EBSDdata.detdwelltime,format="(D9.2)"),'DETDWELLTIME','EBSDDetectorWidget_event')
+file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
+EBSDwidget_s.detdwelltime = Core_WTextE(file2,'Dwell Time [mu s] ', fontstr, 140, 25, 10, 1, string(EBSDdata.detdwelltime,format="(F7.3)"),'DETDWELLTIME','EBSDDetectorWidget_event')
 
 
-;------------------------------------------------------------
-;------------------------------------------------------------
-
-
-;------------------------------------------------------------
-;------------------------------------------------------------
-file1 = WIDGET_BASE(block2, /ROW, XSIZE=440, /ALIGN_RIGHT)
-file2 = WIDGET_LABEL(file1, VALUE='Pattern Parameters', font=fontstrlarge, /ALIGN_RIGHT,/FRAME)
-
-;---------- 
-file1 = WIDGET_BASE(block2, /ROW, XSIZE=440, /ALIGN_CENTER)
-EBSDwidget_s.detphi1 = Core_WTextE(file1,'Euler [deg] phi1', fontstr, 120, 25, 8, 1, string(EBSDdata.detphi1,format="(F6.2)"),'DETphi1','EBSDDetectorWidget_event')
-EBSDwidget_s.detphi = Core_WTextE(file1,' Phi', fontstr, 40, 25, 8, 1, string(EBSDdata.detphi,format="(F6.2)"),'DETPhi','EBSDDetectorWidget_event')
-EBSDwidget_s.detphi2 = Core_WTextE(file1,' phi2', fontstr, 40, 25, 8, 1, string(EBSDdata.detphi2,format="(F6.2)"),'DETphi2','EBSDDetectorWidget_event')
-
-file1 = WIDGET_BASE(block2, /ROW, XSIZE=440, /ALIGN_CENTER)
+file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
 vals = ['TSL', 'HKL']
-EBSDwidget_s.EulerConvention = CW_BGROUP(file1, $
+EBSDwidget_s.EulerConvention = CW_BGROUP(file2, $
                         vals, $
                         /ROW, $
                         /NO_RELEASE, $
@@ -157,60 +136,200 @@ EBSDwidget_s.EulerConvention = CW_BGROUP(file1, $
 
 
 ;------------------------------------------------------------
-file1 = WIDGET_BASE(block2, /ROW, XSIZE=440, /ALIGN_CENTER)
-vals = ['Background Only','Full Pattern']
-EBSDwidget_s.BGmode = CW_BGROUP(file1, $
-                        vals, $
-                        /ROW, $
-                        /NO_RELEASE, $
-                        /EXCLUSIVE, $
-                        FONT=fontstr, $
-                        LABEL_LEFT = 'Pattern Mode', $
-                        EVENT_FUNC ='EBSDevent', $
-                        UVALUE='PATTERNMODE', $
-                        SET_VALUE=EBSDdata.BGmode)
+;file2 = WIDGET_BASE(file1, /ROW, XSIZE=430, /ALIGN_CENTER)
+;vals = ['Background Only','Full Pattern']
+;EBSDwidget_s.BGmode = CW_BGROUP(file2, $
+;                        vals, $
+;                        /ROW, $
+;                        /NO_RELEASE, $
+;                        /EXCLUSIVE, $
+;                        FONT=fontstr, $
+;                        LABEL_LEFT = 'Pattern Mode', $
+;                        EVENT_FUNC ='EBSDevent', $
+;                        UVALUE='PATTERNMODE', $
+;                        SET_VALUE=EBSDdata.BGmode)
 
 ;------------------------------------------------------------
 ; min and max energy settings for filtered imaging
-file1 = WIDGET_BASE(block2, /ROW, XSIZE=440, /ALIGN_CENTER)
+file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
 tvals = strarr(EBSDdata.mcenergynumbin)
 for i=0,EBSDdata.mcenergynumbin-1 do begin
   th = EBSDdata.mcenergymin + float(i)*EBSDdata.mcenergybinsize
   tvals[i] = string(th,format="(F5.2)")
 end
 
-file2 = WIDGET_LABEL(file1, VALUE='Energy Window:   Min ', font=fontstr)
-EBSDwidget_s.EBSDminenergylist = WIDGET_DROPLIST(file1, $
+file3 = WIDGET_LABEL(file2, VALUE='Energy Min', font=fontstr)
+EBSDwidget_s.EBSDminenergylist = WIDGET_DROPLIST(file2, $
 			EVENT_PRO='EBSDDetectorWidget_event', $
 			VALUE=tvals,$
 			UVALUE='EBSDMINENERGYLIST', $
 			/ALIGN_LEFT)
 WIDGET_CONTROL, set_droplist_select=EBSDdata.Eminsel, EBSDwidget_s.EBSDminenergylist
 
-file2 = WIDGET_LABEL(file1, VALUE='Max ', font=fontstr)
-EBSDwidget_s.EBSDmaxenergylist = WIDGET_DROPLIST(file1, $
+file3 = WIDGET_LABEL(file2, VALUE='Max ', font=fontstr)
+EBSDwidget_s.EBSDmaxenergylist = WIDGET_DROPLIST(file2, $
 			EVENT_PRO='EBSDDetectorWidget_event', $
 			VALUE=tvals,$
 			UVALUE='EBSDMAXENERGYLIST', $
 			/ALIGN_LEFT)
 WIDGET_CONTROL, set_droplist_select=EBSDdata.Emaxsel, EBSDwidget_s.EBSDmaxenergylist
 
+
 ;------------------------------------------------------------
-file1 = WIDGET_BASE(block2, /ROW, XSIZE=440, /ALIGN_CENTER)
-vals = ['UL','LL','UR','LR']
-EBSDwidget_s.PatternOrigin = CW_BGROUP(file1, $
+;------------------------------------------------------------
+
+EBSDwidget_s.EBSDpatternfilename = Core_WText(file1,'EBSD Output File Name', fontstr, 200, 25, 50, 1, EBSDdata.EBSDpatternfilename)
+
+EBSDwidget_s.EBSDgetpatternfilename = WIDGET_BUTTON(file1, $
+                      UVALUE='GETEBSDFILENAME', $
+                      VALUE='Set Output File Name', $
+                      EVENT_PRO='EBSDDetectorWidget_event', $
+                      SENSITIVE=1, $
+		      /ALIGN_LEFT, $
+                      /FRAME)
+
+;------------------------------------------------------------
+;------------------------------------------------------------
+; and here is the Close button
+file1 = WIDGET_BASE(block1, XSIZE=340, /ALIGN_LEFT, /ROW)
+
+EBSDwidget_s.DetectorClose = WIDGET_BUTTON(file1, $
+                                UVALUE='CLOSEDETECTOR', $
+                                VALUE='Close', $
+                                EVENT_PRO='EBSDDetectorWidget_event', $
+                                SENSITIVE=1, $
+                                /FRAME)
+
+;------------------------------------------------------------
+;------------------------------------------------------------
+; this box defines the pattern mode and the output file name
+file1 = WIDGET_BASE(block2, /COLUMN, /FRAME, YPAD=8, XSIZE=430, /ALIGN_LEFT)
+file2 = WIDGET_LABEL(file1, VALUE='Pattern Mode', font=fontstrlarge, /ALIGN_LEFT, /FRAME)
+
+vals = ['Single Pattern','Angle File','Dictionary']
+EBSDwidget_s.Pmode = CW_BGROUP(file1, $
                         vals, $
                         /ROW, $
                         /NO_RELEASE, $
                         /EXCLUSIVE, $
                         FONT=fontstr, $
-                        LABEL_LEFT = 'Pattern Origin', $
                         EVENT_FUNC ='EBSDevent', $
-                        UVALUE='EBSPATTERNORIGIN', $
-                        SET_VALUE=EBSDdata.PatternOrigin)
+                        UVALUE='PMODE', $
+                        SET_VALUE=EBSDdata.Pmode)
+
+;------------------------------------------------------------
+;------------------------------------------------------------
+file1 = WIDGET_BASE(block2, /COLUMN, /FRAME, YPAD=8, XSIZE=430, /ALIGN_LEFT)
+file2 = WIDGET_LABEL(file1, VALUE='Single Pattern Parameters', font=fontstrlarge, /ALIGN_LEFT,/FRAME)
 
 
+;---------- 
+file2 = WIDGET_BASE(file1, /ROW, XSIZE=430, /ALIGN_CENTER)
+EBSDwidget_s.detphi1 = Core_WTextE(file2,'Euler [deg] phi1', fontstr, 120, 25, 8, 1, string(EBSDdata.detphi1,format="(F6.2)"),'DETphi1','EBSDDetectorWidget_event')
+EBSDwidget_s.detphi = Core_WTextE(file2,' Phi', fontstr, 40, 25, 8, 1, string(EBSDdata.detphi,format="(F6.2)"),'DETPhi','EBSDDetectorWidget_event')
+EBSDwidget_s.detphi2 = Core_WTextE(file2,' phi2', fontstr, 40, 25, 8, 1, string(EBSDdata.detphi2,format="(F6.2)"),'DETphi2','EBSDDetectorWidget_event')
 
+EBSDwidget_s.DisplayEBSD = WIDGET_BUTTON(file1, $
+                                VALUE='Display Pattern', $
+                                UVALUE='DISPLAYEBSD', $
+                                EVENT_PRO='EBSDDetectorWidget_event', $
+				/ALIGN_LEFT, $
+                                SENSITIVE=0, $
+                                /FRAME)
+
+;------------------------------------------------------------
+;------------------------------------------------------------
+file1 = WIDGET_BASE(block2, /COLUMN, /FRAME, YPAD=8, XSIZE=430, /ALIGN_LEFT)
+file3 = WIDGET_BASE(file1, /ROW, /ALIGN_LEFT)
+file2 = WIDGET_LABEL(file3, VALUE='Angle File Parameters', font=fontstrlarge, /ALIGN_LEFT,/FRAME)
+
+EBSDwidget_s.GoAngle = WIDGET_BUTTON(file3, $
+                                VALUE='Go', $
+                                UVALUE='GOANGLE', $
+                                EVENT_PRO='EBSDetectorWidget_event', $
+                                SENSITIVE=0, $
+                                /FRAME)
+
+
+EBSDwidget_s.EBSDanglefilename = Core_WText(file1,'Angle File Name', fontstr, 200, 25, 50, 1, EBSDdata.EBSDanglefilename)
+
+EBSDwidget_s.EBSDgetanglefilename = WIDGET_BUTTON(file1, $
+                      UVALUE='GETANGLEFILENAME', $
+                      VALUE='Load Angle File', $
+                      EVENT_PRO='EBSDDetectorWidget_event', $
+                      SENSITIVE=0, $
+		      /ALIGN_LEFT, $
+                      /FRAME)
+
+file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_LEFT)
+EBSDwidget_s.angletype = Core_WText(file2,'Angle Type', fontstr, 90, 25, 10, 1, EBSDdata.angletype)
+EBSDwidget_s.numangles = Core_WText(file2,'# Angles  ', fontstr, 80, 25, 10, 1, string(EBSDdata.numangles,format="(I8)"))
+
+;------------------------------------------------------------
+;------------------------------------------------------------
+file1 = WIDGET_BASE(block2, /COLUMN, /FRAME, YPAD=8, XSIZE=430, /ALIGN_LEFT)
+file3 = WIDGET_BASE(file1, /ROW, /ALIGN_LEFT)
+file2 = WIDGET_LABEL(file3, VALUE='Dictionary Parameters', font=fontstrlarge, /ALIGN_LEFT,/FRAME)
+
+EBSDwidget_s.GoDictionary = WIDGET_BUTTON(file3, $
+                                VALUE='Go', $
+                                UVALUE='GODICTIONARY', $
+                                EVENT_PRO='EBSDetectorWidget_event', $
+                                SENSITIVE=0, $
+                                /FRAME)
+
+PGs = [ 'Select Point Group', '1 (C1) - no symmetry' , '-1 (Ci) - no symmetry ', $ ; [triclinic]
+ '2 (C2) - Cyclic', 'm (Cs) - Cyclic', '2/m (C2h) - Cyclic', $ ; [monoclinic]
+ '222 (D2) - Dihedral', 'mm2 (C2v) - Dihedral', 'mmm (D2h) - Dihedral', $ ;[orthorhombic]
+ '4 (C4) - Cyclic', '-4 (S4) - Cyclic', '4/m (C4h) - Cyclic', '422 (D4) - Dihedral', '4mm (C4v) - Dihedral', '-42m (D2d) - Dihedral', '4/mmm (D4h) - Dihedral', $ ; [tetragonal]
+ '3 (C3) - Cyclic', '-3 (C3i) - Cyclic', '32 (D3) - Dihedral', '3m (C3v) - Dihedral', '-3m (D3d) - Dihedral', $ ; [trigonal]
+ '6 (C6) - Cyclic', '-6 (C3h) - Cyclic', '6/m (C6h) - Cyclic', '622 (D6) - Dihedral', '6mm (C6v) - Dihedral', '-6m2 (D3h) - Dihedral', '6/mmm (D6h) - Dihedral', $ ; [hexagonal]
+ '23 (T) - Tetrahedral', 'm3 (Th) - Tetrahedral', '432 (O) - Octahedral', '-43m (Td) - Tetrahedral', 'm-3m (Oh) - Octahedral'] ; [cubic]
+
+; FZtype
+; 0        no symmetry at all
+; 1        cyclic symmetry
+; 2        dihedral symmetry
+; 3        tetrahedral symmetry
+; 4        octahedral symmetry
+ 
+; first entry is a space filler
+FZtarray = [0, 0,0,1,1,1,2,2,2,1,1,1,2,2,2,2,1,1,2,2,2,1,1,1,2,2,2,2,3,3,4,3,4 ]
+FZoarray = [0, 0,0,2,2,2,2,2,2,4,4,4,4,4,4,4,3,3,3,3,3,6,6,6,6,6,6,6,0,0,0,0,0 ]
+
+file2 = WIDGET_BASE(file1, /ROW, XSIZE=430, /ALIGN_LEFT)
+file3 = WIDGET_LABEL(file2, VALUE='Point Group:', font=fontstr)
+EBSDwidget_s.PGdroplist = WIDGET_DROPLIST(file2, $
+			EVENT_PRO='EBSDDetectorWidget_event', $
+			VALUE=PGs,$
+			SENSITIVE = 0, $
+			UVALUE='DICTIONARYPG', $
+			/ALIGN_LEFT)
+WIDGET_CONTROL, set_droplist_select=EBSDdata.Dictpointgroup, EBSDwidget_s.PGdroplist
+
+file2 = WIDGET_BASE(file1, /ROW, XSIZE=430, /ALIGN_LEFT)
+EBSDwidget_s.Ncubochoric = Core_WTextE(file2,'N (# sampling points)', fontstr, 175, 25, 10, 1, string(EBSDdata.Ncubochoric,format="(I4)"),'NCUBOCHORIC','EBSDDetectorWidget_event')
+
+;file2 = WIDGET_BASE(file1, /ROW, XSIZE=430, /ALIGN_LEFT)
+EBSDwidget_s.EBSDdictfilename = Core_WText(file1,'Dictionary File Name', fontstr, 160, 25, 50, 1, EBSDdata.EBSDdictfilename)
+
+EBSDwidget_s.EBSDgetdictfilename = WIDGET_BUTTON(file1, $
+                      UVALUE='GETDICTFILENAME', $
+                      VALUE='Set Dictionary File Name', $
+                      EVENT_PRO='EBSDDetectorWidget_event', $
+                      SENSITIVE=0, $
+		      /ALIGN_LEFT, $
+                      /FRAME)
+
+file2 = WIDGET_BASE(file1, /ROW, XSIZE=430, /ALIGN_LEFT)
+EBSDwidget_s.GoDict = WIDGET_BUTTON(file2, $
+                                VALUE='Create Dictionary', $
+                                UVALUE='GODICT', $
+                                EVENT_PRO='EBSDDetectorWidget_event', $
+                                SENSITIVE=0, $
+                                /FRAME)
+
+EBSDwidget_s.NinRFZ = Core_WText(file2,'# points in RFZ', fontstr, 125, 25, 10, 1, string(EBSDdata.NinRFZ,FORMAT="(I10)")) 
 
 
 ;------------------------------------------------------------

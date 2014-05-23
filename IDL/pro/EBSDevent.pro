@@ -120,10 +120,62 @@ CASE eventval OF
   'EBSPATTERNORIGIN': begin
                 WIDGET_CONTROL, get_value=val,EBSDwidget_s.PatternOrigin
                 EBSDdata.PatternOrigin = fix(val[0])
+	  	EBSDshowPattern,/single
 		vals = ['Upper Left','Lower Left','Upper Right','Lower Right']
 		  Core_Print, 'Pattern origin set to '+vals[EBSDdata.PatternOrigin]
 	endcase
+ 'EBSPATTERNSCALING': begin
+                WIDGET_CONTROL, get_value=val,EBSDwidget_s.PatternScaling
+                EBSDdata.PatternScaling = fix(val[0])
+	  	EBSDshowPattern,/single
+		vals = ['linear', 'gamma']
+		  Core_Print, 'Pattern scaling set to '+vals[EBSDdata.PatternScaling]
+	endcase
 
+ 'EBSDPATTERNBINNING': begin
+                WIDGET_CONTROL, get_value=val,EBSDwidget_s.detbinning
+                EBSDdata.detbinning= fix(val[0])
+	  	EBSDshowPattern,/single
+		vals = ['1','2','4','8']
+		  Core_Print, 'Pattern binning set to '+vals[EBSDdata.detbinning]
+	endcase
+
+ 'PMODE': begin
+                WIDGET_CONTROL, get_value=val,EBSDwidget_s.Pmode
+                EBSDdata.Pmode = fix(val[0])
+		vals = ['Single Pattern','Angle File','Dictionary']
+		  Core_Print, 'Pattern mode set to '+vals[EBSDdata.Pmode]
+; next we need to turn on those widgets that belong to the selected mode (sensitivity=1)
+		if (EBSDdata.Pmode eq 0) then begin
+		  WIDGET_CONTROL, EBSDwidget_s.DisplayEBSD, sensitive=1
+		  WIDGET_CONTROL, EBSDwidget_s.EBSDgetanglefilename, sensitive=0
+		  WIDGET_CONTROL, EBSDwidget_s.PGdroplist, sensitive=0
+		  WIDGET_CONTROL, EBSDwidget_s.EBSDgetdictfilename, sensitive=0
+		  WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=0
+		end
+
+		if (EBSDdata.Pmode eq 1) then begin
+		  WIDGET_CONTROL, EBSDwidget_s.DisplayEBSD, sensitive=1
+		  WIDGET_CONTROL, EBSDwidget_s.EBSDgetanglefilename, sensitive=1
+		  WIDGET_CONTROL, EBSDwidget_s.PGdroplist, sensitive=0
+		  WIDGET_CONTROL, EBSDwidget_s.EBSDgetdictfilename, sensitive=0
+		  WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=0
+		end
+
+		if (EBSDdata.Pmode eq 2) then begin
+		  WIDGET_CONTROL, EBSDwidget_s.DisplayEBSD, sensitive=1
+		  WIDGET_CONTROL, EBSDwidget_s.EBSDgetanglefilename, sensitive=0
+		  WIDGET_CONTROL, EBSDwidget_s.PGdroplist, sensitive=1
+		  WIDGET_CONTROL, EBSDwidget_s.EBSDgetdictfilename, sensitive=1
+		  if ( (EBSDdata.Ncubochoric ne 0) and (EBSDdata.Dictpointgroup ne 0) and (EBSDdata.EBSDdictfilename ne '') ) then begin
+		    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=1
+		  end else begin
+		    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=0
+		  end
+		end
+		
+
+	endcase
 
 else: MESSAGE, "Event User Value Not Found"
 

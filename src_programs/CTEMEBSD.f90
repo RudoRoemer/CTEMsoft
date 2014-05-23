@@ -82,6 +82,7 @@ end program CTEMEBSD
 !> @date 09/25/13  MDG 3.1 replaced k-vector code by kvectors module
 !> @date 02/26/14  MDG 4.0 new version
 !> @date 03/26/14  MDG 4.1 adapted to new input and out file formats
+!> @date 05/22/14  MDG 4.2 slight modification of angle input file; update for new CTEMEBSDMaster file format
 !--------------------------------------------------------------------------
 subroutine ComputeEBSDPatterns(nmlfile)
 
@@ -116,7 +117,7 @@ integer(kind=irg)	:: numsx 	! number of scintillator points along x
 integer(kind=irg)	:: numsy	! number of scintillator points along y
 real(kind=sgl)		:: xpc		! pattern center x [pixels]
 real(kind=sgl)		:: ypc		! pattern center y [pixels]
-character(fnlen)	:: eulerfile, FZfile, datafile, energyfile
+character(fnlen)	:: anglefile, FZfile, datafile, energyfile
 real(kind=sgl)		:: energymin, energymax ! energy window for energy-filtered EBSD
 integer(kind=irg)	:: numEbins, numzbins, nsx, nsy, nE, Emin, Emax, numelectrons  ! variables used in MC energy file
 real(kind=dbl)		:: EkeV, Ehistmin, Ebinsize, depthmax, depthstep ! enery variables from MC program
@@ -128,18 +129,19 @@ real(kind=sgl),allocatable		:: scin_x(:), scin_y(:) 		! scintillator coordinate 
 real(kind=sgl),allocatable		:: rgx(:,:), rgy(:,:), rgz(:,:)  	! auxiliary arrays needed for interpolation
 real(kind=sgl),allocatable		:: eulang(:,:)				! euler angle array
 real(kind=sgl),allocatable		:: EBSDpattern(:,:)			! array with EBSD pattern
-real(kind=sgl),allocatable 		:: sr(:,:,:), EkeVs(:)			! dynamical and kinematical parts of the FZ intensities
+real(kind=sgl),allocatable 		:: sr(:,:,:),srtmp(:,:,:,:), EkeVs(:)	! dynamical and kinematical parts of the FZ intensities
 real(kind=sgl),allocatable		:: imagestack(:,:,:), z(:,:)		! used to store the computed patterns before writing to disk
-integer(kind=irg),allocatable		:: accum_e(:,:,:)
+integer(kind=irg),allocatable		:: accum_e(:,:,:), atomtype(:)
 real(kind=sgl),allocatable 		:: accum_e_detector(:,:,:)
 
 ! quaternion variables
 real(kind=sgl),allocatable		:: quatang(:,:)
 real(kind=sgl)				:: qq(4), qq1(4), qq2(4), qq3(4)
+character(2)                          :: angletype
 
 ! various items
-integer(kind=irg)	:: numeuler, numstacks	! number of Euler angle triplets in file
-integer(kind=irg)	:: i, j, iang,k, io_int(6), num_el, MCnthreads, etotal		! various counters
+integer(kind=irg)	:: numeuler, numstacks, numset	! number of Euler angle triplets in file
+integer(kind=irg)	:: i, ii, j, iang,k, io_int(6), num_el, MCnthreads, etotal		! various counters
 integer(kind=irg)	:: istat		! status for allocate operations
 integer(kind=irg)	:: nix, niy, npx, npy, offx, offy, imcnt	! various parameters
 real(kind=sgl),parameter 	:: dtor = 0.0174533  ! convert from degrees to radians
@@ -160,7 +162,7 @@ integer, parameter 	:: K4B=selected_int_kind(9)      ! used by ran function in m
 integer(K4B) 		:: idum
 
 ! define the IO namelist to facilitate passing variables to the program.
-namelist  / EBSDdata / L, sig, thetac, delta, numsx, numsy, xpc, ypc, anglemode, eulerfile, eulerconvention, FZfile, &
+namelist  / EBSDdata / L, thetac, delta, numsx, numsy, xpc, ypc, anglefile, eulerconvention, FZfile, &
 			energyfile, datafile, beamcurrent, dwelltime, energymin, energymax
 
 ! spit out some information about the program 
@@ -170,23 +172,21 @@ call CTEMsoft
 
 ! define reasonable default values for the namelist parameters
 L		= 20000.0 	! [microns]
-sig		= 70.0		! [degrees]
 thetac		= 0.0		! [degrees]
 delta		= 25.0		! [microns]
 numsx		= 640		! [dimensionless]
 numsy		= 480		! [dimensionless]
 xpc		= 0.0		! [pixels]
 ypc		= 0.0		! [pixels]
-anglemode 	= 'euler'	! mode of the angular input data ('euler' or 'quats')
 energymin	= 15.0		! minimum energy to consider
 energymax	= 30.0		! maximum energy to consider
-eulerfile	= 'euler.txt'	! filename
+anglefile	= 'euler.txt'	! filename
 eulerconvention = 'tsl'	! convention for the first Euler angle ['tsl' or 'hkl']
 FZfile		= 'FZ.data'	! filename
 energyfile 	= 'energy.data' ! name of file that contains energy histograms for all scintillator pixels (output from MC program)
 datafile	= 'EBSDout.data'	! output file name
-beamcurrent 	= 14.513D-9	! beam current (actually emission current) in ampere
-dwelltime 	= 100.0D-6	! in seconds
+beamcurrent 	= 14.513D0	! beam current (actually emission current) in nano ampere
+dwelltime 	= 100.0D0	! in microseconds
  
 ! then we read the rundata namelist, which may override some of these defaults  
 ! this could also be replaced (or duplicated) by the ability to directly call
@@ -215,50 +215,55 @@ dwelltime 	= 100.0D-6	! in seconds
 !====================================
 ! get the angular information, either in Euler angles or in quaternions, from a file
 !====================================
-if (anglemode.eq.'euler') then
-! open the euler angle file and read the entries; there should be three reals on each line
-! with the first line an integer indicating how many triplets there are in the file ... 
-	open(unit=dataunit,file=trim(eulerfile),status='old',action='read')
-	read(unit=dataunit,*) numeuler
+! open the angle file 
+open(unit=dataunit,file=trim(anglefile),status='old',action='read')
 
-	io_int(1) = numeuler
-	call WriteValue('Number of euler angles = ',io_int,1)
-
-	! allocate the euler angle array
-	allocate(eulang(3,numeuler),stat=istat)
-	! if istat.ne.0 then do some error handling ... 
-	do i=1,numeuler
-	  read(unit=dataunit,*) eulang(1:3,i)
-	end do
-	close(unit=dataunit,status='keep')
-	
-	if (eulerconvention.eq.'hkl') then
-	  mess = '  -> converting Euler angles to TSL representation'
-	  call Message("(A/)")
-	  eulang(1,1:numeuler) = eulang(1,1:numeuler) + 90.0
-	end if
-	
-	! convert the euler angle triplets to quaternions
-	allocate(quatang(4,numeuler),stat=istat)
-	! if (istat.ne.0) then ...
-
-	mess = '  -> converting Euler angles to quaternions'
-	call Message("(A/)")
-
-	do i=1,numeuler
-	  quatang(1:4,i) = eu2qu(eulang(1:3,i)*dtor)
-	end do
+! get the type of angle first [ 'eu' or 'qu' ]
+read(unit=dataunit,*) angletype
+if (angletype.eq.'eu') then 
+  anglemode = 'euler'
 else
-	open(unit=dataunit,file=trim(eulerfile),status='old',action='read')
-	read(unit=dataunit,*) numeuler
-	io_int(1) = numeuler
-	call WriteValue('Number of quaternions = ',io_int,1)
-	allocate(quatang(4,numeuler),stat=istat)
-	do i=1,numeuler
-	  read(unit=dataunit,*) quatang(1:4,i)
-	end do
-	close(unit=dataunit,status='keep')
+  anglemode = 'quats'
 end if
+
+! then the number of angles in the file
+read(unit=dataunit,*) numeuler
+
+io_int(1) = numeuler
+call WriteValue('Number of angle entries = ',io_int,1)
+
+if (anglemode.eq.'euler') then
+! allocate the euler angle array
+    allocate(eulang(3,numeuler),stat=istat)
+! if istat.ne.0 then do some error handling ... 
+  do i=1,numeuler
+    read(unit=dataunit,*) eulang(1:3,i)
+  end do
+  close(unit=dataunit,status='keep')
+
+  if (eulerconvention.eq.'hkl') then
+    mess = '  -> converting Euler angles to TSL representation'
+    call Message("(A/)")
+    eulang(1,1:numeuler) = eulang(1,1:numeuler) + 90.0
+  end if
+
+! convert the euler angle triplets to quaternions
+  allocate(quatang(4,numeuler),stat=istat)
+! if (istat.ne.0) then ...
+
+  mess = '  -> converting Euler angles to quaternions'
+  call Message("(A/)")
+  
+  do i=1,numeuler
+    quatang(1:4,i) = eu2qu(eulang(1:3,i)*dtor)
+  end do
+else
+  allocate(quatang(4,numeuler),stat=istat)
+  do i=1,numeuler
+    read(unit=dataunit,*) quatang(1:4,i)
+  end do
+end if
+close(unit=dataunit,status='keep')
 !====================================
 
 !====================================
@@ -314,6 +319,7 @@ read (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
 !call WriteValue(' EkeV, Ehistmin, Ebinsize, depthmax, depthstep ',io_real,5,"(4F10.5,',',F10.5)")
 
  read (dataunit) MCsig, MComega
+ sig = MCsig
  read (dataunit) MCmode
 
 allocate(accum_e(numEbins,-nsx:nsx,-nsy:nsy),stat=istat)
@@ -355,20 +361,26 @@ open(unit=dataunit,file=FZfile,status='old',form='unformatted')
 ! then the name of the corresponding Monte Carlo data file
   read (dataunit) Masterenergyfile
 ! energy information and array size    
-  read (dataunit) npx,npy,nE 
+  read (dataunit) npx,npy,nE,numset
   if (numEbins.ne.nE) then
     write (*,*) 'Energy histogram and Lambert stack have different energy dimension; aborting program'
     write (*,*) 'energy histogram = ',shape(accum_e)
     write (*,*) 'Lambert stack = ', nE, npx, npy
     stop
   end if
-  allocate(sr(-npx:npx,-npy:npy,nE),EkeVs(nE),stat=istat)
+  allocate(sr(-npx:npx,-npy:npy,nE),srtmp(-npx:npx,-npy:npy,nE,numset),EkeVs(nE),atomtype(numset),stat=istat)
   read (dataunit) EkeVs
+  read (dataunit) atomtype
 ! is this a regular (square) or hexagonal projection ?
   read (dataunit) sqorhe
 ! and finally the results array
-  read (dataunit) sr
-close(unit=dataunit,status='keep')
+  read (dataunit) srtmp
+! convert to a smaller array by summing over all atom types 
+! [in a later version of the program we might allow for the 
+! user to request an element specific EBSD pattern calculation]
+  sr = sum(srtmp,4)
+  deallocate(srtmp)
+  close(unit=dataunit,status='keep')
 mess = ' -> completed reading Master EBSD pattern file'
 call Message("(A)")
 !====================================
@@ -441,8 +453,6 @@ deallocate(z)
   call InitLambertParameters
   allocate(accum_e_detector(numEbins,numsx,numsy), stat=istat)
 
-write (*,*) 'shape(accum_e_detector) = ',shape(accum_e_detector), nsx
-
 ! determine the scale factor for the Lambert interpolation; the square has
 ! an edge length of 2 x sqrt(pi/2)
   scl = float(nsx) / LPs%sPio2
@@ -477,14 +487,14 @@ write (*,*) 'shape(accum_e_detector) = ',shape(accum_e_detector), nsx
   accum_e_detector = accum_e_detector * 0.25
 ! and finally, get rid of the original accum_e array which is no longer needed
   deallocate(accum_e)
-  write (*,*) 'detector generation completed'
+
 !====================================
 
 num_el = nint(sum(accum_e_detector))
 
-open(dataunit,file='test.data',status='unknown',form='unformatted')
-write (dataunit) accum_e_detector
-close(unit=dataunit,status='keep')
+! open(dataunit,file='test.data',status='unknown',form='unformatted')
+! write (dataunit) accum_e_detector
+! close(unit=dataunit,status='keep')
 
 !
 
@@ -500,14 +510,13 @@ idum = -1		! to initialize the random number generator
 ! and allocate an array to store, say, 100 images; after every 100, all of them
 ! are stored in tiff format;  this is done to make sure that disk I/O doesn't
 ! become a bottleneck.
-allocate(imagestack(numsx,numsy,storemax),stat=istat)
-imcnt = 1
+! allocate(imagestack(numsx,numsy,storemax),stat=istat)
+! imcnt = 1
 
-write (*,*) 'shape(imagestack) = ',shape(imagestack)
-write (*,*) 'shape(Lambertstack) = ',shape(sr)
-
-prefactor = 0.25D0 * nAmpere * beamcurrent * dwelltime / dble(num_el)
-write (*,*) 'prefactor = ',prefactor
+prefactor = 0.25D0 * nAmpere * beamcurrent * dwelltime * 1.0D-15/ dble(num_el)
+write (*,*) 'intensity prefactor = ',prefactor
+write (*,*) 'max accum_e_detector = ',maxval(accum_e_detector)
+write (*,*) 'max sr = ',maxval(sr)
 
 !====================================
 
@@ -515,9 +524,8 @@ write (*,*) 'prefactor = ',prefactor
 ! ------ and open the output file for IDL visualization
 !====================================
 open(unit=dataunit,file=trim(datafile),status='unknown',form='unformatted',action='write')
-! we need to write the imagestack dimensions, and also how many of those there are...
-numstacks = numeuler/storemax + 1
-write (dataunit) numsx, numsy, storemax, numstacks, numeuler
+! we need to write the image dimensions, and also how many of those there are...
+write (dataunit) numsx, numsy, numeuler
 
 !====================================
 ! ------ start the actual image computation loop
@@ -564,12 +572,14 @@ do iang=1,numeuler
           end do
        end do
 
+        EBSDpattern = prefactor * EBSDpattern
+
 ! add sampling noise (Poisson noise in this case, so multiplicative, sort of)
-!	do i=1,numsx
-! 	  do j=1,numsy
-!              EBSDpattern(i,j) = POIDEV(EBSDpattern(i,j),idum)
-!	  end do
-!	end do      
+	do i=1,numsx
+ 	  do j=1,numsy
+              EBSDpattern(i,j) = POIDEV(EBSDpattern(i,j),idum)
+	  end do
+	end do      
 
 ! we may need to deal with the energy sensitivity of the scintillator as well...
 
@@ -585,12 +595,6 @@ do iang=1,numeuler
 ! file, at full resolution, as observed at the scintillator stage.
        
        
-
-! next, apply the optical point spread function to this pattern
-! [to optimize the speed, we may want to change the size of the array to a square shape]
-
-! TO BE IMPLEMENTED
-
 
 ! and apply any camera binning
 !	if (binning.ne.1) then 
@@ -612,24 +616,19 @@ do iang=1,numeuler
 !	EBSDmax = maxval(binned)
 !	EBSDmin = minval(binned)
 !	if (iang.eq.1) write (*,*) 'Limit Intensity Values : ',EBSDmin,EBSDmax
+! the following is a "best fit" solution without any basis in physics and is used just as a place holder ... 
 !	imagestack(1:binx,1:biny,imcnt) = int(255*(contrast * ( (binned - EBSDmin)/(EBSDmax-EBSDmin) - 1.0) + 1.0))
 
-! the following is a "best fit" solution without any basis in physics and is used just as a place holder ... 
-	imagestack(1:numsx,1:numsy,imcnt) = prefactor * EBSDpattern(1:numsx,1:numsy)
-	imcnt = imcnt+1
+!	imagestack(1:numsx,1:numsy,imcnt) = prefactor * EBSDpattern(1:numsx,1:numsy)
+        write (dataunit) EBSDpattern
 
 ! this will need to become an HDF5 formatted file with all the program output
 ! it should be readable in IDL as well as DREAM.3D.
 
-	if ((imcnt.gt.storemax).or.(iang.eq.numeuler)) then 
-	  write (*,*) 'storing EBSD patterns at angle ',iang,' of ',numeuler
-	  write (dataunit) imagestack*sngl(prefactor)
-	  imcnt = 1
-	end if
 ! that's it for this pattern ... 
 end do
 
-write (dataunit) accum_e_detector
+! write (dataunit) accum_e_detector
 
   close(unit=dataunit,status='keep')
 

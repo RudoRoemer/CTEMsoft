@@ -5,14 +5,19 @@
 @EBSDMCDisplayWidget_event	; MC display widget event handler
 @EBSDDetectorWidget		; detector widget
 @EBSDDetectorWidget_event	; detector widget event handler
+@EBSDPatternWidget		; pattern widget
+@EBSDPatternWidget_event	; pattern widget event handler
+@EBSDreadanglefile		; reads a file of euler angles or other representations
 @EBSDevent			; event handler for button groups
 @EBSDshowMC			; display a Lambert projection image
 @EBSDgetpreferences		; read preferences file
 @EBSDwritepreferences		; write preferences file
+@EBSDExecute			; perform the actual pattern computation
 @Core_LambertS2C		; modified Lambert to Lambert projection
 @Core_LambertS2SP		; modified Lambert to stereographic projection
 @Core_colorwheel		; color representation of energy distribution
 @Core_WText			; generate a text widget with a label
+@Core_WTextE			; generate an editable text widget with a label
 @Core_Print			; print messages to status window and log file
 @Core_WidgetEvent		; general data handler for various widget events
 ;
@@ -146,8 +151,8 @@ EBSDwidget_s = {widgetstruct, $
 	detxpc: long(0), $			; x -pattern center [pixels]
 	detypc: long(0), $			; y -pattern center [pixels]
 	detbinning: long(0), $			; binning
-	detbeamcurrent: long(0), $		; beam current [A]
-	detdwelltime: long(0), $		; dwell time [s]
+	detbeamcurrent: long(0), $		; beam current [nA]
+	detdwelltime: long(0), $		; dwell time [mu s]
 	detphi1: long(0), $			; phi1 Euler angle 
 	detphi: long(0), $			; phi Euler angle 
 	detphi2: long(0), $			; phi2 Euler angle 
@@ -156,11 +161,39 @@ EBSDwidget_s = {widgetstruct, $
 	EBSDminenergylist: long(0), $		; min energy widget
 	EBSDmaxenergylist: long(0), $		; max energy widget
 	PatternOrigin: long(0), $		; pattern origin widget
+	Patternmin: long(0), $			; pattern min widget
+	Patternmax: long(0), $			; pattern max widget
+
+	; pattern parameters for display
+	Pmode: long(0), $			; pattern mode widget
+	EBSDpatternfilename: long(0), $		; output file name widget
+	EBSDgetpatternfilename: long(0), $	; output file name button
+	EBSDanglefilename: long(0), $		; angle file name widget
+	EBSDgetanglefilename: long(0), $	; angle file name widget
+	EBSDdictfilename: long(0), $		; dictionary file name widget
+	EBSDgetdictfilename: long(0), $		; dictionary file name widget
+	angletype: long(0), $			; angle type widget (Euler of Quaternion)
+	numangles: long(0), $			; number of angles widget
+	PGdroplist: long(0), $			; point group selector droplist
+	Ncubochoric: long(0), $			; cubochoric # sampling points widget
+	NinRFZ: long(0), $			; number of point in Rodrigues FZ widget
+	GoEBSD: long(0), $			; EBSD compute button
+	GoDict: long(0), $			; Dictionary compute button
+	GoAngle: long(0), $			; Angle file compute button
+	GoDictionary: long(0), $		; Dictionary file compute button
+	DisplayEBSD: long(0), $			; display EBSD button
+	PatternScaling: long(0), $		; pattern scaling type widget
+	gammaslider: long(0), $			; gamma correction slider
+	DetectorClose: long(0), $		; Close detector widget
+	PatternClose: long(0), $		; Close pattern widget
+	PatternDraw: long(0), $			; Pattern draw widget
+	PatternDrawID: long(0), $		; Pattern draw widget ID
 
 	; other collected items
 	MCdisplaybase: long(0), $		; Monte Carlo display base
 	MPdisplaybase: long(0), $		; Master Pattern & Monte Carlo display base
 	detectorbase: long(0), $		; detector base widget
+	patternbase: long(0), $			; pattern base widget
 	status:long(0), $                       ; status window
 	logfile: long(0), $			; logfile toggle widget ID
 	detector:long(0), $                     ; detector widget
@@ -234,8 +267,8 @@ EBSDdata = {EBSDdatastruct, $
 	detxpc: float(0), $			; x-pattern center [pixels]
 	detypc: float(0), $			; y-pattern center [pixels]
 	detbinning: long(0), $			; binning
-	detbeamcurrent: float(0), $		; beam current [A]
-	detdwelltime: float(0), $		; dwell time [s]
+	detbeamcurrent: float(0), $		; beam current [nA]
+	detdwelltime: float(0), $		; dwell time [mu s]
 	detphi1: float(0), $			; phi1 Euler angle 
 	detphi: float(0), $			; phi Euler angle 
 	detphi2: float(0), $			; phi2 Euler angle 
@@ -244,6 +277,23 @@ EBSDdata = {EBSDdatastruct, $
 	Eminsel: long(0), $			; min energy selection 
 	Emaxsel: long(0), $			; max energy selection 
 	PatternOrigin: long(0), $		; pattern origin indicator
+	PatternScaling: long(0), $		; pattern scaling type (0=linear, 1=gamma)
+	gammavalue: float(0), $			; gamma correction factor
+	Patternmin: float(0), $			; pattern min indicator
+	Patternmax: float(0), $			; pattern max indicator
+
+	; pattern parameters for display
+	Pmode: long(0), $			; pattern mode (0=single, 1=angle file, 2=dictionary)
+	EBSDpatternfilename: '', $		; name for EBSD output file
+	EBSDanglefilename: '', $		; name for EBSD angle file
+	EBSDdictfilename: '', $			; name for EBSD dictionary file
+	angletype: '', $			; angle type (euler, quaternion)
+	numangles: long(0), $			; number of angles in file
+	Dictpointgroup: long(0), $		; point group number
+	RodriguesFZType: long(0), $		; Fundamental Zone type (0=full, 1=Cyclic, 2=Dihedral, 3=Tetrahedral, 4=Octahedral)
+	Ncubochoric: long(0), $			; number of sampling points for cubochoric cell (N, as in 2N+1)
+	NinRFZ: long(0), $			; number of points in Rodrigues Fundamental Zone
+	f90exepath: 'path_unknown', $		; path to f90 executables
 
 	; then general program parameters
 	eventverbose: fix(0), $			; used for event debugging (0=off, 1=on)
@@ -272,6 +322,8 @@ EBSDdata = {EBSDdatastruct, $
 	; widget location parameters
 	xlocation: float(0.0), $		; main widget x-location (can be modified and stored in preferences file)
 	ylocation: float(0.0), $		; main widget y-location (can be modified and stored in preferences file)
+	patternxlocation: float(600.0), $	; pattern widget x-location (can be modified and stored in preferences file)
+	patternylocation: float(100.0), $	; pattern widget y-location 
 	EBSDxlocation: float(600.0), $		; image widget x-location (can be modified and stored in preferences file)
 	EBSDylocation: float(100.0), $		; image widget y-location 
 	MCxlocation: float(600.0), $		; Monte Carlo widget x-location (can be modified and stored in preferences file)

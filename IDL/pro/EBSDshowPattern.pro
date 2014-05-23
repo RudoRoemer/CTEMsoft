@@ -26,60 +26,65 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDwritepreferences.pro
+; CTEMsoft2013:EBSDshowPattern.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: EBSDwritepreferences.pro
+; PROGRAM: EBSDshowPattern.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief write the preferences file
+;> @brief main routine for display of EBSD patterns
 ;
-;> @date 06/13/13 MDG 1.0 first attempt 
+;> @date 05/22/14 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro EBSDwritepreferences,noprint=noprint
- 
+pro EBSDshowPattern, single=single
+
+; the keyword /single indicates that only one pattern is available 
+
 ;------------------------------------------------------------
 ; common blocks
 common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
+common EBSDpatterns, pattern, image, finalpattern
 
-; prefs file
-  openw,1,EBSDdata.prefname
-  nprefs = 24
-  EBSDdata.nprefs = nprefs
-  printf,1,nprefs
-  printf,1,'EBSDroot::'+EBSDdata.EBSDroot
-  printf,1,'f90exepath::'+EBSDdata.f90exepath
+wset,EBSDwidget_s.PatternDrawID
+erase
+empty
 
-  printf,1,'detl::'+string(EBSDdata.detL,format="(F9.2)")
-  printf,1,'dettheta::'+string(EBSDdata.dettheta,format="(F6.2)")
-  printf,1,'detdelta::'+string(EBSDdata.detdelta,format="(F6.2)")
-  printf,1,'detnumsx::'+string(EBSDdata.detnumsx,format="(I6)")
-  printf,1,'detnumsy::'+string(EBSDdata.detnumsy,format="(I6)")
-  printf,1,'detxpc::'+string(EBSDdata.detxpc,format="(F7.2)")
-  printf,1,'detypc::'+string(EBSDdata.detypc,format="(F7.2)")
-  printf,1,'detbinning::'+string(EBSDdata.detbinning,format="(I3)")
-  printf,1,'detbeamcurrent::'+string(EBSDdata.detbeamcurrent,format="(D9.2)")
-  printf,1,'detdwelltime::'+string(EBSDdata.detdwelltime,format="(D9.2)")
+; set the min and max fields
+EBSDdata.Patternmin = min(pattern)
+EBSDdata.Patternmax = max(pattern)
+print,EBSDdata.Patternmin,EBSDdata.Patternmax
 
-; window locations
-  printf,1,'xlocation::'+string(EBSDdata.xlocation,format="(F6.1)")
-  printf,1,'ylocation::'+string(EBSDdata.ylocation,format="(F6.1)")
-  printf,1,'EBSDxlocation::'+string(EBSDdata.EBSDxlocation,format="(F6.1)")
-  printf,1,'EBSDylocation::'+string(EBSDdata.EBSDylocation,format="(F6.1)")
-  printf,1,'Detectorxlocation::'+string(EBSDdata.Detectorxlocation,format="(F6.1)")
-  printf,1,'Detectorylocation::'+string(EBSDdata.Detectorylocation,format="(F6.1)")
-  printf,1,'Patternxlocation::'+string(EBSDdata.patternxlocation,format="(F6.1)")
-  printf,1,'Patternylocation::'+string(EBSDdata.patternylocation,format="(F6.1)")
-  printf,1,'MCxlocation::'+string(EBSDdata.MCxlocation,format="(F6.1)")
-  printf,1,'MCylocation::'+string(EBSDdata.MCylocation,format="(F6.1)")
-  printf,1,'MPxlocation::'+string(EBSDdata.MPxlocation,format="(F6.1)")
-  printf,1,'MPylocation::'+string(EBSDdata.MPylocation,format="(F6.1)")
-; and close the file
-  close,1
+WIDGET_CONTROL, set_value=string(EBSDdata.Patternmin,format="(F7.2)"), EBSDwidget_s.Patternmin
+WIDGET_CONTROL, set_value=string(EBSDdata.Patternmax,format="(F7.2)"), EBSDwidget_s.Patternmax
 
-  if not keyword_set(noprint) then Core_Print,'The preferences file '+EBSDdata.prefname+' was successfully saved '
+; display the pattern
+if keyword_set(single) then begin
+; first apply the necessary intensity scaling to the current pattern
+
+; what kind of intensity scaling do we need?
+  if (EBSDdata.PatternScaling eq 0) then begin  ; this is regular linear scaling
+    finalpattern = bytscl(pattern,min=EBSDdata.Patternmin,max=EBSDdata.Patternmax)
+  end else begin
+    image = pattern^EBSDdata.gammavalue
+    finalpattern = bytscl(image)
+  end
+
+; then we apply the pattern origin (not sure if this is a useful operation or not)
+
+
+
+; finally, we use the binning factor
+  if (EBSDdata.detbinning ne 0) then finalpattern = congrid(finalpattern,EBSDdata.detnumsx/2^EBSDdata.detbinning,EBSDdata.detnumsy/2^EBSDdata.detbinning)
+
+; and we display the result
+  tv,finalpattern
+
+end else begin
+; this is a pre-computed series of patterns, so we can do direct display
 
 end
 
+
+end

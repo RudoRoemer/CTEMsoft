@@ -64,20 +64,15 @@ end else begin
 
  'DETDELTA': EBSDdata.detdelta = Core_WidgetEvent( EBSDwidget_s.detdelta, 'Scintillator pixel size set to [micron] ', '(F6.2)', /flt)
 
- 'DETNUMSX': EBSDdata.detnumsx = Core_WidgetEvent( EBSDwidget_s.detnumsx, 'Scintillator number of pixels along x set to [micron] ', '(I6)', /lng)
- 'DETNUMSY': EBSDdata.detnumsy = Core_WidgetEvent( EBSDwidget_s.detnumsy, 'Scintillator number of pixels along y set to [micron] ', '(I6)', /lng)
+ 'DETNUMSX': EBSDdata.detnumsx = Core_WidgetEvent( EBSDwidget_s.detnumsx, 'Scintillator number of pixels along x set to ', '(I4)', /lng)
+ 'DETNUMSY': EBSDdata.detnumsy = Core_WidgetEvent( EBSDwidget_s.detnumsy, 'Scintillator number of pixels along y set to ', '(I4)', /lng)
 
  'DETXPC': EBSDdata.detxpc = Core_WidgetEvent( EBSDwidget_s.detxpc, 'Pattern Center x-coordinate set to [pixels] ', '(F7.2)', /flt)
  'DETYPC': EBSDdata.detypc = Core_WidgetEvent( EBSDwidget_s.detypc, 'Pattern Center y-coordinate set to [pixels] ', '(F7.2)', /flt)
 
- 'DETBINNING': EBSDdata.detbinning = Core_WidgetEvent( EBSDwidget_s.detbinning, 'CCD binning factor set to ', '(I3)', /lng)
+ 'DETBEAMCURRENT': EBSDdata.detbeamcurrent = Core_WidgetEvent( EBSDwidget_s.detbeamcurrent, 'Beam current set to [nA] ', '(F7.3)', /flt)
+ 'DETDWELLTIME': EBSDdata.detdwelltime = Core_WidgetEvent( EBSDwidget_s.detdwelltime, 'Dwell time set to [mu s] ', '(F7.3)', /flt)
 
- 'DETBEAMCURRENT': EBSDdata.detbeamcurrent = Core_WidgetEvent( EBSDwidget_s.detbeamcurrent, 'Beam current set to [A] ', '(D9.2)', /flt)
- 'DETDWELLTIME': EBSDdata.detdwelltime = Core_WidgetEvent( EBSDwidget_s.detdwelltime, 'Dwell time set to [s] ', '(D9.2)', /flt)
-
- 'DETphi1': EBSDdata.detphi1 = Core_WidgetEvent( EBSDwidget_s.detphi1, 'Euler angle phi1 set to [deg] ', '(F6.2)', /flt)
- 'DETPhi': EBSDdata.detphi = Core_WidgetEvent( EBSDwidget_s.detphi, 'Euler angle Phi set to [deg] ', '(F6.2)', /flt)
- 'DETphi2': EBSDdata.detphi2 = Core_WidgetEvent( EBSDwidget_s.detphi2, 'Euler angle phi2 set to [deg] ', '(F6.2)', /flt)
 
  'EBSDMINENERGYLIST': begin
 		EBSDdata.Eminsel = fix(event.index)
@@ -97,6 +92,92 @@ end else begin
 		WIDGET_CONTROL, set_droplist_select = EBSDdata.Emaxsel, EBSDwidget_s.EBSDmaxenergylist
 	 endcase
 
+ 'GETEBSDFILENAME': begin
+; display a filesaving widget in the data folder with the file extension filled in
+	  filename = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,title='enter EBSD output file name ')
+	  if (filename ne '') then begin
+	    EBSDdata.EBSDpatternfilename = filename
+	    WIDGET_CONTROL, set_value=filename, EBSDwidget_s.EBSDpatternfilename
+	    WIDGET_CONTROL, EBSDwidget_s.DisplayEBSD, sensitive=1
+	  end
+	endcase
+
+
+ 'DETphi1': EBSDdata.detphi1 = Core_WidgetEvent( EBSDwidget_s.detphi1, 'Euler angle phi1 set to [deg] ', '(F6.2)', /flt)
+ 'DETPhi': EBSDdata.detphi = Core_WidgetEvent( EBSDwidget_s.detphi, 'Euler angle Phi set to [deg] ', '(F6.2)', /flt)
+ 'DETphi2': EBSDdata.detphi2 = Core_WidgetEvent( EBSDwidget_s.detphi2, 'Euler angle phi2 set to [deg] ', '(F6.2)', /flt)
+
+ 'GETANGLEFILENAME': begin
+; display a filesaving widget in the data folder with the file extension filled in
+	  filename = DIALOG_PICKFILE(/write,path=data.pathname,title='Select angle input file')
+	  if (filename ne '') then begin
+	    EBSDdata.EBSDanglefilename = filename
+	    WIDGET_CONTROL, set_value=filename, EBSDwidget_s.EBSDanglefilename
+	    EBSDreadanglefile,filename
+	  end
+	endcase
+
+ 'DICTIONARYPG': begin
+	  EBSDdata.Dictpointgroup = event.index
+	  if ( (EBSDdata.Ncubochoric ne 0) and (EBSDdata.EBSDdictfilename ne '') ) then begin
+	    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=1
+	  end
+	endcase
+
+ 'NCUBOCHORIC': begin 
+	  EBSDdata.Ncubochoric = Core_WidgetEvent( EBSDwidget_s.Ncubochoric,  'Number of smapling points along cube semi-edge set to ', '(I4)', /lng)
+	  if ( (EBSDdata.Dictpointgroup ne 0) and (EBSDdata.EBSDdictfilename ne '') ) then begin
+	    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=1
+	  end
+	endcase
+
+ 'GETDICTFILENAME': begin
+; display a filesaving widget 
+	  filename = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,title='Set dictionary angle file name ')
+	  if (filename ne '') then begin
+	    EBSDdata.EBSDdictfilename = filename
+	    WIDGET_CONTROL, set_value=filename, EBSDwidget_s.EBSDdictfilename
+	  end
+	  if ( (EBSDdata.Dictpointgroup ne 0) and (EBSDdata.Ncubochoric ne 0) ) then begin
+	    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=1
+	  end
+	endcase
+
+ 'GODICT': begin
+; first we need to make sure that the path to the fortran executables is known... this is stored in the 
+; preferences file, but is initially set to 'path_unknown'
+	  if (EBSDdata.f90exepath eq 'path_unknown') then begin
+  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
+  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
+  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
+		directoryname = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,/directory,title='Select the f90 executable folder')
+	        EBSDdata.f90exepath = directoryname[0]
+	  end
+print,'executable pathname = ',EBSDdata.f90exepath
+	endcase
+
+ 'DISPLAYEBSD': begin
+print,'DisplayEBSD selected'
+
+; this does two things.  First of all, the CTEMEBSD program is called with the current
+; parameters for the detector and microscope geometry, and the single set of Euler angles
+; entered in the 'Detector and Pattern Mode Widget'.
+;
+; Then, when the CTEMEBSD program has produced its output file, we create a new widget
+; that displays this raw EBSD pattern; the user can then apply a number of intensity
+; corrections, as well as binning, to optimize the pattern quality.  Once this is done, 
+; those parameters will be used for the Angle File mode and the Dictionary mode.
+
+; first, create the nml file and execute the CTEMEBSD program
+	  status = 0
+	  EBSDExecute,status,/single
+
+; then we create the EBSDpattern widget and let the user adjust the imaging parameters
+	  if (status eq 1) then begin
+	    if (XRegistered("EBSDPatternWidget") EQ 0) then EBSDPatternWidget,/single else EBSDshowPattern,/single
+	  end
+
+	endcase
 
  'CLOSEDETECTOR': begin
 ; kill the base widget
