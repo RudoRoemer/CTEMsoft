@@ -30,6 +30,8 @@ common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 common EBSDpatterns, pattern, image, finalpattern
+common EBSD_anglearrays, euler, quaternions
+common EBSDmasks, circularmask
 
 if (EBSDdata.eventverbose eq 1) then help,event,/structure
 
@@ -53,7 +55,8 @@ end else begin
 		delist = ['jpeg','tiff','bmp']
 		de = delist[EBSDdata.imageformat]
 		filename = DIALOG_PICKFILE(/write,default_extension=de,path=EBSDdata.pathname,title='enter filename without extension')
-		im = finalpattern
+		EBSDshowpattern, /nodisplay
+		if (EBSDdata.showcircularmask eq 1) then im = finalpattern*byte(circularmask) else im=finalpattern
 		case de of
 		    'jpeg': write_jpeg,filename,im,quality=100
 		    'tiff': write_tiff,filename,reverse(im,2)
@@ -61,6 +64,62 @@ end else begin
 		 else: MESSAGE,'unknown file format option'
 		endcase
 	endcase
+
+ 'SAVEALLEBSDPATTERNS': begin
+; display a filesaving widget in the data folder with the file extension filled in
+		delist = ['jpeg','tiff','bmp']
+		de = delist[EBSDdata.imageformat]
+		fn = DIALOG_PICKFILE(/write,default_extension=de,path=EBSDdata.pathname,title='enter prefix for image series file name')
+		fn = strsplit(fn,'.',/extract)
+  		openr,1,EBSDdata.EBSDpatternfilename,/f77
+  		q = assoc(1,lonarr(3),4)
+  		dims = q[0]
+  		q = assoc(1,fltarr(dims[0],dims[1]),20)
+		for i=0,EBSDdata.numangles-1 do begin
+  		  pattern = q[i]
+		  EBSDshowpattern, /single, /nodisplay
+		  if (EBSDdata.showcircularmask eq 1) then im = finalpattern*byte(circularmask) else im=finalpattern
+		  filename = fn[0]+string(i+1,format="(I5.5)")+'.'+fn[1]
+		  case de of
+		    'jpeg': write_jpeg,filename,im,quality=75
+		    'tiff': write_tiff,filename,reverse(im,2)
+		    'bmp': write_bmp,filename,im
+		   else: MESSAGE,'unknown file format option'
+		  endcase
+		end
+  		close,1
+		  Core_Print,'All image files generated'
+	endcase
+
+
+ 'NEXTEBSDPATTERN': begin
+	  EBSDdata.currentpatternID += 1
+	  if (EBSDdata.currentpatternID ge EBSDdata.numangles) then EBSDdata.currentpatternID = 0
+	  i = EBSDdata.currentpatternID
+	  if (EBSDdata.angletype eq 'eu') then begin
+	    st = string(i+1,format="(I5.5)")+': '+string(euler[0,i],format="(F7.2)")+', '+string(euler[1,i],format="(F7.2)")+', '+string(euler[2,i],format="(F7.2)")
+	  end else begin
+	    st = string(i+1,format="(I5.5)")+': '+string(quaternions[0,i],format="(F7.2)")+', '+string(quaternionseuler[1,i],format="(F7.2)")+ $
+		', '+string(quaternions[2,i],format="(F7.2)")+', '+string(quaternions[3,i],format="(F7.2)")
+	  end
+	  WIDGET_CONTROL, set_value = st, EBSDwidget_s.angledisplay
+	  EBSDshowpattern
+	endcase
+
+ 'PREVIOUSEBSDPATTERN': begin
+	  EBSDdata.currentpatternID -= 1
+	  if (EBSDdata.currentpatternID lt 0) then EBSDdata.currentpatternID = EBSDdata.numangles-1
+	  i = EBSDdata.currentpatternID
+	  if (EBSDdata.angletype eq 'eu') then begin
+	    st = string(i+1,format="(I5.5)")+': '+string(euler[0,i],format="(F7.2)")+', '+string(euler[1,i],format="(F7.2)")+', '+string(euler[2,i],format="(F7.2)")
+	  end else begin
+	    st = string(i+1,format="(I5.5)")+': '+string(quaternions[0,i],format="(F7.2)")+', '+string(quaternionseuler[1,i],format="(F7.2)")+ $
+		', '+string(quaternions[2,i],format="(F7.2)")+', '+string(quaternions[3,i],format="(F7.2)")
+	  end
+	  WIDGET_CONTROL, set_value = st, EBSDwidget_s.angledisplay
+	  EBSDshowpattern
+	endcase
+
 
  'PATTERNCLOSE': begin
 ; kill the base widget

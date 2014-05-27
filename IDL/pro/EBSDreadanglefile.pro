@@ -37,12 +37,13 @@
 ;
 ;> @date 03/19/14 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro EBSDreadanglefile, fname
+pro EBSDreadanglefile, fname, list=list
 
 ;------------------------------------------------------------
 ; common blocks
 common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
+common EBSD_anglearrays, euler, quaternions
 
 ; the file must exist, since it was selected using the file widget
 openr,10,fname
@@ -50,8 +51,31 @@ angletype = ''
 readf,10,angletype
 numangles = 0L
 readf,10,numangles
-; that's really all we need for now ... the f90 EBSD program is the one that 
-; will actually read and use all the angles
+EBSDdata.numangles = numangles
+if keyword_set(list) then begin
+; if we are doing and angle file, then we need to read and store all the angle
+; entries in the EBSD_anglearrays common variables.
+  if (angletype eq 'eu') then begin
+    euler = fltarr(3L,numangles) 
+    a = 0.0
+    b = 0.0
+    c = 0.0
+    for i=0L,numangles-1L do begin
+      readf,10,a,b,c
+      euler[0L:2L,i] = [a,b,c]
+    endfor
+  end else begin
+    quaternions = fltarr(4L,numangles)
+    a = 0.0
+    b = 0.0
+    c = 0.0
+    d = 0.0
+    for i=0L,numangles-1L do begin
+      readf,10,a,b,c,d
+      quaternions[0L:2L,i] = [a,b,c,d]
+    endfor
+  end 
+end
 close,10
 
 EBSDdata.angletype = angletype

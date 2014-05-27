@@ -57,6 +57,7 @@ block1 = WIDGET_BASE(EBSDwidget_s.patternbase, $
 			/COLUMN)
 
 if keyword_set(single) then begin
+ EBSDdata.currentdisplaywidgetmode = 0
 ;------------------------------------------------------------
 ;------------------------------------------------------------
   file1 = WIDGET_BASE(block1, /COLUMN, /FRAME, YPAD=8, XSIZE=600, /ALIGN_LEFT)
@@ -180,6 +181,92 @@ end else begin
 ; that allows the user to browse through the series of images, 
 ; and save individual ones or all of them (after warning)
 
+ EBSDdata.currentdisplaywidgetmode = 1
+;------------------------------------------------------------
+;------------------------------------------------------------
+  file1 = WIDGET_BASE(block1, /COLUMN, YPAD=8, XSIZE=600, /ALIGN_LEFT)
+  file2 = WIDGET_BASE(file1, /ROW, XSIZE=600, /ALIGN_LEFT)
+
+saveEBSDPattern = WIDGET_BUTTON(file2, $
+                        VALUE='Previous', $
+                        /NO_RELEASE, $
+                        EVENT_PRO='EBSDPatternWidget_event', $
+                        /FRAME, $
+                        UVALUE='PREVIOUSEBSDPATTERN', $
+                        /ALIGN_LEFT)
+
+saveEBSDPattern = WIDGET_BUTTON(file2, $
+                        VALUE='Next', $
+                        /NO_RELEASE, $
+                        EVENT_PRO='EBSDPatternWidget_event', $
+                        /FRAME, $
+                        UVALUE='NEXTEBSDPATTERN', $
+                        /ALIGN_LEFT)
+
+; display the euler angles/quaternion for the currently displayed pattern
+; we'll do this as a simple non-editable text widget
+
+file2 = WIDGET_BASE(block1, /ROW, XSIZE=600, /ALIGN_CENTER)
+EBSDwidget_s.angledisplay = Core_WText(file2,'Orientation:', fontstr, 120, 25, 60, 1, ' ')
+
+
+; then the display window
+EBSDwidget_s.Patterndraw = WIDGET_DRAW(block1, $
+                        COLOR_MODEL=2, $
+                        RETAIN=2, $
+                        /FRAME, $
+                        XSIZE=EBSDdata.detnumsx, $
+                        YSIZE=EBSDdata.detnumsy)
+
+; and the min-max indicators
+block4 = WIDGET_BASE(block1, /ROW, /ALIGN_CENTER)
+EBSDwidget_s.Patternmin = Core_WText(block4, 'min/max ',fontstr, 75, 25, 15, 1, string(EBSDdata.Patternmin,FORMAT="(F9.3)"))
+EBSDwidget_s.Patternmax = Core_WText(block4, '/',fontstr, 5, 25, 15, 1, string(EBSDdata.Patternmax,FORMAT="(F9.3)"))
+
+; a save all button
+block4 = WIDGET_BASE(block1, /ROW, /ALIGN_CENTER)
+saveEBSDPattern = WIDGET_BUTTON(block4, $
+                        VALUE='SaveAll', $
+                        /NO_RELEASE, $
+                        EVENT_PRO='EBSDPatternWidget_event', $
+                        /FRAME, $
+                        UVALUE='SAVEALLEBSDPATTERNS', $
+                        /ALIGN_LEFT)
+
+; and a save button
+saveEBSDPattern = WIDGET_BUTTON(block4, $
+                        VALUE='Save', $
+                        /NO_RELEASE, $
+                        EVENT_PRO='EBSDPatternWidget_event', $
+                        /FRAME, $
+                        UVALUE='SAVEEBSDPATTERN', $
+                        /ALIGN_LEFT)
+
+; and the save format selector
+vals = ['jpeg','tiff','bmp']
+EBSDwidget_s.EBSDformatbgroup = CW_BGROUP(block4, $
+                        vals, $
+                        /ROW, $
+                        /NO_RELEASE, $
+                        /EXCLUSIVE, $
+                        FONT=fontstr, $
+                        LABEL_LEFT = 'File Format', $
+                        /FRAME, $
+                        EVENT_FUNC ='EBSDevent', $
+                        UVALUE='EBSDFORMAT', $
+                        SET_VALUE=EBSDdata.imageformat)
+
+;------------------------------------------------------------
+;------------------------------------------------------------
+; and here is the Close button
+file1 = WIDGET_BASE(block1, XSIZE=340, /ALIGN_LEFT, /ROW)
+
+EBSDwidget_s.PatternClose = WIDGET_BUTTON(file1, $
+                                UVALUE='PATTERNCLOSE', $
+                                VALUE='Close', $
+                                EVENT_PRO='EBSDPatternWidget_event', $
+                                SENSITIVE=1, $
+                                /FRAME)
 end
 
 

@@ -67,9 +67,7 @@
 ;> will be included in the next version (as will be the dictionary generation option).
 ;
 ;> @todo Long list of things to be added:
-;> - quaternion rotation (via axis-angle pair) of Euler angles for single pattern mode
 ;> - add aperture to pattern, with on-off switch
-;> - complete angle file stuff
 ;> - complete Rodrigues Fundamental Zone handling
 ;> - incorporate automated calibration of pattern parameters
 ;> - allow user to save setup for different microscopes
@@ -78,6 +76,7 @@
 ;> @date 03/17/14 MDG 1.1 main widget rewrite; prepended 'EBSD' to widget_s and data structures for future merge with other IDL routines
 ;> @date 03/19/14 MDG 1.2 implementation of Monte Carlo and master EBSD widgets
 ;> @date 05/22/14 MDG 1.3 completion of single pattern display mode
+;> @date 05/27/14 MDG 1.4 completion of angle file display mode
 ;--------------------------------------------------------------------------
 pro EBSDDisplay,dummy
 ;
@@ -87,6 +86,8 @@ common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 common PointGroups, PGTHD, PGTWD, DG
+
+common EBSDmasks, circularmask
 
 common CommonCore, status, logmode, logunit
 
@@ -107,6 +108,8 @@ DG = ['  ',' 1',' 1R',' 2',' 2R',' 21R','  mR', $
       ' 6mm1R']
 
 !EXCEPT=0
+
+circularmask = fltarr(10,10)
 
 ;------------------------------------------------------------
 ; make sure that this program isn't already running
@@ -201,6 +204,8 @@ EBSDwidget_s = {widgetstruct, $
 	PatternClose: long(0), $		; Close pattern widget
 	PatternDraw: long(0), $			; Pattern draw widget
 	PatternDrawID: long(0), $		; Pattern draw widget ID
+	angledisplay: long(0), $		; text widget to display angles
+	circularmask: long(0), $		; circular mask display
 
 	; other collected items
 	MCdisplaybase: long(0), $		; Monte Carlo display base
@@ -298,6 +303,9 @@ EBSDdata = {EBSDdatastruct, $
 	detax2: float(0), $			; axis angle pair component
 	detax3: float(0), $			; axis angle pair component
 	detax4: float(0), $			; axis angle pair component
+	currentpatternID: long(0), $		; pattern ID number
+	showcircularmask: long(0), $		; show circular mask (or not)
+	currentdisplaywidgetmode:long(0), $	; current display widget mode (single or other) 
 
 	; pattern parameters for display
 	Pmode: long(0), $			; pattern mode (0=single, 1=angle file, 2=dictionary)

@@ -46,58 +46,35 @@ pro EBSDExecute, status, single=single
 common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
 common EBSDpatterns, pattern, image, finalpattern
+common EBSD_anglearrays, euler, quaternions
+common EBSDmasks, circularmask
+
+; check whether the mask needs to be recomputed or not
+s = size(circularmask)
+sm = min( [EBSDdata.detnumsx, EBSDdata.detnumsy] )
+if (s[0] ne sm) then begin
+  d = shift(dist(sm),sm/2,sm/2)
+  d[where(d le sm/2)] = 1.0
+  d[where(d gt sm/2)] = 0.0
+  circularmask = fltarr(EBSDdata.detnumsx, EBSDdata.detnumsy)
+  if (sm eq EBSDdata.detnumsx) then begin
+    dm = (EBSDdata.detnumsy - sm)/2
+    circularmask[0,dm] = d
+  end else begin
+    dm = (EBSDdata.detnumsx - sm)/2
+    circularmask[dm,0] = d
+  end
+endif
+
+v = double([EBSDdata.detax1,EBSDdata.detax2,EBSDdata.detax3])
+axang = double([EBSDdata.detax1,EBSDdata.detax2,EBSDdata.detax3,EBSDdata.detax4])
+euang = double([EBSDdata.detphi1,EBSDdata.detphi,EBSDdata.detphi2])
 
 if keyword_set(single) then begin
-; first determine whether or not these euler angles need to be further rotated
-; this would be the case if detax4 is not zero
-  v = double([EBSDdata.detax1,EBSDdata.detax2,EBSDdata.detax3])
-  if ( (EBSDdata.detax4 ne 0.D0) and (max(abs(v)) ne 0.D0) ) then begin
-; first create the rotation quaternion
-    om2 = EBSDdata.detax4*!dtor*0.5D0
-    v = v/sqrt(total(v^2))
-    qr = [cos(om2),sin(om2)*v] ; unit quaternion
-; then convert the Euler angles to a quaternion
-    ee = 0.5D0*[EBSDdata.detphi1,EBSDdata.detphi,EBSDdata.detphi2]*!dtor
-    cPhi = cos(ee[1])
-    sPhi = sin(ee[1])
-    cm = cos(ee[0]-ee[2])
-    sm = sin(ee[0]-ee[2])
-    cp = cos(ee[0]+ee[2])
-    sp = sin(ee[0]+ee[2])
-    q = !pi*cp
-    qe = [-q, sPhi*cm, sPhi*sm, cPhi*sp]
-; next, multiply the two quaternions
-    q = [0.D0,Core_quatmult(qr,qe)]  ; to account for 0 start of arrays in IDL
-; convert this quaternion back to Euler angles
-    q03 = q[1]^2+q[4]^2
-    q12 = q[2]^2+q[3]^2
-    chi = sqrt(q03*q12)
-
-    if (chi eq 0.D0) then begin
-      if (q12 eq 0.D0) then  begin
-        Phi = 0.D0
-        phi2 = 0.D0   		; arbitrarily due to degeneracy
-        phi1 = atan(-2.D0*q[1]*q[4],q[1]^2-q[4]^2)/!dtor
-      end else begin
-        Phi = !dpi
-        phi2 = 0.D0   		; arbitrarily due to degeneracy
-        phi1 = atan(2.D0*q[2]*q[3],q[2]^2-q[3]^2)/!dtor
-      end 
-    end else begin 		; this is not a special degenerate case
-      Phi = atan( 2.D0*chi, q03-q12 )/!dtor
-      chi = 1.D0/chi
-      phi1 = atan( (-q[1]*q[3]+q[2]*q[4])*chi, (-q[1]*q[2]-q[3]*q[4])*chi )/!dtor
-      phi2 = atan( (q[1]*q[3]+q[2]*q[4])*chi, (-q[1]*q[2]+q[3]*q[4])*chi )/!dtor
-    end 
-      s = string(phi1,format="(F8.3)")+' '+ string(Phi,format="(F8.3)")+' '+ string(phi2,format="(F8.3)")
-      Core_Print,'Euler angles rotated to '+s
-  end else begin
-    phi1 = EBSDdata.detphi1
-    Phi = EBSDdata.detphi
-    phi2 = EBSDdata.detphi2
-  end
-
 ; generate an angle input file
+  phi1 = EBSDdata.detphi1
+  Phi = EBSDdata.detphi
+  phi2 = EBSDdata.detphi2
   openw,10,EBSDdata.pathname+'/'+'tmpangle.txt'
   printf,10,'eu'
   printf,10,'1'
@@ -123,7 +100,6 @@ end
   printf,10,'energymin = '+string(th,FORMAT="(F8.3)")
   th = EBSDdata.mcenergymin + EBSDdata.Emaxsel*EBSDdata.mcenergybinsize
   printf,10,'energymax = '+string(th,FORMAT="(F8.3)")
-  printf,10,'anglefile = '''+EBSDdata.pathname+'/'+'tmpangle.txt'''
   if (EBSDData.EulerConvention eq 0) then begin
     printf,10,'eulerconvention = ''tsl'''
   end else begin
@@ -134,6 +110,28 @@ end
   printf,10,'datafile = '''+EBSDdata.EBSDpatternfilename+''''
   printf,10,'beamcurrent = '+string(EBSDdata.detbeamcurrent,FORMAT="(F9.2)")
   printf,10,'dwelltime = '+string(EBSDdata.detdwelltime,FORMAT="(F9.2)")
+; and here are the imaging parameters that are only needed if we are NOT in single image mode
+  if not keyword_set(single) then begin
+; angle file
+    printf,10,'anglefile = '''+EBSDdata.EBSDanglefilename+''''
+; binning parameter
+    printf,10,'binning = '+string(2^EBSDdata.detbinning,format="(I1)")
+; intensity scaling mode
+    if (EBSDdata.PatternScaling eq 0) then begin
+      printf,10,'scalingmode = ''lin'''
+    end else begin
+      printf,10,'scalingmode = ''gam'''
+      printf,10,'gammavalue = '+string(EBSDdata.gammavalue,FORMAT="(F6.3)")
+    end
+; place holder for Pattern Origin setting
+  end else begin
+    printf,10,'anglefile = '''+EBSDdata.pathname+'/'+'tmpangle.txt'''
+  end
+; do we need to do an additional axis-angle pair rotation to all patterns ?
+  if ( (axang[3] ne 0.D0) and (max(abs(v)) ne 0.D0) ) then begin
+      s = string(axang[0],format="(F8.3)")+','+ string(axang[1],format="(F8.3)") +','+ string(axang[2],format="(F8.3)") +','+ string(axang[3],format="(F8.3)")
+      printf,10,'axisangle = '+s
+  end
   printf,10,'/'
   close,10
 
@@ -156,6 +154,8 @@ if keyword_set(single) then begin
   spawn, cmd
 end
 
+  cmd = '/bin/rm '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
+  spawn, cmd
 
 ; next, we need to load the pattern if we are in single mode
 if keyword_set(single) then begin
@@ -168,6 +168,11 @@ if keyword_set(single) then begin
   pattern = fltarr(nsx,nsy)
   readu,1,pattern
   close,1
+end
+
+; if we are not in single mode, then we need to load the angle file
+if not keyword_set(single) then begin
+  EBSDreadanglefile, EBSDdata.EBSDanglefilename, /list
 end
 
 

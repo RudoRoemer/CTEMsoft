@@ -103,6 +103,7 @@ end else begin
 	    EBSDdata.EBSDpatternfilename = filename
 	    WIDGET_CONTROL, set_value=filename, EBSDwidget_s.EBSDpatternfilename
 	    WIDGET_CONTROL, EBSDwidget_s.DisplayEBSD, sensitive=1
+	    WIDGET_CONTROL, EBSDwidget_s.EBSDgetanglefilename, sensitive=1
 	  end
 	endcase
 
@@ -113,11 +114,12 @@ end else begin
 
  'GETANGLEFILENAME': begin
 ; display a filesaving widget in the data folder with the file extension filled in
-	  filename = DIALOG_PICKFILE(/write,path=data.pathname,title='Select angle input file')
+	  filename = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,title='Select angle input file')
 	  if (filename ne '') then begin
 	    EBSDdata.EBSDanglefilename = filename
 	    WIDGET_CONTROL, set_value=filename, EBSDwidget_s.EBSDanglefilename
 	    EBSDreadanglefile,filename
+	    WIDGET_CONTROL, EBSDwidget_s.GoAngle, sensitive=1
 	  end
 	endcase
 
@@ -161,6 +163,10 @@ print,'executable pathname = ',EBSDdata.f90exepath
 	endcase
 
  'DISPLAYEBSD': begin
+; is the correct widget up on the screen ?
+	  if XRegistered("EBSDPatternWidget") then begin
+	    if (EBSDdata.currentdisplaywidgetmode ne 0) then WIDGET_CONTROL, EBSDwidget_s.patternbase, /DESTROY
+	  end
 
 ; this does two things.  First of all, the CTEMEBSD program is called with the current
 ; parameters for the detector and microscope geometry, and the single set of Euler angles
@@ -181,6 +187,32 @@ print,'executable pathname = ',EBSDdata.f90exepath
 	  end
 
 	endcase
+
+ 'GOANGLE': begin
+; is the correct widget up on the screen ?
+	  if XRegistered("EBSDPatternWidget") then begin
+	    if (EBSDdata.currentdisplaywidgetmode ne 1) then WIDGET_CONTROL, EBSDwidget_s.patternbase, /DESTROY
+	  end
+
+; this does two things.  First of all, the CTEMEBSD program is called with the current
+; parameters for the detector and microscope geometry, and the angle file
+;
+; Then, when the CTEMEBSD program has produced its output file, we create a new widget
+; that displays these EBSD patterns; the user can then save selected patterns or all patterns.
+; At this point, there is no option to change the imaging parameters; all the settings of the 
+; other parts of the widget apply to this pattern calculation
+
+; first, create the nml file and execute the CTEMEBSD program
+	  status = 0
+	  EBSDExecute,status
+
+; then we create the EBSDpattern widget and let the user adjust the imaging parameters
+	  if (status eq 1) then begin
+	    if (XRegistered("EBSDPatternWidget") EQ 0) then EBSDPatternWidget else EBSDshowPattern
+	  end
+
+	endcase
+
 
  'CLOSEDETECTOR': begin
 ; kill the base widget

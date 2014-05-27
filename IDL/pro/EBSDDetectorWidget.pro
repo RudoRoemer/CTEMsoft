@@ -158,13 +158,16 @@ for i=0,EBSDdata.mcenergynumbin-1 do begin
   tvals[i] = string(th,format="(F5.2)")
 end
 
-file3 = WIDGET_LABEL(file2, VALUE='Energy Min', font=fontstr)
+EBSDdata.Eminsel = tvals[0]
+
 EBSDwidget_s.EBSDminenergylist = WIDGET_DROPLIST(file2, $
 			EVENT_PRO='EBSDDetectorWidget_event', $
 			VALUE=tvals,$
 			UVALUE='EBSDMINENERGYLIST', $
 			/ALIGN_LEFT)
 WIDGET_CONTROL, set_droplist_select=EBSDdata.Eminsel, EBSDwidget_s.EBSDminenergylist
+
+EBSDdata.Emaxsel = tvals[EBSDdata.mcenergynumbin-1]
 
 file3 = WIDGET_LABEL(file2, VALUE='Max ', font=fontstr)
 EBSDwidget_s.EBSDmaxenergylist = WIDGET_DROPLIST(file2, $
@@ -235,13 +238,26 @@ EBSDwidget_s.detax2 = Core_WTextE(file2,'', fontstr, 4, 25, 8, 1, string(EBSDdat
 EBSDwidget_s.detax3 = Core_WTextE(file2,'', fontstr, 4, 25, 8, 1, string(EBSDdata.detax2,format="(F6.2)"),'DETax3','EBSDDetectorWidget_event')
 EBSDwidget_s.detax4 = Core_WTextE(file2,'angle [deg]', fontstr, 85, 25, 8, 1, string(EBSDdata.detax4,format="(F6.2)"),'DETax4','EBSDDetectorWidget_event')
 
-EBSDwidget_s.DisplayEBSD = WIDGET_BUTTON(file1, $
+file2 = WIDGET_BASE(file1, /ROW, XSIZE=430, /ALIGN_CENTER)
+EBSDwidget_s.DisplayEBSD = WIDGET_BUTTON(file2, $
                                 VALUE='Display Pattern', $
                                 UVALUE='DISPLAYEBSD', $
                                 EVENT_PRO='EBSDDetectorWidget_event', $
 				/ALIGN_LEFT, $
                                 SENSITIVE=0, $
                                 /FRAME)
+
+vals = ['Off','On']
+EBSDwidget_s.circularmask = CW_BGROUP(file2, $
+                        vals, $
+                        /ROW, $
+                        /NO_RELEASE, $
+                        /EXCLUSIVE, $
+                        FONT=fontstr, $
+			LABEL_LEFT='Circular Mask', $
+                        EVENT_FUNC ='EBSDevent', $
+                        UVALUE='CIRCULARMASK', $
+                        SET_VALUE=EBSDdata.showcircularmask)
 
 ;------------------------------------------------------------
 ;------------------------------------------------------------
@@ -252,7 +268,7 @@ file2 = WIDGET_LABEL(file3, VALUE='Angle File Parameters', font=fontstrlarge, /A
 EBSDwidget_s.GoAngle = WIDGET_BUTTON(file3, $
                                 VALUE='Go', $
                                 UVALUE='GOANGLE', $
-                                EVENT_PRO='EBSDetectorWidget_event', $
+                                EVENT_PRO='EBSDDetectorWidget_event', $
                                 SENSITIVE=0, $
                                 /FRAME)
 

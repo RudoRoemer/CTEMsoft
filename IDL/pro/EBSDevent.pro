@@ -140,6 +140,14 @@ CASE eventval OF
 		  Core_Print, 'Pattern binning set to '+vals[EBSDdata.detbinning]
 	endcase
 
+ 'CIRCULARMASK': begin
+                WIDGET_CONTROL, get_value=val,EBSDwidget_s.circularmask
+                EBSDdata.showcircularmask= fix(val[0])
+	  	if (EBSDdata.Pmode eq 0) then EBSDshowPattern,/single else EBSDshowPattern
+		vals = ['Off','On']
+		  Core_Print, 'Circular mask set to '+vals[EBSDdata.showcircularmask]
+	endcase
+
  'PMODE': begin
                 WIDGET_CONTROL, get_value=val,EBSDwidget_s.Pmode
                 EBSDdata.Pmode = fix(val[0])

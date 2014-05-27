@@ -37,7 +37,7 @@
 ;
 ;> @date 05/22/14 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro EBSDshowPattern, single=single
+pro EBSDshowPattern, single=single, nodisplay=nodisplay
 
 ; the keyword /single indicates that only one pattern is available 
 
@@ -46,10 +46,24 @@ pro EBSDshowPattern, single=single
 common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
 common EBSDpatterns, pattern, image, finalpattern
+common EBSDmasks, circularmask
 
-wset,EBSDwidget_s.PatternDrawID
-erase
-empty
+if not keyword_set(nodisplay) then begin
+  wset,EBSDwidget_s.PatternDrawID
+  erase
+  empty
+end
+
+if not keyword_set(single) then begin
+; we need to read the pattern from file
+  openr,1,EBSDdata.EBSDpatternfilename,/f77
+  q = assoc(1,lonarr(3),4)
+  dims = q[0]
+  q = assoc(1,fltarr(dims[0],dims[1]),20)
+  pattern = q[EBSDdata.currentpatternID]
+  close,1
+end
+
 
 ; set the min and max fields
 EBSDdata.Patternmin = min(pattern)
@@ -59,7 +73,6 @@ WIDGET_CONTROL, set_value=string(EBSDdata.Patternmin,format="(F7.2)"), EBSDwidge
 WIDGET_CONTROL, set_value=string(EBSDdata.Patternmax,format="(F7.2)"), EBSDwidget_s.Patternmax
 
 ; display the pattern
-if keyword_set(single) then begin
 ; first apply the necessary intensity scaling to the current pattern
 
 ; what kind of intensity scaling do we need?
@@ -78,12 +91,6 @@ if keyword_set(single) then begin
   if (EBSDdata.detbinning ne 0) then finalpattern = congrid(finalpattern,EBSDdata.detnumsx/2^EBSDdata.detbinning,EBSDdata.detnumsy/2^EBSDdata.detbinning)
 
 ; and we display the result
-  tv,finalpattern
-
-end else begin
-; this is a pre-computed series of patterns, so we can do direct display
-
-end
-
+if not keyword_set(nodisplay) then if (EBSDdata.showcircularmask eq 1) then tv,finalpattern*byte(circularmask) else tv,finalpattern
 
 end

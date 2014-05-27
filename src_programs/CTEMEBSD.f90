@@ -113,12 +113,15 @@ real(kind=sgl)		:: L,L2,Ls,Lc	! distance between scintillator screen and interac
 real(kind=sgl)		:: sig		! sample tile angle [degrees]
 real(kind=sgl)		:: thetac	! detector tilt angle below horizontal [degrees]
 real(kind=sgl)		:: delta	! scintillator step size [microns]
+real(kind=sgl)         :: gammavalue  ! gamma factor for intensity scaling
 integer(kind=irg)	:: numsx 	! number of scintillator points along x
 integer(kind=irg)	:: numsy	! number of scintillator points along y
+integer(kind=irg)      :: binning     ! camera binning mode
 real(kind=sgl)		:: xpc		! pattern center x [pixels]
 real(kind=sgl)		:: ypc		! pattern center y [pixels]
 character(fnlen)	:: anglefile, FZfile, datafile, energyfile
 real(kind=sgl)		:: energymin, energymax ! energy window for energy-filtered EBSD
+real(kind=sgl)         :: axisangle(4), qax(4)        ! axis-angle rotation (optional)
 integer(kind=irg)	:: numEbins, numzbins, nsx, nsy, nE, Emin, Emax, numelectrons  ! variables used in MC energy file
 real(kind=dbl)		:: EkeV, Ehistmin, Ebinsize, depthmax, depthstep ! enery variables from MC program
 real(kind=dbl)		:: beamcurrent, dwelltime, prefactor, MCsig, MComega
@@ -128,7 +131,7 @@ character(4)		:: MCmode	! Monte Carlo mode
 real(kind=sgl),allocatable		:: scin_x(:), scin_y(:) 		! scintillator coordinate ararays [microns]
 real(kind=sgl),allocatable		:: rgx(:,:), rgy(:,:), rgz(:,:)  	! auxiliary arrays needed for interpolation
 real(kind=sgl),allocatable		:: eulang(:,:)				! euler angle array
-real(kind=sgl),allocatable		:: EBSDpattern(:,:)			! array with EBSD pattern
+real(kind=sgl),allocatable		:: EBSDpattern(:,:), binned(:,:)	! array with EBSD patterns
 real(kind=sgl),allocatable 		:: sr(:,:,:),srtmp(:,:,:,:), EkeVs(:)	! dynamical and kinematical parts of the FZ intensities
 real(kind=sgl),allocatable		:: imagestack(:,:,:), z(:,:)		! used to store the computed patterns before writing to disk
 integer(kind=irg),allocatable		:: accum_e(:,:,:), atomtype(:)
@@ -143,19 +146,20 @@ character(2)                          :: angletype
 integer(kind=irg)	:: numeuler, numstacks, numset	! number of Euler angle triplets in file
 integer(kind=irg)	:: i, ii, j, iang,k, io_int(6), num_el, MCnthreads, etotal		! various counters
 integer(kind=irg)	:: istat		! status for allocate operations
-integer(kind=irg)	:: nix, niy, npx, npy, offx, offy, imcnt	! various parameters
+integer(kind=irg)	:: nix, niy, npx, npy, offx, offy, imcnt, binx, biny	! various parameters
 real(kind=sgl),parameter 	:: dtor = 0.0174533  ! convert from degrees to radians
 real(kind=dbl),parameter	:: nAmpere = 6.241D+18   ! Coulomb per second
 integer(kind=irg),parameter	:: storemax = 20	! number of EBSD patterns stored in one output block
 real(kind=sgl)		:: alp, sa, ca		! angle and cosine and sine of alpha
 real(kind=sgl)		:: dc(3), scl		! direction cosine array
-real(kind=sgl)		:: sx, dx, dxm, dy, dym, rhos, io_real(6), x 	! various parameters
+real(kind=sgl)		:: sx, dx, dxm, dy, dym, rhos, io_real(6), x, bindx 	! various parameters
 real(kind=sgl)		:: ixy(2)
 character(3)		:: eulerconvention
 character(5)		:: anglemode	! 'quats' or 'euler' for angular input
 character(6)		:: sqorhe	! from Master file, square or hexagonal Lmabert projection
 character(8)		:: Masterscversion, MCscversion
 character(fnlen)	:: Masterprogname, Masterxtalname, Masterenergyfile, MCprogname, MCxtalname
+character(3)           :: scalingmode ! 'lin' or 'gam' for intensity scaling
 
 ! parameter for random number generator
 integer, parameter 	:: K4B=selected_int_kind(9)      ! used by ran function in math.f90
@@ -163,7 +167,8 @@ integer(K4B) 		:: idum
 
 ! define the IO namelist to facilitate passing variables to the program.
 namelist  / EBSDdata / L, thetac, delta, numsx, numsy, xpc, ypc, anglefile, eulerconvention, FZfile, &
-			energyfile, datafile, beamcurrent, dwelltime, energymin, energymax
+			energyfile, datafile, beamcurrent, dwelltime, energymin, energymax, binning, gammavalue, &
+			scalingmode, axisangle
 
 ! spit out some information about the program 
 progname = 'CTEMEBSD.f90'
@@ -187,7 +192,11 @@ energyfile 	= 'energy.data' ! name of file that contains energy histograms for a
 datafile	= 'EBSDout.data'	! output file name
 beamcurrent 	= 14.513D0	! beam current (actually emission current) in nano ampere
 dwelltime 	= 100.0D0	! in microseconds
- 
+scalingmode    = 'not'         ! intensity selector ('lin', 'gam', or 'not')
+gammavalue     = 1.0          ! gamma factor
+binning        = 1            ! binning mode  (1, 2, 4, or 8)
+axisangle      = (/0.0, 0.0, 0.0, 0.0/)        ! no additional axis angle rotation
+
 ! then we read the rundata namelist, which may override some of these defaults  
 ! this could also be replaced (or duplicated) by the ability to directly call
 ! this program from IDL ?
@@ -265,6 +274,20 @@ else
 end if
 close(unit=dataunit,status='keep')
 !====================================
+
+
+!====================================
+! Do we need to apply an additional axis-angle pair rotation to all the quaternions ?
+!
+if (axisangle(4).ne.0.0) then
+  axisangle(4) = axisangle(4) * dtor
+  qax = ax2qu( axisangle )
+  do i=1,numeuler
+    quatang(1:4,i) = quat_mult(qax,quatang(1:4,i))
+  end do 
+end if
+!====================================
+
 
 !====================================
 ! for the creation of an EBSD dictionary, we'll need some special code
@@ -497,6 +520,12 @@ num_el = nint(sum(accum_e_detector))
 ! close(unit=dataunit,status='keep')
 
 !
+!if (binning.ne.1) then 
+  binx = numsx/binning
+  biny = numsy/binning
+  bindx = 1.0/float(binning)**2
+  allocate(binned(binx,biny),stat=istat)
+!end if
 
 !====================================
 ! init a bunch of parameters
@@ -525,7 +554,11 @@ write (*,*) 'max sr = ',maxval(sr)
 !====================================
 open(unit=dataunit,file=trim(datafile),status='unknown',form='unformatted',action='write')
 ! we need to write the image dimensions, and also how many of those there are...
-write (dataunit) numsx, numsy, numeuler
+if (binning.eq.1) then 
+  write (dataunit) numsx, numsy, numeuler 
+else 
+  write (dataunit) binx, biny, numeuler
+end if
 
 !====================================
 ! ------ start the actual image computation loop
@@ -594,34 +627,35 @@ do iang=1,numeuler
 ! that means that at this point, we really only need to store all the patterns in a single
 ! file, at full resolution, as observed at the scintillator stage.
        
-       
+       if (scalingmode.ne.'not') then
 
-! and apply any camera binning
-!	if (binning.ne.1) then 
-!	  do i=1,numsx,binning
-!	    do j=1,numsy,binning
-!	        binned(i/binning+1,j/binning+1) = sum(EBSDpattern(i:i+binning-1,j:j+binning-1))
-!	    end do
-!	  end do  
-!	else
-!  	  binned = EBSDpattern
-!	end if
-!! and divide by binning^2
-!	binned = binned * bindx
+! apply any camera binning
+	 if (binning.ne.1) then 
+	  do i=1,numsx,binning
+	    do j=1,numsy,binning
+	        binned(i/binning+1,j/binning+1) = sum(EBSDpattern(i:i+binning-1,j:j+binning-1))
+	    end do
+	  end do  
+! and divide by binning^2
+ 	  binned = binned * bindx
+	 else
+  	  binned = EBSDpattern
+	 end if
 	
+! and finally, before saving the patterns, apply the contrast function (linear or gamma correction)
+! for the linear case, we do not need to do anything here...
+        if (scalingmode.eq.'gam') then
+	   binned = binned**gammavalue
+        end if
 
-! this must also be removed; we're not going to apply contrast/brightness acling at this point;
-! we'll allow the user to do this in the visualization code.
-! and finally, before saving the patterns, apply the contrast function and scale between 0 and 255
-!	EBSDmax = maxval(binned)
-!	EBSDmin = minval(binned)
-!	if (iang.eq.1) write (*,*) 'Limit Intensity Values : ',EBSDmin,EBSDmax
-! the following is a "best fit" solution without any basis in physics and is used just as a place holder ... 
-!	imagestack(1:binx,1:biny,imcnt) = int(255*(contrast * ( (binned - EBSDmin)/(EBSDmax-EBSDmin) - 1.0) + 1.0))
+       end if ! scaling mode .ne. 'not'
 
-!	imagestack(1:numsx,1:numsy,imcnt) = prefactor * EBSDpattern(1:numsx,1:numsy)
-        write (dataunit) EBSDpattern
-
+! write either the EBSDpattern array or the binned array to the file 
+       if (scalingmode.eq.'not') then
+         write (dataunit) EBSDpattern
+       else
+         write (dataunit) binned
+       end if
 ! this will need to become an HDF5 formatted file with all the program output
 ! it should be readable in IDL as well as DREAM.3D.
 
