@@ -48,6 +48,24 @@ common EBSD_data_common, EBSDdata
 common EBSDpatterns, pattern, image, finalpattern
 common EBSDmasks, circularmask
 
+; check whether the mask needs to be recomputed or not
+s = size(circularmask)
+dbin = 2^EBSDdata.detbinning
+sm = min( [EBSDdata.detnumsx/dbin, EBSDdata.detnumsy/dbin] )
+if (s[0] ne sm) then begin
+  d = shift(dist(sm),sm/2,sm/2)
+  d[where(d le sm/2)] = 1.0
+  d[where(d gt sm/2)] = 0.0
+  circularmask = fltarr(EBSDdata.detnumsx/dbin, EBSDdata.detnumsy/dbin)
+  if (sm eq EBSDdata.detnumsx/dbin) then begin
+    dm = (EBSDdata.detnumsy/dbin - sm)/2
+    circularmask[0,dm] = d
+  end else begin
+    dm = (EBSDdata.detnumsx/dbin - sm)/2
+    circularmask[dm,0] = d
+  end
+endif
+
 if not keyword_set(nodisplay) then begin
   wset,EBSDwidget_s.PatternDrawID
   erase
@@ -55,12 +73,14 @@ if not keyword_set(nodisplay) then begin
 end
 
 if not keyword_set(single) then begin
+  dbin = 2^EBSDdata.detbinning
 ; we need to read the pattern from file
   openr,1,EBSDdata.EBSDpatternfilename,/f77
   q = assoc(1,lonarr(3),4)
   dims = q[0]
-  q = assoc(1,fltarr(dims[0],dims[1]),20)
-  pattern = q[EBSDdata.currentpatternID]
+  offset = 24L + EBSDdata.currentpatternID * ( EBSDdata.detnumsx * EBSDdata.detnumsy / dbin^2 +2L ) * 4L 
+  q = assoc(1,fltarr(dims[0],dims[1]),offset)
+  pattern = q[0]
   close,1
 end
 

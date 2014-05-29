@@ -39,11 +39,12 @@ if (XRegistered("EBSDPatternWidget") NE 0) then begin
   return
 end
 
+psize = max( [600,EBSDdata.detnumsx+100] )
 ;------------------------------------------------------------
 ; create the top level widget
 EBSDwidget_s.patternbase = WIDGET_BASE(TITLE='Pattern Display Widget', $
                         /ROW, $
-                        XSIZE=max( [600,EBSDdata.detnumsx+100] ), $
+                        XSIZE=psize, $
                         /ALIGN_CENTER, $
 			/TLB_MOVE_EVENTS, $
 			EVENT_PRO='EBSDPatternWidget_event', $
@@ -52,7 +53,7 @@ EBSDwidget_s.patternbase = WIDGET_BASE(TITLE='Pattern Display Widget', $
 
 
 block1 = WIDGET_BASE(EBSDwidget_s.patternbase, $
-			XSIZE=600, $
+			XSIZE=psize, $
 			/ALIGN_TOP, $
 			/COLUMN)
 
@@ -184,7 +185,7 @@ end else begin
  EBSDdata.currentdisplaywidgetmode = 1
 ;------------------------------------------------------------
 ;------------------------------------------------------------
-  file1 = WIDGET_BASE(block1, /COLUMN, YPAD=8, XSIZE=600, /ALIGN_LEFT)
+  file1 = WIDGET_BASE(block1, /COLUMN, YPAD=8, XSIZE=psize, /ALIGN_LEFT)
   file2 = WIDGET_BASE(file1, /ROW, XSIZE=600, /ALIGN_LEFT)
 
 saveEBSDPattern = WIDGET_BUTTON(file2, $

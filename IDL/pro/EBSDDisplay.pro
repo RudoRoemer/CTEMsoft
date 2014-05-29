@@ -597,7 +597,7 @@ WIDGET_CONTROL,EBSDwidget_s.base,/REALIZE
 WIDGET_CONTROL, EBSDwidget_s.logodraw, GET_VALUE=drawID
 EBSDwidget_s.logodrawID = drawID
 ;
-read_jpeg,'Resources/SEMlogo.jpg',logo
+read_jpeg,'Resources/SEMONRlogo.jpg',logo
 wset,EBSDwidget_s.logodrawID
 tvscl,logo,true=1
 

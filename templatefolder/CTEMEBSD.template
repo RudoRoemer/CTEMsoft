@@ -19,11 +19,11 @@ anglefile = 'testeuler.txt'
 ! 'tsl' or 'hkl' Euler angle convention parameter
 eulerconvention = 'hkl'
 ! name of EBSD master output file
-FZfile = '/Volumes/Drive2/playarea/EBSD/Cu_master.data'
+FZfile = '/some/folder/somwhere/Cu_master.data'
 ! name of Monte Carlo output file
-energyfile = '/Volumes/Drive2/playarea/EBSD/Cu_MC.data'
+energyfile = '/some/folder/somewhere/Cu_MC.data'
 ! name of output file
-datafile = 'EBSDtest.data'
+datafile = '/some/folder/somwhere/EBSDtest.data'
 ! incident beam current [nA]
 beamcurrent = 15.0
 ! beam dwell time [micro s]

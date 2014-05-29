@@ -160,12 +160,14 @@ end
 
 EBSDdata.Eminsel = tvals[0]
 
+file3 = WIDGET_LABEL(file2, VALUE='Energy Min ', font=fontstr)
 EBSDwidget_s.EBSDminenergylist = WIDGET_DROPLIST(file2, $
 			EVENT_PRO='EBSDDetectorWidget_event', $
 			VALUE=tvals,$
 			UVALUE='EBSDMINENERGYLIST', $
 			/ALIGN_LEFT)
-WIDGET_CONTROL, set_droplist_select=EBSDdata.Eminsel, EBSDwidget_s.EBSDminenergylist
+;WIDGET_CONTROL, set_droplist_select=EBSDdata.Eminsel, EBSDwidget_s.EBSDminenergylist
+WIDGET_CONTROL, set_droplist_select=0, EBSDwidget_s.EBSDminenergylist
 
 EBSDdata.Emaxsel = tvals[EBSDdata.mcenergynumbin-1]
 
@@ -175,7 +177,8 @@ EBSDwidget_s.EBSDmaxenergylist = WIDGET_DROPLIST(file2, $
 			VALUE=tvals,$
 			UVALUE='EBSDMAXENERGYLIST', $
 			/ALIGN_LEFT)
-WIDGET_CONTROL, set_droplist_select=EBSDdata.Emaxsel, EBSDwidget_s.EBSDmaxenergylist
+;WIDGET_CONTROL, set_droplist_select=EBSDdata.Emaxsel, EBSDwidget_s.EBSDmaxenergylist
+WIDGET_CONTROL, set_droplist_select=EBSDdata.mcenergynumbin-1, EBSDwidget_s.EBSDmaxenergylist
 
 
 ;------------------------------------------------------------
@@ -209,7 +212,7 @@ EBSDwidget_s.DetectorClose = WIDGET_BUTTON(file1, $
 file1 = WIDGET_BASE(block2, /COLUMN, /FRAME, YPAD=8, XSIZE=430, /ALIGN_LEFT)
 file2 = WIDGET_LABEL(file1, VALUE='Pattern Mode', font=fontstrlarge, /ALIGN_LEFT, /FRAME)
 
-vals = ['Single Pattern','Angle File','Dictionary']
+vals = ['Single Pattern','Angle File'] ; ,'Dictionary']
 EBSDwidget_s.Pmode = CW_BGROUP(file1, $
                         vals, $
                         /ROW, $
@@ -287,6 +290,9 @@ file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_LEFT)
 EBSDwidget_s.angletype = Core_WText(file2,'Angle Type', fontstr, 90, 25, 10, 1, EBSDdata.angletype)
 EBSDwidget_s.numangles = Core_WText(file2,'# Angles  ', fontstr, 80, 25, 10, 1, string(EBSDdata.numangles,format="(I8)"))
 
+; eliminate this part of the code for Release 2
+j=0
+if (j eq 1) then begin
 ;------------------------------------------------------------
 ;------------------------------------------------------------
 file1 = WIDGET_BASE(block2, /COLUMN, /FRAME, YPAD=8, XSIZE=430, /ALIGN_LEFT)
@@ -296,7 +302,7 @@ file2 = WIDGET_LABEL(file3, VALUE='Dictionary Parameters', font=fontstrlarge, /A
 EBSDwidget_s.GoDictionary = WIDGET_BUTTON(file3, $
                                 VALUE='Go', $
                                 UVALUE='GODICTIONARY', $
-                                EVENT_PRO='EBSDetectorWidget_event', $
+                                EVENT_PRO='EBSDDetectorWidget_event', $
                                 SENSITIVE=0, $
                                 /FRAME)
 
@@ -352,7 +358,7 @@ EBSDwidget_s.GoDict = WIDGET_BUTTON(file2, $
                                 /FRAME)
 
 EBSDwidget_s.NinRFZ = Core_WText(file2,'# points in RFZ', fontstr, 125, 25, 10, 1, string(EBSDdata.NinRFZ,FORMAT="(I10)")) 
-
+endif  ; eliminated code for this Release
 
 ;------------------------------------------------------------
 ; realize the widget structure

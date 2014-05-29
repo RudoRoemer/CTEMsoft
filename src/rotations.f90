@@ -64,6 +64,7 @@
 !> All 42 conversion routines exist.
 
 !> @date 8/04/13   MDG 1.0 original
+!> @date 5/29/14   MDG 1.1 corrections to ho2ro routine
 !--------------------------------------------------------------------------
 module rotations
 
@@ -1002,10 +1003,14 @@ real(kind=sgl)			:: res(3)
 
 real(kind=sgl)			:: s, d
 
-s = atan(r(3))
-d = atan(r(2)/r(1))
+if (maxval(abs(r)).eq.0.0) then 
+  res = (/ 0.0, 0.0, 0.0 /)
+else
+  s = atan(r(3))
+  d = atan(r(2)/r(1))
 
-res = (/ s+d, 2.0*atan(r(1)*cos(s)/cos(d)), s-d /)
+  res = (/ s+d, 2.0*atan(r(1)*cos(s)/cos(d)), s-d /)
+end if
 
 end function ro2eu
 
@@ -1034,10 +1039,14 @@ real(kind=dbl)			:: res(3)
 
 real(kind=dbl)			:: s, d
 
-s = datan(r(3))
-d = datan(r(2)/r(1))
+if (maxval(abs(r)).eq.0.D0) then 
+  res = (/ 0.D0, 0.D0, 0.D0 /)
+else
+  s = datan(r(3))
+  d = datan(r(2)/r(1))
 
-res = (/ s+d, 2.D0*datan(r(1)*dcos(s)/dcos(d)), s-d /)
+  res = (/ s+d, 2.D0*datan(r(1)*dcos(s)/dcos(d)), s-d /)
+end if
 
 end function ro2eu_d
 
@@ -2617,7 +2626,7 @@ real(kind=dbl),parameter	:: c(7) = (/ -0.5000096149170321D0, -0.0248660614887173
 ! normalize h and store the magnitude
 hmag = sum(h*h)
 if (hmag.eq.0.0) then
-  res = (/ 0.0, 0.0, 0.0, 0.0 /)
+  res = (/ 0.0, 0.0, 0.0 /)
 else
   hm = hmag
   hn = h/sqrt(hmag)
@@ -2629,7 +2638,7 @@ else
     s = s + c(i) * hm
   end do
   
-  s = cos( 2.0*acos(1.0+s) )
+  s = tan( acos(1.0+s) )
   res = (/ hn(1), hn(2), hn(3) /) * s
 end if
 
@@ -2666,7 +2675,7 @@ real(kind=dbl),parameter	:: c(7) = (/ -0.5000096149170321D0, -0.0248660614887173
 ! normalize h and store the magnitude
 hmag = sum(h*h)
 if (hmag.eq.0.D0) then
-  res = (/ 0.D0, 0.D0, 0.D0, 0.D0 /)
+  res = (/ 0.D0, 0.D0, 0.D0 /)
 else
   hm = hmag
   hn = h/dsqrt(hmag)
@@ -2678,7 +2687,7 @@ else
     s = s + c(i) * hm
   end do
 
-  s = dcos( 2.D0*dacos(1.D0+s) )
+  s = dtan( dacos(1.D0+s) )
   res = (/ hn(1), hn(2), hn(3) /) * s
 end if
 

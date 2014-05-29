@@ -49,19 +49,21 @@ common EBSDpatterns, pattern, image, finalpattern
 common EBSD_anglearrays, euler, quaternions
 common EBSDmasks, circularmask
 
+
 ; check whether the mask needs to be recomputed or not
 s = size(circularmask)
-sm = min( [EBSDdata.detnumsx, EBSDdata.detnumsy] )
+dbin = 2^EBSDdata.detbinning
+sm = min( [EBSDdata.detnumsx/dbin, EBSDdata.detnumsy/dbin] )
 if (s[0] ne sm) then begin
   d = shift(dist(sm),sm/2,sm/2)
   d[where(d le sm/2)] = 1.0
   d[where(d gt sm/2)] = 0.0
-  circularmask = fltarr(EBSDdata.detnumsx, EBSDdata.detnumsy)
-  if (sm eq EBSDdata.detnumsx) then begin
-    dm = (EBSDdata.detnumsy - sm)/2
+  circularmask = fltarr(EBSDdata.detnumsx/dbin, EBSDdata.detnumsy/dbin)
+  if (sm eq EBSDdata.detnumsx/dbin) then begin
+    dm = (EBSDdata.detnumsy/dbin - sm)/2
     circularmask[0,dm] = d
   end else begin
-    dm = (EBSDdata.detnumsx - sm)/2
+    dm = (EBSDdata.detnumsx/dbin - sm)/2
     circularmask[dm,0] = d
   end
 endif
@@ -113,7 +115,8 @@ end
 ; and here are the imaging parameters that are only needed if we are NOT in single image mode
   if not keyword_set(single) then begin
 ; angle file
-    printf,10,'anglefile = '''+EBSDdata.EBSDanglefilename+''''
+    if (EBSDdata.Pmode eq 1) then printf,10,'anglefile = '''+EBSDdata.EBSDanglefilename+''''
+    if (EBSDdata.Pmode eq 2) then printf,10,'anglefile = '''+EBSDdata.EBSDdictfilename+''''
 ; binning parameter
     printf,10,'binning = '+string(2^EBSDdata.detbinning,format="(I1)")
 ; intensity scaling mode
@@ -134,6 +137,13 @@ end
   end
   printf,10,'/'
   close,10
+
+  if (EBSDdata.numangles gt 1000) then begin
+    Core_Print,'',/blank
+    Core_Print,'You are computing more than 1000 EBSPs; this will take a while...'
+    Core_Print,'The program will not provide any further updates until the run has been completed.'
+    Core_Print,'',/blank
+  endif
 
 ; and finally run the CTEMEBSD program
   cmd = EBSDdata.f90exepath+'CTEMEBSD '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'

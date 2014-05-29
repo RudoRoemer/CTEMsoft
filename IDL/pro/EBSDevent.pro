@@ -152,37 +152,38 @@ CASE eventval OF
                 WIDGET_CONTROL, get_value=val,EBSDwidget_s.Pmode
                 EBSDdata.Pmode = fix(val[0])
 		vals = ['Single Pattern','Angle File','Dictionary']
-		  Core_Print, 'Pattern mode set to '+vals[EBSDdata.Pmode]
 ; next we need to turn on those widgets that belong to the selected mode (sensitivity=1)
 		if (EBSDdata.Pmode eq 0) then begin
 		  WIDGET_CONTROL, EBSDwidget_s.DisplayEBSD, sensitive=1
 		  WIDGET_CONTROL, EBSDwidget_s.EBSDgetanglefilename, sensitive=0
-		  WIDGET_CONTROL, EBSDwidget_s.PGdroplist, sensitive=0
-		  WIDGET_CONTROL, EBSDwidget_s.EBSDgetdictfilename, sensitive=0
-		  WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=0
+;	  WIDGET_CONTROL, EBSDwidget_s.PGdroplist, sensitive=0
+;	  WIDGET_CONTROL, EBSDwidget_s.EBSDgetdictfilename, sensitive=0
+;	  WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=0
+		    Core_Print, 'Pattern mode set to '+vals[EBSDdata.Pmode]
 		end
 
 		if (EBSDdata.Pmode eq 1) then begin
-		  WIDGET_CONTROL, EBSDwidget_s.DisplayEBSD, sensitive=1
+		  WIDGET_CONTROL, EBSDwidget_s.DisplayEBSD, sensitive=0
 		  WIDGET_CONTROL, EBSDwidget_s.EBSDgetanglefilename, sensitive=1
-		  WIDGET_CONTROL, EBSDwidget_s.PGdroplist, sensitive=0
-		  WIDGET_CONTROL, EBSDwidget_s.EBSDgetdictfilename, sensitive=0
-		  WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=0
+;	  WIDGET_CONTROL, EBSDwidget_s.PGdroplist, sensitive=0
+;	  WIDGET_CONTROL, EBSDwidget_s.EBSDgetdictfilename, sensitive=0
+;	  WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=0
+		    Core_Print, 'Pattern mode set to '+vals[EBSDdata.Pmode]
 		end
 
 		if (EBSDdata.Pmode eq 2) then begin
-		  WIDGET_CONTROL, EBSDwidget_s.DisplayEBSD, sensitive=1
+		  WIDGET_CONTROL, EBSDwidget_s.DisplayEBSD, sensitive=0
 		  WIDGET_CONTROL, EBSDwidget_s.EBSDgetanglefilename, sensitive=0
-		  WIDGET_CONTROL, EBSDwidget_s.PGdroplist, sensitive=1
-		  WIDGET_CONTROL, EBSDwidget_s.EBSDgetdictfilename, sensitive=1
-		  if ( (EBSDdata.Ncubochoric ne 0) and (EBSDdata.Dictpointgroup ne 0) and (EBSDdata.EBSDdictfilename ne '') ) then begin
-		    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=1
-		  end else begin
-		    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=0
-		  end
+;	  WIDGET_CONTROL, EBSDwidget_s.PGdroplist, sensitive=0
+;	  WIDGET_CONTROL, EBSDwidget_s.EBSDgetdictfilename, sensitive=0
+;	  if ( (EBSDdata.Ncubochoric ne 0) and (EBSDdata.Dictpointgroup ne 0) and (EBSDdata.EBSDdictfilename ne '') ) then begin
+;	    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=0
+;	  end else begin
+;	    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=0
+;	  end
+;	    Core_Print, 'Pattern mode set to '+vals[EBSDdata.Pmode]
+		    Core_Print, 'Not implemented in this program Release',/blank
 		end
-		
-
 	endcase
 
 else: MESSAGE, "Event User Value Not Found"
