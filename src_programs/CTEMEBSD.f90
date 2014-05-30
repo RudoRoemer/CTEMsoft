@@ -122,7 +122,7 @@ real(kind=sgl)		:: ypc		! pattern center y [pixels]
 character(fnlen)	:: anglefile, FZfile, datafile, energyfile
 real(kind=sgl)		:: energymin, energymax ! energy window for energy-filtered EBSD
 real(kind=sgl)         :: axisangle(4), qax(4)        ! axis-angle rotation (optional)
-integer(kind=irg)	:: numEbins, numzbins, nsx, nsy, nE, Emin, Emax, numelectrons  ! variables used in MC energy file
+integer(kind=irg)	:: numEbins, numzbins, nsx, nsy, nE, Emin, Emax  ! variables used in MC energy file
 real(kind=dbl)		:: EkeV, Ehistmin, Ebinsize, depthmax, depthstep ! enery variables from MC program
 real(kind=dbl)		:: beamcurrent, dwelltime, prefactor, MCsig, MComega
 character(4)		:: MCmode	! Monte Carlo mode
@@ -133,7 +133,7 @@ real(kind=sgl),allocatable		:: rgx(:,:), rgy(:,:), rgz(:,:)  	! auxiliary arrays
 real(kind=sgl),allocatable		:: eulang(:,:)				! euler angle array
 real(kind=sgl),allocatable		:: EBSDpattern(:,:), binned(:,:)	! array with EBSD patterns
 real(kind=sgl),allocatable 		:: sr(:,:,:),srtmp(:,:,:,:), EkeVs(:)	! dynamical and kinematical parts of the FZ intensities
-real(kind=sgl),allocatable		:: imagestack(:,:,:), z(:,:)		! used to store the computed patterns before writing to disk
+real(kind=sgl),allocatable		:: z(:,:)		! used to store the computed patterns before writing to disk
 integer(kind=irg),allocatable		:: accum_e(:,:,:), atomtype(:)
 real(kind=sgl),allocatable 		:: accum_e_detector(:,:,:)
 
@@ -143,16 +143,16 @@ real(kind=sgl)				:: qq(4), qq1(4), qq2(4), qq3(4)
 character(2)                          :: angletype
 
 ! various items
-integer(kind=irg)	:: numeuler, numstacks, numset	! number of Euler angle triplets in file
-integer(kind=irg)	:: i, ii, j, iang,k, io_int(6), num_el, MCnthreads, etotal		! various counters
+integer(kind=irg)	:: numeuler, numset	! number of Euler angle triplets in file
+integer(kind=irg)	:: i, j, iang,k, io_int(6), num_el, MCnthreads, etotal		! various counters
 integer(kind=irg)	:: istat		! status for allocate operations
-integer(kind=irg)	:: nix, niy, npx, npy, offx, offy, imcnt, binx, biny	! various parameters
+integer(kind=irg)	:: nix, niy, npx, npy, binx, biny	! various parameters
 real(kind=sgl),parameter 	:: dtor = 0.0174533  ! convert from degrees to radians
 real(kind=dbl),parameter	:: nAmpere = 6.241D+18   ! Coulomb per second
 integer(kind=irg),parameter	:: storemax = 20	! number of EBSD patterns stored in one output block
 real(kind=sgl)		:: alp, sa, ca		! angle and cosine and sine of alpha
 real(kind=sgl)		:: dc(3), scl		! direction cosine array
-real(kind=sgl)		:: sx, dx, dxm, dy, dym, rhos, io_real(6), x, bindx 	! various parameters
+real(kind=sgl)		:: sx, dx, dxm, dy, dym, rhos, x, bindx 	! various parameters
 real(kind=sgl)		:: ixy(2)
 character(3)		:: eulerconvention
 character(5)		:: anglemode	! 'quats' or 'euler' for angular input

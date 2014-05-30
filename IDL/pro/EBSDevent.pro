@@ -71,7 +71,7 @@ CASE eventval OF
 		 openw,EBSDdata.logunit,EBSDdata.logname
 		 EBSDdata.logfileopen = 1
 		end else begin
-		   Core_rint,'Turning log mode off',/blank
+		   Core_Print,'Turning log mode off',/blank
 		 if (EBSDdata.logfileopen eq 1) then begin
 		   close,EBSDdata.logunit
 		   EBSDdata.logfileopen = 0
