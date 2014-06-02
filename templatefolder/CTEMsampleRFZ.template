@@ -1,0 +1,10 @@
+&RFZlist
+! template file for the CTEMsampleRFZ program
+!
+! point group number
+pgnum = 1
+! number of sampling points along cube semi-edge
+nsteps = 10
+! output angle file name
+outname = 'anglefile.txt'
+/

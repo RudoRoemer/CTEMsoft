@@ -26,60 +26,67 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDwritepreferences.pro
+; CTEMsoft2013:EBSDreadanglefile.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: EBSDwritepreferences.pro
+; PROGRAM: EBSDreadanglefile.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief write the preferences file
+;> @brief reads an angle input file and determines how many entries there are
 ;
-;> @date 06/13/13 MDG 1.0 first attempt 
+;> @date 03/19/14 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro EBSDwritepreferences,noprint=noprint
- 
+pro EBSDreadanglefile, fname, list=list
+
 ;------------------------------------------------------------
 ; common blocks
 common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
+common EBSD_anglearrays, euler, quaternions
 
-; prefs file
-  openw,1,EBSDdata.prefname
-  nprefs = 24
-  EBSDdata.nprefs = nprefs
-  printf,1,nprefs
-  printf,1,'EBSDroot::'+EBSDdata.EBSDroot
-  printf,1,'f90exepath::'+EBSDdata.f90exepath
+; the file must exist, since it was selected using the file widget
+openr,10,fname
+angletype = ''
+readf,10,angletype
+numangles = 0L
+readf,10,numangles
+EBSDdata.numangles = numangles
+if keyword_set(list) then begin
+; if we are doing and angle file, then we need to read and store all the angle
+; entries in the EBSD_anglearrays common variables.
+  if (angletype eq 'eu') then begin
+    euler = fltarr(3L,numangles) 
+    a = 0.0
+    b = 0.0
+    c = 0.0
+    for i=0L,numangles-1L do begin
+      readf,10,a,b,c
+      euler[0L:2L,i] = [a,b,c]
+    endfor
+  end else begin
+    quaternions = fltarr(4L,numangles)
+    a = 0.0
+    b = 0.0
+    c = 0.0
+    d = 0.0
+    for i=0L,numangles-1L do begin
+      readf,10,a,b,c,d
+      quaternions[0L:2L,i] = [a,b,c,d]
+    endfor
+  end 
+end
+close,10
 
-  printf,1,'detl::'+string(EBSDdata.detL,format="(F9.2)")
-  printf,1,'dettheta::'+string(EBSDdata.dettheta,format="(F6.2)")
-  printf,1,'detdelta::'+string(EBSDdata.detdelta,format="(F6.2)")
-  printf,1,'detnumsx::'+string(EBSDdata.detnumsx,format="(I6)")
-  printf,1,'detnumsy::'+string(EBSDdata.detnumsy,format="(I6)")
-  printf,1,'detxpc::'+string(EBSDdata.detxpc,format="(F7.2)")
-  printf,1,'detypc::'+string(EBSDdata.detypc,format="(F7.2)")
-  printf,1,'detbinning::'+string(EBSDdata.detbinning,format="(I3)")
-  printf,1,'detbeamcurrent::'+string(EBSDdata.detbeamcurrent,format="(D9.2)")
-  printf,1,'detdwelltime::'+string(EBSDdata.detdwelltime,format="(D9.2)")
-
-; window locations
-  printf,1,'xlocation::'+string(EBSDdata.xlocation,format="(F6.1)")
-  printf,1,'ylocation::'+string(EBSDdata.ylocation,format="(F6.1)")
-  printf,1,'EBSDxlocation::'+string(EBSDdata.EBSDxlocation,format="(F6.1)")
-  printf,1,'EBSDylocation::'+string(EBSDdata.EBSDylocation,format="(F6.1)")
-  printf,1,'Detectorxlocation::'+string(EBSDdata.Detectorxlocation,format="(F6.1)")
-  printf,1,'Detectorylocation::'+string(EBSDdata.Detectorylocation,format="(F6.1)")
-  printf,1,'Patternxlocation::'+string(EBSDdata.patternxlocation,format="(F6.1)")
-  printf,1,'Patternylocation::'+string(EBSDdata.patternylocation,format="(F6.1)")
-  printf,1,'MCxlocation::'+string(EBSDdata.MCxlocation,format="(F6.1)")
-  printf,1,'MCylocation::'+string(EBSDdata.MCylocation,format="(F6.1)")
-  printf,1,'MPxlocation::'+string(EBSDdata.MPxlocation,format="(F6.1)")
-  printf,1,'MPylocation::'+string(EBSDdata.MPylocation,format="(F6.1)")
-; and close the file
-  close,1
-
-  if not keyword_set(noprint) then Core_Print,'The preferences file '+EBSDdata.prefname+' was successfully saved '
-
+EBSDdata.angletype = angletype
+if (angletype eq 'eu') then begin
+  WIDGET_CONTROL, set_value='Euler', EBSDwidget_s.angletype
+end
+if (angletype eq 'qu') then begin
+  WIDGET_CONTROL, set_value='quaternion', EBSDwidget_s.angletype
 end
 
+WIDGET_CONTROL, set_value=string(numangles,FORMAT="(I8)"), EBSDwidget_S.numangles
+
+
+end

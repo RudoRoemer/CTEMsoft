@@ -34,38 +34,19 @@
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief Zone axis ECCI defect image computations
+!> @brief tryECCI computes ECCI defect contrast for multiple defects
 !
-!> @date   03/07/10 MDG  1.0 original, based on STEMdefect.f90 (collaboration with OSU) 
-!> @date   03/21/10 MDG  2.0 modified for STEM illumination, fast version with bi-variate interpolation
-!> @date   10/15/10 MDG  3.0 modified for ECCI, using ECPz concepts
-!> @date   06/02/11 MDG  3.1 verified integration direction after dislocation changes to main CTEMlib routines
-!> @date   08/04/12 MDG  4.0 complete rework based on Stefan Zaeferrer's comments; defect counts only
-!>                           for incident beam, not for outgoing beam
-!> @date   11/19/13 MDG  5.0 complete rewrite based on new ctemlib.a library routines
+!> @details This is a test version based on the CTEMZAdefect program
+! 
+!> @date  03/07/10 MDG  1.0 original, based on STEMdefect.f90 (collaboration with OSU) 
+!> @date  03/21/10 MDG  2.0 modified for STEM illumination, fast version with bi-variate interpolation
+!> @date  06/19/13 MDG  3.0 conversion to new libraries 
+!> @date  10/28/13 MDG  3.1 added Interpret_Program_Arguments line
+!> @date  12/03/13 MDG  4.0 new start 
+!> @date  12/08/13 MDG  4.1 added trace (line scan) mode
+!> @date  02/10/14 MDG  4.2 added apbs
 !--------------------------------------------------------------------------
-
-! is this module still needed ?
-module Svars
-
-use local
-
-IMPLICIT NONE
-
-complex(kind=dbl),allocatable    :: DHWM(:,:),Afirst(:,:),DHWMvoid(:,:),DDD(:,:),Sarray(:,:,:,:)
-complex(kind=dbl),allocatable    :: q(:,:),qin(:,:),qout(:,:),r(:,:),amp(:),amp2(:),Azz(:,:),para(:)
-complex(kind=dbl)                :: czero,cone
-integer(kind=irg),allocatable    :: expval(:,:,:)
-integer(kind=irg)                :: nsl
-real(kind=sgl)                   :: zmax, sl
-real(kind=dbl)                   :: thr
-real(kind=sgl),allocatable       :: ECCIimage(:,:,:)
-
-end module Svars
-
-
-
-program CTEMECCI 
+program CTEMECCI
 
 use local
 use files
@@ -73,264 +54,282 @@ use io
 
 IMPLICIT NONE
 
-character(fnlen)	          :: nmldeffile
+character(fnlen)			:: nmldeffile
 
 ! deal with the command line arguments, if any
 nmldeffile = 'CTEMECCI.nml'
 progname = 'CTEMECCI.f90'
 call Interpret_Program_Arguments(nmldeffile,8,(/ 0, 3, 41, 200, 201, 202, 203, 204 /) )
 
-! perform the zone axis computations
-call ECCIsimulation(nmldeffile)
+! initialize all user-defined variables
+call ComputeECCI(nmldeffile)
 
 end program CTEMECCI
 
+
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE:ECCIsimulation
+! SUBROUTINE: ComputeECCI
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief compute ECCI images for a given range of beam directions
-!
-!> @note This is somewhat similar to a zone axis defect computation
+!> @brief compute a zone axis ECCI defect data set
 !
 !> @param nmlfile namelist file name
 !
-!> @date 11/19/13  MDG 1.0 major rewrite from older ZAECCI program
+!> @todo check sign of kt for consistency 
+!
+!> @date 11/29/01  MDG 1.0 original
+!> @date 04/08/13  MDG 2.0 rewrite
+!> @date 05/14/13  MDG 2.1 replaced IO by namelist file
+!> @date 11/13/13  MDG 2.2 implementation of Pade approximation for scattering matrix computation
+!> @date 12/04/13  MDG 3.0 new implementation of the thickness integration, nmore along the lines of CTEMECP 
+!> @date 12/07/13  MDG 3.1 added line scan mode (called "trace")
+!> @date 02/10/14  MDG 3.2 added apbs
+!> @date 02/24/14  MDG 3.3 removal of double-counted phase factor
+!> @date 03/05/14  MDG 3.4 correction of integration to double integration for Lgh array
+!> @date 03/12/14  MDG 3.5 conversion of Sgh and Lgh arrays to diagonal only
 !--------------------------------------------------------------------------
-subroutine ECCIsimulation(nmlfile) 
+subroutine ComputeECCI(nmlfile)
 
 use local
+use error
 use crystalvars 
 use crystal
 use symmetryvars
 use symmetry
+use postscript
 use constants
 use diffraction
 use dynamical
-use gvectors
 use kvectors
-use error
+use gvectors
 use files
 use io
+use math
 use foilmodule
 use stacking_fault
 use dislocation
-use YSHModule
+use YSHmodule
 use void
 use inclusion
+use apb
 use defectmodule
+use rotations
 use timing
 use STEMmodule
-use Svars
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)	 :: nmlfile
+character(fnlen),INTENT(IN)		:: nmlfile
 
-integer(kind=irg)              :: nn,i,j,ik,npix,npiy,numvoids,numdisl,numYdisl,numsf, &
-                                  numinc,dinfo,t_interval,DF_nums_new,io_int(6),npx, npy, nkt, ijmax, &
-                                  DF_npix_new,DF_npiy_new, numstart,numstop, isg, TID, NTHR, isym, ir, ga(3), gb(3), nbeams, &
-                                  ic,numd,ix,iy, numk, k(3), fn(3), istart,ig, gg(3), ixp, iyp, skip, dgn, pgnum, SETNTHR
+integer(kind=irg)    		        :: nn,i,j,k,npix,npiy,ii,jj,numvoids,numdisl, numset, &
+					numYdisl,numsf,numinc,numapb,dinfo,t_interval,nat(100), &
+					DF_nums_new,DF_npix_new,DF_npiy_new, numstart,numstop, isg, TID, &
+					NTHR, isym, ir, ga(3), gb(3),kk(3),ic,g,numd,ix,iy,nkt,nbeams, ik, ig, &
+					numk,ixp,iyp,SETNTHR, io_int(6), skip, gg(3), iSTEM, nktstep
+!                                  OMP_GET_THREAD_NUM,OMP_GET_NUM_THREADS
+integer(kind=irg),parameter 		:: numdd=360 ! 180
+real(kind=sgl)         		:: thick, X(2), dmin, dkt, bragg, thetac, kstar(3), gperp(3), &
+					lauec(2),lauec2(2),gdotR,DF_gf(3), tpi, &
+					DM(2,2), DD, c(3), gx(3), gy(3), &
+					gac(3), gbc(3),zmax, ktmax, io_real(2), voltage, ijmax
+real(kind=dbl)                        :: arg, glen
+character(fnlen)      			:: dataname,sgname,voidname,dislname(3*maxdefects),sfname(maxdefects),ECPname, &
+					incname,dispfile,xtalname,foilnmlfile, STEMnmlfile,dislYname(3*maxdefects), apbname
+character(4)            		:: dispmode, summode
+character(5)                          :: progmode
+complex(kind=dbl),allocatable    	:: DHWM(:,:),DHWMvoid(:,:),DDD(:,:),Sarray(:,:,:,:)
+complex(kind=dbl),allocatable    	:: amp(:),amp2(:),Azz(:,:)
+complex(kind=dbl)                	:: czero,cone
+complex(kind=dbl)                	:: para(0:numdd),dx,dy,dxm,dym, xgp
+real(kind=sgl),allocatable       	:: sgarray(:,:)
+real(kind=sgl),allocatable    		:: disparray(:,:,:,:),imatvals(:,:), ECCIimages(:,:)
+integer(kind=sgl),allocatable    	:: expval(:,:,:)
+complex(kind=dbl),allocatable         :: Lgh(:),Sgh(:) ! Lgh(:,:),Sgh(:,:)
+logical	                               :: ECCI, NANCHK
 
-integer(kind=irg),parameter    :: numdd=180
-real(kind=sgl)                 :: arg,thick, X(2),gdotR,xgp,DF_gf(3), DM(2,2), DD, voltage, c(3), gx(3), gy(3), dmin,&
-                                  gac(3), gbc(3), io_real(3), ktmax, dkt, bragg, thetac, galen, qx, qy
+namelist / ECCIlist / DF_L, DF_npix, DF_npiy, DF_slice, dmin, sgname, numvoids, incname, stdout, &
+                                voidname, numdisl, dislname, numYdisl, dislYname, numsf, sfname, dinfo, &
+				 t_interval,progmode, dispfile, ktmax, dkt, ECPname, summode, lauec, lauec2, &
+				 dispmode,SETNTHR,xtalname,voltage,kk, lauec, nktstep, &
+				 dataname, foilnmlfile, STEMnmlfile, apbname
 
-character(fnlen)               :: sgname, voidname, dislname(3*maxdefects), sfname(maxdefects), dataname, &
-                                  incname, dispfile,  dislYname(3*maxdefects), xtalname, foilnmlfile
-character(4)                   :: dispmode, method
+ECCI = .TRUE.
 
-complex(kind=dbl)              :: dx,dy,dxm,dym
-real(kind=sgl),allocatable     :: sgarray(:,:),thickarray(:)
-real(kind=sgl),allocatable     :: disparray(:,:,:,:),imatvals(:,:)
-real(kind=dbl),allocatable     :: att(:)
-real(kind=dbl)                 :: g3n(3),g3(3),H,FNg(3),ll(3),lpg(3),gplen,LC3,sgdenom,exer
-
-namelist / ECCIlist / stdout, DF_L, DF_npix, DF_npiy, DF_slice, k, dkt, ktmax, foilnmlfile, sgname, numvoids, &
-                      voidname, numinc, incname, numdisl, dislname, numYdisl, dislYname, numsf, sfname, dinfo, &
-                      dispfile, dispmode, SETNTHR, dataname, xtalname, dmin, voltage
-
-
-! here we read the general simulation information from a namelist file
 ! first we define the default values
- xtalname = 'undefined' ! input crystal structure file
- stdout = 6          ! output channel (screen)
- SETNTHR = 1         ! number of threads for OpenMP sections
- DF_L = 1.0          ! edge length of column in nanometers
- DF_npix = 256       ! number of image pixels along x
- DF_npiy = 256       ! number of image pixels along y 
- DF_slice = 1.0      ! slice thickness in nanometers
- voltage = 30000.0   ! microscope voltage
- k = (/ 0, 0, 1 /)   ! zone axis orientation
- dkt = 0.5           ! step size along kt   
- ktmax = 5.0         ! max tangential wave vector in units of |g_a|
- dmin = 0.04         ! minimum d-spacing
- dinfo = 0           ! switch to make makedislocation verbose
+czero=dcmplx(0.D0,0.D0)
+cone=dcmplx(1.D0,0.D0)
+tpi = 2.0*sngl(cPi)
+
+! parameters specific to this run
+ xtalname = 'undefined'		! initial value; MUST be present in nml file for program to execute
+ voltage = 20000.0			! accelerating voltage
+ kk = (/ 0, 0, 1 /)			! incident wave vector in crystal components (omitting wave length)
+ lauec = (/ 0.0,0.0 /)			! Laue center coordinates (used for single image mode, start point in trace modea)
+ lauec2 = (/ 0.0,0.0 /)		! Laue center 2 coordinates (used for trace mode, end point)
+ nktstep = 10                         ! number of steps in line scan mode
+ dmin = 0.04			        ! smallest d-spacing to include in dynamical matrix [nm]
+ ktmax = 5.0
+ dkt = 0.5
+ progmode = 'array'                   ! 'array' for array of images, 'trace' for line scan
+ summode = 'diag'                     ! 'full' for complete summation, 'diag' for diagonal only
+
+! CTEM or STEM ?
+ progmode = 'CTEM'  		        ! default illumination mode (can be 'CTEM' or 'STEM')
+ STEMnmlfile = 'STEM_rundata.nml'	! name of the STEM rundata namelist file
  foilnmlfile = 'FOIL_rundata.nml'	! name of the foil rundata namelist file
- sgname = 'nofile'   ! if this variable is different from 'nofile', then an external sg array is read (to be implemented)
- numdisl = 0         ! number of dislocation files
- numYdisl = 0        ! number of relaxed dislocations
- numsf = 0           ! number of stacking fault files
- numinc = 0          ! number of inclusions
- numvoids = 0        ! number of voids
- voidname = 'none'   ! filename for void data
- dislname = ''       ! filenames for dislocation data
- sfname = ''         ! filenames for stacking fault data
- incname = 'none'    ! filename for inclusion data
- dataname = 'test.data'! default root name for output files
- dispfile = 'none'   ! name of the displacement field output file (will be created if different from none)
- dispmode = 'not'    ! should a diplacement file be written ('new') or read ('old') or neither ('not')?
- t_interval = 5
+ ECPname = 'undefined'                ! name of the corresponding ECP file (must exist!)
  
-! then we read the rundata namelist, which may override some of these defaults  
+! column approximation parameters and image parameters 
+ DF_L = 1.0             		! edge length of column in nanometers
+ DF_npix = 256       			! number of image pixels along x
+ DF_npiy = 256       			! number of image pixels along y 
+ DF_slice = 1.0       			! slice thickness in nanometers
+
+ dinfo = 0               		! switch to make makedislocation verbose
+ sgname = 'nofile'   			! if this variable is different from 'nofile', then an external sg array is read (to be implemented)
+
+! defect parameters
+ numdisl = 0           	! number of dislocation files
+ numYdisl = 0           	! number of Yoffe dislocation files
+ numsf = 0             	! number of stacking fault files
+ numinc = 0           		! number of inclusions
+ numvoids = 0       		! number of voids
+ voidname = 'none' 		! filename for void data
+ dislname = ''         	! filenames for dislocation data
+ dislYname = ''         	! filenames for Yoffe dislocation data
+ sfname = ''            	! filenames for stacking fault data
+ incname = 'none'   		! filename for inclusion data
+ apbname = 'none'              ! filename for (circular) apbs
+ dispfile = 'none'     	! name of the displacement field output file (will be created if different from none)
+ dispmode = 'not'  		! should a diplacement file be written ('new') or read ('old') or neither ('not')?
+
+! output parameters
+ dataname = 'ECCIdefect.data'	! default outputfile name
+ t_interval = 10       	! default timing interval (output every t_interval image columns)
+ 
+! then we read the actual rundata namelist, which may override some or all of these defaults  
  OPEN(UNIT=dataunit,FILE=trim(nmlfile),DELIM='APOSTROPHE')
  READ(UNIT=dataunit,NML=ECCIlist)
  CLOSE(UNIT=dataunit)
-
+  
+! make sure the xtalname variable has been properly defined
 if (trim(xtalname).eq.'undefined') then
   call FatalError('CTEMECCI:',' structure file name is undefined in '//nmlfile)
 end if
 
-! display the standard program info
- progname = 'CTEMECCI.f90'
- progdesc = 'Near zone axis ECCI defect image simulation (version 3)'
- call CTEMsoft
+! make sure the ECPname variable has been properly defined
+if (trim(ECPname).eq.'undefined') then
+  call FatalError('CTEMECCI:',' ECP pattern file name is undefined in '//nmlfile)
+end if
 
+! we got this far, so display the standard program info
+ progname = 'CTEMECCI.f90'
+ progdesc = 'Dynamical zone axis ECCI defect image simulation'
+ call CTEMsoft
+ 
+ numd = numdd
+ 
 ! first get the crystal data and microscope voltage
  SG%SYM_reduce=.TRUE.
- hexset = .FALSE.
  call CrystalData(xtalname)
 
-! initialize the wave length and lattice potential computations
- skip = 3
+! Weickenmeier-Kohl scattering parameters with absorption form factors
+ skip = 3	
  call CalcWaveLength(dble(voltage),skip)
 
-! generate all atom positions
+ ! generate all atom positions
  call CalcPositions('v')
 
-! determine the point group number
+! determine the point group number and get the ZAP 2-D symmetry  NEEDS TO BE MODIFIED WITH NEW ROUTINES
  j=0
  do i=1,32
-  if (SGPG(i).le.cell % SYM_SGnum) j=i
+  if (SGPG(i).le.cell%SYM_SGnum) j=i
  end do
-
-! use the new routine to get the whole pattern 2D symmetry group, since that
-! is the one that determines the independent beam directions.
- dgn = GetPatternSymmetry(k,j,.TRUE.)
- pgnum = j
- isym = WPPG(dgn) ! WPPG lists the whole pattern point group numbers vs. diffraction group numbers
-
-! determine the shortest reciprocal lattice points for this zone
- call ShortestG(k,ga,gb,isym)
- io_int(1:3)=ga(1:3)
- io_int(4:6)=gb(1:3)
- call WriteValue(' Reciprocal lattice vectors : ', io_int, 6,"('(',3I3,') and (',3I3,')',/)")
- 
- ! initialize the HOLZ geometry type
- call GetHOLZGeometry(float(ga),float(gb),k,fn) 
-
-! determine range of incident beam directions
- bragg = CalcDiffAngle(ga(1),ga(2),ga(3))*0.5
- thetac = (ktmax * 2.0 * bragg) ! *1000.0
- write (*,*) 'thetac = ',thetac
-
-! the number of pixels across the illumination disk is equal to 2*npix + 1
- npx = DF_npix
- npy = DF_npiy
- io_int(1:2) = (/ 2*npx + 1, 2*npy+1 /)
- call WriteValue('Output image size = ', io_int, 2, "(I6i,I6)")
- mess=' '; call Message("(A/)")
-
- isym = 1
- nkt = nint(ktmax / dkt)        ! number of pixels across half the illumination disk
- ijmax = nkt**2
- call Calckvectors(dble(k),dble(ga),dble(ktmax),nkt,nkt,numk,isym,ijmax,'Conical')    ! here we figure out how many beams there are
- io_int(1)=numk
- call WriteValue('Total # incident beam directions = ', io_int, 1, "(I8)")
-
-! determine the reflection list
- method = 'ALL'
- call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,0,thetac)
- galen = CalcLength(float(ga),'r')
-
- numd = numdd
- czero=cmplx(0.0,0.0,dbl)
- cone=cmplx(1.0,0.0,dbl)
- 
- 
-! force dynamical matrix routine to read new Bethe parameters from file
-! in the present implementation, we're not splitting off weak reflections at all
- call Set_Bethe_Parameters(.TRUE.)
- BetheParameter%weakcutoff = BetheParameter%cutoff
-
-! next, we read the foildata namelist from the foil nml file
-! this includes material property data, in this case the elastic moduli,
-! and the foil normal
- call read_foil_data(foilnmlfile,DF_npix,DF_npiy,DF_L,dinfo)
- fn = foil%F
- 
-! transform the foil normal
- call TransSpace(float(fn),DynFN,'d','r')
- call NormVec(DynFN,'r')
-
-! then we need to prune the reflection list to have only reflections that will actually occur in the computation
- mess = ' Pruning reflection list (this takes a while ...) '
- call Message("(A)")
- write (*,*) numk, nbeams, 'entering pruning routine'
- call Prune_ReflectionList(numk,nbeams)
- io_int(1) = nbeams
- call WriteValue('Maximum number of contributing beams  : ', io_int, 1, '(I)')
- nn = nbeams
-
-! in this version of the program, we take all beams in to account all the time;
-! when there's time, this needs to be modified substantially to include the Bethe
-! potential approximation !
-
-! reset the incident beam direction to the actual beam direction
- ktmp => khead
- call TransSpace(ktmp%k,foil%B,'r','d')
-
-! define the foil thickness, attenuation, and number slices per column
-thick = foil%zb    ! this is the same everywhere for this version; needs to be updated in the next version
-DF_slice = 1.0
-DF_nums = nint(thick/DF_slice)  ! this is the number of slices for each column
-
-! in the first version of this program, we would do a Kossel depth profile computation
-! at this point.  After a long conversation with Stefan Zaeferrer during the 2012 M&M
-! conference in Phoenix, I decided to change the code so that the elastic scattering
-! phenomena affect only the incident electrons, not the outgoing ones (since those
-! are incoherently detected on a large area detector).  In the first version, we did not
-! take into account scattering by the defect(s) for the incident electron beam, but only 
-! for the exiting electrons, which is the equivalent of using a point detector in an 
-! EBSD experiment.  So, this second version of the program takes the incident beam
-! and integrates it through the defect(s) layer by layer, and adds together the 
-! intensities for all depths upto some maximum depth set by the user.
-! This maximum depth could still be computed using a Kossel style computation, but 
-! we are no longer using the depth profile as weight factors, as we did in the first
-! version of this program.
-
-! To really do things right, we need to perform a Monte Carlo simulation to determine 
-! the incoherent background of the ECCI pattern, and then the coherent contrast information
-! on top of that background...  that will be for another day...
-
-! this is taken from the systematic row program, so we need to verify that it is still correct!
-! in this program, we're not allowing for a bent foil of any kind, but we still need to set 
-! these parameters so that the CalcR routine will know not to include it.
- DF_gf = float(ga)
- DF_gstar = DF_gf/CalcLength(DF_gf,'r')**2            ! define G* such that G.G* = 1
- call TransSpace(DF_gf,DF_gc,'r','c')                 ! convert to Cartesian reference frame
- foil%sg = 0.0
- DF_gstar = 0.0
-
-! allocate and initialize DF_Sarray, and DF_Svoid   TO BE CHECKED
- allocate(DF_Svoid(nn,nn))
- DF_Sarray = czero
-! allocate the various DHW Matrices
- allocate(DHWMz(nn,nn),DHWM(nn,nn),DHWMvoid(nn,nn))
- DHWMvoid = czero; DHWMz=czero; DHWM(nn,nn)=czero
+ call BFsymmetry(kk,j,isym,ir)
   
+! determine and display the shortest reciprocal lattice vectors for this zone
+ call ShortestG(kk,ga,gb,isym)
+ io_int(1:3) = kk(1:3)
+ call WriteValue('', io_int, 3,  "(//,' ','[',3I2,'] has Bright Field symmetry ',$)")
+ mess = PGTWD(isym)
+ call Message("(A,$)")
+ io_int(1) = ir
+ call WriteValue(' order = ', io_int, 1, "(I4/)")
+ mess = 'Reciprocal lattice vectors : '; 
+ io_int(1:3) = ga(1:3)
+ io_int(4:6) = gb(1:3)
+ call WriteValue(' Reciprocal lattice vectors : ', io_int, 6, "('(',3I3,') and (',3I3,')',/)")
+
+! determine the cartesian components of ga
+ DF_gf = float(ga)
+ DF_gstar = DF_gf/CalcLength(DF_gf,'r')**2    ! define G* such that G.G* = 1
+ call TransSpace(DF_gf,DF_gc,'r','c')         ! convert to Cartesian reference frame
+
+! we'll need to compute the list of wavevectors at this point
+  nkt = nint( ktmax / dkt)
+  ijmax = nkt**2
+  bragg = CalcDiffAngle(ga(1),ga(2),ga(3)) * 0.5
+  if (ktmax.eq.0.0) then
+    thetac = bragg
+  else
+    thetac = (ktmax * 2.0 * bragg) * 0.5
+  end if
+! here we figure out how many beams there are
+  if (progmode.eq.'array') then 
+!    call Calckvectors(dble(kk),dble(ga),dble(ktmax),nkt,nkt,numk,isym,ijmax,'Conical')   
+    call Calckvectorcone(kk,ga,lauec(1),lauec(2),ktmax,nkt,numk)
+    io_int(1)=numk 
+    call WriteValue('Total number of independent incident beam directions inside cone = ', io_int, 1,"(I8)")
+  end if
+  if (progmode.eq.'trace') then  
+! single image mode, potentially with a narrow range of incident beam directions
+    call Calckvectortrace(kk,ga,lauec(1),lauec(2),lauec2(1),lauec2(2),1.0,nktstep,numk)
+    io_int(1)=numk 
+    call WriteValue('Total number of independent incident beam directions along trace = ', io_int, 1,"(I8)")
+  end if
+
+! and determine the overall reflection list
+  call Compute_ReflectionList(dmin,kk,ga,gb,'ALL',.FALSE.,0,thetac)
+
+! for now, we do not consider weak beams at all
+  if (BetheParameter%cutoff.eq.0.0) call Set_Bethe_Parameters
+  BetheParameter%weakcutoff = BetheParameter%cutoff
+
+! next, we read the foildata namelist from the SRdef_foildata.nml file
+! [yes, we're using the same file as for the systematic row case]
+! this includes material property data, in this case the elastic moduli,
+! and the foil normal, which we will need in the next step
+  call read_foil_data(foilnmlfile,DF_npix,DF_npiy,DF_L,dinfo)
+  DynFN = foil%F
+  
+! then we need to prune the reflection list to have only reflections that will actually occur in the 
+! computation
+  mess = ' Pruning reflection list (this takes a while ...) '
+  call Message("(A)")
+  call Prune_ReflectionList(numk,nbeams)
+  io_int(1) = nbeams
+  call WriteValue('Number of contributing beams  : ', io_int, 1, '(I)')
+  nn = nbeams
+
+! print the list for debugging purposes...
+ rltmpa => reflist%next    ! point to the front of the list
+! ir is the row index
+  do ir=1,nn
+    write (*,*) ir,': ',rltmpa%hkl(1),rltmpa%hkl(2),rltmpa%hkl(3)
+    rltmpa => rltmpa%next
+  end do
+
+
+! ideally, we should use Bethe potentials to reduce the size of the dynamical matrix;
+! while the theory has been worked out to do this, it would require tremendous changes
+! to the program starting about here; given the time limitations, there won't be any 
+! chance to do this before the end of the year (2013), so we'll leave that for some other time...
+  
+! allocate the various DHW Matrices
+  allocate(DHWMz(nn,nn),DHWM(nn,nn),DHWMvoid(nn,nn))
+  DHWMvoid = czero; DHWMz=czero; DHWM(nn,nn)=czero
   
  ! Compute the off-diagonal part of the complex DHW matrix (factor i is included)
  ! We can precompute those because they will not change at all during the run
@@ -348,31 +347,23 @@ DF_nums = nint(thick/DF_slice)  ! this is the number of slices for each column
  DM(2,2) = CalcDot(float(ga),float(ga),'c')
  DD = DM(1,1)*DM(2,2) - DM(1,2)*DM(2,1)
 
+ cone = dcmplx(0.D0,cPi)
+ write (*,*) 'complex iPi = ',cone
+
  rltmpa => reflist%next    ! point to the front of the list
 ! ir is the row index
   do ir=1,nn
-    if (rltmpa%num.eq.0) then 
-      do 
-       rltmpa => rltmpa%next    ! keep going until the first contributing reflection
-       if (rltmpa%num.ne.0) exit
-      end do
-    end if
    rltmpb => reflist%next   ! point to the front of the list
 ! ic is the column index
    do ic=1,nn
-      if (rltmpb%num.eq.0) then 
-       do 
-        rltmpb => rltmpb%next    ! keep going until the first contributing reflection
-        if (rltmpb%num.ne.0) exit
-       end do
-      end if
-      if (ic.ne.ir) then  ! exclude the diagonal
+    if (ic.ne.ir) then  ! exclude the diagonal
 ! compute Fourier coefficient of electrostatic lattice potential 
-        call CalcUcg(rltmpa%hkl - rltmpb%hkl)
-        DHWMz(ir,ic) = cPi*cmplx(-aimag(rlp%qg),real(rlp%qg),dbl)  ! and initialize the off-diagonal matrix element (including i)
-      end if
-     rltmpb => rltmpb%next  ! move to next column-entry
-    end do
+     call CalcUcg(rltmpa%hkl - rltmpb%hkl)
+     DHWMz(ir,ic) = rlp%qg * cone
+!cmplx(- cPi * aimag(rlp%qg), cPi * real(rlp%qg),dbl)  ! and initialize the off-diagonal matrix element (including i Pi)
+    end if
+    rltmpb => rltmpb%next  ! move to next column-entry
+   end do
 ! decompose this point w.r.t ga and gb
    X(1) = CalcDot(float(rltmpa%hkl),float(ga),'c')
    X(2) = CalcDot(float(rltmpa%hkl),float(gb),'c')
@@ -380,59 +371,28 @@ DF_nums = nint(thick/DF_slice)  ! this is the number of slices for each column
    rltmpa%nab(1:2) = int(X(1:2))
    rltmpa => rltmpa%next   ! move to next row-entry
   end do
+  mess = 'Reference Darwin-Howie-Whelan matrix initialized'; call Message("(A/)")
 
- mess = 'Reference Darwin-Howie-Whelan matrix initialized'; call Message("(A/)")
+! compute the normal absorption factor xgp (which equals rlp%qg with g=0)
+  rlp%qg = cmplx(0.D0,0.D0)
+  call CalcUcg((/0,0,0/))
+  xgp = cmplx(-cPi/rlp%xgp,0.0) ! cPi * rlp%qg * cone
+  io_real(1) = rlp%xgp
+  call WriteValue('Normal absorption length : ', io_real, 1, "(F10.5/)")
+  write (*,*) 'rlp%qg = ',rlp%qg
+write (*,*) 'i Pi / q_0 = ',xgp
 
-! compute the normal absorption factor xgp
- call CalcUcg((/0,0,0/))
- xgp = aimag(rlp%qg)
- io_real(1) = 1.0/xgp
- call WriteValue('Normal absorption length : ', io_real, 1, "(F10.5/)")
+! define the foil thickness, attenuation, and number slices per column
+  thick = foil%zb    ! this is the same everywhere for this version; needs to be updated in the next version
+  DF_nums = nint(thick/DF_slice)  ! this is the number of slices for this particular column
+write (*,*) 'foil thickness', foil%zb, thick, DF_nums
 
-  
-! compute normal absorption array for all thicknesses
-  allocate (att(1:DF_nums),thickarray(1:DF_nums))
-  do i=1,DF_nums
-    thickarray(i) = dble(i)*DF_slice
-  end do
-  att = exp(-2.D0*cPi*thickarray*xgp)
-  
-
-
-! THIS PART NEEDS TO MOVE TO LATER IN THE PROGRAM !!!!
-
-! loop over all reflections to get the appropriate expval powers
-allocate(expval(2,nn,nn))
-expval = 0.0
- rltmpa => reflist%next    ! point to the front of the list
-! ir is the row index
-  do ir=1,nn
-    if (rltmpa%num.eq.0) then 
-      do 
-       rltmpa => rltmpa%next    ! keep going until the first contributing reflection
-       if (rltmpa%num.ne.0) exit
-      end do
-    end if   
-   rltmpb => reflist%next   ! point to the front of the list
-! ic is the column index
-   do ic=1,nn
-      if (rltmpb%num.eq.0) then 
-       do 
-        rltmpb => rltmpb%next    ! keep going until the first contributing reflection
-        if (rltmpb%num.ne.0) exit
-       end do
-      end if
-      if (ic.ne.ir) expval(1:2,ir,ic) = rltmpa%nab(1:2)-rltmpb%nab(1:2)
-      rltmpb => rltmpb%next  ! move to next column-entry
-     end do
-     rltmpa => rltmpa%next   ! move to next row-entry
-  end do
-
-
-
-! next, deal with all the defects; this is the same sequence in several separate programs,
-! so we really ought to make this its own module, or include it all in the defectmodule.... TO BE COMPLETED
+! next, deal with all the defects  This is the same as for the systematic row, except that in the zone
+! axis case we have two fundamental vectors and we can not use the same integer-based approach;  therefore,
+! we have to store two floats for each slice in each column instead of a single integer.
 !
+
+
 ! if there is a diplacement field file entered in the STEM_rundata.nml file,  
 ! then we simply read that file in; otherwise, we read all the defect descriptor files
 if ((dispmode.eq.'new').or.(dispmode.eq.'not')) then
@@ -447,28 +407,27 @@ if ((dispmode.eq.'new').or.(dispmode.eq.'not')) then
    if (numYdisl.gt.0) call read_YSH_dislocation_data(dislYname,numYdisl,DF_npix,DF_npiy,DF_gf,DF_L,dinfo)
 
 ! read namelist files for all stacking faults, if any
-   if (numsf.gt.0) call read_stacking_fault_data(numsf,numdisl,sfname,DF_L,DF_npix,DF_npiy,DF_g,dinfo)
+   if (numsf.gt.0) call read_stacking_fault_data(numsf,numdisl,numYdisl,sfname,DF_L,DF_npix,DF_npiy,DF_g,dinfo,ECCI)
 
 ! is there an inclusion data file? if so, then read it
    if (incname.ne.'none') call read_inclusion_data(numinc,incname,DF_L,DF_npix,DF_npiy,dinfo)
 
-! transform the g-vector to the defect reference frames (needed for all dislocations in CalcR).
-! this can only be done AFTER all dislocations and stacking faults have been created.  
-!
-!! This may need to be looked at for the zone axis case!  Which DF_gc should we be using here?   CHECK THIS !!!
-!!
-!   do i=1,numdisl
-!     DF_gd(0:2,i) = matmul(DL(i)%a_dc,DF_gc)
-!   end do
+! is there an apb file ?
+   if (apbname.ne.'none') call read_apb_data(numapb,apbname,DF_L,DF_npix,DF_npiy,dinfo)
    
+! the following will also have to be changed for the ZA case; it might not be necessary (or possible) 
+! to pre-compute all the possible scattering matrices; perhaps we need to precompute an array of 
+! 180x180 scattering matrices (about 40,000 of them) and then use bi-linear interpolation to select
+! the right one for each slice.  Or, perhaps better in the long run, we simply compute the one we
+! need when we need it...
+
 ! precompute ALL the defect columns and, if needed, store them in dispfile
 ! this portion should be carried out in multi-threaded mode as much as possible
   allocate(disparray(2,DF_nums,DF_npix,DF_npiy),imatvals(2,DF_nums))
   disparray = 0.0; imatvals = 0
-  mess = 'displacement field computation'; call Message("(A)")
   
 ! initiate multi-threaded segment
-!!$OMP     PARALLEL DEFAULT(SHARED) PRIVATE(TID,DF_R,imatvals,gdotR,i,j,k) 
+!!$OMP     PARALLEL PRIVATE(TID,DF_R,imatvals,gdotR,i,j,k,imat) &
 !!$OMP&   SHARED(NTHR,DF_npix,DF_npiy,DF_nums,numvoids,numdisl,numsf,numinc,disparray,t_interval)
 !  NTHR = OMP_GET_NUM_THREADS()
 !  TID = OMP_GET_THREAD_NUM()
@@ -477,42 +436,48 @@ if ((dispmode.eq.'new').or.(dispmode.eq.'not')) then
  NTHR = 1
   if (TID.eq.0) then
 ! do time reporting only in the master thread
-    call Time_report(10*t_interval*float(NTHR)/float(DF_npix))
+    call Time_report(t_interval*float(NTHR)/float(DF_npix))
     call Time_start
-!    write (*,*) TID,': completed timing initialization'
   end if
   allocate(DF_R(DF_nums,3))     ! each thread has its own DF_R array 
 
  call TransSpace(float(ga),gac,'r','c')
  call TransSpace(float(gb),gbc,'r','c')
  
+
 !!$OMP DO SCHEDULE (GUIDED)
+!  write(*,*) TID,': starting Do Schedule'
   do i=1,DF_npix  
     do j=1,DF_npiy
       DF_R = 0.0
 ! compute the displacement vectors DF_R for all points in the column
-      call CalcR(i,j,numvoids,numdisl,numYdisl,numsf,numinc)
+      call CalcR(i,j,numvoids,numdisl,numYdisl,numsf,numinc,numapb)
 ! loop over the fixed thickness slices
-      do ik=1,DF_nums
+      do k=1,DF_nums
 ! then convert to the dot-product 
-       if (DF_R(ik,1).eq.-10000.0) then  ! this is point inside a void
- 	imatvals(1:2,ik) = -10000
+       if (DF_R(k,1).eq.-10000.0) then  ! this is point inside a void
+ 	imatvals(1:2,k) = -10000
        else  ! it is not a void, so use the full dot product g.R (all vectors must be Cartesian !)
-! use gac and gbc to get the two dot products and store both of them as integers mapped onto the 0..180 or 0..360 range
-         gdotR = Dot_Product(gac,DF_R(ik,1:3))
-         imatvals(1,ik) = numd*amod(gdotR+1000.0,1.0)
-         gdotR = Dot_Product(gbc,DF_R(ik,1:3))
-         imatvals(2,ik) = numd*amod(gdotR+1000.0,1.0)
+! use gac and gbc to get the two dot products and store both of them as integers mapped onto the 0..numd range
+         gdotR = Dot_Product(gac,DF_R(k,1:3))
+! due to the logarithmic singularity at a dislocation core, it is possible for gdotR to be NaN; we need
+! to intercept these cases, and replace the value of gdotR by 0.0
+         if (NANCHK(gdotR)) gdotR = 0.0         
+         imatvals(1,k) = numd*amod(gdotR+1000.0,1.0)
+         gdotR = Dot_Product(gbc,DF_R(k,1:3))
+         if (NANCHK(gdotR)) gdotR = 0.0         
+         imatvals(2,k) = numd*amod(gdotR+1000.0,1.0)
        end if
      end do ! k loop
      disparray(1:2,1:DF_nums,i,j) = imatvals(1:2,1:DF_nums)
    end do
-  if ((mod(i,10*t_interval).eq.0).and.(TID.eq.0)) call Time_remaining(i,DF_npix)
+  if ((mod(i,t_interval).eq.0).and.(TID.eq.0)) call Time_remaining(i,DF_npix)
 end do
 !!$OMP END DO 
  if (TID.eq.0) call Time_stop(DF_npix*DF_npiy)
 !!$OMP END PARALLEL
- 
+end if
+
 ! and, if needed, store the defect displacement field for re-runs
 if (dispmode.ne.'not') then 
   if (dispmode.eq.'new') then 
@@ -546,66 +511,72 @@ io_real(1) = minval(disparray)
 io_real(2) = maxval(disparray)
 call WriteValue('disparray bounds: ', io_real, 2, "(2(F10.5,' '))")
 
-end if
-
 ! ok, all the set up is now complete;
 ! next, we prepare for the actual image simulation
+! there are three types of simulation: CTEM, BF/HAADF, or STEM with storage of CBED patterns
   npix = DF_npix
   npiy = DF_npiy
-  allocate(ECCIimage(npix,npiy,numk))
-  ECCIimage = 0.0
   
+  allocate(ECCIimages(npix,npiy))
+  ECCIimages = 0.0
 
- ! determine all the excitation errors for all reflections and beam directions
- mess = 'Computing excitation error array' ; call Message("(A)")
-! distance between consecutive HOLZ layers in nm-1
- H = 1.0/CalcLength(float(k),'d')
-! determine g3 basis vector (vector normal to ZOLZ, with length H)
- call CalcCross(dble(ga),dble(gb),g3,'r','r',1)
- call NormVec(g3,'r')
- g3n = g3
- g3 = H * g3
- FNg = (/ CalcDot(dble(DynFN),dble(ga),'r'), CalcDot(dble(DynFN),dble(gb),'r'), CalcDot(dble(DynFN),dble(g3),'r') /)
- allocate(sgarray(1:nn,1:numk))
- ktmp => khead
-! open(unit=20,file=glistname,status='unknown',action='write',form='formatted')  
- do ik=1,numk
-  ! get the Laue center (x and y components of the wave vector in units of ga and gb)
-    ll = ktmp%kt  !  (1) * float(ga) + tmp%kt(2) * float(gb)
+! compute the excitation error array
+  allocate(sgarray(nn,numk))
+! loop over the wave vector linked list
+  ktmp => khead
+  beamloopCL: do ik=1,numk
+!    ll = ktmp%kt        ! this is the tangential component of the wave vector
+! and loop over all reflections
     rltmpa => reflist%next
-    reflectionloop: do ig=1,nn
-      if (rltmpa%num.eq.0) then 
-        do 
-         rltmpa => rltmpa%next    ! keep going until the first contributing reflection
-         if (rltmpa%num.ne.0) exit
-        end do
-      end if   
-!    if (ik.eq.1) write (20,*) ig,rltmpa%hkl,CalcDiffAngle(rltmpa%hkl(1),rltmpa%hkl(2),rltmpa%hkl(3))
-      gg = rltmpa%hkl
-      lpg = ll+gg
-      gplen = CalcLength(lpg,'r')
-      LC3 = sqrt(1.D0-mLambda**2*CalcLength(ll,'r')**2)
-      if (gplen.eq.0.D0) then
-        exer = -mLambda*CalcDot(dble(gg),2.D0*ll+gg,'r')/(2.D0*LC3*CalcDot(g3n,dble(DynFN),'r'))  
-        sgdenom = 0.0
-      else
-        sgdenom = 2.D0*LC3*CalcDot(g3n,dble(DynFN),'r')-2.D0*mLambda*CalcDot(lpg,dble(DynFN),'r')
-        exer = -(mLambda*CalcDot(dble(gg),2.D0*ll+gg,'r')-2.D0*LC3*CalcDot(g3n,lpg,'r'))/sgdenom
-      end if
-      sgarray(ig,ik) = exer
+    reflectionloopCL: do ig=1,nn
+      gg = float(rltmpa%hkl)
+!      glen = CalcLength(dble(gg),'r')
+!      lpg = ll + gg                ! Laue + g
+!      gplen = CalcLength(lpg,'r')
+!      kpg = 2000.0*asin(0.50*sngl(mLambda)*gplen)    ! 2theta in mrad
+      sgarray(ig,ik) = Calcsg(float(gg),sngl(ktmp%k),DynFN)
+ ! and we move to the next reflection in the list
       rltmpa => rltmpa%next
-    end do reflectionloop
+    end do reflectionloopCL  
     ktmp => ktmp%next
-end do
-!close(unit=20,status='keep')
+  end do beamloopCL
 
+! loop over all reflections to get the appropriate powers
+allocate(expval(2,nn,nn))
+ rltmpa => reflist%next    ! point to the front of the list
+! ir is the row index
+do ir=1,nn
+   rltmpb => reflist%next   ! point to the front of the list
+! ic is the column index
+   do ic=1,nn
+     if (ic.ne.ir) then  ! exclude the diagonal
+       expval(1,ir,ic) = rltmpa%nab(1)-rltmpb%nab(1) 
+       expval(2,ir,ic) = rltmpa%nab(2)-rltmpb%nab(2)
+     end if
+     rltmpb => rltmpb%next  ! move to next column-entry
+  end do
+  rltmpa => rltmpa%next   ! move to next row-entry
+end do
 
 ! define the numd complex defect parameters
-  allocate(para(0:numd))
   do i=0,numd
     arg = 2.D0*cPi*dble(i)/dble(numd)
-    para(i) = cmplx(cos(arg),-sin(arg),dbl)
+    para(i) = dcmplx(dcos(arg),-dsin(arg))
   end do
+
+! determine the Sgh array, which is sort of a glorified structure factor...
+! since all incident beam orientations use the same number of reflections,
+! we can compute Sgh here instead of inside the main loop.  This will need
+! to be modified when we start using Bethe potentials.
+
+  mess = 'Computing Sgh array'; call Message("(A)")
+
+  numset = cell % ATOM_ntype  ! number of special positions in the unit cell
+
+  allocate(Sgh(nn))
+  call CalcSgh(nn,Sgh,nat)
+  
+
 
 ! store necessary data in data file
   mess ='Storing data for IDL visualization program in '//dataname
@@ -618,17 +589,32 @@ end do
 ! filename of corresponding data set
   write (dataunit) dataname
 
+! filename of corresponding ECP pattern information
+  write (dataunit) ECPname
+
+! program mode
+  write (dataunit) progmode
+
+! summation mode 
+  write (dataunit) summode
+
 ! various bits of useful information
-  write (dataunit) xtalname						! crystal structure file names	
-  write (dataunit) k							! incident wave vector
-  write (dataunit) CalcDiffAngle(ga(1),ga(2),ga(3))*0.5		! Bragg angle for the first reflection (whether allowed or not)
-  write (dataunit) nkt				                       ! number of pixels along disk radius
-  write (dataunit) sngl(mLambda)					! wave length
-  write (dataunit) thetac						! beam divergence
-  write (dataunit) DF_L						! pixel size
-	
+  write (dataunit) xtalname					! crystal structure file names	
+  write (dataunit) kk						! incident wave vector
+  write (dataunit) CalcDiffAngle(ga(1),ga(2),ga(3))*0.5      ! Bragg angle for the first reflection (whether allowed or not)
+  if (progmode.eq.'array') then 
+    write (dataunit) ktmax		                       ! max beam convergence in units of |g_a|
+  else
+    write (dataunit) 1.0		                       ! max beam convergence in units of |g_a|
+  end if
+
+  write (dataunit) dkt				               ! angular step size along disk radius
+  write (dataunit) voltage				        ! microscope voltage
+  write (dataunit) thetac					! beam divergence
+  write (dataunit) DF_L					! pixel size
+
 ! number of reflections, and associated information (hkl, ...)
-  call TransSpace(float(k),c,'d','c')
+  call TransSpace(float(kk),c,'d','c')
   call NormVec(c,'c')
 ! then make ga the x-axis
   call TransSpace(float(ga),gx,'r','c')
@@ -637,270 +623,64 @@ end do
   call CalcCross(c,gx,gy,'c','c',0)
   
   write (dataunit) nn   ! number of reflections
-  rltmpa => reflist%next
-  do ic = 1,nn
-    gg=rltmpa%hkl
-    call TransSpace(float(gg),c,'r','c')
-    qx= CalcDot(c,gx,'c')
-    qy= CalcDot(c,gy,'c')
-    write (dataunit) rltmpa%hkl(1:3)
-    write (dataunit) qx,qy
-    rltmpa => rltmpa%next   ! move to next entry
-  end do
+
+
+! this needs to be fixed !!!!!
+
+  call TransSpace(float(kk),kstar,'d','r')        ! transform incident direction to reciprocal space
+  call CalcCross(float(ga),kstar,gperp,'r','r',0)! compute g_perp = ga x k
+  call NormVec(gperp,'r')                        ! normalize g_perp
+
+ DM(1,1) = CalcDot(gperp,gperp,'c')
+ DM(1,2) = -CalcDot(float(ga),gperp,'c')
+ DM(2,1) = DM(1,2)
+ DM(2,2) = CalcDot(float(ga),float(ga),'c')
+ DM = transpose(DM)
+ DD = DM(1,1)*DM(2,2) - DM(1,2)*DM(2,1)
+ glen = CalcLength(float(ga),'r')
+
+
 
 ! number of wave vectors, tangential components, etc...
   write (dataunit) numk   ! number of wave vectors
   ktmp => khead
-  do ic=1,numk
-    write (dataunit) ktmp%i, ktmp%j
-    ktmp => ktmp%next
-  end do
+!  if (progmode.eq.'trace') then  
+    do ic=1,numk
+      X(1) = -CalcDot(sngl(ktmp%kt),float(ga),'c') ! / glen
+      X(2) = -CalcDot(sngl(ktmp%kt),gperp,'c') * glen
+!      write (*,*) X(1), X(2), ktmp%kt
+      write (dataunit) X(1), X(2)
+      ktmp => ktmp%next
+    end do
+!  end if
 
-  write (dataunit) DF_npix,DF_npiy,numk
-
+  
+  write (dataunit) DF_npix,DF_npiy
+  
+  allocate(Sarray(nn,nn,0:numd,0:numd))
 
 ! initialize the timer
   numstart = 1
-  numstop = numk
-  call Time_report(float(t_interval)/float(numk))
+  numstop = numk   
+  io_int(1) = numk
+  call WriteValue('ECCI: number of beam directions =  ', io_int, 1, "(I5)")
+  call Time_report(1.0/float(numstop-numstart+1))
   call Time_start
-
-write (*,*) 'Shape(ECCIimage) = ',shape(ECCIimage)
-
+  
+  cone = dcmplx(1.D0,0.D0)
+  write (*,*) 'cone = ',cone
+  write (*,*) 'czero = ',czero
+  
+  
 !--------------------------------------------------------------
 !--------------------------------------------------------------
 !--------------------------------------------------------------
-mainloop: do isg = numstart,numstop   ! this is the main computational loop over the wave vectors
+mainloop: do isg = numstart,numstop   ! this is the main computational loop
+ iSTEM = iSTEM+1
+ ECCIimages = 0.0
 
-! the original lines for the computation of the Sarray are now in the CalcSEntry subroutine ...
-! we do need to reset the Sarray to -10000.0
-  allocate(Sarray(nn,nn,0:numd,0:numd))
-  Sarray(1,1,0:numd,0:numd) = -10000.0
-
-  forall (i=1:nn)
-   DHWMz(i,i)=2.0*cPi*cmplx(0.0,sgarray(i,isg))    ! initialize the diagonal elements of the dynamical matrix
-   DHWMvoid(i,i) = DHWMz(i,i)
-  end forall
-  
-  allocate(Afirst(nn,nn))
-  Afirst = czero
-  forall (i=1:nn)
-    Afirst(i,i) = cone
-  end forall
-  
-!---------------------------------------------------------!
-! Finally, here it is: the actual ECCI image computation  !
-!---------------------------------------------------------!
-  
-! do we have to start at the bottom slice ?
- istart = 1
-
-! allocate auxiliary arrays
- allocate(Azz(nn,nn),amp(nn),amp2(nn))
-
-! loop over the image pixels
- donpix: do i=1,npix
- donpiy:   do j=1,npiy
-    amp = czero
-    amp(1) = cone
-doslices: do ik=1,DF_nums    ! loop over the fixed thickness slices
-! compute the appropriate scattering matrix to propagate with (see section 8.3.3 in the book)
-       if (disparray(1,ik,i,j).eq.-10000) then  ! this is point inside a void
- 	 Azz(:,:) = DF_Svoid(:,:)    ! so we use the void propagator matrix
-       else  ! it is not a void
-! in this version, we use complex bi-variate interpolation to select the appropriate Azz 
-! matrix from the Sarray; if the required S matrix is not yet known, then we compute it first
-         ix = int(disparray(1,ik,i,j))
-         iy = int(disparray(2,ik,i,j))
-         dx = cmplx(amod(disparray(1,ik,i,j),1.0),0.0)
-         dy = cmplx(amod(disparray(2,ik,i,j),1.0),0.0)
-         dxm = cone-dx
-         dym = cone-dy
-         if (minval( (/ dble(Sarray(1,1,ix,iy)),dble(Sarray(1,1,ix+1,iy)),dble(Sarray(1,1,ix,iy+1)), &
-                dble(Sarray(1,1,ix+1,iy+1)) /) ).eq.-10000.0) call CalcSEntry(nn,ix,iy,DF_slice)
-              ixp = ix+1
-              iyp = iy+1
-	      Azz = dxm*dym*Sarray(1:nn,1:nn,ix,iy)+dx*dym*Sarray(1:nn,1:nn,ixp,iy)+ &
-                        dxm*dy*Sarray(1:nn,1:nn,ix,iyp)+dx*dy*Sarray(1:nn,1:nn,ixp,iyp)
-         end if
-! and multiply with this matrix, to integrate over the thickness
-         amp2 = matmul(Azz,amp)
-! then compute all the intensities at this depth, and add them all together ... 
-         ECCIimage(i,j,isg) = ECCIimage(i,j,isg) + att(ik) * sum(cabs(amp2)**2)
-! update the amplitudes to the next slice
-         amp = amp2
-      end do doslices ! loop over slices 
-      
-    end do donpiy
-!    if (mod(i,32).eq.0) write (*,*) isg,i,' done'
-    write (*,*) isg,i,' done'
-  end do donpix
-  deallocate(Afirst,Azz,amp,amp2,Sarray)
-  call Time_remaining(isg-numstart+1,numstop-numstart+1)
-  
-! do an intermediate save of the resulting image intensities  
-!if (intname.ne.'none') then
-!  write (*,*) 'intermediate image stored in intermediate.data'
-!  open(unit=20,file=intname,status='unknown',action='write',form='unformatted')  
-!  write (20) npix,npiy 
-!  write (20) ECCIimage
-!  close(unit=20,status='keep')
-!end if
-  
-end do mainloop
-
-! and save the data 
-mess = 'data written to file '//trim(dataname)
-call Message("(/A/)")
-write (dataunit) ECCIimage
-close(UNIT=dataunit,STATUS='keep')
-  
-    
-! ok, so the main computation is complete; print some timing information
-call Time_stop(npix*npiy)
-
-end subroutine ECCIsimulation
-
-
-!
-!
-!! ###################################################################
-!! 
-!!  subroutine Calckvectorcone
-!!
-!!  Author: Marc De Graef
-!!  
-!!  Description: computes the independent incident beam directions
-!!  for the multi-beam case and returns them as a linked list in the
-!!  global variables head and tail
-!! 
-!!  History
-!! 
-!!  modified by  rev reason
-!!  -------- --- --- -----------
-!!   6/4/01  MDG 1.0 original
-!! ###################################################################
-!subroutine Calckvectorcone(k,ga,ktx,kty,ktrad,ktstep,numk)
-!
-!use io
-!use error
-!use diffraction
-!use crystal
-!use dynamical
-!
-!IMPLICIT NONE
-!
-!integer              :: numk,k(3),ga(3),istat,imin,imax,jmin,jmax,ijmax,i,j,ktstep,ic,jc,ki
-!real                 :: ktrad,ktx,kty,kr(3),glen,delta,kstar(3),kt(3),gan(3),gperp(3),ktlen
-!
-!intent(IN)           :: ktx,kty,k,ga,ktrad,ktstep
-!intent(OUT)          :: numk
-!
-!! compute geometrical factors 
-! glen = CalcLength(float(ga),'r')              ! length of ga
-! gan = ga/glen                                 ! normalized ga
-! delta = 2.0*ktrad*glen/float(2*ktstep+1)             ! grid step size in nm-1 
-! call TransSpace(float(k),kstar,'d','r')       ! transform incident direction to reciprocal space
-! call CalcCross(float(ga),kstar,gperp,'r','r',0)      ! compute g_perp = ga x k
-! call NormVec(gperp,'r')                       ! normalize g_perp
-! call NormVec(kstar,'r')                       ! normalize reciprocal beam vector
-! write (*,*) 'Calckvectors : ',k,ga,glen,ktrad,ktstep,ktx,kty,delta
-! write (*,*) 'Calckvectors : ',kstar,gperp
-!
-! open(unit=20,file='ECPzkt.txt',status='unknown',form='formatted')
-!
-!! deal only with the incident beam (parallel illumination)
-!if (ktstep.eq.0) then
-! if (.not.associated(head)) then     ! allocate the head and tail of the linked list
-!   allocate(head,stat=istat)         ! allocate new value
-!   if (istat.ne.0) call FatalError('Calckvectorcone: unable to allocate head pointer',' ')
-!   tail => head                      ! tail points to new value
-!   nullify(tail%next)                ! nullify next in new value
-!   numk = 1                          ! keep track of number of k-vectors so far
-! ! this should be the center vector of the illumination cone !!!
-!   kt = - glen * (ktx*gan + kty * gperp)
-!   tail%kt = kt                           ! store tangential component of k
-!   ktlen = glen**2*(ktx**2+kty**2)         ! squared length of tangential component
-!   kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
-!   tail%k = kr                            ! store in pointer list
-!   tail%kn = CalcDotd(tail%k,dble(kstar),'r')    ! normal component of k
-!  write(unit=20,*) tail%kt,tail%k,CalcLengthd(tail%k,'r')
-! end if
-!else
-!! next, put the center of the cone in units of (i,j) (original ECP "screen" coordinates)
-!  ic = int(ktx*glen/delta)
-!  jc = int(kty*glen/delta)
-!  ki = ktstep
-!  write(*,*) ic,jc,ki,1.0/mLambda
-!
-!
-! if (.not.associated(head)) then     ! allocate the head and tail of the linked list
-!   allocate(head,stat=istat)         ! allocate new value
-!   if (istat.ne.0) call FatalError('Calckvectorcone: unable to allocate head pointer',' ')
-!   tail => head                      ! tail points to new value
-!   nullify(tail%next)                ! nullify next in new value
-!   numk = 1                          ! keep track of number of k-vectors so far
-! ! this should be the center vector of the illumination cone !!!
-!   tail%i = ic                            ! i-index of beam
-!   tail%j = jc                            ! j-index of beam
-!   kt = -float(tail%i)*delta*gan - float(tail%j)*delta*gperp  ! tangential component of k
-!   tail%kt = kt                           ! store tangential component of k
-!   ktlen = delta**2*(tail%i**2+tail%j**2)         ! squared length of tangential component
-!   kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
-!   tail%k = kr                            ! store in pointer list
-!   tail%kn = CalcDotd(tail%k,dble(kstar),'r')    ! normal component of k
-!  write(unit=20,*) tail%i,tail%j,tail%kt,tail%k,CalcLengthd(tail%k,'r')
-! else
-!   call FatalError('Calckvectorcone: pointer head already allocated',' ')
-! end if
-!
-!! the following lines are quite different if symmetry is taken into account;
-!! check the MBsym.f90 program to determine how that can be done.
-!  imin =  -ki; imax = ki; jmin = -ki; jmax = ki; 
-!  ijmax = ki**2
-!! now do the real work
-!  do i=imin,imax
-!   do j=jmin,jmax
-!    if (.not.((i.eq.0).and.(j.eq.0))) then  ! the point (0,0) has already been taken care of
-!     if ((i**2+j**2).le.ijmax) then   ! is point inside the incident cone ?
-!      allocate(tail%next,stat=istat)  ! allocate new value
-!      if (istat.ne.0) call FatalError('Calckvectors: unable to allocate pointer',' ')
-!      tail => tail%next               ! tail points to new value
-!      nullify(tail%next)              ! nullify next in new value
-!      numk = numk + 1                 ! keep track of number of k-vectors so far
-!      tail%i = ic+i                   ! i-index of beam
-!      tail%j = jc+j                   ! j-index of beam
-!      kt = -float(tail%i)*delta*gan - float(tail%j)*delta*gperp  ! tangential component of k
-!      tail%kt = kt                    ! store tangential component of k
-!      ktlen = delta**2*(tail%i**2+tail%j**2)         ! squared length of tangential component
-!      kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
-!      tail%k = kr                     ! store in pointer list
-!      tail%kn = CalcDotd(tail%k,dble(kstar),'r')    ! normal component of k
-!  write(unit=20,*) tail%i,tail%j,tail%kt,tail%k,CalcLengthd(tail%k,'r')
-!!     write (*,*) i,j,tail%kt,tail%kn
-!     end if
-!    end if
-!   end do
-!  end do
-!end if
-!close(unit=20,status='keep')
-!  
-!end subroutine
-!
-!
-
-
-
-
-!--------------------------------------------------------------------------
-!
-! SUBROUTINE:CalcSEntry
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief compute entries in the scattering matrix array
-!
-!> @note Here we precompute four entries in the array of scattering matrices that can 
+!--------------------------------------------------------------
+! here we precompute an array of scattering matrices that can 
 ! then be used, either directly, or via bi-linear interpolation,
 ! by the image computation portion of this program.
 !
@@ -910,55 +690,533 @@ end subroutine ECCIsimulation
 !
 ! this part is essentially the same as the threaded section of the older
 ! ZAdefect.all.f90 program (which was a test program).
-
-!> @param nn number of beams
-!> @param ini x-parameter
-!> @param inj y-parameter
 !
-!> @date 11/19/13  MDG 1.0 rewrite including MatrixExponential call
-!--------------------------------------------------------------------------
-recursive subroutine CalcSEntry(nn,ini,inj,DF_slice)
 
-use local
+! get the correct excitation errors for this beam orientation (in STEM mode);
+! fill the diagonal of the reference dynamical matrix and the void matrix
+! make sure that normal absorption is properly taken into account...
+  forall (i=1:nn)
+   DHWMz(i,i)= dcmplx(0.D0,2.D0*cPi*sgarray(i,isg)) + xgp ! xgp already has i Pi in it.
+   DHWMvoid(i,i) = DHWMz(i,i)
+  end forall
+
+NTHR = SETNTHR
+
+!$OMP  PARALLEL NUM_THREADS(NTHR) DEFAULT(SHARED) PRIVATE(TID,i,j,k,ii,jj,ic,ir,g,Azz,DDD,zmax)
+TID = OMP_GET_THREAD_NUM() 
+!TID = 0
+allocate(Azz(nn,nn), DDD(nn,nn))   ! these are private variables, so each thread must allocate them !
+
+!$OMP DO SCHEDULE(STATIC)
+do j=0,numd
+ do i=0,numd 
+! loop over all reflections in the array DD using the information in expval
+! ic is the column index
+ do ic=1,nn
+! ir is the row index
+    do ir=1,nn
+    if (ic.ne.ir) then  ! exclude the diagonal
+     DDD(ir,ic) = DHWMz(ir,ic) * para(i)**expval(1,ir,ic) * para(j)**expval(2,ir,ic)
+    else
+     DDD(ir,ic) = DHWMz(ir,ic) 
+    end if
+   end do
+  end do
+    
+  call MatrixExponential(DDD, Azz, dble(DF_slice), 'Pade', nn)  
+    
+   Sarray(1:nn,1:nn,i,j) = Azz(1:nn,1:nn)
+ end do
+ if ((TID.eq.0).and.(mod(j,10).eq.0)) then
+    mess = '.'; call Message("(A1,$)")
+ end if
+end do
+!$OMP END DO
+
+deallocate(Azz, DDD)
+!$OMP END PARALLEL
+
+mess = ' Scattering matrices precomputed '; call Message("(A,' ',$)")
+
+!----------------------------------------------------!
+! Finally, here it is: the actual image computation  !
+! This was modified from the regular (S)TEM mode to  !
+! reflect the depth integration, which requires a    !
+! summation of the product of Sgh and Lgh.           !
+!----------------------------------------------------!
+
+ NTHR = SETNTHR
+!$OMP  PARALLEL NUM_THREADS(NTHR) DEFAULT(SHARED) PRIVATE(TID,i,j,k,ii,Azz,amp,amp2,ix,iy,dx,dy,dxm,dym,ixp,iyp,Lgh,ir,ic)
+ TID = OMP_GET_THREAD_NUM() 
+! TID = 0 
+ allocate(Azz(nn,nn),amp(nn),amp2(nn),Lgh(nn))
+ 
+!$OMP DO SCHEDULE (STATIC)
+ donpix: do i=1,npix
+ if ((TID.eq.0).and.(mod(i,10).eq.0)) then
+   mess = '.'
+   call Message("(A1,$)")
+ end if
+ donpiy:   do j=1,npiy
+! initialize the wave function for this pixel with (1.0,0.0) for the incident beam
+    Lgh = czero
+    amp = czero
+    amp(1) = cone
+!    if ((TID.eq.0).and.(isg.eq.1).and.(i.eq.1).and.(j.eq.1)) then
+!      write (*,*) 'Storing data for comparison with ECP program; dimensions : ',nn,DF_nums
+!      open(unit=dataunit,file='ECCIcheck.data',status='unknown',action='write',form='unformatted')
+!      write (dataunit) nn,DF_nums
+!    end if
+
+    doslices: do k=1,DF_nums    ! loop over the fixed thickness slices
+! compute the appropriate scattering matrix to propagate with (see section 8.3.3 in the book)
+       if (disparray(1,k,i,j).eq.-10000) then  ! this is point inside a void
+ 	 Azz = DHWMvoid    ! so we use the void propagator matrix
+       else  ! it is not a void
+! in this version, we use complex bi-variate interpolation to select the appropriate Azz 
+! matrix from the pre-computed Sarray.
+         ix = int(disparray(1,k,i,j))
+         ixp = ix+1
+         if (ix.eq.numd) ixp=1
+         iy = int(disparray(2,k,i,j))
+         iyp = iy+1
+         if (iy.eq.numd) iyp=1
+         dx = cmplx(amod(disparray(1,k,i,j),1.0),0.0)
+         dy = cmplx(amod(disparray(2,k,i,j),1.0),0.0)
+         dxm = cone-dx
+         dym = cone-dy
+	 Azz = dxm*dym*Sarray(1:nn,1:nn,ix,iy)+dx*dym*Sarray(1:nn,1:nn,ixp,iy)+ &
+               dxm*dy*Sarray(1:nn,1:nn,ix,iyp)+dx*dy*Sarray(1:nn,1:nn,ixp,iyp)
+       end if
+
+       amp2 = matmul(Azz,amp)
+
+       if (k.eq.1) then 
+	  Lgh = abs(amp2)**2
+       else
+	  Lgh = Lgh + abs(amp2)**2
+       end if
+
+
+       amp = amp2
+       
+!    if ((isg.eq.1).and.(i.eq.1).and.(j.eq.1)) then
+!      write (*,*) k,maxval(cabs(amp)**2)
+!!         write (dataunit) Lgh
+!    end if
+       
+    end do doslices ! loop over slices 
+
+! then we need to multiply Sgh and Lgh, sum, and take the real part which will
+! produce the desired BSE intensity
+    ECCIimages(i,j) = sngl(real(sum( Sgh * Lgh )))
+ 
+    end do donpiy
+end do donpix
+!$OMP END DO
+  deallocate(Azz,amp,amp2,Lgh)
+!$OMP END PARALLEL
+  
+  ECCIimages = ECCIimages / float(DF_nums) / float(sum(nat))
+  call Time_remaining(isg-numstart+1,numstop-numstart+1)
+
+  write (dataunit) ECCIimages
+
+200 end do mainloop
+
+close(UNIT=dataunit,STATUS='keep')
+
+! ok, so the main computation is complete; print some timing information
+call Time_stop(npix*npiy)
+
+mess = 'Data stored in file '//trim(dataname)
+call Message("(/A/)")
+
+end subroutine ComputeECCI
+
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: Calckvectorcone
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief compute a set of incident beam directions for single image ECCI mode
+!
+!> @param k incident wave vector (zone axis)
+!> @param ga principal g vector
+!> @param ktx tangential x component
+!> @param kty tangential y component
+!> @param ktrad cone opening angle
+!> @param ktstep number of steps along cone radius
+!> @param numk resulting number of incident beam directions
+!
+!> @date 11/29/01  MDG 1.0 original
+!> @date 12/05/13  MDG 2.0 adapted for ECCI simulations 
+!--------------------------------------------------------------------------
+subroutine Calckvectorcone(k,ga,ktx,kty,ktrad,ktstep,numk)
+
+use io
+use error
+use diffraction
+use crystal
+use kvectors
 use dynamical
-use Svars
-use math
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(IN)        :: nn
-integer(kind=irg),INTENT(IN)        :: ini
-integer(kind=irg),INTENT(IN)        :: inj
-real(kind=sgl),INTENT(IN)           :: DF_slice
+integer(kind=irg),INTENT(IN)        :: k(3)
+integer(kind=irg),INTENT(IN)        :: ga(3)
+real(kind=sgl),INTENT(IN)           :: ktx
+real(kind=sgl),INTENT(IN)           :: kty
+real(kind=sgl),INTENT(IN)           :: ktrad
+integer(kind=irg),INTENT(IN)        :: ktstep
+integer(kind=irg),INTENT(OUT)       :: numk
 
-integer(kind=irg)     :: i,j,ir,ic
+integer                             :: istat,imin,imax,jmin,jmax,ijmax,i,j,ic,jc,ki
+real                                :: kr(3),glen,delta,kstar(3),kt(3),gan(3),gperp(3),ktlen, dkt
 
-allocate(DDD(nn,nn))
+! compute geometrical factors 
+ glen = CalcLength(float(ga),'r')              ! length of ga
+ gan = ga/glen                                 ! normalized ga
+! delta = 2.0*ktrad*glen/float(2*ktstep+1)     ! grid step size in nm-1 
+ delta = ktrad*glen/float(ktstep)              ! grid step size in nm-1 
+ dkt = ktrad/float(ktstep)
+!write (*,*) ktrad, ktstep, glen, delta
+ call TransSpace(float(k),kstar,'d','r')       ! transform incident direction to reciprocal space
+ call CalcCross(float(ga),kstar,gperp,'r','r',0)! compute g_perp = ga x k
+ call NormVec(gperp,'r')                       ! normalize g_perp
+ call NormVec(kstar,'r')                       ! normalize reciprocal beam vector
 
-! loop over the four points closest to the one requested
-do i=ini,ini+1
- do j=inj,inj+1
-  if (Sarray(1,1,i,j).eq.-10000.0) then 
-! loop over all reflections in the array DDD using the information in expval
-! ir is the row index
-   do ir=1,nn
-! ic is the column index
-    do ic=1,nn
-     if (ic.ne.ir) then  ! exclude the diagonal
-      DDD(ir,ic) = DHWMz(ir,ic) * para(i)**expval(1,ir,ic) * para(j)**expval(2,ir,ic)
-     else
-      DDD(ir,ic) = DHWMz(ir,ic) 
+!  kt = -(klaue(1)+float(i)*delta)*gan - (klaue(2)+float(j)*delta)*gperp  ! tangential component of k
+
+! deal only with the incident beam (parallel illumination)
+if (ktstep.eq.0) then
+ if (.not.associated(khead)) then     ! allocate the head and ktail of the linked list
+   allocate(khead,stat=istat)         ! allocate new value
+   if (istat.ne.0) call FatalError('Calckvectorcone: unable to allocate head pointer',' ')
+   ktail => khead                      ! ktail points to new value
+   nullify(ktail%next)                ! nullify next in new value
+   numk = 1                          ! keep track of number of k-vectors so far
+ ! this should be the center vector of the illumination cone !!!
+   kt = - glen * (ktx*gan + kty * gperp)
+!   kt = - glen * (-ktx*gan + kty * gperp)
+   ktail%kt = kt                           ! store tangential component of k
+   ktlen = glen**2*(ktx**2+kty**2)         ! squared length of tangential component
+   
+!   write (*,*) 0, 0, kt, ktlen
+   
+   kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
+   ktail%k = kr                            ! store in pointer list
+   ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
+ end if
+else
+! next, put the center of the cone in units of (i,j) (original ECP "screen" coordinates)
+  ic = int(ktx*glen/delta)
+  jc = int(kty*glen/delta)
+  ki = ktstep
+!write (*,*) ktx, kty, ktx*glen/delta, kty*glen/delta 
+
+ if (.not.associated(khead)) then     ! allocate the head and ktail of the linked list
+   allocate(khead,stat=istat)         ! allocate new value
+   if (istat.ne.0) call FatalError('Calckvectorcone: unable to allocate head pointer',' ')
+   ktail => khead                      ! ktail points to new value
+   nullify(ktail%next)                ! nullify next in new value
+   numk = 1                          ! keep track of number of k-vectors so far
+ ! this should be the center vector of the illumination cone !!!
+   ktail%i = ic                            ! i-index of beam
+   ktail%j = jc                            ! j-index of beam
+!   kt = float(ktail%i)*delta*gan - float(ktail%j)*delta*gperp  ! tangential component of k
+   kt = -float(ktail%i)*delta*gan - float(ktail%j)*delta*gperp  ! tangential component of k
+
+!   kt = delta * (ktx * gan - kty * gperp ) ! tangential component of k
+! write (*,*) ic,jc,kt
+   ktail%kt = kt                           ! store tangential component of k
+   ktlen = delta**2*(ktail%i**2+ktail%j**2)         ! squared length of tangential component
+
+!   write (*,*) ic, jc, kt, ktlen
+
+   kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
+   ktail%k = kr                            ! store in pointer list
+   ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
+ else
+   call FatalError('Calckvectorcone: pointer head already allocated',' ')
+ end if
+
+! the following lines are quite different if symmetry is taken into account;
+! check the MBsym.f90 program to determine how that can be done.
+  imin =  -ki; imax = ki; jmin = -ki; jmax = ki; 
+  ijmax = ki**2
+! now do the real work
+  do i=imin,imax
+   do j=jmin,jmax
+    if (.not.((i.eq.0).and.(j.eq.0))) then  ! the point (0,0) has already been taken care of
+     if ((i**2+j**2).le.ijmax) then   ! is point inside the incident cone ?
+      allocate(ktail%next,stat=istat)  ! allocate new value
+      if (istat.ne.0) call FatalError('Calckvectorcone: unable to allocate pointer',' ')
+      ktail => ktail%next               ! ktail points to new value
+      nullify(ktail%next)              ! nullify next in new value
+      numk = numk + 1                 ! keep track of number of k-vectors so far
+      ktail%i = ic+i                   ! i-index of beam
+      ktail%j = jc+j                   ! j-index of beam
+!      kt = float(ktail%i)*delta*gan - float(ktail%j)*delta*gperp  ! tangential component of k
+      kt = - float(ktail%i)*delta*gan - float(ktail%j)*delta*gperp  ! tangential component of k
+!     kt = delta * ((ktx + float(i)*dkt) * gan - (kty + float(j)*dkt) * gperp ) ! tangential component of k
+! write (*,*) ic+i,jc+j,kt
+      ktail%kt = kt                    ! store tangential component of k
+      ktlen = delta**2*(ktail%i**2+ktail%j**2)         ! squared length of tangential component
+ 
+!   write (*,*) i, j, kt, ktlen
+
+     kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
+      ktail%k = kr                     ! store in pointer list
+      ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
      end if
-    end do
+    end if
    end do
-   call MatrixExponential(DDD, Azz, dble(DF_slice), 'Pade', nn)  
-    
-   Sarray(1:nn,1:nn,i,j) = Azz(1:nn,1:nn)
-  
-  end if
+  end do
+end if
+
+end subroutine Calckvectorcone
+
+
+
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: Calckvectortrace
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief compute a set of incident beam directions for line scan ECCI mode
+!
+!> @param k incident wave vector (zone axis)
+!> @param ga principal g vector
+!> @param ktx tangential x component of trace start point
+!> @param kty tangential y component
+!> @param kt2x tangential x component of trace end point
+!> @param kt2y tangential y component
+!> @param ktrad cone opening angle
+!> @param ktstep number of steps along cone radius
+!> @param numk resulting number of incident beam directions
+!
+!> @date 12/08/13  MDG 1.0 original
+!--------------------------------------------------------------------------
+subroutine Calckvectortrace(k,ga,ktx,kty,kt2x,kt2y,ktrad,ktstep,numk)
+
+use io
+use error
+use diffraction
+use crystal
+use kvectors
+use dynamical
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)        :: k(3)
+integer(kind=irg),INTENT(IN)        :: ga(3)
+real(kind=sgl),INTENT(IN)           :: ktx
+real(kind=sgl),INTENT(IN)           :: kty
+real(kind=sgl),INTENT(IN)           :: kt2x
+real(kind=sgl),INTENT(IN)           :: kt2y
+real(kind=sgl),INTENT(IN)           :: ktrad
+integer(kind=irg),INTENT(IN)        :: ktstep
+integer(kind=irg),INTENT(OUT)       :: numk
+
+integer                             :: istat,j
+real                                :: kr(3),glen,delta,kstar(3),kt(3),gan(3),gperp(3),ktlen, dktx, dkty
+
+!write (*,*) 'ktx,kty: ', ktx, kty, kt2x, kt2y
+
+! compute geometrical factors 
+ glen = CalcLength(float(ga),'r')              ! length of ga
+ gan = ga/glen                                 ! normalized ga
+ delta = 2.0*ktrad*glen/float(2*ktstep+1)      ! grid step size in nm-1 
+ call TransSpace(float(k),kstar,'d','r')       ! transform incident direction to reciprocal space
+ call CalcCross(float(ga),kstar,gperp,'r','r',0)! compute g_perp = ga x k
+ call NormVec(gperp,'r')                       ! normalize g_perp
+ call NormVec(kstar,'r')                       ! normalize reciprocal beam vector
+
+!write (*,*) 'Calckvectortrace: ',gan, gperp, glen, kstar 
+
+! kt = -(klaue(1)+float(i)*delta)*gan - (klaue(2)+float(j)*delta)*gperp  ! tangential component of k
+
+ j = 0
+ if (.not.associated(khead)) then     ! allocate the head and ktail of the linked list
+   allocate(khead,stat=istat)         ! allocate new value
+   if (istat.ne.0) call FatalError('Calckvectortrace: unable to allocate head pointer',' ')
+   ktail => khead                     ! ktail points to new value
+   nullify(ktail%next)                ! nullify next in new value
+   numk = 1                           ! keep track of number of k-vectors so far
+! this should be the starting point of the line trace
+!   kt = - glen * ( - ktx*gan + kty * gperp)
+   kt = - glen * ( ktx*gan + kty * gperp)
+!   write (*,*) j, kt
+   ktail%kt = kt                           ! store tangential component of k
+   ktlen = glen**2*(ktx**2+kty**2)         ! squared length of tangential component
+   kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
+   ktail%k = kr                            ! store in pointer list
+   ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
+ end if
+! write (*,*) 'kt start = ',kt
+ 
+ dktx = (kt2x - ktx)/float(ktstep-1)
+ dkty = (kt2y - kty)/float(ktstep-1)
+
+! write (*,*) 'stepsizes :', dktx, dkty
+ do j=1,ktstep-1
+      allocate(ktail%next,stat=istat)  ! allocate new value
+      if (istat.ne.0) call FatalError('Calckvectortrace: unable to allocate pointer',' ')
+      ktail => ktail%next              ! ktail points to new value
+      nullify(ktail%next)              ! nullify next in new value
+      numk = numk + 1                  ! keep track of number of k-vectors so far
+!      kt = - glen * (-(ktx+float(j)*dktx)*gan + (kty+float(j)*dkty) * gperp) ! tangential component of k
+      kt = - glen * ( (ktx+float(j)*dktx)*gan + (kty+float(j)*dkty) * gperp) ! tangential component of k
+!   write (*,*) j, kt
+      ktail%kt = kt                    ! store tangential component of k
+      ktlen = delta**2*(ktail%i**2+ktail%j**2)         ! squared length of tangential component
+      kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
+      ktail%k = kr                     ! store in pointer list
+      ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
  end do
-end do
 
-deallocate(DDD)
+end subroutine Calckvectortrace
 
-end subroutine CalcSEntry
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: CalcSgh
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief compute structure factor-like array for ECCI and ECP simulations
+!
+!> @param nn dimension of array
+!> @param Sgh output array
+!> @param nat normalization array
+!
+!> @date 03/05/14  MDG 1.0 original (used to be in-line in ECP and ECCI programs)
+!> @date 03/11/14  MDG 1.1 converted to diagonal Sgh array only
+!--------------------------------------------------------------------------
+subroutine CalcSgh(nn,Sgh,nat)
+
+use local
+use crystalvars
+use crystal
+use gvectors
+use constants
+use symmetry
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)		:: nn
+complex(kind=dbl),INTENT(INOUT)	:: Sgh(nn,nn)
+integer(kind=irg),INTENT(INOUT)	:: nat(100)
+
+integer(kind=irg)			:: ip, ir, ic, kkk(3), ikk, n, numset
+real(kind=sgl)				:: Znsq, DBWF, kkl
+complex(kind=dbl)			:: carg
+real(kind=dbl)                        :: ctmp(192,3),arg, tpi
+
+  tpi = 2.D0 * cPi
+  Sgh = dcmplx(0.D0,0.D0)
+  numset = cell % ATOM_ntype  ! number of special positions in the unit cell
+
+! for each special position we need to compute its contribution to the Sgh array
+  do ip=1,numset
+    call CalcOrbit(ip,n,ctmp)
+    nat(ip) = n
+! get Zn-squared for this special position, and include the site occupation parameter as well
+    Znsq = float(cell%ATOM_type(ip))**2 * cell%ATOM_pos(ip,4)
+! loop over all contributing reflections
+! ir is the row index
+    rltmpa => reflist%next    ! point to the front of the list
+    do ir=1,nn
+! ic is the column index
+      rltmpb => reflist%next    ! point to the front of the list
+      do ic=1,nn
+        kkk = rltmpb%hkl - rltmpa%hkl
+! We'll assume isotropic Debye-Waller factors for now ...
+! That means we need the square of the length of s=  kk^2/4
+        kkl = 0.25 * CalcLength(float(kkk),'r')**2
+! Debye-Waller exponential times Z^2
+        DBWF = Znsq * exp(-cell%ATOM_pos(ip,5)*kkl)
+! here is where we should insert the proper weight factor, Z^2 exp[-M_{h-g}]
+! and also the detector geometry...   For now, we do nothing with the detector
+! geometry; the Rossouw et al 1994 paper lists a factor A that does not depend
+! on anything in particular, so we assume it is 1. 
+        do ikk=1,n
+! get the argument of the complex exponential
+          arg = tpi*sum(kkk(1:3)*ctmp(ikk,1:3))
+          carg = dcmplx(dcos(arg),dsin(arg))
+! multiply with the prefactor and add
+          Sgh(ir,ic) = Sgh(ir,ic) + carg * dcmplx(DBWF,0.D0)
+        end do
+        rltmpb => rltmpb%next  ! move to next column-entry
+      end do
+     rltmpa => rltmpa%next  ! move to next row-entry
+   end do  
+  end do
+  
+end subroutine CalcSgh
+
+
+
+
+!C***********************************************************************
+!C
+!C                        naninfchk.f
+!C
+!C  	*****************************************************************
+!C 	* 								*
+!C	* 	Absoft Corporation 					* 
+!C 	*	2781 Bond Street					*
+!C	*	Rochester Hills, MI  48309				*
+!C	*								*
+!C	*	This file contains example code for demonstration	*
+!C	*	purposes only.  Absoft makes no warranty of the	* 
+!C	*	suitability of this code for any purpose.		*
+!C	*								*
+!C	*	In no event shall Absoft be liable for any incidental,*
+!C	*	indirect, special, or consequential damages arising	*
+!C	*	out of the use of this code.				*
+!C	*								*
+!C	***************************************************************** 
+!C
+!C Routines to test real and double values against NaN and INF
+!C
+!C            NANCHK(X) - tests REAL*4 value X against NaN
+!!C            DNANCHK(X) - tests REAL*8 value X against NaN
+!!C            INFCHK(X) - tests REAL*4 value X against INF
+!!C            DINFCHK(X) - test REAL*8 value X against INF
+!C
+!C For little endian machines (Intel x86), compile with
+!C
+!C      f77 -c -DBYTE_SWAPPED=1 naninfchk.f
+!C	or
+!C      f90 -c -DBYTE_SWAPPED=1 naninfchk.f -YBOZTYPE=INT
+!C
+!C For big endian machines (PowerPC), compile with
+!C
+!C      f77 -c naninfchk.f
+!C	or
+!C      f90 -c naninfchk.f -YBOZTYPE=INT
+!C
+!C***********************************************************************
+RECURSIVE LOGICAL FUNCTION NANCHK(X)
+IMPLICIT NONE
+REAL,INTENT(IN)      :: X
+REAL                 :: Y
+INTEGER              :: I
+EQUIVALENCE(Y,I)
+
+Y = X
+NANCHK = isnan(Y) !((I .AND. z'7f800000') .EQ. z'7f800000') .AND.((I .AND. z'007fffff') .NE. z'00000000')
+
+RETURN
+END
+
+
+
+
+

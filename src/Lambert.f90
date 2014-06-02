@@ -88,10 +88,14 @@ type LambertParameters
 	real(kind=dbl)		:: beta		! pi^(5/6)/6^(1/6)/2
 	real(kind=dbl)		:: R1		! (3pi/4)^(1/3)
 	real(kind=dbl)		:: r2		! sqrt(2)
+	real(kind=dbl)		:: r22		! 1/sqrt(2)
 	real(kind=dbl)		:: pi12		! pi/12
+	real(kind=dbl)		:: pi8		! pi/8
 	real(kind=dbl)		:: prek		! R1 2^(1/4)/beta
 	real(kind=dbl)		:: r24		! sqrt(24)
+        real(kind=dbl)	        :: rvmax2      ! square of max rodrigues vector length  
 	real(kind=dbl)		:: tfit(7)	! fit parameters
+	real(kind=dbl)         :: BP(6)       ! used for Fundamental Zone determination
 end type LambertParameters
 
 type(LambertParameters)	:: LPs
@@ -256,9 +260,20 @@ LPs%sc = LPs%a/LPs%ap
 LPs%beta = 0.5D0*LPs%a
 LPs%R1 = (3.D0*dpi/4.D0)**(1.D0/3.D0)
 LPs%r2 = dsqrt(2.D0)
+LPs%r22 = dsqrt(2.D0)/2.D0
 LPs%pi12 = dpi/12.D0
+LPs%pi8 = dtan(dpi/8.D0)
 LPs%prek =  LPs%R1*2.D0**(0.25D0)/LPs%beta
 LPs%r24 = dsqrt(24.D0)
+
+! we need to make sure that we do not consider Rodrigues vectors of infinite length,
+! which would correspond to 180 degree rotations; we'll put the max length so that 
+! we can deal with 179.999 degree rotations, which should be good enough for most 
+! practical cases (this may be changed if deemed necessary)
+LPs%rvmax2 = (dtan(179.999D0*dpi/2.D0/180.D0))**2  ! square of max rodrigues vector length 
+
+! truncation values needed for the Cyclic fundamental zones of order 2, 3, 4, and 6
+LPs%BP(1:6) = (/ 0.D0, dtan(dpi/4.D0), dtan(dpi/6.D0), LPs%pi8, 0.D0, dtan(LPs%pi12) /)
 
 ! fit parameters determined with Mathematica
 LPs%tfit = (/ -0.5000096149170321D0, -0.02486606148871731D0, &
@@ -869,7 +884,7 @@ real(kind=sgl)			:: XYZ(3), sXYZ(3), T1, T2, c, s, q, LamXYZ(3), edge
 integer(kind=irg)		:: p
 
 ierr = 0
-edge = 0.D0 * (sngl(cPi))**(2.0/3.0)
+edge = 0.50 * (sngl(cPi))**(2.0/3.0)
 
 if (maxval(abs(lxyz)).gt.edge) then ! PGC dabs -> abs
   res = (/ 0.0, 0.0, 0.0 /)

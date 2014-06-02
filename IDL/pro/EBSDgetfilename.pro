@@ -56,7 +56,7 @@ common EBSD_data_common, EBSDdata
   rootpath = EBSDdata.EBSDroot
 
   if keyword_set(MCFILE) then begin
-    res=dialog_pickfile(title='Select a valid Monte Carlo data file',path=rootpath)
+    res=dialog_pickfile(title='Select a valid Monte Carlo data file',path=rootpath,filter='*mc*.*;*MC*.*')
     if (res eq '') then begin
 	  Core_Print,'No selection made'
 	  goto, skip
@@ -93,7 +93,7 @@ common EBSD_data_common, EBSDdata
         goto, skip
     endelse
   end else begin
-    res=dialog_pickfile(title='Select a valid Master Pattern data file',path=rootpath)
+    res=dialog_pickfile(title='Select a valid Master Pattern data file',path=rootpath,filter='*Master*.*;*master*.*;*MASTER*.*')
     if (res eq '') then begin
 	  Core_Print,'No selection made'
 	  goto, skip

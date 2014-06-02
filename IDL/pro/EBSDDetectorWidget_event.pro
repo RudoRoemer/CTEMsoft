@@ -64,20 +64,19 @@ end else begin
 
  'DETDELTA': EBSDdata.detdelta = Core_WidgetEvent( EBSDwidget_s.detdelta, 'Scintillator pixel size set to [micron] ', '(F6.2)', /flt)
 
- 'DETNUMSX': EBSDdata.detnumsx = Core_WidgetEvent( EBSDwidget_s.detnumsx, 'Scintillator number of pixels along x set to [micron] ', '(I6)', /lng)
- 'DETNUMSY': EBSDdata.detnumsy = Core_WidgetEvent( EBSDwidget_s.detnumsy, 'Scintillator number of pixels along y set to [micron] ', '(I6)', /lng)
+ 'DETNUMSX': EBSDdata.detnumsx = Core_WidgetEvent( EBSDwidget_s.detnumsx, 'Scintillator number of pixels along x set to ', '(I4)', /lng)
+ 'DETNUMSY': EBSDdata.detnumsy = Core_WidgetEvent( EBSDwidget_s.detnumsy, 'Scintillator number of pixels along y set to ', '(I4)', /lng)
 
  'DETXPC': EBSDdata.detxpc = Core_WidgetEvent( EBSDwidget_s.detxpc, 'Pattern Center x-coordinate set to [pixels] ', '(F7.2)', /flt)
  'DETYPC': EBSDdata.detypc = Core_WidgetEvent( EBSDwidget_s.detypc, 'Pattern Center y-coordinate set to [pixels] ', '(F7.2)', /flt)
 
- 'DETBINNING': EBSDdata.detbinning = Core_WidgetEvent( EBSDwidget_s.detbinning, 'CCD binning factor set to ', '(I3)', /lng)
+ 'DETBEAMCURRENT': EBSDdata.detbeamcurrent = Core_WidgetEvent( EBSDwidget_s.detbeamcurrent, 'Beam current set to [nA] ', '(F7.3)', /flt)
+ 'DETDWELLTIME': EBSDdata.detdwelltime = Core_WidgetEvent( EBSDwidget_s.detdwelltime, 'Dwell time set to [mu s] ', '(F7.3)', /flt)
 
- 'DETBEAMCURRENT': EBSDdata.detbeamcurrent = Core_WidgetEvent( EBSDwidget_s.detbeamcurrent, 'Beam current set to [A] ', '(D9.2)', /flt)
- 'DETDWELLTIME': EBSDdata.detdwelltime = Core_WidgetEvent( EBSDwidget_s.detdwelltime, 'Dwell time set to [s] ', '(D9.2)', /flt)
-
- 'DETphi1': EBSDdata.detphi1 = Core_WidgetEvent( EBSDwidget_s.detphi1, 'Euler angle phi1 set to [deg] ', '(F6.2)', /flt)
- 'DETPhi': EBSDdata.detphi = Core_WidgetEvent( EBSDwidget_s.detphi, 'Euler angle Phi set to [deg] ', '(F6.2)', /flt)
- 'DETphi2': EBSDdata.detphi2 = Core_WidgetEvent( EBSDwidget_s.detphi2, 'Euler angle phi2 set to [deg] ', '(F6.2)', /flt)
+ 'DETax1': EBSDdata.detax1 = Core_WidgetEvent( EBSDwidget_s.detax1, 'Axis-angle entry 1 set to ', '(F6.2)', /flt)
+ 'DETax2': EBSDdata.detax2 = Core_WidgetEvent( EBSDwidget_s.detax2, 'Axis-angle entry 2 set to ', '(F6.2)', /flt)
+ 'DETax3': EBSDdata.detax3 = Core_WidgetEvent( EBSDwidget_s.detax3, 'Axis-angle entry 3 set to ', '(F6.2)', /flt)
+ 'DETax4': EBSDdata.detax4 = Core_WidgetEvent( EBSDwidget_s.detax4, 'Axis-angle entry 4 set to [deg] ', '(F6.2)', /flt)
 
  'EBSDMINENERGYLIST': begin
 		EBSDdata.Eminsel = fix(event.index)
@@ -97,6 +96,182 @@ end else begin
 		WIDGET_CONTROL, set_droplist_select = EBSDdata.Emaxsel, EBSDwidget_s.EBSDmaxenergylist
 	 endcase
 
+ 'GETEBSDFILENAME': begin
+; display a filesaving widget in the data folder with the file extension filled in
+	  filename = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,title='enter EBSD output file name ')
+	  if (filename ne '') then begin
+	    EBSDdata.EBSDpatternfilename = filename
+	    WIDGET_CONTROL, set_value=filename, EBSDwidget_s.EBSDpatternfilename
+	    WIDGET_CONTROL, EBSDwidget_s.DisplayEBSD, sensitive=1
+	    WIDGET_CONTROL, EBSDwidget_s.EBSDgetanglefilename, sensitive=1
+	  end
+	endcase
+
+
+ 'DETphi1': EBSDdata.detphi1 = Core_WidgetEvent( EBSDwidget_s.detphi1, 'Euler angle phi1 set to [deg] ', '(F6.2)', /flt)
+ 'DETPhi': EBSDdata.detphi = Core_WidgetEvent( EBSDwidget_s.detphi, 'Euler angle Phi set to [deg] ', '(F6.2)', /flt)
+ 'DETphi2': EBSDdata.detphi2 = Core_WidgetEvent( EBSDwidget_s.detphi2, 'Euler angle phi2 set to [deg] ', '(F6.2)', /flt)
+
+ 'GETANGLEFILENAME': begin
+; display a filesaving widget in the data folder with the file extension filled in
+	  filename = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,title='Select angle input file')
+	  if (filename ne '') then begin
+	    EBSDdata.EBSDanglefilename = filename
+	    WIDGET_CONTROL, set_value=filename, EBSDwidget_s.EBSDanglefilename
+	    EBSDreadanglefile,filename
+	    WIDGET_CONTROL, EBSDwidget_s.GoAngle, sensitive=1
+	  end
+	endcase
+
+ 'DICTIONARYPG': begin
+	  EBSDdata.Dictpointgroup = event.index
+	  if ( (EBSDdata.Ncubochoric ne 0) and (EBSDdata.EBSDdictfilename ne '') ) then begin
+	    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=1
+	  end
+	endcase
+
+ 'NCUBOCHORIC': begin 
+	  EBSDdata.Ncubochoric = Core_WidgetEvent( EBSDwidget_s.Ncubochoric,  'Number of smapling points along cube semi-edge set to ', '(I4)', /lng)
+	  if ( (EBSDdata.Dictpointgroup ne 0) and (EBSDdata.EBSDdictfilename ne '') ) then begin
+	    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=1
+	  end
+	endcase
+
+ 'GETDICTFILENAME': begin
+; display a filesaving widget 
+	  filename = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,title='Set dictionary angle file name ')
+	  if (filename ne '') then begin
+	    EBSDdata.EBSDdictfilename = filename
+	    WIDGET_CONTROL, set_value=filename, EBSDwidget_s.EBSDdictfilename
+	  end
+	  if ( (EBSDdata.Dictpointgroup ne 0) and (EBSDdata.Ncubochoric ne 0) ) then begin
+	    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=1
+	  end
+	endcase
+
+ 'GODICT': begin
+; this option calls the sampleRFZ program to create a dictionary angle file
+	      openw,10,EBSDdata.pathname+'/CTEMsampleRFZ.nml'
+	      printf,10,'&RFZlist'
+	      printf,10,'pgnum = '+string(EBSDdata.Dictpointgroup,FORMAT="(I2)")
+	      printf,10,'nsteps = '+string(EBSDdata.Ncubochoric,FORMAT="(I6)")
+	      printf,10,'outname = '''+EBSDdata.EBSDdictfilename+''''
+	      printf,10,'/'
+	      close,10
+; then run the CTEMsampleRFZ program on this file to create the angle file
+	      cmd = EBSDdata.f90exepath+'/CTEMsampleRFZ '+EBSDdata.pathname+'/CTEMsampleRFZ.nml'
+	      spawn,cmd
+; then read the number of entries from that file and display it, then activate the GO button
+	      EBSDreadanglefile, EBSDdata.EBSDdictfilename
+	      WIDGET_CONTROL, set_value=string(EBSDdata.numangles,FORMAT="(I8)"), EBSDwidget_s.NinRFZ
+	      WIDGET_CONTROL, EBSDwidget_s.GoDictionary, sensitive=1
+	endcase
+
+ 'DISPLAYEBSD': begin
+; first we need to make sure that the path to the fortran executables is known... this is stored in the 
+; preferences file, but is initially set to 'path_unknown'
+	  if (EBSDdata.f90exepath eq 'path_unknown') then begin
+  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
+  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
+  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
+		directoryname = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,/directory,title='Select the f90 executable folder')
+	        EBSDdata.f90exepath = directoryname[0]
+	  end
+
+; is the correct widget up on the screen ?
+	  if XRegistered("EBSDPatternWidget") then begin
+	    if (EBSDdata.currentdisplaywidgetmode ne 0) then WIDGET_CONTROL, EBSDwidget_s.patternbase, /DESTROY
+	  end
+
+; this does two things.  First of all, the CTEMEBSD program is called with the current
+; parameters for the detector and microscope geometry, and the single set of Euler angles
+; entered in the 'Detector and Pattern Mode Widget'.
+;
+; Then, when the CTEMEBSD program has produced its output file, we create a new widget
+; that displays this raw EBSD pattern; the user can then apply a number of intensity
+; corrections, as well as binning, to optimize the pattern quality.  Once this is done, 
+; those parameters will be used for the Angle File mode and the Dictionary mode.
+
+; first, create the nml file and execute the CTEMEBSD program
+	  status = 0
+	  EBSDExecute,status,/single
+
+; then we create the EBSDpattern widget and let the user adjust the imaging parameters
+	  if (status eq 1) then begin
+	    if (XRegistered("EBSDPatternWidget") EQ 0) then EBSDPatternWidget,/single else EBSDshowPattern,/single
+	  end
+
+	endcase
+
+ 'GOANGLE': begin
+; first we need to make sure that the path to the fortran executables is known... this is stored in the 
+; preferences file, but is initially set to 'path_unknown'
+	  if (EBSDdata.f90exepath eq 'path_unknown') then begin
+  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
+  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
+  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
+		directoryname = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,/directory,title='Select the f90 executable folder')
+	        EBSDdata.f90exepath = directoryname[0]
+	  end
+
+; is the correct widget up on the screen ?
+	  if XRegistered("EBSDPatternWidget") then begin
+	    if (EBSDdata.currentdisplaywidgetmode ne 1) then WIDGET_CONTROL, EBSDwidget_s.patternbase, /DESTROY
+	  end
+
+; this does two things.  First of all, the CTEMEBSD program is called with the current
+; parameters for the detector and microscope geometry, and the angle file
+;
+; Then, when the CTEMEBSD program has produced its output file, we create a new widget
+; that displays these EBSD patterns; the user can then save selected patterns or all patterns.
+; At this point, there is no option to change the imaging parameters; all the settings of the 
+; other parts of the widget apply to this pattern calculation
+
+; first, create the nml file and execute the CTEMEBSD program
+	  status = 0
+	  EBSDExecute,status
+
+; then we create the EBSDpattern widget and let the user adjust the imaging parameters
+	  if (status eq 1) then begin
+	    if (XRegistered("EBSDPatternWidget") EQ 0) then EBSDPatternWidget else EBSDshowPattern
+	  end
+
+	endcase
+
+ 'GODICTIONARY': begin
+; first we need to make sure that the path to the fortran executables is known... this is stored in the 
+; preferences file, but is initially set to 'path_unknown'
+	  if (EBSDdata.f90exepath eq 'path_unknown') then begin
+  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
+  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
+  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
+		directoryname = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,/directory,title='Select the f90 executable folder')
+	        EBSDdata.f90exepath = directoryname[0]
+	  end
+
+; is the correct widget up on the screen ?
+	  if XRegistered("EBSDPatternWidget") then begin
+	    if (EBSDdata.currentdisplaywidgetmode ne 1) then WIDGET_CONTROL, EBSDwidget_s.patternbase, /DESTROY
+	  end
+
+; this does two things.  First of all, the CTEMEBSD program is called with the current
+; parameters for the detector and microscope geometry, and the angle file
+;
+; Then, when the CTEMEBSD program has produced its output file, we create a new widget
+; that displays these EBSD patterns; the user can then save selected patterns or all patterns.
+; At this point, there is no option to change the imaging parameters; all the settings of the 
+; other parts of the widget apply to this pattern calculation
+
+; first, create the nml file and execute the CTEMEBSD program
+	  status = 0
+	  EBSDExecute,status
+
+; then we create the EBSDpattern widget and let the user adjust the imaging parameters
+	  if (status eq 1) then begin
+	    if (XRegistered("EBSDPatternWidget") EQ 0) then EBSDPatternWidget else EBSDshowPattern
+	  end
+
+	endcase
 
  'CLOSEDETECTOR': begin
 ; kill the base widget
