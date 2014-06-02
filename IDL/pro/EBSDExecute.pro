@@ -153,7 +153,7 @@ end
   len = size(cmdoutput,/dimensions)
   for i=0,len[0]-1 do Core_Print,cmdoutput[i]
 
-  if (cmderroutput ne '') then begin
+  if (cmderroutput[0] ne '') then begin
     Core_Print,'CTEMEBSD program reported an error !!!'
     len = size(cmderroutput,/dimensions)
     for i=0,len[0]-1 do Core_Print,cmderroutput[i]
