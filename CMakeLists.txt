@@ -32,9 +32,10 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
   )
 
 # Build shared libraries
-OPTION(BUILD_SHARED_LIBS "Build Shared Libraries" ON)
+OPTION(BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 set(LIB_TYPE STATIC)
 if(BUILD_SHARED_LIBS)
+	message(FATAL_ERROR "Version 2 Only supports Static Libraries. Please turn OFF BUILD_SHARED_LIBS")
     set(LIB_TYPE SHARED)
     list(APPEND CMP_LIB_SEARCH_DIRS  ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} )
     if(MSVC)
@@ -50,7 +51,23 @@ endif(BUILD_SHARED_LIBS)
 set(CMAKE_MODULE_PATH ${CTEMsoft_SOURCE_DIR}/Support/CMakeModules ${CMAKE_MODULE_PATH})
 include_directories(${CTEMsoft_BINARY_DIR}/src)
 
-find_package (FFTW3 COMPONENTS single double)
+
+set(CTEMsoft_VER_MAJOR "2")
+set(CTEMsoft_VER_MINOR "0")
+set(CTEMsoft_VER_PATCH "0")
+
+
+# --------------------------------------------------------------------
+# Generate our ReadMe and License Files
+configure_file(${PROJECT_SOURCE_DIR}/License.txt
+                ${PROJECT_BINARY_DIR}/License.txt )
+configure_file(${PROJECT_SOURCE_DIR}/ReadMe.md
+                ${PROJECT_BINARY_DIR}/ReadMe.md )
+install(FILES ${PROJECT_SOURCE_DIR}/ReadMe.md ${PROJECT_SOURCE_DIR}/License.txt
+        DESTINATION .
+        COMPONENT Applications)
+
+#find_package (FFTW3 COMPONENTS single double)
 
 
 ## THIS WILL BE NEEDED FOR WINDOWS
@@ -93,3 +110,8 @@ endif (Fortran_COMPILER_NAME MATCHES "gfortran.*")
 
 #ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/src ${PROJECT_BINARY_DIR}/src)
 ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/src_programs ${PROJECT_BINARY_DIR}/src_programs)
+
+# This should be the last line in this file:
+include(${CTEMsoft_SOURCE_DIR}/Support/CPack/PackageProject.cmake)
+
+

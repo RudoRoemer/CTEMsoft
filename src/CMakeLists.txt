@@ -51,3 +51,20 @@ ADD_LIBRARY(CTEMSoftLib ${LIB_TYPE} ${CTEMSoftLib_SRCS})
 ADD_LIBRARY(local ${CTEMSoftLib_SOURCE_DIR}/local.f90)
 TARGET_LINK_LIBRARIES(CTEMSoftLib blas lapack)
 
+set(install_dir "tools")
+set(lib_install_dir "lib")
+if(WIN32)
+    set(install_dir ".")
+    set(lib_install_dir "")
+endif()
+
+
+if(BUILD_SHARED_LIBS)
+    INSTALL(TARGETS ${PROJECT_NAME}
+        COMPONENT Applications
+        RUNTIME DESTINATION ${install_dir}
+        LIBRARY DESTINATION ${lib_install_dir}
+        ARCHIVE DESTINATION ${lib_install_dir}
+        BUNDLE DESTINATION "."
+    )
+endif()
