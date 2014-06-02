@@ -1,8 +1,16 @@
+
 # ignore object code
 *.o
 
 # ignore pro.swp files
 *.pro.swp
+
+**/*.*~
+
+*.sav
+*.psd
+
+IDL/**/*.sav
 
 # ignore OS files
 .DS_Store
@@ -35,6 +43,7 @@
 
 # IDL Virtual Machine
 /IDL/VMapps/
+/IDL/VMappsPC/
 
 # debug files
 *.fx3
@@ -68,6 +77,8 @@ absoft_run_env.sh
 
 # xtal
 /xtal/
+
+# IDL VM
 
 #lib030414 and other temp test folders #PGC
 /lib030414
