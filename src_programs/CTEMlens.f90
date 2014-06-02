@@ -151,7 +151,6 @@ use crystalvars
 use crystal
 use diffraction
 use graphics
-
 ! IMPLICIT NONE
 
 integer(kind=irg)            			:: np,p(3),io_int(1)

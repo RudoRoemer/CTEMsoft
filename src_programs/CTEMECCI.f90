@@ -1211,7 +1211,7 @@ INTEGER              :: I
 EQUIVALENCE(Y,I)
 
 Y = X
-NANCHK = ((I .AND. z'7f80 0000') .EQ. z'7f80 0000') .AND.((I .AND. z'007f ffff') .NE. z'0000 0000')
+NANCHK = isnan(Y) !((I .AND. z'7f800000') .EQ. z'7f800000') .AND.((I .AND. z'007fffff') .NE. z'00000000')
 
 RETURN
 END

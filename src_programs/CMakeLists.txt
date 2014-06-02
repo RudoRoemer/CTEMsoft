@@ -10,22 +10,21 @@ endmacro (Create_exe_and_tll)
 
 
 Create_exe_and_tll(CTEMBWshow)
-#need ctembethe.f95
 Create_exe_and_tll(CTEMEBSD)
 Create_exe_and_tll(CTEMEBSDmaster)
-##Create_exe_and_tll(CTEMECCI) #read_stacking_fault_data has wrong number of args passed to it
+Create_exe_and_tll(CTEMECCI) #read_stacking_fault_data has wrong number of args passed to it
 Create_exe_and_tll(CTEMECP)
 Create_exe_and_tll(CTEMECPSM)
 Create_exe_and_tll(CTEMKossel)
 Create_exe_and_tll(CTEMMC)  #MP
-Create_exe_and_tll(CTEMMCTKD) #arg to alog needs to be real(4) not real(8)
+Create_exe_and_tll(CTEMMCTKD) 
 ##Create_exe_and_tll(CTEMSRBW) #Explicit interface required for 'extractbwdata' 
 Create_exe_and_tll(CTEMSRCBED)
 Create_exe_and_tll(CTEMSRdefect) #MP 
 Create_exe_and_tll(CTEMTBBFDF)
 Create_exe_and_tll(CTEMTBBW)
 Create_exe_and_tll(CTEMTBSM)
-Create_exe_and_tll(CTEMZAdefect) #Generic function 'cabs' at (1) is not consistent with a specific intrinsic interface
+Create_exe_and_tll(CTEMZAdefect) 
 Create_exe_and_tll(CTEMZAgeom)
 Create_exe_and_tll(CTEMdrawcell)
 Create_exe_and_tll(CTEMexpeditions)
@@ -41,7 +40,7 @@ Create_exe_and_tll(CTEMmbcbed)
 Create_exe_and_tll(CTEMmkxtal)
 Create_exe_and_tll(CTEMorbit)
 Create_exe_and_tll(CTEMorient)
-#Create_exe_and_tll(CTEMoverlap) #doesn't look like dbdiffB has been initialized anywhere
+##Create_exe_and_tll(CTEMoverlap) #doesn't look like dbdiffB has been initialized anywhere
 Create_exe_and_tll(CTEMped)
 Create_exe_and_tll(CTEMqg)
 Create_exe_and_tll(CTEMstar)
