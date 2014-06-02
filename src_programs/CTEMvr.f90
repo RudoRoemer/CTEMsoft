@@ -102,6 +102,7 @@ real(kind=sgl)                       		:: rr(4),gg(4),g(3),r(3),cc,Vmod,Vphase,g
   allocate(z(-hra:hra,-kra:kra,-lra:lra))
   z(-hra:hra,-kra:kra,-lra:lra) = .FALSE.
   ntot = (2*hra+1)*(2*kra+1)*(2*lra+1)
+!  write (*,*) "ntot = ",ntot  ! PGC debug
 
   allocate(family(ntot,SG % SYM_NUMpt,3))
   allocate(numfam(ntot)) 

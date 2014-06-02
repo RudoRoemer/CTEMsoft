@@ -67,6 +67,7 @@ print,'Number of reflections = '+string(numref,FORMAT="(I4)")
 
 ; read the dimensions of the output array
 datadims = lonarr(4)
+print,'datadims=',datadims
 readu,1,datadims
 print,'Data array has dimensions '+string(datadims[0],FORMAT="(I8)")+string(datadims[1],FORMAT="(I8)")+ $
 	string(datadims[2],FORMAT="(I8)")+string(datadims[3],FORMAT="(I8)")

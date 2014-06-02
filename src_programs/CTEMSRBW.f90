@@ -41,6 +41,7 @@
 !> @date   4/24/01  MDG 1.0 original
 !> @date   5/27/01  MDG 2.0 f90
 !> @date  4/18/13 MDG 3.0 rewrite
+!> @date  03/04/14 PGC 3.0.1 gfortran compatibility stuff
 !--------------------------------------------------------------------------
 program CTEMSRBW
 
@@ -632,7 +633,7 @@ write (*,*) dz, tmin, tmax, g, kt, kzero
     z = tmin + dz*float(i-1)
     diag=exp(-z*Wi)*cmplx(cos(z*Wr),sin(z*Wr))*alph
     do j=1,nn
-     images(ik,i,j) = cabs(sum(CG(j,1:nn)*diag(1:nn)))**2
+     images(ik,i,j) = abs(sum(CG(j,1:nn)*diag(1:nn)))**2 ! PGC cabs -> abs
     end do 
     if (i.eq.256) write (25) (images(ik,i,j),j=1,nn)
    end do

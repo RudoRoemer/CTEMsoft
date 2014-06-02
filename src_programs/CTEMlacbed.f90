@@ -258,7 +258,7 @@ end if
   call Message("(A)")
   call Prune_ReflectionList(numk,nbeams)
   io_int(1) = nbeams
-  call WriteValue('Number of contributing beams  : ', io_int, 1, '(I)')
+  call WriteValue('Number of contributing beams  : ', io_int, 1, '(I8)')
 
 ! since we're only going to store one diffraction disk per family of reflections,
 ! we need to decide which one we're going to keep.  For those, we'll need to 
@@ -504,7 +504,7 @@ kvectorloop:  do ik = 1,numk
   call system_clock(newcount,count_rate,count_max)
   io_real(1)=float(newcount-cnt)/float(count_rate)
   mess = ' Program run completed '; call Message("(/A/)")
-  call WriteValue('Total computation time [s] ' , io_real, 1, "(F)")
+  call WriteValue('Total computation time [s] ' , io_real, 1, "(F10.4)")
 
 ! before we write the output file, we need to determine which reflection families 
 ! need to be written to the file; this is determined by the maxHOLZ parameter.  So,

@@ -120,7 +120,7 @@ real(kind=dbl)        			:: dis,xpos,ypos,zpos,sumR(3),thick,tmp(3),tmp2(3), &
                          			 
 complex(kind=dbl)     			:: za(3)
 complex(kind=sgl)     			:: zero
-logical               			:: void
+logical               			:: lvoid ! PGC void -> lvoid
 
 ! scale the image coordinates with respect to the origin at the center of the image
  xpos = float(i-DF_npix/2)*DF_L
@@ -158,18 +158,18 @@ logical               			:: void
 ! one of the voids; the calling routine then knows to use the void scattering matrix.
 if (numvoids.ne.0) then 
 ! are we inside a void ?
-    void = .FALSE.
+    lvoid = .FALSE.
     voidloop: do ii=1,numvoids
 ! subtract the void position from the current slice position to get the relative position vector
      tmp = tmpf -  (/ voids(ii)%xpos, voids(ii)%ypos, voids(ii)%zpos /)
      dis = CalcLength(tmp,'c')
      if (dis.lt.voids(ii)%radius) then ! inside void
-       void = .TRUE.
+       lvoid = .TRUE.
        exit voidloop
      end if
     end do voidloop
 ! skip the rest of the computation for this slice if we are inside a void
-    if (void.eqv..TRUE.) then 
+    if (lvoid.eqv..TRUE.) then 
       DF_R(islice,1) = -10000.0
       cycle sliceloop
     end if

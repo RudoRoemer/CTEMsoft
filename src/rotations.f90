@@ -94,6 +94,8 @@ type orientationtyped
   real(kind=dbl)	:: cubochoric(3)	! cubic grid representation (derived from homochoric)
 end type orientationtyped
 
+
+
 ! general interface routine to populate the orientation type
 public:: init_orientation
 interface init_orientation
@@ -723,65 +725,6 @@ real(kind=dbl)			:: res(3)
 res = qu2eu_d(om2qu_d(o))
 
 end function om2eu_d
-
-
-!--------------------------------------------------------------------------
-!
-! FUNCTION: ax2qu
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief convert axis angle to quaternion
-!
-!> @param a axis angle pair (single precision)
-! 
-!> @date 8/12/13   MDG 1.0 original
-!> @date 3/11/14   MDG 2.0 replaced by direct implementation
-!--------------------------------------------------------------------------
-function ax2qu(a) result (res)
-
-use local 
-
-real(kind=sgl), intent(in) 		:: a(4)
-real(kind=sgl)				:: res(4)
-real(kind=sgl)                        :: pre
-
-! old two-step approach
-! res = om2qu(ax2om(a))
-
-pre = sin(a(4)*0.5)
-res = (/ cos(a(4)*0.5), pre*a(1), pre*a(2), pre*a(3) /) 
-
-end function ax2qu
-
-!--------------------------------------------------------------------------
-!
-! FUNCTION: ax2qu_d
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief convert axis angle to quaternion
-!
-!> @param a axis angle pair (double precision)
-! 
-!> @date 8/12/13   MDG 1.0 original
-!--------------------------------------------------------------------------
-function ax2qu_d(a) result (res)
-
-use local 
-
-real(kind=dbl), intent(in) 		:: a(4)
-real(kind=dbl)				:: res(4)
-real(kind=dbl)                        :: pre
-
-! old two-step approach
-! res = om2qu_d(ax2om_d(a))
-
-pre = dsin(a(4)*0.5D0)
-res = (/ dcos(a(4)*0.5D0), pre*a(1), pre*a(2), pre*a(3) /) 
-
-
-end function ax2qu_d
 
 !--------------------------------------------------------------------------
 !
@@ -1541,85 +1484,6 @@ end function eu2om_d
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION: qu2ax
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief convert quaternion to axis angle
-!
-!> @param q quaternion (single precision)
-! 
-!> @date 8/12/13   MDG 1.0 original
-!> @date 3/11/14   MDG 2.0 new implementation with actual formulas
-!--------------------------------------------------------------------------
-function qu2ax(q) result (res)
-
-use local 
-use constants
-
-real(kind=sgl), intent(in) 		:: q(4)
-real(kind=sgl)				:: res(4)
-real(kind=sgl)                        :: theta, pre
-
-! old way  (really qu->eu->ro->ax)
-! res = eu2ax(qu2eu(q))
-
-if (q(1).ne.0.0) then
-  theta = 2.0*acos(q(1))
-  if (theta.eq.0.0) then 
-    res = (/ 0.0, 0.0, 1.0, 0.0 /)
-  else
-    pre = 1.0/sqrt(1.0-q(0)**2)
-    res = pre * (/ q(2), q(3), q(4), 0.0 /)
-    res(4) = theta
-  end if
-else
-  res = (/ q(2), q(3), q(4), sngl(cPi) /)
-end if
-
-end function qu2ax
-
-!--------------------------------------------------------------------------
-!
-! FUNCTION: qu2ax_d
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief convert quaternion to axis angle
-!
-!> @param q quaternion (double precision)
-! 
-!> @date 8/12/13   MDG 1.0 original
-!--------------------------------------------------------------------------
-function qu2ax_d(q) result (res)
-
-use local
-use constants
-
-real(kind=dbl), intent(in) 		:: q(4)
-real(kind=dbl)				:: res(4)
-real(kind=dbl)                        :: theta, pre
-
-! old way  (really qu->eu->ro->ax)
-! res = eu2ax_d(qu2eu_d(q))
-
-if (q(1).ne.0.D0) then
-  theta = 2.D0*dacos(q(1))
-  if (theta.eq.0.D0) then 
-    res = (/ 0.D0, 0.D0, 1.D0, 0.D0 /)
-  else
-    pre = 1.D0/dsqrt(1.D0-q(0)**2)
-    res = pre * (/ q(2), q(3), q(4), 0.D0 /)
-    res(4) = theta
-  end if
-else
-  res = (/ q(2), q(3), q(4), cPi /)
-end if
-
-end function qu2ax_d
-
-!--------------------------------------------------------------------------
-!
 ! FUNCTION: qu2om
 !
 !> @author Marc De Graef, Carnegie Mellon University
@@ -1782,83 +1646,6 @@ res = s * res
 
 end function om2qu_d
 
-!--------------------------------------------------------------------------
-!
-! FUNCTION: om2ax
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief convert orientation matrix to axis angle
-!
-!> @param om 3x3 orientation matrix (single precision)
-! 
-!> @date 8/12/13  MDG 1.0 original
-!> @date 3/11/14  MDG 2.0 direct implementation of transformation equations
-!--------------------------------------------------------------------------
-function om2ax(om) result (res)
-
-use local 
-
-real(kind=sgl), intent(in) 		:: om(3,3)
-real(kind=sgl)				:: res(4)
-real(kind=sgl)                        :: theta, pre
-
-! this is really a five step process  om->qu->eu->ro->ax
-! res = eu2ax(om2eu(om))  
-
-theta = acos(0.5*(om(1,1)+om(2,2)+om(3,3)-1.0))
-
-if (theta.eq.0.0) then
-  res = (/ 0.0, 0.0, 1.0, 0.0 /)
-else
-  pre = 1.0/(2.0*sin(theta))
-  res = pre * (/ om(3,2)-om(2,3), om(1,3)-om(3,1), om(2,1)-om(1,2), 0.0 /)
-  ! normalize the direction cosines
-  pre = 1.0/sqrt(res(1)**2+res(2)**2+res(3)**2)
-  res = pre * res
-  res(4) = theta
-end if
-
-end function om2ax
-
-!--------------------------------------------------------------------------
-!
-! FUNCTION: om2ax_d
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief convert orientation matrix to axis angle
-!
-!> @param om 3x3 orientation matrix (double precision)
-! 
-!> @date 8/12/13   MDG 1.0 original
-!> @date 3/11/14  MDG 2.0 direct implementation of transformation equations
-!--------------------------------------------------------------------------
-function om2ax_d(om) result (res)
-
-use local 
-
-real(kind=dbl), intent(in) 		:: om(3,3)
-real(kind=dbl)				:: res(4) 
-real(kind=dbl)                        :: theta, pre
-
-! this is really a five step process  om->qu->eu->ro->ax
-!res = eu2ax_d(om2eu_d(om))  
-
-theta = dacos(0.5D0*(om(1,1)+om(2,2)+om(3,3)-1.D0))
-
-if (theta.eq.0.D0) then
-  res = (/ 0.D0, 0.D0, 1.D0, 0.D0 /)
-else
-  pre = 1.D0/(2.D0*dsin(theta))
-  res = pre * (/ om(3,2)-om(2,3), om(1,3)-om(3,1), om(2,1)-om(1,2), 0.D0 /)
-  ! normalize the direction cosines
-  pre = 1.D0/dsqrt(res(1)**2+res(2)**2+res(3)**2)
-  res = pre * res
-  res(4) = theta
-end if
-
-end function om2ax_d
 
 !--------------------------------------------------------------------------
 !
@@ -2086,6 +1873,52 @@ end function eu2ho_d
 
 !--------------------------------------------------------------------------
 !
+! FUNCTION: om2ax
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief convert orientation matrix to axis angle
+!
+!> @param om 3x3 orientation matrix (single precision)
+! 
+!> @date 8/12/13   MDG 1.0 original
+!--------------------------------------------------------------------------
+function om2ax(om) result (res)
+
+use local 
+
+real(kind=sgl), intent(in) 		:: om(3,3)
+real(kind=sgl)				:: res(4)
+
+res = eu2ax(om2eu(om))
+
+end function om2ax
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: om2ax_d
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief convert orientation matrix to axis angle
+!
+!> @param om 3x3 orientation matrix (double precision)
+! 
+!> @date 8/12/13   MDG 1.0 original
+!--------------------------------------------------------------------------
+function om2ax_d(om) result (res)
+
+use local 
+
+real(kind=dbl), intent(in) 		:: om(3,3)
+real(kind=dbl)				:: res(4)
+
+res = eu2ax_d(om2eu_d(om))
+
+end function om2ax_d
+
+!--------------------------------------------------------------------------
+!
 ! FUNCTION: om2ro
 !
 !> @author Marc De Graef, Carnegie Mellon University
@@ -2270,6 +2103,52 @@ end function ax2ro_d
 
 !--------------------------------------------------------------------------
 !
+! FUNCTION: ax2qu
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief convert axis angle to quaternion
+!
+!> @param a axis angle pair (single precision)
+! 
+!> @date 8/12/13   MDG 1.0 original
+!--------------------------------------------------------------------------
+function ax2qu(a) result (res)
+
+use local 
+
+real(kind=sgl), intent(in) 		:: a(4)
+real(kind=sgl)				:: res(4)
+
+res = om2qu(ax2om(a))
+
+end function ax2qu
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: ax2qu_d
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief convert axis angle to quaternion
+!
+!> @param a axis angle pair (double precision)
+! 
+!> @date 8/12/13   MDG 1.0 original
+!--------------------------------------------------------------------------
+function ax2qu_d(a) result (res)
+
+use local 
+
+real(kind=dbl), intent(in) 		:: a(4)
+real(kind=dbl)				:: res(4)
+
+res = om2qu_d(ax2om_d(a))
+
+end function ax2qu_d
+
+!--------------------------------------------------------------------------
+!
 ! FUNCTION: ro2om
 !
 !> @author Marc De Graef, Carnegie Mellon University
@@ -2334,7 +2213,7 @@ use local
 real(kind=sgl), intent(in) 		:: r(3)
 real(kind=sgl)				:: res(4)
 
-res = eu2qu(ro2eu(r))
+res = ax2qu(ro2ax(r))
 
 end function ro2qu
 
@@ -2358,7 +2237,7 @@ use local
 real(kind=dbl), intent(in) 		:: r(3)
 real(kind=dbl)				:: res(4)
 
-res = eu2qu_d(ro2eu_d(r))
+res = ax2qu_d(ro2ax_d(r))
 
 end function ro2qu_d
 
@@ -2408,6 +2287,52 @@ res = ax2ho_d(ro2ax_d(r))
 
 end function ro2ho_d
 
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: qu2ax
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief convert quaternion to axis angle
+!
+!> @param q quaternion (single precision)
+! 
+!> @date 8/12/13   MDG 1.0 original
+!--------------------------------------------------------------------------
+function qu2ax(q) result (res)
+
+use local 
+
+real(kind=sgl), intent(in) 		:: q(4)
+real(kind=sgl)				:: res(4)
+
+res = eu2ax(qu2eu(q))
+
+end function qu2ax
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: qu2ax_d
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief convert quaternion to axis angle
+!
+!> @param q quaternion (double precision)
+! 
+!> @date 8/12/13   MDG 1.0 original
+!--------------------------------------------------------------------------
+function qu2ax_d(q) result (res)
+
+use local 
+
+real(kind=dbl), intent(in) 		:: q(4)
+real(kind=dbl)				:: res(4)
+
+res = eu2ax_d(qu2eu_d(q))
+
+end function qu2ax_d
 
 
 !--------------------------------------------------------------------------
@@ -3294,7 +3219,7 @@ if (present(outtype)) then
 
   	case ('ro')
 	  ioreal(1:3) = o%rodrigues(1:3)
-  	  call WriteValue(trim(pret)//'Rodrigues vector		: ', ioreal, 3, "(3(F8.4,' '))")
+  	  call WriteValue(trim(pret)//'Rodigues vector		: ', ioreal, 3, "(3(F8.4,' '))")
 
   	case ('ho')
 	  ioreal(1:3) = o%homochoric(1:3)
@@ -3325,7 +3250,7 @@ else
   ioreal(4) = ioreal(4)*180.0/sngl(cPi)
   call WriteValue(trim(pret)//'Axis angle pair [n; angle]	: ', ioreal, 4, "(3(F8.4,' '),'; ',F8.4)")
   ioreal(1:3) = o%rodrigues(1:3)
-  call WriteValue(trim(pret)//'Rodrigues vector		: ', ioreal, 3, "(3(F8.4,' '))")
+  call WriteValue(trim(pret)//'Rodigues vector		: ', ioreal, 3, "(3(F8.4,' '))")
   ioreal(1:3) = o%homochoric(1:3)
   call WriteValue(trim(pret)//'Homochoric representation	: ', ioreal, 3, "(3(F8.4,' '))")
   ioreal(1:3) = o%cubochoric(1:3)
@@ -3390,7 +3315,7 @@ if (present(outtype)) then
 
   	case ('ro')
 	  ioreal(1:3) = o%rodrigues(1:3)
-  	  call WriteValue(trim(pret)//'Rodrigues vector		: ', ioreal, 3, "(3(F12.7,' '))")
+  	  call WriteValue(trim(pret)//'Rodigues vector		: ', ioreal, 3, "(3(F12.7,' '))")
 
   	case ('ho')
 	  ioreal(1:3) = o%homochoric(1:3)
@@ -3421,7 +3346,7 @@ else
   ioreal(4) = ioreal(4)*180.D0/cPi
   call WriteValue(trim(pret)//'Axis angle pair [n; angle]	: ', ioreal, 4, "(3(F12.7,' '),'; ',F12.7)")
   ioreal(1:3) = o%rodrigues(1:3)
-  call WriteValue(trim(pret)//'Rodrigues vector		: ', ioreal, 3, "(3(F12.7,' '))")
+  call WriteValue(trim(pret)//'Rodigues vector		: ', ioreal, 3, "(3(F12.7,' '))")
   ioreal(1:3) = o%homochoric(1:3)
   call WriteValue(trim(pret)//'Homochoric representation	: ', ioreal, 3, "(3(F12.7,' '))")
   ioreal(1:3) = o%cubochoric(1:3)

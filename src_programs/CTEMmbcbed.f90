@@ -389,7 +389,7 @@ BetheParameter%reflistindex = BetheParameter%reflistindex + BetheParameter%weakr
   call system_clock(newcount,count_rate,count_max)
   io_real(1)=float(newcount-cnt)/float(count_rate)
   mess = ' Program run completed '; call Message("(/A/)")
-  call WriteValue('Total computation time [s] ' , io_real, 1, "(F)")
+  call WriteValue('Total computation time [s] ' , io_real, 1, "(F10.5)")
 
 ! the final bit of the program involves dumping all the results into a file,
 ! binary for now, but HDF5 in the future, for the IDL visualization program 

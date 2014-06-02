@@ -269,7 +269,8 @@ use crystal
 IMPLICIT NONE
 
  call SafeOpenFile('xt','unformatted',cell%fname)
- open (dataunit,file=cell%fname,status='unknown',form='unformatted')
+ !open (dataunit,file=cell%fname,status='unknown',form='unformatted')
+ open (dataunit,file=cell%fname,form='unformatted')
 ! save lattice parameters, crystal system, space group number and contents
 ! of the asymmetric unit.
  write (dataunit) cell%xtal_system, cell%a,cell%b,cell%c,cell%alpha,cell%beta,cell%gamma

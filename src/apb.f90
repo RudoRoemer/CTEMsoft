@@ -88,7 +88,7 @@ real(kind=sgl)                 :: Vx,Vy,Vz,Vrad,w,tmp(3), tmp2(3), Rx, Ry, Rz
 ! open the apbdata file
 mess = 'Opening '//apbname; call Message("(A)")
 open(unit=dataunit,file=apbname,form='formatted')
-read(unit=dataunit,*) numapb
+read(dataunit,*) numapb ! PGC unit=dataunit -> dataunit
 allocate(apbs(numapb))
 if (dinfo.eq.1) then
   io_int(1) = numapb
@@ -98,7 +98,7 @@ end if
 
 ! read each subsequent line 
 do i=1,numapb
-  read(unit=dataunit,*) Vx,Vy,Vz,Vrad,w,Rx,Ry,Rz
+  read(dataunit,*) Vx,Vy,Vz,Vrad,w,Rx,Ry,Rz ! PGC unit=dataunit -> dataunit
   apbs(i)%xpos = Vx * 0.5 * float(DF_npix)*DF_L
   apbs(i)%ypos = Vy * 0.5 * float(DF_npiy)*DF_L
   apbs(i)%zpos = Vz * foil%z0         ! vertical fractional location in interval [-1,1]

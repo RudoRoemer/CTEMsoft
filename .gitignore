@@ -27,6 +27,9 @@ IDL/**/*.sav
 *.amake
 *.amake.bk
 *.f90.bak
+*.data
+*.xtal
+*.nml
 
 # DOxygen files
 /doc/
@@ -73,3 +76,30 @@ absoft_run_env.sh
 /xtal/
 
 # IDL VM
+
+#lib030414 and other temp test folders #PGC
+/lib030414
+/test_cmp
+/test_lib
+/test_makefile
+/mktest
+
+# .mod’s and .o’s
+*.mod
+*.o
+
+
+#ignoring cmake and other build systems
+CMakeLists.txt.user
+/Build/
+/zRel/
+/CleanBuild/
+.cproject
+.project
+/clang/
+/xcode/
+/x64/
+/i386/
+/qtcreator/
+
+/Debug

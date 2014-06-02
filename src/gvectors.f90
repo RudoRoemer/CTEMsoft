@@ -27,7 +27,6 @@
 ! ###################################################################
 
 
-
 !--------------------------------------------------------------------------
 ! CTEMsoft2013:gvectors.f90
 !--------------------------------------------------------------------------
@@ -47,6 +46,7 @@
 !> to figure out how to change that. 
 ! 
 !> @date   04/29/13 MDG 1.0 original 
+!> @date   03/04/14 PGC ??  gfortran compatiblity changes. eq -> eqv, cabs -> abs
 !--------------------------------------------------------------------------
 module gvectors
 
@@ -75,7 +75,7 @@ type(reflisttype),pointer 	:: reflist, & 	! linked list of reflections
                                 rltmpa,rltmpb 	! temporary pointers
 
 complex(kind=dbl),allocatable 	:: LUT(:,:,:)
-logical,allocatable		:: dbdiff(:,:,:), dbdiffB(:,:,:)
+logical,allocatable		:: dbdiff(:,:,:)
 integer(kind=ish),allocatable	:: refdone(:,:,:)	! used to keep track of which reflections have already been dealt with.
 
 ! define the cutoff parameters for the Bethe potential approach (and set to zero initially)
@@ -742,7 +742,7 @@ nbeams = 0
 ! loop over all reflections in the linked list    
   rltmpa => rltmpa%next
   reflectionloop: do ig=2,DynNbeamsLinked
-    lUg = cabs(rltmpa%Ucg) * mLambda
+    lUg = abs(rltmpa%Ucg) * mLambda ! PGC cabs -> abs
     cut1 = BetheParameter%cutoff * lUg
     cut2 = BetheParameter%weakcutoff * lUg
 
@@ -1025,7 +1025,7 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
 !  weakcutoff lambda |Ug| > |sg|  -> strong reflection
 !
         sgp = abs(rltmpa%sg) 
-        lUg = cabs(rltmpa%Ucg) * mLambda
+        lUg = abs(rltmpa%Ucg) * mLambda ! PGC cabs -> abs
         cut1 = BetheParameter%cutoff * lUg
         cut2 = BetheParameter%weakcutoff * lUg
 
@@ -1137,18 +1137,18 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
               if (ic.ne.ir) then  ! not a diagonal entry
                  ll = BetheParameter%stronghkl(1:3,ir) - BetheParameter%stronghkl(1:3,ic)
                  DynMat(ir,ic) = LUT(ll(1),ll(2),ll(3)) 
-! and subtract from this the total contribution of the weak beams
-                 weaksum = czero
-                 do iw=1,BetheParameter%nnw
-                      ll = BetheParameter%stronghkl(1:3,ir) - BetheParameter%weakhkl(1:3,iw)
-                      ughp = LUT(ll(1),ll(2),ll(3)) 
-                      ll = BetheParameter%weakhkl(1:3,iw) - BetheParameter%stronghkl(1:3,ic)
-                      uhph = LUT(ll(1),ll(2),ll(3)) 
-                      weaksum = weaksum +  ughp * uhph *cmplx(1.D0/BetheParameter%weaksg(iw),0.0,dbl)
-                 end do
-! and correct the dynamical matrix element to become a Bethe potential coefficient
-                 DynMat(ir,ic) = DynMat(ir,ic) - cmplx(0.5D0*mLambda,0.0D0,dbl)*weaksum
-! do we need to add the second order corrections ? NOT YET IMPLEMENTED
+        ! and subtract from this the total contribution of the weak beams
+         weaksum = czero
+         do iw=1,BetheParameter%nnw
+              ll = BetheParameter%stronghkl(1:3,ir) - BetheParameter%weakhkl(1:3,iw)
+              ughp = LUT(ll(1),ll(2),ll(3)) 
+              ll = BetheParameter%weakhkl(1:3,iw) - BetheParameter%stronghkl(1:3,ic)
+              uhph = LUT(ll(1),ll(2),ll(3)) 
+              weaksum = weaksum +  ughp * uhph *cmplx(1.D0/BetheParameter%weaksg(iw),0.0,dbl)
+         end do
+        ! and correct the dynamical matrix element to become a Bethe potential coefficient
+         DynMat(ir,ic) = DynMat(ir,ic) - cmplx(0.5D0*mLambda,0.0D0,dbl)*weaksum
+! do we need to add the second order corrections ?
 		  if (AddSecondOrder) then 
 		    weaksum = czero
 		  end if
@@ -1158,11 +1158,11 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
 		  do iw=1,BetheParameter%nnw
                       ll = BetheParameter%stronghkl(1:3,ir) - BetheParameter%weakhkl(1:3,iw)
                       ughp = LUT(ll(1),ll(2),ll(3)) 
-                      weaksgsum = weaksgsum +  cabs(ughp)**2/BetheParameter%weaksg(iw)
+                      weaksgsum = weaksgsum +  abs(ughp)**2/BetheParameter%weaksg(iw) ! PGC cabs -> abs
                  end do
                  weaksgsum = weaksgsum * mLambda/2.D0
                  DynMat(ir,ir) = cmplx(2.D0*BetheParameter%strongsg(ir)/mLambda-weaksgsum,DynUpz,dbl)
-! do we need to add the second order corrections ? NOT YET IMPLEMENTED
+! do we need to add the second order corrections ?
 		  if (AddSecondOrder) then 
 		    weaksum = czero
 		  end if
@@ -1214,7 +1214,7 @@ weakcutoff = 80.0  	! dimensionless cutoff parameter, smaller = strong, larger =
 cutoff = 160.0		! overall cutoff parameter
 sgcutoff = 0.05		! sg cutoff for double diffraction reflections
 
-if (fexist.eq..TRUE.) then ! check for the file in the local folder
+if (fexist.eqv..TRUE.) then ! check for the file in the local folder!PGC eq -> eqv
 ! read the parameters from the file
  OPEN(UNIT=dataunit,FILE=trim(Bethefilename),DELIM='APOSTROPHE')
  READ(UNIT=dataunit,NML=BetheList)
@@ -1280,16 +1280,10 @@ real(kind=sgl),INTENT(IN),OPTIONAL		:: convang
 
 integer(kind=irg)				:: imh, imk, iml, gg(3), ix, iy, iz, i, minholz, RHOLZ, im, istat, N, &
 						ig, numr, ir, irsel
-real(kind=sgl)					:: dhkl, io_real(9), H, g3(3), g3n(3), FNg(3), ddt, maxang, minang, s, &
-                                              kr(3), dval
+real(kind=sgl)					:: dhkl, io_real(9), H, g3(3), g3n(3), FNg(3), ddt, maxang, minang, s, kr(3)
 integer(kind=irg)				:: io_int(3), gshort(3), gp(3)
 
 logical,allocatable				:: inrange(:)
-
-! first, if khead already exists, delete it
- if (associated(reflist)) then    	 	! deallocate the entire linked list
-    call Delete_gvectorlist()
- end if   
 
 ! determine the master list of reflections for the general case (i.e., a box in reciprocal space)
 if (method.eq.'ALL') then 
@@ -1310,23 +1304,22 @@ call TransSpace(float(k),kr,'d','r')
 ! The master list is easily created by brute force
  imh = 1
  do 
+   imh = imh + 1
    dhkl = 1.0/CalcLength(  (/float(imh) ,0.0_sgl,0.0_sgl/), 'r')
    if (dhkl.lt.dmin) EXIT
-   imh = imh + 1
  end do
  imk = 1
  do 
-   dhkl = 1.0/CalcLength( (/0.0_sgl,float(imk),0.0_sgl/), 'r')
-   if (dhkl.lt.dmin) EXIT
    imk = imk + 1
+   dhkl = 1.0/CalcLength( (/0.0_sgl,float(imk),0.0_sgl/), 'r')
+  if (dhkl.lt.dmin) EXIT
  end do
  iml = 1
  do 
+   iml = iml + 1
    dhkl = 1.0/CalcLength( (/0.0_sgl,0.0_sgl,float(iml)/), 'r')
    if (dhkl.lt.dmin) EXIT
-   iml = iml + 1
  end do
-
  io_int = (/ imh, imk, iml /)
  call WriteValue(' Range of reflections along a*, b* and c* = ',io_int,3)
 
@@ -1337,7 +1330,7 @@ call TransSpace(float(k),kr,'d','r')
 ! allocate an array to keep track of all families of reflections
   allocate(refdone(-imh:imh,-imk:imk,-iml:iml),stat=istat)
 !  refdone = .FALSE.
-  refdone = 0
+ refdone = 0
  
 ! allocate an array that keeps track of potential double diffraction reflections
   allocate(dbdiff(-2*imh:2*imh,-2*imk:2*imk,-2*iml:2*iml),stat=istat)
@@ -1366,10 +1359,9 @@ iyl:  do iy=-2*imk,2*imk
 izl:   do iz=-2*iml,2*iml
         gg = (/ ix, iy, iz /)
         if (IsGAllowed(gg)) then
-         dval = 1.0/CalcLength( float(gg), 'r' )
-         
+
 ! if this g is inside the original box, then add it to the linked list
-         if ((abs(ix).le.imh).and.(abs(iy).le.imk).and.(abs(iz).le.iml).and.(dval.gt.dmin)) then 
+         if ((abs(ix).le.imh).and.(abs(iy).le.imk).and.(abs(iz).le.iml)) then 
 
 ! if we haven't visited this reflection yet
 !	   if ( .not.refdone(ix,iy,iz) ) then
@@ -1650,7 +1642,6 @@ do
   rltail => rltmpa
   rltmpa => rltail % next
 end do
-nullify(reflist)
 
 end subroutine Delete_gvectorlist
 

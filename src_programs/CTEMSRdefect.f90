@@ -129,7 +129,7 @@ real(kind=sgl),allocatable       :: weights(:), inten(:), STEMimages(:,:,:,:)
 integer(kind=irg),allocatable    :: disparray(:,:,:)
 real(kind=sgl),allocatable       :: BFweightsarray(:,:,:),ADFweightsarray(:,:,:)
 
-
+!write (*,*) "Debug Test"
 namelist / SRdeflist / DF_L, DF_npix, DF_npiy, DF_slice, progmode, numvoids, incname, &
                      voidname, numdisl, dislname, numsf, sfname, dinfo, outputformat, &
                      dataname,t_interval,dispfile, SETNTHR, &
@@ -139,7 +139,7 @@ namelist / SRdeflist / DF_L, DF_npix, DF_npiy, DF_slice, progmode, numvoids, inc
 ! first we define the default values
 
 ! parameters specific to this run
- xtalname = 'undefined'		! initial value; MUST be present in nml file for program to execute
+ xtalname = 'Au.xtal'		! initial value; MUST be present in nml file for program to execute
  voltage = 200000.0		        ! accelerating voltage
  SRG = (/ 1,0,0 /)			! systematic row g-vector
  Grange = 4				! maximum positive multiple of g-vector; total number will be 2*Grange+1 
@@ -148,7 +148,7 @@ namelist / SRdeflist / DF_L, DF_npix, DF_npiy, DF_slice, progmode, numvoids, inc
  
 ! input files
  STEMnmlfile = 'STEM_rundata.nml'	! name of the STEM rundata namelist file
- foilnmlfile = 'SRdef_foildata.nml'	! name of the foil rundata namelist file
+ foilnmlfile = 'FOIL_rundata.nml'	! name of the foil rundata namelist file
  
 ! column approximation parameters and image parameters 
  DF_L = 1.0             		! edge length of column in nanometers
@@ -174,7 +174,7 @@ namelist / SRdeflist / DF_L, DF_npix, DF_npiy, DF_slice, progmode, numvoids, inc
 ! output parameters
  dataname = 'SRdefect.data'           ! default output file name
  t_interval = 10       		! default timing interval (output every t_interval image columns)
- SETNTHR = 6                          ! number of threads to use (OpenMP)
+ SETNTHR = 4                          ! number of threads to use (OpenMP)
 
 ! other parameters that the user does not have access to
  Nmat = 3600       			! number of precomputed A matrices to be stored (every 0.1 degrees)
@@ -183,9 +183,9 @@ namelist / SRdeflist / DF_L, DF_npix, DF_npiy, DF_slice, progmode, numvoids, inc
  dgr = 2.D0*cPi/dble(Nmat)       	! angular increment for theta values
 
 ! then we read the rundata namelist, which may override some of these defaults  
- OPEN(UNIT=dataunit,FILE=nmlfile,DELIM='APOSTROPHE')
- READ(UNIT=dataunit,NML=SRdeflist)
- CLOSE(UNIT=dataunit)
+! OPEN(UNIT=dataunit,FILE=nmlfile,DELIM='APOSTROPHE')
+! READ(UNIT=dataunit,NML=SRdeflist)
+! CLOSE(UNIT=dataunit)
 
 ! make sure the xtalname variable has been properly defined
  if (trim(xtalname).eq.'undefined') then
@@ -519,7 +519,7 @@ donpix: do i=1,npix
       end do doslices ! loop over slices
    
 ! compute the (attenuated) intensities for the CTEM and STEM images and store
-      inten(1:nn) = att*cabs(amp(1:nn))**2
+      inten(1:nn) = att*abs(amp(1:nn))**2 ! PGC cabs->abs
       if (progmode.eq.'STEM') then 
           STEMimages(i,j,1:nn,iSTEM) = inten
       end if
@@ -630,7 +630,7 @@ real(kind=dbl)        :: afi(4), afc(4)
 real(kind=dbl)        :: lDFR(3)
 complex(kind=dbl)     :: za(3)
 complex(kind=sgl)     :: zero
-logical               :: void
+logical               :: lvoid ! PGC void -> lvoid
 type (voidtype), allocatable          :: lvoids(:)
 real(kind=sgl),allocatable            :: lsg(:,:)
 type (dislocationtype), allocatable   :: lDL(:)    
@@ -684,7 +684,7 @@ call OMP_SET_NUM_THREADS(SETNTHR)
 ! initiate multi-threaded segment
 !$OMP   PARALLEL DEFAULT(SHARED) &
 !$OMP& PRIVATE(TID,lDFR,gdotR,i,j,k,imat,zt,xpos,ypos,zpos,islice,dis,sumR,tmp,tmp2,tmpf, &
-!$OMP& ii,void,za,zar,zai,zaamp,zaphase,zr,zi,u,jcnt)
+!$OMP& ii,lvoid,za,zar,zai,zaamp,zaphase,zr,zi,u,jcnt)
   NTHR = OMP_GET_NUM_THREADS()
   TID = OMP_GET_THREAD_NUM()
 
@@ -728,18 +728,18 @@ call OMP_SET_NUM_THREADS(SETNTHR)
 ! one of the voids; the calling routine then knows to use the void scattering matrix.
        if (numvoids.ne.0) then 
 ! are we inside a void ?
-           void = .FALSE.
+           lvoid = .FALSE. ! PGC void -> lvoid
            voidloop: do ii=1,numvoids
 ! subtract the void position from the current slice position to get the relative position vector
             tmp = tmpf -  (/ lvoids(ii)%xpos, lvoids(ii)%ypos, lvoids(ii)%zpos /)
             dis = CalcLength(tmp,'c')
             if (dis.lt.lvoids(ii)%radius) then ! inside void
-              void = .TRUE.
+              lvoid = .TRUE. ! PGC void -> lvoid
               exit voidloop
             end if
            end do voidloop
 ! skip the rest of the computation for this slice if we are inside a void
-           if (void.eqv..TRUE.) then 
+           if (lvoid.eqv..TRUE.) then ! PGC void -> lvoid
              lDFR(1) = -10000.0
              cycle sliceloop
            end if

@@ -228,7 +228,7 @@ axisangle      = (/0.0, 0.0, 0.0, 0.0/)        ! no additional axis angle rotati
 open(unit=dataunit,file=trim(anglefile),status='old',action='read')
 
 ! get the type of angle first [ 'eu' or 'qu' ]
-read(unit=dataunit,*) angletype
+read(dataunit,*) angletype
 if (angletype.eq.'eu') then 
   anglemode = 'euler'
 else
@@ -236,7 +236,7 @@ else
 end if
 
 ! then the number of angles in the file
-read(unit=dataunit,*) numeuler
+read(dataunit,*) numeuler
 
 io_int(1) = numeuler
 call WriteValue('Number of angle entries = ',io_int,1)
@@ -246,7 +246,7 @@ if (anglemode.eq.'euler') then
     allocate(eulang(3,numeuler),stat=istat)
 ! if istat.ne.0 then do some error handling ... 
   do i=1,numeuler
-    read(unit=dataunit,*) eulang(1:3,i)
+    read(dataunit,*) eulang(1:3,i)
   end do
   close(unit=dataunit,status='keep')
 
@@ -269,7 +269,7 @@ if (anglemode.eq.'euler') then
 else
   allocate(quatang(4,numeuler),stat=istat)
   do i=1,numeuler
-    read(unit=dataunit,*) quatang(1:4,i)
+    read(dataunit,*) quatang(1:4,i)
   end do
 end if
 close(unit=dataunit,status='keep')

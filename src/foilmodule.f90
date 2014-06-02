@@ -102,7 +102,7 @@ IMPLICIT NONE
 
 integer(kind=sgl),INTENT(IN)	:: dinfo
 
-real(kind=dbl)      		:: ey(3),ex(3),t,dx,dy 
+real(kind=dbl)      		:: ey(3),ex(3),ttt,dx,dy !PGC t->ttt
 real(kind=sgl)			:: io_real(3)
 real(kind=dbl)			:: cp,sp,cs,ss,cr,sr, ca, sa, a_fc(3,3)
 integer(kind=irg) 		:: i,j
@@ -227,11 +227,11 @@ else
   dx = foil%npix*0.5
   dy = foil%npiy*0.5
   do i=1,foil%npix
-   t = foil%brx * (float(i)-dx-foil%cpx)**2
+   ttt = foil%brx * (float(i)-dx-foil%cpx)**2
     do j=1,foil%npiy
 ! initialize the foil shape function; we assume that the center of the elliptic paraboloid is at location (cpx,cpy)
 ! presumably, this surface could also be a saddle point if the brx and bry values have opposite sign ...
-      foil%sg(i,j) = t + foil%bry * (float(j)-dy-foil%cpy)**2+ 2.0*foil%brxy * (float(j)-dy-foil%cpy)*(float(i)-dx-foil%cpx)
+      foil%sg(i,j) = ttt + foil%bry * (float(j)-dy-foil%cpy)**2+ 2.0*foil%brxy * (float(j)-dy-foil%cpy)*(float(i)-dx-foil%cpx)
     end do
   end do
   if (dinfo.eq.1) then

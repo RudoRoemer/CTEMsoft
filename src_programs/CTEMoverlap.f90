@@ -404,7 +404,7 @@ end if
 ! before moving on to crystal B, we need to store the geometrical information on the 
 ! relevant reflections, and the intensities, and then we'll reset the reflection list
   allocate(inten(numthick,numg))
-  inten = cabs(amplitudeA)**2
+  inten = cdabs(amplitudeA)**2 ! MNS from cabs to cdabs for gfortran
   allocate(k0pg(3,numg))
   rltmpa  => reflistA
   numg = 1
@@ -565,7 +565,7 @@ end if
    end do 
 
 ! convert to intensities
-   inten = cabs(amplitudeB)**2
+   inten = cdabs(amplitudeB)**2 ! MNS from cabs to cdabs for gfortran
 
 ! and store the relevant stuff in the output file   
 ! we need to store all the g-vectors, the coordinates of k0+g+h, and the intensities
@@ -688,7 +688,7 @@ rltmpa => reflistA
 !  cutoff lambda |Ug| > |sg|  -> strong reflection
 !
       sgp = abs(rltmpa%sg) 
-      lUg = cabs(rltmpa%Ucg) * mLambda
+      lUg = cdabs(rltmpa%Ucg) * mLambda !MNS from cabs to cdabs for gfortran
       cut1 = BetheParameter%cutoff * lUg
 
       if (sgp.le.cut1) then  ! count this beam
@@ -857,7 +857,7 @@ rltmpa => reflist%next
 !  cutoff lambda |Ug| > |sg|  -> strong reflection
 !
       sgp = abs(rltmpa%sg) 
-      lUg = cabs(rltmpa%Ucg) * mLambda
+      lUg = cdabs(rltmpa%Ucg) * mLambda ! MNS from cabs to cdabs for gfortran
       cut1 = BetheParameter%cutoff * lUg
 
       if (sgp.le.cut1) then  ! count this beam
@@ -1025,6 +1025,7 @@ write (*,*) 'allocated LUT'
 write (*,*) 'allocated refdone'
  
 ! allocate an array that keeps track of potential double diffraction reflections
+!if (allocated(dbdiffB)) deallocate(dbdiffB)
   allocate(dbdiffB(-2*imh:2*imh,-2*imk:2*imk,-2*iml:2*iml),stat=istat)
   dbdiffB = .FALSE.
 !write (*,*) 'allocated dbdiffb'

@@ -755,7 +755,7 @@ TID = OMP_GET_THREAD_NUM()
     end do doslices ! loop over slices 
       
 ! compute the intensities and (for STEM mode) use the proper weight-factor
-    inten(1:nn) = att*cabs(amp(1:nn))**2
+    inten(1:nn) = att*cdabs(amp(1:nn))**2
     if (progmode.eq.'STEM') then
         ZAimages(i,j,1:nn,iSTEM) = inten(1:nn)
     end if
