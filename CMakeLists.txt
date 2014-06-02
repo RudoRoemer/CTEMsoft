@@ -43,24 +43,29 @@ if(BUILD_SHARED_LIBS)
     endif()
 endif(BUILD_SHARED_LIBS)
 
-#include_directories(${CTEMsoft_SOURCE_DIR}/src)
+
+# --------------------------------------------------------------------
+# Over ride CMake's built in module directory by prepending cmp's module
+# directory first
+set(CMAKE_MODULE_PATH ${CTEMsoft_SOURCE_DIR}/Support/CMakeModules ${CMAKE_MODULE_PATH})
 include_directories(${CTEMsoft_BINARY_DIR}/src)
 
+find_package (FFTW3 COMPONENTS single double)
+
+
 ## THIS WILL BE NEEDED FOR WINDOWS
-	#cmake_minimum_required(VERSION 2.8.7.20120206)
-	#project(fortranc)
-	include(CMakeAddFortranSubdirectory)
-	# add the lapack subdirectory as a fortran project
-	# the subdir is lapack, the project is LAPACK
-	cmake_add_fortran_subdirectory(src
-	  NO_EXTERNAL_INSTALL
-	  PROJECT CTEMSoftLib  # project name in toplevel CMakeLists.txt in lapack
-	  #ARCHIVE_DIR lapack/lib # .lib location relative to root binary tree
-	  #RUNTIME_DIR lapack/bin # .dll location relative to root binary tree
-	  LIBRARIES CTEMSoftLib # target libraries created
-	  LINK_LIBRARIES blas lapack  # link interface libraries
-	  LINK_LIBS  CTEMSoftLib blas lapack 
-	   )
+include(CMakeAddFortranSubdirectory)
+# add the lapack subdirectory as a fortran project
+# the subdir is lapack, the project is LAPACK
+cmake_add_fortran_subdirectory(src
+  NO_EXTERNAL_INSTALL
+  PROJECT CTEMSoftLib  # project name in toplevel CMakeLists.txt in lapack
+  #ARCHIVE_DIR lapack/lib # .lib location relative to root binary tree
+  #RUNTIME_DIR lapack/bin # .dll location relative to root binary tree
+  LIBRARIES CTEMSoftLib # target libraries created
+  LINK_LIBRARIES blas lapack  # link interface libraries
+  LINK_LIBS  CTEMSoftLib blas lapack 
+)
 	   
 # FFLAGS depend on the compiler
 get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
