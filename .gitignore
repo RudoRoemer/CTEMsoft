@@ -4,6 +4,8 @@
 # ignore pro.swp files
 *.pro.swp
 
+**/*.*~
+
 *.sav
 *.psd
 
