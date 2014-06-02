@@ -1,12 +1,25 @@
 @EBSDDisplay_event    		; EBSD event handler
-@EBSDgetfilename			; select a geometry file
+@EBSDgetfilename		; select a geometry file
 @EBSDreaddatafile		; read geometry and data files
-@EBSDatternWidget		; display widget
-@EBSDatternWidget_event		; even handler
-@EBSDshow			; show an EBSDattern (with grid)
+@EBSDMCDisplayWidget		; MC display widget
+@EBSDMCDisplayWidget_event	; MC display widget event handler
+@EBSDDetectorWidget		; detector widget
+@EBSDDetectorWidget_event	; detector widget event handler
+@EBSDPatternWidget		; pattern widget
+@EBSDPatternWidget_event	; pattern widget event handler
+@EBSDreadanglefile		; reads a file of euler angles or other representations
 @EBSDevent			; event handler for button groups
+@EBSDshowMC			; display a Lambert projection image
 @EBSDgetpreferences		; read preferences file
 @EBSDwritepreferences		; write preferences file
+@EBSDExecute			; perform the actual pattern computation
+@Core_LambertS2C		; modified Lambert to Lambert projection
+@Core_LambertS2SP		; modified Lambert to stereographic projection
+@Core_colorwheel		; color representation of energy distribution
+@Core_WText			; generate a text widget with a label
+@Core_WTextE			; generate an editable text widget with a label
+@Core_Print			; print messages to status window and log file
+@Core_WidgetEvent		; general data handler for various widget events
 ;
 ; Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
@@ -44,27 +57,41 @@
 ;
 ;> @brief Electron backscatter diffraction pattern display
 ;
-;> @todo 03/19/14 This is the very first implementation of the EBSD visualization GUI.
+;> @details 03/19/14 This is the very first implementation of the EBSD visualization GUI.
 ;> At this stage, we allow the user to display various versions of the Monte Carlo
 ;> results, as well as the master EBSD pattern in a number of projection modes.
 ;> The user can then define a series of detector parameters and compute EBSD
 ;> patterns.  In this version, there are no PSF, scintillator energy dependence,
-;> or microscope geometric distortions; only the detector geometry, noise (on/off)
+;> or microscope geometric distortions; only the detector geometry, noise (on/off),
 ;> binning, and brightness/contrast controls are available.  The other options 
 ;> will be included in the next version (as will be the dictionary generation option).
+;
+;> @todo Long list of things to be added:
+;> - add aperture to pattern, with on-off switch
+;> - complete Rodrigues Fundamental Zone handling
+;> - incorporate automated calibration of pattern parameters
+;> - allow user to save setup for different microscopes
 ;
 ;> @date 01/27/14 MDG 1.0 first attempt at a user-friendly interface
 ;> @date 03/17/14 MDG 1.1 main widget rewrite; prepended 'EBSD' to widget_s and data structures for future merge with other IDL routines
 ;> @date 03/19/14 MDG 1.2 implementation of Monte Carlo and master EBSD widgets
+;> @date 05/22/14 MDG 1.3 completion of single pattern display mode
+;> @date 05/27/14 MDG 1.4 completion of angle file display mode
 ;--------------------------------------------------------------------------
 pro EBSDDisplay,dummy
 ;
 ;------------------------------------------------------------
 ; common blocks
 common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, data
+common EBSD_data_common, EBSDdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 common PointGroups, PGTHD, PGTWD, DG
+
+common EBSDmasks, circularmask
+
+common CommonCore, status, logmode, logunit
+
+common projections, mcxcircle, mcycircle, mpxcircle, mpycircle, mcSPxcircle, mcSPycircle, mpSPxcircle, mpSPycircle 
 
 PGTWD = [ 'none',' 1',' 2',' m',' 2mm',' 4',' 4mm',' 3',' 3m1',' 31m',' 6',' 6mm'] 
 PGTHD = ['  ' ,' 1',' -1',' 2',' m',' 2/m',' 222', $
@@ -82,6 +109,8 @@ DG = ['  ',' 1',' 1R',' 2',' 2R',' 21R','  mR', $
 
 !EXCEPT=0
 
+circularmask = fltarr(10,10)
+
 ;------------------------------------------------------------
 ; make sure that this program isn't already running
 if (XRegistered("EBSDDisplay") NE 0) then begin
@@ -92,48 +121,133 @@ end
 ;------------------------------------------------------------
 ; define a few structures (one for widgets, and one for data)
 EBSDwidget_s = {widgetstruct, $
-            base:long(0), $                     ; base widget ID
+	base:long(0), $                     	; base widget ID
 
-            EBSDatternbase:long(0), $            ; display window widget ID
-            EBSDthicklist:long(0), $             ; integration depth widget
-            EBSDgridbgroup:long(0), $            ; grid button group
-            EBSDformatbgroup:long(0), $          ; file format button group
-            EBSDDraw:long(0), $                  ; pattern draw widget
-            EBSDDrawID:long(0), $                ; pattern draw widget ID
-            filename:long(0), $                 ; file name field
-            xtalname:long(0), $                 ; structure file name field
-            filesize:long(0), $                 ; file size field
-            mainstop:long(0), $                 ; program quit button
-            loadfile:long(0), $                 ; load file button
-            symCPG:long(0), $                   ; crystallographic point group
-            symWPG:long(0), $                   ; whole pattern symmetry group
-            imx:long(0), $                      ; pattern x dimension
-            imy:long(0), $                      ; pattern y dimension
-            numk:long(0), $                     ; number of wave vectors used 
-            numthick:long(0), $                 ; number of thickness values
-            thetac:long(0), $                   ; pattern convergence angle
-            wavek:long(0), $                    ; zone axis indices 
-            blur:float(0.0), $                  ; blur factor widget
-            cx:long(0), $                       ; x-coordinate field
-            cy:long(0), $                       ; y-coordinate field
-            voltage:long(0), $                  ; microscope voltage
-            abcdist:long(0), $                  ; lattice parameters
-            albegadist:long(0), $               ; lattice parameters (angles)
-            logodraw:long(0), $                 ; logo widget 
-            logodrawID:long(0) $                ; logo widget ID
+	; Monte Carlo widget ids
+	mcfilename: long(0), $			; Monte Carlo filename
+	mcfilesize: long(0), $			; file size in bytes
+	mcenergymin: long(0), $			; minimum energy
+	mcenergymax: long(0), $			; maximum energy
+	mcenergybinsize: long(0), $		; energy bin size
+	mcenergynumbin: long(0), $		; number of energy bins
+	voltage: long(0), $			; microscope voltage
+	mcdepthmax: long(0), $			; maximum penetration depth
+	mcdepthstep: long(0), $			; step size for depth
+	mcdepthnumbins: long(0), $		; number of depth bins
+	mcimx: long(0), $			; N in 2N+1 (x-pixels)
+	mcimy: long(0), $			; N in 2N+1 (y-pixels)
+	mctotale: long(0), $			; total number of incident electrons
+	mcbse: long(0), $			; total number of bacck-scattered electrons
+	mcvangle: long(0), $			; vertical tilt angle
+	mchangle: long(0), $			; horizontal tilt angle
+	mcmode: long(0), $			; Monte Carlo mode
+	mcloadfile: long(0), $                  ; load file button
+	mcdisplay: long(0), $                   ; MC display button
+	   
+	; Master Pattern widget ids
+	mpfilename: long(0), $			; file name for master pattern
+	mpfilesize: long(0), $			; file size in bytes
+	mpimx: long(0), $			; x-pixels N as in (2N+1)
+	mpimy: long(0), $			; y-pixels (should be equal to mpimx)
+	mpgridmode: long(0), $			; Lambert grid mode
+	asymunit: long(0), $			; widget for asymmetric unit position selection
+	xtalname: long(0), $			; file name for crystal structure data
+	mploadfile: long(0), $                  ; load file button
+
+	; detector parameter widget ids
+	detL: long(0), $			; sample scintillator distance [microns]
+	dettheta: long(0), $			; detector tilt angle [degrees]
+	detdelta: long(0), $			; detector pixel size [microns]
+	detnumsx: long(0), $			; number of x-pixels
+	detnumsy: long(0), $			; number of y-pixels
+	detxpc: long(0), $			; x -pattern center [pixels]
+	detypc: long(0), $			; y -pattern center [pixels]
+	detbinning: long(0), $			; binning
+	detbeamcurrent: long(0), $		; beam current [nA]
+	detdwelltime: long(0), $		; dwell time [mu s]
+	detphi1: long(0), $			; phi1 Euler angle 
+	detphi: long(0), $			; phi Euler angle 
+	detphi2: long(0), $			; phi2 Euler angle 
+	EulerConvention: long(0), $		; Euler angle convention for phi2 (TSL or HKL)
+	BGmode: long(0), $			; background/full display mode
+	EBSDminenergylist: long(0), $		; min energy widget
+	EBSDmaxenergylist: long(0), $		; max energy widget
+	PatternOrigin: long(0), $		; pattern origin widget
+	Patternmin: long(0), $			; pattern min widget
+	Patternmax: long(0), $			; pattern max widget
+	detax1: long(0), $			; axis angle pair component
+	detax2: long(0), $			; axis angle pair component
+	detax3: long(0), $			; axis angle pair component
+	detax4: long(0), $			; axis angle pair component
+
+	; pattern parameters for display
+	Pmode: long(0), $			; pattern mode widget
+	EBSDpatternfilename: long(0), $		; output file name widget
+	EBSDgetpatternfilename: long(0), $	; output file name button
+	EBSDanglefilename: long(0), $		; angle file name widget
+	EBSDgetanglefilename: long(0), $	; angle file name widget
+	EBSDdictfilename: long(0), $		; dictionary file name widget
+	EBSDgetdictfilename: long(0), $		; dictionary file name widget
+	angletype: long(0), $			; angle type widget (Euler of Quaternion)
+	numangles: long(0), $			; number of angles widget
+	PGdroplist: long(0), $			; point group selector droplist
+	Ncubochoric: long(0), $			; cubochoric # sampling points widget
+	NinRFZ: long(0), $			; number of point in Rodrigues FZ widget
+	GoEBSD: long(0), $			; EBSD compute button
+	GoDict: long(0), $			; Dictionary compute button
+	GoAngle: long(0), $			; Angle file compute button
+	GoDictionary: long(0), $		; Dictionary file compute button
+	DisplayEBSD: long(0), $			; display EBSD button
+	PatternScaling: long(0), $		; pattern scaling type widget
+	gammaslider: long(0), $			; gamma correction slider
+	DetectorClose: long(0), $		; Close detector widget
+	PatternClose: long(0), $		; Close pattern widget
+	PatternDraw: long(0), $			; Pattern draw widget
+	PatternDrawID: long(0), $		; Pattern draw widget ID
+	angledisplay: long(0), $		; text widget to display angles
+	circularmask: long(0), $		; circular mask display
+
+	; other collected items
+	MCdisplaybase: long(0), $		; Monte Carlo display base
+	MPdisplaybase: long(0), $		; Master Pattern & Monte Carlo display base
+	detectorbase: long(0), $		; detector base widget
+	patternbase: long(0), $			; pattern base widget
+	status:long(0), $                       ; status window
+	logfile: long(0), $			; logfile toggle widget ID
+	detector:long(0), $                     ; detector widget
+	MCbutton:long(0), $                     ; MC button ID
+	MCslider:long(0), $                     ; MC slider ID
+	MCenergyval: long(0), $			; MC energy value
+        MCmin: long(0), $                       ; MC display minimum
+        MCmax: long(0), $                       ; MC display maximum
+        MPbutton:long(0), $                     ; MP button ID
+        MPmin: long(0), $                       ; MP display minimum
+        MPmax: long(0), $                       ; MP display maximum
+	MCDraw:long(0), $                       ; pattern draw widget
+	MCDrawID:long(0), $                     ; pattern draw widget
+	MPDraw:long(0), $                       ; pattern draw widget
+	MPDrawID:long(0), $                     ; pattern draw widget
+	mainstop:long(0), $                     ; program quit button
+	logodraw:long(0), $                     ; logo widget 
+	logodrawID:long(0),$                    ; logo widget ID
+	EBSDformatbgroup: long(0), $		; image file format widget
+	MCLambertSelector:long(0),$             ; Lambert Selector widget ID
+	MPLambertSelector:long(0),$             ; Lambert Selector widget ID
+	MCLambertMode: long(0) $		; Lambert sum or individual image mode
            }
 
 EBSDdata = {EBSDdatastruct, $
 	; Monte Carlo parameters first 
-	mcdataname: '', $			; Monte Carlo result file name
+	mcfilename: '', $			; Monte Carlo result file name
 	mcfilesize: long64(0), $		; Monte Carlo file size [bytes]
 	mcenergymin: float(0.0), $		; minimum energy
 	mcenergymax: float(0.0), $		; maximum energy
 	mcenergybinsize: float(0.0), $		; energy bin size
-	mcenergynumbins: long(0), $		; number of energy bins
+	mcenergynumbin: long(0), $		; number of energy bins
 	voltage: float(0.0), $			; microscope voltage
 	mcdepthmax: float(0.0), $		; maximum depth in MC file
 	mcdepthstep: float(0.0), $		; depth step size
+	mcdepthnumbins: long(0), $		; number of depth bins
 	mcimx: long(0), $			; number of pixels along x in modified Lambert map
 	mcimy: long(0), $			; same along y
 	mctotale: long(0), $			; total number of electrons hitting the sample
@@ -141,35 +255,108 @@ EBSDdata = {EBSDdatastruct, $
 	mcvangle: float(0.0), $			; vertical sample tilt angle (around TD)
 	mchangle: float(0.0), $			; horizontal sample tilt angle (around RD)
 	mcmode: '', $				; 'CSDA' (continuous slowing down approximation) or 'DLOS' (discrete losses)
+	Esel: long(0), $			; energy selection for slider in MC and MP display routines
+	mcprogname: '', $ 			; MC program name
+	mcscversion: '', $ 			; source code version number
+	mcdataedims: lon64arr(3), $		; dimensions of accum_e
+	mcdatazdims: lon64arr(4), $		; dimensions of accum_z
+
 	; then Master Pattern parameters
+	mpfilename: '', $ 			; master pattern file name
+	mpfilesize: long(0), $			; size (in bytes) of master pattern file
+	mpimx: long(0), $			; number of x-pixels in master pattern (N in 2N+1)
+	mpimy: long(0), $			; same along y
+	numset: long(0), $			; number of positions in asymmetric unit
+	Asymsel: long(-1), $			; which asymmetric unit position to display?
+	atnum: lonarr(250), $			; number of atoms in asymmetric unit 
+	mpenergynumbin: long(0), $		; number of energy bins (may be different from MC file)
+	mpgridmode: '', $			; 'hex' or 'squ' for Lambert grid type
+	xtalname: '', $				; crystal structure filename
+	mpprogname: '', $ 			; Master Pattern program name
+	mpscversion: '', $ 			; source code version number
+	mpdatadims: lon64arr(3), $		; dimensions of raw data array
+
+	; detector parameters
+	detL: float(0), $			; scintillator - sample distance [microns]
+	dettheta: float(0), $			; detector tilt angle [degrees]
+	detdelta: float(0), $			; scintillator pixel size [microns]
+	detnumsx: long(0), $			; number of x-pixels
+	detnumsy: long(0), $			; number of y-pixels
+	detxpc: float(0), $			; x-pattern center [pixels]
+	detypc: float(0), $			; y-pattern center [pixels]
+	detbinning: long(0), $			; binning
+	detbeamcurrent: float(0), $		; beam current [nA]
+	detdwelltime: float(0), $		; dwell time [mu s]
+	detphi1: float(0), $			; phi1 Euler angle 
+	detphi: float(0), $			; phi Euler angle 
+	detphi2: float(0), $			; phi2 Euler angle 
+	EulerConvention: long(0), $		; Euler angle convention (TSL = 0, HKL = 2)
+	BGmode: long(0), $			; background/full pattern display mode
+	Eminsel: long(0), $			; min energy selection 
+	Emaxsel: long(0), $			; max energy selection 
+	PatternOrigin: long(0), $		; pattern origin indicator
+	PatternScaling: long(0), $		; pattern scaling type (0=linear, 1=gamma)
+	gammavalue: float(0), $			; gamma correction factor
+	Patternmin: float(0), $			; pattern min indicator
+	Patternmax: float(0), $			; pattern max indicator
+	detax1: float(0), $			; axis angle pair component
+	detax2: float(0), $			; axis angle pair component
+	detax3: float(0), $			; axis angle pair component
+	detax4: float(0), $			; axis angle pair component
+	currentpatternID: long(0), $		; pattern ID number
+	showcircularmask: long(0), $		; show circular mask (or not)
+	currentdisplaywidgetmode:long(0), $	; current display widget mode (single or other) 
+
+	; pattern parameters for display
+	Pmode: long(0), $			; pattern mode (0=single, 1=angle file, 2=dictionary)
+	EBSDpatternfilename: '', $		; name for EBSD output file
+	EBSDanglefilename: '', $		; name for EBSD angle file
+	EBSDdictfilename: '', $			; name for EBSD dictionary file
+	angletype: '', $			; angle type (euler, quaternion)
+	numangles: long(0), $			; number of angles in file
+	Dictpointgroup: long(0), $		; point group number
+	RodriguesFZType: long(0), $		; Fundamental Zone type (0=full, 1=Cyclic, 2=Dihedral, 3=Tetrahedral, 4=Octahedral)
+	Ncubochoric: long(0), $			; number of sampling points for cubochoric cell (N, as in 2N+1)
+	NinRFZ: long(0), $			; number of points in Rodrigues Fundamental Zone
+	f90exepath: 'path_unknown', $		; path to f90 executables
 
 	; then general program parameters
 	eventverbose: fix(0), $			; used for event debugging (0=off, 1=on)
-	dataname: '', $				; filename (without pathname)
+	scversion: '', $			; source code version number
 	pathname: '', $				; pathname (obviously)
 	suffix: '', $				; filename suffix 
-	filesize: long64(0), $			; input file size in bytes
 	homefolder: '', $			; startup folder of the program
 	EBSDroot: 'undefined', $		; current pathname (is stored in preferences file)
 	prefname: '~/.EBSDgui.prefs', $		; filename of preferences file (including path)
 	nprefs: fix(0), $			; number of preferences in file
-	progname: '',$				; program name
-	scversion: '',$				; program version
+	MCLSmode: fix(0), $			; Monte Carlo Lambert Selector tag
+	MCLSum: fix(0), $			; Monte Carlo Lambert sum or individual tag
+	MPLSmode: fix(0), $			; Master Pattern Lambert Selector tag
+        MCMPboth: long(0), $                    ; switch for MC or MC/MP display
+        MCmin: long(0), $                       ; min value for MC display
+        MCmax: long(0), $                       ; max value for MC display
+        MPmin: float(0), $                      ; min value for MP display
+        MPmax: float(0), $                      ; max value for MP display
+        imageformat: long(0), $                 ; image format 'jpeg', 'tiff', 'bmp'
+	logmode: fix(0), $			; keep a log file or not
+	logunit: fix(13), $			; logical file unit for log file
+	logname: '', $				; filename for log output
+	logfileopen: fix(0), $			; log file is open when 1, closed when 0
 
-	datadims: lon64arr(3), $		; dimensions of raw data array
-	xtalname: '', $				; crystal structure filename
-	wavelength: float(0.0), $		; electron wavelength
-	ecplegend: long(0), $			; display pattern scale bar toggle (0=do not display, 1=display)
-	ecpformat: long(0), $			; pattern output format selector (0=jpeg, 1=tiff, 2=bmp)
-	ecpgrid: long(0), $			; grid display selector (0 = off, 1 = on)
-	nums: long(0), $			; number of pixels along disk radius (diameter = 2*nums+1)
-	scale: float(0.0), $			; scale factor for CBED, [number of pixels per reciprocal nanometer]
 
 	; widget location parameters
 	xlocation: float(0.0), $		; main widget x-location (can be modified and stored in preferences file)
 	ylocation: float(0.0), $		; main widget y-location (can be modified and stored in preferences file)
+	patternxlocation: float(600.0), $	; pattern widget x-location (can be modified and stored in preferences file)
+	patternylocation: float(100.0), $	; pattern widget y-location 
 	EBSDxlocation: float(600.0), $		; image widget x-location (can be modified and stored in preferences file)
 	EBSDylocation: float(100.0), $		; image widget y-location 
+	MCxlocation: float(600.0), $		; Monte Carlo widget x-location (can be modified and stored in preferences file)
+	MCylocation: float(100.0), $		; Monte Carlo widget y-location 
+	MPxlocation: float(600.0), $		; Master Pattern widget x-location (can be modified and stored in preferences file)
+	MPylocation: float(100.0), $		; Master Pattern widget y-location 
+	Detectorxlocation: float(600.0), $	; detector widget x-location (can be modified and stored in preferences file)
+	Detectorylocation: float(100.0), $	; detector widget y-location 
         scrdimx:0L, $                           ; display area x size in pixels 
         scrdimy:0L $                            ; display area y size in pixels 
         }
@@ -188,7 +375,7 @@ device,decomposed = 0
 device, GET_SCREEN_SIZE = scr
 
 sar = float(scr[0])/float(scr[1])
-if sar gt (1.1*16.0/9.0) then begin !PGC
+if (sar gt (1.1*16.0/9.0)) then begin
 	scr[0] = scr[0]/2
 end
 EBSDdata.scrdimy = scr[1] * 0.8
@@ -198,13 +385,13 @@ EBSDdata.ylocation = EBSDdata.scrdimx / 8.0
 
 ;------------------------------------------------------------
 ; does the preferences file exist ?  If not, create it, otherwise read it
-EBSDgetpreferences
+EBSDgetpreferences,/noprint
 
 ;------------------------------------------------------------
 ; create the top level widget
-EBSDwidget_s.base = WIDGET_BASE(TITLE='Electron Backscatter Diffraction Pattern Display Program', $
-                        /COLUMN, $
-                        XSIZE=700, $
+EBSDwidget_s.base = WIDGET_BASE(TITLE='Electron Backscatter Diffraction Display Program', $
+                        /ROW, $
+                        XSIZE=1220, $
                         /ALIGN_LEFT, $
 			/TLB_MOVE_EVENTS, $
 			EVENT_PRO='EBSDDisplay_event', $
@@ -212,10 +399,11 @@ EBSDwidget_s.base = WIDGET_BASE(TITLE='Electron Backscatter Diffraction Pattern 
                         YOFFSET=EBSDdata.ylocation)
 
 ;------------------------------------------------------------
-; create the various vertical blocks
-; block 1 deals with the input file and displays the EBSDdata.dimensions
+; create the two main columns
+; block 1 is the left column, with logo and MC information
 block1 = WIDGET_BASE(EBSDwidget_s.base, $
 			/FRAME, $
+			XSIZE=610, $
 			/ALIGN_CENTER, $
 			/COLUMN)
 
@@ -227,278 +415,135 @@ EBSDwidget_s.logodraw = WIDGET_DRAW(block1, $
 			XSIZE=600, $
 			YSIZE=200)
 
-
-;------------------------------------------------------------
-;------------------------------------------------------------
-; then we need a couple of control buttons: Quit, LoadMC, LoadMaster, Detector
-
-
-
-;------------------------------------------------------------
-;------------------------------------------------------------
-; this is the middle block that will display Monte Carlo file information; no user interactions here
-; except for a few buttons.
-block1 = WIDGET_BASE(EBSDwidget_s.base, /FRAME, /COLUMN, TITLE='Monte Carlo Trajectory Simulation Parameters')
-
-;----------
-; things to display from the MC file:  
-;   file name and size 
-;   min and max energy, bins size, number of bins
-;   microscope voltage
-;   depth max, and depth step size
-;   number of pixels in modified Lambert projection 
-;   total number of electrons in MC run; total number of BSE electrons
-;   sample tilt angles
-;   MC mode (CSDA, other)
-
-
-;---------- file name and size
-file1 = WIDGET_BASE(block1, /ROW, XSIZE=700, /ALIGN_CENTER)
-EBSDwidget_s.mcfilename = Core_WText(file1,'MC Data File Name', fontstrlarge, 200, 25, 77, 1, EBSDdata.mcdataname)
-file1 = WIDGET_BASE(block1, /ROW, /BASE_ALIGN_BOTTOM, /ALIGN_LEFT)
-EBSDwidget_s.mcfilesize = Core_WText(file1,'MC Data File Size', fontstrlarge, 200, 25, 40, 1, string(EBSDdata.mcfilesize,FORMAT="(I)")+' bytes',/aright) 
-
-;---------- min and max energy
-file1 = WIDGET_BASE(block1, /ROW, XSIZE=700, /ALIGN_CENTER)
-EBSDwidget_s.mcenergymin = Core_WText(file1,'Min/Max energy', fontstrlarge, 200, 25, 77, 1, string(EBSDdata.mcenergymin,format="(F6.2)"))
-EBSDwidget_s.mcenergymax = Core_WText(file1,' / ', fontstrlarge, 3, 25, 77, 1, string(EBSDdata.mcenergymax,format="(F6.2)"))
-
-;---------- bin size, number of bins
-file1 = WIDGET_BASE(block1, /ROW, XSIZE=700, /ALIGN_CENTER)
-EBSDwidget_s.mcenergybinsize = Core_WText(file1,'Energy binsize/#', fontstrlarge, 200, 25, 77, 1, string(EBSDdata.mcenergybinsize,format="(F6.2)"))
-EBSDwidget_s.mcenergynumbin = Core_WText(file1,' / ', fontstrlarge, 3, 25, 77, 1, string(EBSDdata.mcenergynumbin,format="(I5)"))
-
-;---------- microscope voltage
-file1 = WIDGET_BASE(block1, /ROW, /ALIGN_LEFT)
-EBSDwidget_s.voltage = Core_WText(file1,'Voltage [V]', fontstrlarge, 200, 25, 10, 1, string(EBSDdata.voltage,FORMAT="(F7.1)")) 
-
-;---------- depth max, and depth stepsize
-file1 = WIDGET_BASE(block1, /ROW, /ALIGN_LEFT)
-EBSDwidget_s.mcdepthmax = Core_WText(file1,'Depth max/step [nm]', fontstrlarge, 200, 25, 10, 1, string(EBSDdata.mcdepthmax,FORMAT="(F7.1)")) 
-EBSDwidget_s.mcdepthstep = Core_WText(file1,' / ', fontstrlarge, 3, 25, 10, 1, string(EBSDdata.mcdepthstep,FORMAT="(F7.1)")) 
-
-;---------- dimensions of modified Lambert projection 
-file1 = WIDGET_BASE(block1, /ROW, /ALIGN_LEFT)
-EBSDwidget_s.mcimx = Core_WText(file1,'Lambert Dimensions', fontstrlarge, 200, 25, 10, 1, string(EBSDdata.mcimx,FORMAT="(I5)")) 
-EBSDwidget_s.mcimy = Core_WText(file1,'by', fontstrlarge, 200, 25, 10, 1, string(EBSDdata.mcimy,FORMAT="(I5)")) 
-
-;---------- total and backscattered numbers of electrons
-file1 = WIDGET_BASE(block1, /ROW, /ALIGN_LEFT)
-EBSDwidget_s.mctotale = Core_WText(file1,'Total #/backscattered e', fontstrlarge, 200, 25, 10, 1, string(EBSDdata.mctotale,FORMAT="(I12)")) 
-EBSDwidget_s.mcbse = Core_WText(file1,' / ', fontstrlarge, 3, 25, 10, 1, string(EBSDdata.mcbse,FORMAT="(I12)")) 
-
-;---------- sample tilt angles 
-file1 = WIDGET_BASE(block1, /ROW, /ALIGN_LEFT)
-EBSDwidget_s.mcvangle = Core_WText(file1,'Sample tilt angles (v, h)', fontstrlarge, 200, 25, 10, 1, string(EBSDdata.mcvangle,FORMAT="(F7.2)")) 
-EBSDwidget_s.mchangle = Core_WText(file1,', ', fontstrlarge, 3, 25, 10, 1, string(EBSDdata.mhvangle,FORMAT="(F7.2)")) 
-
-;---------- Monte Carlo mode 
-file1 = WIDGET_BASE(block1, /ROW, /ALIGN_LEFT)
-EBSDwidget_s.mcmode = Core_WText(file1,'MC Mode ', fontstrlarge, 200, 25, 10, 1, EBSDdata.mcmode) 
-
-;---------- and finally we need a button on the lower right to call up the MCDisplay widget
-
-
-;------------------------------------------------------------
-;------------------------------------------------------------
-
-
-
-
-;------------------------------------------------------------
-;------------------------------------------------------------
-; this is the central block that will display Master Pattern file information; no user interactions here
-; except for a few buttons.
-block1 = WIDGET_BASE(EBSDwidget_s.base, /FRAME, /COLUMN, TITLE='Master Pattern Simulation Parameters')
-
-;----------
-; EBSDdata.things to display from the Master Pattern file:  
-;   file name and size
-;   number of pixels in modified Lambert projection
-;   xtal file name
-;   space group
-;   etc...
-
-;---------- file name and size
-file1 = WIDGET_BASE(block1, /ROW, XSIZE=700, /ALIGN_CENTER)
-EBSDwidget_s.mpfilename = Core_WText(file1,'MP Data File Name', fontstrlarge, 200, 25, 77, 1, EBSDdata.mpdataname)
-file1 = WIDGET_BASE(block1, /ROW, /BASE_ALIGN_BOTTOM, /ALIGN_LEFT)
-EBSDwidget_s.mpfilesize = Core_WText(file1,'MP Data File Size', fontstrlarge, 200, 25, 40, 1, string(EBSDdata.mpfilesize,FORMAT="(I)")+' bytes',/aright) 
-
-;---------- dimensions of modified Lambert projection 
-file1 = WIDGET_BASE(block1, /ROW, /ALIGN_LEFT)
-EBSDwidget_s.mpimx = Core_WText(file1,'Lambert Dimensions', fontstrlarge, 200, 25, 10, 1, string(EBSDdata.mpimx,FORMAT="(I5)")) 
-EBSDwidget_s.mpimy = Core_WText(file1,'by', fontstrlarge, 200, 25, 10, 1, string(EBSDdata.mpimy,FORMAT="(I5)")) 
-
-;---------- crystal structure file name
-file1 = WIDGET_BASE(block1, /ROW, /ALIGN_LEFT)
-EBSDwidget_s.xtalname = Core_WText(file1,'Structure file', fontstrlarge, 200, 25, 20, 1, EBSDdata.xtalname)
-
-
-
-
-
-
-
-;----------- next we have a series of parameters that are 
-; derived from the input file and can not be changed by
-; the user...
-
-;-------------
-file5 = WIDGET_BASE(file4, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file5, $
-			VALUE='# of thicknesses', $
-			FONT=fontstrlarge, $
-			XSIZE=230, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-EBSDwidget_s.numthick= WIDGET_TEXT(file5, $
-			VALUE=string(EBSDdata.datadims[2],format="(I5)"),$
-			XSIZE=10, $
-			/ALIGN_LEFT)
-
-;-------------
-file5 = WIDGET_BASE(file4, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file5, $
-			VALUE='Beam Convergence [mrad]', $
-			FONT=fontstrlarge, $
-			XSIZE=230, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-EBSDwidget_s.thetac= WIDGET_TEXT(file5, $
-			VALUE=string(EBSDdata.thetac,format="(F6.3)"),$
-			XSIZE=10, $
-			/ALIGN_LEFT)
-
-;-------------
-
-
-;-------------
-;-------------
-file6 = WIDGET_BASE(block2, $
-			/COLUMN, $
-			/ALIGN_LEFT)
-
-;-------------
-file7 = WIDGET_BASE(file6, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file7, $
-			VALUE='# of k-vectors', $
-			FONT=fontstrlarge, $
-			XSIZE=200, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-EBSDwidget_s.numk= WIDGET_TEXT(file7, $
-			VALUE=string(EBSDdata.numk,format="(I5)"),$
-			XSIZE=20, $
-			/ALIGN_LEFT)
-
-;-------------
-file7 = WIDGET_BASE(file6, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file7, $
-			VALUE='Structure File', $
-			FONT=fontstrlarge, $
-			XSIZE=200, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-EBSDwidget_s.xtalname= WIDGET_TEXT(file7, $
-			VALUE=EBSDdata.xtalname,$
-			XSIZE=20, $
-			/ALIGN_LEFT)
-
-;-------------
-file7 = WIDGET_BASE(file6, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file7, $
-			VALUE='Zone Axis [uvw]', $
-			FONT=fontstrlarge, $
-			XSIZE=200, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-wv = '['+string(EBSDdata.wavek[0],format="(I2)")+' '+ string(EBSDdata.wavek[1],format="(I2)")+' '+ string(EBSDdata.wavek[2],format="(I2)")+']'
-EBSDwidget_s.wavek= WIDGET_TEXT(file7, $
-			VALUE=wv,$
-			XSIZE=20, $
-			/ALIGN_LEFT)
-
-
-;----------- next we have the lattice parameters
-
+; this is the rightmost block; will be filled in later
 block2 = WIDGET_BASE(EBSDwidget_s.base, $
+			XSIZE=610, $
 			/FRAME, $
 			/COLUMN)
 
-file4 = WIDGET_BASE(block2, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file4, $
-			VALUE='Lattice parameters ', $
-			FONT=fontstrlarge, $
-			XSIZE=200, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-pp = string(EBSDdata.abcdist[0],format="(F10.5)")+', '+ string(EBSDdata.abcdist[1],format="(F10.5)")+', '+ string(EBSDdata.abcdist[2],format="(F10.5)")+' [nm]'
-EBSDwidget_s.abcdist= WIDGET_TEXT(file4, $
-			VALUE=pp,$
-			XSIZE=45, $
-			/ALIGN_LEFT)
-
-file4 = WIDGET_BASE(block2, $
-			/ROW, $
-			/ALIGN_LEFT)
-
-label2 = WIDGET_LABEL(file4, $
-			VALUE='                   ', $
-			FONT=fontstrlarge, $
-			XSIZE=200, $
-			YSIZE=25, $
-			/ALIGN_LEFT)
-
-pp = string(EBSDdata.albegadist[0],format="(F10.5)")+', '+ string(EBSDdata.albegadist[1],format="(F10.5)")+', '+ string(EBSDdata.albegadist[2],format="(F10.5)")+' [degrees]'
-EBSDwidget_s.albegadist= WIDGET_TEXT(file4, $
-			VALUE=pp,$
-			XSIZE=45, $
-			/ALIGN_LEFT)
-
-;------------------------------------------------------------
-block3 = WIDGET_BASE(EBSDwidget_s.base, /FRAME, /ROW)
-
-;-------------
-file5 = WIDGET_BASE(block3, /ROW, /ALIGN_LEFT)
-EBSDwidget_s.symCPG = Core_WText(file5, 'Crystal PG',fontstrlarge, 230, 25, 10, 1, PGTHD[EBSDdata.symgroups[0]] )
-EBSDwidget_s.symWPG = Core_WText(file5, 'Whole Pattern PG',fontstrlarge, 230, 25, 10, 1, PGTWD[EBSDdata.symgroups[5]] )
 
 
 ;------------------------------------------------------------
-; block 3 QUIT button, LOAD FILE button
-block3 = WIDGET_BASE(EBSDwidget_s.base, $
-			XSIZE=650, $
-			/FRAME, $
-			/ROW)
+;------------------------------------------------------------
+; this is the block that will display Monte Carlo file information; no user interactions here
+; except for a single button.
+block11 = WIDGET_BASE(block1, /FRAME, /COLUMN, TITLE='Monte Carlo Trajectory Simulation Parameters')
 
-file11 = WIDGET_BASE(block3, $
-			/ROW, $
+file1 = WIDGET_BASE(block11, /ROW, XSIZE=600, /ALIGN_RIGHT)
+file2 = WIDGET_LABEL(file1, VALUE='Monte Carlo Trajectory Simulation Parameters', font=fontstrlarge, /ALIGN_RIGHT)
+
+EBSDwidget_s.MCbutton= WIDGET_BUTTON(file1, $
+                      UVALUE='MCDISPLAY', $
+                      VALUE='Display', $
+                      EVENT_PRO='EBSDDisplay_event', $
+                      SENSITIVE=0, $
+		      /ALIGN_RIGHT, $
+                      /FRAME)
+
+;---------- file name and size
+file1 = WIDGET_BASE(block11, /ROW, XSIZE=600, /ALIGN_CENTER)
+EBSDwidget_s.mcfilename = Core_WText(file1,'MC Data File Name', fontstrlarge, 200, 25, 60, 1, EBSDdata.mcfilename)
+file1 = WIDGET_BASE(block11, /ROW, /BASE_ALIGN_BOTTOM, /ALIGN_LEFT)
+EBSDwidget_s.mcfilesize = Core_WText(file1,'MC Data File Size', fontstrlarge, 200, 25, 30, 1, string(EBSDdata.mcfilesize,FORMAT="(I12)")+' bytes') 
+
+;---------- min and max energy
+file1 = WIDGET_BASE(block11, /ROW, XSIZE=600, /ALIGN_CENTER)
+EBSDwidget_s.mcenergymin = Core_WText(file1,'Min/Max energy [keV]', fontstrlarge, 200, 25, 20, 1, string(EBSDdata.mcenergymin,format="(F6.2)"))
+EBSDwidget_s.mcenergymax = Core_WText(file1,' / ', fontstrlarge, 25, 25, 20, 1, string(EBSDdata.mcenergymax,format="(F6.2)"))
+
+;---------- bin size, number of bins
+file1 = WIDGET_BASE(block11, /ROW, XSIZE=600, /ALIGN_CENTER)
+EBSDwidget_s.mcenergybinsize = Core_WText(file1,'Energy binsize/#', fontstrlarge, 200, 25, 20, 1, string(EBSDdata.mcenergybinsize,format="(F6.2)"))
+EBSDwidget_s.mcenergynumbin = Core_WText(file1,' / ', fontstrlarge, 25, 25, 20, 1, string(EBSDdata.mcenergynumbin,format="(I5)"))
+
+;---------- depth max, and depth stepsize
+file1 = WIDGET_BASE(block11, /ROW, /ALIGN_LEFT)
+EBSDwidget_s.mcdepthmax = Core_WText(file1,'Depth max/step/#', fontstrlarge, 200, 25, 15, 1, string(EBSDdata.mcdepthmax,FORMAT="(F7.1)")) 
+EBSDwidget_s.mcdepthstep = Core_WText(file1,' / ', fontstrlarge, 25, 25, 15, 1, string(EBSDdata.mcdepthstep,FORMAT="(F7.1)")) 
+EBSDwidget_s.mcdepthnumbins = Core_WText(file1,' / ', fontstrlarge, 25, 25, 15, 1, string(EBSDdata.mcdepthnumbins,FORMAT="(I4)")) 
+
+;---------- microscope voltage and Monte Carlo mode
+file1 = WIDGET_BASE(block11, /ROW, /ALIGN_LEFT)
+EBSDwidget_s.voltage = Core_WText(file1,'Voltage [kV]', fontstrlarge, 200, 25, 10, 1, string(EBSDdata.voltage,FORMAT="(F7.1)")) 
+EBSDwidget_s.mcmode = Core_WText(file1,'   MC Mode ', fontstrlarge, 120, 25, 10, 1, EBSDdata.mcmode) 
+
+;---------- dimensions of modified Lambert projection 
+file1 = WIDGET_BASE(block11, /ROW, /ALIGN_LEFT)
+EBSDwidget_s.mcimx = Core_WText(file1,'Lambert Dimensions', fontstrlarge, 200, 25, 20, 1, string(EBSDdata.mcimx,FORMAT="(I5)")) 
+EBSDwidget_s.mcimy = Core_WText(file1,'by', fontstr, 25, 25, 20, 1, string(EBSDdata.mcimy,FORMAT="(I5)")) 
+
+;---------- total and backscattered numbers of electrons
+file1 = WIDGET_BASE(block11, /ROW, /ALIGN_LEFT)
+EBSDwidget_s.mctotale = Core_WText(file1,'Total #/backscattered e', fontstrlarge, 200, 25, 20, 1, string(EBSDdata.mctotale,FORMAT="(I12)")) 
+EBSDwidget_s.mcbse = Core_WText(file1,' / ', fontstrlarge, 25, 25, 20, 1, string(EBSDdata.mcbse,FORMAT="(I12)")) 
+
+;---------- sample tilt angles 
+file1 = WIDGET_BASE(block11, /ROW, /ALIGN_LEFT)
+EBSDwidget_s.mcvangle = Core_WText(file1,'Sample tilt angles (v, h)', fontstrlarge, 200, 25, 20, 1, string(EBSDdata.mcvangle,FORMAT="(F7.2)")) 
+EBSDwidget_s.mchangle = Core_WText(file1,', ', fontstrlarge, 25, 25, 20, 1, string(EBSDdata.mchangle,FORMAT="(F7.2)")) 
+
+;------------------------------------------------------------
+;------------------------------------------------------------
+
+
+
+
+;------------------------------------------------------------
+;------------------------------------------------------------
+; this is the block that will display Master Pattern file information; no user interactions here
+; except for a few buttons.
+block21 = WIDGET_BASE(block2, /COLUMN, XSIZE=600, /ALIGN_RIGHT)
+file2 = WIDGET_BASE(block21, /ROW, XSIZE=600, /ALIGN_RIGHT)
+file3 = WIDGET_LABEL(file2, VALUE='Master Pattern Simulation Parameters', font=fontstrlarge, /ALIGN_CENTER)
+
+EBSDwidget_s.MPbutton = WIDGET_BUTTON(file2, $
+                      UVALUE='MPDISPLAY', $
+                      VALUE='Display', $
+                      EVENT_PRO='EBSDDisplay_event', $
+                      SENSITIVE=0, $
+		      /ALIGN_RIGHT, $
+                      /FRAME)
+
+
+;---------- file name and size
+file1 = WIDGET_BASE(block21, /ROW, XSIZE=600, /ALIGN_CENTER)
+EBSDwidget_s.mpfilename = Core_WText(file1,'MP Data File Name', fontstrlarge, 200, 25, 60, 1, EBSDdata.mpfilename)
+file1 = WIDGET_BASE(block21, /ROW, /BASE_ALIGN_BOTTOM, /ALIGN_LEFT)
+EBSDwidget_s.mpfilesize = Core_WText(file1,'MP Data File Size', fontstrlarge, 200, 25, 30, 1, string(EBSDdata.mpfilesize,FORMAT="(I12)")+' bytes') 
+
+;---------- dimensions of modified Lambert projection 
+file1 = WIDGET_BASE(block21, /ROW, /ALIGN_LEFT)
+EBSDwidget_s.mpimx = Core_WText(file1,'Lambert Dimensions', fontstrlarge, 200, 25, 20, 1, string(EBSDdata.mpimx,FORMAT="(I5)")) 
+EBSDwidget_s.mpimy = Core_WText(file1,'by', fontstr, 25, 25, 20, 1, string(EBSDdata.mpimy,FORMAT="(I5)")) 
+
+;---------- Lambert grid mode (hexagonal or square)
+file1 = WIDGET_BASE(block21, /ROW, /ALIGN_LEFT)
+EBSDwidget_s.mpgridmode = Core_WText(file1,'Lambert grid', fontstrlarge, 200, 25, 20, 1, EBSDdata.mpgridmode)
+
+;---------- crystal structure file name
+file1 = WIDGET_BASE(block21, /ROW, /ALIGN_LEFT)
+EBSDwidget_s.xtalname = Core_WText(file1,'Structure file', fontstrlarge, 200, 25, 20, 1, EBSDdata.xtalname)
+
+
+;------------------------------------------------------------
+;------------------------------------------------------------
+; then we have the program message window
+
+EBSDwidget_s.status= WIDGET_TEXT(block2, $
+			XSIZE=90, $
+			YSIZE=22, $
+			/SCROLL, $
+			VALUE=' ',$
 			/ALIGN_LEFT)
+
+; the following is needed by the Core_Print routine
+status = EBSDwidget_s.status 
+
+;------------------------------------------------------------
+;------------------------------------------------------------
+; finally we need a couple of control buttons: Quit, LoadMC, LoadMaster, Detector
+
+file11 = WIDGET_BASE(block2, XSIZE=590, /FRAME, /ROW)
 
 EBSDwidget_s.mainstop = WIDGET_BUTTON(file11, $
                                 VALUE='Quit', $
@@ -507,13 +552,42 @@ EBSDwidget_s.mainstop = WIDGET_BUTTON(file11, $
                                 SENSITIVE=1, $
                                 /FRAME)
 
-EBSDwidget_s.loadfile = WIDGET_BUTTON(file11, $
-                                VALUE='EBSD File', $
-                                UVALUE='LOADFILE', $
+EBSDwidget_s.mcloadfile = WIDGET_BUTTON(file11, $
+                                UVALUE='MCFILE', $
+                                VALUE='Load MC file', $
                                 EVENT_PRO='EBSDDisplay_event', $
                                 SENSITIVE=1, $
                                 /FRAME)
 
+EBSDwidget_s.mploadfile = WIDGET_BUTTON(file11, $
+                                UVALUE='MPFILE', $
+                                VALUE='Load master file', $
+                                EVENT_PRO='EBSDDisplay_event', $
+                                SENSITIVE=1, $
+                                /FRAME)
+
+EBSDwidget_s.detector = WIDGET_BUTTON(file11, $
+                                UVALUE='DETECTOR', $
+                                VALUE='Define detector', $
+                                EVENT_PRO='EBSDDisplay_event', $
+                                SENSITIVE=0, $
+                                /FRAME)
+
+values = ['Off','On']
+EBSDwidget_s.logfile= CW_BGROUP(file11, $
+			values, $
+			/FRAME, $
+                        LABEL_LEFT='LogFile', $
+			/ROW, $
+			/NO_RELEASE, $
+			/EXCLUSIVE, $
+			SET_VALUE=EBSDdata.logmode, $
+                        EVENT_FUNC='EBSDevent', $
+			UVALUE='LOGFILE')
+
+; the following is needed by the Core_Print routine
+logmode = EBSDdata.logmode
+logunit = EBSDdata.logunit
 
 ;------------------------------------------------------------
 ; realize the widget structure
@@ -523,7 +597,7 @@ WIDGET_CONTROL,EBSDwidget_s.base,/REALIZE
 WIDGET_CONTROL, EBSDwidget_s.logodraw, GET_VALUE=drawID
 EBSDwidget_s.logodrawID = drawID
 ;
-read_jpeg,'Resources/SEMlogo.jpg',logo
+read_jpeg,'Resources/SEMONRlogo.jpg',logo
 wset,EBSDwidget_s.logodrawID
 tvscl,logo,true=1
 

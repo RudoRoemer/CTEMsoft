@@ -124,10 +124,10 @@ if keyword_set(MPFILE) then begin
 ; and finally the results array
   MParray = fltarr(2L*EBSDdata.mpimx+1L,2L*EBSDdata.mpimy+1L,EBSDdata.mcenergynumbin,EBSDdata.numset)
   readu,1,MParray
-  MParraysum = total(MParray,4)
+  if (EBSDdata.numset gt 1) then MParraysum = total(MParray,4) else MParraysum = MParray
 
   sz = size(MParray,/dimensions)
-    Core_Print,' Size of MParray data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") +' x'+string(sz[3],format="(I5)")
+  if (EBSDdata.numset gt 1) then Core_Print,' Size of MParray data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") +' x'+string(sz[3],format="(I5)") else Core_Print,' Size of MParray data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)")
 
 ; and close the file
   close,1

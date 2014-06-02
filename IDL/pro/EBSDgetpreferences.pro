@@ -63,6 +63,8 @@ if (rs eq 1) then begin
     case nm of 
 ; root folder
 	'EBSDroot': EBSDdata.EBSDroot=val
+	'f90exepath': EBSDdata.f90exepath=val
+
 ; various parameters
   	'detl': EBSDdata.detL = float(val)
   	'dettheta': EBSDdata.dettheta = float(val)
@@ -80,6 +82,10 @@ if (rs eq 1) then begin
   	'ylocation': EBSDdata.ylocation = float(val)
   	'EBSDxlocation': EBSDdata.EBSDxlocation = float(val)
   	'EBSDylocation': EBSDdata.EBSDylocation = float(val)
+  	'Patternxlocation': EBSDdata.patternxlocation = float(val)
+  	'Patternylocation': EBSDdata.patternylocation = float(val)
+  	'Detectorxlocation': EBSDdata.Detectorxlocation = float(val)
+  	'Detectorylocation': EBSDdata.Detectorylocation = float(val)
   	'MCxlocation': EBSDdata.MCxlocation = float(val)
   	'MCylocation': EBSDdata.MCylocation = float(val)
   	'MPxlocation': EBSDdata.MPxlocation = float(val)
