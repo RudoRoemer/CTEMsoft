@@ -88,14 +88,10 @@ type LambertParameters
 	real(kind=dbl)		:: beta		! pi^(5/6)/6^(1/6)/2
 	real(kind=dbl)		:: R1		! (3pi/4)^(1/3)
 	real(kind=dbl)		:: r2		! sqrt(2)
-	real(kind=dbl)		:: r22		! 1/sqrt(2)
 	real(kind=dbl)		:: pi12		! pi/12
-	real(kind=dbl)		:: pi8		! pi/8
 	real(kind=dbl)		:: prek		! R1 2^(1/4)/beta
 	real(kind=dbl)		:: r24		! sqrt(24)
-        real(kind=dbl)	        :: rvmax2      ! square of max rodrigues vector length  
 	real(kind=dbl)		:: tfit(7)	! fit parameters
-	real(kind=dbl)         :: BP(6)       ! used for Fundamental Zone determination
 end type LambertParameters
 
 type(LambertParameters)	:: LPs
@@ -260,20 +256,9 @@ LPs%sc = LPs%a/LPs%ap
 LPs%beta = 0.5D0*LPs%a
 LPs%R1 = (3.D0*dpi/4.D0)**(1.D0/3.D0)
 LPs%r2 = dsqrt(2.D0)
-LPs%r22 = dsqrt(2.D0)/2.D0
 LPs%pi12 = dpi/12.D0
-LPs%pi8 = dtan(dpi/8.D0)
 LPs%prek =  LPs%R1*2.D0**(0.25D0)/LPs%beta
 LPs%r24 = dsqrt(24.D0)
-
-! we need to make sure that we do not consider Rodrigues vectors of infinite length,
-! which would correspond to 180 degree rotations; we'll put the max length so that 
-! we can deal with 179.999 degree rotations, which should be good enough for most 
-! practical cases (this may be changed if deemed necessary)
-LPs%rvmax2 = (dtan(179.999D0*dpi/2.D0/180.D0))**2  ! square of max rodrigues vector length 
-
-! truncation values needed for the Cyclic fundamental zones of order 2, 3, 4, and 6
-LPs%BP(1:6) = (/ 0.D0, dtan(dpi/4.D0), dtan(dpi/6.D0), LPs%pi8, 0.D0, dtan(LPs%pi12) /)
 
 ! fit parameters determined with Mathematica
 LPs%tfit = (/ -0.5000096149170321D0, -0.02486606148871731D0, &
@@ -305,11 +290,10 @@ IMPLICIT NONE
 real(kind=sgl),INTENT(IN)		:: xy(2)
 integer(kind=irg),INTENT(INOUT)	:: ierr
 real(kind=sgl)				:: res(3), q, qq
-real(kind=sgl),parameter		:: eps = 1.0E-6
 
 ierr = 0
 ! check to make sure that the input point lies inside the square of edge length 2 sqrt(pi/2)
-if ((maxval(abs(xy))-LPs%sPio2).gt.eps) then
+if (maxval(abs(xy)).gt.LPs%sPio2) then
   res = (/ 0.0, 0.0, 0.0 /)		
   ierr = 1
 else
@@ -358,11 +342,10 @@ IMPLICIT NONE
 real(kind=dbl),INTENT(IN)		:: xy(2)
 integer(kind=irg),INTENT(INOUT)	:: ierr
 real(kind=dbl)				:: res(3), q, qq
-real(kind=dbl),parameter		:: eps = 1.0D-12
 
 ierr = 0
 ! check to make sure that the input point lies inside the square of edge length 2 sqrt(pi)
-if ((maxval(dabs(xy))-LPs%sPio2).gt.eps) then
+if (maxval(dabs(xy)).gt.LPs%sPio2) then
   res = (/ 0.D0, 0.D0, 0.D0 /)
   ierr = 1   ! input point does not lie inside square with edge length 2 sqrt(pi/2)
 else
@@ -636,7 +619,7 @@ IMPLICIT NONE
 real(kind=sgl),INTENT(IN)	:: xyz(3) 
 integer(kind=irg),INTENT(INOUT):: ierr
 
-real(kind=sgl)			:: res(2), q, qq, XX, YY, lxx, lyy
+real(kind=sgl)			:: res(2), q, qq, XX, YY, xx, yy
 integer(kind=irg)		:: ks
 real(kind=sgl),parameter	:: eps = 1.0E-7
 
@@ -661,20 +644,20 @@ else
   select case (ks)
     case (0,3)
         q = LPs%pree * (abs(XX)/XX) * sqrt(XX**2+YY**2)
-  	lxx = q * LPs%sPio2 
-  	lyy = q * LPs%pref * atan(YY/XX)
+  	xx = q * LPs%sPio2 
+  	yy = q * LPs%pref * atan(YY/XX)
     case (1,4)
     	q = LPs%prea * (abs(XX)/XX) * sqrt(XX**2+YY**2)
     	qq= atan((YY-LPs%rtt*XX)/(XX+LPs%rtt*YY))
-  	lxx = q * LPs%rtt *( LPs%Pi/6.0 - qq )
-  	lyy = q * ( 0.5*LPs%Pi + qq )
+  	xx = q * LPs%rtt *( LPs%Pi/6.0 - qq )
+  	yy = q * ( 0.5*LPs%Pi + qq )
     case (2,5)
     	q = LPs%prea * (abs(XX)/XX) * sqrt(XX**2+YY**2)
     	qq= atan((YY+LPs%rtt*XX)/(XX-LPs%rtt*YY))
-  	lxx = q * LPs%rtt *( LPs%Pi/6.0 + qq )
-  	lyy = q * ( -0.5*LPs%Pi + qq )
+  	xx = q * LPs%rtt *( LPs%Pi/6.0 + qq )
+  	yy = q * ( -0.5*LPs%Pi + qq )
   end select
-  res = (/ lxx, lyy /)
+  res = (/ xx, yy /)
  end if
 end if
 
@@ -703,7 +686,7 @@ IMPLICIT NONE
 real(kind=dbl),INTENT(IN)	:: xyz(3) 
 integer(kind=irg),INTENT(INOUT):: ierr
 
-real(kind=dbl)			:: res(2), q, qq, XX, YY, lxx, lyy
+real(kind=dbl)			:: res(2), q, qq, XX, YY, xx, yy
 integer(kind=irg)		:: ks
 real(kind=dbl),parameter	:: eps = 1.0E-12
 
@@ -728,20 +711,20 @@ else
   select case (ks)
     case (0,3)
         q = LPs%pree * (dabs(XX)/XX) * dsqrt(XX**2+YY**2)
-  	lxx = q * LPs%sPio2 
-  	lyy = q * LPs%pref * datan(YY/XX)
+  	xx = q * LPs%sPio2 
+  	yy = q * LPs%pref * datan(YY/XX)
     case (1,4)
     	q = LPs%prea * (dabs(XX)/XX) * dsqrt(XX**2+YY**2)
     	qq= datan((YY-LPs%rtt*XX)/(XX+LPs%rtt*YY))
-  	lxx = q * LPs%rtt *( LPs%Pi/6.D0 - qq )
-  	lyy = q * ( 0.5D0*LPs%Pi + qq )
+  	xx = q * LPs%rtt *( LPs%Pi/6.D0 - qq )
+  	yy = q * ( 0.5D0*LPs%Pi + qq )
     case (2,5)
     	q = LPs%prea * (dabs(XX)/XX) * dsqrt(XX**2+YY**2)
     	qq= datan((YY+LPs%rtt*XX)/(XX-LPs%rtt*YY))
-  	lxx = q * LPs%rtt *( LPs%Pi/6.D0 + qq )
-  	lyy = q * ( -0.5D0*LPs%Pi + qq )
+  	xx = q * LPs%rtt *( LPs%Pi/6.D0 + qq )
+  	yy = q * ( -0.5D0*LPs%Pi + qq )
   end select
-    res = (/ lxx, lyy /)
+    res = (/ xx, yy /)
 end if
 end if
 
@@ -864,43 +847,40 @@ end function GetSextantDouble
 !
 !> @brief map from 3D cubic grid to 3D ball 
 !
-!> @param lxyz 3D coordinates to be considered (single precision)  
+!> @param xyz 3D coordinates to be considered (single precision)  
 !> @param ierr error flag 0 = OK, 1 = 
 ! 
 !> @date 7/12/13    MDG 1.0 original
 !--------------------------------------------------------------------------
-recursive function Lambert3DCubeForwardSingle(lxyz,ierr) result(res)
+recursive function Lambert3DCubeForwardSingle(xyz,ierr) result(res)
 
 use local
-use constants
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: lxyz(3)
+real(kind=sgl),INTENT(IN)	:: xyz(3)
 integer(kind=irg),INTENT(INOUT):: ierr
 real(kind=sgl)			:: res(3)
 
-real(kind=sgl)			:: XYZ(3), sXYZ(3), T1, T2, c, s, q, LamXYZ(3), edge
+real(kind=sgl)			:: XYZ(3), sXYZ(3), T1, T2, c, s, q, LamXYZ(3)
 integer(kind=irg)		:: p
 
 ierr = 0
-edge = 0.50 * (sngl(cPi))**(2.0/3.0)
-
-if (maxval(abs(lxyz)).gt.edge) then ! PGC dabs -> abs
+if (maxval(dabs(xyz)).gt.1.0) then
   res = (/ 0.0, 0.0, 0.0 /)
   ierr = 1
   return
 end if
 
 ! determine which pyramid pair the point lies in and copy coordinates in correct order (see paper)
-p = GetPyramidSingle(lxyz)
+p = GetPyramidSingle(xyz)
 select case (p)
  case (1,2)
-  sXYZ = lxyz
+  sXYZ = xyz
  case (3,4)
-  sXYZ = (/ lxyz(2), lxyz(3), lxyz(1) /)
+  sXYZ = (/ xyz(2), xyz(3), xyz(1) /)
  case (5,6)
-  sXYZ = (/ lxyz(3), lxyz(1), lxyz(2) /)
+  sXYZ = (/ xyz(3), xyz(1), xyz(2) /)
 end select
 
 ! scale by grid parameter ratio sc
@@ -960,42 +940,40 @@ end function Lambert3DCubeForwardSingle
 !
 !> @brief map from 3D cubic grid to 3D ball 
 !
-!> @param lxyz 3D coordinates to be considered (double precision)  
+!> @param xyz 3D coordinates to be considered (double precision)  
 !> @param ierr error flag 0 = OK, 1 = outside of unit cube
 ! 
 !> @date 7/12/13    MDG 1.0 original
 !--------------------------------------------------------------------------
-recursive function Lambert3DCubeForwardDouble(lxyz,ierr) result(res)
+recursive function Lambert3DCubeForwardDouble(xyz,ierr) result(res)
 
 use local
-use constants
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)	:: lxyz(3)
+real(kind=dbl),INTENT(IN)	:: xyz(3)
 integer(kind=irg),INTENT(INOUT):: ierr
 real(kind=dbl)			:: res(3)
 
-real(kind=dbl)			:: XYZ(3), sXYZ(3), T1, T2, c, s, q, LamXYZ(3), edge
+real(kind=dbl)			:: XYZ(3), sXYZ(3), T1, T2, c, s, q, LamXYZ(3)
 integer(kind=irg)		:: p
 
 ierr = 0
-edge = 0.5D0 * (cPi)**(2.D0/3.D0)
-if (maxval(dabs(lxyz)).gt.edge) then
+if (maxval(dabs(xyz)).gt.1.0) then
   res = (/ 0.D0, 0.D0, 0.D0 /)
   ierr = 1
   return
 end if
 
 ! determine which pyramid pair the point lies in and copy coordinates in correct order (see paper)
-p = GetPyramidDouble(lxyz)
+p = GetPyramidDouble(xyz)
 select case (p)
  case (1,2)
-  sXYZ = lxyz
+  sXYZ = xyz
  case (3,4)
-  sXYZ = (/ lxyz(2), lxyz(3), lxyz(1) /)
+  sXYZ = (/ xyz(2), xyz(3), xyz(1) /)
  case (5,6)
-  sXYZ = (/ lxyz(3), lxyz(1), lxyz(2) /)
+  sXYZ = (/ xyz(3), xyz(1), xyz(2) /)
 end select
 
 ! scale by grid parameter ratio sc
@@ -1942,10 +1920,6 @@ end function LambertInverseDouble
 subroutine Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
 
 use local
-use io
-use diffraction
-use multibeams
-use dynamical
 
 IMPLICIT NONE
 

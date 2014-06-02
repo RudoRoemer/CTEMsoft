@@ -1,5 +1,5 @@
 ! ###################################################################
-! Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
+! Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
 ! All rights reserved.
 !
 ! Redistribution and use in source and binary forms, with or without modification, are 
@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:others.f90
+! CTEMsoft:others.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: others
@@ -40,7 +40,7 @@
 !>  and absorptive form factors; it is included with permission from H. Kohl.
 !
 !> @note This code was originally f77, and was converted to f90 by MDG [5/22/01];
-!> core functionality is unchanged from the f7 version, but the output statements
+!> core functionality is unchanged from the f77 version, but the output statements
 !> were adapted to the current CTEMsoft package standard.
 ! 
 !> @date   10/13/98 MDG 1.0 original
@@ -62,7 +62,7 @@ contains
 !> @details 'use's error and local modules; Weickenmeier's original comments
 !> and notes are left unchanged in the source code.
 ! 
-!> @date 5/21/01   MDG 1.0 original f90 translation
+!> @date 5/21/01 MDG 1.0 original f90 translation
 !> @date 3/21/13 MDG 2.0 updated IO statements
 !--------------------------------------------------------------------------
 complex FUNCTION FSCATT (G,UL,Z,SYMBOL,ACCVLT,ABSFLG,ACCFLG,DWFLG)
@@ -127,10 +127,10 @@ use local
 use error
 
 real(kind=sgl),parameter     	:: FOURPI=12.56637062
-real(kind=sgl)               		:: K0,A(4),B(4)
-integer(kind=irg)            		:: ABSFLG,Z
+real(kind=sgl)               	:: K0,A(4),B(4)
+integer(kind=irg)            	:: ABSFLG,Z
 CHARACTER(2)                 	:: SYMBOL
-logical                      		:: ACCFLG,DWFLG
+logical                      	:: ACCFLG,DWFLG
 
 ! CHECK INPUT
  IF (Z .LT. 1 .OR. Z .GT. 98) call FatalError('fscatt',' Z is out of range')
@@ -422,7 +422,7 @@ use error
 real(kind=sgl),parameter :: A1=8.57332,A2=18.05901,A3=8.63476,A4=.26777, &
                             B1=9.57332,B2=25.63295,B3=21.09965,B4=3.95849
 
- IF (X .GT. 60.) call FatalError('EI (in others.f90)','>>> EI NICHT GETESTET FUER X>60 ')
+ IF (X .GT. 60.) call FatalError('EI (in others.f90)','>>> EI UNTESTED FOR X>60 ')
 
  IF (X .LT. -60.) THEN
   EI = 0.

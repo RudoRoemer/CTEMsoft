@@ -1,5 +1,5 @@
 ! ###################################################################
-! Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
+! Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
 ! All rights reserved.
 !
 ! Redistribution and use in source and binary forms, with or without modification, are 
@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:symmetry.f90
+! CTEMsoft:symmetry.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: symmetry
@@ -39,17 +39,19 @@
 !> @details routines to generate a space group based on the generator string; computation
 !> of orbits and families; computation of all atoms in a single or multiple unit cells
 ! 
-!> @date 1/5/99   MDG 1.0 original
-!> @date   5/19/01  MDG 2.0 f90
-!> @date  11/27/01  MDG 2.1 added kind support
-!> @date   03/19/13 MDG 3.0 udated IO and such
+!> @date  01/05/99 MDG 1.0 original
+!> @date  05/19/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  03/19/13 MDG 3.0 udated IO and such
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 
 module symmetry
 
 use local
+use crystalvars
 use symmetryvars
- 
+
 contains
 
 !--------------------------------------------------------------------------
@@ -65,9 +67,10 @@ contains
 !> @param t input string (4 character block from generator string)
 !> @param isgn switch to indicate forward or reverse translation component
 !
-!> @date   10/13/98 MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90
-!> @date  11/27/01  MDG 2.1 added kind support
+!> @date  10/13/98 MDG 1.0 original
+!> @date  05/19/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 subroutine SYM_fillgen(t,isgn)
 
@@ -84,41 +87,42 @@ real(kind=dbl)				:: sgn	!< forward or reverse multiplier for translation compon
  sgn=dble(isgn)
 
 ! first fill the array with zeroes and a 1 at 4,4
- SG%SYM_c(1:4,1:4) = 0.0_dbl
- SG%SYM_c(4,4) = 1.0_dbl
+ cell%SG%SYM_c(1:4,1:4) = 0.0_dbl
+ cell%SG%SYM_c(4,4) = 1.0_dbl
 
 ! then check for the particular matrix type
  select case (t(1))
-  case ('a'); SG%SYM_c(1,1) = 1.0_dbl; SG%SYM_c(2,2) = 1.0_dbl; SG%SYM_c(3,3) = 1.0_dbl
-  case ('b'); SG%SYM_c(1,1) =-1.0_dbl; SG%SYM_c(2,2) =-1.0_dbl; SG%SYM_c(3,3) = 1.0_dbl
-  case ('c'); SG%SYM_c(1,1) =-1.0_dbl; SG%SYM_c(2,2) = 1.0_dbl; SG%SYM_c(3,3) =-1.0_dbl
-  case ('d'); SG%SYM_c(1,3) = 1.0_dbl; SG%SYM_c(2,1) = 1.0_dbl; SG%SYM_c(3,2) = 1.0_dbl
-  case ('e'); SG%SYM_c(1,2) = 1.0_dbl; SG%SYM_c(2,1) = 1.0_dbl; SG%SYM_c(3,3) =-1.0_dbl
-  case ('f'); SG%SYM_c(1,2) =-1.0_dbl; SG%SYM_c(2,1) =-1.0_dbl; SG%SYM_c(3,3) =-1.0_dbl
-  case ('g'); SG%SYM_c(1,2) =-1.0_dbl; SG%SYM_c(2,1) = 1.0_dbl; SG%SYM_c(3,3) = 1.0_dbl
-  case ('h'); SG%SYM_c(1,1) =-1.0_dbl; SG%SYM_c(2,2) =-1.0_dbl; SG%SYM_c(3,3) =-1.0_dbl
-  case ('i'); SG%SYM_c(1,1) = 1.0_dbl; SG%SYM_c(2,2) = 1.0_dbl; SG%SYM_c(3,3) =-1.0_dbl
-  case ('j'); SG%SYM_c(1,1) = 1.0_dbl; SG%SYM_c(2,2) =-1.0_dbl; SG%SYM_c(3,3) = 1.0_dbl
-  case ('k'); SG%SYM_c(1,2) =-1.0_dbl; SG%SYM_c(2,1) =-1.0_dbl; SG%SYM_c(3,3) = 1.0_dbl
-  case ('l'); SG%SYM_c(1,2) = 1.0_dbl; SG%SYM_c(2,1) = 1.0_dbl; SG%SYM_c(3,3) = 1.0_dbl
-  case ('m'); SG%SYM_c(1,2) = 1.0_dbl; SG%SYM_c(2,1) =-1.0_dbl; SG%SYM_c(3,3) =-1.0_dbl
-  case ('n'); SG%SYM_c(1,2) =-1.0_dbl; SG%SYM_c(2,1) = 1.0_dbl; SG%SYM_c(2,2) =-1.0_dbl; SG%SYM_c(3,3) = 1.0_dbl
+  case ('a'); cell%SG%SYM_c(1,1) = 1.0_dbl; cell%SG%SYM_c(2,2) = 1.0_dbl; cell%SG%SYM_c(3,3) = 1.0_dbl
+  case ('b'); cell%SG%SYM_c(1,1) =-1.0_dbl; cell%SG%SYM_c(2,2) =-1.0_dbl; cell%SG%SYM_c(3,3) = 1.0_dbl
+  case ('c'); cell%SG%SYM_c(1,1) =-1.0_dbl; cell%SG%SYM_c(2,2) = 1.0_dbl; cell%SG%SYM_c(3,3) =-1.0_dbl
+  case ('d'); cell%SG%SYM_c(1,3) = 1.0_dbl; cell%SG%SYM_c(2,1) = 1.0_dbl; cell%SG%SYM_c(3,2) = 1.0_dbl
+  case ('e'); cell%SG%SYM_c(1,2) = 1.0_dbl; cell%SG%SYM_c(2,1) = 1.0_dbl; cell%SG%SYM_c(3,3) =-1.0_dbl
+  case ('f'); cell%SG%SYM_c(1,2) =-1.0_dbl; cell%SG%SYM_c(2,1) =-1.0_dbl; cell%SG%SYM_c(3,3) =-1.0_dbl
+  case ('g'); cell%SG%SYM_c(1,2) =-1.0_dbl; cell%SG%SYM_c(2,1) = 1.0_dbl; cell%SG%SYM_c(3,3) = 1.0_dbl
+  case ('h'); cell%SG%SYM_c(1,1) =-1.0_dbl; cell%SG%SYM_c(2,2) =-1.0_dbl; cell%SG%SYM_c(3,3) =-1.0_dbl
+  case ('i'); cell%SG%SYM_c(1,1) = 1.0_dbl; cell%SG%SYM_c(2,2) = 1.0_dbl; cell%SG%SYM_c(3,3) =-1.0_dbl
+  case ('j'); cell%SG%SYM_c(1,1) = 1.0_dbl; cell%SG%SYM_c(2,2) =-1.0_dbl; cell%SG%SYM_c(3,3) = 1.0_dbl
+  case ('k'); cell%SG%SYM_c(1,2) =-1.0_dbl; cell%SG%SYM_c(2,1) =-1.0_dbl; cell%SG%SYM_c(3,3) = 1.0_dbl
+  case ('l'); cell%SG%SYM_c(1,2) = 1.0_dbl; cell%SG%SYM_c(2,1) = 1.0_dbl; cell%SG%SYM_c(3,3) = 1.0_dbl
+  case ('m'); cell%SG%SYM_c(1,2) = 1.0_dbl; cell%SG%SYM_c(2,1) =-1.0_dbl; cell%SG%SYM_c(3,3) =-1.0_dbl
+  case ('n'); cell%SG%SYM_c(1,2) =-1.0_dbl; cell%SG%SYM_c(2,1) = 1.0_dbl; cell%SG%SYM_c(2,2) =-1.0_dbl; 
+              cell%SG%SYM_c(3,3) = 1.0_dbl
  end select
 
 ! then fill in the translational component
  do j=2,4 
   select case (t(j))
-   case('A'); SG%SYM_c(j-1,4) = sgn/6.0_dbl
-   case('B'); SG%SYM_c(j-1,4) = sgn/4.0_dbl
-   case('C'); SG%SYM_c(j-1,4) = sgn/3.0_dbl
-   case('D'); SG%SYM_c(j-1,4) = sgn/2.0_dbl
-   case('E'); SG%SYM_c(j-1,4) = sgn*2.0_dbl/3.0_dbl
-   case('F'); SG%SYM_c(j-1,4) = sgn*3.0_dbl/4.0_dbl
-   case('G'); SG%SYM_c(j-1,4) = sgn*5.0_dbl/6.0_dbl
-   case('O'); SG%SYM_c(j-1,4) = 0.0_dbl
-   case('X'); SG%SYM_c(j-1,4) = -sgn*3.0_dbl/8.0_dbl
-   case('Y'); SG%SYM_c(j-1,4) = -sgn/4.0_dbl
-   case('Z'); SG%SYM_c(j-1,4) = -sgn/8.0_dbl
+   case('A'); cell%SG%SYM_c(j-1,4) = sgn/6.0_dbl
+   case('B'); cell%SG%SYM_c(j-1,4) = sgn/4.0_dbl
+   case('C'); cell%SG%SYM_c(j-1,4) = sgn/3.0_dbl
+   case('D'); cell%SG%SYM_c(j-1,4) = sgn/2.0_dbl
+   case('E'); cell%SG%SYM_c(j-1,4) = sgn*2.0_dbl/3.0_dbl
+   case('F'); cell%SG%SYM_c(j-1,4) = sgn*3.0_dbl/4.0_dbl
+   case('G'); cell%SG%SYM_c(j-1,4) = sgn*5.0_dbl/6.0_dbl
+   case('O'); cell%SG%SYM_c(j-1,4) = 0.0_dbl
+   case('X'); cell%SG%SYM_c(j-1,4) = -sgn*3.0_dbl/8.0_dbl
+   case('Y'); cell%SG%SYM_c(j-1,4) = -sgn/4.0_dbl
+   case('Z'); cell%SG%SYM_c(j-1,4) = -sgn/8.0_dbl
   end select
  end do
 
@@ -134,10 +138,11 @@ end subroutine SYM_fillgen
 !
 !> @details interprets the generator string and initializes all generator matrices
 !
-!> @date   10/13/98 MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90
-!> @date  11/27/01  MDG 2.1 added kind support
+!> @date  10/13/98 MDG 1.0 original
+!> @date   5/19/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
 !> @date  03/19/13 MDG 3.0 general cleanup
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------!     
 subroutine MakeGenerators
 
@@ -155,43 +160,43 @@ character(1)			:: t(4)				!< 4-character string etracted from generator string
 character(40)			:: genst			!< full generator string
 
 ! fill in the space group name 
- SG%SYM_name = SYM_SGname(cell%SYM_SGnum)
+ cell%SG%SYM_name = SYM_SGname(cell%SYM_SGnum)
 
 ! initialize the encoded identity operator aOOO
  t = (/ 'a', 'O', 'O', 'O' /)
 ! compute its matrix
  call SYM_fillgen(t,1)
 ! and put it first in the list of matrices
- SG%SYM_data(1,:,:) = SG%SYM_c(:,:)
+ cell%SG%SYM_data(1,:,:) = cell%SG%SYM_c(:,:)
 
 ! get the space group generator string 
  genst = SYM_GL(cell%SYM_SGnum)
 
 ! initialize the number of generators 
- SG%SYM_GENnum = ichar(genst(2:2))-QQ
+ cell%SG%SYM_GENnum = ichar(genst(2:2))-QQ
 
 ! create the generator matrices 
- do i=2,2+SG%SYM_GENnum - 1
+ do i=2,2+cell%SG%SYM_GENnum - 1
    do  k=1,4
      l=2+4*(i-2)+k
      t(k) = genst(l:l)
    end do
    call SYM_fillgen(t,1)
-   SG%SYM_data(i,:,:) = SG%SYM_c(:,:)
+   cell%SG%SYM_data(i,:,:) = cell%SG%SYM_c(:,:)
  end do
 
 ! this is where we are in the generator string
- i=2+4*SG%SYM_GENnum+1
+ i=2+4*cell%SG%SYM_GENnum+1
 
 ! if there is inversion symmetry, add the inversion to the generators 
  if (genst(1:1).eq.'1') then 
-  SG%SYM_centrosym=.TRUE.
+  cell%SG%SYM_centrosym=.TRUE.
   t = (/ 'h', 'O', 'O', 'O' /)
   call SYM_fillgen(t,1)
-  SG%SYM_data(SG%SYM_GENnum+2,:,:) = SG%SYM_c(:,:)
-  SG%SYM_GENnum = SG%SYM_GENnum+2
+  cell%SG%SYM_data(cell%SG%SYM_GENnum+2,:,:) = cell%SG%SYM_c(:,:)
+  cell%SG%SYM_GENnum = cell%SG%SYM_GENnum+2
  else   
-  SG%SYM_GENnum = SG%SYM_GENnum+1
+  cell%SG%SYM_GENnum = cell%SG%SYM_GENnum+1
  end if
 
 ! now check for special origin conditions (choices 1 and 2) 
@@ -207,15 +212,15 @@ character(40)			:: genst			!< full generator string
     l=i+k-1
     t(k) = genst(l:l)
    end do
-   do l=2,SG%SYM_GENnum 
+   do l=2,cell%SG%SYM_GENnum 
 ! translate to first setting origin
     call SYM_fillgen(t,-1)
-    SYM_d(:,:)=SG%SYM_data(l,:,:)
+    SYM_d(:,:)=cell%SG%SYM_data(l,:,:)
 ! apply generator
-    SYM_e = matmul(SYM_d,SG%SYM_c)
+    SYM_e = matmul(SYM_d,cell%SG%SYM_c)
 ! translate back to second setting origin
     call SYM_fillgen(t,1)
-    SYM_d = matmul(SG%SYM_c,SYM_e)
+    SYM_d = matmul(cell%SG%SYM_c,SYM_e)
 ! reduce the translations to the fundamental unit cell
     do  k=1,3
      if (abs(SYM_d(k,4)).lt.eps) SYM_d(k,4)=0.0_dbl
@@ -232,7 +237,7 @@ character(40)			:: genst			!< full generator string
      if (abs(SYM_d(k,4)-1.0_dbl).lt.eps) SYM_d(k,4)=0.0_dbl
     end do
 ! and store the result in the SYM_data array
-    SG%SYM_data(l,:,:)=SYM_d(:,:)
+    cell%SG%SYM_data(l,:,:)=SYM_d(:,:)
    end do
   end if ! if (SYM_SGset.eq.2)
  end if ! if (genst(i:i).ne.'0')
@@ -255,10 +260,11 @@ end subroutine MakeGenerators
 !
 !> @note there is no output since the result is stored in the SG structure SYM_c array
 !
-!> @date   10/13/98 MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90
-!> @date  11/27/01  MDG 2.1 added kind support
+!> @date  10/13/98 MDG 1.0 original
+!> @date   5/19/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
 !> @date  03/19/13 MDG 3.0 general cleanup
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 subroutine matrixmult(k1,k2)
    
@@ -273,9 +279,9 @@ real(kind=dbl),parameter	:: eps=0.0005_dbl		!< truncation constant
 
  do i=1,4
   do j=1,4
-   SG%SYM_c(i,j) = 0.0_dbl
+   cell%SG%SYM_c(i,j) = 0.0_dbl
    do k=1,4
-    SG%SYM_c(i,j)=SG%SYM_c(i,j)+SG%SYM_data(k1,i,k)*SG%SYM_data(k2,k,j)
+    cell%SG%SYM_c(i,j)=cell%SG%SYM_c(i,j)+cell%SG%SYM_data(k1,i,k)*cell%SG%SYM_data(k2,k,j)
    end do
   end do
  end do
@@ -283,18 +289,18 @@ real(kind=dbl),parameter	:: eps=0.0005_dbl		!< truncation constant
 ! bring the translational part of the matrix back to
 ! the first unit cell and correct possible rounding errors
  do  k=1,3
-  if (abs(SG%SYM_c(k,4)).lt.eps) SG%SYM_c(k,4)=0.0_dbl
-  if (SG%SYM_c(k,4).lt.0.0_dbl) then 
-   do while (SG%SYM_c(k,4).lt.0.0_dbl) 
-    SG%SYM_c(k,4)=SG%SYM_c(k,4)+1.0_dbl
+  if (abs(cell%SG%SYM_c(k,4)).lt.eps) cell%SG%SYM_c(k,4)=0.0_dbl
+  if (cell%SG%SYM_c(k,4).lt.0.0_dbl) then 
+   do while (cell%SG%SYM_c(k,4).lt.0.0_dbl) 
+    cell%SG%SYM_c(k,4)=cell%SG%SYM_c(k,4)+1.0_dbl
    end do
   end if
-  if (SG%SYM_c(k,4).gt.1.0_dbl) then 
-   do while (SG%SYM_c(k,4).gt.1.0_dbl) 
-    SG%SYM_c(k,4)=SG%SYM_c(k,4)-1.0_dbl
+  if (cell%SG%SYM_c(k,4).gt.1.0_dbl) then 
+   do while (cell%SG%SYM_c(k,4).gt.1.0_dbl) 
+    cell%SG%SYM_c(k,4)=cell%SG%SYM_c(k,4)-1.0_dbl
    end do
   end if
-  if (abs(SG%SYM_c(k,4)-1.0_dbl).lt.eps) SG%SYM_c(k,4)=0.0_dbl
+  if (abs(cell%SG%SYM_c(k,4)-1.0_dbl).lt.eps) cell%SG%SYM_c(k,4)=0.0_dbl
  end do
 
 end subroutine matrixmult
@@ -312,9 +318,10 @@ end subroutine matrixmult
 !
 !> @param nsym index of matrix to be compared
 !
-!> @date   10/13/98 MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90
-!> @date  11/27/01  MDG 2.1 added kind support
+!> @date  10/13/98 MDG 1.0 original
+!> @date   5/19/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 logical function isitnew(nsym)
 
@@ -333,7 +340,7 @@ real(kind=dbl),parameter		:: eps=0.0005_dbl	!< comparison threshold
   k=k+1
   do i=1,3
    do j=1,4
-    if (abs(SG%SYM_c(i,j)- SG%SYM_data(k,i,j)).lt.eps) n=n+1
+    if (abs(cell%SG%SYM_c(i,j)- cell%SG%SYM_data(k,i,j)).lt.eps) n=n+1
    end do
   end do
  end do
@@ -354,16 +361,17 @@ end function isitnew
 !
 !> @brief compute all relevant symmetry operators
 !
-!> @details compute all symmetry operators and store them in SG%SYM_data.
+!> @details compute all symmetry operators and store them in cell%SG%SYM_data.
 !               
 !> @note These routines are based on a program written by G. Ceder (MIT).
 !
 !> @param dopg include point group matrices or not (logical)
 !
-!> @date   10/13/98 MDG/Ceder 1.0 original
-!> @date    5/19/01 MDG 2.0 f90
-!> @date  11/27/01  MDG 2.1 added kind support
+!> @date  10/13/98 MDG/Ceder 1.0 original
+!> @date   5/19/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
 !> @date  03/19/13 MDG 3.0 clean up
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 subroutine GenerateSymmetry(dopg)
 
@@ -378,14 +386,14 @@ real(kind=dbl)			:: q,sm				!< auxiliary variables.
 
 ! create the space group generator matrices
  call MakeGenerators
- nsym = SG%SYM_GENnum
+ nsym = cell%SG%SYM_GENnum
 
 ! generate new elements from the squares of the generators 
- do k=1,SG%SYM_GENnum 
+ do k=1,cell%SG%SYM_GENnum 
   call matrixmult(k,k)
   if (isitnew(nsym).eqv..TRUE.) then 
    nsym=nsym+1
-   SG%SYM_data(nsym,:,:) = SG%SYM_c(:,:)
+   cell%SG%SYM_data(nsym,:,:) = cell%SG%SYM_c(:,:)
   end if
  end do
 
@@ -397,7 +405,7 @@ real(kind=dbl)			:: q,sm				!< auxiliary variables.
    call matrixmult(k2,k1)
    if (isitnew(nsym).eqv..TRUE.) then 
     nsym=nsym+1
-    SG%SYM_data(nsym,:,:) = SG%SYM_c(:,:)
+    cell%SG%SYM_data(nsym,:,:) = cell%SG%SYM_c(:,:)
     if (nsym.ge.192) then 
      k2 = nsym
      k1 = nsym
@@ -407,12 +415,12 @@ real(kind=dbl)			:: q,sm				!< auxiliary variables.
   end do
   k1=k1+1
  end do
- SG%SYM_MATnum = nsym
+ cell%SG%SYM_MATnum = nsym
 
 ! reduce the translation operators to the fundamental unit cell
- do i=1,SG%SYM_MATnum
+ do i=1,cell%SG%SYM_MATnum
   do j=1,3
-   SG%SYM_data(i,j,4)=mod( SG%SYM_data(i,j,4),1.0_dbl)
+   cell%SG%SYM_data(i,j,4)=mod( cell%SG%SYM_data(i,j,4),1.0_dbl)
   end do
  end do
 
@@ -421,14 +429,14 @@ real(kind=dbl)			:: q,sm				!< auxiliary variables.
 ! this is used to determine families of directions;
 ! for planes we must determine the transformed point symmetry
 ! operators SYM_recip() (this requires the metric tensors)
-  SG%SYM_NUMpt=0
-  do i=1,SG%SYM_MATnum 
-   sm=SG%SYM_data(i,1,4)**2+SG%SYM_data(i,2,4)**2+SG%SYM_data(i,3,4)**2
+  cell%SG%SYM_NUMpt=0
+  do i=1,cell%SG%SYM_MATnum 
+   sm=cell%SG%SYM_data(i,1,4)**2+cell%SG%SYM_data(i,2,4)**2+cell%SG%SYM_data(i,3,4)**2
    if (sm.lt.0.1_dbl) then
-    SG%SYM_NUMpt=SG%SYM_NUMpt+1
+    cell%SG%SYM_NUMpt=cell%SG%SYM_NUMpt+1
 
 ! direct space point group symmetry elements
-    SG%SYM_direc(SG%SYM_NUMpt,:,:)=SG%SYM_data(i,1:3,1:3)
+    cell%SG%SYM_direc(cell%SG%SYM_NUMpt,:,:)=cell%SG%SYM_data(i,1:3,1:3)
 
 ! reciprocal space point group symmetry elements
     do j=1,3
@@ -436,16 +444,19 @@ real(kind=dbl)			:: q,sm				!< auxiliary variables.
       q=0.0_dbl
       do l1=1,3
        do l2=1,3
-        q=q+cell%dmt(j,l1)*SG%SYM_data(i,l1,l2)*cell%rmt(l2,k)
+        q=q+cell%dmt(j,l1)*cell%SG%SYM_data(i,l1,l2)*cell%rmt(l2,k)
        end do
       end do
-      SG%SYM_recip(SG%SYM_NUMpt,j,k)=q
+      cell%SG%SYM_recip(cell%SG%SYM_NUMpt,j,k)=q
      end do
     end do
    end if  ! (sm.lt.0.1)
   end do
  end if ! if (dopg.eq..TRUE.)
 ! this completes generation of the factor group 
+
+! and finally, let's determine whether or not this space group is non-symmorphic
+ cell%nonsymmorphic = (minval(abs(SGsym - cell % SYM_SGnum)).ne.0) 
 
 end subroutine GenerateSymmetry
 
@@ -464,9 +475,10 @@ end subroutine GenerateSymmetry
 !> @param numksame number of entries in ksame to be considered
 !> @param nunique number of unique entries in itmp
 !
-!> @date   10/13/98 MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90
-!> @date  11/27/01  MDG 2.1 added kind support
+!> @date  10/13/98 MDG 1.0 original
+!> @date   5/19/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 subroutine Calc2DFamily(ind,ksame,numksame,nunique)
         
@@ -492,16 +504,16 @@ real,parameter				:: eps=0.0001_sgl		!< comparison threshold
  l=float(ind(3))
 
 ! multiply with all point group elements that have the value .TRUE. in ksame
- do i=2,SG%SYM_NUMpt 
+ do i=2,cell%SG%SYM_NUMpt 
   if (ksame(i)) then 
 !   if (space.eq.'d') then
-    ih=SG%SYM_direc(i,1,1)*h+SG%SYM_direc(i,1,2)*k+SG%SYM_direc(i,1,3)*l
-    ik=SG%SYM_direc(i,2,1)*h+SG%SYM_direc(i,2,2)*k+SG%SYM_direc(i,2,3)*l
-    il=SG%SYM_direc(i,3,1)*h+SG%SYM_direc(i,3,2)*k+SG%SYM_direc(i,3,3)*l
+    ih=cell%SG%SYM_direc(i,1,1)*h+cell%SG%SYM_direc(i,1,2)*k+cell%SG%SYM_direc(i,1,3)*l
+    ik=cell%SG%SYM_direc(i,2,1)*h+cell%SG%SYM_direc(i,2,2)*k+cell%SG%SYM_direc(i,2,3)*l
+    il=cell%SG%SYM_direc(i,3,1)*h+cell%SG%SYM_direc(i,3,2)*k+cell%SG%SYM_direc(i,3,3)*l
 !   else
-!    ih=SG%SYM_recip(i,1,1)*h+SG%SYM_recip(i,1,2)*k+SG%SYM_recip(i,1,3)*l
-!    ik=SG%SYM_recip(i,2,1)*h+SG%SYM_recip(i,2,2)*k+SG%SYM_recip(i,2,3)*l
-!    il=SG%SYM_recip(i,3,1)*h+SG%SYM_recip(i,3,2)*k+SG%SYM_recip(i,3,3)*l
+!    ih=cell%SG%SYM_recip(i,1,1)*h+cell%SG%SYM_recip(i,1,2)*k+cell%SG%SYM_recip(i,1,3)*l
+!    ik=cell%SG%SYM_recip(i,2,1)*h+cell%SG%SYM_recip(i,2,2)*k+cell%SG%SYM_recip(i,2,3)*l
+!    il=cell%SG%SYM_recip(i,3,1)*h+cell%SG%SYM_recip(i,3,2)*k+cell%SG%SYM_recip(i,3,3)*l
 !   end if
 
 ! is this a new point ?
@@ -537,9 +549,10 @@ end subroutine Calc2DFamily
 !> @param num output number of family members generated
 !> @param space space in which to perform the computation (direct 'd' or reciprocal 'r')
 !
-!> @date   10/13/98 MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90
-!> @date  11/27/01  MDG 2.1 added kind support
+!> @date  10/13/98 MDG 1.0 original
+!> @date   5/19/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 subroutine CalcFamily(ind,num,space)
         
@@ -563,15 +576,15 @@ real,parameter				:: eps=0.0001_sgl		!< comparison threshold
  l=float(ind(3))
 
 ! multiply with all point group elements
- do i=2,SG%SYM_NUMpt 
+ do i=2,cell%SG%SYM_NUMpt 
   if (space.eq.'d') then
-   ih=SG%SYM_direc(i,1,1)*h+SG%SYM_direc(i,1,2)*k+SG%SYM_direc(i,1,3)*l
-   ik=SG%SYM_direc(i,2,1)*h+SG%SYM_direc(i,2,2)*k+SG%SYM_direc(i,2,3)*l
-   il=SG%SYM_direc(i,3,1)*h+SG%SYM_direc(i,3,2)*k+SG%SYM_direc(i,3,3)*l
+   ih=cell%SG%SYM_direc(i,1,1)*h+cell%SG%SYM_direc(i,1,2)*k+cell%SG%SYM_direc(i,1,3)*l
+   ik=cell%SG%SYM_direc(i,2,1)*h+cell%SG%SYM_direc(i,2,2)*k+cell%SG%SYM_direc(i,2,3)*l
+   il=cell%SG%SYM_direc(i,3,1)*h+cell%SG%SYM_direc(i,3,2)*k+cell%SG%SYM_direc(i,3,3)*l
   else
-   ih=SG%SYM_recip(i,1,1)*h+SG%SYM_recip(i,1,2)*k+SG%SYM_recip(i,1,3)*l
-   ik=SG%SYM_recip(i,2,1)*h+SG%SYM_recip(i,2,2)*k+SG%SYM_recip(i,2,3)*l
-   il=SG%SYM_recip(i,3,1)*h+SG%SYM_recip(i,3,2)*k+SG%SYM_recip(i,3,3)*l
+   ih=cell%SG%SYM_recip(i,1,1)*h+cell%SG%SYM_recip(i,1,2)*k+cell%SG%SYM_recip(i,1,3)*l
+   ik=cell%SG%SYM_recip(i,2,1)*h+cell%SG%SYM_recip(i,2,2)*k+cell%SG%SYM_recip(i,2,3)*l
+   il=cell%SG%SYM_recip(i,3,1)*h+cell%SG%SYM_recip(i,3,2)*k+cell%SG%SYM_recip(i,3,3)*l
   end if
 
 ! is this a new point ?
@@ -607,9 +620,10 @@ end subroutine CalcFamily
 !> @param n output number of orbit members generated
 !> @param ctmp output coordinate array
 !
-!> @date   10/13/98 MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90
-!> @date  11/27/01  MDG 2.1 added kind support
+!> @date  10/13/98 MDG 1.0 original
+!> @date   5/19/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 subroutine CalcOrbit(m,n,ctmp)
 
@@ -636,16 +650,16 @@ logical					:: new			!< is this a new point ?
  end do
  
 ! get all the equivalent atom positions
- do i=2,SG%SYM_MATnum
+ do i=2,cell%SG%SYM_MATnum
   do j=1,3
-   s(j)=SG%SYM_data(i,j,4)
+   s(j)=cell%SG%SYM_data(i,j,4)
    do k=1,3
-    s(j)=s(j)+SG%SYM_data(i,j,k)*r(k)
+    s(j)=s(j)+cell%SG%SYM_data(i,j,k)*r(k)
    end do
   end do
 
 ! reduce to the fundamental unit cell if necessary
-  if (SG%SYM_reduce) then
+  if (cell%SG%SYM_reduce) then
    do j=1,3
     s(j) = mod(s(j)+100.0_dbl,1.0_dbl)
    end do
@@ -693,9 +707,10 @@ end subroutine CalcOrbit
 !> @param stmp output coordinate array
 !> @param space space in which to carry out the computation
 !
-!> @date   10/13/98 MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90
-!> @date  11/27/01  MDG 2.1 added kind support
+!> @date  10/13/98 MDG 1.0 original
+!> @date   5/19/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 subroutine CalcStar(kk,n,stmp,space)
 
@@ -717,14 +732,14 @@ logical					:: new			!< logical (is this a new one?)
  stmp(n,1:3)=r(1:3)
 
 ! get all the equivalent reciprocal/direct space vectors
- do i=2,SG%SYM_NUMpt 
+ do i=2,cell%SG%SYM_NUMpt 
   do j=1,3
    s(j)=0.0_dbl
    do k=1,3
     if (space.eq.'r') then 
-     s(j)=s(j)+SG%SYM_recip(i,j,k)*r(k)
+     s(j)=s(j)+cell%SG%SYM_recip(i,j,k)*r(k)
     else
-     s(j)=s(j)+SG%SYM_direc(i,j,k)*r(k)
+     s(j)=s(j)+cell%SG%SYM_direc(i,j,k)*r(k)
     end if
    end do
   end do
@@ -765,10 +780,11 @@ end subroutine CalcStar
 !!
 !> @param switch input vector 
 !
-!> @date   10/13/98 MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90
-!> @date  11/27/01  MDG 2.1 added kind support
-!> @date  03/21/13  MDG 3.0 clean up and updated IO
+!> @date  10/13/98 MDG 1.0 original
+!> @date   5/19/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  03/21/13 MDG 3.0 clean up and updated IO
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 subroutine CalcPositions(switch)
 
@@ -787,7 +803,7 @@ real(kind=dbl)    		:: ctmp(192,3),ff(3),sh(3)	!< auxiliary variables
 real(kind=sgl)    		:: r(3),g(3)			!< auxiliary variables	
 
 ! make sure all coordinates are reduced to the fundamental unit cell
- SG%SYM_reduce=.TRUE.
+ cell%SG%SYM_reduce=.TRUE.
 
 ! multiple cells ?
  if (switch.eq.'m') then 
@@ -809,9 +825,9 @@ real(kind=sgl)    		:: r(3),g(3)			!< auxiliary variables
 ! main loop
 ! first allocate the apos variable (contains CARTESIAN coordinates
 ! if switch is 'm', crystal coordinates otherwise)
- if (allocated(apos)) deallocate(apos)
- allocate (apos(cell%ATOM_ntype, ncells * SG%SYM_MATnum, 3),stat=ier)
- if (ier.ne.0) call FatalError('CalcPositions','unable to allocate memory for array apos')
+ if (allocated(cell%apos)) deallocate(cell%apos)
+ allocate (cell%apos(cell%ATOM_ntype, ncells * cell%SG%SYM_MATnum, 3),stat=ier)
+ if (ier.ne.0) call FatalError('CalcPositions','unable to allocate memory for array cell%apos')
 
  do i=1,cell%ATOM_ntype
 
@@ -841,7 +857,7 @@ real(kind=sgl)    		:: r(3),g(3)			!< auxiliary variables
        if (inside) then
         call TransSpace(r,g,'d','c')
         do mm=1,3
-         apos(i,icnt,mm)=g(mm)
+         cell%apos(i,icnt,mm)=g(mm)
         end do
         icnt=icnt+1
        end if
@@ -849,7 +865,7 @@ real(kind=sgl)    		:: r(3),g(3)			!< auxiliary variables
 
 ! prepare for structure factor computation
        do mm=1,3
-        apos(i,icnt,mm)=r(mm)
+        cell%apos(i,icnt,mm)=r(mm)
        end do
        icnt=icnt+1
       end if  ! switch
@@ -875,10 +891,11 @@ end subroutine CalcPositions
 !
 !> @param iset  output value (1 or 2) 
 !
-!> @date   10/13/98 MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90
-!> @date  11/27/01  MDG 2.1 added kind support
-!> @date  03/21/13  MDG 3.0 clean up and updated IO
+!> @date  10/13/98 MDG 1.0 original
+!> @date   5/19/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  03/21/13 MDG 3.0 clean up and updated IO
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 subroutine GetSetting(iset)
 
@@ -953,10 +970,11 @@ end subroutine GetSetting
 !> statements, which in principle should only be used in the io module; so,
 !> we may need to move this entire routine to the io.f90 file to be consistent.
 !
-!> @date   10/13/98 MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90
-!> @date  11/27/01  MDG 2.1 added kind support
-!> @date  03/21/13  MDG 3.0 clean up and updated IO
+!> @date  10/13/98 MDG 1.0 original
+!> @date   5/19/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  03/21/13 MDG 3.0 clean up and updated IO
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 subroutine GetSpaceGroup
 
@@ -977,7 +995,7 @@ logical           	:: skip						!< logical variable
  case (2); sgmin =  75; sgmax = 142
  case (3); sgmin =  16; sgmax =  74
  case (4); sgmin = 168; sgmax = 194
- case (5); if (cell%SYM_second) then
+ case (5); if (cell%SG%SYM_second) then
              mess = 'The space groups below correspond to the '; call Message("(/A)")
              mess = 'second (rhombohedral) setting.'; call Message("(A/)")
              mess = 'Please select one of the space groups.'; call Message("(A/)")
@@ -993,7 +1011,7 @@ logical           	:: skip						!< logical variable
              cell%SYM_SGnum = io_int(1)
 
 ! check for rhombohedral settings of rhombohedral space groups
-             if (cell%SYM_second) then
+             if (cell%SG%SYM_second) then
                if (cell%SYM_SGnum.eq.146) cell%SYM_SGnum=231
                if (cell%SYM_SGnum.eq.148) cell%SYM_SGnum=232
                if (cell%SYM_SGnum.eq.155) cell%SYM_SGnum=233
@@ -1052,10 +1070,11 @@ end subroutine GetSpaceGroup
 !> @param num number of values to test
 !> @param jcnt number of distinct entries in the output list
 !
-!> @date   10/13/98 MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90
-!> @date  11/27/01  MDG 2.1 added kind support
-!> @date  03/21/13  MDG 3.0 clean up and updated IO
+!> @date  10/13/98 MDG 1.0 original
+!> @date   5/19/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  03/21/13 MDG 3.0 clean up and updated IO
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 subroutine GetOrder(k,il,num,jcnt)
 
@@ -1125,10 +1144,11 @@ end subroutine GetOrder
 !> @todo It may be possible to do this in a different (easier) way; it is a 
 !> bit clumsy right now...
 !
-!> @date   10/13/98 MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90
-!> @date  11/27/01  MDG 2.1 added kind support
-!> @date  03/21/13  MDG 3.0 clean up and updated IO
+!> @date  10/13/98 MDG 1.0 original
+!> @date   5/19/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  03/21/13 MDG 3.0 clean up and updated IO
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 subroutine ShortestG(k,gone,gtwo,isym)
 
@@ -1321,10 +1341,11 @@ end subroutine ShortestG
 !
 !> @param g input vector  
 !
-!> @date   10/13/98 MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90
-!> @date  11/27/01  MDG 2.1 added kind support
-!> @date  03/21/13  MDG 3.0 clean up and updated IO
+!> @date  10/13/98 MDG 1.0 original
+!> @date   5/19/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  03/21/13 MDG 3.0 clean up and updated IO
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 logical function IsGAllowed(g)
 
@@ -1339,7 +1360,7 @@ character(1)				:: lc		!< first letter of space group name
 
 ! Determine whether or not this vector is
 ! actually allowed by the lattice centering
- lc(1:1) =  SG%SYM_name(2:2)
+ lc(1:1) =  cell%SG%SYM_name(2:2)
  IsGAllowed = .TRUE.
  select case (lc)
   case ('P'); ! all reflections allowed for a primitive lattice
@@ -1381,10 +1402,11 @@ end function IsGAllowed
 !> @param isym keeps track of special cases	
 !> @param ir  index of point group
 !
-!> @date   10/13/98 MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90
-!> @date  11/27/01  MDG 2.1 added kind support
-!> @date  03/21/13  MDG 3.0 clean up and updated IO
+!> @date  10/13/98 MDG 1.0 original
+!> @date   5/19/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  03/21/13 MDG 3.0 clean up and updated IO
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 subroutine BFsymmetry(uvw,j,isym,ir)
 
@@ -1401,7 +1423,7 @@ integer(kind=irg)		:: orderPG, Lauenum, ng		!< auxiliary variables
 real(kind=dbl)			:: kstar(48,3)				!< star variable
 
 
- orderPG = SG%SYM_NUMpt
+ orderPG = cell%SG%SYM_NUMpt
  Lauenum = PGLaueinv(j)
  call CalcStar(dble(uvw),ng,kstar,'d')
  ir = orderPG/ng
@@ -1429,7 +1451,8 @@ end subroutine BFsymmetry
 !> @param pgnum point group number
 !> @param verbose (optional) produces output if present
 !
-!> @date   10/01/13 MDG 1.0 original
+!> @date  10/01/13 MDG 1.0 original
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 function GetPatternSymmetry(uvw,pgnum,verbose) result(dgn)
 
@@ -1498,7 +1521,8 @@ end function GetPatternSymmetry
 !> this would be for the following point groups  -6m2, -3m, 3m, 32, -42m, and the unique
 !> axis settings for the monoclinic groups.
 !
-!> @date   10/01/13 MDG 1.0 original
+!> @date  10/01/13 MDG 1.0 original
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 function GetDiffractionGroup(uvw,pgn) result(dgn)
 
@@ -2078,7 +2102,8 @@ end function GetDiffractionGroup
 !
 !> @param pgn 2D point group number
 !
-!> @date   10/02/13 MDG 1.0 original
+!> @date  10/02/13 MDG 1.0 original
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 subroutine Generate2DSymmetry(pgn)
 
@@ -2222,7 +2247,8 @@ end subroutine Generate2DSymmetry
 !> @param isym 2D point group number for whole pattern symmetry
 !> @param thetam (output) point group rotation angle, if needed
 !
-!> @date   10/14/13 MDG 1.0 original
+!> @date  10/14/13 MDG 1.0 original
+!> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 subroutine CheckPatternSymmetry(k,ga,isym,thetam)
 

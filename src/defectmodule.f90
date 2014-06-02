@@ -90,9 +90,8 @@ contains
 !> @date  03/26/13 MDG 3.0 updated IO
 !> @date  10/30/13 MDG 3.1 debug of coordinate rotations
 !> @date  11/13/13 MDG 3.2 finally, the bug has been found!  
-!> @date  02/10/14 MDG 3.3 added apbs
 !--------------------------------------------------------------------------
-subroutine CalcR(i,j,numvoids,numdisl,numYdisl,numsf,numinc,numapb)
+subroutine CalcR(i,j,numvoids,numdisl,numYdisl,numsf,numinc)
 
 use local
 use constants
@@ -104,14 +103,12 @@ use foilmodule
 use void
 use stacking_fault
 use inclusion
-use apb
 use quaternions
 use rotations
 
 IMPLICIT NONE
 
 integer(kind=irg),INTENT(IN)    	:: i,j,numvoids,numdisl,numYdisl,numsf,numinc
-integer(kind=irg),INTENT(IN),OPTIONAL :: numapb
 integer(kind=irg)			:: k, islice, ii
 real(kind=dbl)        			:: dis,xpos,ypos,zpos,sumR(3),thick,tmp(3),tmp2(3), &
 					   tmpf(3),u(3),zaamp,zaphase,zar,zai,zr(3),zi(3), &
@@ -120,7 +117,7 @@ real(kind=dbl)        			:: dis,xpos,ypos,zpos,sumR(3),thick,tmp(3),tmp2(3), &
                          			 
 complex(kind=dbl)     			:: za(3)
 complex(kind=sgl)     			:: zero
-logical               			:: lvoid ! PGC void -> lvoid
+logical               			:: void
 
 ! scale the image coordinates with respect to the origin at the center of the image
  xpos = float(i-DF_npix/2)*DF_L
@@ -158,18 +155,18 @@ logical               			:: lvoid ! PGC void -> lvoid
 ! one of the voids; the calling routine then knows to use the void scattering matrix.
 if (numvoids.ne.0) then 
 ! are we inside a void ?
-    lvoid = .FALSE.
+    void = .FALSE.
     voidloop: do ii=1,numvoids
 ! subtract the void position from the current slice position to get the relative position vector
      tmp = tmpf -  (/ voids(ii)%xpos, voids(ii)%ypos, voids(ii)%zpos /)
      dis = CalcLength(tmp,'c')
      if (dis.lt.voids(ii)%radius) then ! inside void
-       lvoid = .TRUE.
+       void = .TRUE.
        exit voidloop
      end if
     end do voidloop
 ! skip the rest of the computation for this slice if we are inside a void
-    if (lvoid.eqv..TRUE.) then 
+    if (void.eqv..TRUE.) then 
       DF_R(islice,1) = -10000.0
       cycle sliceloop
     end if
@@ -330,26 +327,6 @@ end do
      sumR = sumR + inclusions(ii)%C*tmp
    end do
   end if
-
-!------------
-!----APBS----
-!------------
-! these are cylindrical APBs that are used specifically for the LSMO system, but might be useful
-! for other things as well.  
-if (present(numapb)) then
-   apbloop: do ii=1,numapb
-! subtract the void position from the current slice position to get the relative position vector
-     tmp = tmpf - (/ apbs(ii)%xpos, apbs(ii)%ypos, apbs(ii)%zpos /)
-     dis = sqrt(tmp(1)**2+tmp(2)**2)
-     if (dis.lt.(apbs(ii)%radius+apbs(ii)%w)) then ! inside apb + boundary
-       if (dis.lt.apbs(ii)%radius) then ! inside apb + boundary
-         sumR = sumR + apbs(ii)%Rdisp
-       else
-         sumR = sumR + apbs(ii)%Rdisp * (dis - apbs(ii)%radius) / apbs(ii)%w
-       end if  
-   end if
-    end do apbloop
-end if 
 
 ! TO BE IMPLEMENTED FOR RICHARD LESAR'S Discrete Dislocation Dynamics ! 
 ! finally any displacement fields defined by the user routine UserDisp

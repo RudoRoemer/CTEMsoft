@@ -17,6 +17,7 @@
 !> @date    3/14/02 MDG 2.2 added CalcDynMat routine
 !> @date    4/29/13 MDG 3.0 rewrite, moved stuff into gvectors and kvectors modules
 !> @date   11/05/13 MDG 3.1 added DynMats for multiphase calculations
+!> @date   01/10/14 MDG 4.0 adjusted for new cell type definition
 !--------------------------------------------------------------------------
 module dynamical
 
@@ -60,7 +61,8 @@ real(kind=sgl)   		:: DynWV(3), &       ! wave vector expressed in reciprocal fr
                     		DynFN(3), &       ! Foil normal in reciprocal frame
 		    		DynUpz            ! U'_0 normal absorption parameter
 
-integer(kind=irg)		:: DynNbeams, DynNbeamsLinked      ! number of beams
+! moved to cell type in crystalvars.f90
+! integer(kind=irg)		:: DynNbeams, DynNbeamsLinked      ! number of beams
 
 end module dynamical
 

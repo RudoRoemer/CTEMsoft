@@ -1,5 +1,5 @@
 ! ###################################################################
-! Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
+! Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
 ! All rights reserved.
 !
 ! Redistribution and use in source and binary forms, with or without modification, are 
@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:diffraction.f90
+! CTEMsoft:diffraction.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: diffraction
@@ -42,6 +42,7 @@
 !> @date    5/22/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date    3/14/02 MDG 2.2 added CalcDynMat routine
+!> @date   01/10/14 MDG 3.0 update with new cell type etc...
 !--------------------------------------------------------------------------
 module diffraction
 
@@ -236,10 +237,10 @@ use dynamical
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)   			:: voltage			!< accelerating voltage [V]
+real(kind=dbl),INTENT(IN)   		:: voltage		!< accelerating voltage [V]
 integer(kind=irg),INTENT(IN),OPTIONAL 	:: skip			!< scattering set identifier
-real(kind=dbl)   					:: temp1,temp2, oi_real(1)
-integer(kind=irg)					:: hkl(3), io_int(1)
+real(kind=dbl)   			:: temp1,temp2, oi_real(1)
+integer(kind=irg)			:: hkl(3), io_int(1)
 
 ! store voltage in common block
  mAccvol = voltage
@@ -316,7 +317,7 @@ end subroutine
 !> @date   10/20/98 MDG 1.0 original
 !> @date    5/22/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
-!> @date  03/26/13  MDG  3.0 updated IO
+!> @date   03/26/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 function CalcDiffAngle(h,k,l) result(tt)
 
@@ -326,7 +327,7 @@ use crystal
 IMPLICIT NONE
 
 integer(kind=irg),INTENT(IN)  	:: h,k,l 		!< Miller indices
-real(kind=sgl)     			:: tt
+real(kind=sgl)     		:: tt
 
 tt = 2.0*asin(0.50*sngl(mLambda)*CalcLength( float( (/h,k,l/) ), 'r') )
 
@@ -354,7 +355,7 @@ IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)  			:: theta 		!< scattering angle
 character(*),INTENT(IN),OPTIONAL		:: HEDM		!< for HEDM we have a different polarization factor
-real(kind=sgl)     					:: tt
+real(kind=sgl)     				:: tt
 
 if (present(HEDM)) then
   tt = (1.0+cos(2.0*theta)**2) / sin(theta)**2 / cos(theta)
@@ -382,11 +383,12 @@ end function
 !
 !> @note CalcPositions must be called before calling this routine
 !
-!> @date   10/20/98 MDG 1.0 original
-!> @date    5/22/01 MDG 2.0 f90
-!> @date   11/27/01 MDG 2.1 added kind support
-!> @date  03/26/13  MDG  3.0 updated IO
+!> @date  10/20/98 MDG 1.0 original
+!> @date   5/22/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  03/26/13 MDG 3.0 updated IO
 !> @date  03/26/13 MDG 3.1 added XRD support
+!> @date  01/10/14 MDG 4.0 new cell type
 !--------------------------------------------------------------------------
 subroutine CalcUcg(hkl)
 
@@ -401,12 +403,12 @@ use dynamical
 IMPLICIT NONE
 
 integer(kind=irg),INTENT(IN)      	:: hkl(3)		!< Miller indices
-integer(kind=irg)      			:: j,absflg,m,ii
-real(kind=sgl)         				:: s,twopi,arg,swk,dwwk,pref,ul,pre,preg,sct,fs,fsp
-complex(kind=sgl)      			:: ff,gg,sf,p1
-complex(kind=sgl)      			:: czero
-logical                				:: accflg, dwflg
-character(2)           				:: smb
+integer(kind=irg)      		:: j,absflg,m,ii
+real(kind=sgl)         		:: s,twopi,arg,swk,dwwk,pref,ul,pre,preg,sct,fs,fsp
+complex(kind=sgl)      		:: ff,gg,sf,p1
+complex(kind=sgl)      		:: czero
+logical                		:: accflg, dwflg
+character(2)           		:: smb
 
 twopi = sngl(2.D0*cPi)
 czero = cmplx(0.0,0.0)
@@ -449,7 +451,7 @@ if (rlp%method.eq.'XR') then
 
 ! loop over all atoms in the orbit
   do j=1,numat(m)
-   arg=twopi * sum(hkl(1:3)*apos(m,j,1:3))
+   arg=twopi * sum(hkl(1:3)*cell%apos(m,j,1:3))
    sf = sf + fs * cmplx(cos(arg),-sin(arg))
   end do
 
@@ -486,7 +488,7 @@ if (rlp%method.eq.'DT') then
 
 ! loop over all atoms in the orbit
   do j=1,numat(m)
-   arg=twopi*sum(hkl(1:3)*apos(m,j,1:3))
+   arg=twopi*sum(hkl(1:3)*cell%apos(m,j,1:3))
    sf = sf + fs*exp(cmplx(0.0,-arg))
   end do
  end do ! m loop
@@ -565,7 +567,7 @@ if (rlp%method.eq.'WK') then
 ! loop over all atoms in the orbit
   p1 = czero
   do j=1,numat(m)
-   arg=twopi*sum(float(hkl(1:3))*apos(m,j,1:3))
+   arg=twopi*sum(float(hkl(1:3))*cell%apos(m,j,1:3))
    p1 = p1 + exp(cmplx(0.0,-arg))
   end do
 
@@ -644,7 +646,7 @@ end subroutine CalcUcg
 !> @date   10/20/98 MDG 1.0 original
 !> @date    5/22/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
-!> @date  03/26/13  MDG  3.0 updated IO
+!> @date   03/26/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 function CalcsgSingle(gg,kk,FN) result(sg)
 
@@ -653,9 +655,9 @@ use crystal
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN) 	::  gg(3)		!< reciprocal lattice point
-real(kind=sgl),INTENT(IN) 	::  kk(3)		!< wave vector
-real(kind=sgl),INTENT(IN) 	::  FN(3) 		!< foil normal
+real(kind=sgl),INTENT(IN) 	:: gg(3)		!< reciprocal lattice point
+real(kind=sgl),INTENT(IN) 	:: kk(3)		!< wave vector
+real(kind=sgl),INTENT(IN) 	:: FN(3) 		!< foil normal
 real(kind=sgl)			:: kpg(3),tkpg(3),xnom,xden,q1,q2,sg
 
 
@@ -688,7 +690,7 @@ end function CalcsgSingle
 !> @date   10/20/98 MDG 1.0 original
 !> @date    5/22/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
-!> @date  03/26/13  MDG  3.0 updated IO
+!> @date   03/26/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 function CalcsgDouble(gg,kk,FN) result(sg)
 
@@ -697,9 +699,9 @@ use crystal
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN) 	::  gg(3)		!< reciprocal lattice point
-real(kind=dbl),INTENT(IN) 	::  kk(3)		!< wave vector
-real(kind=dbl),INTENT(IN) 	::  FN(3) 		!< foil normal
+real(kind=dbl),INTENT(IN) 	:: gg(3)		!< reciprocal lattice point
+real(kind=dbl),INTENT(IN) 	:: kk(3)		!< wave vector
+real(kind=dbl),INTENT(IN) 	:: FN(3) 		!< foil normal
 real(kind=dbl)			:: kpg(3),tkpg(3),xnom,xden,q1,q2,sg
 
  kpg=kk+gg
@@ -715,9 +717,6 @@ real(kind=dbl)			:: kpg(3),tkpg(3),xnom,xden,q1,q2,sg
  sg = xnom/xden
 
 end function CalcsgDouble
-
-
-
 
 
 !--------------------------------------------------------------------------
@@ -744,7 +743,7 @@ end function CalcsgDouble
 !> @date   10/20/98 MDG 1.0 original
 !> @date    5/22/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
-!> @date  03/26/13  MDG  3.0 updated IO
+!> @date   03/26/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine TBCalcSM(Ar,Ai,sg,z,xig,xigp,xizero,betag)
 
@@ -846,7 +845,7 @@ end subroutine
 !> @date   10/20/98 MDG 1.0 original
 !> @date    5/22/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
-!> @date  03/26/13  MDG  3.0 updated IO
+!> @date   03/26/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine TBCalcInten(It,Is,sg,z,xig,xigp,xizero,betag)
 
@@ -923,7 +922,7 @@ end subroutine
 !> @date   10/20/98 MDG 1.0 original
 !> @date    5/22/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
-!> @date  03/26/13  MDG  3.0 updated IO
+!> @date   03/26/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine TBCalcdz(im,nbm)
  
@@ -968,7 +967,8 @@ end subroutine
 !> @date   10/20/98 MDG 1.0 original
 !> @date    5/22/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
-!> @date  03/26/13  MDG  3.0 updated IO
+!> @date   03/26/13 MDG 3.0 updated IO
+!> @date   01/10/14 MDG 4.0 update for new cell type
 !--------------------------------------------------------------------------
 subroutine DiffPage
 
@@ -981,26 +981,26 @@ use symmetryvars
 use math
 use io
 use constants
-use doublediff
 use dynamical
 
 IMPLICIT NONE
 
 integer(kind=irg),parameter    :: inm = 5
-character(1)                    		:: list(256)
-logical                         		:: first,np,ppat,a
-logical,allocatable             	:: z(:,:,:),zr(:,:,:)
-integer(kind=irg)               	:: i,j,h,k,l,m,totfam,hh,ll,fmax,inmhkl(3),ricnt,icnt,ind(3),uu,vv,ww,slect(256), &
-                                   			js,ii,num,hc,hhcc,iinm,dpcnt,imo,ih,ik,il,ier,iref, io_int(4)
+character(1)                    :: list(256)
+logical                         :: first,np,ppat,a
+logical,allocatable             :: z(:,:,:),zr(:,:,:)
+integer(kind=irg)               :: i,j,h,k,l,m,totfam,hh,ll,fmax,inmhkl(3),ricnt,icnt,ind(3),uu,vv,ww,slect(256), &
+                                 	js,ii,num,hc,hhcc,iinm,dpcnt,imo,ih,ik,il,ier,iref, io_int(4)
 integer(kind=irg),allocatable   :: idx(:)
 integer(kind=irg),allocatable   :: family(:,:),numfam(:)
-real(kind=sgl)                  	:: twopi,ggl,g(3),Vmax,laL,gmax,RR,thr, oi_real(1)
-real(kind=sgl),allocatable      	:: gg(:)
+real(kind=sgl)                  :: twopi,ggl,g(3),Vmax,laL,gmax,RR,thr, oi_real(1)
+real(kind=sgl),allocatable      :: gg(:)
 real(kind=sgl),parameter        :: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/),yoff(0:5)=(/6.0,6.0,3.0,3.0,0.0,0.0/), &
-                                   			eps = 1.0E-3
+                                  	eps = 1.0E-3
+logical,allocatable  	         :: dbdiff(:)
 
 ! set some parameters
- SG % SYM_reduce=.TRUE.
+ cell % SG % SYM_reduce=.TRUE.
  thr = 1.E-4 
  twopi = 2.0*cPi
  Vmax = 0.0
@@ -1042,8 +1042,7 @@ real(kind=sgl),parameter        :: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/
 ! if this is a non-symmorphic space group, then also
 ! allocate the dbdiff array to tag potential double 
 ! diffraction reflections
- nonsymmorphic = (minval(abs(SGsym - cell % SYM_SGnum)).ne.0) 
- if (nonsymmorphic) then
+ if (cell%nonsymmorphic) then
    allocate(dbdiff(hhcc))
    dbdiff(1:hhcc) = .FALSE.
  endif
@@ -1084,7 +1083,7 @@ real(kind=sgl),parameter        :: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/
       if (a) then
        call CalcUcg(ind)
 ! check for nonsymmorphic systematic absences
-       if ((nonsymmorphic).and.(rlp%Vmod.lt.eps)) then
+       if ((cell%nonsymmorphic).and.(rlp%Vmod.lt.eps)) then
         io_int = (/ h, k, l, 0 /)
         call WriteValue(' potential double diffraction family :', io_int,3,"('{',I3,I3,I3,'}')")
         dbdiff(icnt) = .TRUE.
@@ -1221,7 +1220,7 @@ real(kind=sgl),parameter        :: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/
  call ReadValue('',list,256,"(256A)")
  call studylist(list,slect,fmax,ppat)
 
- if (nonsymmorphic) then
+ if (cell%nonsymmorphic) then
   mess = 'Potential double diffraction reflections will be indicated by open squares.'; call Message("(A,/)")
  end if
  call ReadValue('No indices (0), labels (1), extinctions (2), labels + extinctions (3): ', io_int, 1)
@@ -1249,13 +1248,13 @@ real(kind=sgl),parameter        :: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/
   else
    io_int(1:3) = family(j,1:3)
    call WriteValue('Creating ZAP ', io_int,3, "('[',3i3,'] : ',$)")
-   call DumpZAP(xoff(imo),yoff(imo),family(j,1),family(j,2),family(j,3),numfam(j),np,first,iref,laL,ricnt)
+   call DumpZAP(xoff(imo),yoff(imo),family(j,1),family(j,2),family(j,3),numfam(j),np,first,iref,laL,ricnt,dbdiff)
   endif
  end do
 
 ! and clean up all variables
  deallocate(zr,z,Vg, Vgsave, rfamily, rnumfam, rg, family, numfam, idx, gg)
- if (nonsymmorphic) deallocate(dbdiff)
+ if (cell%nonsymmorphic) deallocate(dbdiff)
 
 end subroutine DiffPage
 
@@ -1278,20 +1277,20 @@ end subroutine DiffPage
 !> @param indi 
 !> @param laL camera length
 !> @param icnt counter
+!> @param dbdiff double diffraction logical array
 !
 !> @date   10/20/98 MDG 1.0 original
 !> @date    5/22/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date  03/26/13  MDG  3.0 updated IO
 !--------------------------------------------------------------------------
-subroutine DumpZAP(xo,yo,u,v,w,p,np,first,indi,laL,icnt)
+subroutine DumpZAP(xo,yo,u,v,w,p,np,first,indi,laL,icnt,dbdiff)
 
 use local
 use io
 use postscript
 use crystal
 use crystalvars
-use doublediff
 use error
 
 IMPLICIT NONE
@@ -1299,20 +1298,21 @@ IMPLICIT NONE
 real(kind=sgl),INTENT(IN)	:: xo, yo		!< lower left position
 integer(kind=irg),INTENT(IN)	:: u, v, w		!< zone axis components
 integer(kind=irg),INTENT(IN)	:: p			!< ??
-logical,INTENT(IN)			:: np			!< logical for new page
-logical,INTENT(IN)			:: first		!< logical
-integer(kind=irg),INTENT(IN)	:: indi		!< ??
+logical,INTENT(IN)		:: np			!< logical for new page
+logical,INTENT(IN)		:: first		!< logical
+integer(kind=irg),INTENT(IN)	:: indi		        !< ??
 real(kind=sgl),INTENT(IN)	:: laL			!< camera length
-integer(kind=irg),INTENT(IN)	:: icnt		!< counter
+integer(kind=irg),INTENT(IN)	:: icnt		        !< counter
+logical,INTENT(IN)            :: dbdiff(icnt)         !< array to deal with double diffraction spots
 
 ! nref is the anticipated maximum number of reflections per pattern
 integer(kind=irg),parameter  	:: nref = 2000
-integer(kind=irg)            		:: dp,i,j,jcnt,ui,vi,wi,pp,locg(nref,3),ier, io_int(1)
+integer(kind=irg)            	:: dp,i,j,jcnt,ui,vi,wi,pp,locg(nref,3),ier, io_int(1)
 integer(kind=irg),allocatable	:: idx(:)
-real(kind=sgl)               		:: sc,gmax,leng(nref),PX,PY,qx,qy,locv(nref),locvsave(nref),t(3),c(3),gg(3),gx(3),gy(3)
+real(kind=sgl)               	:: sc,gmax,leng(nref),PX,PY,qx,qy,locv(nref),locvsave(nref),t(3),c(3),gg(3),gx(3),gy(3)
 real(kind=sgl),allocatable   	:: lng(:)
 real(kind=sgl),parameter     	:: le=3.25,he=2.9375,thr=1.0E-4
-logical                      		:: dbd(nref)
+logical                      	:: dbd(nref)
 
 ! do page preamble stuff if this is a new page
 ! [This assumes that the PostScript file has already been opened]
@@ -1368,7 +1368,7 @@ logical                      		:: dbd(nref)
     locvsave(jcnt)=Vgsave(i)
     dbd(jcnt)=.FALSE.
 ! take care of potential double diffraction reflections
-    if ((nonsymmorphic).and.(dbdiff(i))) dbd(jcnt) = .TRUE.
+    if ((cell%nonsymmorphic).and.(dbdiff(i))) dbd(jcnt) = .TRUE.
    end if
   end do
  end do
@@ -1418,7 +1418,7 @@ logical                      		:: dbd(nref)
   end if
 
 ! could it be a double diffraction spot ?
-  if ((nonsymmorphic).and.(dbd(j))) call PS_square(qx,qy,0.04)
+  if ((cell%nonsymmorphic).and.(dbd(j))) call PS_square(qx,qy,0.04)
 
 ! is it a regular reflection ?
   if (locv(j).ge.thr) then
@@ -1462,14 +1462,14 @@ use crystalvars
 IMPLICIT NONE 
 
 real(kind=sgl),INTENT(IN)	:: xo, yo		!< lower left position
-logical,INTENT(IN)			:: np			!< logical for new page
+logical,INTENT(IN)		:: np			!< logical for new page
 real(kind=sgl),INTENT(IN)	:: laL			!< camera length
 integer(kind=irg),INTENT(IN)	:: icnt		!< counter
 
 ! nref = max number of rings
 integer(kind=irg),parameter 	:: nref = 500
-integer(kind=irg)           		:: i,j
-real(kind=sgl)              		:: sc,gmax,leng(nref),PX,PY,locv(nref),grad,w,Vmax
+integer(kind=irg)           	:: i,j
+real(kind=sgl)              	:: sc,gmax,leng(nref),PX,PY,locv(nref),grad,w,Vmax
 real(kind=sgl),parameter    	:: le=3.25,he=2.9375,thr=1.0E-4
 
 ! do page preamble stuff if this is a new page
@@ -1548,7 +1548,7 @@ end subroutine
 !> @date   10/20/98 MDG 1.0 original
 !> @date    5/22/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
-!> @date  03/26/13  MDG  3.0 updated IO
+!> @date   03/26/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine studylist(list,slect,np,ppat)
 
@@ -1556,12 +1556,12 @@ use local
 
 IMPLICIT NONE
 
-character(1),INTENT(IN) 			:: list(256)		!< input string
+character(1),INTENT(IN) 		:: list(256)		!< input string
 integer(kind=irg),INTENT(OUT)     	:: slect(256)		!< list of patterns to be drawn
 integer(kind=irg),INTENT(OUT)     	:: np				!< number of patterns
 logical,INTENT(INOUT)			:: ppat			!< powder pattern included ?
 
-integer(kind=irg)				:: comma(100),hyphen(100),ccnt,hcnt,i,j,k,ip,icnt,nd,n,istart,istop
+integer(kind=irg)			:: comma(100),hyphen(100),ccnt,hcnt,i,j,k,ip,icnt,nd,n,istart,istop
 integer(kind=irg),parameter 		:: nmb(48:57)=(/0,1,2,3,4,5,6,7,8,9/)
 
 ! initialize a few parameters
@@ -1675,7 +1675,6 @@ end subroutine
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date  08/09/10  MDG 2.2  rewritten to include both ZGEEV and ZGEES/ZTREVC
 !> @date  03/26/13  MDG  3.0 clean up of old comments
-!> @date  03/04/14  PGC  3.1 Change cabs -> abs for gfortran compatability
 !--------------------------------------------------------------------------
 recursive subroutine BWsolve(M,W,CGG,CGinv,nn,IPIV,keeporder)
 
@@ -1731,7 +1730,7 @@ complex(kind=dbl),allocatable 	:: MIWORK(:)
 ! it appears that the eigenvectors may not always be normalized ...
 ! so we renormalize them here...
 do i=1,nn
-  normsum = sum(abs(CGG(1:nn,i))**2) !PGC cabs -> abs
+  normsum = sum(cabs(CGG(1:nn,i))**2)
   normsum = cmplx(1.0,0.0,dbl)/sqrt(normsum)
   CGG(1:nn,i) = CGG(1:nn,i)*normsum
 end do
@@ -1751,9 +1750,9 @@ end do
  call zgetri(nn,CGinv,LDA,JPIV,MIWORK,MILWORK,INFO)
  if (INFO.ne.0) call FatalError('Error in BWsolve: ','ZGETRI return not zero')
 
- if ((abs(sum(matmul(CGG,CGinv)))-dble(nn)).gt.1.E-8) then ! PGC cabs -> abs
+ if ((cabs(sum(matmul(CGG,CGinv)))-dble(nn)).gt.1.E-8) then
   mess= 'Error in matrix inversion; continuing'; call Message("(A)")
-  io_real(1) = abs(sum(matmul(CGG,CGinv)))-dble(nn) ! PGC cabs -> abs
+  io_real(1) = cabs(sum(matmul(CGG,CGinv)))-dble(nn)
   call WriteValue('   Matrix inversion error; this number should be zero: ',io_real,1,"(F)")
  endif
   

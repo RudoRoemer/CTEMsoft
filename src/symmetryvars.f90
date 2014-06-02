@@ -1,5 +1,5 @@
 ! ###################################################################
-! Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
+! Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
 ! All rights reserved.
 !
 ! Redistribution and use in source and binary forms, with or without modification, are 
@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:symmetryvars.f90
+! CTEMsoft:symmetryvars.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: symmetryvars
@@ -76,12 +76,12 @@
 !> @note  9/25/2011: corrected the generators for space groups 39, 90, 107, 108, 131, 214, and 222.\n
 !> [Thank you Matthew O'Brien for pointing out the errors !]\n
 !> [Thank you also to Marco Schowalter for pointing out an error in space group 222; corrected on 9/24/2012]
-!> [Thank you Shyue Ping for suggesting to modify the monoclinic names to include the "1" axes, 4/14/14]
 
-!> @date 1/5/99   MDG 1.0 original
-!> @date   5/19/01  MDG 2.0 f90
-!> @date  11/27/01  MDG 2.1 added kind support
-!> @date   03/19/13 MDG 3.0 updated file
+!> @date  1/5/99  MDG 1.0 original
+!> @date  5/19/01 MDG 2.0 f90
+!> @date 11/27/01 MDG 2.1 added kind support
+!> @date 03/19/13 MDG 3.0 updated file
+!> @date 01/10/14 MDG 4.0 new version
 !--------------------------------------------------------------------------
 
 module symmetryvars
@@ -91,10 +91,10 @@ use local
 !>  SYM_SGname all space group names
 ! TRICLINIC SPACE GROUPS
 character(11),parameter :: SYM_SGname(237)= (/" P  1      " ," P -1      ", & ! MONOCLINIC SPACE GROUPS
-        " P 1 2 1   " ," P 1 21 1  " ," C 1 2 1   " ," P 1 m 1   ", &
-        " P 1 c 1   " ," C 1 m 1   " ," C 1 c 1   " ," P 1 2/m 1 ", &
-        " P 1 21/m 1" ," C 1 2/m 1 " ," P 1 2/c 1 " ," P 1 21/c 1", &
-        " C 1 2/c 1 ", &                                              ! ORTHORHOMBIC SPACE GROUPS
+        " P 2       " ," P 21      " ," C 2       " ," P m       ", &
+        " P c       " ," C m       " ," C c       " ," P 2/m     ", &
+        " P 21/m    " ," C 2/m     " ," P 2/c     " ," P 21/c    ", &
+        " C 2/c     ", &                                              ! ORTHORHOMBIC SPACE GROUPS
         " P 2 2 2   " ," P 2 2 21  " ," P 21 21 2 " ," P 21 21 21", &
         " C 2 2 21  " ," C 2 2 2   " ," F 2 2 2   " ," I 2 2 2   ", &
         " I 21 21 21" ," P m m 2   " ," P m c 21  " ," P c c 2   ", &
@@ -142,14 +142,14 @@ character(11),parameter :: SYM_SGname(237)= (/" P  1      " ," P -1      ", & ! 
         " P -6 c 2  " ," P -6 2 m  " ," P -6 2 c  " ," P 6/m m m ", &
         " P 6/m c c " ," P 63/m c m" ," P 63/m m c", &                ! CUBIC SPACE GROUPS
         " P 2 3     " ," F 2 3     " ," I 2 3     " ," P 21 3    ", &
-        " I 21 3    " ," P m -3    " ," P n -3    " ," F m -3    ", &
-        " F d -3    " ," I m -3    " ," P a -3    " ," I a -3    ", &
+        " I 21 3    " ," P m 3     " ," P n 3     " ," F m 3     ", &
+        " F d 3     " ," I m 3     " ," P a 3     " ," I a 3     ", &
         " P 4 3 2   " ," P 42 3 2  " ," F 4 3 2   " ," F 41 3 2  ", &
         " I 4 3 2   " ," P 43 3 2  " ," P 41 3 2  " ," I 41 3 2  ", &
         " P -4 3 m  " ," F -4 3 m  " ," I -4 3 m  " ," P -4 3 n  ", &
-        " F -4 3 c  " ," I -4 3 d  " ," P m -3 m  " ," P n -3 n  ", &
-        " P m -3 n  " ," P n -3 m  " ," F m -3 m  " ," F m -3 c  ", &
-        " F d -3 m  " ," F d -3 c  " ," I m -3 m  " ," I a -3 d  ", & ! TRIGONAL GROUPS RHOMBOHEDRAL SETTING
+        " F -4 3 c  " ," I -4 3 d  " ," P m 3 m   " ," P n 3 n   ", &
+        " P m 3 n   " ," P n 3 m   " ," F m 3 m   " ," F m 3 c   ", &
+        " F d 3 m   " ," F d 3 c   " ," I m 3 m   " ," I a 3 d   ", & ! TRIGONAL GROUPS RHOMBOHEDRAL SETTING
         " R 3   |146" ," R -3  |148" ," R 3 2 |155" ," R 3 m |160", &
         " R 3 c |161" ," R -3 m|166" ," R -3 c|167"/)
 
@@ -379,15 +379,15 @@ type symdata
 end type
 
 ! declare global variables
-!> @param SG entire space group structure
-type (symdata)   	:: SG
+!> @param SG entire space group structure, moved to cell in crystalvars.f90
+! type (symdata)   	:: SG
 	
 ! arrays used by CalcFamily, CalcPositions and related routines
 integer(kind=irg)	:: itmp(48,3)			!< auxiliary array used for family computations etc
 integer(kind=irg)	:: numat(maxpasym)		!< number of atoms of each type in the asymmetric unit
 
-! atom coordinates
-real(kind=dbl),allocatable :: apos(:,:,:)		!< atom position array
+! atom coordinates, moved to cell type
+! real(kind=dbl),allocatable :: apos(:,:,:)		!< atom position array
 
 ! for many diffraction calculations we need the 2D planar point groups; 
 ! the maximum order of such a group is 12, and there are only 10 of them, with

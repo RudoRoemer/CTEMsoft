@@ -1,5 +1,5 @@
 ! ###################################################################
-! Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
+! Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
 ! All rights reserved.
 !
 ! Redistribution and use in source and binary forms, with or without modification, are 
@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:files.f90
+! CTEMsoft:files.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: files
@@ -38,35 +38,35 @@
 ! 
 !> @version
 !
-!> @date 1/5/99   MDG 1.0 original
+!> @date    1/ 5/99 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
+!> @date   01/10/14 MDG 4.0 update after new cell type
 !--------------------------------------------------------------------------
 
 
 module files
 
-! logical,private	:: loadingfile
 logical :: loadingfile
-
 
 contains
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE: ResetData
+! SUBROUTINE: ResetCell
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief  reset all unit cell and symmetry variables to zero
 ! 
-!> @date 1/5/99   MDG 1.0 original
+!> @date    1/ 5/99 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
+!> @date   01/10/14 MDG 4.0 update after new cell type
 !--------------------------------------------------------------------------
-subroutine ResetData
+subroutine ResetCell
 
 use local
 use crystalvars
@@ -86,33 +86,86 @@ IMPLICIT NONE
  cell%rmt = 0.0_dbl
  cell%dsm = 0.0_dbl
  cell%rsm = 0.0_dbl
- cell%krdel = 0.0_dbl
  cell%ATOM_type = 0_irg
  cell%ATOM_ntype = 0_irg
  cell%SYM_SGnum = 0_irg
  cell%xtal_system = 0_irg
  cell%SYM_SGset = 0_irg
  cell%ATOM_pos = 0.0_dbl
- cell%fname = '               '
- cell%SYM_reduce = .FALSE.
- cell%SYM_second = .FALSE.
- cell%SYM_trigonal = .FALSE.
+ cell%fname = ''
 
 ! initialize all symmetry variables
- SG%SYM_GENnum = 0_irg
- SG%SYM_MATnum = 0_irg
- SG%SYM_NUMpt  = 0_irg
- SG%SYM_reduce = .FALSE.
- SG%SYM_trigonal = .FALSE.
- SG%SYM_second = .FALSE.
- SG%SYM_centrosym = .FALSE. 
- SG%SYM_c = 0.0_dbl
- SG%SYM_data = 0.0_dbl
- SG%SYM_direc = 0.0_dbl
- SG%SYM_recip = 0.0_dbl
- SG%SYM_name = '           '
+ cell%SG%SYM_GENnum = 0_irg
+ cell%SG%SYM_MATnum = 0_irg
+ cell%SG%SYM_NUMpt  = 0_irg
+ cell%SG%SYM_reduce = .FALSE.
+ cell%SG%SYM_trigonal = .FALSE.
+ cell%SG%SYM_second = .FALSE.
+ cell%SG%SYM_centrosym = .FALSE. 
+ cell%SG%SYM_c = 0.0_dbl
+ cell%SG%SYM_data = 0.0_dbl
+ cell%SG%SYM_direc = 0.0_dbl
+ cell%SG%SYM_recip = 0.0_dbl
+ cell%SG%SYM_name = ''
 
-end subroutine
+! and deallocate any arrays
+ if (allocated(cell%LUT)) deallocate(cell%LUT)
+ if (allocated(cell%dbdiff)) deallocate(cell%dbdiff)
+ if (allocated(cell%apos)) deallocate(cell%apos)
+ if (associated(cell%reflist)) nullify(cell%reflist)
+
+end subroutine ResetCell
+
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: CopyFromCell
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief  copy from cell into newcell
+! 
+!> @date   01/10/14 MDG 1.0 update after new cell type
+!--------------------------------------------------------------------------
+subroutine CopyFromCell(newcell)
+
+use local
+use crystalvars
+
+IMPLICIT NONE
+
+type (unitcell),INTENT(INOUT) :: newcell
+
+newcell = cell
+newcell%reflist => cell%reflist
+
+end subroutine CopyFromCell
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: CopyToCell
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief copy from newcell to cell
+! 
+!> @date   01/10/14 MDG 1.0 update after new cell type
+!--------------------------------------------------------------------------
+subroutine CopyToCell(newcell)
+
+use local
+use crystalvars
+
+IMPLICIT NONE
+
+type (unitcell),INTENT(IN) :: newcell
+
+call ResetCell
+cell = newcell
+cell%reflist => newcell%reflist
+
+end subroutine CopyToCell
+
 
 !--------------------------------------------------------------------------
 !
@@ -122,10 +175,11 @@ end subroutine
 !
 !> @brief Write a brief summary of the crystal structure on the screen
 ! 
-!> @date 1/5/99   MDG 1.0 original
+!> @date    1/ 5/99 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
+!> @date   01/10/14 MDG 4.0 update after new cell type
 !--------------------------------------------------------------------------
 subroutine DumpXtalInfo    
 
@@ -141,7 +195,7 @@ IMPLICIT NONE
 integer(kind=irg)  	:: i, j, oi_int(3)
 real(kind=dbl)		:: oi_real(5)
 
- mess = '              '; call Message("(A)")
+ mess = ''; call Message("(A/)")
  mess = 'Crystal Structure Information'; call Message("('-->',A,'<--')")
  oi_real(1) = cell%a
  call WriteValue('  a [nm]             : ', oi_real, 1, "(F9.5)")
@@ -167,7 +221,7 @@ real(kind=dbl)		:: oi_real(5)
  if ((cell%SYM_SGset.eq.2).AND.(cell%xtal_system.eq.5)) then 
   mess = '   Using rhombohedral parameters'; call Message("(A)")
  endif
-  if (SG%SYM_centrosym) then 
+  if (cell%SG%SYM_centrosym) then 
     mess = '   Structure is centrosymmetric'; call Message("(A)")
  else 
    mess = '   Structure is non-centrosymmetric'; call Message("(A)")
@@ -183,11 +237,11 @@ real(kind=dbl)		:: oi_real(5)
   mess = ' ('//ATOM_sym(cell%ATOM_type(i))//')'; call Message("(A)")
   mess = '   Equivalent positions  (x y z  occ  DWF) ';  call Message("(A)")
   do j=1,numat(i)
-    oi_real(1:5) = (/apos(i, j,1:3),dble(cell%ATOM_pos(i,4:5))/)
+    oi_real(1:5) = (/cell%apos(i, j,1:3),dble(cell%ATOM_pos(i,4:5))/)
     call WriteValue('         > ', oi_real, 5,"(2x,4(F9.5,','),F9.5)")
   end do
 end do
-mess = '              '; call Message("(A)")
+mess = ''; call Message("(A/)")
 
 end subroutine DumpXtalInfo
 
@@ -201,10 +255,11 @@ end subroutine DumpXtalInfo
 ! 
 !> @param fname file name (optional)
 !
-!> @date 1/5/99   MDG 1.0 original
+!> @date    1/ 5/99 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
+!> @date   01/10/14 MDG 4.0 update after new cell type
 !--------------------------------------------------------------------------
 subroutine CrystalData(fname)
 
@@ -217,6 +272,7 @@ use symmetry
 IMPLICIT NONE
 
 character(fnlen),OPTIONAL,INTENT(IN)  	:: fname			!< optional file name
+
 integer(kind=irg)			:: io_int(1)
 logical 				:: fr = .TRUE.
 
@@ -254,10 +310,11 @@ end subroutine
 ! 
 !> @todo This should be replaced with a text-based editable file format (.txt. or .xml)
 !
-!> @date 1/5/99   MDG 1.0 original
+!> @date    1/ 5/99 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
+!> @date   01/10/14 MDG 4.0 update after new cell type
 !--------------------------------------------------------------------------
 subroutine SaveData
 
@@ -268,15 +325,13 @@ use crystal
  
 IMPLICIT NONE
 
- call SafeOpenFile('xt','unformatted',cell%fname)
- !open (dataunit,file=cell%fname,status='unknown',form='unformatted')
- open (dataunit,file=cell%fname,form='unformatted')
+! call SafeOpenFile('xt','unformatted',cell%fname)
+ open (dataunit,file=trim(cell%fname),status='unknown',form='unformatted')
 ! save lattice parameters, crystal system, space group number and contents
 ! of the asymmetric unit.
  write (dataunit) cell%xtal_system, cell%a,cell%b,cell%c,cell%alpha,cell%beta,cell%gamma
  write (dataunit) cell%ATOM_type, cell%ATOM_pos, cell%ATOM_ntype, cell%SYM_SGnum, cell%SYM_SGset
  call SafeCloseFile('xt','keep',cell%fname)
- strucdef = .FALSE.
 
 end subroutine
 
@@ -294,10 +349,11 @@ end subroutine
 ! 
 !> @todo This should be replaced with a text-based editable file format (.txt. or .xml)
 !
-!> @date 1/5/99   MDG 1.0 original
+!> @date    1/ 5/99 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
+!> @date   01/10/14 MDG 4.0 update after new cell type
 !--------------------------------------------------------------------------
 subroutine ReadDataFile(fr)
 
@@ -475,7 +531,7 @@ end subroutine SafeOpenFile
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE: SafeOpenFile
+! SUBROUTINE: SafeCloseFile
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !

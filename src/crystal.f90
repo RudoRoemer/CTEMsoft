@@ -1,5 +1,5 @@
 ! ###################################################################
-! Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
+! Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
 ! All rights reserved.
 !
 ! Redistribution and use in source and binary forms, with or without modification, are 
@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:crystal.f90
+! CTEMsoft:crystal.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: crystal
@@ -45,7 +45,8 @@
 !> @date    4/ 5/00 MDG 1.2 modified TransCoor to include mInvert
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
-!> @date   03/19/13 MDG 3.0  improved interface for single and double precision
+!> @date   03/19/13 MDG 3.0 improved interface for single and double precision
+!> @date   01/10/14 MDG 4.0 new version, suitable for multiphase calculations
 !--------------------------------------------------------------------------
 
 module crystal
@@ -93,11 +94,12 @@ contains
 !> @brief computes important crystallographic matrices
 !
 !> @details  Computes the direct and reciprocal metric tensors and the direct
-!>  and reciprocal structure matrices as well as the Kronecker delta
+!>  and reciprocal structure matrices 
 ! 
 !> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
+!> @date   01/10/14 MDG 3.0 removed Kronecker delta matrix
 !--------------------------------------------------------------------------
 subroutine CalcMatrices
 
@@ -125,8 +127,9 @@ real(kind=dbl)     :: det,ca,cb,cg,sa,sb,sg,tg,pirad
   call FatalError('CalcMatrices','Invalid gamma angle')
  endif
 
+! [removed on 1/10/14]
 ! define the Kronecker Delta
- cell%krdel = reshape( (/ 1.0_dbl,0.0_dbl,0.0_dbl,0.0_dbl,1.0_dbl,0.0_dbl,0.0_dbl,0.0_dbl,1.0_dbl /), (/3,3/) )
+! cell%krdel = reshape( (/ 1.0_dbl,0.0_dbl,0.0_dbl,0.0_dbl,1.0_dbl,0.0_dbl,0.0_dbl,0.0_dbl,1.0_dbl /), (/3,3/) )
 
 ! compute the direct metric tensor [equation 1.5, page 6]
  cell%dmt(1,1) = cell%a**2
@@ -199,10 +202,11 @@ end subroutine CalcMatrices
 !> @param inspace input space character ('d', 'r', 'c')
 !> @param outspace output space character ('d', 'r', 'c') 
 ! 
-!> @date  10/13/98 MDG 1.0 original
+!> @date    10/13/98 MDG 1.0 original
 !> @date     5/19/01 MDG 2.0 f90 version
 !> @date    11/27/01 MDG 2.1 added kind support
 !> @date    03/19/13 MDG 3.0 changed using interface protocol
+!> @date    01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 subroutine TransSpaceDouble(t,d,inspace,outspace)
 
@@ -214,8 +218,8 @@ IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN)	:: t(3)			!< input vector in inspace reference frame
 real(kind=dbl),INTENT(OUT)	:: d(3)			!< output vector in outspace reference frame 
-character(1),INTENT(IN)		:: inspace			!< characters to label input space (d, r, or c)
-character(1),INTENT(IN)		:: outspace		!< characters to label output space (d, r, or c)
+character(1),INTENT(IN)	:: inspace		!< characters to label input space (d, r, or c)
+character(1),INTENT(IN)	:: outspace		!< characters to label output space (d, r, or c)
 
  if (inspace.eq.'d') then
 ! direct to Cartesian (pre-multiplication)
@@ -269,10 +273,11 @@ end subroutine TransSpaceDouble
 !> @param inspace input space character ('d', 'r', 'c')
 !> @param outspace output space character ('d', 'r', 'c') 
 ! 
-!> @date  10/13/98 MDG 1.0 original
+!> @date    10/13/98 MDG 1.0 original
 !> @date     5/19/01 MDG 2.0 f90 version
 !> @date    11/27/01 MDG 2.1 added kind support
 !> @date    03/19/13 MDG 3.0 changed using interface protocol
+!> @date    01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 subroutine TransSpaceSingle(t,d,inspace,outspace)
 
@@ -284,8 +289,8 @@ IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)	:: t(3)			!< input vector in inspace reference frame
 real(kind=sgl),INTENT(OUT)	:: d(3)			!< output vector in outspace reference frame 
-character(1),INTENT(IN)		:: inspace			!< characters to label input space (d, r, or c)
-character(1),INTENT(IN)		:: outspace		!< characters to label output space (d, r, or c)
+character(1),INTENT(IN)	:: inspace	        !< characters to label input space (d, r, or c)
+character(1),INTENT(IN)	:: outspace	        !< characters to label output space (d, r, or c)
 
  if (inspace.eq.'d') then
 ! direct to Cartesian (pre-multiplication)
@@ -351,6 +356,7 @@ end subroutine  TransSpaceSingle
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 slight modification
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 subroutine TransCoor(t,d,talpha,space,direction)
 
@@ -363,11 +369,11 @@ IMPLICIT NONE
 real(kind=dbl),INTENT(IN)		:: t(3)			!< input vector w.r.t. input space reference frame
 real(kind=dbl),INTENT(OUT)		:: d(3)			!< transformed vector components
 real(kind=dbl),INTENT(IN)		:: talpha(3,3)		!< transformation matrix
-real(kind=dbl)					:: alinv(3,3)		!< inverse of transformation matrix
+real(kind=dbl)				:: alinv(3,3)		!< inverse of transformation matrix
 
-character(1),INTENT(IN)			:: space			!< space in which to perform transformation ('d', 'r', 'c')
-character(2),INTENT(IN)			:: direction		!< transformation direction (no=new-to-old, on=old-to-new)
-logical						:: uni			!< logical to indicate unitary matrix (or not)
+character(1),INTENT(IN)		:: space		!< space in which to perform transformation ('d', 'r', 'c')
+character(2),INTENT(IN)		:: direction		!< transformation direction (no=new-to-old, on=old-to-new)
+logical					:: uni			!< logical to indicate unitary matrix (or not)
 
 ! these matrices are typically unitary, so inverse is simply the transpose
  uni = .TRUE.
@@ -404,9 +410,10 @@ end subroutine TransCoor
 !> @param q input vector 
 !> @param space input space character ('d', 'r', 'c')
 !
-!> @date 10/13/98 MDG 1.0 original
+!> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 function CalcDotSingle(p,q,space) result(cdot)
 
@@ -417,9 +424,9 @@ use math
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)		:: p(3)		!< first input vector in space reference frame
-real(kind=sgl),INTENT(IN)		:: q(3) 		!< second input vector
-real(kind=sgl) 					:: cdot		!< dot product p.q
-character(1),INTENT(IN)			:: space		!< space in which to compute product ('d', 'r', or 'c')
+real(kind=sgl),INTENT(IN)		:: q(3) 	!< second input vector
+character(1),INTENT(IN)		:: space	!< space in which to compute product ('d', 'r', or 'c')
+real(kind=sgl) 				:: cdot		!< dot product p.q
 
  cdot = 0.0_sgl
  if (space.eq.'d') cdot = dot_product(p,matmul(cell%dmt,q))
@@ -444,9 +451,10 @@ end function CalcDotSingle
 !> @param q input vector 
 !> @param space input space character ('d', 'r', 'c')
 !
-!> @date 10/13/98 MDG 1.0 original
+!> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 function CalcDotDouble(p,q,space) result(cdot)
 
@@ -457,9 +465,9 @@ use math
 IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN)		:: p(3)		!< first input vector in space reference frame
-real(kind=dbl),INTENT(IN)		:: q(3) 		!< second input vector
-real(kind=dbl)					:: cdot		!< dot product p.q
-character(1),INTENT(IN)			:: space		!< space in which to compute product ('d', 'r', or 'c')
+real(kind=dbl),INTENT(IN)		:: q(3) 	!< second input vector
+character(1),INTENT(IN)		:: space	!< space in which to compute product ('d', 'r', or 'c')
+real(kind=dbl)				:: cdot		!< dot product p.q
 
  cdot = 0.0_dbl
  if (space.eq.'d') cdot = dot_product(p,matmul(cell%dmt,q))
@@ -485,6 +493,7 @@ end function CalcDotDouble
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 subroutine NormVecSingle(p,space)
 
@@ -492,9 +501,9 @@ use local
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(INOUT)			:: p(3)	!< input/output vector components
-real(kind=sgl)						:: x  		!< auxiliary variable
-character(1),INTENT(IN)				:: space	!< space character ('d', 'r', or 'c')
+real(kind=sgl),INTENT(INOUT)			:: p(3)	        !< input/output vector components
+character(1),INTENT(IN)			:: space	!< space character ('d', 'r', or 'c')
+real(kind=sgl)					:: x  		!< auxiliary variable
 
  x=CalcLength(p,space)
  if (x.ne.0.0) then 
@@ -522,6 +531,7 @@ end subroutine NormVecSingle
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 subroutine NormVecDouble(p,space)
 
@@ -529,9 +539,9 @@ use local
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(INOUT)			:: p(3)	!< input/output vector components
-real(kind=dbl)						:: x  		!< auxiliary variable
-character(1),INTENT(IN)				:: space	!< space character ('d', 'r', or 'c')
+real(kind=dbl),INTENT(INOUT)			:: p(3)	        !< input/output vector components
+character(1),INTENT(IN)			:: space	!< space character ('d', 'r', or 'c')
+real(kind=dbl)					:: x  		!< auxiliary variable
 
  x=CalcLength(p,space)
  if (x.ne.0.D0) then 
@@ -556,10 +566,11 @@ end subroutine NormVecDouble
 !> @param p input/output vector 
 !> @param space input space character ('d', 'r', 'c')
 !
-!> @date 10/13/98 MDG 1.0 original
+!> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 function CalcLengthSingle(p,space) result(x)
 
@@ -567,9 +578,9 @@ use local
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)			:: p(3)	!< input/output vector components
-character(1),INTENT(IN)				:: space	!< space character ('d', 'r', or 'c')
-real(kind=sgl)						:: x  		!< auxiliary variable
+real(kind=sgl),INTENT(IN)			:: p(3)	        !< input/output vector components
+character(1),INTENT(IN)			:: space	!< space character ('d', 'r', or 'c')
+real(kind=sgl)					:: x  		!< auxiliary variable
 
 
  x = sqrt(CalcDot(p,p,space))
@@ -590,10 +601,11 @@ end function CalcLengthSingle
 !> @param p input/output vector 
 !> @param space input space character ('d', 'r', 'c')
 !
-!> @date 10/13/98 MDG 1.0 original
+!> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 function CalcLengthDouble(p,space) result(x)
 
@@ -628,6 +640,7 @@ end function CalcLengthDouble
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 function CalcAngleSingle(p,q,space) result(a)
 
@@ -640,8 +653,8 @@ IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)		:: p(3)		!< first vector components
 real(kind=sgl),INTENT(IN)		:: q(3) 	!< second vector components
-real(kind=sgl)				:: a		!< angle in radians
 character(1),INTENT(IN)		:: space	!< space of the computation ('d', 'r', 'c')
+real(kind=sgl)				:: a		!< angle in radians
 real(kind=sgl)				:: x, y, z, t	!< auxiliary variables
 
  x = CalcDot(p,q,space)
@@ -684,6 +697,7 @@ end function CalcAngleSingle
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 function CalcAngleDouble(p,q,space) result(a)
 
@@ -696,8 +710,8 @@ IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN)		:: p(3)		!< first vector components
 real(kind=dbl),INTENT(IN)		:: q(3) 	!< second vector components
-real(kind=dbl)				:: a		!< angle in radians
 character(1),INTENT(IN)		:: space	!< space of the computation ('d', 'r', 'c')
+real(kind=dbl)				:: a		!< angle in radians
 real(kind=dbl)				:: x, y, z, t	!< auxiliary variables
 
 
@@ -746,10 +760,11 @@ end function CalcAngleDouble
 !
 !> @todo replace iv by a logical switch; replace if-statements by case statement
 !
-!> @date 10/13/98 MDG 1.0 original
+!> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 subroutine CalcCrossSingle(p,q,r,inspace,outspace,iv)
 
@@ -762,10 +777,10 @@ IMPLICIT NONE
 real(kind=sgl),INTENT(IN)		:: p(3)		!< first input vector (order is important here !)
 real(kind=sgl),INTENT(IN)		:: q(3)		!< second input vector
 real(kind=sgl),INTENT(OUT)		:: r(3)		!< output vector
-character(1),INTENT(IN)			:: inspace		!< inspace character ('d','r','c')
-character(1),INTENT(IN)			:: outspace	!< outspace character
-integer(kind=irg),INTENT(IN)		:: iv			!< volume division switch
-real(kind=sgl)					:: x(3), vl		!< auxiliary variables
+character(1),INTENT(IN)		:: inspace	!< inspace character ('d','r','c')
+character(1),INTENT(IN)		:: outspace	!< outspace character
+integer(kind=irg),INTENT(IN)		:: iv		!< volume division switch
+real(kind=sgl)				:: x(3), vl	!< auxiliary variables
 
 ! divide by volume?
  if (iv.eq.1) then 
@@ -779,7 +794,7 @@ real(kind=sgl)					:: x(3), vl		!< auxiliary variables
   r(1) = vl*(p(2)*q(3)-p(3)*q(2))
   r(2) = vl*(p(3)*q(1)-p(1)*q(3))
   r(3) = vl*(p(1)*q(2)-p(2)*q(1))
-  if (outspace.eq.'d') then 	! output in direct space
+  if (outspace.eq.'d') then 	        ! output in direct space
    x = matmul(r,cell%rmt)
    r = x
   end if
@@ -837,10 +852,11 @@ end subroutine CalcCrossSingle
 !
 !> @todo replace iv by a logical switch; replace if-statements by case statement
 !
-!> @date 10/13/98 MDG 1.0 original
+!> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 subroutine CalcCrossDouble(p,q,r,inspace,outspace,iv)
 
@@ -853,10 +869,10 @@ IMPLICIT NONE
 real(kind=dbl),INTENT(IN)		:: p(3)		!< first input vector (order is important here !)
 real(kind=dbl),INTENT(IN)		:: q(3)		!< second input vector
 real(kind=dbl),INTENT(OUT)		:: r(3)		!< output vector
-character(1),INTENT(IN)			:: inspace		!< inspace character ('d','r','c')
-character(1),INTENT(IN)			:: outspace	!< outspace character
-integer(kind=irg),INTENT(IN)		:: iv			!< volume division switch
-real(kind=dbl)					:: x(3), vl		!< auxiliary variables
+character(1),INTENT(IN)		:: inspace	!< inspace character ('d','r','c')
+character(1),INTENT(IN)		:: outspace	!< outspace character
+integer(kind=irg),INTENT(IN)		:: iv		!< volume division switch
+real(kind=dbl)				:: x(3), vl	!< auxiliary variables
 
 
  if (iv.eq.1) then 
@@ -870,7 +886,7 @@ real(kind=dbl)					:: x(3), vl		!< auxiliary variables
   r(1) = vl*(p(2)*q(3)-p(3)*q(2))
   r(2) = vl*(p(3)*q(1)-p(1)*q(3))
   r(3) = vl*(p(1)*q(2)-p(2)*q(1))
-  if (outspace.eq.'d') then 	! output in direct space
+  if (outspace.eq.'d') then 	        ! output in direct space
    x = matmul(r,cell%rmt)
    r = x
   end if
@@ -920,10 +936,11 @@ end subroutine CalcCrossDouble
 !> @param q output vector 
 !> @param d direction string ('34' or '43')
 !!
-!> @date 10/13/98 MDG 1.0 original
+!> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 subroutine MilBrav(p,q,d)
 
@@ -931,11 +948,11 @@ use local
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(INOUT)		:: p(3)	!< input/output vector
-integer(kind=irg),INTENT(INOUT)		:: q(4)	!< input/output vector
-character(2),INTENT(IN)				:: d		!< direction string ('34' or '43')
-integer(kind=irg)					:: i, j		!< auxiliary variables
-real(kind=sgl)						:: r(4), rm	!< auxiliary variables	
+integer(kind=irg),INTENT(INOUT)		:: p(3)	        !< input/output vector
+integer(kind=irg),INTENT(INOUT)		:: q(4)	        !< input/output vector
+character(2),INTENT(IN)			:: d		!< direction string ('34' or '43')
+integer(kind=irg)				:: i, j		!< auxiliary variables
+real(kind=sgl)					:: r(4), rm	!< auxiliary variables	
 
  if (d.eq.'43') then 
 ! equation 1.31
@@ -985,10 +1002,11 @@ end subroutine MilBrav
 !> parameters; all are stored in the cell type.
 !
 !!
-!> @date 10/13/98 MDG 1.0 original
+!> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 subroutine GetLatParm
 
@@ -1002,6 +1020,7 @@ IMPLICIT NONE
 integer(kind=irg)		:: io_int(1)	!< integer input array
 real(kind=dbl)			:: io_real(1)	!< double precision real input array
 
+! this routine assumes that the cell pointer has been associated elsewhere
 
  mess = ' Select the crystal system : '; call Message("(A)")
  mess = '  1. Cubic '; call Message("(A)")
@@ -1025,21 +1044,21 @@ real(kind=dbl)			:: io_real(1)	!< double precision real input array
  
 ! make sure the symmetry operations will be reduced to the 
 ! fundamental unit cell
- cell%SYM_reduce=.TRUE.
+ cell%SG%SYM_reduce=.TRUE.
  hexset=.FALSE.
 
 ! deal with the rhombohedral vs. hexagonal setting
 ! (the rhombohedral axes are considered as the second setting)
- cell%SYM_trigonal=.FALSE.
- cell%SYM_second=.FALSE.
+ cell%SG%SYM_trigonal=.FALSE.
+ cell%SG%SYM_second=.FALSE.
  if (cell%xtal_system.eq.5) then
-  cell%SYM_trigonal=.TRUE.
+  cell%SG%SYM_trigonal=.TRUE.
   mess = 'Enter 1 for rhombohedral lattice parameters,'; call Message("(A)")
   call ReadValue('0 for hexagonal lattice parameters : ',io_int,1)
   if (io_int(1).eq.0) then
    cell%xtal_system=4
   else
-   cell%SYM_second=.TRUE.
+   cell%SG%SYM_second=.TRUE.
   end if
  end if
 
@@ -1103,12 +1122,12 @@ real(kind=dbl)			:: io_real(1)	!< double precision real input array
 
 ! if trigonal symmetry was selected in the first setting,
 ! then the xtal_system must be reset to 5
- if (cell%SYM_trigonal) then
+ if (cell%SG%SYM_trigonal) then
   cell%xtal_system=5
  end if
 
 ! if hexagonal setting is used, then Miller-Bravais indices must be enabled
- if ((cell%xtal_system.eq.4).OR.((cell%xtal_system.eq.5).AND.(.not.cell%SYM_second))) then
+ if ((cell%xtal_system.eq.4).OR.((cell%xtal_system.eq.5).AND.(.not.cell%SG%SYM_second))) then
   hexset = .TRUE.
  else 
   hexset = .FALSE.
@@ -1128,10 +1147,11 @@ end subroutine GetLatParm
 !> and Debye-Waller parameter for each atom type.
 !
 !!
-!> @date 10/13/98 MDG 1.0 original
+!> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 subroutine GetAsymPos
 
@@ -1194,32 +1214,41 @@ end subroutine GetAsymPos
 !> @details display the periodic table so that the user can look up the atomic number
 !
 !!
-!> @date 10/13/98 MDG 1.0 original
+!> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
+!> @date   01/10/14 MDG 4.0 modified to a fixed size table
 !--------------------------------------------------------------------------
 subroutine DisplayElements
 
 use local
 use io
-use constants
 
 IMPLICIT NONE
 
-integer(kind=irg) 	::  i		!< loop counter
-
- mess = '-------Periodic Table of the Elements--------'; call Message("(/A/)")
-
- do i=1,92
-  if (mod(i,10).eq.0) then
-   write (stdout,"(1x,i3,':',A2)") i,ATOM_sym(i)
-  else
-   write (stdout,"(1x,i3,':',A2,2x,$)") i,ATOM_sym(i)
-  end if  
- end do
-
- mess = '----------------------------------------------'; call Message("(/A/)")
+ mess = ' ------------------------------------ Periodic Table of the Elements ------------------------------------'
+ call Message("(/A/)")
+ mess = '1:H                                                                                                    2:He'
+ call Message("A")
+ mess = '3:Li  4:Be                                                               5:B   6:C   7:N   8:O   9:F  10:Ne'
+ call Message("A")
+ mess = '11:Na 12:Mg                                                             13:Al 14:Si 15:P  16:S  17:Cl 18:Ar'
+ call Message("A")
+ mess = '19:K  20:Ca 21:Sc 22:Ti 23:V  24:Cr 25:Mn 26:Fe 27:Co 28:Ni 29:Cu 30:Zn 31:Ga 32:Ge 33:As 34:Se 35:Br 36:Kr'
+ call Message("A")
+ mess = '37:Rb 38:Sr 39:Y  40:Zr 41:Nb 42:Mo 43:Tc 44:Ru 45:Rh 46:Pd 47:Ag 48:Cd 49:In 50:Sn 51:Sb 52:Te 53: I 54:Xe'
+ call Message("A")
+ mess = '55:Cs 56:Ba ----- 72:Hf 73:Ta 74:W  75:Re 76:Os 77:Ir 78:Pt 79:Au 80:Hg 81:Tl 82:Pb 83:Bi 84:Po 85:At 86:Rn'
+ call Message("A")
+ mess = '87:Fr 88:Ra -----'
+ call Message("A/")
+ mess = '57:La 58:Ce 59:Pr 60:Nd 61:Pm 62:Sm 63:Eu 64:Gd 65:Tb 66:Dy 67:Ho 68:Er 69:Tm 70:Yb 71:Lu'
+ call Message("A")
+ mess = '89:Ac 90:Th 91:Pa 92:U'
+ call Message("A")
+ mess = ' ----------------------------------------------------------------------------------------------------------'
+ call Message("(/A/)")
 
 end subroutine DisplayElements
 
@@ -1239,10 +1268,11 @@ end subroutine DisplayElements
 !> @param list	string typed in by the user
 !> @param pt set of 5 reals returned to the calling routine
 !
-!> @date 10/13/98 MDG 1.0 original
+!> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 subroutine extractposition(list,pt)
 
@@ -1384,6 +1414,7 @@ end subroutine extractposition
 !
 !> @date   03/19/13 MDG 1.0 original version
 !> @date   07/23/13 MDG 1.1 converted to subroutine from function
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 subroutine CalcDensity(dens, avZ, avA)
 
@@ -1436,6 +1467,7 @@ end subroutine CalcDensity
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 subroutine GetOR(orel)
 
@@ -1477,6 +1509,96 @@ end subroutine GetOR
 
 
 !--------------------------------------------------------------------------
+!
+! SUBROUTINE: ComputeOR
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief compute the orientation relation transformation matrix
+!
+!> @param orel output variable of type orientation
+!> @param cellA unit cell A
+!> @param cellB unit cell B
+!> @param direction 'AB' for A new, B old; 'BA' for B new, A old
+!
+!> @date   12/20/13 MDG 1.0 first version, used for CTEMoverlap and CTEMorient
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
+!--------------------------------------------------------------------------
+function ComputeOR(orel, cellA, cellB, direction) result(TT)
+
+use local
+use crystalvars
+use math
+use io
+
+IMPLICIT NONE
+
+type(orientation),INTENT(INOUT):: orel		!< orientation relation type
+type(unitcell),INTENT(IN)      :: cellA, cellB 
+character(2),INTENT(IN)        :: direction  !< direction of transformation (AB or BA)
+real(kind=sgl)                 :: TT(3,3)
+
+real(kind=sgl)                 :: r(3), p(3), Ep(3,3), E(3,3), io_real(6)
+real(kind=dbl)                 :: dE(3,3)
+integer(kind=irg)              :: i
+
+
+! compute E matrix  [page 74]
+ cell = cellA
+ call TransSpace(orel % gA,r,'r','d')
+ call NormVec(r,'d')
+ call NormVec(orel % tA,'d')
+ call CalcCross(orel % tA,r,p,'d','d',0)
+ call NormVec(p,'d')
+ E(1,1:3)=r(1:3)
+ E(2,1:3)=p(1:3)
+ E(3,1:3)=orel % tA(1:3)
+ if (direction.eq.'AB') then
+   call mInvert(dble(E),dE,.FALSE.)
+   E = sngl(dE)
+ end if
+ mess = 'Transformation matrix E'; call Message("(A)")
+ do i=1,3
+  io_real(1:3) = E(i,1:3)
+  call WriteValue('', io_real, 3)
+ end do
+
+! compute E-prime matrix 
+ cell = cellB
+ call TransSpace(orel % gB,r,'r','d')
+ call NormVec(r,'d')
+ call NormVec(orel % tB,'d')
+ call CalcCross(orel % tB,r,p,'d','d',0)
+ call NormVec(p,'d')
+ Ep(1,1:3)=r(1:3)
+ Ep(2,1:3)=p(1:3)
+ Ep(3,1:3)=orel % tB(1:3)
+ if (direction.eq.'BA') then
+   call mInvert(dble(Ep),dE,.FALSE.)
+   Ep = sngl(dE)
+ end if
+ mess ='Transformation matrix E-prime'; call Message("(A)")
+ do i=1,3
+  io_real(1:3) = Ep(i,1:3)
+  call WriteValue('', io_real, 3)
+ end do
+
+! and multiply both matrices to get transformation matrix M
+ if (direction.eq.'BA') then
+   TT = matmul(Ep,E)
+ else
+   TT = matmul(E,Ep)
+ end if
+ mess = 'Transformation matrix from A to B'; call Message("(A)")
+ do i=1,3
+  io_real(1:3) = TT(i,1:3)
+  call WriteValue('', io_real, 3)
+ end do
+ mess = ' --- '; call Message("(A)")
+
+end function ComputeOR
+
+!--------------------------------------------------------------------------
 ! 
 ! FUNCTION:CalcsgHOLZ
 !
@@ -1490,7 +1612,8 @@ end subroutine GetOR
 !> @param kt tangential components of wave vector
 !> @param lambda electron wavelength
 ! 
-!> @date 10/16/13 MDG 1.0 new version, includes HOLZ stuff
+!> @date   10/16/13 MDG 1.0 new version, includes HOLZ stuff
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 function CalcsgHOLZ(gg,kt,lambda) result(exer)
 
@@ -1546,6 +1669,7 @@ end function CalcsgHOLZ
 !> @param FN foil normal
 ! 
 !> @date 10/17/13 MDG 1.0 original
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 subroutine GetHOLZGeometry(g1,g2,uvw,fn)
 
@@ -1661,6 +1785,7 @@ end subroutine GetHOLZGeometry
 !> @date 1/29/02  MDG 1.0 original
 !> @date 04/08/13 MDG 2.0 rewrite
 !> @date 10/16/13 MDG 3.0 incorporation into LACBED code
+!> @date 01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 function GetHOLZcoordinates(gg,kt,lambda) result(pxy)
 

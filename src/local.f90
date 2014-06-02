@@ -1,5 +1,5 @@
 ! ###################################################################
-! Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
+! Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
 ! All rights reserved.
 !
 ! Redistribution and use in source and binary forms, with or without modification, are 
@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:local.f90
+! CTEMsoft:local.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: local
@@ -49,6 +49,7 @@
 !> @date 12/08/01  MDG 2.2 added CTEMsoft subroutine
 !> @date 03/19/13  MDG 3.0 rewrite of entire package
 !> @date 05/16/13 MDG 3.1 added stdout
+!> @date 01/10/14 MDG 4.0 new version
 !--------------------------------------------------------------------------
 
 module local
@@ -63,25 +64,25 @@ use omp_lib
 
 ! Define the "kind" parameters for single and double precision reals, 
 !> single precision real kind parameter
-  integer,parameter        		:: sgl = SELECTED_REAL_KIND(p=6,r=37)	
+  integer,parameter        	        :: sgl = SELECTED_REAL_KIND(p=6,r=37)	
 !> double precision real kind parameter
-  integer,parameter        		:: dbl = SELECTED_REAL_KIND(p=13,r=200)	
+  integer,parameter        	        :: dbl = SELECTED_REAL_KIND(p=13,r=200)	
 
 ! Define the "kind" parameters for short and regular integers,
 !> short integer kind parameter 
-  integer,parameter        		:: ish = SELECTED_INT_KIND(3) 
+  integer,parameter        	        :: ish = SELECTED_INT_KIND(3) 
 !> long integer kind parameter 
-  integer,parameter        		:: irg = SELECTED_INT_KIND(9)
+  integer,parameter        	        :: irg = SELECTED_INT_KIND(9)
 
 !> source code version number
-  character(8), parameter  	:: scversion="3.0/2013"
+  character(8), parameter  	        :: scversion="4.0/2014"
 !> source code author name
-  character(13), parameter 	:: username="Marc De Graef"	
+  character(13), parameter 	        :: username="Marc De Graef"	
 !> source code author location
-  character(26), parameter 	:: userlocn="Carnegie Mellon University"
+  character(26), parameter 	        :: userlocn="Carnegie Mellon University"
 
 !> standard string length for filenames
-  integer(kind=irg),parameter	:: fnlen=132
+  integer(kind=irg),parameter	        :: fnlen=132
   
 !> program name string
   character(fnlen)            		:: progname="default"
@@ -98,7 +99,7 @@ use omp_lib
 ! psunit    = Postscript output unit number
 ! dataunit  = Data unit number (for *.xtal files and other in/output)
 !> reserved IO unit identifiers for postscript (20) and data (21-23)
-  integer(kind=irg), parameter	:: psunit=20, dataunit=21, dataunit2=22, dataunit3=23
+  integer(kind=irg), parameter	        :: psunit=20, dataunit=21, dataunit2=22, dataunit3=23
 
 ! where should standard output go ?  To the terminal (stdout=6) or elsewhere (stdout>10)
 ! this is not a parameter, but can be changed by each program 
@@ -113,13 +114,13 @@ use omp_lib
 ! strucdef is a logical variable to determine whether or not a structure has been loaded;
 ! hexset determines whether or not 4-index hexagonal indices should be used.
 !> logical variable to determine whether or not a crystal structuter has been loaded
-  logical                  			:: strucdef
+  logical                  		:: strucdef
 !> logical to determine whether to use 3(FALSE) or 4(TRUE) index notation
-  logical                  			:: hexset
+  logical                  		:: hexset
  
 ! to be eliminated !!! 
 !> where is the postscript viewer on this system ? 
-  character(18),parameter  	:: psviewer="/usr/local/bin/gv "
+  character(18),parameter  	        :: psviewer="/usr/local/bin/gv "
 contains
 
 
@@ -139,11 +140,12 @@ contains
 !> @date  12/08/01 MDG 1.0 original
 !> @date  03/19/13 MDG 2.0 minor modifications
 !> @date  05/16/13 MDG 2.1 added timestamp and stdout
+!> @date  01/10/14 MDG 3.0 new version
 !--------------------------------------------------------------------------
 
 subroutine CTEMsoft
 
- write (stdout,"(//1x,'CTEMsoft version ',A8,', Copyright (C) 2001-2013 Marc De Graef/CMU')") scversion
+ write (stdout,"(//1x,'CTEMsoft version ',A8,', Copyright (C) 2001-2014 Marc De Graef/CMU')") scversion
  write (stdout,"(1x,'CTEMsoft comes with ABSOLUTELY NO WARRANTY.')")
  write (stdout,"(1x,'This is free software, and you are welcome to redistribute it')")
  write (stdout,"(1x,'under certain conditions; see Copyright.txt file for details.'//)")

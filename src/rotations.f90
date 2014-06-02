@@ -64,7 +64,6 @@
 !> All 42 conversion routines exist.
 
 !> @date 8/04/13   MDG 1.0 original
-!> @date 5/29/14   MDG 1.1 corrections to ho2ro routine
 !--------------------------------------------------------------------------
 module rotations
 
@@ -946,14 +945,10 @@ real(kind=sgl)			:: res(3)
 
 real(kind=sgl)			:: s, d
 
-if (maxval(abs(r)).eq.0.0) then 
-  res = (/ 0.0, 0.0, 0.0 /)
-else
-  s = atan(r(3))
-  d = atan(r(2)/r(1))
+s = atan(r(3))
+d = atan(r(2)/r(1))
 
-  res = (/ s+d, 2.0*atan(r(1)*cos(s)/cos(d)), s-d /)
-end if
+res = (/ s+d, 2.0*atan(r(1)*cos(s)/cos(d)), s-d /)
 
 end function ro2eu
 
@@ -982,14 +977,10 @@ real(kind=dbl)			:: res(3)
 
 real(kind=dbl)			:: s, d
 
-if (maxval(abs(r)).eq.0.D0) then 
-  res = (/ 0.D0, 0.D0, 0.D0 /)
-else
-  s = datan(r(3))
-  d = datan(r(2)/r(1))
+s = datan(r(3))
+d = datan(r(2)/r(1))
 
-  res = (/ s+d, 2.D0*datan(r(1)*dcos(s)/dcos(d)), s-d /)
-end if
+res = (/ s+d, 2.D0*datan(r(1)*dcos(s)/dcos(d)), s-d /)
 
 end function ro2eu_d
 
@@ -2446,7 +2437,7 @@ use local
 real(kind=sgl), intent(in) 		:: h(3)
 real(kind=sgl)				:: res(3)
 
-res = ro2eu(ho2ro(h))
+res = ax2eu(ho2ax(h))
 
 end function ho2eu
 
@@ -2519,14 +2510,13 @@ res = ax2om_d(ho2ax_d(h))
 
 end function ho2om_d
 
-
 !--------------------------------------------------------------------------
 !
 ! FUNCTION: ho2ro
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief convert homochoric to Rodrigues (similar to ho2ax)
+!> @brief convert homochoric to Rodrigues
 !
 !> @param h homochoric coordinates (single precision)
 ! 
@@ -2534,38 +2524,12 @@ end function ho2om_d
 !--------------------------------------------------------------------------
 function ho2ro(h) result (res)
 
-IMPLICIT NONE
+use local 
 
-real(kind=sgl),INTENT(IN)	:: h(3)		!< homochoric coordinates
-real(kind=sgl)			:: res(3)
+real(kind=sgl), intent(in) 		:: h(3)
+real(kind=sgl)				:: res(3)
 
-integer(kind=irg)		:: i
-real(kind=sgl)			:: hn(3), hmag, s, hm
-
-! fit parameters determined with Mathematica
-real(kind=dbl),parameter	:: c(7) = (/ -0.5000096149170321D0, -0.02486606148871731D0, &
-              				-0.004549381779362819D0, 0.0005118668366387526D0, &
-              				-0.0016500827333575548D0, 0.0007593352203388718D0, &
-              				-0.0002040422502566876D0 /)
-
-! normalize h and store the magnitude
-hmag = sum(h*h)
-if (hmag.eq.0.0) then
-  res = (/ 0.0, 0.0, 0.0 /)
-else
-  hm = hmag
-  hn = h/sqrt(hmag)
-
-! convert the magnitude to the rotation angle
-  s = c(1) * hmag
-  do i=2,7
-    hm = hm*hmag
-    s = s + c(i) * hm
-  end do
-  
-  s = tan( acos(1.0+s) )
-  res = (/ hn(1), hn(2), hn(3) /) * s
-end if
+res = ax2ro(ho2ax(h))
 
 end function ho2ro
 
@@ -2583,41 +2547,14 @@ end function ho2ro
 !--------------------------------------------------------------------------
 function ho2ro_d(h) result (res)
 
-IMPLICIT NONE
+use local 
 
-real(kind=dbl),INTENT(IN)	:: h(3)		!< homochoric coordinates
-real(kind=dbl)			:: res(3)
+real(kind=dbl), intent(in) 		:: h(3)
+real(kind=dbl)				:: res(3)
 
-integer(kind=irg)		:: i
-real(kind=dbl)			:: hn(3), hmag, s, hm
-
-! fit parameters determined with Mathematica
-real(kind=dbl),parameter	:: c(7) = (/ -0.5000096149170321D0, -0.02486606148871731D0, &
-              				-0.004549381779362819D0, 0.0005118668366387526D0, &
-              				-0.0016500827333575548D0, 0.0007593352203388718D0, &
-              				-0.0002040422502566876D0 /)
-
-! normalize h and store the magnitude
-hmag = sum(h*h)
-if (hmag.eq.0.D0) then
-  res = (/ 0.D0, 0.D0, 0.D0 /)
-else
-  hm = hmag
-  hn = h/dsqrt(hmag)
-
-! convert the magnitude to the rotation angle
-  s = c(1) * hmag
-  do i=2,7
-    hm = hm*hmag
-    s = s + c(i) * hm
-  end do
-
-  s = dtan( dacos(1.D0+s) )
-  res = (/ hn(1), hn(2), hn(3) /) * s
-end if
+res = ax2ro_d(ho2ax_d(h))
 
 end function ho2ro_d
-
 
 !--------------------------------------------------------------------------
 !

@@ -1,5 +1,5 @@
 ! ###################################################################
-! Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
+! Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
 ! All rights reserved.
 !
 ! Redistribution and use in source and binary forms, with or without modification, are 
@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:constants.f90
+! CTEMsoft:constants.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: constants
@@ -43,9 +43,10 @@
 ! 
 !> @date 1/5/99   MDG 1.0 original
 !> @date 5/18/01  MDG 2.0 f90
-!> @date 11/27/01  MDG 2.1 added kind support
-!> @date 03/19/13  MDG 3.0 added atomic weights 
-!
+!> @date 11/27/01 MDG 2.1 added kind support
+!> @date 03/19/13 MDG 3.0 added atomic weights 
+!> @date 01/10/14 MDG 4.0 new version
+!> @date 04/29/14 MDG 4.1 constants updated from NIST physical constants tables
 !--------------------------------------------------------------------------
 
 module constants
@@ -55,24 +56,24 @@ use local
 IMPLICIT NONE
 
 ! various physical constants
-!> cPi			= pi [dimensionless]
-!> cLight		= velocity of light [m/s]
-!> cPlanck		= Planck''s constant [Js]
+!> cPi		= pi [dimensionless]
+!> cLight	= velocity of light [m/s]
+!> cPlanck	= Planck''s constant [Js]
 !> cBoltzmann	= Boltmann constant [J/K]
-!> cPermea		= permeability of vacuum [dimensionless]
-!> cPermit		= permittivity of vacuum [F/m]
-!> cCharge		= electron charge [C]
+!> cPermea	= permeability of vacuum [dimensionless]
+!> cPermit	= permittivity of vacuum [F/m]
+!> cCharge	= electron charge [C]
 !> cRestmass	= electron rest mass [kg]
 !> cMoment	= electron magnetic moment [J/T]
-!> cJ2eV		= Joules per eV
+!> cJ2eV	= Joules per eV
 !> cAvogadro	= Avogadro's constant [mol^-1]
 
 real(kind=dbl), parameter :: cPi=3.141592653589793238D0, cLight = 299792458.D0, &
-                             cPlanck = 6.626075D-34, cBoltzmann = 1.380658D-23,  &
-                             cPermea = 1.2566371D-6, cPermit = 8.854187817D-12, &
-                             cCharge = 1.602177D-19, cRestmass = 9.109389D-31, &
-                             cMoment = 9.284770D-24, cJ2eV = 1.602177D-19, &
-			      cAvogadro = 6.0221413D23
+                             cPlanck = 6.62606957D-34, cBoltzmann = 1.3806488D-23,  &
+                             cPermea = 1.2566370614D-6, cPermit = 8.854187817D-12, &
+                             cCharge = 1.602176565D-19, cRestmass = 9.10938291D-31, &
+                             cMoment = 9.28476430D-24, cJ2eV = 1.602176565D-19, &
+			      cAvogadro = 6.02214129D23
 
 !> element symbols (we'll do 1-98 for all parameter lists)
 character(2), parameter :: ATOM_sym(98)=(/' H','He','Li','Be',' B',' C',' N',' O',' F','Ne', &
@@ -124,24 +125,24 @@ character(3), parameter :: ATOM_color(98)=(/'blu','grn','blu','blu','red','bro',
 
 !> atomic weights for things like density computations (from NIST elemental data base)
 real(kind=sgl),parameter	:: ATOM_weights(98) = (/1.00794, 4.002602, 6.941, 9.012182, 10.811, &
-										12.0107, 14.0067, 15.9994, 18.9984032, 20.1797, &
-										22.98976928, 24.3050, 26.9815386, 28.0855, 30.973762, &
-										32.065, 35.453, 39.948, 39.0983, 40.078, &
-										44.955912, 47.867, 50.9415, 51.9961, 54.938045, &
-										55.845, 58.933195, 58.6934, 63.546, 65.38, &
-										69.723, 72.64, 74.92160, 78.96, 79.904, &
-										83.798, 85.4678, 87.62, 88.90585, 91.224, &
-										92.90638, 95.96, 98.9062, 101.07, 102.90550, &
-										106.42, 107.8682, 112.411, 114.818, 118.710, &
-										121.760, 127.60, 126.90447, 131.293, 132.9054519, &
-										137.327, 138.90547, 140.116, 140.90765, 144.242, &
-										145.0, 150.36, 151.964, 157.25, 158.92535, &
-										162.500, 164.93032, 167.259, 168.93421, 173.054, &
-										174.9668, 178.49, 180.94788, 183.84, 186.207, &
-										190.23, 192.217, 195.084, 196.966569, 200.59, &
-										204.3833, 207.2, 208.98040, 209.0, 210.0, &
-										222.0, 223.0, 226.0, 227.0, 232.03806, &
-										231.03588, 238.02891, 237.0, 244.0, 243.0, &
-										247.0, 251.0, 252.0 /)
+							12.0107, 14.0067, 15.9994, 18.9984032, 20.1797, &
+							22.98976928, 24.3050, 26.9815386, 28.0855, 30.973762, &
+							32.065, 35.453, 39.948, 39.0983, 40.078, &
+							44.955912, 47.867, 50.9415, 51.9961, 54.938045, &
+							55.845, 58.933195, 58.6934, 63.546, 65.38, &
+							69.723, 72.64, 74.92160, 78.96, 79.904, &
+							83.798, 85.4678, 87.62, 88.90585, 91.224, &
+							92.90638, 95.96, 98.9062, 101.07, 102.90550, &
+							106.42, 107.8682, 112.411, 114.818, 118.710, &
+							121.760, 127.60, 126.90447, 131.293, 132.9054519, &
+							137.327, 138.90547, 140.116, 140.90765, 144.242, &
+							145.0, 150.36, 151.964, 157.25, 158.92535, &
+							162.500, 164.93032, 167.259, 168.93421, 173.054, &
+							174.9668, 178.49, 180.94788, 183.84, 186.207, &
+							190.23, 192.217, 195.084, 196.966569, 200.59, &
+							204.3833, 207.2, 208.98040, 209.0, 210.0, &
+							222.0, 223.0, 226.0, 227.0, 232.03806, &
+							231.03588, 238.02891, 237.0, 244.0, 243.0, &
+							247.0, 251.0, 252.0 /)
 
 end module

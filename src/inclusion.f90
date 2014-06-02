@@ -80,18 +80,18 @@ use foilmodule
 
 IMPLICIT NONE
 
-character(50),INTENT(IN)       :: incname
-integer(kind=irg),INTENT(OUT)  :: numinc
+character(50),INTENT(IN)       	:: incname
+integer(kind=irg),INTENT(OUT):: numinc
 integer(kind=irg),INTENT(IN)	:: dinfo,DF_npix,DF_npiy
 real(kind=sgl),INTENT(IN)	:: DF_L
 
-integer(kind=irg)              :: i, io_int(1)
-real(kind=sgl)                 :: Vx,Vy,Vz,Vrad,C,tmp(3)
+integer(kind=irg) :: i, io_int(1)
+real(kind=sgl)      :: Vx,Vy,Vz,Vrad,C,tmp(3)
 
 ! open the inclusion data file
 mess = 'Opening '//incname; call Message("(A)")
 open(unit=dataunit,file=incname,form='formatted')
-read(dataunit,*) numinc ! PGC unit=dataunit -> dataunit
+read(unit=dataunit,*) numinc
 allocate(inclusions(numinc))
 if (dinfo.eq.1) then
   io_int(1) = numinc
@@ -101,7 +101,7 @@ end if
 
 ! read each subsequent line 
 do i=1,numinc
-  read(dataunit,*) Vx,Vy,Vz,Vrad,C ! PGC unit=dataunit -> dataunit
+  read(unit=dataunit,*) Vx,Vy,Vz,Vrad,C
   inclusions(i)%xpos = Vx * 0.5 * float(DF_npix)*DF_L
   inclusions(i)%ypos = Vy * 0.5 * float(DF_npiy)*DF_L
   inclusions(i)%zpos = Vz * foil%z0         ! vertical fractional location in interval [-1,1]
