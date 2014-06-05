@@ -173,6 +173,7 @@ type unitcell
   real(kind=dbl)	                :: dmt(3,3),rmt(3,3),dsm(3,3),rsm(3,3),vol
   integer(kind=irg)	                :: ATOM_type(maxpasym),ATOM_ntype,SYM_SGnum,xtal_system,SYM_SGset
   real(kind=sgl)	                :: ATOM_pos(maxpasym,5)
+  integer(kind=irg)			 :: numat(maxpasym)		!< number of atoms of each type in the asymmetric unit
   character(fnlen)	                :: fname
   logical				 :: hexset
   real(kind=dbl),allocatable           :: apos(:,:,:)

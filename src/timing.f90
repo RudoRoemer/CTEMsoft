@@ -336,7 +336,8 @@ integer(kind=irg)			:: std
   call system_clock(TT%TIME_newcount, TT%TIME_count_rate, TT%TIME_count_max)
   call Message('  Total computation time [s] ', frm = "(A$)", stdout = std)
   call PrintTime((float(TT%TIME_loops)*float(TT%TIME_count_max)+float(TT%TIME_newcount-TT%TIME_count))/float(TT%TIME_count_rate))
-  io_real(1)=(float(TT%TIME_loops)*float(TT%TIME_count_max)+float(TT%TIME_newcount-TT%TIME_count))/float(TT%TIME_count_rate)/float(numk)
+  io_real(1)= float(TT%TIME_loops)*float(TT%TIME_count_max)+float(TT%TIME_newcount-TT%TIME_count)
+  io_real(1) = io_real(1)/float(TT%TIME_count_rate)/float(numk)
   call WriteValue(' Time per step/pixel [s] ', io_real, 1, frm = "(F)", stdout = std)
 end subroutine Time_stop
 

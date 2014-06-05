@@ -75,16 +75,14 @@ IMPLICIT NONE
 
 character(*), INTENT(IN)  			:: var1		!< first part of error message (routine name)
 character(*), INTENT(IN)  			:: var2		!< second part of error message (brief explanation)
-integer(kind=irg)m INTENT(IN),OPTIONAL		:: stdout 	!< output unit identifier
+integer(kind=irg), INTENT(IN),OPTIONAL		:: stdout 	!< output unit identifier
 
 integer(kind=irg)				:: std 
-character(*)					:: mess
 
  std = 6
  if (PRESENT(stdout)) std=stdout
 
- mess = ' ----> Fatal error in routine '//var1//': '//var2
- call Message(mess, frm='(//A//)', stdout=std) 
+ call Message(' ----> Fatal error in routine '//var1//': '//var2, frm='(//A//)', stdout=std) 
  stop '  Progam ended abnormally'
 
 end subroutine

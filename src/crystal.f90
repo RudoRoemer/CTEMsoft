@@ -52,6 +52,9 @@
 
 module crystal
 
+use local
+use crystalvars
+
 public
 
 interface TransSpace
@@ -113,7 +116,7 @@ use crystalvars
 
 IMPLICIT NONE
 
-type(unitcell),INTENT(IN),pointer	:: cell
+type(unitcell),pointer	:: cell
 
 !> auxiliary variables for geometric computation
 real(kind=dbl)     :: det,ca,cb,cg,sa,sb,sg,tg,pirad
@@ -216,7 +219,7 @@ use crystalvars
 
 IMPLICIT NONE
 
-type(unitcell),INTENT(IN),pointer	:: cell
+type(unitcell),pointer	:: cell
 real(kind=dbl),INTENT(IN)		:: t(3)			!< input vector in inspace reference frame
 real(kind=dbl),INTENT(OUT)		:: d(3)			!< output vector in outspace reference frame 
 character(1),INTENT(IN)		:: inspace		!< characters to label input space (d, r, or c)
@@ -288,7 +291,7 @@ use crystalvars
 
 IMPLICIT NONE
 
-type(unitcell),INTENT(IN),pointer	:: cell
+type(unitcell),pointer	:: cell
 real(kind=sgl),INTENT(IN)		:: t(3)			!< input vector in inspace reference frame
 real(kind=sgl),INTENT(OUT)		:: d(3)			!< output vector in outspace reference frame 
 character(1),INTENT(IN)		:: inspace	        !< characters to label input space (d, r, or c)
@@ -369,7 +372,7 @@ use math, ONLY: mInvert
 
 IMPLICIT NONE
 
-type(unitcell),INTENT(IN),pointer	:: cell
+type(unitcell),pointer	:: cell
 real(kind=dbl),INTENT(IN)		:: t(3)			!< input vector w.r.t. input space reference frame
 real(kind=dbl),INTENT(OUT)		:: d(3)			!< transformed vector components
 real(kind=dbl),INTENT(IN)		:: talpha(3,3)		!< transformation matrix
@@ -430,7 +433,7 @@ use math
 
 IMPLICIT NONE
 
-type(unitcell),INTENT(IN),pointer	:: cell
+type(unitcell),pointer	:: cell
 real(kind=sgl),INTENT(IN)		:: p(3)		!< first input vector in space reference frame
 real(kind=sgl),INTENT(IN)		:: q(3) 	!< second input vector
 character(1),INTENT(IN)		:: space	!< space in which to compute product ('d', 'r', or 'c')
@@ -474,7 +477,7 @@ use math
 
 IMPLICIT NONE
 
-type(unitcell),INTENT(IN),pointer	:: cell
+type(unitcell),pointer	:: cell
 real(kind=dbl),INTENT(IN)		:: p(3)		!< first input vector in space reference frame
 real(kind=dbl),INTENT(IN)		:: q(3) 	!< second input vector
 character(1),INTENT(IN)		:: space	!< space in which to compute product ('d', 'r', or 'c')
@@ -514,16 +517,16 @@ end function CalcDotDouble
 !--------------------------------------------------------------------------
 subroutine NormVecSingle(cell, p, space)
 
-use local
+use crystalvars
 
 IMPLICIT NONE
 
-type(unitcell),INTENT(IN),pointer		:: cell
+type(unitcell),pointer				:: cell
 real(kind=sgl),INTENT(INOUT)			:: p(3)	        !< input/output vector components
 character(1),INTENT(IN)			:: space	!< space character ('d', 'r', or 'c')
 real(kind=sgl)					:: x  		!< auxiliary variable
 
- x=CalcLength(cell, p,space)
+ x=CalcLength(cell, p, space)
  if (x.ne.0.0) then 
    p=p/x
  else
@@ -560,7 +563,7 @@ use local
 
 IMPLICIT NONE
 
-type(unitcell),INTENT(IN),pointer		:: cell
+type(unitcell),pointer		:: cell
 real(kind=dbl),INTENT(INOUT)			:: p(3)	        !< input/output vector components
 character(1),INTENT(IN)			:: space	!< space character ('d', 'r', or 'c')
 real(kind=dbl)					:: x  		!< auxiliary variable
@@ -602,7 +605,7 @@ use local
 
 IMPLICIT NONE
 
-type(unitcell),INTENT(IN),pointer		:: cell
+type(unitcell),pointer		:: cell
 real(kind=sgl),INTENT(IN)			:: p(3)	        !< input/output vector components
 character(1),INTENT(IN)			:: space	!< space character ('d', 'r', or 'c')
 real(kind=sgl)					:: x  		!< auxiliary variable
@@ -640,7 +643,7 @@ use local
 
 IMPLICIT NONE
 
-type(unitcell),INTENT(IN),pointer		:: cell
+type(unitcell),pointer		:: cell
 real(kind=dbl),INTENT(IN)			:: p(3)		!< input/output vector components
 character(1),INTENT(IN)			:: space	!< space character ('d', 'r', or 'c')
 real(kind=dbl)					:: x  		!< auxiliary variable
@@ -680,7 +683,7 @@ use constants
 
 IMPLICIT NONE
 
-type(unitcell),INTENT(IN),pointer	:: cell
+type(unitcell),pointer	:: cell
 real(kind=sgl),INTENT(IN)		:: p(3)		!< first vector components
 real(kind=sgl),INTENT(IN)		:: q(3) 	!< second vector components
 character(1),INTENT(IN)		:: space	!< space of the computation ('d', 'r', 'c')
@@ -740,7 +743,7 @@ use constants
 
 IMPLICIT NONE
 
-type(unitcell),INTENT(IN),pointer	:: cell
+type(unitcell),pointer	:: cell
 real(kind=dbl),INTENT(IN)		:: p(3)		!< first vector components
 real(kind=dbl),INTENT(IN)		:: q(3) 	!< second vector components
 character(1),INTENT(IN)		:: space	!< space of the computation ('d', 'r', 'c')
@@ -808,7 +811,7 @@ use math
 
 IMPLICIT NONE 
 
-type(unitcell),INTENT(IN),pointer	:: cell
+type(unitcell),pointer	:: cell
 real(kind=sgl),INTENT(IN)		:: p(3)		!< first input vector (order is important here !)
 real(kind=sgl),INTENT(IN)		:: q(3)		!< second input vector
 real(kind=sgl),INTENT(OUT)		:: r(3)		!< output vector
@@ -902,7 +905,7 @@ use math
 
 IMPLICIT NONE 
 
-type(unitcell),INTENT(IN),pointer	:: cell
+type(unitcell),pointer	:: cell
 real(kind=dbl),INTENT(IN)		:: p(3)		!< first input vector (order is important here !)
 real(kind=dbl),INTENT(IN)		:: q(3)		!< second input vector
 real(kind=dbl),INTENT(OUT)		:: r(3)		!< output vector
@@ -1246,7 +1249,7 @@ integer(kind=irg)			:: j, io_int(1)	, std	!< auxiliary variables
   out_real = (/ (cell%ATOM_pos(cell%ATOM_ntype,j),j=1,5) /)
   call WriteValue('    -> ', out_real, 5, frm = "(1x,4(F10.7,2x),F10.7)", stdout = std) 
 
-  call ReadValue(' ->  Another atom ? (y/n) ', ans, frm = "(A1)", , stdout = std)
+  call ReadValue(' ->  Another atom ? (y/n) ', ans, frm = "(A1)", stdout = std)
   if ((ans.eq.'y').or.(ans.eq.'Y')) then 
    more=.TRUE.
   else
@@ -1495,10 +1498,10 @@ integer(kind=irg)			:: i, nat
 ! also compute the total atomic number
 AW = 0.0
 Z = 0.0
-nat = sum( numat(1:cell % ATOM_ntype) )
+nat = sum( cell%numat(1:cell % ATOM_ntype) )
 do i = 1, cell % ATOM_ntype
-  AW = AW + numat(i) * ATOM_weights(cell % ATOM_type(i)) * cell % ATOM_pos(i,4)
-  Z = Z + numat(i) * float(cell % ATOM_type(i))
+  AW = AW + cell%numat(i) * ATOM_weights(cell % ATOM_type(i)) * cell % ATOM_pos(i,4)
+  Z = Z + cell%numat(i) * float(cell % ATOM_type(i))
 end do
 avA = AW/float(nat)
 avZ = Z/float(nat)
@@ -1601,7 +1604,7 @@ use io
 IMPLICIT NONE
 
 type(orientation),INTENT(INOUT)	:: orel		!< orientation relation type
-type(unitcell),INTENT(IN),pointer     :: cellA, cellB 
+type(unitcell),pointer     :: cellA, cellB 
 character(2),INTENT(IN)        	:: direction  !< direction of transformation (AB or BA)
 real(kind=sgl)                 	:: TT(3,3)
 
@@ -1674,7 +1677,7 @@ use crystalvars
 
 IMPLICIT NONE
 
-type(unitcell),INTENT(IN),pointer     :: cell
+type(unitcell),pointer     :: cell
 type(HOLZentries),INTENT(INOUT)	:: HOLZdata
 real(kind=sgl),INTENT(IN)		:: gg(3), kt(3), lambda
 
@@ -1736,7 +1739,7 @@ use error
 
 IMPLICIT NONE
 
-type(unitcell),INTENT(IN),pointer     :: cell
+type(unitcell),pointer     :: cell
 type(HOLZentries),INTENT(INOUT)	:: HOLZdata
 integer(kind=irg),INTENT(IN)		:: uvw(3), fn(3)
 real(kind=sgl),INTENT(IN)		:: g1(3), g2(3)
@@ -1853,7 +1856,7 @@ use crystalvars
 
 IMPLICIT NONE
 
-type(unitcell),INTENT(IN),pointer     :: cell
+type(unitcell),pointer     :: cell
 type(HOLZentries),INTENT(INOUT)	:: HOLZdata
 real(kind=sgl),INTENT(IN)		:: gg(3), kt(3), lambda
 
@@ -1876,7 +1879,7 @@ integer(kind=irg)			:: N
     	ny = (g12*h1-g11*h2)*z
 
 ! compute excitation error, including Laue center, foil normal, and HOLZ reflection.
-	exer = CalcsgHOLZ(cell,gg,kt,lambda)
+	exer = CalcsgHOLZ(cell,HOLZdata,gg,kt,lambda)
 
 ! next, determine the drawing coordinates, first in terms of g1 and g2
         correction = 1.0/(1.0-lambda*HOLZdata%H*(float(N)+exer*HOLZdata%FNg(3)))

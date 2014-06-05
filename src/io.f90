@@ -187,8 +187,8 @@ subroutine ReadValueStringArray(Qstring, rd_string, num, frm, stdout)
 
 use local
 
-character(*),INTENT(IN)			:: Qstring, frm 
-character(1),INTENT(OUT)			:: in_string(num)
+character(*),INTENT(IN)			:: Qstring
+character(1),INTENT(OUT)			:: rd_string(num)
 integer(kind=irg),INTENT(IN)			:: num
 character(*),INTENT(IN),OPTIONAL		:: frm
 integer(kind=irg),OPTIONAL,INTENT(IN)		:: stdout
@@ -310,7 +310,7 @@ end subroutine ReadValueIntLong
 !> @date 03/19/13 MDG 1.0 new routine
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
-subroutine ReadValueRealSingle(Qstring, rd_int, num, stdout)
+subroutine ReadValueRealSingle(Qstring, rd_real, num, stdout)
 
 use local
 
@@ -351,7 +351,7 @@ end subroutine ReadValueRealSingle
 !> @date 03/19/13 MDG 1.0 new routine
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
-subroutine ReadValueRealDouble(Qstring, rd_int, num, stdout)
+subroutine ReadValueRealDouble(Qstring, rd_real, num, stdout)
 
 use local
 

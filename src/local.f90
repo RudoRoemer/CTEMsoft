@@ -208,7 +208,7 @@ subroutine timestamp (stdout)
 
   IMPLICIT NONE
   
-  integer(kind=irg),INTENT(IN,OPTIONAL)	:: stdout
+  integer(kind=irg),INTENT(IN),OPTIONAL	:: stdout
 
   integer(kind=irg)	  :: std
   character ( len = 8 )  :: ampm

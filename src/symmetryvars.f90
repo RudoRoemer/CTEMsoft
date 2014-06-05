@@ -382,13 +382,7 @@ end type
 ! declare global variables
 !> @param SG entire space group structure, moved to cell in crystalvars.f90
 ! type (symdata)   	:: SG
-	
-! arrays used by CalcFamily, CalcPositions and related routines
-! integer(kind=irg)	:: itmp(48,3)			!< auxiliary array used for family computations etc
-! integer(kind=irg)	:: numat(maxpasym)		!< number of atoms of each type in the asymmetric unit
 
-! atom coordinates, moved to cell type
-! real(kind=dbl),allocatable :: apos(:,:,:)		!< atom position array
 
 ! for many diffraction calculations we need the 2D planar point groups; 
 ! the maximum order of such a group is 12, and there are only 10 of them, with
