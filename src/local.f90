@@ -50,6 +50,7 @@
 !> @date 03/19/13  MDG 3.0 rewrite of entire package
 !> @date 05/16/13 MDG 3.1 added stdout
 !> @date 01/10/14 MDG 4.0 new version
+!> @date 06/05/14 MDG 4.1 added comments about global variables in Release 3.0
 !--------------------------------------------------------------------------
 
 module local
@@ -58,6 +59,9 @@ module local
 use omp_lib
 
 !> @note This module must be "use"d by every program, subroutine, and function!
+
+! In Release 3.0 and beyond, we aim to have no global variables at all in the module
+! files...  This file should only contain parameter definitions (i.e., constants).
 
 ! The entire CTEMsoft package should be processor independent.  This can
 ! be accomplished by the use of the "kind" parameters.
@@ -74,6 +78,8 @@ use omp_lib
 !> long integer kind parameter 
   integer,parameter        	        :: irg = SELECTED_INT_KIND(9)
 
+! in Release 3.0 and beyond, this parameter should be replaced by a more flexible
+! mechanism for source code version numbering using the CMake facilities.
 !> source code version number
   character(8), parameter  	        :: scversion="4.0/2014"
 !> source code author name
@@ -84,17 +90,11 @@ use omp_lib
 !> standard string length for filenames
   integer(kind=irg),parameter	        :: fnlen=132
   
-!> program name string
-  character(fnlen)            		:: progname="default"
+!> program name string (MDG: removed as global variables on 6/5/14)
+!  character(fnlen)            		:: progname="default"
 !> one line program descriptor
-  character(fnlen)            		:: progdesc="default"
+!  character(fnlen)            		:: progdesc="default"
 
-!> pathname to the namelist template files
-  character(fnlen)			:: templatepathname   !='~/.CTEMsoft2013/templatefolder'
-  character(fnlen)			:: resourcepathname   !='~/.CTEMsoft2013/resources'
-  integer(kind=irg), parameter		:: maxnumtemplates = 256
-  character(17)				:: templatecodefilename = 'templatecodes.txt'
-  
 ! input/output information
 ! psunit    = Postscript output unit number
 ! dataunit  = Data unit number (for *.xtal files and other in/output)
@@ -102,25 +102,38 @@ use omp_lib
   integer(kind=irg), parameter	        :: psunit=20, dataunit=21, dataunit2=22, dataunit3=23
 
 ! where should standard output go ?  To the terminal (stdout=6) or elsewhere (stdout>10)
-! this is not a parameter, but can be changed by each program 
-  integer(kind=irg)			:: stdout = 6
+!  integer(kind=irg)			:: stdout = 6 (MDG: removed as global variables on 6/5/14)
   
 ! parameters governing the size of varous arrays
 !> Maximum number of positions in asymmetric unit
-  integer, parameter       		:: maxpasym=250		
+  integer(kind=irg), parameter       	:: maxpasym=250		
 !>Maximum number of defects of any given type
-  integer, parameter       		:: maxdefects=250
+  integer(kind=irg), parameter       	:: maxdefects=250
+! max number of templates in templatecodes.txt file
+  integer(kind=irg), parameter		:: maxnumtemplates = 256
+
+
 
 ! strucdef is a logical variable to determine whether or not a structure has been loaded;
 ! hexset determines whether or not 4-index hexagonal indices should be used.
 !> logical variable to determine whether or not a crystal structuter has been loaded
-  logical                  		:: strucdef
-!> logical to determine whether to use 3(FALSE) or 4(TRUE) index notation
-  logical                  		:: hexset
- 
-! to be eliminated !!! 
-!> where is the postscript viewer on this system ? 
-  character(18),parameter  	        :: psviewer="/usr/local/bin/gv "
+! [no longer needed in Release 3, since we can easily determine whether or not the cell structure has been initialized
+!  logical                  		:: strucdef
+!> logical to determine whether to use 3(FALSE) or 4(TRUE) index notation [MDG: moved to celltype structure, 6/5/14]
+!  logical                  		:: hexset
+
+! ================================
+! the entries below are still global variables and should be removed
+! ================================
+
+!> pathnames to the namelist template files
+! This should be reworked via CMake commands
+  character(fnlen)			:: templatepathname   !='~/.CTEMsoft2013/templatefolder'
+  character(fnlen)			:: resourcepathname   !='~/.CTEMsoft2013/resources'
+  character(17)				:: templatecodefilename = 'templatecodes.txt'
+
+  
+
 contains
 
 
@@ -137,24 +150,40 @@ contains
 !> @details prints a copyright statement as well as where the user can find the license information 
 !> This is then followed by the program name, a one-line description, and a time stamp.
 ! 
+!> @param progname program name string
+!> @param progdesc program descriptor string
+!> @param stdout optional output unit identifier
+!
 !> @date  12/08/01 MDG 1.0 original
 !> @date  03/19/13 MDG 2.0 minor modifications
 !> @date  05/16/13 MDG 2.1 added timestamp and stdout
 !> @date  01/10/14 MDG 3.0 new version
+!> @date  06/05/14 MDG 4.0 progname and progdesc are now subroutine arguments; made stdout optional
 !--------------------------------------------------------------------------
 
-subroutine CTEMsoft
+subroutine CTEMsoft(progname,progdesc,stdout)
 
- write (stdout,"(//1x,'CTEMsoft version ',A8,', Copyright (C) 2001-2014 Marc De Graef/CMU')") scversion
- write (stdout,"(1x,'CTEMsoft comes with ABSOLUTELY NO WARRANTY.')")
- write (stdout,"(1x,'This is free software, and you are welcome to redistribute it')")
- write (stdout,"(1x,'under certain conditions; see Copyright.txt file for details.'//)")
+IMPLICIT NONE
 
- write (stdout,"(1x,'Program name : ',A)") trim(progname)
- write (stdout,"(1x,A//)") trim(progdesc)
+character(fnlen),INTENT(IN)           :: progname
+character(fnlen),INTENT(IN)           :: progdesc
+integer(kind=irg),INTENT(IN),OPTIONAL	:: stdout
 
- call timestamp()
- write (stdout,"(1x,//)")
+integer(kind=irg)			:: std 
+
+ std = 6
+ if (PRESENT(stdout)) std=stdout
+
+ write (std,"(//1x,'CTEMsoft version ',A8,', Copyright (C) 2001-2014 Marc De Graef/CMU')") scversion
+ write (std,"(1x,'CTEMsoft comes with ABSOLUTELY NO WARRANTY.')")
+ write (std,"(1x,'This is free software, and you are welcome to redistribute it')")
+ write (std,"(1x,'under certain conditions; see License.txt file for details.'//)")
+
+ write (std,"(1x,'Program name : ',A)") trim(progname)
+ write (std,"(1x,A//)") trim(progdesc)
+
+ call timestamp(std)
+ write (std,"(1x,//)")
  
 end subroutine CTEMsoft
 
@@ -169,27 +198,36 @@ end subroutine CTEMsoft
 !
 !> @note  This code is distributed under the GNU LGPL license. 
 !
+!> @param stdout output unit identifier
+!
 !> @date 05/31/01  JB original
-!> @date 05/01/13 MDG changed 'm' to 'mo' for month variable, and some other changes
+!> @date 05/01/13 MDG changed 'm' to 'mo' for month variable, and some other minor changes
+!> @date 06/05/14 MDG added stdout as optional argument
 !--------------------------------------------------------------------------
-subroutine timestamp ( )
+subroutine timestamp (stdout)
 
-  implicit none
+  IMPLICIT NONE
+  
+  integer(kind=irg),INTENT(IN,OPTIONAL)	:: stdout
 
-  character ( len = 8 ) ampm
-  integer ( kind = irg ) d
-  character ( len = 8 ) date
-  integer ( kind = irg ) h
-  integer ( kind = irg ) mo
-  integer ( kind = irg ) mm
+  integer(kind=irg)	  :: std
+  character ( len = 8 )  :: ampm
+  integer ( kind = irg ) :: d
+  character ( len = 8 )  :: date
+  integer ( kind = irg ) :: h
+  integer ( kind = irg ) :: mo
+  integer ( kind = irg ) :: mm
   character ( len = 3 ), parameter, dimension(12) :: month = (/ &
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' /)
-  integer ( kind = irg ) n
-  integer ( kind = irg ) s
-  character ( len = 10 ) time
-  integer ( kind = irg ) values(8)
-  integer ( kind = irg ) y
-  character ( len = 5 ) zone
+  integer ( kind = irg ) :: n
+  integer ( kind = irg ) :: s
+  character ( len = 10 ) :: time
+  integer ( kind = irg ) :: values(8)
+  integer ( kind = irg ) :: y
+  character ( len = 5 )  :: zone
+
+  std = 6
+  if (PRESENT(stdout)) std=stdout
 
   call date_and_time ( date, time, zone, values )
 
@@ -222,12 +260,11 @@ subroutine timestamp ( )
     end if
   end if
 
-  write ( stdout, '(a,1x,i2,1x,i4,2x,i2,a1,i2.2,a1,i2.2,a1,i3.3,1x,a)' ) &
+  write ( std, '(a,1x,i2,1x,i4,2x,i2,a1,i2.2,a1,i2.2,a1,i3.3,1x,a)' ) &
     month(mo), d, y, h, ':', n, ':', s, '.', mm, trim ( ampm )
 
-  return
+!  return   ! return statement is not needed in subroutines
 end subroutine timestamp
-
 
 
 

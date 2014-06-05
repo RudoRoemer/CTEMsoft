@@ -46,6 +46,7 @@
 !> @date   03/19/13 MDG 3.0 update to new version
 !> @date   10/17/13 MDG 3.1 added HOLZentries type
 !> @date    1/10/14 MDG 4.0 new version, many new entries in unitcell type
+!> @date    6/ 5/14 MDG 4.1 removed variable declaration for cell
 !--------------------------------------------------------------------------
 module crystalvars
 
@@ -53,13 +54,11 @@ use local
 use symmetryvars
 
 !> [note added on 1/10/14]
-!> first we define the reflisttype (all the information needed for a given reciprocal lattice point).
+!> first we define the reflisttype (all the information needed for a given reciprocal lattice point or rlp).
 !> This used to be in the gvectors module, but the type definitions make more sense here.
 !> In this linked list, we want to keep everything that might be needed to perform rlp-related 
 !> simulations, except for the Fourier coefficient of the lattice potential, wich is kept in 
 !> a lookup table.  Anything that can easily be derived from the LUT does not need to be stored.
-!> We've also added the next2 pointer to this type; this pointer can be used to shorten the list
-!> while maintaining the original list as we process to determine the strong and weak beams.
 !> [end note]
 !
 ! linked list of reflections
@@ -93,7 +92,9 @@ type HOLZentries
   integer(kind=irg)	:: uvw(3),FN(3)
 end type
 
-type (HOLZentries)	:: HOLZdata
+! this used to be a global variable declaration, but in Release 3.0 we no longer have any 
+! global variables...
+! type (HOLZentries)	:: HOLZdata
 
 
 
@@ -139,6 +140,9 @@ type (HOLZentries)	:: HOLZdata
 !> the structure file name
 !> fname	= crystal structure file name
 !
+!> use hexagonal or regular indices (comes from old local.f90 module)
+!> hexset	= logical to determine whether to use 3(FALSE) or 4(TRUE) index notation 
+!
 !> atom coordinate array
 !> apos        = allocatable array for atom coordinates
 !
@@ -157,15 +161,20 @@ type (HOLZentries)	:: HOLZdata
 !> linked g-vector list (used to be in gvectors.f90)
 !> reflist     = starting point of linked list of g-vectors
 !
+!> firstw	= pointer to first weak beam entry in list
+!
 !> number of beams in linked list (used to be in dynamical.f90)
 !> DynNbeams   = current number being considered
 !> DynNbeamsLinked = total number
+!> nns	= number of strong beams
+!> nnw = number of weak beams
 type unitcell
   real(kind=dbl)	                :: a,b,c,alpha,beta,gamma
   real(kind=dbl)	                :: dmt(3,3),rmt(3,3),dsm(3,3),rsm(3,3),vol
   integer(kind=irg)	                :: ATOM_type(maxpasym),ATOM_ntype,SYM_SGnum,xtal_system,SYM_SGset
   real(kind=sgl)	                :: ATOM_pos(maxpasym,5)
   character(fnlen)	                :: fname
+  logical				 :: hexset
   real(kind=dbl),allocatable           :: apos(:,:,:)
   complex(kind=dbl),allocatable        :: LUT(:,:,:)
   logical,allocatable                  :: dbdiff(:,:,:)
@@ -185,7 +194,11 @@ end type
 
 !> cell is a pointer to the generic unit cell variable used in all programs.  
 ! This pointer is allocated by the InitializeCell routine in the initializers.f90 module
-type(unitcell) :: cell
+! 
+! in Release 2.0, the cell variable was a global variable.  In Release 3 and beyond,
+! we aim to have no global variables at all and, instead, pass all variables as 
+! function and subroutine arguments.
+! type(unitcell) :: cell
 
 
 

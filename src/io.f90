@@ -1,5 +1,5 @@
 ! ###################################################################
-! Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
+! Copyright (c) 2013-2014, Marc De Graef/Carnegie Mellon University
 ! All rights reserved.
 !
 ! Redistribution and use in source and binary forms, with or without modification, are 
@@ -42,17 +42,16 @@
 !> programs, is done by means of namelist files.  This allows the entire package to be
 !> controlled from inside the IDL environment or from the standard command line.
 ! 
-!> @date 1/5/99   MDG 1.0 original
-!> @date 5/19/01 MDG 2.0 f90 version
-!> @date 03/19/13  MDG  3.0 major changes in IO routines (use of interface)
+!> @date 01/05/99 MDG 1.0 original
+!> @date 05/19/01 MDG 2.0 f90 version
+!> @date 03/19/13 MDG 3.0 major changes in IO routines (use of interface)
 !> @date 05/16/13 MDG 3.1 added stdout as an option to run from IDL
+!> @date 06/05/14 MDG 4.0 changed stdout to regular argument; removed global "mess" declaration
 !--------------------------------------------------------------------------
 
 module io
 
 use local
-
-character(132)              	:: mess		!< 132 character string for message output
 
 public
 
@@ -74,10 +73,6 @@ interface WriteValue
 	module procedure WriteValueString
 end interface WriteValue
 
-interface Message
-	module procedure Message
-end interface
-
 contains
 
 !--------------------------------------------------------------------------
@@ -89,60 +84,85 @@ contains
 !> @brief dump a message to standard output
 !
 !> @details Simple routine to print a string on the standard output, with optional formatting
-!>  instructions
+!> instructions, for instance if one wants an empty line before (frm='(/A)') or after (frm='(A/)') 
+!> the string.  Note that one can include the name of the optional variable in the subroutine
+!> call, as in:
+!> call Message('this is a string', frm='(//A//)' , stdout = 22)
+!> this makes it clear that frm and stdout are optional variables.
 ! 
+!> @param mess message string
 !> @param frm optional string formatting command
+!> @param stdout optional output unit identifier
 !
-!> @date 1/5/99   MDG 1.0 original
-!> @date 5/19/01 MDG 2.0 f90 version
+!> @date 01/05/99 MDG 1.0 original
+!> @date 05/19/01 MDG 2.0 f90 version
 !> @date 03/19/13 MDG 3.0 made argument optional and introduced default format
+!> @date 06/05/14 MDG 4.0 added stdout and mess as mandatory arguments
 !--------------------------------------------------------------------------
-subroutine Message(frm)
+subroutine Message(mess,frm,stdout)
 
 use local
 
-character(*),OPTIONAL,INTENT(IN)  :: frm	!< optional formatting string
+character(*),INTENT(IN)		:: mess		!< message string
+character(*),OPTIONAL,INTENT(IN)  	:: frm		!< optional formatting string
+integer(kind=irg),OPTIONAL,INTENT(IN)	:: stdout	!< optional output unit identifier
+
+integer(kind=irg)			:: std
+
+std = 6
+if (PRESENT(stdout)) std = stdout
 
 ! default format or not ?
 if (PRESENT(frm)) then
- write (stdout,fmt=frm) trim(mess)
-else    ! default output format: a string with a linefeed before and after ...
- write (stdout,fmt="(/A/)") trim(mess)
+ write (std,fmt=frm) trim(mess)
+else    ! default output format: a simple string
+ write (std,fmt="(A)") trim(mess)
 end if 
 
-! and reset the mess array
-mess(:) = ''
-
 end subroutine Message
+
+! ###################################################################
+! reading routines
+! ###################################################################
+
 
 ! ###################################################################
 ! 
 !  subroutine ReadValueString   
 !
-!                                    created: 10/13/98 {9:29:46 AM} 
-!                                last update: 1/8/98 {9:40:05 AM} 
-!  Author: Marc De Graef
-!  
-!  Description: read a string from standard input
-! 
-!  History
-! 
-!  modified by  rev reason
-!  -------- --- --- -----------
-!  03/19/13 MDG 1.0 new routine
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read a string from standard input (unit = 5)
+!
+!> @param Qstring question string
+!> @param rd_string string to be read
+!> @param frm optional format string
+!> @param stdout optional output unit identifier
+
+!> @date 03/19/13 MDG 1.0 new routine
+!> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
-subroutine ReadValueString(Qstring, in_string, frm)
+subroutine ReadValueString( Qstring, rd_string, frm, stdout)
 
 use local
 
-character(*),INTENT(IN)			:: Qstring, frm
-character(*),INTENT(OUT)			:: in_string
+character(*),INTENT(IN)			:: Qstring
+character(*),INTENT(OUT)			:: rd_string
+character(*),INTENT(IN),OPTIONAL		:: frm
+integer(kind=irg),OPTIONAL,INTENT(IN)		:: stdout
 
-! send Qstring to the output
-mess = Qstring
-call Message("(' ',A,' ',$)")
+integer(kind=irg)				:: std
 
-read (*,fmt=frm) in_string
+std = 6
+if (PRESENT(stdout)) std = stdout
+
+call Message(Qstring, frm = "(' ',A,' ',$)", stdout = std)
+
+if (PRESENT(frm)) then
+  read (5, fmt=frm) rd_string
+else
+  read (5,*) rd_string
+end if
 
 end subroutine ReadValueString
 
@@ -150,266 +170,305 @@ end subroutine ReadValueString
 ! 
 !  subroutine ReadValueStringArray   
 !
-!                                    created: 10/13/98 {9:29:46 AM} 
-!                                last update: 1/8/98 {9:40:05 AM} 
-!  Author: Marc De Graef
-!  
-!  Description: read a series of strings from standard input
-! 
-!  History
-! 
-!  modified by  rev reason
-!  -------- --- --- -----------
-!  03/19/13 MDG 1.0 new routine
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read an array of strings from standard input (unit = 5)
+!
+!> @param Qstring question string
+!> @param rd_string string to be read
+!> @param num number of strings in array
+!> @param frm optional format string
+!> @param stdout optional output unit identifier
+
+!> @date 03/19/13 MDG 1.0 new routine
+!> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
-subroutine ReadValueStringArray(Qstring, in_string, num, frm)
+subroutine ReadValueStringArray(Qstring, rd_string, num, frm, stdout)
 
 use local
 
 character(*),INTENT(IN)			:: Qstring, frm 
 character(1),INTENT(OUT)			:: in_string(num)
 integer(kind=irg),INTENT(IN)			:: num
+character(*),INTENT(IN),OPTIONAL		:: frm
+integer(kind=irg),OPTIONAL,INTENT(IN)		:: stdout
 
-! send Qstring to the output
-mess = Qstring
-call Message("(' ',A,' ',$)")
+integer(kind=irg)				:: std, i
 
-read (*,fmt=frm) in_string
+std = 6
+if (PRESENT(stdout)) std = stdout
+
+call Message(Qstring, frm = "(' ',A,' ',$)", stdout = std)
+
+if (PRESENT(frm)) then 
+  do i=1,num
+    read (5, fmt=frm) rd_string(i)
+  end do
+else  
+  do i=1,num
+    read (5,*) rd_string(i)
+  end do
+end if 
 
 end subroutine ReadValueStringArray
+
 ! ###################################################################
 ! 
-!  subroutine ReadValueIntShort    
+!  subroutine ReadValueIntShort   
 !
-!                                    created: 10/13/98 {9:29:46 AM} 
-!                                last update: 1/8/98 {9:40:05 AM} 
-!  Author: Marc De Graef
-!  
-!  Description: read one or more short integers from standard input
-! 
-!  History
-! 
-!  modified by  rev reason
-!  -------- --- --- -----------
-!  03/19/13 MDG 1.0 new routine
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read one or more short integers
+!
+!> @param Qstring question string
+!> @param rd_int integer to be read
+!> @param num optional number of integers to be read
+!> @param stdout optional output unit identifier
+
+!> @date 03/19/13 MDG 1.0 new routine
+!> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
-subroutine ReadValueIntShort(Qstring, in_int, num)
+subroutine ReadValueIntShort(Qstring, rd_int, num, stdout)
 
 use local
 
 character(*), INTENT(IN)			:: Qstring
-integer(kind=ish),INTENT(OUT)			:: in_int(*)
+integer(kind=ish),INTENT(OUT)			:: rd_int(*)
 integer(kind=irg),INTENT(IN),OPTIONAL		:: num
+integer(kind=irg),OPTIONAL,INTENT(IN)		:: stdout
 
-! send Qstring to the output
-mess = Qstring
-call Message("(' ',A,' ',$)")
+integer(kind=irg)				:: std, i
+
+std = 6
+if (PRESENT(stdout)) std = stdout
+
+call Message(Qstring, frm = "(' ',A,' ',$)", stdout = std)
 
 ! one or more than one values expected ?
 if (PRESENT(num)) then
-  read (*,*) (in_int(i),i=1,num)
+  read (5,*) (rd_int(i),i=1,num)
 else
-  read (*,*) in_int(1)
+  read (5,*) rd_int(1)
 end if
   
 end subroutine ReadValueIntShort
 
 ! ###################################################################
 ! 
-!  subroutine ReadValueInt    
+!  subroutine ReadValueIntLong 
 !
-!                                    created: 10/13/98 {9:29:46 AM} 
-!                                last update: 1/8/98 {9:40:05 AM} 
-!  Author: Marc De Graef
-!  
-!  Description: read one or more regular integers from standard input
-! 
-!  History
-! 
-!  modified by  rev reason
-!  -------- --- --- -----------
-!  03/19/13 MDG 1.0 new routine
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read one or more regular (4-byte) integers
+!
+!> @param Qstring question string
+!> @param rd_int integer to be read
+!> @param num optional number of integers to be read
+!> @param stdout optional output unit identifier
+
+!> @date 03/19/13 MDG 1.0 new routine
+!> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
-subroutine ReadValueIntLong(Qstring, in_int, num)
+subroutine ReadValueIntLong(Qstring, rd_int, num, stdout)
 
 use local
 
 character(*), INTENT(IN)			:: Qstring
-integer(kind=irg),INTENT(OUT)			:: in_int(*)
+integer(kind=irg),INTENT(OUT)			:: rd_int(*)
 integer(kind=irg),INTENT(IN),OPTIONAL		:: num
+integer(kind=irg),OPTIONAL,INTENT(IN)		:: stdout
 
-! send Qstring to the output
-mess = Qstring
-call Message("(' ',A,' ',$)")
+integer(kind=irg)				:: std, i
+
+std = 6
+if (PRESENT(stdout)) std = stdout
+
+call Message(Qstring, frm = "(' ',A,' ',$)", stdout = std)
 
 ! one or more than one values expected ?
 if (PRESENT(num)) then
-  read (*,*) (in_int(i),i=1,num)
+  read (5,*) (rd_int(i),i=1,num)
 else
-  read (*,*) in_int(1)
+  read (5,*) rd_int(1)
 end if
-
+  
 end subroutine ReadValueIntLong
 
 ! ###################################################################
 ! 
-!  subroutine ReadValueRealSingle    
+!  subroutine ReadValueRealSingle 
 !
-!                                    created: 10/13/98 {9:29:46 AM} 
-!                                last update: 1/8/98 {9:40:05 AM} 
-!  Author: Marc De Graef
-!  
-!  Description: read one or more singe precision reals from standard input
-! 
-!  History
-! 
-!  modified by  rev reason
-!  -------- --- --- -----------
-!  03/19/13 MDG 1.0 new routine
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read one or more regular (4-byte) reals
+!
+!> @param Qstring question string
+!> @param rd_real integer to be read
+!> @param num optional number of integers to be read
+!> @param stdout optional output unit identifier
+
+!> @date 03/19/13 MDG 1.0 new routine
+!> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
-subroutine ReadValueRealSingle(Qstring, in_real, num)
+subroutine ReadValueRealSingle(Qstring, rd_int, num, stdout)
 
 use local
 
 character(*), INTENT(IN)			:: Qstring
-real(kind=sgl),INTENT(OUT)			:: in_real(*)
+real(kind=sgl),INTENT(OUT)			:: rd_real(*)
 integer(kind=irg),INTENT(IN),OPTIONAL		:: num
+integer(kind=irg),OPTIONAL,INTENT(IN)		:: stdout
 
-! send Qstring to the output
-mess = Qstring
-call Message("(' ',A,' ',$)")
+integer(kind=irg)				:: std, i
+
+std = 6
+if (PRESENT(stdout)) std = stdout
+
+call Message(Qstring, frm = "(' ',A,' ',$)", stdout = std)
 
 ! one or more than one values expected ?
 if (PRESENT(num)) then
-  read (*,*) (in_real(i),i=1,num)
+  read (5,*) (rd_real(i),i=1,num)
 else
-  read (*,*) in_real(1)
+  read (5,*) rd_real(1)
 end if
 
-! the calling routine must now use io_real to get to the value(s)
 end subroutine ReadValueRealSingle
 
-
 ! ###################################################################
 ! 
-!  subroutine ReadValueRealDouble
+!  subroutine ReadValueRealDouble 
 !
-!                                    created: 10/13/98 {9:29:46 AM} 
-!                                last update: 1/8/98 {9:40:05 AM} 
-!  Author: Marc De Graef
-!  
-!  Description: read one or more double precision reals from standard input
-! 
-!  History
-! 
-!  modified by  rev reason
-!  -------- --- --- -----------
-!  03/19/13 MDG 1.0 new routine
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read one or more regular (4-byte) reals
+!
+!> @param Qstring question string
+!> @param rd_real integer to be read
+!> @param num optional number of integers to be read
+!> @param stdout optional output unit identifier
+
+!> @date 03/19/13 MDG 1.0 new routine
+!> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
-subroutine ReadValueRealDouble(Qstring, in_real, num)
+subroutine ReadValueRealDouble(Qstring, rd_int, num, stdout)
 
 use local
 
 character(*), INTENT(IN)			:: Qstring
-real(kind=dbl),INTENT(OUT)			:: in_real(*)
+real(kind=dbl),INTENT(OUT)			:: rd_real(*)
 integer(kind=irg),INTENT(IN),OPTIONAL		:: num
+integer(kind=irg),OPTIONAL,INTENT(IN)		:: stdout
 
-! send Qstring to the output
-mess = Qstring
-call Message("(' ',A,' ',$)")
+integer(kind=irg)				:: std, i
+
+std = 6
+if (PRESENT(stdout)) std = stdout
+
+call Message(Qstring, frm = "(' ',A,' ',$)", stdout = std)
 
 ! one or more than one values expected ?
 if (PRESENT(num)) then
-  read (*,*) (in_real(i),i=1,num)
+  read (5,*) (rd_real(i),i=1,num)
 else
-  read (*,*) in_real(1)
+  read (5,*) rd_real(1)
 end if
 
 end subroutine ReadValueRealDouble
 
 
 ! ###################################################################
-! 
-!  subroutine WriteValueString    
-!
-!                                    created: 10/13/98 {9:29:46 AM} 
-!                                
-!  Author: Marc De Graef
-!  
-!  Description: write  a string to standard output
-! 
-!  History
-! 
-!  modified by  rev reason
-!  -------- --- --- -----------
-!  03/19/13 MDG 1.0 new routine
+! writing routines
 ! ###################################################################
-subroutine WriteValueString(Qstring, out_string, frm)
+
+! ###################################################################
+! 
+!  subroutine WriteValueString 
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief write a string
+!
+!> @param Qstring question string
+!> @param out_string output string
+!> @param frm optional formatting argument
+!> @param stdout optional output unit identifier
+!
+!> @date 03/19/13 MDG 1.0 new routine
+!> @date 06/05/14 MDG 2.0 changed io handling
+! ###################################################################
+subroutine WriteValueString(Qstring, out_string, frm, stdout)
 
 use local
 
-character(*), INTENT(IN)			:: Qstring, out_string
+character(*),INTENT(IN)			:: Qstring 
+character(*),INTENT(IN)			:: out_string
 character(*),INTENT(IN),OPTIONAL		:: frm
+integer(kind=irg),INTENT(IN),OPTIONAL		:: stdout
 
+integer(kind=irg)				:: std
+
+std = 6
+if (PRESENT(stdout)) std = stdout
 
 ! send Qstring to the output only if it is non-zero length
-if (len(Qstring).ne.0) then
-  mess = Qstring
-  call Message("(' ',A,' ',$)")
-end if
+if (len(Qstring).ne.0) call Message(Qstring, frm = "(A$)", stdout = std)
 
-mess = trim(out_string)
+
 if (PRESENT(frm)) then 
-  call Message(frm)
+  call Message(out_string, frm = frm, stdout = std)
 else
- call Message("(A)")
+ call Message(out_string, frm = "(A)", stdout = std)
 end if
 
 end subroutine WriteValueString
 
 ! ###################################################################
 ! 
-!  subroutine WriteValueIntShort    
+!  subroutine WriteValueIntShort 
 !
-!                                    created: 10/13/98 {9:29:46 AM} 
-!                                
-!  Author: Marc De Graef
-!  
-!  Description: write one or more short integers to standard input
-! 
-!  History
-! 
-!  modified by  rev reason
-!  -------- --- --- -----------
-!  03/19/13 MDG 1.0 new routine
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief write one or more short integers
+!
+!> @param Qstring question string
+!> @param out_int output string
+!> @param num optional number of integers
+!> @param frm optional formatting argument
+!> @param stdout optional output unit identifier
+!
+!> @date 03/19/13 MDG 1.0 new routine
+!> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
-subroutine WriteValueIntShort(Qstring, out_int, num, frm)
+subroutine WriteValueIntShort(Qstring, out_int, num, frm, stdout)
 
 use local
 
 character(*), INTENT(IN)			:: Qstring
-character(*),INTENT(IN),OPTIONAL		:: frm
 integer(kind=ish),INTENT(IN)			:: out_int(*)
+character(*),INTENT(IN),OPTIONAL		:: frm
 integer(kind=irg),INTENT(IN),OPTIONAL		:: num
+integer(kind=irg),INTENT(IN),OPTIONAL		:: stdout
 
-! send Qstring to the output
-if (len(Qstring).ne.0) then
-  mess = Qstring
-  call Message("(' ',A,' ',$)")
-end if
+integer(kind=irg)				:: std
+
+std = 6
+if (PRESENT(stdout)) std = stdout
+
+if (len(Qstring).ne.0) call Message(Qstring, frm = "(A$)", stdout = std)
 
 ! one or more than one values expected ?
 if (PRESENT(num)) then
  if (PRESENT(frm)) then
-  write (stdout,fmt=frm) (out_int(i),i=1,num)
+  write (std, fmt=frm) (out_int(i),i=1,num)
  else
-  write (stdout,*) (out_int(i),i=1,num)
+  write (std,*) (out_int(i),i=1,num)
  end if
 else
  if (PRESENT(frm)) then
-  write (stdout,fmt=frm) out_int(1)
+  write (std, fmt=frm) out_int(1)
  else
-  write (stdout,*) out_int(1)
+  write (std,*) out_int(1)
  end if
 end if
 
@@ -417,47 +476,50 @@ end subroutine WriteValueIntShort
 
 ! ###################################################################
 ! 
-!  subroutine WriteValueIntLong    
+!  subroutine WriteValueIntLong 
 !
-!                                    created: 10/13/98 {9:29:46 AM} 
-!                                
-!  Author: Marc De Graef
-!  
-!  Description: write one or more long integers to standard input
-! 
-!  History
-! 
-!  modified by  rev reason
-!  -------- --- --- -----------
-!  03/19/13 MDG 1.0 new routine
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief write one or more 4-byte integers
+!
+!> @param Qstring question string
+!> @param out_int output string
+!> @param num optional number of integers
+!> @param frm optional formatting argument
+!> @param stdout optional output unit identifier
+!
+!> @date 03/19/13 MDG 1.0 new routine
+!> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
-subroutine WriteValueIntLong(Qstring, out_int, num, frm)
+subroutine WriteValueIntLong(Qstring, out_int, num, frm, stdout)
 
 use local
 
 character(*), INTENT(IN)			:: Qstring
-character(*),INTENT(IN),OPTIONAL		:: frm
 integer(kind=irg),INTENT(IN)			:: out_int(*)
+character(*),INTENT(IN),OPTIONAL		:: frm
 integer(kind=irg),INTENT(IN),OPTIONAL		:: num
+integer(kind=irg),INTENT(IN),OPTIONAL		:: stdout
 
-! send Qstring to the output
-if (len(Qstring).ne.0) then
-  mess = Qstring
-  call Message("(' ',A,' ',$)")
-end if
+integer(kind=irg)				:: std
+
+std = 6
+if (PRESENT(stdout)) std = stdout
+
+if (len(Qstring).ne.0) call Message(Qstring, frm = "(A$)", stdout = std)
 
 ! one or more than one values expected ?
 if (PRESENT(num)) then
  if (PRESENT(frm)) then
-  write (stdout,fmt=frm) (out_int(i),i=1,num)
+  write (std, fmt=frm) (out_int(i),i=1,num)
  else
-  write (stdout,*) (out_int(i),i=1,num)
+  write (std,*) (out_int(i),i=1,num)
  end if
 else
  if (PRESENT(frm)) then
-  write (stdout,fmt=frm) out_int(1)
+  write (std, fmt=frm) out_int(1)
  else
-  write (stdout,*) out_int(1)
+  write (std,*) out_int(1)
  end if
 end if
 
@@ -466,146 +528,159 @@ end subroutine WriteValueIntLong
 
 ! ###################################################################
 ! 
-!  subroutine WriteValueRealSingle    
+!  subroutine WriteValueRealSingle 
 !
-!                                    created: 10/13/98 {9:29:46 AM} 
-!                                
-!  Author: Marc De Graef
-!  
-!  Description: write one or more single precision reals  to standard input
-! 
-!  History
-! 
-!  modified by  rev reason
-!  -------- --- --- -----------
-!  03/19/13 MDG 1.0 new routine
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief write one or more single precision reals
+!
+!> @param Qstring question string
+!> @param out_real output string
+!> @param num optional number of integers
+!> @param frm optional formatting argument
+!> @param stdout optional output unit identifier
+!
+!> @date 03/19/13 MDG 1.0 new routine
+!> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
-subroutine WriteValueRealSingle(Qstring, out_real, num, frm)
+subroutine WriteValueRealSingle(Qstring, out_real, num, frm, stdout)
 
 use local
 
 character(*), INTENT(IN)			:: Qstring
 real(kind=sgl),INTENT(IN)			:: out_real(*)
-integer(kind=irg),INTENT(IN),OPTIONAL		:: num
 character(*),INTENT(IN),OPTIONAL		:: frm
+integer(kind=irg),INTENT(IN),OPTIONAL		:: num
+integer(kind=irg),INTENT(IN),OPTIONAL		:: stdout
 
-! send Qstring to the output
-if (len(Qstring).ne.0) then
-  mess = Qstring
-  call Message("(' ',A,' ',$)")
-end if
+integer(kind=irg)				:: std
+
+std = 6
+if (PRESENT(stdout)) std = stdout
+
+if (len(Qstring).ne.0) call Message(Qstring, frm = "(A$)", stdout = std)
 
 ! one or more than one values expected ?
 if (PRESENT(num)) then
  if (PRESENT(frm)) then
-  write (stdout,fmt=frm) (out_real(i),i=1,num)
+  write (std, fmt=frm) (out_real(i),i=1,num)
  else
-  write (stdout,*) (out_real(i),i=1,num)
+  write (std,*) (out_real(i),i=1,num)
  end if
 else
  if (PRESENT(frm)) then
-  write (stdout,fmt=frm) out_real(1)
+  write (std, fmt=frm) out_real(1)
  else
-  write (stdout,*) out_real(1)
+  write (std,*) out_real(1)
  end if
 end if
 
 end subroutine WriteValueRealSingle
 
+
+
 ! ###################################################################
 ! 
-!  subroutine WriteValueRealDouble   
+!  subroutine WriteValueRealDouble 
 !
-!                                    created: 10/13/98 {9:29:46 AM} 
-!                                
-!  Author: Marc De Graef
-!  
-!  Description: write one or more double precision reals  to standard input
-! 
-!  History
-! 
-!  modified by  rev reason
-!  -------- --- --- -----------
-!  03/19/13 MDG 1.0 new routine
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief write one or more double precision reals
+!
+!> @param Qstring question string
+!> @param out_real output string
+!> @param num optional number of integers
+!> @param frm optional formatting argument
+!> @param stdout optional output unit identifier
+!
+!> @date 03/19/13 MDG 1.0 new routine
+!> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
-subroutine WriteValueRealDouble(Qstring, out_real, num,frm)
+subroutine WriteValueRealDouble(Qstring, out_real, num, frm, stdout)
 
 use local
 
 character(*), INTENT(IN)			:: Qstring
-character(*),INTENT(IN),OPTIONAL		:: frm
 real(kind=dbl),INTENT(IN)			:: out_real(*)
+character(*),INTENT(IN),OPTIONAL		:: frm
 integer(kind=irg),INTENT(IN),OPTIONAL		:: num
+integer(kind=irg),INTENT(IN),OPTIONAL		:: stdout
 
-! send Qstring to the output
-if (len(Qstring).ne.0) then
-  mess = Qstring
-  call Message("(' ',A,' ',$)")
-end if
+integer(kind=irg)				:: std
+
+std = 6
+if (PRESENT(stdout)) std = stdout
+
+if (len(Qstring).ne.0) call Message(Qstring, frm = "(A$)", stdout = std)
 
 ! one or more than one values expected ?
 if (PRESENT(num)) then
  if (PRESENT(frm)) then
-  write (stdout,fmt=frm) (out_real(i),i=1,num)
+  write (std, fmt=frm) (out_real(i),i=1,num)
  else
-  write (stdout,*) (out_real(i),i=1,num)
+  write (std,*) (out_real(i),i=1,num)
  end if
 else
  if (PRESENT(frm)) then
-  write (stdout,fmt=frm) out_real(1)
+  write (std, fmt=frm) out_real(1)
  else
-  write (stdout,*) out_real(1)
+  write (std,*) out_real(1)
  end if
 end if
 
 end subroutine WriteValueRealDouble
 
+
 ! ###################################################################
 ! 
-!  subroutine WriteValueRealComplex  
+!  subroutine WriteValueRealComplex 
 !
-!                                    created: 10/13/98 {9:29:46 AM} 
-!                                
-!  Author: Marc De Graef
-!  
-!  Description: write one or more complex reals  to standard input
-! 
-!  History
-! 
-!  modified by  rev reason
-!  -------- --- --- -----------
-!  03/19/13 MDG 1.0 new routine
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief write one or more single precision complex numbers
+!
+!> @param Qstring question string
+!> @param out_real output string
+!> @param num optional number of integers
+!> @param frm optional formatting argument
+!> @param stdout optional output unit identifier
+!
+!> @date 03/19/13 MDG 1.0 new routine
+!> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
-subroutine WriteValueRealComplex(Qstring, out_cmplx, num,frm)
+subroutine WriteValueRealComplex(Qstring, out_cmplx, num, frm, stdout)
 
 use local
 
 character(*), INTENT(IN)			:: Qstring
-character(*),INTENT(IN),OPTIONAL		:: frm
 complex(kind=sgl),INTENT(IN)			:: out_cmplx(*)
+character(*),INTENT(IN),OPTIONAL		:: frm
 integer(kind=irg),INTENT(IN),OPTIONAL		:: num
+integer(kind=irg),INTENT(IN),OPTIONAL		:: stdout
 
-! send Qstring to the output
-if (len(Qstring).ne.0) then
-  mess = Qstring
-  call Message("(' ',A,' ',$)")
-end if
+integer(kind=irg)				:: std
+
+std = 6
+if (PRESENT(stdout)) std = stdout
+
+if (len(Qstring).ne.0) call Message(Qstring, frm = "(A$)", stdout = std)
 
 ! one or more than one values expected ?
 if (PRESENT(num)) then
  if (PRESENT(frm)) then
-  write (stdout,fmt=frm) (out_cmplx(i),i=1,num)
+  write (std, fmt=frm) (out_cmplx(i),i=1,num)
  else
-  write (stdout,*) (out_cmplx(i),i=1,num)
+  write (std,*) (out_cmplx(i),i=1,num)
  end if
 else
  if (PRESENT(frm)) then
-  write (stdout,fmt=frm) out_cmplx(1)
+  write (std, fmt=frm) out_cmplx(1)
  else
-  write (stdout,*) out_cmplx(1)
+  write (std,*) out_cmplx(1)
  end if
 end if
 
 end subroutine WriteValueRealComplex
+
 
 end module io

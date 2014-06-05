@@ -1,5 +1,5 @@
 ! ###################################################################
-! Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
+! Copyright (c) 2013-2014, Marc De Graef/Carnegie Mellon University
 ! All rights reserved.
 !
 ! Redistribution and use in source and binary forms, with or without modification, are 
@@ -182,7 +182,8 @@ end subroutine cInvert
 !> @param TP 'Tayl' or 'Pade', to select method
 !> @param nn number of row/column entries in A
 !
-!> @date   09/16/13 MDG 1.0 original, tested against analytical version for small array
+!> @date 09/16/13 MDG 1.0 original, tested against analytical version for small array
+!> @date 06/05/14 MDG 1.1 updated IO
 !--------------------------------------------------------------------------
 recursive subroutine MatrixExponential(A,E,z0,TP,nn)
 
@@ -202,9 +203,11 @@ real(kind=dbl)				:: modA, pref, sgn
 complex(kind=dbl),allocatable		:: B(:,:), add(:,:), Nqq(:,:), Dqq(:,:), C(:,:)
 
 integer(kind=irg)			:: i, k, j, icnt, q, istat, ilev
+
 integer(kind=irg)    			:: INFO, LDA, MILWORK
 integer(kind=irg),allocatable		:: JPIV(:)
 complex(kind=dbl),allocatable 		:: MIWORK(:)
+
 integer(kind=irg),parameter		:: kTaylor(6) = (/ 3, 4, 6, 8, 7, 6 /)		! from table 1 in reference above
 integer(kind=irg),parameter		:: jTaylor(6) = (/ 1, 2, 3, 5, 9, 13 /)
 integer(kind=irg),parameter		:: qPade(6) = (/ 2, 3, 4, 4, 4, 4 /)
@@ -219,12 +222,7 @@ ilev = nint(alog10(modA))+3
 if (ilev.le.0) ilev = 1		! can not be smaller than 1
 
 ! if modA gets to be too large, abort with a message
-if (modA.gt.10000.D0) then
-  mess = 'MatrixExponential routine can not deal with ||A|| > 10000.0'
-  call Message("(/A/)")
-  stop 'Program aborted'
-end if
-
+if (modA.gt.10000.D0) call FatalError('MatrixExponential','  routine can not deal with ||A|| > 10000.0')
 
 if (TP.eq.'Tayl') then ! use scaling and squaring for the Taylor expansion
 	k = kTaylor(ilev)
@@ -232,10 +230,7 @@ if (TP.eq.'Tayl') then ! use scaling and squaring for the Taylor expansion
 
 	! allocate an auxiliary array
 	allocate( B(nn,nn), add(nn,nn), stat=istat )
-	if (istat.ne.0) then 
-	  call FatalError('MatrixExponential','Error allocating arrays for Taylor approximation')
-	  stop
-	end if
+	if (istat.ne.0) call FatalError('MatrixExponential',' Error allocating arrays for Taylor approximation')
 	
 	! perform the scaling step
 	B = (A * z0) / 2.0D0**j ! dcmplx(2.0**j,0.0)
@@ -260,10 +255,7 @@ else ! Pade approximation for target accuracy 10^(-9)
 
 	! allocate auxiliary arrays
 	allocate(B(nn,nn),C(nn,nn), Nqq(nn,nn), Dqq(nn,nn), stat=istat )
-	if (istat.ne.0) then 
-	  call FatalError('MatrixExponential','Error allocating arrays for Pade approximation')
-	  stop
-	end if
+	if (istat.ne.0) call FatalError('MatrixExponential',' Error allocating arrays for Pade approximation')
 	
 	! perform the scaling step
 	B = (A * z0) / 2.D0**j  ! dcmplx(2.0**j,0.0)
@@ -291,14 +283,14 @@ else ! Pade approximation for target accuracy 10^(-9)
 	LDA = nn
 	allocate( JPIV(nn) )
  	call zgetrf(nn,nn,Dqq,LDA,JPIV,INFO)
-	if (INFO.ne.0) call FatalError('Error in MatrixExponential: ','ZGETRF return not zero')
+	if (INFO.ne.0) call FatalError('Error in MatrixExponential: ',' ZGETRF return not zero')
 
 	MILWORK = 64*nn 
  	allocate(MIWORK(MILWORK))
 
 	MIWORK = dcmplx(0.0_dbl,0.0_dbl)
  	call zgetri(nn,Dqq,LDA,JPIV,MIWORK,MILWORK,INFO)
- 	if (INFO.ne.0) call FatalError('Error in MatrixExponential: ','ZGETRI return not zero')
+ 	if (INFO.ne.0) call FatalError('Error in MatrixExponential: ',' ZGETRI return not zero')
 
 	! and compute E
 	E = matmul( Dqq, Nqq )
@@ -313,13 +305,6 @@ do icnt = 1,j
 end do
 
 end subroutine MatrixExponential
-
-
-
-
-
-
-
 
 
 end module math

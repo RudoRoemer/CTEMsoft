@@ -1,5 +1,5 @@
 ! ###################################################################
-! Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
+! Copyright (c) 2013-2014, Marc De Graef/Carnegie Mellon University
 ! All rights reserved.
 !
 ! Redistribution and use in source and binary forms, with or without modification, are 
@@ -34,10 +34,11 @@
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief Provides routines to compute the displacement vector for various dislocations.
+!> @brief Provides a few timing routines
 ! 
 !> @date   11/19/01 MDG 1.0 original
 !> @date   06/04/13 MDG 2.0 rewrite
+!> @date   06/05/14 MDG 3.0 replaced globals by timetype argument
 !--------------------------------------------------------------------------
 module timing
 
@@ -46,9 +47,18 @@ use io
 
 IMPLICIT NONE
 
-real(kind=sgl)     	:: TIME_t_count,TIME_unit_count,TIME_interval,TIME_fraction
-integer(kind=irg)   	:: TIME_newcount,TIME_count_rate,TIME_count_max,TIME_count,TIME_old,TIME_loops
-
+type timetype
+  real(kind=sgl)     	:: TIME_t_count
+  real(kind=sgl)     	:: TIME_unit_count
+  real(kind=sgl)     	:: TIME_interval
+  real(kind=sgl)     	:: TIME_fraction
+  integer(kind=irg)   	:: TIME_newcount
+  integer(kind=irg)   	:: TIME_count_rate
+  integer(kind=irg)   	:: TIME_count_max
+  integer(kind=irg)   	:: TIME_count
+  integer(kind=irg)   	:: TIME_old
+  integer(kind=irg)   	:: TIME_loops
+end type
 
 contains
 
@@ -62,17 +72,22 @@ contains
 !
 !> @date   06/04/01 MDG 1.0 original
 !> @date   06/04/13 MDG 2.0 rewrite
+!> @date   06/05/14 MDG 3.0 added TT as argument
 !--------------------------------------------------------------------------
-subroutine Time_reset
+subroutine Time_reset(TT)
 
-TIME_t_count = 0.0
-TIME_unit_count = 0.0
-TIME_count = 0
-TIME_newcount = 0
-TIME_count_rate = 0
-TIME_count_max = HUGE(0)
-TIME_old = 0
-TIME_loops = 0
+IMPLICIT NONE
+
+type(timetype),INTENT(INOUT)	:: TT
+
+TT%TIME_t_count = 0.0
+TT%TIME_unit_count = 0.0
+TT%TIME_count = 0
+TT%TIME_newcount = 0
+TT%TIME_count_rate = 0
+TT%TIME_count_max = HUGE(0)
+TT%TIME_old = 0
+TT%TIME_loops = 0
 
 end subroutine Time_reset
 
@@ -84,21 +99,30 @@ end subroutine Time_reset
 !
 !> @brief report time recording
 !
+!> @param TT time structure
+!> @param interval interval for reporting
+!> @param stdout optional output unit identifier
+!
 !> @date   06/04/01 MDG 1.0 original
 !> @date   06/04/13 MDG 2.0 rewrite
+!> @date   06/05/14 MDG 3.0 added TT as argument
 !--------------------------------------------------------------------------
-subroutine Time_report(interval)
-
-use local
-use io
+subroutine Time_report(TT, interval, stdout)
 
 IMPLICIT NONE
 
-real(kind=sgl),intent(IN)   :: interval
+type(timetype),INTENT(INOUT)		:: TT
+real(kind=sgl),intent(IN)   		:: interval
+integer(kind=irg),OPTIONAL,INTENT(IN)	:: stdout
 
-  TIME_interval = interval
-  TIME_fraction = TIME_interval
-  mess = 'Starting computation'; call Message("(/A)")
+integer(kind=irg)			:: std
+
+ std = 6
+ if (PRESENT(stdout)) std = stdout
+
+ TT%TIME_interval = interval
+ TT%TIME_fraction = TT%TIME_interval
+ call Message('Starting computation', frm = "(/A)", stdout = std)
 
 end subroutine Time_report
 
@@ -112,12 +136,17 @@ end subroutine Time_report
 !
 !> @date   06/04/01 MDG 1.0 original
 !> @date   06/04/13 MDG 2.0 rewrite
+!> @date   06/05/14 MDG 3.0 added TT as argument
 !--------------------------------------------------------------------------
-subroutine Time_start
+subroutine Time_start(TT)
+
+IMPLICIT NONE
+
+type(timetype),INTENT(INOUT)		:: TT
 
 ! start the timing of the computation
- call Time_reset
- call system_clock(TIME_count,TIME_count_rate,TIME_count_max)
+ call Time_reset(TT)
+ call system_clock(TT%TIME_count,TT%TIME_count_rate,TT%TIME_count_max)
 
 end subroutine Time_start
 
@@ -129,32 +158,37 @@ end subroutine Time_start
 !
 !> @brief estimare remaining time
 !
+!> @param TT time structure
 !> @param numk number of idividual computations
+!> @param stdout optional output unit identifier
 !
 !> @date   06/04/01 MDG 1.0 original
 !> @date   06/04/13 MDG 2.0 rewrite
+!> @date   06/05/14 MDG 3.0 added TT as argument
 !--------------------------------------------------------------------------
-subroutine Time_estimate(numk)
-
-use local
-use io
+subroutine Time_estimate(TT, numk, stdout)
 
 IMPLICIT NONE
 
+type(timetype),INTENT(INOUT)		:: TT
 integer(kind=irg),intent(IN)     	:: numk
+integer(kind=irg),INTENT(IN),OPTIONAL	:: stdout
 
-integer(kind=irg)      		:: TIME_nc
+integer(kind=irg)      		:: TIME_nc, std
 real(kind=sgl)				:: io_real(1)
 
+std = 6
+if (PRESENT(stdout)) std = stdout
+
 ! get the current time
- call system_clock(TIME_nc,TIME_count_rate,TIME_count_max)
- TIME_newcount = TIME_nc
- TIME_t_count = float(TIME_newcount-TIME_count)/float(TIME_count_rate)
- TIME_unit_count = TIME_t_count
- io_real(1) = TIME_unit_count
- call WriteValue(' Time for first computation step [s, typically overestimate] :', io_real, 1, "(F10.5)")
- mess = '  Anticipated total computation time :'; call Message("(A$)")
- call PrintTime(TIME_unit_count*float(numk))
+ call system_clock(TIME_nc, TT%TIME_count_rate, TT%TIME_count_max)
+ TT%TIME_newcount = TIME_nc
+ TT%TIME_t_count = float(TT%TIME_newcount-TT%TIME_count)/float(TT%TIME_count_rate)
+ TT%TIME_unit_count = TT%TIME_t_count
+ io_real(1) = TT%TIME_unit_count
+ call WriteValue(' Time for first computation step [s, typically overestimate] :', io_real, 1, frm = "(F10.5)", stdout = std)
+ call Message('  Anticipated total computation time :', frm = "(A$)", stdout = std)
+ call PrintTime(TT%TIME_unit_count*float(numk), stdout = std)
  
 end subroutine Time_estimate
 
@@ -166,49 +200,55 @@ end subroutine Time_estimate
 !
 !> @brief estimate remaining time
 !
+!> @param TT time structure
 !> @param ik current computation
 !> @param numk number of idividual computations
+!> @param stdout optional output unit identifier
 !
 !> @date   06/04/01 MDG 1.0 original
 !> @date   06/04/13 MDG 2.0 rewrite
+!> @date   06/05/14 MDG 3.0 added TT as argument
 !--------------------------------------------------------------------------
-subroutine Time_remaining(ik,numk)
-
-use local
-use io
+subroutine Time_remaining(TT, ik, numk, stdout)
 
 IMPLICIT NONE
 
-integer(kind=irg),intent(IN)   	:: ik,numk
+type(timetype),INTENT(INOUT)		:: TT
+integer(kind=irg),intent(IN)   	:: ik
+integer(kind=irg),intent(IN)   	:: numk
+integer(kind=irg),INTENT(IN),OPTIONAL	:: stdout
 
-integer(kind=irg)    			:: TIME_nc, io_int(1)
+integer(kind=irg)    			:: TIME_nc, io_int(1), std
 real(kind=sgl)				:: io_real(1)
 
- TIME_fraction = TIME_fraction + TIME_interval
+ std = 6
+ if (PRESENT(stdout)) std = stdout
+
+ TT%TIME_fraction = TT%TIME_fraction + TT%TIME_interval
 
 ! get the current time
- call system_clock(TIME_nc,TIME_count_rate,TIME_count_max)
+ call system_clock(TIME_nc, TT%TIME_count_rate, TT%TIME_count_max)
 
 ! correct for the resetting of TIME_nc when TIME_count_max is reached
- if (TIME_nc.lt.TIME_newcount) then     ! we've looped through the entire cycle
-   TIME_loops = TIME_loops+1
-   TIME_count = 0
+ if (TIME_nc.lt.TT%TIME_newcount) then     ! we've looped through the entire cycle
+   TT%TIME_loops = TT%TIME_loops+1
+   TT%TIME_count = 0
  end if 
- TIME_newcount = TIME_nc
+ TT%TIME_newcount = TIME_nc
 
 ! and print it
- TIME_t_count = (float(TIME_loops)*float(TIME_count_max)+float(TIME_newcount-TIME_count))/float(TIME_count_rate)
+ TT%TIME_t_count = (float(TT%TIME_loops)*float(TT%TIME_count_max)+float(TT%TIME_newcount-TT%TIME_count))/float(TT%TIME_count_rate)
 
 ! reset the time per unit
- TIME_unit_count = TIME_t_count/float(ik)
+ TT%TIME_unit_count = TT%TIME_t_count/float(ik)
 
 ! print estimated remaining time
- io_int(1) = nint(100.0*TIME_t_count/(TIME_t_count+TIME_unit_count*(float(numk)-float(ik))))
- call WriteValue (' ',io_int, 1, "(1x,I3,' % completed; '$)") 
- io_real(1) = TIME_t_count
- call WriteValue(' Total computation time [s] ', io_real, 1, "(F$)")
- mess = ';  Estimated remaining time : '; call Message("(A$)")
- call PrintTime(TIME_unit_count*(float(numk)-float(ik)))
+ io_int(1) = nint(100.0*TT%TIME_t_count/(TT%TIME_t_count+TT%TIME_unit_count*(float(numk)-float(ik))))
+ call WriteValue (' ',io_int, 1, frm = "(1x,I3,' % completed; '$)", stdout = std) 
+ io_real(1) = TT%TIME_t_count
+ call WriteValue(' Total computation time [s] ', io_real, 1, frm = "(F$)", stdout = std)
+ call Message(';  Estimated remaining time : ', frm = "(A$)", stdout = std)
+ call PrintTime(TT%TIME_unit_count*(float(numk)-float(ik)), stdout = std)
 !
 end subroutine Time_remaining
 
@@ -221,21 +261,24 @@ end subroutine Time_remaining
 !> @brief print  time
 !
 !> @param tm time variable
+!> @param stdout optional output unit identifier
 !
 !> @date   06/04/01 MDG 1.0 original
 !> @date   06/04/13 MDG 2.0 rewrite
+!> @date   06/05/14 MDG 3.0 changed IO
 !--------------------------------------------------------------------------
-subroutine PrintTime(tm)
-
-use local
-use io
+subroutine PrintTime(tm, stdout)
 
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)		:: tm
+integer(kind=irg),INTENT(IN),OPTIONAL	:: stdout
 
-integer(kind=irg)    				:: days,hours,minutes,seconds, io_int(4)
-real(kind=sgl)       				:: secs
+integer(kind=irg)    			:: days, hours, minutes, seconds, io_int(4), std
+real(kind=sgl)       			:: secs
+
+  std = 6
+  if (PRESENT(stdout)) std = stdout
 
   secs = tm
   days = 0
@@ -254,8 +297,10 @@ real(kind=sgl)       				:: secs
     secs = mod(secs,60.0)
   end if
   seconds = int(secs)
+
   io_int(1:4) = (/ days, hours, minutes, seconds /)
-  call WriteValue(' ',io_int, 4, "(1x,I3,' d,',I3,' h,',I3,' m,',I3,' s')")
+  call WriteValue(' ',io_int, 4, frm = "(1x,I3,' d,',I3,' h,',I3,' m,',I3,' s')", stdout = std)
+
 end subroutine PrintTime
 
 !--------------------------------------------------------------------------
@@ -266,27 +311,33 @@ end subroutine PrintTime
 !
 !> @brief stop time recording
 !
+!> @param TT time structure
 !> @param numk total number of computations
+!> @param stdout optional output unit identifier
 !
 !> @date   06/04/01 MDG 1.0 original
 !> @date   06/04/13 MDG 2.0 rewrite
+!> @date   06/05/14 MDG 3.0 added TT; changed IO
 !--------------------------------------------------------------------------
-subroutine Time_stop(numk)
-
-use local
-use io
+subroutine Time_stop(TT, numk, stdout)
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(IN)  :: numk
+type(timetype),INTENT(INOUT)		:: TT
+integer(kind=irg),INTENT(IN)  		:: numk
+integer(kind=irg),INTENT(IN),OPTIONAL	:: stdout
 
 real(kind=sgl)				:: io_real(1)
+integer(kind=irg)			:: std
 
-  call system_clock(TIME_newcount,TIME_count_rate,TIME_count_max)
-  mess = '  Total computation time [s] '; call Message("(A$)")
-  call PrintTime((float(TIME_loops)*float(TIME_count_max)+float(TIME_newcount-TIME_count))/float(TIME_count_rate))
-  io_real(1)=(float(TIME_loops)*float(TIME_count_max)+float(TIME_newcount-TIME_count))/float(TIME_count_rate)/float(numk)
-  call WriteValue(' Time per step/pixel [s] ', io_real, 1, "(F)")
+  std = 6
+  if (PRESENT(stdout)) std= stdout
+
+  call system_clock(TT%TIME_newcount, TT%TIME_count_rate, TT%TIME_count_max)
+  call Message('  Total computation time [s] ', frm = "(A$)", stdout = std)
+  call PrintTime((float(TT%TIME_loops)*float(TT%TIME_count_max)+float(TT%TIME_newcount-TT%TIME_count))/float(TT%TIME_count_rate))
+  io_real(1)=(float(TT%TIME_loops)*float(TT%TIME_count_max)+float(TT%TIME_newcount-TT%TIME_count))/float(TT%TIME_count_rate)/float(numk)
+  call WriteValue(' Time per step/pixel [s] ', io_real, 1, frm = "(F)", stdout = std)
 end subroutine Time_stop
 
 
