@@ -1,5 +1,7 @@
 project(CTEMSoftLib)
 
+configure_file(${CTEMSoftLib_SOURCE_DIR}/local.f90.in 
+			   ${CTEMSoftLib_BINARY_DIR}/local.f90 @ONLY)
 
 set(CTEMSoftLib_SRCS
 	${CTEMSoftLib_SOURCE_DIR}/apb.f90
@@ -10,7 +12,7 @@ set(CTEMSoftLib_SRCS
 	${CTEMSoftLib_SOURCE_DIR}/diffraction.f90
 	${CTEMSoftLib_SOURCE_DIR}/dislocation.f90
 	#${CTEMSoftLib_SOURCE_DIR}/dispfield.f90  #also named ysh model at top
-	${CTEMSoftLib_SOURCE_DIR}/doublediff.f90
+#	${CTEMSoftLib_SOURCE_DIR}/doublediff.f90
 	${CTEMSoftLib_SOURCE_DIR}/dynamical.f90
 	${CTEMSoftLib_SOURCE_DIR}/eispack.f90
 	${CTEMSoftLib_SOURCE_DIR}/error.f90
@@ -24,11 +26,12 @@ set(CTEMSoftLib_SRCS
 	${CTEMSoftLib_SOURCE_DIR}/io.f90
 	${CTEMSoftLib_SOURCE_DIR}/kvectors.f90
 	${CTEMSoftLib_SOURCE_DIR}/Lambert.f90
-	${CTEMSoftLib_SOURCE_DIR}/local.f90
+#	${CTEMSoftLib_SOURCE_DIR}/local.f90
+	${CTEMSoftLib_BINARY_DIR}/local.f90  # NOTE THIS FILE IS GENERATED DURING CMAKE TIME
 	${CTEMSoftLib_SOURCE_DIR}/math.f90
 	${CTEMSoftLib_SOURCE_DIR}/multibeams.f90
 	${CTEMSoftLib_SOURCE_DIR}/MBmodule.f90
-	${CTEMSoftLib_SOURCE_DIR}/noise.f90
+#	${CTEMSoftLib_SOURCE_DIR}/noise.f90
 	${CTEMSoftLib_SOURCE_DIR}/others.f90
 	${CTEMSoftLib_SOURCE_DIR}/pgm.f90
 	${CTEMSoftLib_SOURCE_DIR}/postscript.f90
