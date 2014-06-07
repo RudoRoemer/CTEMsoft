@@ -74,7 +74,7 @@ use omp_lib
   integer,parameter        		:: irg = SELECTED_INT_KIND(9)
 
 !> source code version number
-  character(8), parameter  	:: scversion="3.0/2013"
+  character(8), parameter  	:: scversion="2.0/2013"
 !> source code author name
   character(13), parameter 	:: username="Marc De Graef"	
 !> source code author location

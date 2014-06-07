@@ -45,12 +45,19 @@ if(BUILD_SHARED_LIBS)
 endif(BUILD_SHARED_LIBS)
 
 
+
+
+set(CMP_SOURCE_DIR ${CTEMsoft_SOURCE_DIR}/Support/cmp)
+INCLUDE (${CMP_SOURCE_DIR}/cmpCMakeMacros.cmake )
+INCLUDE (${CMP_SOURCE_DIR}/cmpProject.cmake)
+
 # --------------------------------------------------------------------
 # Over ride CMake's built in module directory by prepending cmp's module
 # directory first
 set(CMAKE_MODULE_PATH ${CTEMsoft_SOURCE_DIR}/Support/CMakeModules ${CMAKE_MODULE_PATH})
-include_directories(${CTEMsoft_BINARY_DIR}/src)
 
+
+set(EXE_DEBUG_EXTENSION "_debug")
 
 set(CTEMsoft_VER_MAJOR "2")
 set(CTEMsoft_VER_MINOR "0")
@@ -67,6 +74,8 @@ install(FILES ${PROJECT_SOURCE_DIR}/ReadMe.md ${PROJECT_SOURCE_DIR}/License.txt
         DESTINATION .
         COMPONENT Applications)
 
+
+include_directories(${CTEMsoft_BINARY_DIR}/src)
 #find_package (FFTW3 COMPONENTS single double)
 
 
@@ -89,13 +98,13 @@ get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
 
 if (Fortran_COMPILER_NAME MATCHES "gfortran.*")
   # gfortran
-  set (CMAKE_Fortran_FLAGS ${CMAKE_Fortran_FLAGS} "-fopenmp")
-  set (CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} -funroll-all-loops -fno-f2c -O3 -fopenmp")
-  set (CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fno-f2c -O0 -g -fopenmp")
+  set (CMAKE_Fortran_FLAGS ${CMAKE_Fortran_FLAGS})
+  set (CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} -funroll-all-loops -fno-f2c -O3")
+  set (CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fno-f2c -O0 -g")
 elseif (Fortran_COMPILER_NAME MATCHES "ifort.*")
   # ifort (untested)
-  set (CMAKE_Fortran_FLAGS_RELEASE "-f77rtl -O3")
-  set (CMAKE_Fortran_FLAGS_DEBUG   "-f77rtl -O0 -g")
+  set (CMAKE_Fortran_FLAGS_RELEASE "-f77rtl -O3 -openmp")
+  set (CMAKE_Fortran_FLAGS_DEBUG   "-f77rtl -O0 -g -openmp")
 elseif (Fortran_COMPILER_NAME MATCHES "g77")
   # g77
   set (CMAKE_Fortran_FLAGS_RELEASE "-funroll-all-loops -fno-f2c -O3 -m32")
