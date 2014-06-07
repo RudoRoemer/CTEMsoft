@@ -378,16 +378,11 @@ type symdata
   character(11)    	:: SYM_name			!< current space group name
 end type
 
+! in Release 3.0 and beyond, there are no more global variables
 ! declare global variables
 !> @param SG entire space group structure, moved to cell in crystalvars.f90
 ! type (symdata)   	:: SG
-	
-! arrays used by CalcFamily, CalcPositions and related routines
-integer(kind=irg)	:: itmp(48,3)			!< auxiliary array used for family computations etc
-integer(kind=irg)	:: numat(maxpasym)		!< number of atoms of each type in the asymmetric unit
 
-! atom coordinates, moved to cell type
-! real(kind=dbl),allocatable :: apos(:,:,:)		!< atom position array
 
 ! for many diffraction calculations we need the 2D planar point groups; 
 ! the maximum order of such a group is 12, and there are only 10 of them, with
@@ -399,7 +394,8 @@ type symdata2D
 end type
 
 ! define the 2D point group variable
-type (symdata2D)	:: TDPG
+! moved elsewhere in Release 3.0
+! type (symdata2D)	:: TDPG
 
 
 end module symmetryvars

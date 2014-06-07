@@ -15,6 +15,13 @@ IDL/**/*.sav
 .DS_Store
 .DS_Store?
 
+# CMake files
+/CMakeFiles/
+*.cmake
+CMakeCache.txt
+
+*.atools
+
 # executables
 /exe/
 

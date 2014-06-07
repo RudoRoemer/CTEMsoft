@@ -47,9 +47,13 @@
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 improved interface for single and double precision
 !> @date   01/10/14 MDG 4.0 new version, suitable for multiphase calculations
+!> @date   06/05/14 MDG 4.1 many modifications to remove/replace global variables, in particular "cell"
 !--------------------------------------------------------------------------
 
 module crystal
+
+use local
+use crystalvars
 
 public
 
@@ -96,12 +100,14 @@ contains
 !> @details  Computes the direct and reciprocal metric tensors and the direct
 !>  and reciprocal structure matrices 
 ! 
+!> @param cell unit cell pointer
+!
 !> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   01/10/14 MDG 3.0 removed Kronecker delta matrix
 !--------------------------------------------------------------------------
-subroutine CalcMatrices
+subroutine CalcMatrices(cell)
 
 use local
 use error
@@ -109,6 +115,8 @@ use constants
 use crystalvars
 
 IMPLICIT NONE
+
+type(unitcell),pointer	:: cell
 
 !> auxiliary variables for geometric computation
 real(kind=dbl)     :: det,ca,cb,cg,sa,sb,sg,tg,pirad
@@ -123,11 +131,9 @@ real(kind=dbl)     :: det,ca,cb,cg,sa,sb,sg,tg,pirad
  sg = dsin(pirad*cell%gamma)
  tg = dtan(pirad*cell%gamma)
 
- if (sg.eq.0.0_dbl) then
-  call FatalError('CalcMatrices','Invalid gamma angle')
- endif
+ if (sg.eq.0.0_dbl) call FatalError('CalcMatrices',' Invalid gamma angle')
 
-! [removed on 1/10/14]
+! [removed on 1/10/14; was not used anywhere in the package]
 ! define the Kronecker Delta
 ! cell%krdel = reshape( (/ 1.0_dbl,0.0_dbl,0.0_dbl,0.0_dbl,1.0_dbl,0.0_dbl,0.0_dbl,0.0_dbl,1.0_dbl /), (/3,3/) )
 
@@ -145,9 +151,7 @@ real(kind=dbl)     :: det,ca,cb,cg,sa,sb,sg,tg,pirad
  det = (cell%a*cell%b*cell%c)**2*(1.D0-ca**2-cb**2-cg**2+2.D0*ca*cb*cg)
  cell%vol = dsqrt(det)
 
- if (cell%vol.lt.1D-6) then
-  call FatalError('CalcMatrices','Unit cell volume is zero')
- endif
+ if (cell%vol.lt.1D-6) call FatalError('CalcMatrices',' Unit cell volume is zero or suspiciously small')
 
 ! compute the reciprocal metric tensor as the inverse of the direct
 ! metric tensor
@@ -197,6 +201,7 @@ end subroutine CalcMatrices
 !> @details  Converts vector components from one space to another, including
 !> direct space, reciprocal space, and the standard cartesian reference frame.
 !
+!> @param cell unit cell pointer
 !> @param t input vector 
 !> @param d output vector 
 !> @param inspace input space character ('d', 'r', 'c')
@@ -208,18 +213,17 @@ end subroutine CalcMatrices
 !> @date    03/19/13 MDG 3.0 changed using interface protocol
 !> @date    01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
-subroutine TransSpaceDouble(t,d,inspace,outspace)
+subroutine TransSpaceDouble(cell,t,d,inspace,outspace)
 
-use local
 use crystalvars
-use math
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)	:: t(3)			!< input vector in inspace reference frame
-real(kind=dbl),INTENT(OUT)	:: d(3)			!< output vector in outspace reference frame 
-character(1),INTENT(IN)	:: inspace		!< characters to label input space (d, r, or c)
-character(1),INTENT(IN)	:: outspace		!< characters to label output space (d, r, or c)
+type(unitcell),pointer	:: cell
+real(kind=dbl),INTENT(IN)		:: t(3)			!< input vector in inspace reference frame
+real(kind=dbl),INTENT(OUT)		:: d(3)			!< output vector in outspace reference frame 
+character(1),INTENT(IN)		:: inspace		!< characters to label input space (d, r, or c)
+character(1),INTENT(IN)		:: outspace		!< characters to label output space (d, r, or c)
 
  if (inspace.eq.'d') then
 ! direct to Cartesian (pre-multiplication)
@@ -268,6 +272,7 @@ end subroutine TransSpaceDouble
 !> @details  Converts vector components from one space to another, including
 !> direct space, reciprocal space, and the standard cartesian reference frame.
 !
+!> @param cell unit cell pointer
 !> @param t input vector 
 !> @param d output vector 
 !> @param inspace input space character ('d', 'r', 'c')
@@ -278,19 +283,19 @@ end subroutine TransSpaceDouble
 !> @date    11/27/01 MDG 2.1 added kind support
 !> @date    03/19/13 MDG 3.0 changed using interface protocol
 !> @date    01/10/14 MDG 4.0 checked for changes to unitcell type
+!> @date    06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-subroutine TransSpaceSingle(t,d,inspace,outspace)
+subroutine TransSpaceSingle(cell, t, d, inspace, outspace)
 
-use local
 use crystalvars
-use math
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: t(3)			!< input vector in inspace reference frame
-real(kind=sgl),INTENT(OUT)	:: d(3)			!< output vector in outspace reference frame 
-character(1),INTENT(IN)	:: inspace	        !< characters to label input space (d, r, or c)
-character(1),INTENT(IN)	:: outspace	        !< characters to label output space (d, r, or c)
+type(unitcell),pointer	:: cell
+real(kind=sgl),INTENT(IN)		:: t(3)			!< input vector in inspace reference frame
+real(kind=sgl),INTENT(OUT)		:: d(3)			!< output vector in outspace reference frame 
+character(1),INTENT(IN)		:: inspace	        !< characters to label input space (d, r, or c)
+character(1),INTENT(IN)		:: outspace	        !< characters to label output space (d, r, or c)
 
  if (inspace.eq.'d') then
 ! direct to Cartesian (pre-multiplication)
@@ -341,6 +346,7 @@ end subroutine  TransSpaceSingle
 !> Table 1.6, page 51, of the textbook. The direction of the 
 !> transformation is 'on' (old-to-new) or 'no' (new-to-old).
 !
+!> @param cell unit cell pointer
 !> @param t input vector 
 !> @param d output vector 
 !> @param talpha transformation matrix
@@ -351,28 +357,29 @@ end subroutine  TransSpaceSingle
 !> general type of transformation can be carried out, including Euler angle
 !> rotations and quaternion rotations.
 !
-!> @date 7/16/99 MDG 1.0 original
-!> @date   4/ 5/00 MDG 1.1 added support for new mInvert
+!> @date    7/16/99 MDG 1.0 original
+!> @date    4/ 5/00 MDG 1.1 added support for new mInvert
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 slight modification
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
+!> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-subroutine TransCoor(t,d,talpha,space,direction)
+subroutine TransCoor(cell, t, d, talpha, space, direction)
 
-use local
 use crystalvars
 use math, ONLY: mInvert 
 
 IMPLICIT NONE
 
+type(unitcell),pointer	:: cell
 real(kind=dbl),INTENT(IN)		:: t(3)			!< input vector w.r.t. input space reference frame
 real(kind=dbl),INTENT(OUT)		:: d(3)			!< transformed vector components
 real(kind=dbl),INTENT(IN)		:: talpha(3,3)		!< transformation matrix
 real(kind=dbl)				:: alinv(3,3)		!< inverse of transformation matrix
-
 character(1),INTENT(IN)		:: space		!< space in which to perform transformation ('d', 'r', 'c')
 character(2),INTENT(IN)		:: direction		!< transformation direction (no=new-to-old, on=old-to-new)
+
 logical					:: uni			!< logical to indicate unitary matrix (or not)
 
 ! these matrices are typically unitary, so inverse is simply the transpose
@@ -392,6 +399,7 @@ logical					:: uni			!< logical to indicate unitary matrix (or not)
    d = matmul(alinv,t)
   end if
  end if
+
 end subroutine TransCoor
 
 !--------------------------------------------------------------------------
@@ -406,6 +414,7 @@ end subroutine TransCoor
 !> real, reciprocal, or Cartesian space; implements
 !> equations 1.6 (page 7), and 1.16 (page 15).
 !
+!> @param cell unit cell pointer
 !> @param p input vector 
 !> @param q input vector 
 !> @param space input space character ('d', 'r', 'c')
@@ -414,8 +423,9 @@ end subroutine TransCoor
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
+!> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-function CalcDotSingle(p,q,space) result(cdot)
+function CalcDotSingle(cell, p,q,space) result(cdot)
 
 use local
 use crystalvars
@@ -423,6 +433,7 @@ use math
 
 IMPLICIT NONE
 
+type(unitcell),pointer	:: cell
 real(kind=sgl),INTENT(IN)		:: p(3)		!< first input vector in space reference frame
 real(kind=sgl),INTENT(IN)		:: q(3) 	!< second input vector
 character(1),INTENT(IN)		:: space	!< space in which to compute product ('d', 'r', or 'c')
@@ -447,6 +458,7 @@ end function CalcDotSingle
 !> real, reciprocal, or Cartesian space; implements
 !> equations 1.6 (page 7), and 1.16 (page 15).
 !
+!> @param cell unit cell pointer
 !> @param p input vector 
 !> @param q input vector 
 !> @param space input space character ('d', 'r', 'c')
@@ -455,8 +467,9 @@ end function CalcDotSingle
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
+!> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-function CalcDotDouble(p,q,space) result(cdot)
+function CalcDotDouble(cell, p, q, space) result(cdot)
 
 use local
 use crystalvars
@@ -464,6 +477,7 @@ use math
 
 IMPLICIT NONE
 
+type(unitcell),pointer	:: cell
 real(kind=dbl),INTENT(IN)		:: p(3)		!< first input vector in space reference frame
 real(kind=dbl),INTENT(IN)		:: q(3) 	!< second input vector
 character(1),INTENT(IN)		:: space	!< space in which to compute product ('d', 'r', or 'c')
@@ -484,8 +498,13 @@ end function CalcDotDouble
 !
 !> @brief single precision vector normalization
 !
-!> @details  vector normalization in arbitrary space
+!> @details  vector normalization in arbitrary space.  Note that it is not
+!> necessarily so that the Cartesian length of a vector [sqrt(x^2+y^2+z^2)]
+!> becomes unity after this normalization.  That is only the case for 
+!> the cartesian metric; for all other metrics, the length of a normalized
+!> vector is in general not equal to 1.0 !!!
 !
+!> @param cell unit cell pointer
 !> @param p input.output vector 
 !> @param space input space character ('d', 'r', 'c')
 !
@@ -494,18 +513,20 @@ end function CalcDotDouble
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
+!> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-subroutine NormVecSingle(p,space)
+subroutine NormVecSingle(cell, p, space)
 
-use local
+use crystalvars
 
 IMPLICIT NONE
 
+type(unitcell),pointer				:: cell
 real(kind=sgl),INTENT(INOUT)			:: p(3)	        !< input/output vector components
 character(1),INTENT(IN)			:: space	!< space character ('d', 'r', or 'c')
 real(kind=sgl)					:: x  		!< auxiliary variable
 
- x=CalcLength(p,space)
+ x=CalcLength(cell, p, space)
  if (x.ne.0.0) then 
    p=p/x
  else
@@ -522,8 +543,10 @@ end subroutine NormVecSingle
 !
 !> @brief double precision vector normalization
 !
-!> @details  vector normalization in arbitrary space
+!> @details  vector normalization in arbitrary space; see also comment in 
+!> single precision version.
 !
+!> @param cell unit cell pointer
 !> @param p input/output vector 
 !> @param space input space character ('d', 'r', 'c')
 !
@@ -532,18 +555,20 @@ end subroutine NormVecSingle
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
+!> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-subroutine NormVecDouble(p,space)
+subroutine NormVecDouble(cell, p, space)
 
 use local
 
 IMPLICIT NONE
 
+type(unitcell),pointer		:: cell
 real(kind=dbl),INTENT(INOUT)			:: p(3)	        !< input/output vector components
 character(1),INTENT(IN)			:: space	!< space character ('d', 'r', or 'c')
 real(kind=dbl)					:: x  		!< auxiliary variable
 
- x=CalcLength(p,space)
+ x=CalcLength(cell,p,space)
  if (x.ne.0.D0) then 
    p=p/x
  else
@@ -563,6 +588,7 @@ end subroutine NormVecDouble
 !> @details  compute the length of a vector in real, reciprocal
 !> or Cartesian space
 !
+!> @param cell unit cell pointer
 !> @param p input/output vector 
 !> @param space input space character ('d', 'r', 'c')
 !
@@ -571,19 +597,21 @@ end subroutine NormVecDouble
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
+!> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-function CalcLengthSingle(p,space) result(x)
+function CalcLengthSingle(cell, p, space) result(x)
 
 use local
 
 IMPLICIT NONE
 
+type(unitcell),pointer		:: cell
 real(kind=sgl),INTENT(IN)			:: p(3)	        !< input/output vector components
 character(1),INTENT(IN)			:: space	!< space character ('d', 'r', or 'c')
 real(kind=sgl)					:: x  		!< auxiliary variable
 
 
- x = sqrt(CalcDot(p,p,space))
+ x = sqrt(CalcDot(cell, p, p, space))
 
 end function CalcLengthSingle
 
@@ -598,6 +626,7 @@ end function CalcLengthSingle
 !> @details  compute the length of a vector in real, reciprocal
 !> or Cartesian space
 !
+!> @param cell unit cell pointer
 !> @param p input/output vector 
 !> @param space input space character ('d', 'r', 'c')
 !
@@ -606,18 +635,20 @@ end function CalcLengthSingle
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
+!> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-function CalcLengthDouble(p,space) result(x)
+function CalcLengthDouble(cell, p, space) result(x)
 
 use local
 
 IMPLICIT NONE
 
+type(unitcell),pointer		:: cell
 real(kind=dbl),INTENT(IN)			:: p(3)		!< input/output vector components
 character(1),INTENT(IN)			:: space	!< space character ('d', 'r', or 'c')
 real(kind=dbl)					:: x  		!< auxiliary variable
 
- x = dsqrt(CalcDot(p,p,space))
+ x = dsqrt(CalcDot(cell, p, p, space))
 
 end function CalcLengthDouble
 
@@ -632,6 +663,7 @@ end function CalcLengthDouble
 !> @details  compute the angle between vectors in real, reciprocal
 !> or Cartesian space
 !
+!> @param cell unit cell pointer
 !> @param p input vector 
 !> @param q input vector 
 !> @param space input space character ('d', 'r', 'c')
@@ -641,28 +673,29 @@ end function CalcLengthDouble
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
+!> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-function CalcAngleSingle(p,q,space) result(a)
+function CalcAngleSingle(cell, p, q, space) result(a)
 
-use local
 use crystalvars
 use error
 use constants
 
 IMPLICIT NONE
 
+type(unitcell),pointer	:: cell
 real(kind=sgl),INTENT(IN)		:: p(3)		!< first vector components
 real(kind=sgl),INTENT(IN)		:: q(3) 	!< second vector components
 character(1),INTENT(IN)		:: space	!< space of the computation ('d', 'r', 'c')
 real(kind=sgl)				:: a		!< angle in radians
 real(kind=sgl)				:: x, y, z, t	!< auxiliary variables
 
- x = CalcDot(p,q,space)
- y = CalcLength(p,space)
- z = CalcLength(q,space)
+ x = CalcDot(cell,p,q,space)
+ y = CalcLength(cell,p,space)
+ z = CalcLength(cell,q,space)
 
  if ((y.eq.0.0_sgl).or.(z.eq.0.0_sgl)) then
-  call FatalError('CalcAngleSingle','vector of zero length specified')
+  call FatalError('CalcAngleSingle',' vector of zero length specified')
  end if
 
  t = x/(y*z)
@@ -689,6 +722,7 @@ end function CalcAngleSingle
 !> @details  compute the angle between vectors in real, reciprocal
 !> or Cartesian space
 !
+!> @param cell unit cell pointer
 !> @param p input vector 
 !> @param q input vector 
 !> @param space input space character ('d', 'r', 'c')
@@ -698,8 +732,9 @@ end function CalcAngleSingle
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
+!> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-function CalcAngleDouble(p,q,space) result(a)
+function CalcAngleDouble(cell,p,q,space) result(a)
 
 use local
 use crystalvars
@@ -708,6 +743,7 @@ use constants
 
 IMPLICIT NONE
 
+type(unitcell),pointer	:: cell
 real(kind=dbl),INTENT(IN)		:: p(3)		!< first vector components
 real(kind=dbl),INTENT(IN)		:: q(3) 	!< second vector components
 character(1),INTENT(IN)		:: space	!< space of the computation ('d', 'r', 'c')
@@ -715,12 +751,12 @@ real(kind=dbl)				:: a		!< angle in radians
 real(kind=dbl)				:: x, y, z, t	!< auxiliary variables
 
 
- x = CalcDot(p,q,space)
- y = CalcLength(p,space)
- z = CalcLength(q,space)
+ x = CalcDot(cell,p,q,space)
+ y = CalcLength(cell,p,space)
+ z = CalcLength(cell,q,space)
 
  if ((y.eq.0.0_dbl).or.(z.eq.0.0_dbl)) then
-  call FatalError('CalcAngleDouble','vector of zero length specified')
+  call FatalError('CalcAngleDouble',' vector of zero length specified')
  end if
 
  t = x/(y*z)
@@ -751,6 +787,7 @@ end function CalcAngleDouble
 !> whether the result should be scaled by the unit cell
 !> volume. More information in section 1.3.5, page 18.
 !
+!> @param cell unit cell pointer
 !> @param p input vector 
 !> @param q input vector 
 !> @param r output vector 
@@ -765,15 +802,16 @@ end function CalcAngleDouble
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
+!> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-subroutine CalcCrossSingle(p,q,r,inspace,outspace,iv)
+subroutine CalcCrossSingle(cell,p,q,r,inspace,outspace,iv)
 
-use local
 use crystalvars
 use math
 
 IMPLICIT NONE 
 
+type(unitcell),pointer	:: cell
 real(kind=sgl),INTENT(IN)		:: p(3)		!< first input vector (order is important here !)
 real(kind=sgl),INTENT(IN)		:: q(3)		!< second input vector
 real(kind=sgl),INTENT(OUT)		:: r(3)		!< output vector
@@ -843,6 +881,7 @@ end subroutine CalcCrossSingle
 !> whether the result should be scaled by the unit cell
 !> volume. More information in section 1.3.5, page 18.
 !
+!> @param cell unit cell pointer
 !> @param p input vector 
 !> @param q input vector 
 !> @param r output vector 
@@ -858,7 +897,7 @@ end subroutine CalcCrossSingle
 !> @date   03/19/13 MDG 3.0 interface support
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
-subroutine CalcCrossDouble(p,q,r,inspace,outspace,iv)
+subroutine CalcCrossDouble(cell,p,q,r,inspace,outspace,iv)
 
 use local
 use crystalvars
@@ -866,6 +905,7 @@ use math
 
 IMPLICIT NONE 
 
+type(unitcell),pointer	:: cell
 real(kind=dbl),INTENT(IN)		:: p(3)		!< first input vector (order is important here !)
 real(kind=dbl),INTENT(IN)		:: q(3)		!< second input vector
 real(kind=dbl),INTENT(OUT)		:: r(3)		!< output vector
@@ -1001,51 +1041,60 @@ end subroutine MilBrav
 !> @details  Input of crystal system followed by the appropriate set of lattice
 !> parameters; all are stored in the cell type.
 !
+!> @param cell unit cell pointer
+!> @param stdout optional output unit identifier
 !!
 !> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
-!> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
+!> @date   01/10/14 MDG 4.0 checked for changes to unitcell 
+!> @date   06/05/14 MDG 4.1 modified after elimination of global variables
 !--------------------------------------------------------------------------
-subroutine GetLatParm
+subroutine GetLatParm(cell, stdout)
 
-use local
 use io
 use symmetryvars
 use crystalvars
 
 IMPLICIT NONE
 
-integer(kind=irg)		:: io_int(1)	!< integer input array
-real(kind=dbl)			:: io_real(1)	!< double precision real input array
+type(unitcell),INTENT(INOUT)		:: cell
+integer(kind=irg),OPTIONAL,INTENT(IN)	:: stdout
 
+integer(kind=irg)			:: io_int(1)	!< integer input array
+real(kind=dbl)				:: io_real(1)	!< double precision real input array
+integer(kind=irg)			:: std
+
+ std = 6
+ if (PRESENT(stdout)) std = stdout
+ 
 ! this routine assumes that the cell pointer has been associated elsewhere
 
- mess = ' Select the crystal system : '; call Message("(A)")
- mess = '  1. Cubic '; call Message("(A)")
- mess = '  2. Tetragonal '; call Message("(A)")
- mess = '  3. Orthorhombic '; call Message("(A)")
- mess = '  4. Hexagonal '; call Message("(A)")
- mess = '  5. Trigonal '; call Message("(A)")
- mess = '  6. Monoclinic '; call Message("(A)")
- mess = '  7. Triclinic '; call Message("(A)")
- mess = ' '; call Message("(A)")
- mess = ' Note about the trigonal system:'; call Message("(A)")
- mess = ' -------------------------------'; call Message("(A)")
- mess = ' Primitive trigonal crystals are defined with respect to a HEXAGONAL'; call Message("(A)")
- mess = ' reference frame.  Rhombohedral crystals can be referenced with'; call Message("(A)")
- mess = ' respect to a HEXAGONAL basis (first setting), or with respect to'; call Message("(A)")
- mess = ' a RHOMBOHEDRAL basis (second setting).  The default setting for '; call Message("(A)")
- mess = ' trigonal symmetry is the hexagonal setting.  When you select'; call Message("(A)")
- mess = ' crystal system 5 above, you will be prompted for the setting. '; call Message("(A//)")
- call ReadValue(' crystal system ---> ', io_int,1)
+ call Message(' Select the crystal system : ', frm = "(A)", stdout = std)
+ call Message('  1. Cubic ', frm = "(A)", stdout = std)
+ call Message('  2. Tetragonal ', frm = "(A)", stdout = std)
+ call Message('  3. Orthorhombic ', frm = "(A)", stdout = std)
+ call Message('  4. Hexagonal ', frm = "(A)", stdout = std)
+ call Message('  5. Trigonal ', frm = "(A)", stdout = std)
+ call Message('  6. Monoclinic ', frm = "(A)", stdout = std)
+ call Message('  7. Triclinic ', frm = "(A/)", stdout = std)
+
+ call Message(' Note about the trigonal system:', frm = "(A)", stdout = std)
+ call Message(' -------------------------------', frm = "(A)", stdout = std)
+ call Message(' Primitive trigonal crystals are defined with respect to a HEXAGONAL', frm = "(A)", stdout = std)
+ call Message(' reference frame.  Rhombohedral crystals can be referenced with', frm = "(A)", stdout = std)
+ call Message(' respect to a HEXAGONAL basis (first setting), or with respect to', frm = "(A)", stdout = std)
+ call Message(' a RHOMBOHEDRAL basis (second setting).  The default setting for ', frm = "(A)", stdout = std)
+ call Message(' trigonal symmetry is the hexagonal setting.  When you select', frm = "(A)", stdout = std)
+ call Message(' crystal system 5 above, you will be prompted for the setting. ', frm = "(A//)", stdout = std)
+ call ReadValue(' crystal system ---> ', io_int, 1, stdout = std)
  cell%xtal_system = io_int(1)
  
 ! make sure the symmetry operations will be reduced to the 
 ! fundamental unit cell
  cell%SG%SYM_reduce=.TRUE.
- hexset=.FALSE.
+ cell%hexset=.FALSE.
 
 ! deal with the rhombohedral vs. hexagonal setting
 ! (the rhombohedral axes are considered as the second setting)
@@ -1053,8 +1102,8 @@ real(kind=dbl)			:: io_real(1)	!< double precision real input array
  cell%SG%SYM_second=.FALSE.
  if (cell%xtal_system.eq.5) then
   cell%SG%SYM_trigonal=.TRUE.
-  mess = 'Enter 1 for rhombohedral lattice parameters,'; call Message("(A)")
-  call ReadValue('0 for hexagonal lattice parameters : ',io_int,1)
+  call Message('Enter 1 for rhombohedral lattice parameters,', frm = "(A)", stdout = std)
+  call ReadValue('0 for hexagonal lattice parameters : ', io_int, 1, stdout = std)
   if (io_int(1).eq.0) then
    cell%xtal_system=4
   else
@@ -1063,10 +1112,10 @@ real(kind=dbl)			:: io_real(1)	!< double precision real input array
  end if
 
 ! get the lattice parameters
- mess = 'Enter lattice parameters'; call Message("(//A)")
+ call Message('Enter lattice parameters', frm = "(//A)", stdout = std)
 
 ! put default values based on cubic symmetry, then change them later
- call ReadValue('    a [nm] = ', io_real, 1)
+ call ReadValue('    a [nm] = ', io_real, 1, stdout = std)
  cell%a = io_real(1)
  cell%b = cell%a 
  cell%c = cell%a 
@@ -1079,44 +1128,44 @@ real(kind=dbl)			:: io_real(1)	!< double precision real input array
   case (1)
 ! tetragonal
   case (2)
-   call ReadValue('    c [nm] = ', io_real, 1)
+   call ReadValue('    c [nm] = ', io_real, 1, stdout = std)
    cell%c = io_real(1)
 ! orthorhombic
   case (3)
-   call ReadValue('    b [nm] = ', io_real, 1)
+   call ReadValue('    b [nm] = ', io_real, 1, stdout = std)
    cell%b = io_real(1)
-   call ReadValue('    c [nm] = ', io_real, 1)
+   call ReadValue('    c [nm] = ', io_real, 1, stdout = std)
    cell%c = io_real(1)
 ! hexagonal
   case (4)
-   call ReadValue('    c [nm] = ', io_real, 1)
+   call ReadValue('    c [nm] = ', io_real, 1, stdout = std)
    cell%c = io_real(1)
    cell%gamma=120.0_dbl
 ! rhombohedral 
   case (5)
-   call ReadValue('    alpha [deg] = ', io_real, 1)
+   call ReadValue('    alpha [deg] = ', io_real, 1, stdout = std)
    cell%alpha = io_real(1)
    cell%beta = cell%alpha
    cell%gamma = cell%alpha
 ! monoclinic   
   case (6)
-   call ReadValue('    b [nm] = ', io_real, 1)
+   call ReadValue('    b [nm] = ', io_real, 1, stdout = std)
    cell%b = io_real(1)
-   call ReadValue('    c [nm] = ', io_real, 1)
+   call ReadValue('    c [nm] = ', io_real, 1, stdout = std)
    cell%c = io_real(1)
-   call ReadValue('    beta  [deg] = ', io_real, 1)
+   call ReadValue('    beta  [deg] = ', io_real, 1, stdout = std)
    cell%beta = io_real(1)
 ! triclinic    
   case (7) 
-   call ReadValue('    b [nm] = ', io_real, 1)
+   call ReadValue('    b [nm] = ', io_real, 1, stdout = std)
    cell%b = io_real(1)
-   call ReadValue('    c [nm] = ', io_real, 1)
+   call ReadValue('    c [nm] = ', io_real, 1, stdout = std)
    cell%c = io_real(1)
-   call ReadValue('    alpha [deg] = ', io_real, 1)
+   call ReadValue('    alpha [deg] = ', io_real, 1, stdout = std)
    cell%alpha = io_real(1)
-   call ReadValue('    beta  [deg] = ', io_real, 1)
+   call ReadValue('    beta  [deg] = ', io_real, 1, stdout = std)
    cell%beta = io_real(1)
-   call ReadValue('    gamma [deg] = ', io_real, 1)
+   call ReadValue('    gamma [deg] = ', io_real, 1, stdout = std)
    cell%gamma = io_real(1)
  end select
 
@@ -1128,9 +1177,9 @@ real(kind=dbl)			:: io_real(1)	!< double precision real input array
 
 ! if hexagonal setting is used, then Miller-Bravais indices must be enabled
  if ((cell%xtal_system.eq.4).OR.((cell%xtal_system.eq.5).AND.(.not.cell%SG%SYM_second))) then
-  hexset = .TRUE.
+  cell%hexset = .TRUE.
  else 
-  hexset = .FALSE.
+  cell%hexset = .FALSE.
  end if
 
 end subroutine GetLatParm
@@ -1146,6 +1195,8 @@ end subroutine GetLatParm
 !> @details ask the user for the atom type, coordinates, site occupation parameter
 !> and Debye-Waller parameter for each atom type.
 !
+!> @param cell unit cell pointer
+!> @param stdout optional output unit identifier
 !!
 !> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
@@ -1153,34 +1204,40 @@ end subroutine GetLatParm
 !> @date   03/19/13 MDG 3.0 interface support
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
-subroutine GetAsymPos
+subroutine GetAsymPos(cell, stdout)
 
-use local
 use io
 use crystalvars
 
 IMPLICIT NONE
 
-logical			:: more			!< logical to determine if more atoms need to be entered
-character(1)		:: ans,list(256)	!< used for IO
-real(kind=sgl)		:: pt(5), out_real(5)	!< used to read and write asymmetric position data
-integer(kind=irg)	:: j, io_int(1)		!< auxiliary variables
+type(unitcell),INTENT(INOUT)		:: cell
+integer(kind=irg),OPTIONAL,INTENT(IN)	:: stdout
 
+logical					:: more			!< logical to determine if more atoms need to be entered
+character(1)				:: ans, list(256)	!< used for IO
+real(kind=sgl)				:: pt(5), out_real(5)	!< used to read and write asymmetric position data
+integer(kind=irg)			:: j, io_int(1)	, std	!< auxiliary variables
+
+ std = 6
+ if (PRESENT(stdout)) std = stdout
+ 
  more=.TRUE.
  cell%ATOM_ntype = 0
- mess = ' Enter atoms in asymmetric unit '; call Message("(/A)")
- call DisplayElements
+ call Message(' Enter atoms in asymmetric unit ', frm = "(/A)", stdout = std)
+ call DisplayElements(std)
 
  do while (more)
   cell%ATOM_ntype = cell%ATOM_ntype + 1
 
 ! atomic number
-  call ReadValue(' ->  Atomic number : ', io_int, 1)
+  call ReadValue(' ->  Atomic number : ', io_int, 1, stdout = std)
   cell%ATOM_type(cell%ATOM_ntype) = io_int(1)
 
 ! general atom coordinate
   list = (/ (' ',j=1,256) /)
-  call ReadValue(' ->  Fractional coordinates, site occupation, and Debye-Waller Factor [nm^2] : ', list, 256, "(256A)" )
+  call ReadValue(' ->  Fractional coordinates, site occupation, and Debye-Waller Factor [nm^2] : ', &
+     list, 256, frm = "(256A)" , stdout = std)
 
 ! interpret this string and extract coordinates and such ...
   call extractposition(list,pt) 
@@ -1190,9 +1247,9 @@ integer(kind=irg)	:: j, io_int(1)		!< auxiliary variables
 
 ! and write the coordinate back to the terminal  
   out_real = (/ (cell%ATOM_pos(cell%ATOM_ntype,j),j=1,5) /)
-  call WriteValue('    -> ', out_real, 5, "(1x,4(F10.7,2x),F10.7)") 
+  call WriteValue('    -> ', out_real, 5, frm = "(1x,4(F10.7,2x),F10.7)", stdout = std) 
 
-  call ReadValue(' ->  Another atom ? (y/n) ', ans, "(A1)")
+  call ReadValue(' ->  Another atom ? (y/n) ', ans, frm = "(A1)", stdout = std)
   if ((ans.eq.'y').or.(ans.eq.'Y')) then 
    more=.TRUE.
   else
@@ -1213,6 +1270,7 @@ end subroutine GetAsymPos
 !
 !> @details display the periodic table so that the user can look up the atomic number
 !
+!> @param stdout optional output unit identifier
 !!
 !> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
@@ -1220,35 +1278,41 @@ end subroutine GetAsymPos
 !> @date   03/19/13 MDG 3.0 interface support
 !> @date   01/10/14 MDG 4.0 modified to a fixed size table
 !--------------------------------------------------------------------------
-subroutine DisplayElements
+subroutine DisplayElements(stdout)
 
-use local
 use io
 
 IMPLICIT NONE
 
- mess = ' ------------------------------------ Periodic Table of the Elements ------------------------------------'
- call Message("(/A/)")
- mess = '1:H                                                                                                    2:He'
- call Message("A")
- mess = '3:Li  4:Be                                                               5:B   6:C   7:N   8:O   9:F  10:Ne'
- call Message("A")
- mess = '11:Na 12:Mg                                                             13:Al 14:Si 15:P  16:S  17:Cl 18:Ar'
- call Message("A")
- mess = '19:K  20:Ca 21:Sc 22:Ti 23:V  24:Cr 25:Mn 26:Fe 27:Co 28:Ni 29:Cu 30:Zn 31:Ga 32:Ge 33:As 34:Se 35:Br 36:Kr'
- call Message("A")
- mess = '37:Rb 38:Sr 39:Y  40:Zr 41:Nb 42:Mo 43:Tc 44:Ru 45:Rh 46:Pd 47:Ag 48:Cd 49:In 50:Sn 51:Sb 52:Te 53: I 54:Xe'
- call Message("A")
- mess = '55:Cs 56:Ba ----- 72:Hf 73:Ta 74:W  75:Re 76:Os 77:Ir 78:Pt 79:Au 80:Hg 81:Tl 82:Pb 83:Bi 84:Po 85:At 86:Rn'
- call Message("A")
- mess = '87:Fr 88:Ra -----'
- call Message("A/")
- mess = '57:La 58:Ce 59:Pr 60:Nd 61:Pm 62:Sm 63:Eu 64:Gd 65:Tb 66:Dy 67:Ho 68:Er 69:Tm 70:Yb 71:Lu'
- call Message("A")
- mess = '89:Ac 90:Th 91:Pa 92:U'
- call Message("A")
- mess = ' ----------------------------------------------------------------------------------------------------------'
- call Message("(/A/)")
+integer(kind=irg),OPTIONAL,INTENT(IN)	:: stdout
+
+integer(kind=irg)			:: std
+
+ std = 6
+ if (PRESENT(stdout)) std = stdout
+
+ call Message(' ------------------------------------ Periodic Table of the Elements --------------------------------------', & 
+   frm ="(/A/)", stdout = std)
+ call Message('1:H                                                                                                    2:He', &
+   frm ="(A)", stdout = std)
+ call Message('3:Li  4:Be                                                               5:B   6:C   7:N   8:O   9:F  10:Ne', &
+   frm ="(A)", stdout = std)
+ call Message('11:Na 12:Mg                                                             13:Al 14:Si 15:P  16:S  17:Cl 18:Ar', &
+   frm ="(A)", stdout = std)
+ call Message('19:K  20:Ca 21:Sc 22:Ti 23:V  24:Cr 25:Mn 26:Fe 27:Co 28:Ni 29:Cu 30:Zn 31:Ga 32:Ge 33:As 34:Se 35:Br 36:Kr', &
+   frm ="(A)", stdout = std)
+ call Message('37:Rb 38:Sr 39:Y  40:Zr 41:Nb 42:Mo 43:Tc 44:Ru 45:Rh 46:Pd 47:Ag 48:Cd 49:In 50:Sn 51:Sb 52:Te 53: I 54:Xe', &
+   frm ="(A)", stdout = std)
+ call Message('55:Cs 56:Ba ----- 72:Hf 73:Ta 74:W  75:Re 76:Os 77:Ir 78:Pt 79:Au 80:Hg 81:Tl 82:Pb 83:Bi 84:Po 85:At 86:Rn', &
+   frm ="(A)", stdout = std)
+ call Message('87:Fr 88:Ra -----', &
+   frm ="(A)/", stdout = std)
+ call Message('57:La 58:Ce 59:Pr 60:Nd 61:Pm 62:Sm 63:Eu 64:Gd 65:Tb 66:Dy 67:Ho 68:Er 69:Tm 70:Yb 71:Lu', &
+   frm ="(A)", stdout = std)
+ call Message('89:Ac 90:Th 91:Pa 92:U', &
+   frm ="(A)", stdout = std)
+ call Message(' ----------------------------------------------------------------------------------------------------------', &
+   frm ="(A)", stdout = std)
 
 end subroutine DisplayElements
 
@@ -1275,8 +1339,6 @@ end subroutine DisplayElements
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 subroutine extractposition(list,pt)
-
-use local
 
 IMPLICIT NONE
 
@@ -1406,6 +1468,7 @@ end subroutine extractposition
 !> @details this routine is used by the Monte Carlo program for EBSD, and also
 !> by the HEDM-GFP program.
 !
+!> @param cell unit cell pointer
 !> @param dens density in g/cm^3
 !> @param avZ average atomic number
 !> @param avA average atomic weight g/mol
@@ -1415,29 +1478,30 @@ end subroutine extractposition
 !> @date   03/19/13 MDG 1.0 original version
 !> @date   07/23/13 MDG 1.1 converted to subroutine from function
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
+!> @date   06/05/14 MDG 4.1 added unit cell pointer argument
 !--------------------------------------------------------------------------
-subroutine CalcDensity(dens, avZ, avA)
+subroutine CalcDensity(cell, dens, avZ, avA)
 
-use local
 use constants
 use crystalvars
 use symmetryvars
 
 IMPLICIT NONE
 
+type(unitcell),INTENT(IN)		:: cell
 real(kind=sgl),INTENT(OUT)		:: dens, avA, avZ
+
 real(kind=sgl)				:: AW, Z
 integer(kind=irg)			:: i, nat
-
 
 ! compute the total atomic weight for the unit cell (g/mol)
 ! also compute the total atomic number
 AW = 0.0
 Z = 0.0
-nat = sum( numat(1:cell % ATOM_ntype) )
+nat = sum( cell%numat(1:cell % ATOM_ntype) )
 do i = 1, cell % ATOM_ntype
-  AW = AW + numat(i) * ATOM_weights(cell % ATOM_type(i)) * cell % ATOM_pos(i,4)
-  Z = Z + numat(i) * float(cell % ATOM_type(i))
+  AW = AW + cell%numat(i) * ATOM_weights(cell % ATOM_type(i)) * cell % ATOM_pos(i,4)
+  Z = Z + cell%numat(i) * float(cell % ATOM_type(i))
 end do
 avA = AW/float(nat)
 avZ = Z/float(nat)
@@ -1460,6 +1524,7 @@ end subroutine CalcDensity
 !> and parallel directions; 
 !
 !> @param orel output variable of type orientation
+!> @param stdout optional output unit identifier
 !
 !> @todo Is this routine really necessary ? It is not called very often.
 !
@@ -1468,40 +1533,45 @@ end subroutine CalcDensity
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 interface support
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
+!> @date   06/05/14 MDG 4.1 added stdout 
 !--------------------------------------------------------------------------
-subroutine GetOR(orel)
+subroutine GetOR(orel, stdout)
 
-use local
 use crystalvars
 use io
 
 IMPLICIT NONE
 
-type(orientation),INTENT(OUT) 	:: orel		!< orientation relation type
-real(kind=sgl)    				:: c1,c2		!< auxiliary variables
-integer(kind=irg)				:: io_int(6)	!< used for IO
+type(orientation),INTENT(OUT) 			:: orel			!< orientation relation type
+integer(kind=irg),OPTIONAL,INTENT(IN)		:: stdout
 
+real(kind=sgl)    				:: c1,c2		!< auxiliary variables
+integer(kind=irg)				:: io_int(6), std	!< used for IO
+
+ std = 6
+ if (PRESENT(stdout)) std = stdout
+ 
  c1 = 1.0_sgl
  c2 = 1.0_sgl
  do while ((c1.ne.0.0_sgl).or.(c2.ne.0.0_sgl))
-  mess = 'Enter orientation relation in following form:'; call Message("(A)")
-  mess = 'planes:     h_A,k_A,l_A,h_B,k_B,l_B '; call Message("(A)")
-  mess = 'directions: u_A,v_A,w_A,u_B,v_B,w_B '; call Message("(A)")
-  call ReadValue('Plane normals :', io_int, 6) 
+  call Message('Enter orientation relation in following form:', frm = "(A)", stdout = std)
+  call Message('planes:     h_A,k_A,l_A,h_B,k_B,l_B ', frm = "(A)", stdout = std)
+  call Message('directions: u_A,v_A,w_A,u_B,v_B,w_B ', frm = "(A)", stdout = std)
+  call ReadValue('Plane normals :', io_int, 6, stdout = std) 
   orel%gA(1:3) = float(io_int(1:3))
   orel%gB(1:3) = float(io_int(4:6))
-  call ReadValue('Directions    :', io_int, 6) 
+  call ReadValue('Directions    :', io_int, 6, stdout = std) 
   orel%tA(1:3) = float(io_int(1:3))
   orel%tB(1:3) = float(io_int(4:6))
 
 ! check for orthonormality using zone equation
   c1=sum(orel%tA*orel%gA)
   if (c1.ne.0.0_sgl) then
-   mess = 'Plane does not contain direction (crystal A)'; call Message("(A)")
+   call Message('Plane does not contain direction (crystal A)', frm ="(A)", stdout = std)
   end if
   c2=sum(orel%tB*orel%gB)
   if (c2.ne.0.0_sgl) then
-   mess = 'Plane does not contain direction (crystal B)'; call Message("(A)")
+   call Message('Plane does not contain direction (crystal B)', frm = "(A)", stdout = std)
   end if
  end do
 
@@ -1517,39 +1587,38 @@ end subroutine GetOR
 !> @brief compute the orientation relation transformation matrix
 !
 !> @param orel output variable of type orientation
-!> @param cellA unit cell A
-!> @param cellB unit cell B
+!> @param cellA unit cell A pointer
+!> @param cellB unit cell B pointer
 !> @param direction 'AB' for A new, B old; 'BA' for B new, A old
 !
 !> @date   12/20/13 MDG 1.0 first version, used for CTEMoverlap and CTEMorient
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
+!> @date   06/05/14 MDG 4.1 modification for cell pointers
 !--------------------------------------------------------------------------
 function ComputeOR(orel, cellA, cellB, direction) result(TT)
 
-use local
 use crystalvars
 use math
 use io
 
 IMPLICIT NONE
 
-type(orientation),INTENT(INOUT):: orel		!< orientation relation type
-type(unitcell),INTENT(IN)      :: cellA, cellB 
-character(2),INTENT(IN)        :: direction  !< direction of transformation (AB or BA)
-real(kind=sgl)                 :: TT(3,3)
+type(orientation),INTENT(INOUT)	:: orel		!< orientation relation type
+type(unitcell),pointer     :: cellA, cellB 
+character(2),INTENT(IN)        	:: direction  !< direction of transformation (AB or BA)
+real(kind=sgl)                 	:: TT(3,3)
 
-real(kind=sgl)                 :: r(3), p(3), Ep(3,3), E(3,3), io_real(6)
-real(kind=dbl)                 :: dE(3,3)
-integer(kind=irg)              :: i
+real(kind=sgl)                 	:: r(3), p(3), Ep(3,3), E(3,3)
+real(kind=dbl)                 	:: dE(3,3)
+integer(kind=irg)              	:: i
 
 
 ! compute E matrix  [page 74]
- cell = cellA
- call TransSpace(orel % gA,r,'r','d')
- call NormVec(r,'d')
- call NormVec(orel % tA,'d')
- call CalcCross(orel % tA,r,p,'d','d',0)
- call NormVec(p,'d')
+ call TransSpace(cellA, orel % gA,r,'r','d')
+ call NormVec(cellA, r,'d')
+ call NormVec(cellA, orel % tA,'d')
+ call CalcCross(cellA, orel % tA,r,p,'d','d',0)
+ call NormVec(cellA, p,'d')
  E(1,1:3)=r(1:3)
  E(2,1:3)=p(1:3)
  E(3,1:3)=orel % tA(1:3)
@@ -1557,19 +1626,13 @@ integer(kind=irg)              :: i
    call mInvert(dble(E),dE,.FALSE.)
    E = sngl(dE)
  end if
- mess = 'Transformation matrix E'; call Message("(A)")
- do i=1,3
-  io_real(1:3) = E(i,1:3)
-  call WriteValue('', io_real, 3)
- end do
 
 ! compute E-prime matrix 
- cell = cellB
- call TransSpace(orel % gB,r,'r','d')
- call NormVec(r,'d')
- call NormVec(orel % tB,'d')
- call CalcCross(orel % tB,r,p,'d','d',0)
- call NormVec(p,'d')
+ call TransSpace(cellB, orel % gB,r,'r','d')
+ call NormVec(cellB, r,'d')
+ call NormVec(cellB, orel % tB,'d')
+ call CalcCross(cellB, orel % tB,r,p,'d','d',0)
+ call NormVec(cellB, p,'d')
  Ep(1,1:3)=r(1:3)
  Ep(2,1:3)=p(1:3)
  Ep(3,1:3)=orel % tB(1:3)
@@ -1577,11 +1640,6 @@ integer(kind=irg)              :: i
    call mInvert(dble(Ep),dE,.FALSE.)
    Ep = sngl(dE)
  end if
- mess ='Transformation matrix E-prime'; call Message("(A)")
- do i=1,3
-  io_real(1:3) = Ep(i,1:3)
-  call WriteValue('', io_real, 3)
- end do
 
 ! and multiply both matrices to get transformation matrix M
  if (direction.eq.'BA') then
@@ -1589,12 +1647,6 @@ integer(kind=irg)              :: i
  else
    TT = matmul(E,Ep)
  end if
- mess = 'Transformation matrix from A to B'; call Message("(A)")
- do i=1,3
-  io_real(1:3) = TT(i,1:3)
-  call WriteValue('', io_real, 3)
- end do
- mess = ' --- '; call Message("(A)")
 
 end function ComputeOR
 
@@ -1608,41 +1660,46 @@ end function ComputeOR
 !
 !> @details  see chapter 3
 !
+!> @param cell unit cell pointer
+!> @param HOLZdata HOLZ data structure
 !> @param gg input g vector
 !> @param kt tangential components of wave vector
 !> @param lambda electron wavelength
 ! 
 !> @date   10/16/13 MDG 1.0 new version, includes HOLZ stuff
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
+!> @date   06/05/14 MDG 4.1 added unit cell pointer argument and HOLZdata argument
 !--------------------------------------------------------------------------
-function CalcsgHOLZ(gg,kt,lambda) result(exer)
+function CalcsgHOLZ(cell,HOLZdata,gg,kt,lambda) result(exer)
 
 use local
 use crystalvars
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: gg(3), kt(3), lambda
+type(unitcell),pointer     :: cell
+type(HOLZentries),INTENT(INOUT)	:: HOLZdata
+real(kind=sgl),INTENT(IN)		:: gg(3), kt(3), lambda
 
-real(kind=sgl)			:: exer, g1len, g2len
-real(kind=sgl)			:: ll(3), lpg(3), glen, gplen, LC1, LC2, LC3, sgdenom
+real(kind=sgl)				:: exer, g1len, g2len
+real(kind=sgl)				:: ll(3), lpg(3), glen, gplen, LC1, LC2, LC3, sgdenom
 
 
-glen = CalcLength(gg,'r')
-g1len = CalcLength(HOLZdata%g1,'r')
-g2len = CalcLength(HOLZdata%g2,'r')
+glen = CalcLength(cell,gg,'r')
+g1len = CalcLength(cell,HOLZdata%g1,'r')
+g2len = CalcLength(cell,HOLZdata%g2,'r')
 if (glen.ne.0.0) then
-  LC1 = CalcDot(kt,HOLZdata%g1,'r')/g1len
-  LC2 = CalcDot(kt,HOLZdata%g2,'r')/g2len
+  LC1 = CalcDot(cell,kt,HOLZdata%g1,'r')/g1len
+  LC2 = CalcDot(cell,kt,HOLZdata%g2,'r')/g2len
   ll = LC1*HOLZdata%g1 + LC2*HOLZdata%g2
   lpg = ll + gg
-  gplen = CalcLength(lpg,'r')
-  LC3 = sqrt(1.0-lambda**2*CalcLength(ll,'r')**2)
+  gplen = CalcLength(cell,lpg,'r')
+  LC3 = sqrt(1.0-lambda**2*CalcLength(cell,ll,'r')**2)
   if (gplen.eq.0.0) then
-    exer = -lambda*CalcDot(gg,2.0*ll+gg,'r')/(2.0*LC3*CalcDot(HOLZdata%g3,HOLZdata%FNr,'r'))
+    exer = -lambda*CalcDot(cell,gg,2.0*ll+gg,'r')/(2.0*LC3*CalcDot(cell,HOLZdata%g3,HOLZdata%FNr,'r'))
   else
-    sgdenom = 2.0*CalcDot(LC3*HOLZdata%g3-lambda*lpg,HOLZdata%FNr,'r')
-    exer = (CalcDot(lpg,2.0*LC3*HOLZdata%g3-lambda*gg,'r')-lambda*CalcDot(gg,ll,'r'))/sgdenom
+    sgdenom = 2.0*CalcDot(cell,LC3*HOLZdata%g3-lambda*lpg,HOLZdata%FNr,'r')
+    exer = (CalcDot(cell,lpg,2.0*LC3*HOLZdata%g3-lambda*gg,'r')-lambda*CalcDot(cell,gg,ll,'r'))/sgdenom
   end if
 else
   exer = 10000.0
@@ -1663,6 +1720,8 @@ end function CalcsgHOLZ
 !
 !> @details  see chapter 3
 !
+!> @param cell unit cell pointer
+!> @param HOLZdata HOLZ data structure
 !> @param g1 first ZOLZ vector
 !> @param g2 second ZOLZ vector
 !> @param uvw zone axis
@@ -1670,16 +1729,18 @@ end function CalcsgHOLZ
 ! 
 !> @date 10/17/13 MDG 1.0 original
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
+!> @date   06/05/14 MDG 4.1 added unit cell pointer argument and HOLZdata argument
 !--------------------------------------------------------------------------
-subroutine GetHOLZGeometry(g1,g2,uvw,fn)
+subroutine GetHOLZGeometry(cell,HOLZdata,g1,g2,uvw,fn)
 
-use local
 use crystalvars
 use io
 use error
 
 IMPLICIT NONE
 
+type(unitcell),pointer     :: cell
+type(HOLZentries),INTENT(INOUT)	:: HOLZdata
 integer(kind=irg),INTENT(IN)		:: uvw(3), fn(3)
 real(kind=sgl),INTENT(IN)		:: g1(3), g2(3)
 
@@ -1694,18 +1755,18 @@ integer(kind=irg)            		:: ih,ik,il,NN, oi_int(1)
     HOLZdata%FN = fn
     
 ! distance between consecutive HOLZ layers in nm-1
-    HOLZdata%H = 1.0/CalcLength(float(uvw),'d')
+    HOLZdata%H = 1.0/CalcLength(cell,float(uvw),'d')
 
 ! determine g3 basis vector
-    call CalcCross(HOLZdata%g1,HOLZdata%g2,g3,'r','r',1)
-    call NormVec(g3,'r')
+    call CalcCross(cell,HOLZdata%g1,HOLZdata%g2,g3,'r','r',1)
+    call NormVec(cell,g3,'r')
     HOLZdata%g3 = HOLZdata%H * g3
 
 ! compute components of FN with respect to ga, gb, g3
-    call TransSpace(float(HOLZdata%FN),HOLZdata%FNr,'d','r')
-    call NormVec(HOLZdata%FNr,'r')
-    HOLZdata%FNg = (/ CalcDot(HOLZdata%FNr,HOLZdata%g1,'r'), CalcDot(HOLZdata%FNr,HOLZdata%g2,'r'), &
-			CalcDot(HOLZdata%FNr,g3,'r') /)
+    call TransSpace(cell,float(HOLZdata%FN),HOLZdata%FNr,'d','r')
+    call NormVec(cell,HOLZdata%FNr,'r')
+    HOLZdata%FNg = (/ CalcDot(cell,HOLZdata%FNr,HOLZdata%g1,'r'), CalcDot(cell,HOLZdata%FNr,HOLZdata%g2,'r'), &
+			CalcDot(cell,HOLZdata%FNr,g3,'r') /)
 
 ! look for the shortest reflection satisfying hu+kv+lw = 1
 ! This could be replaced by code from Jackson's paper (1987),
@@ -1718,7 +1779,7 @@ integer(kind=irg)            		:: ih,ik,il,NN, oi_int(1)
     do il=-inm,inm
 ! does this reflection lie in the plane NN ?
      if ((ih*uvw(1)+ik*uvw(2)+il*uvw(3)).eq.NN) then
-      glen = CalcLength(float((/ih,ik,il/)),'r')
+      glen = CalcLength(cell,float((/ih,ik,il/)),'r')
       if (glen.lt.gmin) then
        gmin = glen
        gshort = float( (/ ih,ik,il /) )
@@ -1728,7 +1789,7 @@ integer(kind=irg)            		:: ih,ik,il,NN, oi_int(1)
    end do
   end do
   oi_int(1) = NN
-  call WriteValue(' Could not find any reflections with hu+kv+lw = ', oi_int, 1, "(I2)")
+  call WriteValue(' Could not find any reflections with hu+kv+lw = ', oi_int, 1, frm = "(I2)")
   NN = NN+1
  end do
  if (gmin.eq.100.0) then ! for some reason there is no reflection with N<=3 ...
@@ -1737,32 +1798,32 @@ integer(kind=irg)            		:: ih,ik,il,NN, oi_int(1)
  HOLZdata%gshort = gshort
 
 ! projected components of G
- gam11 = CalcDot(g1,g1,'r')
- gam12 = CalcDot(g1,g2,'r')
- gam22 = CalcDot(g2,g2,'r')
+ gam11 = CalcDot(cell,g1,g1,'r')
+ gam12 = CalcDot(cell,g1,g2,'r')
+ gam22 = CalcDot(cell,g2,g2,'r')
  gmin = 1.0/(gam11*gam22-gam12**2)
- HOLZdata%gp(1) = (CalcDot(gshort,g1,'r')*gam22-CalcDot(gshort,g2,'r')*gam12)*gmin
- HOLZdata%gp(2) = (CalcDot(gshort,g2,'r')*gam11-CalcDot(gshort,g1,'r')*gam12)*gmin
+ HOLZdata%gp(1) = (CalcDot(cell,gshort,g1,'r')*gam22-CalcDot(cell,gshort,g2,'r')*gam12)*gmin
+ HOLZdata%gp(2) = (CalcDot(cell,gshort,g2,'r')*gam11-CalcDot(cell,gshort,g1,'r')*gam12)*gmin
 
 ! coordinate transformation matrix for g1 along x (our standard orientation for all programs)
- phi = CalcAngle(g1,g2,'r')
- glen = CalcLength(g2,'r')
- HOLZdata%gtoc(1,1) = CalcLength(g1,'r')
+ phi = CalcAngle(cell,g1,g2,'r')
+ glen = CalcLength(cell,g2,'r')
+ HOLZdata%gtoc(1,1) = CalcLength(cell,g1,'r')
  HOLZdata%gtoc(1,2) = glen * cos(phi)
  HOLZdata%gtoc(2,1) = 0.0
  HOLZdata%gtoc(2,2) = glen * sin(phi)
 
 ! first normalize the zone axis in cartesian components; this is the z-axis
-  call TransSpace(float(uvw),c,'d','c')
-  call NormVec(c,'c')
+  call TransSpace(cell,float(uvw),c,'d','c')
+  call NormVec(cell,c,'c')
 
 ! then make ga the x-axis
-  call TransSpace(g1,gx,'r','c')
-  call NormVec(gx,'c')
+  call TransSpace(cell,g1,gx,'r','c')
+  call NormVec(cell,gx,'c')
   HOLZdata%gx = gx
 
 ! compute the cross product between k and gx; this is the y-axis
-  call CalcCross(c,gx,gy,'c','c',0)
+  call CalcCross(cell,c,gx,gy,'c','c',0)
   HOLZdata%gy = gy
 
 
@@ -1786,36 +1847,39 @@ end subroutine GetHOLZGeometry
 !> @date 04/08/13 MDG 2.0 rewrite
 !> @date 10/16/13 MDG 3.0 incorporation into LACBED code
 !> @date 01/10/14 MDG 4.0 checked for changes to unitcell type
+!> @date   06/05/14 MDG 4.1 added unit cell pointer argument and HOLZdata argument
 !--------------------------------------------------------------------------
-function GetHOLZcoordinates(gg,kt,lambda) result(pxy)
+function GetHOLZcoordinates(cell,HOLZdata,gg,kt,lambda) result(pxy)
 
 use local
 use crystalvars
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: gg(3), kt(3), lambda
+type(unitcell),pointer     :: cell
+type(HOLZentries),INTENT(INOUT)	:: HOLZdata
+real(kind=sgl),INTENT(IN)		:: gg(3), kt(3), lambda
 
-real(kind=sgl)			:: pxy(2), h1, h2, g11, g12, g22, z
-real(kind=sgl)			:: exer, correction, gxy(2), nx, ny, hh(3)
-integer(kind=irg)		:: N
+real(kind=sgl)				:: pxy(2), h1, h2, g11, g12, g22, z
+real(kind=sgl)				:: exer, correction, gxy(2), nx, ny, hh(3)
+integer(kind=irg)			:: N
 
 ! get the Laue zone number
 	N = abs( HOLZdata%uvw(1)*gg(1) + HOLZdata%uvw(2)*gg(2) + HOLZdata%uvw(3)*gg(3) )
 
 ! get components of gg w.r.t. g1 and g2
 	hh = gg - N * HOLZdata%gshort 
-	h1 = CalcDot(hh,HOLZdata%g1,'c')
-	h2 = CalcDot(hh,HOLZdata%g2,'c')
-	g11 = CalcDot(HOLZdata%g1,HOLZdata%g1,'c')
-	g12 = CalcDot(HOLZdata%g1,HOLZdata%g2,'c')
-	g22 = CalcDot(HOLZdata%g2,HOLZdata%g2,'c')
+	h1 = CalcDot(cell,hh,HOLZdata%g1,'c')
+	h2 = CalcDot(cell,hh,HOLZdata%g2,'c')
+	g11 = CalcDot(cell,HOLZdata%g1,HOLZdata%g1,'c')
+	g12 = CalcDot(cell,HOLZdata%g1,HOLZdata%g2,'c')
+	g22 = CalcDot(cell,HOLZdata%g2,HOLZdata%g2,'c')
 	z = 1.0/(g12**2-g11*g22)
     	nx = (g12*h2-g22*h1)*z
     	ny = (g12*h1-g11*h2)*z
 
 ! compute excitation error, including Laue center, foil normal, and HOLZ reflection.
-	exer = CalcsgHOLZ(gg,kt,lambda)
+	exer = CalcsgHOLZ(cell,HOLZdata,gg,kt,lambda)
 
 ! next, determine the drawing coordinates, first in terms of g1 and g2
         correction = 1.0/(1.0-lambda*HOLZdata%H*(float(N)+exer*HOLZdata%FNg(3)))

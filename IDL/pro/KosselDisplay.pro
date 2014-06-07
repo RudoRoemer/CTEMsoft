@@ -8,7 +8,7 @@
 @Kosselgetpreferences		; read preferences file
 @Kosselwritepreferences		; write preferences file
 ;
-; Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
+; Copyright (c) 2013-2014, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are 

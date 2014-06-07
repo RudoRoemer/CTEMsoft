@@ -1,5 +1,5 @@
 ! ###################################################################
-! Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
+! Copyright (c) 2013-2014, Marc De Graef/Carnegie Mellon University
 ! All rights reserved.
 !
 ! Redistribution and use in source and binary forms, with or without modification, are 
@@ -36,15 +36,13 @@
 !
 !> @brief error handling routines
 !
-!> @details  Just a simple routine that report errors
+!> @details  Just a simple routine that reports errors and aborts the program
 !
-!
-!
-!! 
-!> @date 1/5/99   MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90 version
-!> @date   11/27/01 MDG 2.1 added kind support
-!> @date   03/19/13 MDG 3.0 minor changes
+!> @date 01/05/99 MDG 1.0 original
+!> @date 05/19/01 MDG 2.0 f90 version
+!> @date 11/27/01 MDG 2.1 added kind support
+!> @date 03/19/13 MDG 3.0 minor changes
+!> @date 06/05/14 MDG 4.0 minor changes
 !--------------------------------------------------------------------------
 
 module error
@@ -59,38 +57,36 @@ contains
 !
 !> @brief Write error message and abort program
 !
+!> @param var1 routine name string
+!> @param var2 explanation string
+!> @param stdout optional output unit identifier
+!
 !> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/19/13 MDG 3.0 updated for new io routines
+!> @date   06/05/14 MDG 4.0 added stdout argument
 ! ###################################################################
-subroutine FatalError(var1,var2)
+subroutine FatalError(var1,var2,stdout)
 
 use io
 
 IMPLICIT NONE
 
-character(*), INTENT(IN)  :: var1	!< first part of error message (routine name)
-character(*), INTENT(IN)  :: var2	!< second part of error message (brief explanation)
+character(*), INTENT(IN)  			:: var1		!< first part of error message (routine name)
+character(*), INTENT(IN)  			:: var2		!< second part of error message (brief explanation)
+integer(kind=irg), INTENT(IN),OPTIONAL		:: stdout 	!< output unit identifier
 
- mess = var1//': '//var2; 
- call Message("('  Fatal error in routine ',A/)"); 
+integer(kind=irg)				:: std 
+
+ std = 6
+ if (PRESENT(stdout)) std=stdout
+
+ call Message(' ----> Fatal error in routine '//var1//': '//var2, frm='(//A//)', stdout=std) 
  stop '  Progam ended abnormally'
 
 end subroutine
 
-! old list of error messages (keep for a while until all code updated)
-!character(60),parameter :: errors(10) = &
-!     (/"mInvert: transformation matrix zero determinant             ", &  !  1
-!       "CalcMatrices: unit cell volume = 0                          ", &  !  2
-!       "CalcMatrices: invalid gamma angle                           ", &  !  3
-!       "CalcAngle: vector of zero length specified                  ", &  !  4
-!       "ShortestG: beam direction cannot be [0,0,0]                 ", &  !  5
-!       "RankReflections: variable numr should be increased          ", &  !  6
-!       "DumpZAP: maximum number of reflections per pattern exceeded ", &  !  7
-!       "BWshow: unkown data format                                  ", &  !  8
-!       "                                                            ", &  !  9
-!       "                                                            "/)
 
 end module
 

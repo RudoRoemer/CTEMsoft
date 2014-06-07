@@ -42,8 +42,9 @@
 !> @date  01/05/99 MDG 1.0 original
 !> @date  05/19/01 MDG 2.0 f90
 !> @date  11/27/01 MDG 2.1 added kind support
-!> @date  03/19/13 MDG 3.0 udated IO and such
+!> @date  03/19/13 MDG 3.0 updated IO and such
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
+!> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable 
 !--------------------------------------------------------------------------
 
 module symmetry
@@ -64,6 +65,7 @@ contains
 !
 !> @details  fills in a generator matrix based on an input 4-character code string
 !
+!> @param cell unit cell pointer
 !> @param t input string (4 character block from generator string)
 !> @param isgn switch to indicate forward or reverse translation component
 !
@@ -71,15 +73,18 @@ contains
 !> @date  05/19/01 MDG 2.0 f90
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
+!> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable 
 !--------------------------------------------------------------------------
-subroutine SYM_fillgen(t,isgn)
+subroutine SYM_fillgen(cell,t,isgn)
 
 use local
 
 IMPLICIT NONE
 
+type(unitcell),pointer	:: cell
 character(1),INTENT(IN)		:: t(4)	!< 4-character input string
 integer(kind=irg),INTENT(IN)		:: isgn	!< indicates forward or reverse translation
+
 integer(kind=irg)			:: j	!< auxiliary variable
 real(kind=dbl)				:: sgn	!< forward or reverse multiplier for translation components
 
@@ -138,19 +143,23 @@ end subroutine SYM_fillgen
 !
 !> @details interprets the generator string and initializes all generator matrices
 !
+!> @param cell unit cell pointer
+!
 !> @date  10/13/98 MDG 1.0 original
 !> @date   5/19/01 MDG 2.0 f90
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  03/19/13 MDG 3.0 general cleanup
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
+!> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable 
 !--------------------------------------------------------------------------!     
-subroutine MakeGenerators
+subroutine MakeGenerators(cell)
 
-use local
 use crystalvars
 use math
 
 IMPLICIT NONE
+
+type(unitcell),pointer	:: cell
 
 integer(kind=irg),parameter	:: QQ=48 			!< maximum number of point group symmetry elements
 integer(kind=irg)		:: i,k,l,iset			!< auxiliary variables
@@ -165,7 +174,7 @@ character(40)			:: genst			!< full generator string
 ! initialize the encoded identity operator aOOO
  t = (/ 'a', 'O', 'O', 'O' /)
 ! compute its matrix
- call SYM_fillgen(t,1)
+ call SYM_fillgen(cell,t,1)
 ! and put it first in the list of matrices
  cell%SG%SYM_data(1,:,:) = cell%SG%SYM_c(:,:)
 
@@ -181,7 +190,7 @@ character(40)			:: genst			!< full generator string
      l=2+4*(i-2)+k
      t(k) = genst(l:l)
    end do
-   call SYM_fillgen(t,1)
+   call SYM_fillgen(cell,t,1)
    cell%SG%SYM_data(i,:,:) = cell%SG%SYM_c(:,:)
  end do
 
@@ -192,7 +201,7 @@ character(40)			:: genst			!< full generator string
  if (genst(1:1).eq.'1') then 
   cell%SG%SYM_centrosym=.TRUE.
   t = (/ 'h', 'O', 'O', 'O' /)
-  call SYM_fillgen(t,1)
+  call SYM_fillgen(cell,t,1)
   cell%SG%SYM_data(cell%SG%SYM_GENnum+2,:,:) = cell%SG%SYM_c(:,:)
   cell%SG%SYM_GENnum = cell%SG%SYM_GENnum+2
  else   
@@ -202,7 +211,7 @@ character(40)			:: genst			!< full generator string
 ! now check for special origin conditions (choices 1 and 2) 
  if (genst(i:i).ne.'0') then 
   if (cell%SYM_SGset.eq.0) then
-   call GetSetting(iset)
+   call GetSetting(cell,iset)
    cell%SYM_SGset=iset
   end if
   if (cell%SYM_SGset.eq.2) then 
@@ -214,12 +223,12 @@ character(40)			:: genst			!< full generator string
    end do
    do l=2,cell%SG%SYM_GENnum 
 ! translate to first setting origin
-    call SYM_fillgen(t,-1)
+    call SYM_fillgen(cell,t,-1)
     SYM_d(:,:)=cell%SG%SYM_data(l,:,:)
 ! apply generator
     SYM_e = matmul(SYM_d,cell%SG%SYM_c)
 ! translate back to second setting origin
-    call SYM_fillgen(t,1)
+    call SYM_fillgen(cell,t,1)
     SYM_d = matmul(cell%SG%SYM_c,SYM_e)
 ! reduce the translations to the fundamental unit cell
     do  k=1,3
@@ -255,6 +264,7 @@ end subroutine MakeGenerators
 !> @details multiplies two 4x4 symmetry matrices and brings
 !> the translation component back to the fundamental unit cell.
 !
+!> @param cell unit cell pointer
 !> @param k1 index of first input matrix
 !> @param k2 index of second input matrix
 !
@@ -265,12 +275,15 @@ end subroutine MakeGenerators
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  03/19/13 MDG 3.0 general cleanup
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
+!> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable 
 !--------------------------------------------------------------------------
-subroutine matrixmult(k1,k2)
+subroutine matrixmult(cell, k1, k2)
    
 use local
 
 IMPLICIT NONE
+
+type(unitcell),pointer	:: cell
 
 integer(kind=irg),INTENT(IN)	:: k1				!< index of first 4x4 input matrix
 integer(kind=irg),INTENT(IN)	:: k2				!< index of second 4x4 input matrix
@@ -316,18 +329,22 @@ end subroutine matrixmult
 !> @details check whether or not this is a new operator by simply comparing it 
 !> with all existing operators
 !
+!> @param cell unit cell pointer
 !> @param nsym index of matrix to be compared
 !
 !> @date  10/13/98 MDG 1.0 original
 !> @date   5/19/01 MDG 2.0 f90
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
+!> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable 
 !--------------------------------------------------------------------------
-logical function isitnew(nsym)
+logical function isitnew(cell,nsym)
 
 use local
 
 IMPLICIT NONE
+
+type(unitcell),pointer	:: cell
 
 integer(kind=irg),INTENT(IN)		:: nsym			!< index of matrix to be compared
 integer(kind=irg)			:: i,j,k,n		!< loop counters
@@ -365,6 +382,7 @@ end function isitnew
 !               
 !> @note These routines are based on a program written by G. Ceder (MIT).
 !
+!> @param cell unit cell pointer
 !> @param dopg include point group matrices or not (logical)
 !
 !> @date  10/13/98 MDG/Ceder 1.0 original
@@ -372,26 +390,29 @@ end function isitnew
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  03/19/13 MDG 3.0 clean up
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
+!> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable 
 !--------------------------------------------------------------------------
-subroutine GenerateSymmetry(dopg)
+subroutine GenerateSymmetry(cell,dopg)
 
 use local
 use crystalvars
 
 IMPLICIT NONE
 
+type(unitcell),pointer	:: cell
 logical,INTENT(IN)		:: dopg				!< logical to determine if point group matrices are to be computed as well
+
 integer(kind=irg)		:: i,j,k,nsym,k1,k2,l1,l2	!< loop counters (mostly)
 real(kind=dbl)			:: q,sm				!< auxiliary variables.
 
 ! create the space group generator matrices
- call MakeGenerators
+ call MakeGenerators(cell)
  nsym = cell%SG%SYM_GENnum
 
 ! generate new elements from the squares of the generators 
  do k=1,cell%SG%SYM_GENnum 
-  call matrixmult(k,k)
-  if (isitnew(nsym).eqv..TRUE.) then 
+  call matrixmult(cell,k,k)
+  if (isitnew(cell,nsym).eqv..TRUE.) then 
    nsym=nsym+1
    cell%SG%SYM_data(nsym,:,:) = cell%SG%SYM_c(:,:)
   end if
@@ -402,8 +423,8 @@ real(kind=dbl)			:: q,sm				!< auxiliary variables.
  do while (k1.le.nsym) 
   k2=k1+1
   do while (k2.le.nsym)
-   call matrixmult(k2,k1)
-   if (isitnew(nsym).eqv..TRUE.) then 
+   call matrixmult(cell,k2,k1)
+   if (isitnew(cell,nsym).eqv..TRUE.) then 
     nsym=nsym+1
     cell%SG%SYM_data(nsym,:,:) = cell%SG%SYM_c(:,:)
     if (nsym.ge.192) then 
@@ -470,6 +491,7 @@ end subroutine GenerateSymmetry
 !
 !> @details compute the indices of equivalent planes w.r.t. 2D symmetry and store them in the itmp array
 !               
+!> @param cell unit cell pointer
 !> @param ind input index triplet
 !> @param ksame logical list with symmetry operators to consider
 !> @param numksame number of entries in ksame to be considered
@@ -479,17 +501,20 @@ end subroutine GenerateSymmetry
 !> @date   5/19/01 MDG 2.0 f90
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
+!> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable; replaced itmp by argument
 !--------------------------------------------------------------------------
-subroutine Calc2DFamily(ind,ksame,numksame,nunique)
+subroutine Calc2DFamily(cell,ind,ksame,numksame,nunique,itmp)
         
 use local
 
 IMPLICIT NONE
 
+type(unitcell),pointer	:: cell
 integer(kind=irg),INTENT(IN)		:: ind(3)			!< input triplet
-integer(kind=irg),INTENT(OUT)		:: nunique			!< number of equivalent entries generated
-integer(kind=irg),INTENT(IN)		:: numksame			!< number on the input list
 logical,INTENT(IN)			:: ksame(*)			!< list of symmetry operators
+integer(kind=irg),INTENT(IN)		:: numksame			!< number on the input list
+integer(kind=irg),INTENT(OUT)		:: nunique			!< number of equivalent entries generated
+integer(kind=irg),INTENT(OUT)		:: itmp(48,3)			!< array used for family computations etc
 
 integer(kind=irg)			:: m,i,j			!< loop counters and such
 real(kind=sgl)				:: h,k,l,ih,ik,il,idiff	!< auxiliary variables
@@ -506,15 +531,9 @@ real,parameter				:: eps=0.0001_sgl		!< comparison threshold
 ! multiply with all point group elements that have the value .TRUE. in ksame
  do i=2,cell%SG%SYM_NUMpt 
   if (ksame(i)) then 
-!   if (space.eq.'d') then
     ih=cell%SG%SYM_direc(i,1,1)*h+cell%SG%SYM_direc(i,1,2)*k+cell%SG%SYM_direc(i,1,3)*l
     ik=cell%SG%SYM_direc(i,2,1)*h+cell%SG%SYM_direc(i,2,2)*k+cell%SG%SYM_direc(i,2,3)*l
     il=cell%SG%SYM_direc(i,3,1)*h+cell%SG%SYM_direc(i,3,2)*k+cell%SG%SYM_direc(i,3,3)*l
-!   else
-!    ih=cell%SG%SYM_recip(i,1,1)*h+cell%SG%SYM_recip(i,1,2)*k+cell%SG%SYM_recip(i,1,3)*l
-!    ik=cell%SG%SYM_recip(i,2,1)*h+cell%SG%SYM_recip(i,2,2)*k+cell%SG%SYM_recip(i,2,3)*l
-!    il=cell%SG%SYM_recip(i,3,1)*h+cell%SG%SYM_recip(i,3,2)*k+cell%SG%SYM_recip(i,3,3)*l
-!   end if
 
 ! is this a new point ?
    newpoint=.TRUE.
@@ -545,6 +564,7 @@ end subroutine Calc2DFamily
 !
 !> @details compute the indices of equivalent planes/directions and store them in the itmp array
 !               
+!> @param cell unit cell pointer
 !> @param ind input index triplet
 !> @param num output number of family members generated
 !> @param space space in which to perform the computation (direct 'd' or reciprocal 'r')
@@ -553,16 +573,20 @@ end subroutine Calc2DFamily
 !> @date   5/19/01 MDG 2.0 f90
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
+!> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable; replaced itmp by argument
 !--------------------------------------------------------------------------
-subroutine CalcFamily(ind,num,space)
-        
+subroutine CalcFamily(cell,ind,num,space,itmp)
+  
 use local
 
 IMPLICIT NONE
 
+type(unitcell),pointer	:: cell
 integer(kind=irg),INTENT(OUT)		:: num				!< number of equivalent entries generated
 integer(kind=irg),INTENT(IN)		:: ind(3)			!< input triplet
 character(1),INTENT(IN)		:: space			!< 'd' or 'r'
+integer(kind=irg),INTENT(OUT)		:: itmp(48,3)			!< array used for family computations etc
+
 integer(kind=irg)			:: m,i,j			!< loop counters and such
 real(kind=sgl)				:: h,k,l,ih,ik,il,idiff	!< auxiliary variables
 logical					:: newpoint			!< is this a new point ?
@@ -616,6 +640,7 @@ end subroutine CalcFamily
 !
 !> @details compute the orbit of a point and outputs it in an array
 !
+!> @param cell unit cell pointer
 !> @param m input 
 !> @param n output number of orbit members generated
 !> @param ctmp output coordinate array
@@ -624,14 +649,16 @@ end subroutine CalcFamily
 !> @date   5/19/01 MDG 2.0 f90
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
+!> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable; replaced itmp by argument
 !--------------------------------------------------------------------------
-subroutine CalcOrbit(m,n,ctmp)
+subroutine CalcOrbit(cell,m,n,ctmp)
 
 use local
 use crystalvars
 
 IMPLICIT NONE
 
+type(unitcell),pointer	:: cell
 real(kind=dbl),INTENT(OUT)		:: ctmp(192,3)		!< output array with orbit coordinates
 integer(kind=irg),INTENT(OUT)		:: n			!< number of equivalent entries 
 integer(kind=irg),INTENT(IN)		:: m			!< index of input atom in asymmetric unit array cell%ATOM_pos
@@ -702,6 +729,7 @@ end subroutine CalcOrbit
 !> @todo Since a star and an orbit are basically the same, but in different spaces,
 !> it might be a good idea to merge CalcStar with CalcOrbit.
 !
+!> @param cell unit cell pointer
 !> @param kk input vector 
 !> @param n output number of orbit members generated
 !> @param stmp output coordinate array
@@ -711,17 +739,20 @@ end subroutine CalcOrbit
 !> @date   5/19/01 MDG 2.0 f90
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
+!> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable; replaced itmp by argument
 !--------------------------------------------------------------------------
-subroutine CalcStar(kk,n,stmp,space)
+subroutine CalcStar(cell,kk,n,stmp,space)
 
 use local
 
 IMPLICIT NONE
 
+type(unitcell),pointer	:: cell
 real(kind=dbl),INTENT(OUT)		:: stmp(48,3)		!< output array with equivalent vectors
 real(kind=dbl),INTENT(IN)		:: kk(3)		!< input vector
 integer(kind=irg),INTENT(OUT)		:: n			!< number of entries in equivalent vector array
 character(1),INTENT(IN)		:: space		!< 'd' or 'r'
+
 integer(kind=irg)			:: i,j,k,mm		!< various loop counters and such
 real(kind=dbl)				:: r(3),s(3),diff	!< auxiliary variables
 real(kind=dbl),parameter 		:: eps=1.0D-4		!< comparison threshold
@@ -778,6 +809,7 @@ end subroutine CalcStar
 !> cell and translate to neighbouring cells if needed
 !> (used for structure drawings and structure factor computations)
 !!
+!> @param cell unit cell pointer
 !> @param switch input vector 
 !
 !> @date  10/13/98 MDG 1.0 original
@@ -785,8 +817,9 @@ end subroutine CalcStar
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  03/21/13 MDG 3.0 clean up and updated IO
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
+!> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable; replaced itmp by argument
 !--------------------------------------------------------------------------
-subroutine CalcPositions(switch)
+subroutine CalcPositions(cell,switch)
 
 use local
 use crystalvars
@@ -796,7 +829,9 @@ use crystal
 
 IMPLICIT NONE
 
+type(unitcell),pointer	:: cell
 character(1),INTENT(IN)   	:: switch			!< if switch='m', then multiple unit cells, otherwise single cell
+
 logical				:: inside			!< auxiliary logical
 integer(kind=irg) 		:: i,j,k,l,mm,icnt,celln(3),ncells,n,kk,ier, io_int(3)  !< various auxiliary variables
 real(kind=dbl)    		:: ctmp(192,3),ff(3),sh(3)	!< auxiliary variables	
@@ -827,13 +862,13 @@ real(kind=sgl)    		:: r(3),g(3)			!< auxiliary variables
 ! if switch is 'm', crystal coordinates otherwise)
  if (allocated(cell%apos)) deallocate(cell%apos)
  allocate (cell%apos(cell%ATOM_ntype, ncells * cell%SG%SYM_MATnum, 3),stat=ier)
- if (ier.ne.0) call FatalError('CalcPositions','unable to allocate memory for array cell%apos')
+ if (ier.ne.0) call FatalError('CalcPositions',' unable to allocate memory for array cell%apos')
 
  do i=1,cell%ATOM_ntype
 
 ! for each atom in the asymmetric unit
-  call CalcOrbit(i,n,ctmp)
-  numat(i)=n
+  call CalcOrbit(cell,i,n,ctmp)
+  cell%numat(i)=n
   icnt=1
 
 ! replicate in all cells
@@ -843,7 +878,7 @@ real(kind=sgl)    		:: r(3),g(3)			!< auxiliary variables
     ff(2)=float(k)
     do l=1,celln(3)+1
      ff(3)=float(l)
-     do kk=1,numat(i)
+     do kk=1,cell%numat(i)
       do mm=1,3
        r(mm)=ctmp(kk,mm)+ff(mm)-sh(mm)
       end do 
@@ -855,7 +890,7 @@ real(kind=sgl)    		:: r(3),g(3)			!< auxiliary variables
         if ((r(mm)+sh(mm)).gt.(celln(mm)+1.0)) inside=.FALSE.
        end do
        if (inside) then
-        call TransSpace(r,g,'d','c')
+        call TransSpace(cell,r,g,'d','c')
         do mm=1,3
          cell%apos(i,icnt,mm)=g(mm)
         end do
@@ -873,7 +908,7 @@ real(kind=sgl)    		:: r(3),g(3)			!< auxiliary variables
     end do ! l 
    end do ! k
   end do ! j
-  numat(i)=icnt-1
+  cell%numat(i)=icnt-1
  end do  ! cell%ATOM_type
 
 end subroutine CalcPositions
@@ -889,6 +924,7 @@ end subroutine CalcPositions
 !> @details for the space groups with a second origin setting
 !> this routine asks which of the two settings to use
 !
+!> @param cell unit cell pointer
 !> @param iset  output value (1 or 2) 
 !
 !> @date  10/13/98 MDG 1.0 original
@@ -896,8 +932,9 @@ end subroutine CalcPositions
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  03/21/13 MDG 3.0 clean up and updated IO
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
+!> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable
 !--------------------------------------------------------------------------
-subroutine GetSetting(iset)
+subroutine GetSetting(cell, iset)
 
 use local
 use io
@@ -905,7 +942,9 @@ use crystalvars
 
 IMPLICIT NONE
 
+type(unitcell),pointer	:: cell
 integer(kind=irg),INTENT(OUT)  	:: iset				!< output setting
+
 integer(kind=irg)      		:: i,isg, io_int(1)		!< auxiliary variables
 
 ! There are 24 space groups with two origin choices.
@@ -933,13 +972,13 @@ character(7),parameter 		:: sitesym(48) = (/ '222    ',' -1    ','222/n  ',' -1 
  end do
  
  if (isg.ne.0) then 
-  mess = ' ---------------------------------------------'; call Message("(A)")
-  mess = ' This space group has two origin settings.'; call Message("(A)")
-  mess = ' The first setting has site symmetry    : '//sitesym(2*isg-1); call Message("(A)")
-  mess = ' the second setting has site symmetry   : '//sitesym(2*isg); call Message("(A)")
+  call Message(' ---------------------------------------------', frm = "(A)")
+  call Message(' This space group has two origin settings.', frm = "(A)")
+  call Message(' The first setting has site symmetry    : '//sitesym(2*isg-1), frm = "(A)")
+  call Message(' the second setting has site symmetry   : '//sitesym(2*isg), frm = "(A)")
   call ReadValue(' Which setting do you wish to use (1/2) : ', io_int, 1)
   iset = io_int(1)
-  mess = '---------------------------------------------'; call Message("(A)")
+  call Message('---------------------------------------------', frm = "(A)")
  end if
  
 end subroutine GetSetting
@@ -970,19 +1009,23 @@ end subroutine GetSetting
 !> statements, which in principle should only be used in the io module; so,
 !> we may need to move this entire routine to the io.f90 file to be consistent.
 !
+!> @param cell unit cell pointer
+!
 !> @date  10/13/98 MDG 1.0 original
 !> @date   5/19/01 MDG 2.0 f90
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  03/21/13 MDG 3.0 clean up and updated IO
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
+!> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable
 !--------------------------------------------------------------------------
-subroutine GetSpaceGroup
+subroutine GetSpaceGroup(cell)
 
-use local
 use io
 use crystalvars
 
 IMPLICIT NONE
+
+type(unitcell),pointer	:: cell
 
 integer(kind=irg)  	:: sgmin,sgmax,i,j,TRIG(7), io_int(1)		!< auxiliary var	iables	
 logical           	:: skip						!< logical variable
@@ -996,17 +1039,17 @@ logical           	:: skip						!< logical variable
  case (3); sgmin =  16; sgmax =  74
  case (4); sgmin = 168; sgmax = 194
  case (5); if (cell%SG%SYM_second) then
-             mess = 'The space groups below correspond to the '; call Message("(/A)")
-             mess = 'second (rhombohedral) setting.'; call Message("(A/)")
-             mess = 'Please select one of the space groups.'; call Message("(A/)")
+             call Message('The space groups below correspond to the ', frm = "(/A)")
+             call Message('second (rhombohedral) setting.', frm = "(A/)")
+             call Message('Please select one of these space groups.', frm = "(A/)")
              do i=1,7
               if ((mod(i,4).eq.0).or.(i.eq.7)) then
-                write (stdout,"(1x,i3,':',A11,5x)") TRIG(i),SYM_SGname(TRIG(i))
+                write (5,"(1x,i3,':',A11,5x)") TRIG(i),SYM_SGname(TRIG(i))
               else
-                write (stdout,"(1x,i3,':',A11,5x,$)") TRIG(i),SYM_SGname(TRIG(i))
+                write (5,"(1x,i3,':',A11,5x,$)") TRIG(i),SYM_SGname(TRIG(i))
               end if
              end do 
-             mess = ' -------------------------- '; call Message("(A)")
+             call Message(' -------------------------- ', frm = "(A)")
              call ReadValue(' Enter space group number : ', io_int, 1)
              cell%SYM_SGnum = io_int(1)
 
@@ -1031,23 +1074,23 @@ logical           	:: skip						!< logical variable
 
 ! print out all the relevant space group names and numbers        
  if (skip.eqv..FALSE.) then
-  mess = ' '; call Message("(/A/)")
+  call Message(' ', frm = "(/A/)")
   do i=sgmin,sgmax
    j=i-sgmin+1
    if ((mod(j,4).eq.0).or.(i.eq.sgmax)) then
-    write (stdout,"(1x,i3,':',A11,5x)") i,SYM_SGname(i)
+    write (5,"(1x,i3,':',A11,5x)") i,SYM_SGname(i)
    else
-    write (stdout,"(1x,i3,':',A11,5x,$)") i,SYM_SGname(i)
+    write (5,"(1x,i3,':',A11,5x,$)") i,SYM_SGname(i)
    end if
   end do
   cell%SYM_SGnum = sgmin-1
   do while ((cell%SYM_SGnum.lt.sgmin).or.(cell%SYM_SGnum.gt.sgmax)) 
-   mess = ' -------------------------- '; call Message("(A)")
+   call Message(' -------------------------- ', frm = "(A)")
    call ReadValue(' Enter space group number : ', io_int, 1)
    cell%SYM_SGnum = io_int(1)
    if ((cell%SYM_SGnum.lt.sgmin).or.(cell%SYM_SGnum.gt.sgmax)) then
-    mess = 'Error in space group number '; call Message("(A)")
-    mess = 'Crystal system / space group mismatch '; call Message("(A)")
+    call Message('Error in space group number ', frm = "(A)")
+    call Message('Crystal system / space group mismatch ', frm = "(A)")
    end if
   end do
  end if 
@@ -1069,6 +1112,7 @@ end subroutine GetSpaceGroup
 !> @param il  output list of indices that belong to the zone
 !> @param num number of values to test
 !> @param jcnt number of distinct entries in the output list
+!> @param itmp coordinate array
 !
 !> @date  10/13/98 MDG 1.0 original
 !> @date   5/19/01 MDG 2.0 f90
@@ -1076,7 +1120,7 @@ end subroutine GetSpaceGroup
 !> @date  03/21/13 MDG 3.0 clean up and updated IO
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
-subroutine GetOrder(k,il,num,jcnt)
+subroutine GetOrder(k,il,num,jcnt,itmp)
 
 use local
 use symmetryvars   ! uses itmp variable
@@ -1087,6 +1131,8 @@ real(kind=sgl),INTENT(IN) 		:: k(3)		!< input vector (zone axis)
 integer(kind=irg),INTENT(OUT)		:: il(48)	!< output index list
 integer(kind=irg),INTENT(IN)		:: num		!< number of  entries to test
 integer(kind=irg),INTENT(OUT)		:: jcnt		!< number of entries in output
+integer(kind=irg),INTENT(IN)		:: itmp(48,3)	!< array used for family computations etc
+
 integer(kind=irg)			:: i		!< loop counter
 real(kind=sgl)				:: gn(3)	!< auxiliary variable
 real(kind=sgl),parameter 		:: eps=1.0E-5	!< threshold value
@@ -1116,7 +1162,7 @@ end subroutine GetOrder
 !>
 !> we look for 4 integer numbers which transform ga and gb
 !> simultaneously into two shortest possible vectors of the same zone;
-!> a range of -5:5 should be sufficient as a search space
+!> a range of -10:10 should be sufficient as a search space
 !> 
 !> If g1 and g2 are those shortest vectors, then we have
 !> 
@@ -1136,6 +1182,7 @@ end subroutine GetOrder
 !> are integer linear combinations of the reciprocal basis
 !> vectors.
 !
+!> @param cell unit cell pointer
 !> @param k input vector (zone axis) 
 !> @param gone  output indices of first vector
 !> @param gtwo output indices of second vector
@@ -1149,8 +1196,9 @@ end subroutine GetOrder
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  03/21/13 MDG 3.0 clean up and updated IO
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
+!> @date  06/05/14 MDG 4.1 added unit cell pointer as argument
 !--------------------------------------------------------------------------
-subroutine ShortestG(k,gone,gtwo,isym)
+subroutine ShortestG(cell,k,gone,gtwo,isym)
 
 use local
 use error
@@ -1160,6 +1208,7 @@ use constants
 
 IMPLICIT NONE
 
+type(unitcell),pointer	:: cell
 integer(kind=irg),INTENT(INOUT)	:: isym				!< used to resolve some potential ambiguities for 3-fold and 6-fold symmetries
 integer(kind=irg),INTENT(IN)		:: k(3)				!< input zone axis indices
 integer(kind=irg),INTENT(OUT)		:: gone(3)			!< output first vector
@@ -1169,6 +1218,7 @@ integer(kind=irg)			:: ga(3),gb(3),nzero(3),u,v,w,snz,ml(4),igsave(3)		!< auxili
 integer(kind=irg)			:: ima,imb,ina,inb,el(6),denom,minsum,inm,il(48),jcnt,num 	!< auxiliary variables
 real(kind=sgl)				:: fel(6),fit,gsave(3)		!< auxiliary variables
 integer(kind=irg),allocatable 		:: ifit(:,:,:,:)		!< array used to search
+integer(kind=irg)			:: itmp(48,3)			!< array used for family computations etc
 
  u = k(1)
  v = k(2)
@@ -1203,7 +1253,7 @@ integer(kind=irg),allocatable 		:: ifit(:,:,:,:)		!< array used to search
  end if 
 
 ! check linear combinations to see if there are any shorter ones
- inm = 5
+ inm = 10
  allocate(ifit(-inm:inm,-inm:inm,-inm:inm,-inm:inm))
  do ima=-inm,inm
   do imb=-inm,inm
@@ -1259,8 +1309,8 @@ integer(kind=irg),allocatable 		:: ifit(:,:,:,:)		!< array used to search
  gtwo = (ml(3)*gb-ml(4)*ga)/(ml(3)*ml(2)-ml(4)*ml(1))
 
 ! next rank these two vectors so that their cross product is along +k
- call CalcCross(float(gone),float(gtwo),gsave,'r','r',0)
- fit = CalcDot(gsave,float(k),'r')
+ call CalcCross(cell,float(gone),float(gtwo),gsave,'r','r',0)
+ fit = CalcDot(cell,gsave,float(k),'r')
  if (fit.lt.0.0) then
   igsave = gone
   gone = gtwo
@@ -1277,7 +1327,7 @@ integer(kind=irg),allocatable 		:: ifit(:,:,:,:)		!< array used to search
 ! vs. the same symmetries originating from a hexagonal setting
  if ((isym.eq.7).and.(cell%gamma.eq.120.0)) then
    isym=11
-   fit = CalcAngle(float(gone),float(gtwo),'r')*180.0/cPi 
+   fit = CalcAngle(cell,float(gone),float(gtwo),'r')*180.0/cPi 
    if (abs(fit-120.0).lt.1.0) then
      gtwo=gone+gtwo
    end if
@@ -1288,21 +1338,21 @@ integer(kind=irg),allocatable 		:: ifit(:,:,:,:)		!< array used to search
 !                this is the case for the selected gone and gtwo.
  if ((isym.eq.8).and.(cell%gamma.eq.120.0)) then
    isym=12
-   fit = CalcAngle(float(gone),float(gtwo),'r')*180.0/cPi 
+   fit = CalcAngle(cell,float(gone),float(gtwo),'r')*180.0/cPi 
    if (abs(fit-120.0).lt.1.0) then
      gtwo=gone+gtwo
    end if
  end if
 !
  if (isym.eq.8) then
-   fit = CalcAngle(float(gone),float(gtwo),'r')*180.0/cPi 
+   fit = CalcAngle(cell,float(gone),float(gtwo),'r')*180.0/cPi 
    if (abs(fit-120.0).gt.1.0) then
      gtwo=gtwo-gone
    end if
 
 ! we assume it is the 31m setting;  if the order of gone is 6, then that is not true
-   call CalcFamily(gone,num,'r')
-   call GetOrder(float(k),il,num,jcnt)
+   call CalcFamily(cell,gone,num,'r',itmp)
+   call GetOrder(float(k),il,num,jcnt,itmp)
    if (jcnt.eq.6) then  ! it is the 3m1 setting
      isym = 13
    end if
@@ -1311,8 +1361,8 @@ integer(kind=irg),allocatable 		:: ifit(:,:,:,:)		!< array used to search
 ! it could the 3m1 setting for the 3m hexagonal case
  if (isym.eq.12) then
 ! we assume it is the 31m setting;  if the order of gone is 6, then that is not true
-   call CalcFamily(gone,num,'r')
-   call GetOrder(float(k),il,num,jcnt)
+   call CalcFamily(cell,gone,num,'r',itmp)
+   call GetOrder(float(k),il,num,jcnt,itmp)
    if (jcnt.eq.6) then  ! it is the 3m1 setting
      isym = 14
    end if
@@ -1320,7 +1370,7 @@ integer(kind=irg),allocatable 		:: ifit(:,:,:,:)		!< array used to search
 
 ! For isym = 9 or 10:   60 degrees between vectors (may not be the case)
  if ((isym.eq.9).or.(isym.eq.10)) then
-   fit = CalcAngle(float(gone),float(gtwo),'r')*180.0/cPi 
+   fit = CalcAngle(cell,float(gone),float(gtwo),'r')*180.0/cPi 
    if (abs(fit-120.0).lt.1.0) then
      gtwo=gone+gtwo
    end if
@@ -1336,9 +1386,10 @@ end subroutine ShortestG
 !
 !> @brief  is a reflection allowed?
 !
-!> @details determine whether or not a given reflection is absent due  
+!> @details determine whether or not a given reflection is absent due to
 !> lattice centering operations.
 !
+!> @param cell unit cell pointer
 !> @param g input vector  
 !
 !> @date  10/13/98 MDG 1.0 original
@@ -1346,15 +1397,17 @@ end subroutine ShortestG
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  03/21/13 MDG 3.0 clean up and updated IO
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
+!> @date  06/05/14 MDG 4.1 added unit cell pointer as argument
 !--------------------------------------------------------------------------
-logical function IsGAllowed(g)
+logical function IsGAllowed(cell,g)
 
-use local
 use symmetryvars
 
 IMPLICIT NONE
 
+type(unitcell),pointer	:: cell
 integer(kind=irg),INTENT(IN)		:: g(3)		!< input reciprocal lattice vector
+
 integer(kind=irg)			:: seo		!< auxiliary variable
 character(1)				:: lc		!< first letter of space group name
 
@@ -1369,7 +1422,7 @@ character(1)				:: lc		!< first letter of space group name
   case ('A'); seo = mod(g(2)+g(3)+100,2); if (seo.eq.1) IsGAllowed = .FALSE.
   case ('B'); seo = mod(g(1)+g(3)+100,2); if (seo.eq.1) IsGAllowed = .FALSE.
   case ('C'); seo = mod(g(1)+g(2)+100,2); if (seo.eq.1) IsGAllowed = .FALSE.
-  case ('R'); if (hexset) then
+  case ('R'); if (cell%hexset) then
                seo = mod(-g(1)+g(2)+g(3)+90,3); if (seo.ne.0) IsGAllowed = .FALSE.
               endif ! otherwise reflections are all allowed
  end select
@@ -1397,6 +1450,7 @@ end function IsGAllowed
 !> The normal conversion from the reduced order ir to the actual Bright Field
 !> symmetry uses the PGTWDinverse array to determine the 2D symmetry
 !
+!> @param cell unit cell pointer
 !> @param uvw input vector (zone axis)
 !> @param j index into inverse Laue group list
 !> @param isym keeps track of special cases	
@@ -1407,25 +1461,27 @@ end function IsGAllowed
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  03/21/13 MDG 3.0 clean up and updated IO
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
+!> @date  06/05/14 MDG 4.1 added unit cell pointer as argument
 !--------------------------------------------------------------------------
-subroutine BFsymmetry(uvw,j,isym,ir)
+subroutine BFsymmetry(cell,uvw,j,isym,ir)
 
 use local
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(IN)	:: uvw(3)	!< zone axis indices
-integer(kind=irg),INTENT(IN)	:: j		!< index into Laue group list
-integer(kind=irg),INTENT(OUT)	:: isym		!< keeps track of special cases
-integer(kind=irg),INTENT(OUT)	:: ir		!< index of point group
+type(unitcell),pointer	:: cell
+integer(kind=irg),INTENT(IN)		:: uvw(3)	!< zone axis indices
+integer(kind=irg),INTENT(IN)		:: j		!< index into Laue group list
+integer(kind=irg),INTENT(OUT)		:: isym		!< keeps track of special cases
+integer(kind=irg),INTENT(OUT)		:: ir		!< index of point group
 
-integer(kind=irg)		:: orderPG, Lauenum, ng		!< auxiliary variables
-real(kind=dbl)			:: kstar(48,3)				!< star variable
+integer(kind=irg)			:: orderPG, Lauenum, ng		!< auxiliary variables
+real(kind=dbl)				:: kstar(48,3)				!< star variable
 
 
  orderPG = cell%SG%SYM_NUMpt
  Lauenum = PGLaueinv(j)
- call CalcStar(dble(uvw),ng,kstar,'d')
+ call CalcStar(cell,dble(uvw),ng,kstar,'d')
  ir = orderPG/ng
 
 ! take care of special cases
@@ -1447,53 +1503,47 @@ end subroutine BFsymmetry
 !
 !> @brief  Determine the diffraction group number and optionally produce output
 !
+!> @param cell unit cell pointer
 !> @param uvw input vector (zone axis)
 !> @param pgnum point group number
 !> @param verbose (optional) produces output if present
 !
 !> @date  10/01/13 MDG 1.0 original
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
+!> @date  06/05/14 MDG 4.1 added unit cell pointer as argument
 !--------------------------------------------------------------------------
-function GetPatternSymmetry(uvw,pgnum,verbose) result(dgn)
+function GetPatternSymmetry(cell,uvw,pgnum,verbose) result(dgn)
 
 use local
 use io
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(IN)	:: uvw(3)	!< zone axis indices
-integer(kind=irg),INTENT(IN)	:: pgnum	!< point group number
-logical,INTENT(IN),OPTIONAL	:: verbose	!< print output or not
+type(unitcell),pointer	:: cell
+integer(kind=irg),INTENT(IN)		:: uvw(3)	!< zone axis indices
+integer(kind=irg),INTENT(IN)		:: pgnum	!< point group number
+logical,INTENT(IN),OPTIONAL		:: verbose	!< print output or not
 
-integer(kind=irg)		:: dgn		!< output diffraction group number
-integer(kind=irg)		:: io_int(3)
+integer(kind=irg)			:: dgn		!< output diffraction group number
+integer(kind=irg)			:: io_int(3)
 
 ! get the diffraction group number
- dgn = GetDiffractionGroup(uvw,pgnum)
+ dgn = GetDiffractionGroup(cell,uvw,pgnum)
 
 ! and print some general information if needed.
  if (present(verbose)) then
-   mess = ' '
-   call Message("(A)")
+   call Message(' ',"(A)")
    io_int(1:3) = uvw(1:3)
    call WriteValue(' Zone Axis : ',io_int,3,"('[',I3,I3,I3,']')")
-   mess = ' Crystal point group           : '//PGTHD(pgnum)
-   call Message("(/A)")
-   mess = ' Laue group                    : '// PGTHD(PGLaue(pgnum))
-   call Message("(A)")
-   mess = ' Diffraction group             : '//DG(dgn)
-   call Message("(A)")
-   mess = ' Projection diffraction group  : '// DG(PDG(dgn))
-   call Message("(A/)")
+   call Message(' Crystal point group           : '//PGTHD(pgnum), frm = "(/A)")
+   call Message(' Laue group                    : '// PGTHD(PGLaue(pgnum)), frm = "(A)")
+   call Message(' Diffraction group             : '//DG(dgn), frm = "(A)")
+   call Message(' Projection diffraction group  : '// DG(PDG(dgn)), frm = "(A/)")
 
-   mess = ' Bright Field symmetry         : '//PGTWD(BFPG(dgn))
-   call Message("(A)")
-   mess = ' Whole Pattern symmetry        : '//PGTWD(WPPG(dgn))
-   call Message("(A)")
-   mess = ' Dark Field general symmetry   : '//PGTWD(DFGN(dgn))
-   call Message("(A)")
-   mess = ' Dark Field special symmetry   : '//PGTWD(DFSP(dgn))
-   call Message("(A/)")
+   call Message(' Bright Field symmetry         : '//PGTWD(BFPG(dgn)), frm = "(A)")
+   call Message(' Whole Pattern symmetry        : '//PGTWD(WPPG(dgn)), frm = "(A)")
+   call Message(' Dark Field general symmetry   : '//PGTWD(DFGN(dgn)), frm = "(A)")
+   call Message(' Dark Field special symmetry   : '//PGTWD(DFSP(dgn)), frm = "(A/)")
  end if
 
 end function GetPatternSymmetry
@@ -1514,6 +1564,7 @@ end function GetPatternSymmetry
 !> BESR table and the International Tables for Crystallography, point group section,
 !> Table 10.2.2.
 !
+!> @param cell unit cell pointer
 !> @param uvw zone axis direction 
 !> @param pgn point group number
 !
@@ -1523,26 +1574,27 @@ end function GetPatternSymmetry
 !
 !> @date  10/01/13 MDG 1.0 original
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
+!> @date  06/05/14 MDG 4.1 added unit cell pointer as argument
 !--------------------------------------------------------------------------
-function GetDiffractionGroup(uvw,pgn) result(dgn)
+function GetDiffractionGroup(cell,uvw,pgn) result(dgn)
 
-use local
 use symmetryvars
 use io
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(IN)	:: uvw(3)			!< zone axis indices
-integer(kind=irg),INTENT(IN)	:: pgn				!< point group number
+type(unitcell),pointer	:: cell
+integer(kind=irg),INTENT(IN)		:: uvw(3)			!< zone axis indices
+integer(kind=irg),INTENT(IN)		:: pgn				!< point group number
 
-real(kind=dbl)			:: kstar(48,3)			!< star variable
-integer(kind=irg)		:: ng				!< number of members in star
-integer(kind=irg)		:: auvw(3), mina, nz, i, s 	!< abs(uvw), min(auvw), number of zeroes
-integer(kind=irg)		:: dgn				!< (output) diffraction group number
-logical				:: found
+real(kind=dbl)				:: kstar(48,3)			!< star variable
+integer(kind=irg)			:: ng				!< number of members in star
+integer(kind=irg)			:: auvw(3), mina, nz, i, s 	!< abs(uvw), min(auvw), number of zeroes
+integer(kind=irg)			:: dgn				!< (output) diffraction group number
+logical					:: found
 
 ! compute the order of the family of directions (in direct space)
- call CalcStar(dble(uvw),ng,kstar,'d')
+ call CalcStar(cell,dble(uvw),ng,kstar,'d')
 
 ! determine some parameters that might be useful in deciding the correct diffraction group symmetry 
  auvw = iabs(uvw)
@@ -1572,8 +1624,7 @@ select case (pgn)
  		case (48)
  			dgn = 4  ! 2R
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
  	end select
  case (31) ! -4 3 m
  	select case (ng)
@@ -1594,8 +1645,7 @@ select case (pgn)
 				dgn = 1 ! 1
 			end if 
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
  	end select
  case (30) ! 432
  	select case (ng)
@@ -1616,8 +1666,7 @@ select case (pgn)
 			  end if
 			end if
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
  	end select
  !------------
  case (29) ! m3
@@ -1631,8 +1680,7 @@ select case (pgn)
  		case (24)
  			dgn = 4  ! 2R
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
  	end select
  case (28) ! 23
  	select case (ng)
@@ -1647,8 +1695,7 @@ select case (pgn)
  				dgn = 1 ! 1
  			end if
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
  	end select
  !------------
  case (27) ! 6/mmm
@@ -1662,8 +1709,7 @@ select case (pgn)
 		case (24)
  			dgn = 4  ! 2R
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
  	end select
  case (26) ! -6m2
  	select case (ng)
@@ -1698,8 +1744,7 @@ select case (pgn)
 				dgn = 1  ! 1
 			end if
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
  	end select
  case (25) ! 6mm
  	select case (ng)
@@ -1718,8 +1763,7 @@ select case (pgn)
  				dgn = 1 ! 1
 			end if
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
  	end select
  case (24) ! 622
  	select case (ng)
@@ -1744,8 +1788,7 @@ select case (pgn)
  				dgn = 1 ! 1
 			end if
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
  	end select
  !------------
  case (23) ! 6/m
@@ -1757,8 +1800,7 @@ select case (pgn)
  		case (12)
 			dgn = 4  ! 2R
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
  	end select
  case (22) ! -6
  	select case (ng)
@@ -1769,8 +1811,7 @@ select case (pgn)
  		case (6)
 			dgn = 1  ! 1
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
  	end select
  case (21) ! -6
  	select case (ng)
@@ -1783,8 +1824,7 @@ select case (pgn)
 				dgn = 1  ! 1
 			end if
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
  	end select
  !------------
  case (20) ! -3m
@@ -1809,8 +1849,7 @@ select case (pgn)
   		case (12)
 			dgn = 4  ! 2R
 		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
  	end select
  case (19) ! -3m1
  	select case (ng)
@@ -1825,8 +1864,7 @@ select case (pgn)
   		case (6)
 			dgn = 1  ! 1
 		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
  	end select
  case (18) ! 321
  	select case (ng)
@@ -1846,8 +1884,7 @@ select case (pgn)
 				dgn = 1  ! 1
 			end if
 		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
  	end select
  !------------
  case (17) ! -3
@@ -1857,8 +1894,7 @@ select case (pgn)
  		case (6)
  			dgn = 4  ! 2R 
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
  	end select
  case (16) ! 3
  	select case (ng)
@@ -1867,8 +1903,7 @@ select case (pgn)
  		case (3)
  			dgn = 1  ! 1 
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
  	end select
  !------------
  case (15) ! 4/mmm
@@ -1882,8 +1917,7 @@ select case (pgn)
  		case (16)
  			dgn = 4  ! 2R
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
  	end select
  case (14) ! 4/mmm
  	select case (ng)
@@ -1906,8 +1940,7 @@ select case (pgn)
 				dgn = 1  ! 1
 			end if
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
  	end select
  case (13) ! 4mmm
  	select case (ng)
@@ -1926,8 +1959,7 @@ select case (pgn)
 				dgn = 1  ! 1
 			end if
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
 	end select
  case (12) ! 422
  	select case (ng)
@@ -1943,8 +1975,7 @@ select case (pgn)
 				dgn = 6 ! mR
 			end if
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
 	end select
 !------------
  case (11) ! 4/m
@@ -1956,8 +1987,7 @@ select case (pgn)
  		case (8)
 			dgn = 4  ! 2R
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
 	end select
  case (10) ! -4
  	select case (ng)
@@ -1970,8 +2000,7 @@ select case (pgn)
 				dgn = 1 ! 1
 			end if				
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
 	end select
  case (9) ! 4
  	select case (ng)
@@ -1984,8 +2013,7 @@ select case (pgn)
 				dgn = 1 ! 1
 			end if				
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
 	end select
 !------------
  case (8) ! mmm
@@ -1997,8 +2025,7 @@ select case (pgn)
  		case (8)
 			dgn = 4 ! 2R
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
 	end select
  case (7) ! mm2
  	select case (ng)
@@ -2017,8 +2044,7 @@ select case (pgn)
 				dgn = 1 ! 1
 			end if
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
 	end select
  case (6) ! 222
  	select case (ng)
@@ -2031,8 +2057,7 @@ select case (pgn)
 				dgn = 1 ! 1
 			end if
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
 	end select
 !------------
  case (5) ! 2/m
@@ -2046,8 +2071,7 @@ select case (pgn)
  		case (4)
  			dgn = 4 ! 2R
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
 	end select
  case (4) ! m
  	select case (ng)
@@ -2060,8 +2084,7 @@ select case (pgn)
  				dgn = 1 ! 1
 			end if
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
 	end select
  case (3) ! 2
  	select case (ng)
@@ -2074,8 +2097,7 @@ select case (pgn)
  		case (2)
 			dgn = 1 ! 1
  		case default
-			mess = ' -> incorrect number of equivalent directions in point group '//PGTHD(pgn)
-			call Message("(A)")
+			call Message(' -> incorrect number of equivalent directions in point group '//PGTHD(pgn), frm = "(A)")
 	end select
 !------------
  case (2) ! -1
@@ -2100,12 +2122,13 @@ end function GetDiffractionGroup
 !> @details The output of this routine is stored in the TDPG structure that 
 !> is defined at the end of the symmetryvars module.  Routine verified on 10/2/13.
 !
+!> @param TDPG output structure
 !> @param pgn 2D point group number
 !
 !> @date  10/02/13 MDG 1.0 original
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
-subroutine Generate2DSymmetry(pgn)
+subroutine Generate2DSymmetry(TDPG,pgn)
 
 use local
 use error
@@ -2113,6 +2136,7 @@ use symmetryvars
 
 IMPLICIT NONE
 
+type (symdata2D),INTENT(OUT)	:: TDPG
 integer(kind=irg),INTENT(IN)	:: pgn		!< point group number
 
 ! here we define all 8 possible 2x2 matrices (remember column major order !)
@@ -2242,6 +2266,7 @@ end subroutine Generate2DSymmetry
 !> angle thetam if a correction is needed. If necessary, the 2D pint group number is also 
 !> changed (for the 3m1 vs. 31m case).
 !
+!> @param cell unit cell pointer
 !> @param k zone axis
 !> @param ga horizontal g vector
 !> @param isym 2D point group number for whole pattern symmetry
@@ -2249,8 +2274,9 @@ end subroutine Generate2DSymmetry
 !
 !> @date  10/14/13 MDG 1.0 original
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
+!> @date  06/05/14 MDG 4.1 added unit cell pointer as argument
 !--------------------------------------------------------------------------
-subroutine CheckPatternSymmetry(k,ga,isym,thetam)
+subroutine CheckPatternSymmetry(cell,k,ga,isym,thetam)
 
 use local
 use error
@@ -2261,6 +2287,7 @@ use io
 
 IMPLICIT NONE
 
+type(unitcell),pointer			:: cell
 integer(kind=irg),INTENT(IN)		:: k(3)		!< zone axis
 integer(kind=irg),INTENT(IN)		:: ga(3)	!< g-vector
 integer(kind=irg),INTENT(INOUT)	:: isym		!< 2D point group number
@@ -2268,6 +2295,7 @@ real(kind=sgl),INTENT(OUT)		:: thetam	!< rotation angle (degrees, CCW)
 
 integer(kind=irg)			:: num
 real(kind=sgl)				:: io_real(1)
+integer(kind=irg)			:: itmp(48,3)	!< array used for family computations etc
 
 ! no action is needed for the following 2D point groups: 1, 2, 2mm, 3, 4, 4mm, 6, 6mm
 thetam = 0.0
@@ -2278,9 +2306,9 @@ thetam = 0.0
 ! ga and ga' and set thetam to half of this angle.
 
 if (isym.eq.3) then 
-  call CalcFamily(ga, num, 'r')
+  call CalcFamily(cell, ga, num, 'r',itmp)
   if (num.ne.1) then
-    thetam = 0.5 * CalcAngle(float(ga),float(itmp(2,1:3)),'r') *180.0/cPi
+    thetam = 0.5 * CalcAngle(cell, float(ga),float(itmp(2,1:3)),'r') *180.0/cPi
   end if  
   io_real(1) = thetam
   call WriteValue('  --> Pattern symmetry m correction; point group rotation angle [deg]',io_real, 1, "(F6.3/)")
@@ -2289,14 +2317,13 @@ end if
 ! for the groups 3m1 and 31m, we need to check which one we have
 
 if ((isym.eq.8).or.(isym.eq.11)) then 
-  call CalcFamily(ga, num, 'r')
+  call CalcFamily(cell, ga, num, 'r',itmp)
   if (num.eq.3) then
     isym = 11
   else
     isym = 8
   end if  
-  mess = '  --> Pattern symmetry verified to be '//PGTWD(isym)
-  call Message("(A/)")
+  call Message('  --> Pattern symmetry verified to be '//PGTWD(isym), frm = "(A/)")
 end if
 
 end subroutine CheckPatternSymmetry
