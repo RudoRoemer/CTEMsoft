@@ -68,38 +68,38 @@ use omp_lib
 
 ! Define the "kind" parameters for single and double precision reals, 
 !> single precision real kind parameter
-  integer,parameter        	        :: sgl = SELECTED_REAL_KIND(p=6,r=37)	
+  integer,parameter                     :: sgl = SELECTED_REAL_KIND(p=6,r=37)   
 !> double precision real kind parameter
-  integer,parameter        	        :: dbl = SELECTED_REAL_KIND(p=13,r=200)	
+  integer,parameter                     :: dbl = SELECTED_REAL_KIND(p=13,r=200) 
 
 ! Define the "kind" parameters for short and regular integers,
 !> short integer kind parameter 
-  integer,parameter        	        :: ish = SELECTED_INT_KIND(3) 
-!> long integer kind parameter 
-  integer,parameter        	        :: irg = SELECTED_INT_KIND(9)
+  integer,parameter                     :: ish = SELECTED_INT_KIND(3) 
+!> long integer kind parameter  
+  integer,parameter                     :: irg = SELECTED_INT_KIND(9)
 
 ! in Release 3.0 and beyond, this parameter should be replaced by a more flexible
 ! mechanism for source code version numbering using the CMake facilities.
 !> source code version number
-  character(8), parameter  	        :: scversion="4.0/2014"
+  character(8), parameter               :: scversion="3.x.x"
 !> source code author name
-  character(13), parameter 	        :: username="Marc De Graef"	
+  character(13), parameter              :: username="Marc De Graef"     
 !> source code author location
-  character(26), parameter 	        :: userlocn="Carnegie Mellon University"
+  character(26), parameter              :: userlocn="Carnegie Mellon University"
 
 !> standard string length for filenames
-  integer(kind=irg),parameter	        :: fnlen=132
+  integer(kind=irg),parameter           :: fnlen=132
   
 !> reserved IO unit identifiers for postscript (20) and data (21-23)
-  integer(kind=irg), parameter	        :: psunit=20, dataunit=21, dataunit2=22, dataunit3=23
+  integer(kind=irg), parameter          :: psunit=20, dataunit=21, dataunit2=22, dataunit3=23
 
 ! parameters governing the size of varous arrays
 !> Maximum number of positions in asymmetric unit
-  integer(kind=irg), parameter       	:: maxpasym=250		
+  integer(kind=irg), parameter          :: maxpasym=250         
 !> Maximum number of defects of any given type
-  integer(kind=irg), parameter       	:: maxdefects=250
+  integer(kind=irg), parameter          :: maxdefects=250
 !> max number of templates in templatecodes.txt file
-  integer(kind=irg), parameter		:: maxnumtemplates = 256
+  integer(kind=irg), parameter          :: maxnumtemplates = 256
 
 ! ================================
 ! 06/08/14 the entries below are still global variables and should be removed
@@ -107,9 +107,9 @@ use omp_lib
 
 !> pathnames to the namelist template files
 ! This should be reworked via CMake commands
-  character(fnlen)			:: templatepathname   !='~/.CTEMsoft2013/templatefolder'
-  character(fnlen)			:: resourcepathname   !='~/.CTEMsoft2013/resources'
-  character(17)				:: templatecodefilename = 'templatecodes.txt'
+  character(fnlen)                      :: templatepathname   !='~/.CTEMsoft2013/templatefolder'
+  character(fnlen)                      :: resourcepathname   !='~/.CTEMsoft2013/resources'
+  character(17)                         :: templatecodefilename = 'templatecodes.txt'
 
 contains
 
@@ -144,9 +144,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)           :: progname
 character(fnlen),INTENT(IN)           :: progdesc
-integer(kind=irg),INTENT(IN),OPTIONAL	:: stdout
+integer(kind=irg),INTENT(IN),OPTIONAL :: stdout
 
-integer(kind=irg)			:: std 
+integer(kind=irg)                     :: std 
 
  std = 6
  if (PRESENT(stdout)) std=stdout
@@ -185,9 +185,9 @@ subroutine timestamp (stdout)
 
   IMPLICIT NONE
   
-  integer(kind=irg),INTENT(IN),OPTIONAL	:: stdout
+  integer(kind=irg),INTENT(IN),OPTIONAL :: stdout
 
-  integer(kind=irg)	  :: std
+  integer(kind=irg)      :: std
   character ( len = 8 )  :: ampm
   integer ( kind = irg ) :: d
   character ( len = 8 )  :: date
