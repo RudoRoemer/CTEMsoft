@@ -89,6 +89,78 @@ end interface CalcCross
 
 contains
 
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: ResetCell
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief  reset all unit cell and symmetry variables to zero
+! 
+!> @date    1/ 5/99 MDG 1.0 original
+!> @date    5/19/01 MDG 2.0 f90 version
+!> @date   11/27/01 MDG 2.1 added kind support
+!> @date   03/25/13 MDG 3.0 updated IO
+!> @date   01/10/14 MDG 4.0 update after new cell type
+!> @date   06/06/14 MDG 4.1 further update of various fields in cell pointer
+!> @date   06/06/14 MDG 4.2 moved routine to crystal module
+!--------------------------------------------------------------------------
+subroutine ResetCell(cell)
+
+use crystalvars
+use symmetryvars
+
+IMPLICIT NONE
+
+type(unitcell),pointer	:: cell
+
+! initialize cell 
+ cell%a = 0.0_dbl
+ cell%b = 0.0_dbl
+ cell%c = 0.0_dbl
+ cell%alpha = 0.0_dbl
+ cell%beta  = 0.0_dbl
+ cell%gamma = 0.0_dbl
+ cell%vol   = 0.0_dbl
+ cell%dmt = 0.0_dbl
+ cell%rmt = 0.0_dbl
+ cell%dsm = 0.0_dbl
+ cell%rsm = 0.0_dbl
+ cell%ATOM_type = 0_irg
+ cell%ATOM_ntype = 0_irg
+ cell%SYM_SGnum = 0_irg
+ cell%xtal_system = 0_irg
+ cell%SYM_SGset = 0_irg
+ cell%ATOM_pos = 0.0_dbl
+ cell%fname = ''
+
+! initialize all symmetry variables
+ cell%SG%SYM_GENnum = 0_irg
+ cell%SG%SYM_MATnum = 0_irg
+ cell%SG%SYM_NUMpt  = 0_irg
+ cell%SG%SYM_reduce = .FALSE.
+ cell%SG%SYM_trigonal = .FALSE.
+ cell%SG%SYM_second = .FALSE.
+ cell%SG%SYM_centrosym = .FALSE. 
+ cell%SG%SYM_c = 0.0_dbl
+ cell%SG%SYM_data = 0.0_dbl
+ cell%SG%SYM_direc = 0.0_dbl
+ cell%SG%SYM_recip = 0.0_dbl
+ cell%SG%SYM_name = ''
+
+! and deallocate any arrays
+ if (allocated(cell%LUT)) deallocate(cell%LUT)
+ if (allocated(cell%dbdiff)) deallocate(cell%dbdiff)
+ if (allocated(cell%apos)) deallocate(cell%apos)
+ 
+! deallocate any linked lists 
+ if (associated(cell%reflist)) nullify(cell%reflist)
+
+end subroutine ResetCell
+
+
+
 !--------------------------------------------------------------------------
 !
 ! SUBROUTINE: CalcMatrices

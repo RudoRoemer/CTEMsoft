@@ -3,6 +3,7 @@
 
 # ignore pro.swp files
 *.pro.swp
+*.swp
 
 **/*.*~
 
@@ -17,8 +18,12 @@ IDL/**/*.sav
 
 # CMake files
 /CMakeFiles/
+*.make
 *.cmake
 CMakeCache.txt
+**/Makefile
+**/link.txt
+**/progress.marks
 
 *.atools
 

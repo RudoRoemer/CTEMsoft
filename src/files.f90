@@ -48,124 +48,12 @@
 
 module files
 
+use local
+
+! needs to be removed !!
 logical :: loadingfile
 
 contains
-
-!--------------------------------------------------------------------------
-!
-! SUBROUTINE: ResetCell
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief  reset all unit cell and symmetry variables to zero
-! 
-!> @date    1/ 5/99 MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90 version
-!> @date   11/27/01 MDG 2.1 added kind support
-!> @date   03/25/13 MDG 3.0 updated IO
-!> @date   01/10/14 MDG 4.0 update after new cell type
-!--------------------------------------------------------------------------
-subroutine ResetCell
-
-use local
-use crystalvars
-use symmetryvars
-
-IMPLICIT NONE
-
-! initialize cell 
- cell%a = 0.0_dbl
- cell%b = 0.0_dbl
- cell%c = 0.0_dbl
- cell%alpha = 0.0_dbl
- cell%beta  = 0.0_dbl
- cell%gamma = 0.0_dbl
- cell%vol   = 0.0_dbl
- cell%dmt = 0.0_dbl
- cell%rmt = 0.0_dbl
- cell%dsm = 0.0_dbl
- cell%rsm = 0.0_dbl
- cell%ATOM_type = 0_irg
- cell%ATOM_ntype = 0_irg
- cell%SYM_SGnum = 0_irg
- cell%xtal_system = 0_irg
- cell%SYM_SGset = 0_irg
- cell%ATOM_pos = 0.0_dbl
- cell%fname = ''
-
-! initialize all symmetry variables
- cell%SG%SYM_GENnum = 0_irg
- cell%SG%SYM_MATnum = 0_irg
- cell%SG%SYM_NUMpt  = 0_irg
- cell%SG%SYM_reduce = .FALSE.
- cell%SG%SYM_trigonal = .FALSE.
- cell%SG%SYM_second = .FALSE.
- cell%SG%SYM_centrosym = .FALSE. 
- cell%SG%SYM_c = 0.0_dbl
- cell%SG%SYM_data = 0.0_dbl
- cell%SG%SYM_direc = 0.0_dbl
- cell%SG%SYM_recip = 0.0_dbl
- cell%SG%SYM_name = ''
-
-! and deallocate any arrays
- if (allocated(cell%LUT)) deallocate(cell%LUT)
- if (allocated(cell%dbdiff)) deallocate(cell%dbdiff)
- if (allocated(cell%apos)) deallocate(cell%apos)
- if (associated(cell%reflist)) nullify(cell%reflist)
-
-end subroutine ResetCell
-
-
-!--------------------------------------------------------------------------
-!
-! SUBROUTINE: CopyFromCell
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief  copy from cell into newcell
-! 
-!> @date   01/10/14 MDG 1.0 update after new cell type
-!--------------------------------------------------------------------------
-subroutine CopyFromCell(newcell)
-
-use local
-use crystalvars
-
-IMPLICIT NONE
-
-type (unitcell),INTENT(INOUT) :: newcell
-
-newcell = cell
-newcell%reflist => cell%reflist
-
-end subroutine CopyFromCell
-
-!--------------------------------------------------------------------------
-!
-! SUBROUTINE: CopyToCell
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief copy from newcell to cell
-! 
-!> @date   01/10/14 MDG 1.0 update after new cell type
-!--------------------------------------------------------------------------
-subroutine CopyToCell(newcell)
-
-use local
-use crystalvars
-
-IMPLICIT NONE
-
-type (unitcell),INTENT(IN) :: newcell
-
-call ResetCell
-cell = newcell
-cell%reflist => newcell%reflist
-
-end subroutine CopyToCell
-
 
 !--------------------------------------------------------------------------
 !
@@ -180,10 +68,10 @@ end subroutine CopyToCell
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
 !> @date   01/10/14 MDG 4.0 update after new cell type
+!> @date   06/06/14 MDG 4.1 added cell pointer as argument, corrected Message routine
 !--------------------------------------------------------------------------
-subroutine DumpXtalInfo    
+subroutine DumpXtalInfo(cell, stdout)    
 
-use local
 use constants
 use io
 use crystalvars
@@ -192,56 +80,62 @@ use symmetryvars
 
 IMPLICIT NONE
 
-integer(kind=irg)  	:: i, j, oi_int(3)
-real(kind=dbl)		:: oi_real(5)
+type(unitcell), pointer                 :: cell
+integer(kind=irg),INTENT(IN),OPTIONAL   :: stdout
 
- mess = ''; call Message("(A/)")
- mess = 'Crystal Structure Information'; call Message("('-->',A,'<--')")
+integer(kind=irg)                       :: i, j, oi_int(3), std
+real(kind=dbl)                          :: oi_real(5)
+
+ std = 6
+ if (PRESENT(stdout)) std = stdout
+
+ call Message('', frm = "(A/)", stdout = std)
+ call Message('Crystal Structure Information', frm = "('-->',A,'<--')", stdout = std)
  oi_real(1) = cell%a
- call WriteValue('  a [nm]             : ', oi_real, 1, "(F9.5)")
+ call WriteValue('  a [nm]             : ', oi_real, 1, "(F9.5)", stdout = std)
  oi_real(1) = cell%b
- call WriteValue('  b [nm]             : ', oi_real, 1, "(F9.5)")
+ call WriteValue('  b [nm]             : ', oi_real, 1, "(F9.5)", stdout = std)
  oi_real(1) = cell%c
- call WriteValue('  c [nm]             : ', oi_real, 1, "(F9.5)")
+ call WriteValue('  c [nm]             : ', oi_real, 1, "(F9.5)", stdout = std)
  oi_real(1) = cell%alpha
- call WriteValue('  alpha [deg]        : ', oi_real, 1, "(F9.5)")
+ call WriteValue('  alpha [deg]        : ', oi_real, 1, "(F9.5)", stdout = std)
  oi_real(1) = cell%beta
- call WriteValue('  beta  [deg]        : ', oi_real, 1, "(F9.5)")
+ call WriteValue('  beta  [deg]        : ', oi_real, 1, "(F9.5)", stdout = std)
  oi_real(1) = cell%gamma
- call WriteValue('  gamma [deg]        : ', oi_real, 1, "(F9.5)")
+ call WriteValue('  gamma [deg]        : ', oi_real, 1, "(F9.5)", stdout = std)
  oi_real(1) = cell%vol
- call WriteValue('  Volume [nm^3]      : ', oi_real, 1, "(F12.8)")
+ call WriteValue('  Volume [nm^3]      : ', oi_real, 1, "(F12.8)", stdout = std)
  oi_int(1) = cell%SYM_SGnum
- call WriteValue('  Space group #      : ', oi_int, 1, "(1x,I3)")
- call WriteValue('  Space group symbol : ', trim(SYM_SGname(cell%SYM_SGnum)) )
- call WriteValue('  Generator String   : ',  trim(SYM_GL(cell%SYM_SGnum)) )
+ call WriteValue('  Space group #      : ', oi_int, 1, "(1x,I3)", stdout = std)
+ call WriteValue('  Space group symbol : ', trim(SYM_SGname(cell%SYM_SGnum)) , stdout = std)
+ call WriteValue('  Generator String   : ',  trim(SYM_GL(cell%SYM_SGnum)) , stdout = std)
  if ((cell%SYM_SGset.eq.2).AND.(cell%xtal_system.ne.5)) then 
-  mess = '   Using second origin setting'; call Message("(A)")
+  call Message('   Using second origin setting', frm = "(A)", stdout = std)
  endif
  if ((cell%SYM_SGset.eq.2).AND.(cell%xtal_system.eq.5)) then 
-  mess = '   Using rhombohedral parameters'; call Message("(A)")
+  call Message('   Using rhombohedral parameters', frm = "(A)", stdout = std)
  endif
   if (cell%SG%SYM_centrosym) then 
-    mess = '   Structure is centrosymmetric'; call Message("(A)")
+    call Message('   Structure is centrosymmetric', frm = "(A)", stdout = std)
  else 
-   mess = '   Structure is non-centrosymmetric'; call Message("(A)")
+   call Message('   Structure is non-centrosymmetric', frm = "(A)", stdout = std)
  end if
 ! generate atom positions and dump output  
- mess = ' '; call Message("(A)")
- call CalcPositions('v')
+ call Message('', frm = "(A/)", stdout = std)
+ call CalcPositions(cell,'v')
  oi_int(1) = cell%ATOM_ntype
- call WriteValue('  Number of asymmetric atom positions ', oi_int, 1)
+ call WriteValue('  Number of asymmetric atom positions ', oi_int, 1, stdout = std)
  do i=1,cell%ATOM_ntype
   oi_int(1:3) = (/i, cell%ATOM_type(i), numat(i)/)
-  call WriteValue('  General position / atomic number / multiplicity :', oi_int, 3,"(1x,I3,'/',I2,'/',I3,$)")
-  mess = ' ('//ATOM_sym(cell%ATOM_type(i))//')'; call Message("(A)")
-  mess = '   Equivalent positions  (x y z  occ  DWF) ';  call Message("(A)")
+  call WriteValue('  General position / atomic number / multiplicity :', oi_int, 3,"(1x,I3,'/',I2,'/',I3,$)", stdout = std)
+  call Message(' ('//ATOM_sym(cell%ATOM_type(i))//')', frm = "(A)", stdout = std)
+  call Message('   Equivalent positions  (x y z  occ  DWF) ', frm = "(A)", stdout = std)
   do j=1,numat(i)
     oi_real(1:5) = (/cell%apos(i, j,1:3),dble(cell%ATOM_pos(i,4:5))/)
-    call WriteValue('         > ', oi_real, 5,"(2x,4(F9.5,','),F9.5)")
+    call WriteValue('         > ', oi_real, 5,"(2x,4(F9.5,','),F9.5)", stdout = std)
   end do
 end do
-mess = ''; call Message("(A/)")
+call Message('', frm = "(A/)", stdout = std)
 
 end subroutine DumpXtalInfo
 
@@ -253,6 +147,8 @@ end subroutine DumpXtalInfo
 !
 !> @brief load or generate crystal data
 ! 
+!> @param cell unit cell pointer
+!> @param loadingfile logical
 !> @param fname file name (optional)
 !
 !> @date    1/ 5/99 MDG 1.0 original
@@ -260,10 +156,10 @@ end subroutine DumpXtalInfo
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
 !> @date   01/10/14 MDG 4.0 update after new cell type
+!> @date   06/06/14 MDG 4.1 added cell pointer and loadingfile arguments
 !--------------------------------------------------------------------------
-subroutine CrystalData(fname)
+subroutine CrystalData(cell, loadingfile, fname), stdout
 
-use local
 use io
 use crystalvars
 use crystal
@@ -271,34 +167,40 @@ use symmetry
 
 IMPLICIT NONE
 
-character(fnlen),OPTIONAL,INTENT(IN)  	:: fname			!< optional file name
+type(unitcell), pointer                 :: cell
+logical, INTENT(INOUT)                  :: loadingfile
+character(fnlen),OPTIONAL,INTENT(IN)    :: fname        !< optional file name
+intger(kind=irg),INTENT(IN),OPTIONAL    :: stdout
 
-integer(kind=irg)			:: io_int(1)
-logical 				:: fr = .TRUE.
+integer(kind=irg)                       :: io_int(1), std
+logical                                 :: fr = .TRUE.
+
+ std = 6
+ if (PRESENT(stdout)) std = stdout
 
  loadingfile = .FALSE.
  if (PRESENT(fname)) then 
   cell%fname = fname
   loadingfile = .TRUE.
-  call ReadDataFile(fr)
+  call ReadDataFile(cell,fr)
  else
-  call ReadValue(' Load file (0) or new data (1) ? ', io_int, 1)
-  mess = ' '; call Message("(A)")
+  call ReadValue(' Load file (0) or new data (1) ? ', io_int, 1), stdout = std
+  call Message('', frm = "(A/)", stdout = std)
   if (io_int(1).ne.0) then
    cell%SYM_SGset=0
-   call GetLatParm
-   call CalcMatrices
-   call GetSpaceGroup
-   call GenerateSymmetry(.TRUE.)
-   call GetAsymPos
-   call SaveData
+   call GetLatParm(cell)
+   call CalcMatrices(cell)
+   call GetSpaceGroup(cell)
+   call GenerateSymmetry(cell,.TRUE.)
+   call GetAsymPos(cell)
+   call SaveData(cell)
   else
    loadingfile = .TRUE.
-   call ReadDataFile
+   call ReadDataFile(cell)
   end if
  end if
 
-end subroutine 
+end subroutine CrystalData
 
 !--------------------------------------------------------------------------
 !
@@ -310,13 +212,16 @@ end subroutine
 ! 
 !> @todo This should be replaced with a text-based editable file format (.txt. or .xml)
 !
+!> @param cell unit cell pointer
+!
 !> @date    1/ 5/99 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
 !> @date   01/10/14 MDG 4.0 update after new cell type
+!> @date   06/06/14 MDG 4.1 added cell pointer argument
 !--------------------------------------------------------------------------
-subroutine SaveData
+subroutine SaveData(cell)
 
 use local
 use io
@@ -324,6 +229,8 @@ use crystalvars
 use crystal
  
 IMPLICIT NONE
+
+type(unitcell), pointer :: cell
 
 ! call SafeOpenFile('xt','unformatted',cell%fname)
  open (dataunit,file=trim(cell%fname),status='unknown',form='unformatted')
@@ -345,7 +252,8 @@ end subroutine
 !
 !> @details Also converts the older file format to the current one.
 !
-!> @param fr logical, passed on to SafeOpenFile routine
+!> @param cell unit cell pointer
+!> @param fr optional logical, passed on to SafeOpenFile routine
 ! 
 !> @todo This should be replaced with a text-based editable file format (.txt. or .xml)
 !
@@ -354,8 +262,9 @@ end subroutine
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
 !> @date   01/10/14 MDG 4.0 update after new cell type
+!> @date   06/06/14 MDG 4.1 added cell pointer argument
 !--------------------------------------------------------------------------
-subroutine ReadDataFile(fr)
+subroutine ReadDataFile(cell,fr)
 
 use local
 use io
@@ -366,13 +275,15 @@ use symmetryvars
 
 IMPLICIT NONE
 
-logical,optional,INTENT(IN)  		:: fr			!< logical 
-integer(kind=irg) 			:: i,ipg,isave,iost
-logical           			:: fread = .TRUE.
+type(unitcell), pointer                 :: cell
+logical,optional,INTENT(IN)             :: fr                   !< logical 
+
+integer(kind=irg)                       :: i,ipg,isave,iost
+logical                                 :: fread = .TRUE.
 
 ! the following variables are used for the older (smaller) xtal file format
-integer 				:: ATOM_type(50),ATOM_ntype,SYM_SGnum,SYM_SGset
-real    				:: ATOM_pos(50,5)
+integer                                 :: ATOM_type(50),ATOM_ntype,SYM_SGnum,SYM_SGset
+real                                    :: ATOM_pos(50,5)
 
 
  if (present(fr)) fread=.FALSE.
@@ -385,29 +296,29 @@ real    				:: ATOM_pos(50,5)
    call SafeCloseFile('xt','keep',cell%fname,.TRUE.)   ! ok, this is a modern file with 100 max atom positions in asymmetric unit
  else ! this a legacy input file with only 50 maximum atom positions in the asymmetric unit cell... conversion is needed
 ! close the file first, then re-open it and read with alternative variables
-   mess = 'Found a data file of the old format; converting to new format'; call Message("(A)")
+   call Message('Found a data file of the old format; converting to new format', frm = "(A)")
    call SafeCloseFile('xt','keep',cell%fname,.TRUE.)     
    call SafeOpenFile('xt','unformatted',cell%fname,.FALSE.)
    read (dataunit) cell%xtal_system, cell%a,cell%b,cell%c,cell%alpha,cell%beta,cell%gamma
    read (dataunit,iostat=iost) ATOM_type, ATOM_pos, ATOM_ntype, SYM_SGnum, SYM_SGset
    call SafeCloseFile('xt','keep',cell%fname)     
 ! and copy them into the new arrays
-  cell%ATOM_type(1:50) = ATOM_type(1:50)
-  cell%ATOM_pos(1:50,1:5) = ATOM_pos(1:50,1:5)
-  cell%ATOM_ntype = ATOM_ntype
-  cell%SYM_SGnum = SYM_SGnum
-  cell%SYM_SGset = SYM_SGset
-  call SaveData
-  mess = 'Conversion complete'; call Message("(A)")
+   cell%ATOM_type(1:50) = ATOM_type(1:50)
+   cell%ATOM_pos(1:50,1:5) = ATOM_pos(1:50,1:5)
+   cell%ATOM_ntype = ATOM_ntype
+   cell%SYM_SGnum = SYM_SGnum
+   cell%SYM_SGset = SYM_SGset
+   call SaveData
+   call Message('Conversion complete', frm = "(A)")
  end if
  
- strucdef = .TRUE.
- hexset = .FALSE.
- if (cell%xtal_system.eq.4) hexset = .TRUE.
- if ((cell%xtal_system.eq.5).AND.(cell%SYM_SGset.ne.2)) hexset = .TRUE.
+! strucdef = .TRUE.
+ cell%hexset = .FALSE.
+ if (cell%xtal_system.eq.4) cell%hexset = .TRUE.
+ if ((cell%xtal_system.eq.5).AND.(cell%SYM_SGset.ne.2)) cell%hexset = .TRUE.
 
 ! compute the metric matrices
- call CalcMatrices
+ call CalcMatrices(cell)
 
 ! First generate the point symmetry matrices, then the actual space group.
 ! Get the symmorphic space group corresponding to the point group
@@ -421,17 +332,17 @@ real    				:: ATOM_pos(50,5)
 ! steps can be done simultaneously, otherwise two calls to 
 ! GenerateSymmetry are needed.
  if (SGPG(ipg).eq.cell%SYM_SGnum) then
-  call GenerateSymmetry(.TRUE.)
+  call GenerateSymmetry(cell,.TRUE.)
  else
   isave = cell%SYM_SGnum
   cell%SYM_SGnum = SGPG(ipg)
-  call GenerateSymmetry(.TRUE.)
+  call GenerateSymmetry(cell,.TRUE.)
   cell%SYM_SGnum = isave
-  call GenerateSymmetry(.FALSE.)
+  call GenerateSymmetry(cell,.FALSE.)
  end if
 
 ! and print the information on the screen
- call DumpXtalInfo
+ call DumpXtalInfo(cell)
 
 end subroutine
 
@@ -448,7 +359,8 @@ end subroutine
 !> @param ftyp file type identifier
 !> @param frm string to indicate file format (formatted, unformatted)
 !> @param fname file name
-!> @param fread logical
+!> @param fread optional logical
+!> @param stdout optional output unit identifier
 ! 
 !> @todo This should be replaced with a text-based editable file format (.txt. or .xml)
 !
@@ -456,8 +368,9 @@ end subroutine
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
+!> @date   06/06/14 MDG 4.0 added stdout argument
 !--------------------------------------------------------------------------
-subroutine SafeOpenFile(ftyp,frm,fname,fread)
+subroutine SafeOpenFile(ftyp,frm,fname,fread, stdout)
 
 use local
 use error
@@ -465,13 +378,17 @@ use io
 
 IMPLICIT NONE
 
-character(2),INTENT(IN)        		:: ftyp		!< selects the logical unit
-character(fnlen),INTENT(INOUT)	:: fname		!< file name string
-character(*),INTENT(IN)        		:: frm		!< formatting option
-logical,OPTIONAL,INTENT(IN) 		:: fread		!< read if .TRUE., write if .FALSE.
-character(1)        				:: ans
-logical             					:: lexist,lopen 
-integer             				:: iunit
+character(2),INTENT(IN)                 :: ftyp         !< selects the logical unit
+character(fnlen),INTENT(INOUT)          :: fname        !< file name string
+character(*),INTENT(IN)                 :: frm          !< formatting option
+logical,OPTIONAL,INTENT(IN)             :: fread        !< read if .TRUE., write if .FALSE.
+
+character(1)                            :: ans
+logical                                 :: lexist,lopen 
+integer(kind=irg)                       :: iunit, std
+
+ std = 6
+ if (PRESENT(stdout)) std = stdout
 
  select case (ftyp)
   case('xt'); iunit = dataunit
@@ -487,10 +404,10 @@ integer             				:: iunit
 ! get filename
   if (PRESENT(fread)) then
    if (fread.eqv..TRUE.) then ! get the input filename 
-    call ReadValue(' Enter input file name : ', fname,"(A)")
+    call ReadValue(' Enter input file name : ', fname,"(A)", stdout = std)
    end if
   else
-   call ReadValue(' Enter output file name : ', fname, "(A)")
+   call ReadValue(' Enter output file name : ', fname, "(A)", stdout = std)
   end if
 
 ! does file already exist ?
@@ -507,7 +424,7 @@ integer             				:: iunit
      open(unit=iunit,file=trim(fname),status='old',action='read',form = frm)
      lopen = .TRUE.
    else  ! file exists and we need to write, so ask what to do
-    call ReadValue(' Output file exists.  Overwrite it ? (y/n) ', ans,"(A1)")
+    call ReadValue(' Output file exists.  Overwrite it ? (y/n) ', ans,"(A1)", stdout = std)
     replace: if ((ans == 'Y').or.(ans == 'y')) then
 ! open file for writing 
      open(unit=iunit,file=trim(fname),status='replace',action='write',form = frm)
@@ -521,9 +438,9 @@ integer             				:: iunit
 
  if (lopen) then ! ok, file is open, so we print a message
   if (PRESENT(fread)) then
-   mess = '  File '//trim(fname)//' open for input '; call Message("(A)")
+   call Message('  File '//trim(fname)//' open for input ', frm = "(A)", stdout = std)
   else
-   mess = '  File '//trim(fname)//' open for output '; call Message("(A)")
+   call Message('  File '//trim(fname)//' open for output ', frm = "(A)", stdout = std)
   end if
  end if
 
@@ -548,8 +465,9 @@ end subroutine SafeOpenFile
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
+!> @date   06/08/14 MDG 4.0 added stdout argument
 !--------------------------------------------------------------------------
-subroutine SafeCloseFile(ftyp,stt,fname,quiet)
+subroutine SafeCloseFile(ftyp,stt,fname,quiet,stdout)
 
 use local
 use io
@@ -557,11 +475,16 @@ use error
 
 IMPLICIT NONE
 
-character(2),INTENT(IN)        		:: ftyp		!< file type identifier
-character(*),INTENT(IN)        		:: stt			!< status string
-character(fnlen),INTENT(IN)       	:: fname		!< file name
-logical,OPTIONAL,INTENT(IN) 		:: quiet		!< logical verbose or not
-integer(kind=irg)   				:: iunit,ier
+character(2),INTENT(IN)                 :: ftyp         !< file type identifier
+character(*),INTENT(IN)                 :: stt          !< status string
+character(fnlen),INTENT(IN)             :: fname        !< file name
+logical,OPTIONAL,INTENT(IN)             :: quiet        !< logical verbose or not
+integer(kind=irg),OPTIONAL,INTENT(IN)   :: quiet        !< logical verbose or not
+
+integer(kind=irg)                       :: iunit,ier,std
+
+std = 6
+if (PRESENT(stdout)) std = stdout
 
  select case (ftyp)
   case('xt'); iunit = dataunit
@@ -573,10 +496,10 @@ integer(kind=irg)   				:: iunit,ier
 
  close(unit=iunit,status=stt,iostat=ier)
 
- if (ier.ne.0) call FatalError('SafeCloseFile',' data file NOT saved')
+ if (ier.ne.0) call FatalError('SafeCloseFile',' data file NOT saved', stdout = std)
 
  if (.not.present(quiet)) then
-  mess = ' Data has been stored in file '//trim(fname); call Message("(A)")
+  call Message(' Data has been stored in file '//trim(fname), frm = "(A)", stdout = std)
  end if
  
 end subroutine SafeCloseFile
@@ -598,21 +521,26 @@ end subroutine SafeCloseFile
 !> @param templatelist integer array identifying the template files to be copied
 ! 
 !> @date   06/26/13 MDG 1.0 first attempt
+!> @date   06/08/14 MDG 2.0 added stdout argument
 !--------------------------------------------------------------------------
-subroutine CopyTemplateFiles(nt,templatelist)
+subroutine CopyTemplateFiles(nt,templatelist,stdout)
 
 use local
 use io
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(IN)	:: nt
-integer(kind=irg),INTENT(IN)	:: templatelist(*)
-character(fnlen) 		:: templates(maxnumtemplates)
+integer(kind=irg),INTENT(IN)            :: nt
+integer(kind=irg),INTENT(IN)            :: templatelist(*)
+integer(kind=irg),INTENT(IN),OPTIONAL   :: stdout
 
-character(fnlen)		:: input_name, output_name
-integer(kind=sgl)		:: ios, i, j
-character(255)			:: line
+character(fnlen)                :: templates(maxnumtemplates)
+character(fnlen)                :: input_name, output_name
+integer(kind=sgl)               :: ios, i, j, std
+character(255)                  :: line
+
+std = 6
+if (PRESENT(stdout)) std = stdout
 
 call getenv("CTEMsoft2013templates",templatepathname)
 call getenv("CTEMsoft2013resources",resourcepathname)
@@ -621,7 +549,7 @@ call getenv("CTEMsoft2013resources",resourcepathname)
 
 ! first open and read the resources/templatecodes.txt file
 open(UNIT=dataunit,FILE=trim(resourcepathname)//'/'//templatecodefilename, &
-	STATUS='old', FORM='formatted',ACCESS='sequential')
+        STATUS='old', FORM='formatted',ACCESS='sequential')
 
 templates = ''
 do
@@ -641,15 +569,15 @@ do i=1,nt
  OPEN(UNIT=dataunit,FILE=trim(input_name), STATUS='old', FORM='formatted',ACCESS='sequential')
  OPEN(UNIT=dataunit2,FILE=trim(output_name), STATUS='replace', FORM='formatted',ACCESS='sequential')
  do
- 	read(dataunit,'(A)',iostat=ios) line
- 	if (ios.ne.0) then 
- 	  exit
-	end if
- 	write(dataunit2,'(A)') trim(line)
+        read(dataunit,'(A)',iostat=ios) line
+        if (ios.ne.0) then 
+          exit
+        end if
+        write(dataunit2,'(A)') trim(line)
   end do
  CLOSE(UNIT=dataunit, STATUS='keep')
  CLOSE(UNIT=dataunit2, STATUS='keep')
- mess = '  -> created template file '//trim(templates(templatelist(i))); call Message("(A)")
+ call Message('  -> created template file '//trim(templates(templatelist(i))), frm = "(A)", stdout = std)
 end do
  
 
@@ -675,24 +603,30 @@ end subroutine CopyTemplateFiles
 ! 
 !> @date   06/26/13 MDG 1.0 first attempt (this might belong elsewhere...)
 !> @date   09/04/13 MDG 1.1 minor modifications to arguments
+!> @date   06/08/14 MDG 2.0 added stdout argument
 !--------------------------------------------------------------------------
-subroutine Interpret_Program_Arguments(nmldefault,numt,templatelist)
+subroutine Interpret_Program_Arguments(nmldefault,numt,templatelist,progname,stdout)
 
 use local
 use io
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(INOUT)		:: nmldefault
-integer(kind=irg),INTENT(IN)		:: numt
-integer(kind=irg),INTENT(IN)		:: templatelist(*)
+character(fnlen),INTENT(INOUT)          :: nmldefault
+integer(kind=irg),INTENT(IN)            :: numt
+integer(kind=irg),INTENT(IN)            :: templatelist(*)
+character(fnlen),INTENT(IN)             :: progname
+integer(kind=irg),INTENT(IN),OPTIONAL   :: stdout
 
-integer(kind=irg)			:: numarg	!< number of command line arguments
-integer(kind=irg)			:: iargc	!< external function for command line
-character(fnlen)    			:: arg		!< to be read from the command line
-character(fnlen)			:: nmlfile	!< nml file name
-integer(kind=irg)			:: i
-logical					:: haltprogram
+integer(kind=irg)                       :: numarg       !< number of command line arguments
+integer(kind=irg)                       :: iargc        !< external function for command line
+character(fnlen)                        :: arg          !< to be read from the command line
+character(fnlen)                        :: nmlfile      !< nml file name
+integer(kind=irg)                       :: i, std
+logical                                 :: haltprogram
+
+std = 6
+if (PRESENT(stdout)) std = stdout
 
 numarg = iargc()
 nmlfile = ''
@@ -708,34 +642,33 @@ if (numarg.gt.0) then ! there is at least one argument
 ! does the argument start with a '-' character?    
     if (arg(1:1).eq.'-') then
         if (trim(arg).eq.'-h') then
-		mess = ' Program should be called as follows: '; call Message("(/A)")
-		mess = '        '//trim(progname)//' -h -t [nmlfile]'; call Message("(A)")
-		mess = ' where nmlfile is an optional file name for the namelist file;'; call Message("(A/)")
-		mess = ' If absent, the default name '''//trim(nmldefault)//''' will be used.'; call Message("(A)")
-		mess = ' To create templates of all possible input files, type '//trim(progname)//' -t'; call Message("(A)")
-		mess = ' To produce this message, type '//trim(progname)//' -h'; call Message("(A)")
-		mess = ' All program arguments can be combined in the same order; the argument without - '; call Message("(A)")
-		mess = ' will be interpreted as the input file name.'; call Message("(A/)")
-	end if
+         call Message(' Program should be called as follows: ', frm = "(/A)", stdout = std)
+         call Message('        '//trim(progname)//' -h -t [nmlfile]', frm = "(A)", stdout = std)
+         call Message(' where nmlfile is an optional file name for the namelist file;', frm = "(A/)", stdout = std)
+         call Message(' If absent, the default name '''//trim(nmldefault)//''' will be used.', frm = "(A)", stdout = std)
+         call Message(' To create templates of all possible input files, type '//trim(progname)//' -t', frm = "(A)", stdout = std)
+         call Message(' To produce this message, type '//trim(progname)//' -h', frm = "(A)", stdout = std)
+         call Message(' All program arguments can be combined in the same order; the argument without - ', frm = "(A)", stdout = std)
+         call Message(' will be interpreted as the input file name.', frm = "(A/)", stdout = std)
+        end if
         if (trim(arg).eq.'-t') then
 ! with this option the program creates template namelist files in the current folder so that the 
 ! user can edit them (file extension will be .template; should be changed by user to .nml)
-		mess = 'Creating program template files:'; call Message("(/A)")
-		call CopyTemplateFiles(numt,templatelist)
-	end if
+                call Message('Creating program template files:', frm = "(/A)", stdout = std)
+                call CopyTemplateFiles(numt,templatelist)
+        end if
     else
 ! no, the first character is not '-', so this argument must be the filename
 ! if it is present, but any of the other arguments were present as well, then
 ! we stop the program. 
-	nmlfile = arg
-	if (numarg.eq.1) haltprogram = .FALSE.
+        nmlfile = arg
+        if (numarg.eq.1) haltprogram = .FALSE.
     end if
   end do
 end if
 
 if (haltprogram) then
-  mess = 'To execute program, remove all flags except for nml input file name'
-  call Message("(/A/)")
+  call Message('To execute program, remove all flags except for nml input file name', frm = "(/A/)", stdout = std)
   stop
 end if
 
