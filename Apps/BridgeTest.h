@@ -1,20 +1,16 @@
 #ifndef _BRIDGETEST_H_
 #define _BRIDGETEST_H_
 
-// 	struct nmltypefile {
-//  		double sig;
-//  	};
+
+#include "SampleRFZ_Mangling.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 	typedef void (*CallbackType)(int, double*&);
-	void sampler_(int* pgnum, int* nsteps, CallbackType callback);
 
-    //void domcsimulation_(nmltypefile* nmlfile);
-
-
+	void SAMPLERFZ_GLOBAL(sampler, SAMPLER)(int* pgnum, int* nsteps, CallbackType callback);
 
 #ifdef __cplusplus
 }
