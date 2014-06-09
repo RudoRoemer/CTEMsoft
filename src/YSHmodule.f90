@@ -45,7 +45,7 @@ module YSHModule
 
 use local
 use quaternions
-use crystalvars
+use typedefs
 
 IMPLICIT NONE 
 

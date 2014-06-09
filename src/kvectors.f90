@@ -46,19 +46,9 @@
 module kvectors
 
 use local
+use typedefs
 
 IMPLICIT NONE
-
-! derived type definitions 
-
-! linked list of wave vectors (used by all diffraction programs)
-type kvectorlist  
-  integer(kind=irg) 		:: i,j         		! image coordinates
-  real(kind=dbl)    		:: kt(3)       	! tangential component of wavevector
-  real(kind=dbl)    		:: kn          	! normal component
-  real(kind=dbl)    		:: k(3)        	! full wave vector
-  type(kvectorlist),pointer	:: next     		! connection to next wave vector
-end type kvectorlist
 
 contains
 
@@ -76,8 +66,6 @@ contains
 !> @date   04/29/13 MDG 1.0 original
 !--------------------------------------------------------------------------
 function Kdelta(i,j) result(res)
-
-use local
 
 IMPLICIT NONE
 
@@ -131,7 +119,6 @@ use error
 use constants
 use diffraction
 use crystal
-use crystalvars
 
 IMPLICIT NONE
 
@@ -577,7 +564,6 @@ use error
 use constants
 use diffraction
 use crystal
-use crystalvars
 use Lambert
 
 IMPLICIT NONE
@@ -720,7 +706,6 @@ end subroutine CalckvectorsSymmetry
 !--------------------------------------------------------------------------
 subroutine Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,klaue,hexgrid)
 
-use local
 use error
 use crystal
 use constants
@@ -786,8 +771,6 @@ end subroutine Add_knode
 !--------------------------------------------------------------------------
 function GetSextant(x,y) result(res)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN):: x, y 
@@ -847,14 +830,11 @@ end function GetSextant
 !--------------------------------------------------------------------------
 subroutine AddkVector(ktail,cell,numk,delta,i,j,usehex)
 
-use local
 use io
 use constants
 use error
 use diffraction
 use crystal
-use crystalvars
-use dynamical
 
 IMPLICIT NONE
 

@@ -42,19 +42,7 @@
 module STEMmodule
 
 use local
-
-type STEMtype
-	character(fnlen)		:: weightoutput
-	character(2)  			:: geometry
-	integer(kind=irg) 		:: numberofsvalues, numk, numCL
-	real(kind=sgl) 			:: BFradius,ADFinnerradius,ADFouterradius,kt,beamconvergence,cameralength, &
-	                          	   BFmrad,ADFimrad,ADFomrad, diffapmrad, diffapmcenter, CLarray(20)
-	logical,allocatable  		:: ZABFweightsarray(:,:,:),ZAADFweightsarray(:,:,:)       ! only used for the zone axis case
-	real(kind=sgl),allocatable  	:: sgarray(:,:),BFweightsarray(:,:,:),ADFweightsarray(:,:,:)   ! only used for the systematic row case
-end type STEMtype
-
-type(STEMtype) :: STEM
-
+use typedefs
 
 contains
 
@@ -66,21 +54,25 @@ contains
 !
 !> @brief initialize the weight factors for the systematic row case.
 !
+!> @param STEM STEM structure
+!> @param cell unit cell pointer
 !> @param nn number of beams
 !> @param g systematic row basic vector
 ! 
 !> @date   04/29/11 MDG 1.0 original
 !> @date   06/12/13 MDG 2.0 rewrite 
+!> @date   06/09/14 MDG 3.0 added STEM and cell arguments
 !--------------------------------------------------------------------------
-subroutine init_STEM(nn,g)
+subroutine init_STEM(STEM,cell,nn,g)
 
-use local
 use io
 use crystal
 use diffraction
 
 IMPLICIT NONE
 
+type(STEMtype),INTENT(INOUT)          :: STEM
+type(unitcell),pointer	                :: cell
 integer(kind=irg),INTENT(IN)		:: nn
 integer(kind=irg),INTENT(IN)		:: g(3)
 
@@ -100,10 +92,10 @@ logical    				:: debug = .FALSE., diffappresent = .FALSE., apinBF=.FALSE. , api
   allocate(STEM%sgarray(nn,STEM%numberofsvalues))
 
 ! determine the lower and upper bounds of the excitation error for the fundamental reflection G
-  thb = CalcDiffAngle(g(1),g(2),g(3))*0.5  ! Bragg angle in radians
+  thb = CalcDiffAngle(cell,g(1),g(2),g(3))*0.5  ! Bragg angle in radians
 
 ! convert k_t to the alp and omega angles (in radians)
-  glen = CalcLength(float(g),'r')
+  glen = CalcLength(cell,float(g),'r')
   alp = -2.0*STEM%kt*thb
   omega_c = cPi*0.5+alp
   omega_min = omega_c - STEM%beamconvergence/1000.0
@@ -198,7 +190,7 @@ end do  ! that completes the central disk weight factors
 do i=ira+1,nn      ! loop over the positive reflections of the systematic row (the rest follows by symmetry)
 ! redefine a couple of parameters
   j = i - ira
-  thb = CalcDiffAngle(j*g(1),j*g(2),j*g(3))*1000.0  ! diffraction angle in mrad
+  thb = CalcDiffAngle(cell,j*g(1),j*g(2),j*g(3))*1000.0  ! diffraction angle in mrad
   omega_min = thb - th
   omega_max = thb + th
 ! only used for debugging
@@ -272,10 +264,8 @@ if (diffappresent) then   ! there is a diffraction aperture, so revisit the weig
 
 ! if the aperture is outside the ADF detector, or it overlaps the space between the detectors, then abort
   if ( .not.apinBF .and. .not.apinADF ) then
-    mess = 'Please fix input: Diffraction aperture outside BF detector disk or ADF ring !'  
-     call Message("(A)")
-     write (*,*) apinBF, apinADF, a,b,c, dx-dr, dx+dr, dx,dr
-     stop
+    call Message('Please fix input: Diffraction aperture outside BF detector disk or ADF ring !', frm = "(A)")
+    stop
   end if
 
 
@@ -286,7 +276,7 @@ if (apinBF) then
 ! redefine a couple of parameters
   j = -(nn-1)/2-1+i
   if (j.ne.0) then 
-    thb = (j/abs(j)) * CalcDiffAngle(j*g(1),j*g(2),j*g(3))*1000.0  ! diffraction angle in mrad
+    thb = (j/abs(j)) * CalcDiffAngle(cell,j*g(1),j*g(2),j*g(3))*1000.0  ! diffraction angle in mrad
   else
     thb = 0.0
   end if  
@@ -360,7 +350,7 @@ if (apinADF) then
 ! redefine a couple of parameters
     j = -(nn-1)/2-1+i
     if (j.ne.0) then 
-      thb = (j/abs(j)) * CalcDiffAngle(j*g(1),j*g(2),j*g(3))*1000.0  ! diffraction angle in mrad
+      thb = (j/abs(j)) * CalcDiffAngle(cell,j*g(1),j*g(2),j*g(3))*1000.0  ! diffraction angle in mrad
     else
       thb = 0.0
    end if  
@@ -460,27 +450,36 @@ end subroutine init_STEM
 ! 
 !> @note This will need to be reconsidered when we implement sectored detectors ... 
 !
+!> @param STEM STEM structure
+!> @param cell unit cell pointer
+!> @param khead top of kvector list
+!> @param reflist top of reflection list
 !> @param nn number of reflections
 ! 
 !> @date   04/29/11 MDG 1.0 original
 !> @date   06/12/13 MDG 2.0 rewrite 
+!> @date   06/09/14 MDG 3.0 added STEM and cell structures and khead+reflist linked lists
 !--------------------------------------------------------------------------
-subroutine init_STEM_ZA(nn)
+subroutine init_STEM_ZA(STEM,cell,khead,reflist,nn)
 
-use local
 use crystal
 use diffraction
-use dynamical
 use foilmodule
 use kvectors
 use gvectors
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(IN) :: nn
+type(STEMtype),INTENT(INOUT)        :: STEM
+type(unitcell),pointer	             :: cell
+type(kvectorlist),pointer	     :: khead
+type(reflisttype),pointer	     :: reflist
+integer(kind=irg),INTENT(IN)        :: nn
 
 integer(kind=irg)                   :: ik,ig, iCL
 real(kind=sgl)                      :: ll(3), lpg(3), gg(3), glen, gplen, kpg
+type(kvectorlist),pointer	      :: ktmp
+type(reflisttype),pointer	      :: rltmpa
 
 ! this routine initializes the excitation error arrays and the weight-factor arrays for zone axis STEM signals
 ! the weightfactors are quite a bit different from the ones for the systematic row case;
@@ -496,8 +495,8 @@ real(kind=sgl)                      :: ll(3), lpg(3), gg(3), glen, gplen, kpg
   allocate(STEM%sgarray(nn,STEM%numk))
   
 ! transform the foil normal to real space and normalize
-  call TransSpace(sngl(foil%F),DynFN,'d','r')
-  call NormVec(DynFN,'r')
+  call TransSpace(cell,sngl(foil%F),DynFN,'d','r')
+  call NormVec(cell,DynFN,'r')
 
 ! allocate the weight factor arrays, one entry for each beam direction, reflection, and camera length
   allocate(STEM%ZABFweightsarray(nn,STEM%numk,STEM%numCL),STEM%ZAADFweightsarray(nn,STEM%numk,STEM%numCL))
@@ -512,9 +511,9 @@ real(kind=sgl)                      :: ll(3), lpg(3), gg(3), glen, gplen, kpg
     rltmpa => reflist%next
     reflectionloopCL: do ig=1,nn
       gg = float(rltmpa%hkl)
-      glen = CalcLength(gg,'r')
+      glen = CalcLength(cell,gg,'r')
       lpg = ll + gg                ! Laue + g
-      gplen = CalcLength(lpg,'r')
+      gplen = CalcLength(cell,lpg,'r')
       kpg = 2000.0*asin(0.50*sngl(mLambda)*gplen)    ! 2theta in mrad
       do iCL=1,STEM%numCL
         STEM%BFmrad = atan(STEM%BFradius/STEM%CLarray(iCL))*1000.0
@@ -523,21 +522,12 @@ real(kind=sgl)                      :: ll(3), lpg(3), gg(3), glen, gplen, kpg
         if (kpg.le.STEM%BFmrad) STEM%ZABFweightsarray(ig,ik,iCL) = .TRUE.
         if ((kpg.ge.STEM%ADFimrad).AND.(kpg.le.STEM%ADFomrad)) STEM%ZAADFweightsarray(ig,ik,iCL) = .TRUE.
       end do  ! loop over camera lengths
-      STEM%sgarray(ig,ik) = Calcsg(gg,sngl(ktmp%k),DynFN)
+      STEM%sgarray(ig,ik) = Calcsg(cell,gg,sngl(ktmp%k),DynFN)
  ! and we move to the next reflection in the list
       rltmpa => rltmpa%next
     end do reflectionloopCL  
     ktmp => ktmp%next
   end do beamloopCL
-
-!  open(unit=dataunit,file='ZAbfprofiles.data',status='unknown',form='unformatted')
-!  write(unit=dataunit) nn,STEM%numk
-!  write(unit=dataunit) int(STEM%ZABFweightsarray)
-!  close(unit=dataunit,status='keep')
-!  open(unit=dataunit,file='ZAadfprofiles.data',status='unknown',form='unformatted')
-!  write(unit=dataunit) nn,STEM%numk
-!  write(unit=dataunit)  int(STEM%ZAADFweightsarray)
-!  close(unit=dataunit,status='keep')
 
 ! that's it folks!
 end subroutine init_STEM_ZA
@@ -552,7 +542,11 @@ end subroutine init_STEM_ZA
 !
 !> @brief read detector and other parameters for the STEM case
 ! 
+!> @param STEM STEM structure
+!> @param cell unit cell pointer
 !> @param STEMnmlfile filename of the namelist file
+!> @param khead top of kvector list
+!> @param reflist top of reflection list
 !> @param geometry 'SR' for systematic row or 'ZA' for zone axis
 !> @param nn number of reflections
 !> @param g fundamental g-vector for systematic row
@@ -564,15 +558,20 @@ end subroutine init_STEM_ZA
 !> @date   06/12/13 MDG 2.0 rewrite 
 !> @date   11/26/13 MDG 2.1 made geometry an input parameter instead of part of the STEMdata namelist
 !--------------------------------------------------------------------------
-subroutine read_STEM_data(STEMnmlfile,geometry,nn,g,kt,numk,beamdiv)
+subroutine read_STEM_data(STEM,cell,STEMnmlfile,khead,reflist,geometry,nn,g,kt,numk,beamdiv)
 
-use local
 use io
 use files
+use kvectors
+use gvectors
 
 IMPLICIT NONE
 
+type(STEMtype),INTENT(INOUT)                  :: STEM
+type(unitcell),pointer	                        :: cell
 character(fnlen),INTENT(IN)			:: STEMnmlfile
+type(kvectorlist),pointer	                :: khead
+type(reflisttype),pointer	                :: reflist
 character(2),INTENT(IN) 			:: geometry  ! 'SR' or 'ZA'
 integer(kind=irg),INTENT(IN)			:: nn
 integer(kind=irg),INTENT(IN)			:: g(3)
@@ -602,7 +601,7 @@ diffapcenter = 0.0		! position of center of diffraction aperture in mrad along s
 weightoutput = '' 		! string with filename root for graphical output of weight profiles, empty if not needed
 
 ! read the namelist file
-mess = 'opening '//trim(STEMnmlfile); call Message("(/A)")
+call Message('opening '//trim(STEMnmlfile), frm = "(/A)")
 OPEN(UNIT=dataunit,FILE=trim(STEMnmlfile),DELIM='APOSTROPHE')
 READ(UNIT=dataunit,NML=STEMdata)
 CLOSE(UNIT=dataunit)
@@ -639,9 +638,9 @@ if (PRESENT(beamdiv)) beamdiv=beamconvergence
 ! and initialize all other STEM related arrays 
 if (.not.PRESENT(beamdiv)) then
   if (geometry.eq.'SR') then
-    call init_STEM(nn,g)
+    call init_STEM(STEM,cell,nn,g)
   else
-    call init_STEM_ZA(nn)
+    call init_STEM_ZA(STEM,cell,khead,reflist,nn)
   end if
 end if 
 

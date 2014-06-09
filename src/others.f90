@@ -49,6 +49,8 @@
 !--------------------------------------------------------------------------
 module others
 
+use local
+
 contains
 !--------------------------------------------------------------------------
 !
@@ -123,7 +125,6 @@ complex FUNCTION FSCATT (G,UL,Z,SYMBOL,ACCVLT,ABSFLG,ACCFLG,DWFLG)
 ! 
 !**************************************************************************
 
-use local
 use error
 
 real(kind=sgl),parameter     	:: FOURPI=12.56637062
@@ -182,7 +183,6 @@ FUNCTION WEKO (A,B,S)
 ! UPDATE 07.07.93
 ! NOW 4 A AND 4 B
 
-use local
 
 REAL(kind=sgl)   :: A(4), B(4)
 
@@ -207,7 +207,6 @@ END FUNCTION
 
 real FUNCTION FPHON (G,UL,A,B)
 
-use local
 
 real(kind=sgl),parameter  :: FOURPI = 12.56636, FP2= FOURPI*FOURPI
 real(kind=sgl)            :: A(4),B(4),A1(4),B1(4)
@@ -239,7 +238,6 @@ real FUNCTION RI1 (BI,BJ,G)
 
 ! ERSTES INTEGRAL FUER DIE ABSORPTIONSPOTENTIALE
 
-use local
 
 real(kind=sgl),parameter  :: PI=3.1415927, C =0.5772157
 
@@ -287,7 +285,6 @@ real FUNCTION RI2 (BI,BJ,G,U)
 
 ! ZWEITES INTEGRAL FUER DIE ABSORPTIONSPOTENTIALE
 
-use local
 
 real(kind=sgl),parameter  :: PI=3.1415927
 
@@ -379,7 +376,6 @@ real FUNCTION RIH2 (X)
 ! WERTET X*EXP(-X)*EI(X) AUS FUER GROSSE X
 ! DURCH INTERPOLATION DER TABELLE ... AUS ABRAMOWITZ
 
-use local
 
 real(kind=sgl),parameter :: F(0:20) =(/1.000000,1.005051,1.010206,1.015472,1.020852, &
                                        1.026355,1.031985,1.037751,1.043662,1.049726, &
@@ -415,7 +411,6 @@ real FUNCTION EI (X)
 ! EXPONENTIALINTEGRAL
 !   GETESTET -60 < X < 60
 
-use local
 use io
 use error
 
@@ -458,7 +453,6 @@ SUBROUTINE GETWK (Z,SYMBOL,A,B)
 ! UPDATE 07.07.93
 ! NOW 4 A AND 4 B
 
-use local
 
 ! DATEN VON UND FUER DIE AUFRUFENDE ROUTINE
 integer       :: Z
@@ -723,7 +717,6 @@ real FUNCTION FCORE (G,Z,ACCVLT)
 ! 
 !**************************************************************************
 
-use local
 use io
 use error
 

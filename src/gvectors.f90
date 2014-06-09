@@ -50,62 +50,9 @@
 module gvectors
 
 use local
-use crystalvars
+use typedefs
 
 IMPLICIT NONE
-
-! define the cutoff parameters for the Bethe potential approach (and set to zero initially)
-type BetheParameterType
-        real(kind=sgl)                :: c1 = 20.0_sgl
-        real(kind=sgl)                :: c2 = 40.0_sgl
-        real(kind=sgl)                :: c3 = 1000.0_sgl
-        real(kind=sgl)                :: sgdbdiff = 0.05_sgl
-	real(kind=sgl)			:: weakcutoff = 0.0_sgl
-	real(kind=sgl)			:: cutoff = 0.0_sgl
-	real(kind=sgl)			:: sgcutoff = 0.0_sgl
-	integer(kind=irg)		:: nns
-	integer(kind=irg)		:: nnw
-	integer(kind=irg)		:: minweak
-	integer(kind=irg)		:: minstrong
-	integer(kind=irg)		:: maxweak
-	integer(kind=irg)		:: maxstrong
-	integer(kind=irg)		:: totweak
-	integer(kind=irg)		:: totstrong
-	integer(kind=irg),allocatable 	:: weaklist(:) 
-	integer(kind=irg),allocatable 	:: stronglist(:)
-	integer(kind=irg),allocatable 	:: weakhkl(:,:)
-	integer(kind=irg),allocatable 	:: stronghkl(:,:)
-	real(kind=sgl),allocatable	:: weaksg(:)
-	real(kind=sgl),allocatable	:: strongsg(:)
-	integer(kind=irg),allocatable 	:: strongID(:)
-	integer(kind=sgl),allocatable	:: reflistindex(:)		! used to map strong reflections onto the original reflist
-	integer(kind=sgl),allocatable	:: weakreflistindex(:)		! used to map weak reflections onto the original reflist
-end type BetheParameterType
-
-
-!--------------------------------------------------------------------------
-!--------------------------------------------------------------------------
-!--------------------------------------------------------------------------
-! [06/09/14] ALL of the following global variable definitions need to be removed !!!
-
-! these may not be needed anymore [06/09/14]; only used in CTEMlacbed.openmp.f90, which is old...
-
-! finally, create allocatable arrays with the same fields as the rlp list
-! these may be needed for multithreaded applications, since linked lists
-! cause OpenMP runtime problems.  This may not be a real problem but caused
-! by me misunderstanding some aspects of OpenMP ... it's happened before ...
-!integer(kind=irg),allocatable	:: Reflist_hkl(:,:)
-! complex(kind=dbl),allocatable	:: Reflist_Ucg(:)
-!real(kind=sgl),allocatable	:: Reflist_sg(:), Reflist_xg(:)
-
-! same for the BetheParameter arrays; somehow OpenMP doesn't like this type of variable...
-!integer(kind=irg),allocatable	:: BPweaklist(:), BPstronglist(:), BPweakhkl(:,:), BPstronghkl(:,:), BPreflistindex(:)
-!real(kind=sgl),allocatable	:: BPweaksg(:), BPstrongsg(:)
-!integer(kind=irg)		:: BPnns, BPnnw
-!--------------------------------------------------------------------------
-!--------------------------------------------------------------------------
-!--------------------------------------------------------------------------
-
 
 contains
 
@@ -130,7 +77,6 @@ contains
 subroutine MakeRefList(cell, rltail)
 
 use error
-use crystalvars
 
 IMPLICIT NONE
 
@@ -174,8 +120,6 @@ end subroutine MakeRefList
 subroutine AddReflection(rltail,cell,hkl)
 
 use error
-use dynamical
-use crystalvars
 use diffraction
 
 IMPLICIT NONE
@@ -231,7 +175,6 @@ subroutine Printrlp(rlp,first,stdout)
 
 use io
 use constants
-use dynamical
 
 IMPLICIT NONE
 
@@ -317,7 +260,6 @@ end subroutine Printrlp
 !--------------------------------------------------------------------------
 subroutine Apply_BethePotentials(cell, BetheParameter)
 
-use crystalvars
 use diffraction
 
 IMPLICIT NONE
@@ -452,7 +394,6 @@ subroutine Prune_ReflectionList(cell,khead,reflist,BetheParameter,numk,nbeams)
 
 use io
 use crystal
-use dynamical
 use kvectors
 use diffraction
 
@@ -504,7 +445,7 @@ nbeams = 0
 ! 	sgp = abs(CalcsgHOLZ(float(rltmpa%hkl),sngl(ktmp%kt),sngl(mLambda)))
 ! 	write (*,*) rltmpa%hkl,CalcsgHOLZ(float(rltmpa%hkl),sngl(ktmp%kt), &
 !			sngl(mLambda)),Calcsg(float(rltmpa%hkl),sngl(ktmp%k),DynFN)
-        sgp = abs(Calcsg(cell,float(rltmpa%hkl),sngl(ktmp%k),DynFN)) 
+        sgp = abs(Calcsg(cell,float(rltmpa%hkl),sngl(ktmp%k),Dyn%FN)) 
 ! we have to deal separately with double diffraction reflections, since
 ! they have a zero potential coefficient !        
         if ( cell%dbdiff(rltmpa%hkl(1),rltmpa%hkl(2),rltmpa%hkl(3)) ) then  ! it is a double diffraction reflection
@@ -615,10 +556,8 @@ end subroutine Prune_ReflectionList
 !--------------------------------------------------------------------------
 recursive subroutine Compute_DynMat(cell,reflist,BetheParameter,calcmode,kk,kt,IgnoreFoilNormal,IncludeSecondOrder)
 
-use dynamical
 use error
 use constants
-use crystalvars
 use crystal
 use diffraction
 use io
@@ -952,7 +891,6 @@ end subroutine Compute_DynMat
 !--------------------------------------------------------------------------
 subroutine Set_Bethe_Parameters(BetheParameter,silent)
 
-use local
 use io
 
 IMPLICIT NONE
@@ -1016,7 +954,6 @@ subroutine ShortestGFOLZ(cell,k,ga,gb,gshort,gp)
 
 use io
 use crystal
-use crystalvars
 use error
 
 IMPLICIT NONE
@@ -1092,8 +1029,6 @@ end subroutine ShortestGFOLZ
 !> @date   06/09/14 MDG 1.1 added cell argument
 !--------------------------------------------------------------------------
 subroutine Delete_gvectorlist(cell)
-
-use crystalvars
 
 IMPLICIT NONE
 

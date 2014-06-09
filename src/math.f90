@@ -75,7 +75,6 @@ contains
 !--------------------------------------------------------------------------
 subroutine mInvert(a,b,uni)
 
-use local
 use error
 
 IMPLICIT NONE
@@ -132,7 +131,6 @@ end subroutine mInvert
 !--------------------------------------------------------------------------
 subroutine cInvert(a,b)
 
-use local
 use error
 
 IMPLICIT NONE
@@ -187,7 +185,6 @@ end subroutine cInvert
 !--------------------------------------------------------------------------
 recursive subroutine MatrixExponential(A,E,z0,TP,nn)
 
-use local
 use io
 use error
 

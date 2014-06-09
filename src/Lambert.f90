@@ -226,8 +226,6 @@ contains
 !--------------------------------------------------------------------------
 subroutine InitLambertParameters
 
-use local
-
 IMPLICIT NONE
 
 real(kind=dbl)		:: dpi
@@ -283,8 +281,6 @@ end subroutine InitLambertParameters
 !--------------------------------------------------------------------------
 recursive function Lambert2DSquareForwardSingle(xy,ierr) result(res)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)		:: xy(2)
@@ -334,8 +330,6 @@ end function Lambert2DSquareForwardSingle
 !> @date 7/10/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function Lambert2DSquareForwardDouble(xy,ierr) result(res)
-
-use local
 
 IMPLICIT NONE
 
@@ -387,8 +381,6 @@ end function Lambert2DSquareForwardDouble
 !--------------------------------------------------------------------------
 recursive function Lambert2DSquareInverseSingle(xyz,ierr) result(res)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)		:: xyz(3)
@@ -433,8 +425,6 @@ end function Lambert2DSquareInverseSingle
 !> @date 7/10/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function Lambert2DSquareInverseDouble(xyz,ierr) result(res)
-
-use local
 
 IMPLICIT NONE
 
@@ -490,8 +480,6 @@ end function Lambert2DSquareInverseDouble
 !> @date 7/10/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function Lambert2DHexForwardSingle(xy,ierr) result(res)
-
-use local
 
 IMPLICIT NONE
 
@@ -551,8 +539,6 @@ end function Lambert2DHexForwardSingle
 !--------------------------------------------------------------------------
 recursive function Lambert2DHexForwardDouble(xy,ierr) result(res)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN)	:: xy(2) 
@@ -611,8 +597,6 @@ end function Lambert2DHexForwardDouble
 !> @date 7/10/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function Lambert2DHexInverseSingle(xyz,ierr) result(res)
-
-use local
 
 IMPLICIT NONE
 
@@ -679,8 +663,6 @@ end function Lambert2DHexInverseSingle
 !--------------------------------------------------------------------------
 recursive function Lambert2DHexInverseDouble(xyz,ierr) result(res)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN)	:: xyz(3) 
@@ -744,8 +726,6 @@ end function Lambert2DHexInverseDouble
 !--------------------------------------------------------------------------
 recursive function GetSextantSingle(xy) result(res)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)	:: xy(2) 
@@ -792,8 +772,6 @@ end function GetSextantSingle
 !> @date 11/21/12    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function GetSextantDouble(xy) result(res)
-
-use local
 
 IMPLICIT NONE
 
@@ -853,8 +831,6 @@ end function GetSextantDouble
 !> @date 7/12/13    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function Lambert3DCubeForwardSingle(xyz,ierr) result(res)
-
-use local
 
 IMPLICIT NONE
 
@@ -947,8 +923,6 @@ end function Lambert3DCubeForwardSingle
 !--------------------------------------------------------------------------
 recursive function Lambert3DCubeForwardDouble(xyz,ierr) result(res)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN)	:: xyz(3)
@@ -1037,8 +1011,6 @@ end function Lambert3DCubeForwardDouble
 !> @date 7/12/13    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function Lambert3DCubeInverseSingle(xyz,ierr) result(res)
-
-use local
 
 IMPLICIT NONE
 
@@ -1133,8 +1105,6 @@ end function Lambert3DCubeInverseSingle
 !--------------------------------------------------------------------------
 recursive function Lambert3DCubeInverseDouble(xyz,ierr) result(res)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN)	:: xyz(3)
@@ -1227,8 +1197,6 @@ end function Lambert3DCubeInverseDouble
 !--------------------------------------------------------------------------
 recursive function GetPyramidSingle(xyz) result(res)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)	:: xyz(3) 
@@ -1290,8 +1258,6 @@ end function GetPyramidSingle
 !> @date 11/21/12    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function GetPyramidDouble(xyz) result(res)
-
-use local
 
 IMPLICIT NONE
 
@@ -1361,7 +1327,6 @@ end function GetPyramidDouble
 !--------------------------------------------------------------------------
 recursive function Lambert3DBallToQuaternionSingle(xyz, ierr) result(res)
 
-use local
 use quaternions
 
 IMPLICIT NONE
@@ -1417,7 +1382,6 @@ end function Lambert3DBallToQuaternionSingle
 !--------------------------------------------------------------------------
 recursive function Lambert3DBallToQuaternionDouble(xyz, ierr) result(res)
 
-use local
 use quaternions
 
 IMPLICIT NONE
@@ -1474,7 +1438,6 @@ end function Lambert3DBallToQuaternionDouble
 !--------------------------------------------------------------------------
 recursive function Lambert3DCubeToQuaternionSingle(xyz, ierr) result(res)
 
-use local
 use quaternions
 
 IMPLICIT NONE
@@ -1506,7 +1469,6 @@ end function Lambert3DCubeToQuaternionSingle
 !--------------------------------------------------------------------------
 recursive function Lambert3DCubeToQuaternionDouble(xyz, ierr) result(res)
 
-use local
 use quaternions
 
 IMPLICIT NONE
@@ -1544,8 +1506,6 @@ end function Lambert3DCubeToQuaternionDouble
 !> @date 7/12/13    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function StereoGraphicForwardSingle(xyz, ierr, Radius) result(res)
-
-use local
 
 IMPLICIT NONE
 
@@ -1587,8 +1547,6 @@ end function StereoGraphicForwardSingle
 !--------------------------------------------------------------------------
 recursive function StereoGraphicForwardDouble(xyz, ierr, Radius) result(res)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN)		:: xyz(3)
@@ -1628,8 +1586,6 @@ end function StereoGraphicForwardDouble
 !> @date 7/12/13    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function StereoGraphicInverseSingle(xy, ierr, Radius) result(res)
-
-use local
 
 IMPLICIT NONE
 
@@ -1671,8 +1627,6 @@ end function StereoGraphicInverseSingle
 !> @date 7/12/13    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function StereoGraphicInverseDouble(xy, ierr, Radius) result(res)
-
-use local
 
 IMPLICIT NONE
 
@@ -1721,8 +1675,6 @@ end function StereoGraphicInverseDouble
 !--------------------------------------------------------------------------
 recursive function LambertForwardSingle(xyz, ierr, Radius) result(res)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)		:: xyz(3)
@@ -1769,8 +1721,6 @@ end function LambertForwardSingle
 !> @date 8/01/13    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function LambertForwardDouble(xyz, ierr, Radius) result(res)
-
-use local
 
 IMPLICIT NONE
 
@@ -1821,8 +1771,6 @@ end function LambertForwardDouble
 !--------------------------------------------------------------------------
 recursive function LambertInverseSingle(xy, ierr, Radius) result(res)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)		:: xy(2)
@@ -1861,8 +1809,6 @@ end function LambertInverseSingle
 !> @date 8/01/13    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function LambertInverseDouble(xy, ierr, Radius) result(res)
-
-use local
 
 IMPLICIT NONE
 
@@ -1918,8 +1864,6 @@ end function LambertInverseDouble
 !> @date  09/20/13 MDG 3.0 re-adapted to generate 2D equivalent point list
 !--------------------------------------------------------------------------
 subroutine Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
-
-use local
 
 IMPLICIT NONE
 
@@ -2044,7 +1988,7 @@ end subroutine Apply2DLaueSymmetry
 subroutine Apply2DPGSymmetry(TDPG,ipx,ipy,isym,iequiv,nequiv)
 
 use io
-use symmetryvars
+use typedefs
 use symmetry
 
 IMPLICIT NONE

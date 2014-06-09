@@ -55,7 +55,7 @@
 module stacking_fault
 
 use local  
-use crystalvars
+use typedefs
 
 contains
 
@@ -302,7 +302,6 @@ use quaternions
 use rotations
 use crystal
 use symmetry
-use symmetryvars
 
 IMPLICIT NONE
 
@@ -495,7 +494,6 @@ use quaternions
 use rotations
 use crystal
 use symmetry
-use symmetryvars
 
 IMPLICIT NONE
 

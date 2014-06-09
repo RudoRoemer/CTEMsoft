@@ -49,6 +49,7 @@
 module files
 
 use local
+use typedefs
 
 ! needs to be removed !!
 logical :: loadingfile
@@ -74,9 +75,7 @@ subroutine DumpXtalInfo(cell, stdout)
 
 use constants
 use io
-use crystalvars
 use symmetry
-use symmetryvars
 
 IMPLICIT NONE
 
@@ -161,7 +160,6 @@ end subroutine DumpXtalInfo
 subroutine CrystalData(cell, loadingfile, fname, stdout)
 
 use io
-use crystalvars
 use crystal
 use symmetry
 
@@ -223,9 +221,7 @@ end subroutine CrystalData
 !--------------------------------------------------------------------------
 subroutine SaveData(cell)
 
-use local
 use io
-use crystalvars
 use crystal
  
 IMPLICIT NONE
@@ -266,12 +262,9 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine ReadDataFile(cell,fr)
 
-use local
 use io
-use crystalvars
 use crystal
 use symmetry
-use symmetryvars
 
 IMPLICIT NONE
 
@@ -372,7 +365,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine SafeOpenFile(ftyp,frm,fname,fread, stdout)
 
-use local
 use error
 use io
 
@@ -471,7 +463,6 @@ end subroutine SafeOpenFile
 !--------------------------------------------------------------------------
 subroutine SafeCloseFile(ftyp,stt,fname,quiet,stdout)
 
-use local
 use io
 use error
 
@@ -527,7 +518,6 @@ end subroutine SafeCloseFile
 !--------------------------------------------------------------------------
 subroutine CopyTemplateFiles(nt,templatelist,stdout)
 
-use local
 use io
 
 IMPLICIT NONE
@@ -609,7 +599,6 @@ end subroutine CopyTemplateFiles
 !--------------------------------------------------------------------------
 subroutine Interpret_Program_Arguments(nmldefault,numt,templatelist,progname,stdout)
 
-use local
 use io
 
 IMPLICIT NONE

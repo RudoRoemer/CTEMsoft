@@ -205,7 +205,6 @@ contains
 !--------------------------------------------------------------------------
 subroutine quaternion_print(q)
 
-use local
 use io
 
     real(kind=sgl), intent(in) 	:: q(4)		!< input quaternion (single precision)
@@ -229,7 +228,6 @@ end subroutine quaternion_print
 !--------------------------------------------------------------------------
 subroutine quaternion_print_d(q)
 
-use local
 use io
 
     real(kind=dbl), intent(in) 	:: q(4)		!< input quaternion (double precision)
@@ -350,8 +348,6 @@ end function quat_conjg_d
 !--------------------------------------------------------------------------
 function quat_norm(x) result (res)
 
-use local
-
    real(kind=sgl), intent(in) 		:: x(4)		!< input quaternion
    real(kind=sgl) 			:: res
 
@@ -373,8 +369,6 @@ end function quat_norm
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
 function quat_norm_d(x) result (res)
-
-use local
 
     real(kind=dbl), intent(in) 	:: x(4)		!< input quaternion
     real(kind=dbl) 			:: res
@@ -449,8 +443,6 @@ end function quat_div_d
 !--------------------------------------------------------------------------
 function quat_innerproduct(x,y) result (res)
 
-use local
-
     real(kind=sgl), intent(in) 		:: x(4),y(4)		!< input quaternions
     real(kind=sgl) 				:: res
 
@@ -474,8 +466,6 @@ end function quat_innerproduct
 !--------------------------------------------------------------------------
 function quat_innerproduct_d(x,y) result (res)
 
-use local
-
     real(kind=dbl), intent(in) 		:: x(4),y(4)		!< input quaternions
     real(kind=dbl) 				:: res
 
@@ -498,8 +488,6 @@ end function quat_innerproduct_d
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------!
 function quat_angle(x,y) result (res)
-
-use local
 
     real(kind=sgl), intent(in) 			:: x(4),y(4)		!< input quaternions
     real(kind=sgl) 					:: res, q
@@ -525,8 +513,6 @@ end function quat_angle
 !--------------------------------------------------------------------------!
 function quat_angle_d(x,y) result (res)
 
-use local
-
     real(kind=dbl), intent(in) 		:: x(4),y(4)		!< input quaternions
     real(kind=dbl) 				:: res, q
 
@@ -550,8 +536,6 @@ end function quat_angle_d
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------!
 recursive function quat_rotate_vector(q,v) result (res)
-
-use local
 
     real(kind=sgl),intent(in) 			:: q(4)		!< input quaternion
     real(kind=sgl),intent(in)			:: v(3)		!< input vector (must be normalized)
@@ -579,8 +563,6 @@ end function quat_rotate_vector
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------!
 recursive function quat_rotate_vector_d(q,v) result (res)
-
-use local
 
     real(kind=dbl), intent(in) 		:: q(4)		!< input quaternion
     real(kind=dbl),intent(in)			:: v(3)		!< input vector (must be normalized)

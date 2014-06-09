@@ -59,6 +59,8 @@ contains
 !
 !> @brief compute the scattered intensities for a range of thicknesses
 !
+!> @param DynMat dynamical matrix
+!> @param ktmp wave vector structure
 !> @param nn number of strong beams
 !> @param nw number of weak beams
 !> @param nt number of thickness values
@@ -69,9 +71,8 @@ contains
 !> @date   7/04/01 MDG 2.0 f90
 !> @date  04/29/13 MDG 3.0 inclusion of Bethe weak beams
 !--------------------------------------------------------------------------
-subroutine CalcBWint(nn,nw,nt,thick,inten)
+subroutine CalcBWint(DynMat,ktmp,BetheParameter,nn,nw,nt,thick,inten)
 
-use local
 use io
 use diffraction
 use kvectors
@@ -81,6 +82,8 @@ use constants
 
 IMPLICIT NONE
 
+complex(kind=dbl),INTENT(IN)   :: DynMat(nn,nn)
+type(kvectorlist),pointer	:: ktmp
 integer(kind=irg),INTENT(IN)	:: nn			!< number of strong beams
 integer(kind=irg),INTENT(IN)	:: nw			!< number of weak beams
 integer(kind=irg),INTENT(IN)	:: nt			!< number of thickness values
@@ -89,7 +92,7 @@ real(kind=sgl),INTENT(INOUT)	:: inten(nt,nn+nw)	!< output intensities (both stro
 
 integer(kind=irg)		:: i,j,IPIV(nn), ll(3), jp
 complex(kind=dbl)		:: CGinv(nn,nn), Minp(nn,nn),diag(nn),Wloc(nn), lCG(nn,nn), lW(nn), &
-				lalpha(nn), delta(nn,nn), weak(nw,nn), Ucross(nw,nn), tmp(nw,nn), c
+				   lalpha(nn), delta(nn,nn), weak(nw,nn), Ucross(nw,nn), tmp(nw,nn), c
 real(kind=sgl) 			:: th
 
 ! compute the eigenvalues and eigenvectors

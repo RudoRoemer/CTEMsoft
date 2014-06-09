@@ -43,7 +43,7 @@ module dislocation
 
 use local
 use quaternions
-use crystalvars
+use typedefs
 
 contains
 
@@ -393,7 +393,6 @@ use constants
 use foilmodule
 use crystal
 use symmetry
-use symmetryvars
 use quaternions
 use rotations
 
@@ -709,7 +708,6 @@ end subroutine makedislocation
 !--------------------------------------------------------------------------
 subroutine read_dislocation_data(defects,cell,DF_npix,DF_npiy,DF_gf,L,dinfo)
 
-use crystalvars
 use io
 use files
 

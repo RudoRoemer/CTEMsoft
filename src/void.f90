@@ -42,7 +42,7 @@
 module void
 
 use local
-use crystalvars
+use typedefs
 
 contains
 
