@@ -191,18 +191,19 @@ contains
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date  03/26/13  MDG  3.0 updated IO
 !--------------------------------------------------------------------------
-subroutine GetVoltage
+subroutine GetVoltage(cell)
 
-use local
+use crystalvars
 use io
 
 IMPLICIT NONE
 
+type(unitcell),pointer	:: cell
 real(kind=dbl)		:: io_real(1), voltage
 
  call ReadValue('Enter the microscope accelerating voltage [V, R] : ', io_real, 1)
  voltage = io_real(1)
- call CalcWaveLength(voltage)
+ call CalcWaveLength(cell,voltage)
  
 end subroutine
 
@@ -219,6 +220,7 @@ end subroutine
 !>  wide range of magnitudes.  If a crystal structure has been defined
 !>  then the gamma*V_0 term is added to correct for refraction.
 !
+!> @param cell unit cell pointer
 !> @param voltage electron accelerating voltage [V]
 !> @param skip scattering set identifier (optional)
 !
@@ -227,16 +229,17 @@ end subroutine
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date  03/26/13  MDG  3.0 updated IO
 !--------------------------------------------------------------------------
-subroutine CalcWaveLength(voltage,skip)
+subroutine CalcWaveLength(cell,voltage,skip)
 
-use local
 use constants
+use crystalvars
 use symmetry
 use io
 use dynamical
 
 IMPLICIT NONE
 
+type(unitcell),pointer	               :: cell
 real(kind=dbl),INTENT(IN)   		:: voltage		!< accelerating voltage [V]
 integer(kind=irg),INTENT(IN),OPTIONAL 	:: skip			!< scattering set identifier
 real(kind=dbl)   			:: temp1,temp2, oi_real(1)
@@ -254,10 +257,8 @@ integer(kind=irg)			:: hkl(3), io_int(1)
  mPsihat = voltage*(1.D0+temp2)
 
 ! compute the electron wavelength in nm
-! has a crystal structure been defined? If so, compute V_0 and
-! add it to mPsihat (corrected by mRelcor)
- if (strucdef.eqv..TRUE.) then
-  call CalcPositions('v')
+! compute V_0 and add it to mPsihat (corrected by mRelcor)
+  call CalcPositions(cell,'v')
 
 ! which scattering factors should be used ?
   if (present(skip)) then
@@ -267,10 +268,10 @@ integer(kind=irg)			:: hkl(3), io_int(1)
     case(3); rlp%method='WK'; rlp%absorption=.TRUE.
    end select
   else
-   mess = ' The following scattering factor sets are available :'; call Message("(/A/)")
-   mess = '  [1] Doyle-Turner/Smith-Burge (no absorption) '; call Message("(A)")
-   mess = '  [2] Weickenmeier-Kohl (no absorption) '; call Message("(A)")
-   mess = '  [3] Weickenmeier-Kohl (with absorption) '; call Message("(A/)")
+   call Message(' The following scattering factor sets are available :', frm = "(/A/)")
+   call Message('  [1] Doyle-Turner/Smith-Burge (no absorption) ', frm = "(A)")
+   call Message('  [2] Weickenmeier-Kohl (no absorption) ', frm = "(A)")
+   call Message('  [3] Weickenmeier-Kohl (with absorption) ', frm = "(A/)")
    call ReadValue('Which set do you want to use [1/2/3] ? ', io_int,1)
    rlp%absorption = .FALSE.
    select case (io_int(1)) 
@@ -281,12 +282,12 @@ integer(kind=irg)			:: hkl(3), io_int(1)
   end if
 
   hkl=(/0,0,0/)
-  call CalcUcg(hkl) 
+  call CalcUcg(cell,hkl) 
   oi_real(1) = rlp%Vmod
   call WriteValue('Mean inner potential [V] ', oi_real, 1)
   mPsihat = mPsihat + dble(rlp%Vmod)
-  mess = ' Wavelength corrected for refraction'; call Message("(A)")
- endif
+  call Message(' Wavelength corrected for refraction', frm = "(A)")
+
  oi_real(1) = mRelcor
  call WriteValue('Relativistic correction factor [gamma]  ', oi_real, 1)
  oi_real(1) = mPsihat
@@ -319,17 +320,19 @@ end subroutine
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/26/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
-function CalcDiffAngle(h,k,l) result(tt)
+function CalcDiffAngle(cell,h,k,l) result(tt)
 
-use local
+use crystalvars
 use crystal
 
 IMPLICIT NONE
 
+type(unitcell),pointer	        :: cell
 integer(kind=irg),INTENT(IN)  	:: h,k,l 		!< Miller indices
+
 real(kind=sgl)     		:: tt
 
-tt = 2.0*asin(0.50*sngl(mLambda)*CalcLength( float( (/h,k,l/) ), 'r') )
+tt = 2.0*asin(0.50*sngl(mLambda)*CalcLength( cell, float( (/h,k,l/) ), 'r') )
 
 end function
 
@@ -379,6 +382,7 @@ end function
 !> We've added the XR rlp%method parameter so that the same routine can be used for the
 !> computation of kinematical x-ray scattering; this was needed for the HEDM package.
 !
+!> @param cell unit cell pointer
 !> @param hkl  Miller indices
 !
 !> @note CalcPositions must be called before calling this routine
@@ -389,10 +393,10 @@ end function
 !> @date  03/26/13 MDG 3.0 updated IO
 !> @date  03/26/13 MDG 3.1 added XRD support
 !> @date  01/10/14 MDG 4.0 new cell type
+!> @date  -6/09/14 MDG 4.1 added cell as argument
 !--------------------------------------------------------------------------
-subroutine CalcUcg(hkl)
+subroutine CalcUcg(cell,hkl)
 
-use local
 use crystalvars
 use crystal
 use symmetry
@@ -402,7 +406,9 @@ use dynamical
 
 IMPLICIT NONE
 
+type(unitcell),pointer	                :: cell
 integer(kind=irg),INTENT(IN)      	:: hkl(3)		!< Miller indices
+
 integer(kind=irg)      		:: j,absflg,m,ii
 real(kind=sgl)         		:: s,twopi,arg,swk,dwwk,pref,ul,pre,preg,sct,fs,fsp
 complex(kind=sgl)      		:: ff,gg,sf,p1
@@ -418,7 +424,7 @@ czero = cmplx(0.0,0.0)
   s = 0.0
   rlp%g = 0.0
  else
-  rlp%g = sngl(CalcLength(dble(hkl),'r'))
+  rlp%g = sngl(CalcLength(cell,dble(hkl),'r'))
   s = (0.50*rlp%g)**2
  end if
 
@@ -450,7 +456,7 @@ if (rlp%method.eq.'XR') then
 !      '; occ. ',cell % ATOM_pos(m,4),'; DW ',exp(-cell % ATOM_pos(m,5)*s),'; fs = ',fs,'; sct = ',sct
 
 ! loop over all atoms in the orbit
-  do j=1,numat(m)
+  do j=1,cell%numat(m)
    arg=twopi * sum(hkl(1:3)*cell%apos(m,j,1:3))
    sf = sf + fs * cmplx(cos(arg),-sin(arg))
   end do
@@ -487,7 +493,7 @@ if (rlp%method.eq.'DT') then
   fs=pref*sct*exp(-cell % ATOM_pos(m,5)*s)*cell % ATOM_pos(m,4)
 
 ! loop over all atoms in the orbit
-  do j=1,numat(m)
+  do j=1,cell%numat(m)
    arg=twopi*sum(hkl(1:3)*cell%apos(m,j,1:3))
    sf = sf + fs*exp(cmplx(0.0,-arg))
   end do
@@ -566,7 +572,7 @@ if (rlp%method.eq.'WK') then
 
 ! loop over all atoms in the orbit
   p1 = czero
-  do j=1,numat(m)
+  do j=1,cell%numat(m)
    arg=twopi*sum(float(hkl(1:3))*cell%apos(m,j,1:3))
    p1 = p1 + exp(cmplx(0.0,-arg))
   end do
@@ -639,6 +645,7 @@ end subroutine CalcUcg
 !
 !> @brief compute the excitation error for a given reflection
 !
+!> @param cell unit cell pointer
 !> @param gg reciprocal lattice point indices
 !> @param kk	wave vector components
 !> @param FN foil normal
@@ -647,17 +654,20 @@ end subroutine CalcUcg
 !> @date    5/22/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/26/13 MDG 3.0 updated IO
+!> @date   06/09/14 MDG 4.0 added cell as argument 
 !--------------------------------------------------------------------------
-function CalcsgSingle(gg,kk,FN) result(sg)
+function CalcsgSingle(cell,gg,kk,FN) result(sg)
 
-use local
+use crystalvars
 use crystal
 
 IMPLICIT NONE
 
+type(unitcell),pointer	        :: cell
 real(kind=sgl),INTENT(IN) 	:: gg(3)		!< reciprocal lattice point
 real(kind=sgl),INTENT(IN) 	:: kk(3)		!< wave vector
 real(kind=sgl),INTENT(IN) 	:: FN(3) 		!< foil normal
+
 real(kind=sgl)			:: kpg(3),tkpg(3),xnom,xden,q1,q2,sg
 
 
@@ -665,11 +675,11 @@ real(kind=sgl)			:: kpg(3),tkpg(3),xnom,xden,q1,q2,sg
  tkpg=2.0*kk+gg
 
 ! use equation of Ewald sphere
- xnom = -CalcDot(gg,tkpg,'r')
+ xnom = -CalcDot(cell,gg,tkpg,'r')
 
 ! 2|k0+g|cos(alpha) = 2(k0+g).Foilnormal
- q1 = CalcLength(kpg,'r')
- q2 = CalcAngle(kpg,FN,'r')
+ q1 = CalcLength(cell,kpg,'r')
+ q2 = CalcAngle(cell,kpg,FN,'r')
  xden = 2.0*q1*cos(q2)
  sg = xnom/xden
 
@@ -683,6 +693,7 @@ end function CalcsgSingle
 !
 !> @brief compute the excitation error for a given reflection (double precision)
 !
+!> @param cell unit cell pointer
 !> @param gg reciprocal lattice point indices
 !> @param kk	wave vector components
 !> @param FN foil normal
@@ -691,28 +702,31 @@ end function CalcsgSingle
 !> @date    5/22/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/26/13 MDG 3.0 updated IO
+!> @date   06/09/14 MDG 4.0 added cell as argument
 !--------------------------------------------------------------------------
-function CalcsgDouble(gg,kk,FN) result(sg)
+function CalcsgDouble(cell,gg,kk,FN) result(sg)
 
-use local
+use crystalvars
 use crystal
 
 IMPLICIT NONE
 
+type(unitcell),pointer	        :: cell
 real(kind=dbl),INTENT(IN) 	:: gg(3)		!< reciprocal lattice point
 real(kind=dbl),INTENT(IN) 	:: kk(3)		!< wave vector
 real(kind=dbl),INTENT(IN) 	:: FN(3) 		!< foil normal
+
 real(kind=dbl)			:: kpg(3),tkpg(3),xnom,xden,q1,q2,sg
 
  kpg=kk+gg
  tkpg=2.D0*kk+gg
 
 ! use equation of Ewald sphere
- xnom = -CalcDot(gg,tkpg,'r')
+ xnom = -CalcDot(cell,gg,tkpg,'r')
 
 ! 2|k0+g|cos(alpha) = 2(k0+g).Foilnormal
- q1 = CalcLength(kpg,'r')
- q2 = CalcAngle(kpg,FN,'r')
+ q1 = CalcLength(cell,kpg,'r')
+ q2 = CalcAngle(cell,kpg,FN,'r')
  xden = 2.D0*q1*dcos(q2)
  sg = xnom/xden
 
@@ -964,15 +978,18 @@ end subroutine
 !
 !> @brief draw kinematical zone axis electron diffraction patterns
 !
+!> @param cell unit cell pointer
+!> @param PS Postscript structure
+!
 !> @date   10/20/98 MDG 1.0 original
 !> @date    5/22/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/26/13 MDG 3.0 updated IO
 !> @date   01/10/14 MDG 4.0 update for new cell type
+!> @date   06/09/14 MDG 4.1 added cell, PS as arguments
 !--------------------------------------------------------------------------
-subroutine DiffPage
+subroutine DiffPage(cell,PS)
 
-use local
 use postscript
 use crystal
 use crystalvars
@@ -984,6 +1001,9 @@ use constants
 use dynamical
 
 IMPLICIT NONE
+
+type(unitcell),pointer	        :: cell
+type(postscript_type),INTENT(INOUT) :: PS
 
 integer(kind=irg),parameter    :: inm = 5
 character(1)                    :: list(256)
@@ -998,6 +1018,7 @@ real(kind=sgl),allocatable      :: gg(:)
 real(kind=sgl),parameter        :: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/),yoff(0:5)=(/6.0,6.0,3.0,3.0,0.0,0.0/), &
                                   	eps = 1.0E-3
 logical,allocatable  	         :: dbdiff(:)
+integer(kind=irg)		 :: itmp(48,3)			!< array used for family computations etc
 
 ! set some parameters
  cell % SG % SYM_reduce=.TRUE.
@@ -1064,10 +1085,10 @@ logical,allocatable  	         :: dbdiff(:)
 ! make sure we have not already done this one in another family
     if (.not.zr(h,k,l)) then
 ! check the length, to make sure it lies within the sphere gmax
-     ggl=CalcLength(float(ind),'r')
+     ggl=CalcLength(cell,float(ind),'r')
 ! if it is larger than gmax, then compute the entire family
      if (ggl.ge.gmax) then
-      call CalcFamily(ind,num,'r')
+      call CalcFamily(cell,ind,num,'r',itmp)
 ! and label the family members in the zr array so that we 
 ! do not include those points later on in the loop
       do i=1,num
@@ -1079,9 +1100,9 @@ logical,allocatable  	         :: dbdiff(:)
 ! [recall that all members in a family have the same Vg]
 ! Do this only for those reflections that are allowed by
 ! the lattice centering !
-      a = IsGAllowed((/h,k,l/))
+      a = IsGAllowed(cell,(/h,k,l/))
       if (a) then
-       call CalcUcg(ind)
+       call CalcUcg(cell,ind)
 ! check for nonsymmorphic systematic absences
        if ((cell%nonsymmorphic).and.(rlp%Vmod.lt.eps)) then
         io_int = (/ h, k, l, 0 /)
@@ -1090,7 +1111,7 @@ logical,allocatable  	         :: dbdiff(:)
         rlp%Vmod = 0.0
        endif
 ! compute the entire family
-       call CalcFamily(ind,num,'r')
+       call CalcFamily(cell,ind,num,'r',itmp)
        rg(icnt)=ggl
 ! copy family in array
        do i=1,num
@@ -1104,7 +1125,7 @@ logical,allocatable  	         :: dbdiff(:)
        Vmax = max(Vg(icnt),Vmax)
       else
 ! remove the equivalent systematic absences
-       call CalcFamily(ind,num,'r')
+       call CalcFamily(cell,ind,num,'r',itmp)
        rg(icnt)=ggl
        do i=1,num
         rfamily(icnt,i,1:3)=itmp(i,1:3)
@@ -1152,7 +1173,7 @@ logical,allocatable  	         :: dbdiff(:)
      call IndexReduce(ind)
      if (.not.z(ind(1),ind(2),ind(3))) then
 ! determine the family <uvw>
-      call CalcFamily(ind,num,'d')
+      call CalcFamily(cell,ind,num,'d',itmp)
 ! and keep only one family member, namely the one with the
 ! largest sum of the three integers, i.e. u+v+w
 ! [this is a simple way to get mostly positive indices as
@@ -1195,14 +1216,14 @@ logical,allocatable  	         :: dbdiff(:)
  gg(1:icnt) = 0.0
  do k=1,icnt
   g(1:3)=float(family(k,1:3))
-  gg(k)=CalcLength(g,'d')
+  gg(k)=CalcLength(cell,g,'d')
  end do
 
 ! rank by increasing value of gg (use SLATEC routine)
  call SPSORT(gg,icnt,idx,1,ier)
 
 ! ask for number to be included in output
- mess = 'List of available zone axis patterns'; call Message("(A)")
+ call Message('List of available zone axis patterns', frm = "(A)")
  do i=1,icnt
   j=idx(i)
   io_int(1)=i
@@ -1215,13 +1236,13 @@ logical,allocatable  	         :: dbdiff(:)
    call WriteValue('', io_int,4,"(I3,' [',3I3,'];',$)")
   endif
  end do
- mess = 'Enter selection (e.g. 4,10-20,) '; call Message("(//,A)")
- mess = '[Include 0 to also draw a powder pattern] '; call Message("(A)")
+ call Message('Enter selection (e.g. 4,10-20,) ', frm = "(//,A)")
+ call Message('[Include 0 to also draw a powder pattern] ', frm = "(A)")
  call ReadValue('',list,256,"(256A)")
  call studylist(list,slect,fmax,ppat)
 
  if (cell%nonsymmorphic) then
-  mess = 'Potential double diffraction reflections will be indicated by open squares.'; call Message("(A,/)")
+  call Message('Potential double diffraction reflections will be indicated by open squares.', frm = "(A,/)")
  end if
  call ReadValue('No indices (0), labels (1), extinctions (2), labels + extinctions (3): ', io_int, 1)
  iref = io_int(1)
@@ -1242,13 +1263,13 @@ logical,allocatable  	         :: dbdiff(:)
    first=.FALSE.
   endif
   if (slect(i).eq.0) then
-   mess = 'Creating Powder Pattern '; call Message("(A)")
-   call DumpPP(xoff(imo),yoff(imo),np,laL,ricnt)
+   call Message('Creating Powder Pattern ', frm = "(A)")
+   call DumpPP(PS,cell,xoff(imo),yoff(imo),np,laL,ricnt)
    ppat=.FALSE.
   else
    io_int(1:3) = family(j,1:3)
    call WriteValue('Creating ZAP ', io_int,3, "('[',3i3,'] : ',$)")
-   call DumpZAP(xoff(imo),yoff(imo),family(j,1),family(j,2),family(j,3),numfam(j),np,first,iref,laL,ricnt,dbdiff)
+   call DumpZAP(PS,cell,xoff(imo),yoff(imo),family(j,1),family(j,2),family(j,3),numfam(j),np,first,iref,laL,ricnt,dbdiff)
   endif
  end do
 
@@ -1266,6 +1287,8 @@ end subroutine DiffPage
 !
 !> @brief draw a single zone axis diffraction pattern
 !
+!> @param PS Postscript structure
+!> @param cell unit cell pointer
 !> @param xo lower left x position
 !> @param yo lower left y position
 !> @param u direction index u
@@ -1282,11 +1305,11 @@ end subroutine DiffPage
 !> @date   10/20/98 MDG 1.0 original
 !> @date    5/22/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
-!> @date  03/26/13  MDG  3.0 updated IO
+!> @date  03/26/13  MDG 3.0 updated IO
+!> @date  06/09/14  MDG 4.0 added PS argument
 !--------------------------------------------------------------------------
-subroutine DumpZAP(xo,yo,u,v,w,p,np,first,indi,laL,icnt,dbdiff)
+subroutine DumpZAP(PS,cell,xo,yo,u,v,w,p,np,first,indi,laL,icnt,dbdiff)
 
-use local
 use io
 use postscript
 use crystal
@@ -1295,6 +1318,8 @@ use error
 
 IMPLICIT NONE
 
+type(postscript_type),INTENT(INOUT) :: PS
+type(unitcell),pointer	        :: cell
 real(kind=sgl),INTENT(IN)	:: xo, yo		!< lower left position
 integer(kind=irg),INTENT(IN)	:: u, v, w		!< zone axis components
 integer(kind=irg),INTENT(IN)	:: p			!< ??
@@ -1317,7 +1342,7 @@ logical                      	:: dbd(nref)
 ! do page preamble stuff if this is a new page
 ! [This assumes that the PostScript file has already been opened]
  if (np) then
-  call PS_newpage(.FALSE.,'Kinematical Zone Axis Patterns')
+  call PS_newpage(PS,.FALSE.,'Kinematical Zone Axis Patterns')
   call PS_text(5.25,-0.05,'scale bar in reciprocal nm')
   gmax = laL
   call PS_textvar(5.25,PS % psfigheight+0.02,'Camera Constant [nm mm]',gmax)
@@ -1339,7 +1364,7 @@ logical                      	:: dbd(nref)
  ui=u
  vi=v
  wi=w
- call PrintIndices('d',ui,vi,wi,xo+0.6,yo+he-0.15)
+ call PrintIndices('d',cell%hexset,ui,vi,wi,xo+0.6,yo+he-0.15)
 
 ! multiplicity
  call PS_setfont(PSfonts(2),0.12)
@@ -1385,8 +1410,8 @@ logical                      	:: dbd(nref)
  t(1)=-float(u)
  t(2)=-float(v)
  t(3)=-float(w)
- call TransSpace(t,c,'d','c')
- call NormVec(c,'c')
+ call TransSpace(cell,t,c,'d','c')
+ call NormVec(cell,c,'c')
 
 ! take the first reflection in the list and make that the x-axis
 ! skip the zero reflection !!
@@ -1395,11 +1420,11 @@ logical                      	:: dbd(nref)
 ! normalize the first reciprocal vector in cartesian components
 ! this will be the x-axis of the diffraction pattern
  gg(1:3)=float(locg(j,1:3))
- call TransSpace(gg,gx,'r','c')
- call NormVec(gx,'c')
+ call TransSpace(cell,gg,gx,'r','c')
+ call NormVec(cell,gx,'c')
 
 ! then get the cross product between t and g; this is the y-axis
- call CalcCross(c,gx,gy,'c','c',0)
+ call CalcCross(cell,c,gx,gy,'c','c',0)
 
 ! plot origin of reciprocal space 
  call PS_filledcircle(PX,PY,0.05,0.0)
@@ -1408,9 +1433,9 @@ logical                      	:: dbd(nref)
  do i=1,jcnt
   j=idx(i)
   gg(1:3)=float(locg(j,1:3))
-  call TransSpace(gg,c,'r','c')
-  qx=PX-CalcDot(c,gx,'c')*sc
-  qy=PY+CalcDot(c,gy,'c')*sc
+  call TransSpace(cell,gg,c,'r','c')
+  qx=PX-CalcDot(cell,c,gx,'c')*sc
+  qy=PY+CalcDot(cell,c,gy,'c')*sc
 
 ! first check for systematic absence due to lattice centering
   if ((locvsave(j).eq.-100.0).and.(indi.ge.2)) then
@@ -1442,6 +1467,8 @@ end subroutine
 !
 !> @brief draw a kinematical powder pattern
 !
+!> @param PS Postscript structure
+!> @param cell unit cell pointer
 !> @param xo lower left x position
 !> @param yo lower left y position
 !> @param np logical (is this a new page?)
@@ -1451,16 +1478,18 @@ end subroutine
 !> @date   10/20/98 MDG 1.0 original
 !> @date    5/22/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
-!> @date  03/26/13  MDG  3.0 updated IO
+!> @date  03/26/13  MDG 3.0 updated IO
+!> @date  06/09/14  MDG 4.0 added PS, cell as arguments
 !--------------------------------------------------------------------------
-subroutine DumpPP(xo,yo,np,laL,icnt)
+subroutine DumpPP(PS,cell,xo,yo,np,laL,icnt)
 
-use local
 use postscript
 use crystalvars
 
 IMPLICIT NONE 
 
+type(postscript_type),INTENT(INOUT) :: PS
+type(unitcell),pointer	        :: cell
 real(kind=sgl),INTENT(IN)	:: xo, yo		!< lower left position
 logical,INTENT(IN)		:: np			!< logical for new page
 real(kind=sgl),INTENT(IN)	:: laL			!< camera length
@@ -1475,7 +1504,7 @@ real(kind=sgl),parameter    	:: le=3.25,he=2.9375,thr=1.0E-4
 ! do page preamble stuff if this is a new page
 ! [This assumes that the PostScript file has already been opened]
  if (np) then
-  call PS_newpage(.FALSE.,'Kinematical Zone Axis Patterns')
+  call PS_newpage(PS,.FALSE.,'Kinematical Zone Axis Patterns')
   call PS_text(5.25,-0.05,'scale bar in reciprocal nm')
   gmax = laL
   call PS_textvar(5.25,PS % psfigheight+0.02,'Camera Constant [nm mm]',gmax)
@@ -1751,7 +1780,7 @@ end do
  if (INFO.ne.0) call FatalError('Error in BWsolve: ','ZGETRI return not zero')
 
  if ((cabs(sum(matmul(CGG,CGinv)))-dble(nn)).gt.1.E-8) then
-  mess= 'Error in matrix inversion; continuing'; call Message("(A)")
+  call Message('Error in matrix inversion; continuing', frm = "(A)")
   io_real(1) = cabs(sum(matmul(CGG,CGinv)))-dble(nn)
   call WriteValue('   Matrix inversion error; this number should be zero: ',io_real,1,"(F)")
  endif
@@ -1886,7 +1915,7 @@ INTENT(IN) :: beam,dimi,dimj,dz
   fidim = 1.0/float(dimi)
   fjdim = 1.0/float(dimj)
   prefac = scl*cPi*mLambda*dz
-  mess = 'Computing Fresnel propagator'; call Message("(A)")
+  call Message('Computing Fresnel propagator', frm = "(A)")
 ! normalize the incident beam direction and rescale to the wavevector
   b = sqrt(sum(beam**2))
   bm= beam(1:2)/b/mLambda

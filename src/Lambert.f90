@@ -2031,6 +2031,7 @@ end subroutine Apply2DLaueSymmetry
 !> input point.  Note that for special points, the number nequiv must be reduced
 !> from its point group order value.
 !
+!> @param TDPG 2D point group structure
 !> @param ipx x-coordinate
 !> @param ipy y-coordinate
 !> @param isym 2D point group number
@@ -2038,16 +2039,17 @@ end subroutine Apply2DLaueSymmetry
 !> @param nequiv number of equivalent coordinates
 !! 
 !> @date  10/02/13 MDG 1.0 first version
+!> @date  06/09/14 MDG 2.0 added TDPG argument 
 !--------------------------------------------------------------------------
-subroutine Apply2DPGSymmetry(ipx,ipy,isym,iequiv,nequiv)
+subroutine Apply2DPGSymmetry(TDPG,ipx,ipy,isym,iequiv,nequiv)
 
-use local
 use io
 use symmetryvars
 use symmetry
 
 IMPLICIT NONE
 
+type(symdata2D),INTENT(INOUT)  :: TDPG
 integer(kind=irg),INTENT(IN)	:: ipx
 integer(kind=irg),INTENT(IN)	:: ipy
 integer(kind=irg),INTENT(IN)	:: isym
@@ -2061,7 +2063,7 @@ logical				:: newp
 
 ! make sure that the symmetry matrices have been predefined; if not, then
 ! compute them first
-if (TDPG%SYM_pgnum.ne.isym) call Generate2DSymmetry(isym)
+if (TDPG%SYM_pgnum.ne.isym) call Generate2DSymmetry(TDPG,isym)
 
 ! set the order;  note that this may need to reduced for special points
 mequiv = TDPG%SYM_MATnum

@@ -2136,7 +2136,7 @@ use symmetryvars
 
 IMPLICIT NONE
 
-type (symdata2D),INTENT(OUT)	:: TDPG
+type (symdata2D),INTENT(INOUT)	:: TDPG
 integer(kind=irg),INTENT(IN)	:: pgn		!< point group number
 
 ! here we define all 8 possible 2x2 matrices (remember column major order !)

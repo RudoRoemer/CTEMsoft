@@ -126,11 +126,11 @@ real(kind=dbl)                          :: oi_real(5)
  oi_int(1) = cell%ATOM_ntype
  call WriteValue('  Number of asymmetric atom positions ', oi_int, 1, stdout = std)
  do i=1,cell%ATOM_ntype
-  oi_int(1:3) = (/i, cell%ATOM_type(i), numat(i)/)
+  oi_int(1:3) = (/i, cell%ATOM_type(i), cell%numat(i)/)
   call WriteValue('  General position / atomic number / multiplicity :', oi_int, 3,"(1x,I3,'/',I2,'/',I3,$)", stdout = std)
   call Message(' ('//ATOM_sym(cell%ATOM_type(i))//')', frm = "(A)", stdout = std)
   call Message('   Equivalent positions  (x y z  occ  DWF) ', frm = "(A)", stdout = std)
-  do j=1,numat(i)
+  do j=1,cell%numat(i)
     oi_real(1:5) = (/cell%apos(i, j,1:3),dble(cell%ATOM_pos(i,4:5))/)
     call WriteValue('         > ', oi_real, 5,"(2x,4(F9.5,','),F9.5)", stdout = std)
   end do
@@ -158,7 +158,7 @@ end subroutine DumpXtalInfo
 !> @date   01/10/14 MDG 4.0 update after new cell type
 !> @date   06/06/14 MDG 4.1 added cell pointer and loadingfile arguments
 !--------------------------------------------------------------------------
-subroutine CrystalData(cell, loadingfile, fname), stdout
+subroutine CrystalData(cell, loadingfile, fname, stdout)
 
 use io
 use crystalvars
@@ -170,7 +170,7 @@ IMPLICIT NONE
 type(unitcell), pointer                 :: cell
 logical, INTENT(INOUT)                  :: loadingfile
 character(fnlen),OPTIONAL,INTENT(IN)    :: fname        !< optional file name
-intger(kind=irg),INTENT(IN),OPTIONAL    :: stdout
+integer(kind=irg),INTENT(IN),OPTIONAL   :: stdout
 
 integer(kind=irg)                       :: io_int(1), std
 logical                                 :: fr = .TRUE.
@@ -184,7 +184,7 @@ logical                                 :: fr = .TRUE.
   loadingfile = .TRUE.
   call ReadDataFile(cell,fr)
  else
-  call ReadValue(' Load file (0) or new data (1) ? ', io_int, 1), stdout = std
+  call ReadValue(' Load file (0) or new data (1) ? ', io_int, 1)
   call Message('', frm = "(A/)", stdout = std)
   if (io_int(1).ne.0) then
    cell%SYM_SGset=0
@@ -238,7 +238,7 @@ type(unitcell), pointer :: cell
 ! of the asymmetric unit.
  write (dataunit) cell%xtal_system, cell%a,cell%b,cell%c,cell%alpha,cell%beta,cell%gamma
  write (dataunit) cell%ATOM_type, cell%ATOM_pos, cell%ATOM_ntype, cell%SYM_SGnum, cell%SYM_SGset
- call SafeCloseFile('xt','keep',cell%fname)
+ call SafeCloseFile('xt','keep', cell%fname)
 
 end subroutine
 
@@ -308,7 +308,7 @@ real                                    :: ATOM_pos(50,5)
    cell%ATOM_ntype = ATOM_ntype
    cell%SYM_SGnum = SYM_SGnum
    cell%SYM_SGset = SYM_SGset
-   call SaveData
+   call SaveData(cell)
    call Message('Conversion complete', frm = "(A)")
  end if
  
@@ -382,6 +382,7 @@ character(2),INTENT(IN)                 :: ftyp         !< selects the logical u
 character(fnlen),INTENT(INOUT)          :: fname        !< file name string
 character(*),INTENT(IN)                 :: frm          !< formatting option
 logical,OPTIONAL,INTENT(IN)             :: fread        !< read if .TRUE., write if .FALSE.
+integer(kind=irg),INTENT(IN),OPTIONAL	  :: stdout
 
 character(1)                            :: ans
 logical                                 :: lexist,lopen 
@@ -458,11 +459,12 @@ end subroutine SafeOpenFile
 !> @param stt string to indicate file status (discard or keep)
 !> @param fname file name
 !> @param quiet optional logical to prevent output
+!> @param stdout output unit identifier
 ! 
 !> @todo This should be replaced with a text-based editable file format (.txt. or .xml)
 !
-!> @date 1/5/99   MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90 version
+!> @date   01/05/99 MDG 1.0 original
+!> @date   05/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
 !> @date   06/08/14 MDG 4.0 added stdout argument
@@ -479,7 +481,7 @@ character(2),INTENT(IN)                 :: ftyp         !< file type identifier
 character(*),INTENT(IN)                 :: stt          !< status string
 character(fnlen),INTENT(IN)             :: fname        !< file name
 logical,OPTIONAL,INTENT(IN)             :: quiet        !< logical verbose or not
-integer(kind=irg),OPTIONAL,INTENT(IN)   :: quiet        !< logical verbose or not
+integer(kind=irg),OPTIONAL,INTENT(IN)   :: stdout       !< output unit identifier 
 
 integer(kind=irg)                       :: iunit,ier,std
 
@@ -648,8 +650,8 @@ if (numarg.gt.0) then ! there is at least one argument
          call Message(' If absent, the default name '''//trim(nmldefault)//''' will be used.', frm = "(A)", stdout = std)
          call Message(' To create templates of all possible input files, type '//trim(progname)//' -t', frm = "(A)", stdout = std)
          call Message(' To produce this message, type '//trim(progname)//' -h', frm = "(A)", stdout = std)
-         call Message(' All program arguments can be combined in the same order; the argument without - ', frm = "(A)", stdout = std)
-         call Message(' will be interpreted as the input file name.', frm = "(A/)", stdout = std)
+         call Message(' All program arguments can be combined in the same order;  ', frm = "(A)", stdout = std)
+         call Message(' the argument without - will be interpreted as the input file name.', frm = "(A/)", stdout = std)
         end if
         if (trim(arg).eq.'-t') then
 ! with this option the program creates template namelist files in the current folder so that the 

@@ -63,30 +63,33 @@ contains
 !
 !> @details viewing direction is defined as a direct space direction [uvw]
 !  
+!> @param cell unit cell pointer
 !> @param iview direction indices
 !> @param M 3x3 transformation matrix
 ! 
 !> @date   10/20/98 MDG 1.0 original
 !> @date    5/21/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
+!> @date   06/0914  MDG 3.0 added cell argument
 !--------------------------------------------------------------------------
-subroutine ProjectionMatrix(iview,M)
+subroutine ProjectionMatrix(cell,iview,M)
 
-use local
 use crystalvars
 use crystal
 
 IMPLICIT NONE
 
+type(unitcell),pointer	               :: cell
 real(kind=sgl),INTENT(OUT)        	:: M(3,3)				!< output transformation matrix
 integer(kind=irg),INTENT(IN)     	:: iview(3)				!< input viewing direction indices
-real(kind=sgl)        				:: g(3),r(3),q(3),qmin	!< auxiliary variables
+
+real(kind=sgl)        			:: g(3),r(3),q(3),qmin	!< auxiliary variables
 integer(kind=irg)     			:: i,imin				!< auxiliary variables
 
  g=float(iview)
  q=(/ 0.0,0.0,0.0 /)
- call TransSpace(g,r,'d','c')
- call NormVec(r,'c')
+ call TransSpace(cell,g,r,'d','c')
+ call NormVec(cell,r,'c')
 
 ! the direction with the smallest direction cosine
 ! will be put parallel to the horizontal axis of the projection
@@ -100,12 +103,12 @@ integer(kind=irg)     			:: i,imin				!< auxiliary variables
  q(imin)=1.0
 
 ! cross rxq to get the y-direction.
- call CalcCross(r,q,g,'c','c',0)
- call NormVec(g,'c')
+ call CalcCross(cell,r,q,g,'c','c',0)
+ call NormVec(cell,g,'c')
 
 ! cross gxr to get the x-direction.
- call CalcCross(g,r,q,'c','c',0)
- call NormVec(q,'c')
+ call CalcCross(cell,g,r,q,'c','c',0)
+ call NormVec(cell,q,'c')
 
 ! fill the projection matrix
  M(1,1:3)=q(1:3)
@@ -123,25 +126,27 @@ end subroutine
 !
 !> @details viewing direction is defined as a direct space direction [uvw]
 !  
+!> @param hexset hexagonal setting logical
 !> @param iview direction indices
 ! 
 !> @date   10/20/98 MDG 1.0 original
 !> @date    5/21/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
-!> @date   03/25/13 MDG 3.0 modified IO 
+!> @date   03/25/13 MDG 3.0 modified IO
+!> @date   06/09/14 MDG 4.0 added hexset argument
 !--------------------------------------------------------------------------
-subroutine GetViewingDirection(iview)
+subroutine GetViewingDirection(hexset,iview)
 
-use local
 use crystal
 use postscript
 use io
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(OUT)    	:: iview(3)		!< direction indices in three index notation
-integer(kind=irg)				:: vview(4)		!< to transform between 3 and 4 index notation
-integer(kind=irg)				:: io_int(4)	!< used for IO
+logical,INTENT(IN)                    :: hexset
+integer(kind=irg),INTENT(OUT)    	:: iview(3)	!< direction indices in three index notation
+integer(kind=irg)			:: vview(4)	!< to transform between 3 and 4 index notation
+integer(kind=irg)			:: io_int(4)	!< used for IO
 
 
 ! viewing direction (watch for hexagonal indices !)
@@ -174,7 +179,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine GetDrawingSpace(sp)
 
-use local
 use io
 
 IMPLICIT NONE
@@ -195,6 +199,8 @@ end subroutine
 !
 !> details makes extensive use of PostScript routines
 !
+!> @param PS Postscript structure
+!> @param cell unit cell pointer
 !> @param sp space character 'd' or 'r'
 !> @param iview projection direction
 !> @param hm maximum h index value
@@ -206,10 +212,10 @@ end subroutine
 !> @date    5/21/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 modified IO 
+!> @date   06/09/14 MDG 4.0 added PS and cell arguments
 !--------------------------------------------------------------------------
-subroutine StereoProj(sp,iview,hm,km,lm,topbot)
+subroutine StereoProj(PS,cell,sp,iview,hm,km,lm,topbot)
 
-use local
 use crystalvars
 use crystal
 use symmetryvars
@@ -220,15 +226,19 @@ use io
 
 IMPLICIT NONE
 
-character(1),INTENT(IN)     		:: sp				!< space character 'd' or 'r'
-integer(kind=irg),INTENT(INOUT)	:: iview(3)			!< viewing direction
+type(postscript_type),INTENT(INOUT)   :: PS
+type(unitcell),pointer	               :: cell
+character(1),INTENT(IN)     		:: sp			!< space character 'd' or 'r'
+integer(kind=irg),INTENT(INOUT)	:: iview(3)		!< viewing direction
 integer(kind=irg),INTENT(IN)		:: hm, km, lm		!< maximum h,k,l indices to be included in drawing
-logical,INTENT(IN)          			:: topbot			!< logical for XXX
-logical						:: nn				!< auxiliary logical	
-logical,allocatable 				:: z(:,:,:)			!< auxiliary logical array
-real(kind=sgl)   				:: rr(3),g(3),r(3),M(3,3), CX, CY, CRad,xst,yst		!< auxiliary variables
-real(kind=sgl),parameter   		:: negthresh = -0.000001					!< threshold parameter
-integer(kind=irg) 				:: i,h,k,l,hkl(3),hkil(4),cr,hh,kk,ll,num,hkm		!< auxiliary integers
+logical,INTENT(IN)          		:: topbot		!< logical for XXX
+
+logical					:: nn			!< auxiliary logical	
+logical,allocatable 			:: z(:,:,:)		!< auxiliary logical array
+real(kind=sgl)   			:: rr(3),g(3),r(3),M(3,3), CX, CY, CRad,xst,yst	!< auxiliary variables
+real(kind=sgl),parameter   		:: negthresh = -0.000001				!< threshold parameter
+integer(kind=irg) 			:: i,h,k,l,hkl(3),hkil(4),cr,hh,kk,ll,num,hkm		!< auxiliary integers
+integer(kind=irg)	               :: itmp(48,3)		!< array used for family computations etc
 
 ! 20cm radius projection circle [inches]
  CRad = 3.937
@@ -236,14 +246,14 @@ integer(kind=irg) 				:: i,h,k,l,hkl(3),hkil(4),cr,hh,kk,ll,num,hkm		!< auxiliar
  CY = 3.5
  
 ! create transformation matrix
- call ProjectionMatrix(iview,M)
+ call ProjectionMatrix(cell,iview,M)
  
 ! write text and draw projection circle
- call DrawSPFrame(CX, CY, CRad, iview, sp)
+ call DrawSPFrame(PS,cell,CX, CY, CRad, iview, sp)
 
 ! loop over families
 ! make sure that the arrays are big enough for the hexagonal case...
-if (hexset.eqv..TRUE.) then 
+if (cell%hexset.eqv..TRUE.) then 
   hkm = abs(hm)+abs(km)
   allocate(z(-hkm:hkm,-hkm:hkm,-lm:lm))
 else
@@ -256,7 +266,7 @@ z = .FALSE.
    do ll=-lm,lm
     if (z(hh,kk,ll).eqv..TRUE.) cycle
 ! determine the family members
-    if ((hexset.eqv..TRUE.).AND.(sp.eq.'d')) then
+    if ((cell%hexset.eqv..TRUE.).AND.(sp.eq.'d')) then
      hkil= (/ hh,kk,-(hh+kk),ll /)
      call MilBrav(hkl,hkil,'43')
     else
@@ -264,7 +274,7 @@ z = .FALSE.
     end if
     if ((hh**2+kk**2+ll**2).ne.0) then
      call IndexReduce(hkl)
-     call CalcFamily(hkl,num,sp)
+     call CalcFamily(cell,hkl,num,sp,itmp)
 ! loop over all points and draw projection+label
       do i=0,num-1
        h=itmp(i,1)
@@ -279,8 +289,8 @@ z = .FALSE.
          k=hkl(2)
          l=hkl(3)
          g=float( (/h,k,l/) )
-         call TransSpace(g,r,sp,'c')
-         call NormVec(r,'c')
+         call TransSpace(cell,g,r,sp,'c')
+         call NormVec(cell,r,'c')
 ! apply viewing tansformation
          rr = matmul(M,r)
 ! compute stereographic projection coordinates
@@ -291,11 +301,11 @@ z = .FALSE.
           if (rr(3).gt.negthresh) then
            call PS_filledcircle(xst,yst,0.015/PS % psscale,0.0)
            nn = .TRUE.
-           call DumpIndices(sp,h,k,l,cr,xst,yst,nn)
+           call DumpIndices(PS,cell%hexset,sp,h,k,l,cr,xst,yst,nn)
           else if (topbot) then
            call PS_circle(xst,yst,0.035/PS % psscale)
            nn = .FALSE.
-           call DumpIndices(sp,h,k,l,cr,xst,yst,nn)
+           call DumpIndices(PS,cell%hexset,sp,h,k,l,cr,xst,yst,nn)
           end if
          end if
          z(h,k,l) = .TRUE.
@@ -319,6 +329,7 @@ end subroutine
 !> @details Based on sections 13.5.1-5 in "Computer Graphics: Systems and Concepts", by R. Salmon and M. Slater, 
 !> pp. 397-408, Addison-Wesley 1987
 !
+!> @param cell unit cell pointer
 !> @param iview viewing direction
 !> @param M transformation matrix
 !> @param VD viewing distance [nm]
@@ -326,25 +337,28 @@ end subroutine
 !> @date   10/20/98 MDG 1.0 original
 !> @date    5/21/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
-!> @date   03/25/13 MDG 3.0 modified IO 
+!> @date   03/25/13 MDG 3.0 modified IO
+!> @date   06/09/14 MDG 4.0 added cell argument 
 !--------------------------------------------------------------------------
-subroutine ComputeViewTrans(iview,M,VD)
+subroutine ComputeViewTrans(cell,iview,M,VD)
 
-use local
+use crystalvars
 use crystal
 
 IMPLICIT NONE
 
+type(unitcell),pointer	               :: cell
 integer(kind=irg),INTENT(IN)		:: iview(3)		!< viewing direction indices
 real(kind=sgl),INTENT(OUT)		:: M(4,4)		!< transformation matrix
 real(kind=sgl),INTENT(IN)		:: VD			!< viewing distance in [nm]
-real(kind=sgl)        :: p(3),n(3),u(3),v(3),pmin		!< auxiliary reals
-integer(kind=irg)     :: i,j,imin					!< auxiliary integers
+
+real(kind=sgl)                        :: p(3),n(3),u(3),v(3),pmin		!< auxiliary reals
+integer(kind=irg)                     :: i,j,imin				!< auxiliary integers
 
 
  n=float(iview)                          ! VPN View Plane Normal
- call TransSpace(n,p,'d','c')            ! convert to cartesian
- call NormVec(p,'c')                     ! and normalize
+ call TransSpace(cell,n,p,'d','c')       ! convert to cartesian
+ call NormVec(cell,p,'c')                ! and normalize
  
 pmin=1.1                                ! select vector v normal to VPN in projection
  do i=1,3
@@ -355,11 +369,11 @@ pmin=1.1                                ! select vector v normal to VPN in proje
  end do
  v= (/0.0,0.0,0.0/)
  v(imin)=1.0
- call CalcCross(v,n,u,'c','c',0)         ! compute u = v x VPN
- call NormVec(u,'c')                     ! parallel to the U axis and normalized
+ call CalcCross(cell,v,n,u,'c','c',0)         ! compute u = v x VPN
+ call NormVec(cell,u,'c')                     ! parallel to the U axis and normalized
  n=-p
- call CalcCross(u,n,v,'c','c',0)         ! the third vector, right handed !!
- call NormVec(v,'c')                     ! and normalize
+ call CalcCross(cell,u,n,v,'c','c',0)         ! the third vector, right handed !!
+ call NormVec(cell,v,'c')                     ! and normalize
 
 ! and store the vectors in the M matrix
  do i=1,3
@@ -406,13 +420,15 @@ end subroutine
 !> @date    5/21/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 modified IO 
+!> @date   06/09/14 MDG 4.0 made AXO and PS as arguments instead of globals
 !--------------------------------------------------------------------------
-subroutine initparameterset
+subroutine initparameterset(AXO)
 
-use local
 use postscript
 
 IMPLICIT NONE
+
+type(axonotype),INTENT(INOUT)	:: AXO
 
  AXO%xi=1
  AXO%yi=2
@@ -424,14 +440,14 @@ IMPLICIT NONE
  AXO%vscle=1.0
 end subroutine
 ! ###################################################################
-subroutine setmenu(what)
+subroutine setmenu(AXO,what)
 
-use local
 use postscript
 
 IMPLICIT NONE
 
-character(*)  :: what
+type(axonotype),INTENT(INOUT)	:: AXO
+character(*),INTENT(IN)       :: what
 
 ! clear the screen
 ! call system('clear')
@@ -495,25 +511,34 @@ character(*)  :: what
  write (*,'(3(/))')
 end subroutine
 ! ###################################################################
-subroutine drawing(zz,inten,nx,ny,dmode,axname)
 
-use local
+subroutine drawing(AXO,PS,AX,progdesc,imanum,zz,inten,nx,ny,dmode,axname)
+
 use postscript
 use constants
 use io
 
 IMPLICIT NONE
 
-integer(kind=irg)   :: i,j,nx,ny,kk,ip,jp
-logical             :: pensw,ipp
-real(kind=sgl)      :: alfa,v1,v2,w1,w2,w3,n(3),e(3),l(3),h(3),pointx,pointy,xr,yr,xp,yp,xi,yi,zz(nx,ny),u1,u2, &
-                       inten(nx,ny),tv(4,2),pp(4,2),k_a,k_d,k_s,In_a,In_p,inmax,pn,zero,nl,hn,sx,sy, &
-                       xmin,xmax,ymin,ymax,s,t,u,bb
-character(6)        :: dmode
-character(20)       :: axname
+type(axonotype),INTENT(INOUT)	            :: AXO
+type(postscript_type),INTENT(INOUT)       :: PS
+type(axistype),INTENT(INOUT)              :: AX
+character(fnlen),INTENT(IN)               :: progdesc
+integer(kind=irg),INTENT(INOUT)           :: imanum
+real(kind=sgl),INTENT(IN)                 :: zz(nx,ny)
+real(kind=sgl),INTENT(INOUT)              :: inten(nx,ny)
+integer(kind=irg),INTENT(IN)              :: nx
+integer(kind=irg),INTENT(IN)              :: ny
+character(6),INTENT(IN)                   :: dmode
+character(fnlen),INTENT(IN)               :: axname
 
-intent(IN)          :: zz,nx,ny,dmode,axname
-intent(INOUT)       :: inten
+
+integer(kind=irg)   :: i,j,kk,ip,jp
+logical             :: pensw,ipp
+real(kind=sgl)      :: alfa,v1,v2,w1,w2,w3,n(3),e(3),l(3),h(3),pointx,pointy,xr,yr,xp,yp,xi,yi,u1,u2, &
+                       tv(4,2),pp(4,2),k_a,k_d,k_s,In_a,In_p,inmax,pn,zero,nl,hn,sx,sy, &
+                       xmin,xmax,ymin,ymax,s,t,u,bb
+
     
 ! define the geometrical transformation to the image reference frame
  xi = float(AXO%xi)
@@ -534,10 +559,10 @@ intent(INOUT)       :: inten
 ! open a complete file for online mode, else
 ! open a temporary file for export mode.
  if (dmode.eq.'export') then 
-  open(UNIT=psunit,FILE=axname,STATUS='UNKNOWN',FORM='FORMATTED')
+  open(UNIT=psunit,FILE=trim(axname),STATUS='UNKNOWN',FORM='FORMATTED')
  else
   PS%psname = 'tmp.ps'
-  call PS_openfile(.TRUE.)
+  call PS_openfile(PS, progdesc, imanum, .TRUE.)  ! PS, progdesc, imanum, dontask
   PS%pspage = 0
  end if
  write (psunit,*) 'gsave'
@@ -568,7 +593,7 @@ intent(INOUT)       :: inten
 ! first compute the bisector unit vector for Phong shading
 ! (see Computer Graphics: Systems and Concepts, by R. Salmon and
 ! M. Slater, Addison-Wesley, 1987, p. 418)
-  mess = 'Computing bisector vector'; call Message("(A)")
+  call Message('Computing bisector vector', frm = "(A)")
   zero = 0.0
 ! eye direction
   e(1) = float(AXO%xi)
@@ -597,7 +622,7 @@ intent(INOUT)       :: inten
   l = l*t
   e = e*u
 ! compute all the polygon normals (triangles)
-  mess = 'Computing polygon normals and intensities'; call Message("(A)")
+  call Message('Computing polygon normals and intensities', frm = "(A)")
   bb = AXO%vscle
   inmax = -10000.0
   In_a = 0.2
@@ -641,7 +666,7 @@ intent(INOUT)       :: inten
     inten(i,j) = max(zero,inten(i,j)*inmax)
    end do
   end do
-  mess = 'Producing Postscript output'; call Message("(A)")
+  call Message('Producing Postscript output', frm = "(A)")
   call PS_newpath
   do i=1,AXO%countx-1
    ip = i+1
@@ -703,7 +728,7 @@ intent(INOUT)       :: inten
     write (psunit,*) 'S'
    end if
   end do
-  mess = 'x-grid completed'; call Message("(A)")
+  call Message('x-grid completed', frm = "(A)")
 ! plot y lines 
   do j=1,AXO%county
    if (mod(j,AXO%ymod).eq.0) then 
@@ -733,29 +758,27 @@ intent(INOUT)       :: inten
     write (psunit,*) 'S'
    end if
   end do
-  mess = 'y-grid completed'; call Message("(A)")
+  call Message('y-grid completed', frm = "(A)")
  end if
  if (dmode.eq.'export') then
   close (unit=psunit,status='keep')
  else
-  call initframe('stop',.FALSE.)
-  call PS_closefile
-  write (*,*) 'drawing command = ',psviewer//PS%psname
-  call system(psviewer//PS%psname)
+  call initframe(AX,'stop',.FALSE.)
+  call PS_closefile(PS)
+  call Message('Use a postscript viewing program to display the file '//PS%psname, frm = ("A"))
  end if
-end subroutine
+end subroutine drawing
 ! ###################################################################
-subroutine initframe(mode,db)
+subroutine initframe(AX,mode,db)
  
-use local
 use postscript
- 
+
 IMPLICIT NONE
 
-character(5)   :: mode
-logical        :: db
-
-! 
+type(axistype),INTENT(IN)        :: AX
+character(5),INTENT(IN)          :: mode
+logical,INTENT(IN)               :: db
+ 
 ! initialize the viewing window (from (-20,-20) to (120,120))
 ! (these are user coordinates, chosen so that the actual drawing
 ! will go from 0 to 100 along both x and y)
@@ -765,7 +788,7 @@ logical        :: db
 !
 ! For a single drawing on an 8.5*11 inch page with 1 inch margins 
 ! left and right and top and bottom 2.25 inch margins requires
-! axw = 6.5 and (xll,yll) = (1.0,2.25) [see common block in postscript.inc]
+! axw = 6.5 and (xll,yll) = (1.0,2.25) 
 !
  if (mode.eq.'start') then 
   write (psunit,*) 'gsave'
@@ -782,44 +805,50 @@ logical        :: db
   write (psunit,*) 'grestore'
  end if
 end subroutine
-! ###################################################################
-subroutine axonometry(zz,nx,ny,g,axname)
 
-use local
+! ###################################################################
+subroutine axonometry(AXO,PS,AX,progdesc,imanum,zz,nx,ny,g,axname)
+
 use postscript
+use io
 
 IMPLICIT NONE
 
-integer(kind=irg)       :: nx,ny
+type(axonotype),INTENT(INOUT)        :: AXO
+type(postscript_type),INTENT(INOUT)  :: PS
+type(axistype),INTENT(INOUT)         :: AX
+character(fnlen),INTENT(IN)          :: progdesc
+integer(kind=irg),INTENT(INOUT)      :: imanum
+real(kind=sgl),INTENT(INOUT)         :: zz(nx,ny)
+integer(kind=irg),INTENT(INOUT)      :: nx
+integer(kind=irg),INTENT(INOUT)      :: ny
+real(kind=sgl),INTENT(IN)            :: g
+character(fnlen),INTENT(IN)          :: axname
 
-real(kind=sgl)          :: zz(nx,ny),g,inten(1)
+real(kind=sgl)          :: inten(1)
 logical                 :: more
-character(1)            :: selection
-character(20)           :: axname
-
-intent(IN)              :: zz,nx,ny,g,axname
+character(1)            :: selection 
     
  AXO%countx=nx
  AXO%county=ny
  AXO%grid=g
- call initparameterset
+ call initparameterset(AXO) 
 
  more = .TRUE.
  do while (more) 
-  call setmenu('all')
-  write (*,"('Enter selection : ',$)")
-  read (*,"(A1)") selection
+  call setmenu(AXO,'all')
+  call ReadValue('Enter selection : ', selection, frm = "(A1)")
   select case (selection)
-   case('1'); call setmenu('change_xi')
-   case('2'); call setmenu('change_yi')
-   case('3'); call setmenu('change_beta')
-   case('4'); call setmenu('change_vis')
-   case('5'); call setmenu('change_scale')
-   case('6'); call setmenu('change_xmod')
-   case('7'); call setmenu('change_ymod')
-   case('8'); call setmenu('change_vscale')
-   case('d','D'); call drawing(zz,inten,nx,ny,'online',' ')
-   case('e','E'); call drawing(zz,inten,nx,ny,'export',axname)
+   case('1'); call setmenu(AXO,'change_xi')
+   case('2'); call setmenu(AXO,'change_yi')
+   case('3'); call setmenu(AXO,'change_beta')
+   case('4'); call setmenu(AXO,'change_vis')
+   case('5'); call setmenu(AXO,'change_scale')
+   case('6'); call setmenu(AXO,'change_xmod')
+   case('7'); call setmenu(AXO,'change_ymod')
+   case('8'); call setmenu(AXO,'change_vscale')
+   case('d','D'); call drawing(AXO,PS,AX,progdesc,imanum,zz,inten,nx,ny,'online',' ')
+   case('e','E'); call drawing(AXO,PS,AX,progdesc,imanum,zz,inten,nx,ny,'export',axname)
    case('q','Q'); more = .FALSE.
    case default;
   end select
@@ -1514,14 +1543,14 @@ real(kind=sgl)       :: xvec(points),yvec(points)
  call PS_translate(-qx,-qy)
 end subroutine
 !  ******************************************************************************
-subroutine axis(points,xvec,yvec,xmin,xmax,ymin,ymax,xautorange,yautorange, &
+subroutine axis(AX,points,xvec,yvec,xmin,xmax,ymin,ymax,xautorange,yautorange, &
                 xmode,ymode,pmode,mark,scalex,scaley,overplot,db,title,xtitle,ytitle)
 
-use local
 use postscript
 
 IMPLICIT NONE
 
+type(axistype),INTENT(IN)  :: AX
 integer(kind=irg)          :: points,mark
 integer(kind=irg)          :: nx,ny
 real(kind=sgl)             :: xvec(points), yvec(points), xmin, xmax, ymin, ymax,q,r
@@ -1547,7 +1576,7 @@ character(*)               :: title,xtitle,ytitle
  call border(xmode,xmin,xmax,nx)
  call border(ymode,ymin,ymax,ny)
 ! initialize graphics stuff  
- call initframe('start',db)
+ call initframe(AX,'start',db)
  if (db) then 
 ! draw the borders if needed
   if (scalex.ne.'NON') then
@@ -1588,7 +1617,7 @@ character(*)               :: title,xtitle,ytitle
   ymin=power(nint(ymin))
   ymax=power(nint(ymax))
  end if
- call initframe('stop',.FALSE.)
+ call initframe(AX,'stop',.FALSE.)
 end subroutine
 
 end module
@@ -1649,7 +1678,12 @@ type Cparameters
  real(kind=sgl)          :: level,x0,y0,dx,dy
  real(kind=sgl)          :: distort(2,2)
 end type
- 
+
+
+! [06/09/14] This will need to be changed so that there are no global variables left ...
+! Shouldn't be difficult, but it is not urgent at this point in time and there
+! is likely no variable name clashing...
+  
 ! array (1D) of values to be contoured
 real(kind=sgl),allocatable         :: Cdata(:)
 

@@ -79,7 +79,7 @@
 !> @date   7/19/99  MDG 2.1 added sp command tp Postscript preamble
 !> @date   5/20/01  MDG 3.0 f90
 !> @date  11/27/01  MDG 3.1 added kind support
-!> @date  03/25/13 MDG 3.2 checked all IO and updated where needed
+!> @date  03/25/13 MDG 3.2 checked all IO and updated where needed 
 !--------------------------------------------------------------------------
 module postscript
 
@@ -139,15 +139,6 @@ character(20),parameter :: PSfonts(5) = (/"Symbol              ", &
                                           "Times-Italic        ", &
                                           "Times-Roman         "/)
 
-! general variable names with user-defined types
-type (postscript_type)    	:: PS
-type (axonotype)	 	:: AXO
-type (axistype)  		:: AX
-
-! we should really get rid of these or make them private!
-integer(kind=irg),allocatable 	:: imaint(:,:)
-integer(kind=irg)             	:: imanum
-
 contains 
 
 !--------------------------------------------------------------------------
@@ -158,6 +149,8 @@ contains
 !
 !> @brief open postscript file and dump the preamble to the file
 !
+!> @param PS Postscript Structure
+!> @param imanum image number 
 !> @param dontask logical to prevent use of SafeOpenFile routine (from files.f90)
 ! 
 !> @todo add A4 paper format as an option
@@ -166,20 +159,24 @@ contains
 !> @date    5/19/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
+!> @date   06/08/14 MDG 4.0 added PS, progdesc, imanum as arguments
 !--------------------------------------------------------------------------
-subroutine PS_openfile(dontask)
+subroutine PS_openfile(PS, progdesc, imanum, dontask)
 
-use local
 use io
 use files
 
 IMPLICIT NONE
 
-logical,INTENT(IN),optional  	:: dontask		!< optional parameter to select file opening route
-real(kind=sgl)    		:: fw, fh		!< page format parameters
-integer(kind=irg) 		:: i			!< loop counter
+type(postscript_type),INTENT(INOUT)    :: PS
+character(fnlen),INTENT(IN)            :: progdesc
+integer(kind=irg),INTENT(INOUT)        :: imanum
+logical,INTENT(IN),optional            :: dontask		!< optional parameter to select file opening route
 
-! define the writeable portion of the page (should be made more userfriendly for A4 format...)
+real(kind=sgl)    		        :: fw, fh		!< page format parameters
+integer(kind=irg) 		        :: i			!< loop counter
+
+! define the writeable portion of the page (should be made more user-friendly for A4 format...)
  imanum = 0
  PS%psfigwidth=6.5 
  PS%psfigheight=9.0
@@ -190,7 +187,7 @@ integer(kind=irg) 		:: i			!< loop counter
 ! if we get here, it means that we are using a temporary PostScript file
 ! and we should not go through the regular SafeOpenFile routine.
    open(unit=psunit,file=PS%psname,status='unknown',action='write',form='formatted')
-   mess = 'Opening temporary file for PostScript output'; call Message("(A)")
+   call Message('Opening temporary file for PostScript output', frm = "(A)")
  else
    loadingfile = .FALSE.
    call SafeOpenFile('ps','formatted',PS%psname)
@@ -224,17 +221,22 @@ end subroutine
 !
 !> @brief close and save postscript file 
 ! 
+!> @param PS Postscript Structure
+!
 !> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
+!> @date   06/08/14 MDG 4.0 added PS as argument
 !--------------------------------------------------------------------------
-subroutine PS_closefile
+subroutine PS_closefile(PS)
 
 use local
 use files
 
 IMPLICIT NONE
+
+type(postscript_type),INTENT(INOUT)    :: PS
 
 ! write the trailer to the file 
  write (psunit,*) 'showpage'
@@ -254,6 +256,7 @@ end subroutine
 !
 !> @brief start a new page inthe PS file
 !
+!> @param PS Postscript structure
 !> @param frm logical to draw a frame or not
 !> @param btxt string for the title balloon
 ! 
@@ -261,13 +264,16 @@ end subroutine
 !> @date    5/19/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
+!> @date   06/08/14 MDG 4.0 added PS as argument
 !--------------------------------------------------------------------------
-subroutine PS_newpage(frm,btxt)
+subroutine PS_newpage(PS, frm, btxt)
 
 IMPLICIT NONE
 
-logical,INTENT(IN)        	:: frm		!< logical draw frame or not
-character(*),INTENT(IN)   	:: btxt		!< character string for header balloon
+type(postscript_type),INTENT(INOUT)    :: PS
+
+logical,INTENT(IN)        	        :: frm		!< logical draw frame or not
+character(*),INTENT(IN)   	        :: btxt		!< character string for header balloon
 
  if (PS%pspage.ne.0) then
   write (psunit,*) 'showpage saveobj restore'
@@ -301,6 +307,8 @@ end subroutine
 !
 !> @brief  write unit cell information (for drawing programs)
 !
+!> @param PS Postscript structure
+!> @param cell unit cell pointer
 !> @param xo  x-position of output
 !> @param yo  y-position of output
 ! 
@@ -308,15 +316,18 @@ end subroutine
 !> @date    5/19/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
+!> @date   06/08/14 MDG 4.0 added PS and cell as argument
 !--------------------------------------------------------------------------
-subroutine PS_cellinfo(xo,yo)
+subroutine PS_cellinfo(PS, cell, xo, yo)
 
-use local
 use crystalvars
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)  :: xo,yo		!< starting location for output 
+type(postscript_type),INTENT(INOUT)        :: PS
+type(unitcell), pointer                    :: cell
+
+real(kind=sgl),INTENT(IN)                  :: xo,yo		!< starting location for output 
 
  call PS_setfont(PSfonts(2),0.12/PS%psscale)
  call PS_text(xo,yo,'Filename: '//cell%fname)
@@ -347,6 +358,7 @@ end subroutine
 !> @date    5/19/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
+!--------------------------------------------------------------------------
 subroutine PS_clippath
 
 use local
@@ -529,9 +541,10 @@ use local
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)  	:: x,y		!< center coordinates
+real(kind=sgl),INTENT(IN)  	:: x,y	!< center coordinates
 real(kind=sgl),INTENT(IN)  	:: edge	!< edge length
-real(kind=sgl)  			:: ed		! auxiliary variable
+
+real(kind=sgl)  		:: ed	! auxiliary variable
 
  ed=0.5*edge
  write (psunit,"('0.0 setgray')")
@@ -567,10 +580,11 @@ use local
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)  	:: x,y			!< center coordinates
+real(kind=sgl),INTENT(IN)  	:: x,y		!< center coordinates
 real(kind=sgl),INTENT(IN)  	:: edge		!< edge length
 real(kind=sgl),INTENT(IN)  	:: graylevel	!< gray level for filling
-real(kind=sgl)  			:: ed			!< auxiliary variable
+
+real(kind=sgl)  		:: ed		!< auxiliary variable
 
  ed=0.5*edge
  write (psunit,"(F12.7,' setgray')") graylevel
@@ -606,10 +620,11 @@ use local
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)  	:: x,y			!< center coordinates
+real(kind=sgl),INTENT(IN)  	:: x,y		!< center coordinates
 real(kind=sgl),INTENT(IN)  	:: edge		!< edge length
-real(kind=sgl),INTENT(IN)  	:: lw			!< line width
-real(kind=sgl)  			:: ed			!< auxiliary variable
+real(kind=sgl),INTENT(IN)  	:: lw		!< line width
+
+real(kind=sgl)  		:: ed		!< auxiliary variable
 
  ed=0.5*edge
  call PS_setlinewidth(lw)
@@ -651,7 +666,7 @@ IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)  	:: x,y			!< center coordinates
 real(kind=sgl),INTENT(IN)  	:: r			!< radius
-character(3),INTENT(IN)           :: clr			!< color string
+character(3),INTENT(IN)       :: clr			!< color string
 
  if (clr.eq.'red') write (psunit,"(1x,7(f12.5,1x),'sp')") 0.6,0.0,0.0,r,r,x,y
  if (clr.eq.'grn') write (psunit,"(1x,7(f12.5,1x),'sp')") 0.0,0.6,0.0,r,r,x,y
@@ -754,8 +769,8 @@ use local
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)  	:: x,y			!< center coordinates
-real(kind=sgl),INTENT(IN)  	:: radius		!< radius
+real(kind=sgl),INTENT(IN)  	:: x,y		!< center coordinates
+real(kind=sgl),INTENT(IN)  	:: radius	!< radius
 real(kind=sgl),INTENT(IN)  	:: graylevel	!< gray level
 
  write (psunit,"(F12.7,' setgray')") graylevel
@@ -874,21 +889,25 @@ end subroutine
 !
 !< @details Note that the dash pattern must be defined in the calling program.
 !
+!> @param PS Postscript structure
 !> @param num number of components in dash pattern
 !
 !> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
+!> @date   06/08/14 MDG 4.0 added PS as argument
 !--------------------------------------------------------------------------
-subroutine PS_setdash(num)
+subroutine PS_setdash(PS, num)
 
 use local
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(IN)  	:: num	!< dash pattern number of components/segments
-integer(kind=irg)  			:: i		!< loop counter
+type(postscript_type), INTENT(INOUT)        :: PS
+integer(kind=irg),INTENT(IN)  	           :: num	!< dash pattern number of components/segments
+
+integer(kind=irg)  		           :: i	!< loop counter
 
  write (psunit,"('[')")
  do i=1,num
@@ -1059,8 +1078,8 @@ use local
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: x,y		!< text start coordinates
-character(*),INTENT(IN)	  	:: line	!< output string
+real(kind=sgl),INTENT(IN)	:: x,y	!< text start coordinates
+character(*),INTENT(IN)	:: line	!< output string
 
  write (psunit,"(F12.7,' ',F12.7,' M')") x,y
  write (psunit,"('(',$)") 
@@ -1092,8 +1111,8 @@ use local
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: x,y		!< text start coordinates
-character(*),INTENT(IN)	  	:: line	!< output string
+real(kind=sgl),INTENT(IN)	:: x,y	!< text start coordinates
+character(*),INTENT(IN)	:: line	!< output string
 
  write (psunit,"('gsave ')") 
  write (psunit,"(F12.7,' ',F12.7,' M')") x,y
@@ -1113,7 +1132,7 @@ end subroutine
 !> @param x x-coordinate of text
 !> @param y y-coordinate
 !> @param line string with output text
-!> @param q ???
+!> @param q 
 !
 !> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90
@@ -1126,9 +1145,9 @@ use local
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: x,y		!< text start coordinates
-character(*),INTENT(IN)	  	:: line	!< output string
-real(kind=sgl),INTENT(IN)	:: q		!< ?
+real(kind=sgl),INTENT(IN)	:: x,y	!< text start coordinates
+character(*),INTENT(IN)	:: line	!< output string
+real(kind=sgl),INTENT(IN)	:: q	!< 
 
  write (psunit,"(F12.7,' ',F12.7,' M')") x,y
  write (psunit,"('(',$)") 
@@ -1148,7 +1167,7 @@ end subroutine
 !> @param x x-coordinate of text
 !> @param y y-coordinate
 !> @param line string with output text
-!> @param q ???
+!> @param q 
 !
 !> @date   10/13/98 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90
@@ -1162,8 +1181,8 @@ use local
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)	:: x,y		!< text start coordinates
-character(*),INTENT(IN)	  	:: line	!< output string
-real(kind=sgl),INTENT(IN)	:: q		!< ?
+character(*),INTENT(IN)	:: line	        !< output string
+real(kind=sgl),INTENT(IN)	:: q		!< 
 
  write (psunit,"('gsave ')") 
  write (psunit,"(F12.7,' ',F12.7,' M')") x,y
@@ -1200,7 +1219,7 @@ use local
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)	:: x,y		!< text start coordinates
-character(*),INTENT(IN)	  	:: line	!< output string
+character(*),INTENT(IN)	:: line	        !< output string
 integer(kind=irg),INTENT(IN)	:: vl		!< integer output value
 
  write (psunit,"(F12.7,' ',F12.7,' M')") x,y
@@ -1236,7 +1255,7 @@ use local
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)	:: x,y		!< text start coordinates
-character(*),INTENT(IN)	  	:: line	!< output string
+character(*),INTENT(IN)	:: line	        !< output string
 real(kind=sgl),INTENT(IN)	:: vl		!< real output value
 
  write (psunit,"(F12.7,' ',F12.7,' M')") x,y
@@ -1272,7 +1291,7 @@ use local
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)	:: x,y		!< text start coordinates
-character(*),INTENT(IN)	  	:: line	!< output string
+character(*),INTENT(IN)	:: line	        !< output string
 real(kind=dbl),INTENT(IN)	:: vl		!< double output value
 
  write (psunit,"(F12.7,' ',F12.7,' M')") x,y
@@ -1308,10 +1327,10 @@ use local
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: x,y		!< text start coordinates
-character(*),INTENT(IN)	  	:: line	!< output string
-character(*),INTENT(IN)	  	:: font	!< font string
-real(kind=sgl),INTENT(IN)	:: sc		!< scale factor
+real(kind=sgl),INTENT(IN)	:: x,y	!< text start coordinates
+character(*),INTENT(IN)	:: line	!< output string
+character(*),INTENT(IN)	:: font	!< font string
+real(kind=sgl),INTENT(IN)	:: sc	!< scale factor
 
  call PS_setfont(font,sc)
  write (psunit,"('/length (',$)") 
@@ -1390,8 +1409,8 @@ use local
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: sc		!< font scale factor  
-character(*),INTENT(IN)		:: line	!< font string
+real(kind=sgl),INTENT(IN)	:: sc	!< font scale factor  
+character(*),INTENT(IN)	:: line	!< font string
 
  write (psunit,"($)") 
  write (psunit,"('/',A,$)") line
@@ -1431,9 +1450,9 @@ IMPLICIT NONE
 
 integer(kind=irg),INTENT(IN)      	:: h,k,l		!< Miller index triplet
 real(kind=sgl),INTENT(IN)		:: x,y			!< starting position of indices
-character(1),parameter 			:: numbers(0:9) = (/'0','1','2','3','4','5','6','7','8','9'/)
-real(kind=sgl)         				:: xo,yo,dx,dy,x1,y1
-character(1)           				:: line
+character(1),parameter 		:: numbers(0:9) = (/'0','1','2','3','4','5','6','7','8','9'/)
+real(kind=sgl)         		:: xo,yo,dx,dy,x1,y1
+character(1)           		:: line
 
  call PS_setfont(PSfonts(5),0.065)
  call PS_setlinewidth(0.004)
@@ -1475,6 +1494,7 @@ end subroutine
 !
 !> @brief  version of Printhkl used by stereographic projection program
 !
+!> @param PS Postscript structure
 !> @param S  space character 'd' or 'r'
 !> @param h  h-index
 !> @param k  k-index
@@ -1491,20 +1511,23 @@ end subroutine
 !> @date    5/19/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
+!> @date   06/08/14 MDG 4.0 added PS as argument
 !--------------------------------------------------------------------------
-subroutine DumpIndices(S,h,k,l,c,x,y,n)
+subroutine DumpIndices(PS,hexset,S,h,k,l,c,x,y,n)
 
 use local
 use crystal
 
 IMPLICIT NONE
 
-
+type(postscript_type),INTENT(INOUT)      :: PS
+logical,INTENT(IN)                    :: hexset
 character(1),INTENT(IN)           	:: S			!< space character 'd' or 'r'
 integer(kind=irg),INTENT(IN)      	:: h,k,l		!< Miller index triplet
 integer(kind=irg),INTENT(IN)		:: c			!< positioning parameter
 real(kind=sgl),INTENT(IN)		:: x,y			!< starting position of indices
-logical,INTENT(IN)		               	:: n			!< logical
+logical,INTENT(IN)		        :: n			!< logical
+
 character(1),parameter :: numbers(0:9) = (/'0','1','2','3','4','5','6','7','8','9'/)
 character(1)           :: line
 integer(kind=irg)      :: uvw(3),uvtw(4)
@@ -1538,7 +1561,7 @@ real(kind=sgl)         :: xo,yo,dx,dy,x1,y1
   call PS_text(x+xo,y+yo,'[')
  else
   call PS_text(x+xo,y+yo,'\(')
-        end if
+ end if
 
 !first index
  x1=x+xo+dx
@@ -1608,6 +1631,7 @@ end subroutine
 !> @brief   draw indices in PostScript format
 !
 !> @param S  space character 'd' or 'r'
+!> @param hexset hexagonal setting logical
 !> @param h  h-index
 !> @param k  k-index
 !> @param l  l-index
@@ -1618,21 +1642,23 @@ end subroutine
 !> @date    5/19/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
+!> @date   06/09/14 MDG 4.0 added argument hexset
 !--------------------------------------------------------------------------
-subroutine PrintIndices(S,h,k,l,x,y)
+subroutine PrintIndices(S,hexset,h,k,l,x,y)
 
 use local
 
 IMPLICIT NONE
 
 character(1),INTENT(IN)           	:: S			!< space character 'd' or 'r'
+logical,INTENT(IN)                    :: hexset
 integer(kind=irg),INTENT(IN)      	:: h,k,l		!< Miller index triplet
 real(kind=sgl),INTENT(IN)		:: x,y			!< starting position of indices
-character(12)    				:: line
-integer(kind=irg)				:: hkl(3)
+character(12)    			:: line
+integer(kind=irg)			:: hkl(3)
 
  hkl = (/ h,k,l /)
- call IndexString(line,hkl,S)
+ call IndexString(hexset,line,hkl,S)
  call PS_text(x,y,line)
 
 end subroutine
@@ -1647,6 +1673,8 @@ end subroutine
 !
 !> @details image is stored in global imnm variable
 !
+!> @param imaint image array
+!> @param imanum image number
 !> @param x0 x position of image
 !> @param y0 y position of image
 !> @param npx number of pixels along x
@@ -1658,18 +1686,19 @@ end subroutine
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
-subroutine PS_DumpImage(x0,y0,npx,npy,scl)
+subroutine PS_DumpImage(imaint,imanum,x0,y0,npx,npy,scl)
 
 use local
 
 IMPLICIT NONE
 
-
-real(kind=sgl),INTENT(IN)                :: x0,y0		!< image position
+integer(kind=irg),INTENT(IN) 	        :: imaint(npx,npy)
+integer(kind=irg),INTENT(INOUT)       :: imanum
+real(kind=sgl),INTENT(IN)             :: x0,y0		!< image position
 integer(kind=irg),INTENT(IN)         	:: npx,npy		!< image size
-real(kind=sgl),INTENT(IN)                :: scl			!< image scale factor
+real(kind=sgl),INTENT(IN)             :: scl			!< image scale factor
 
- call PS_DumpImageDistort(x0,y0,npx,npy,scl,scl)
+ call PS_DumpImageDistort(imaint,imanum,x0,y0,npx,npy,scl,scl)
  
 end subroutine
 
@@ -1683,6 +1712,8 @@ end subroutine
 !
 !> @details image is stored in global imnm variable
 !
+!> @param imaint image array
+!> @param imanum image number
 !> @param x0 x position of image
 !> @param y0 y position of image
 !> @param npx number of pixels along x
@@ -1694,23 +1725,26 @@ end subroutine
 !> @date    5/19/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
+!> @date   06/08/14 MDG 4.0 added imaint and imanum as arguments
 !--------------------------------------------------------------------------
-subroutine PS_DumpImageDistort(x0,y0,npx,npy,sclx,scly)
+subroutine PS_DumpImageDistort(imaint,imanum,x0,y0,npx,npy,sclx,scly)   
 
 use local
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)                :: x0,y0		!< image position
+integer(kind=irg),INTENT(IN) 	        :: imaint(npx,npy)
+integer(kind=irg),INTENT(INOUT)       :: imanum
+real(kind=sgl),INTENT(IN)             :: x0,y0		!< image position
 integer(kind=irg),INTENT(IN)         	:: npx,npy		!< image size
-real(kind=sgl),INTENT(IN)                :: sclx,scly	!< image scale factors
+real(kind=sgl),INTENT(IN)             :: sclx,scly	!< image scale factors
 
-integer(kind=irg)                 		:: iq,i,j,ir,iq1,iq2,k
+integer(kind=irg)                 	:: iq,i,j,ir,iq1,iq2,k
 integer(kind=irg),parameter       	:: bpp=8
-character(2*npx)                  		:: bigone
+character(2*npx)                  	:: bigone
 character(3),parameter            	:: imnm(20) = (/'i01','i02','i03','i04','i05','i06', &
-                                                  				'i07','i08','i09','i10','i11','i12','i13','i14', &
-                                                  				'i15','i16','i17','i18','i19','i20'/)
+                                                  'i07','i08','i09','i10','i11','i12','i13','i14', &
+                                                  'i15','i16','i17','i18','i19','i20'/)
 character(1),parameter            	:: hd(0:15) = (/'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'/)
 
  imanum = imanum + 1
@@ -1766,8 +1800,8 @@ use local
 IMPLICIT NONE
 
 integer(kind=irg),INTENT(INOUT)  		:: hkl(3)		!< indices
-integer(kind=irg)  					:: mi,i,j
-real(kind=sgl)     					:: rhkl(3),ir
+integer(kind=irg)  				:: mi,i,j
+real(kind=sgl)     				:: rhkl(3),ir
 
  mi=100
  do i=1,3
@@ -1810,8 +1844,8 @@ IMPLICIT NONE
 
 
 integer(kind=irg),INTENT(INOUT)  		:: hkl(4)		!< indices
-integer(kind=irg)  					:: mi,i,j
-real(kind=sgl)     					:: rhkl(4),ir
+integer(kind=irg)  				:: mi,i,j
+real(kind=sgl)     				:: rhkl(4),ir
 
  mi=100
  do i=1,4
@@ -1847,20 +1881,22 @@ end subroutine
 !> @date    5/19/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
+!< @date   06/09/14 MDG 4.0 added argument hexset
 !--------------------------------------------------------------------------
-subroutine IndexString(st,hkl,sp)
+subroutine IndexString(hexset,st,hkl,sp)
 
 use local
 use crystal 
 
 IMPLICIT NONE
 
+logical,INTENT(IN)                            :: hexset
 character(12),INTENT(OUT)            		:: st		!< output string
 integer(kind=irg),INTENT(INOUT)        	:: hkl(3)	!< index triplet
 character(1),INTENT(IN)             		:: sp		!< space character 'd' or 'r'
 
-integer(kind=irg)        				:: l,hkil(4),i
-character(1),parameter   :: numbers(0:9) = (/'0','1','2','3','4','5','6','7','8','9'/)
+integer(kind=irg)        			:: l,hkil(4),i
+character(1),parameter                        :: numbers(0:9) = (/'0','1','2','3','4','5','6','7','8','9'/)
 
  do l=1,12
   st(l:l) = ' '
@@ -1933,6 +1969,8 @@ end subroutine
 !
 !> @brief  draw a stereographic projection layout
 !
+!> @param PS Postscript structure
+!> @param cell unit cell structure
 !> @param CX center x-coordinate
 !> @param CY center y-coordinate
 !> @param CRad circle radius
@@ -1943,21 +1981,25 @@ end subroutine
 !> @date    5/19/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
+!> @date   06/09/14 MDG 4.0 added arguments PS, cell
 !--------------------------------------------------------------------------
-subroutine DrawSPFrame(CX,CY,CRad,iview,sp)
+subroutine DrawSPFrame(PS,cell,CX,CY,CRad,iview,sp)
 
-use local
+use crystalvars
 
 IMPLICIT NONE
 
+type(postscript_type),INTENT(INOUT)           :: PS
+type(unitcell),pointer	                       :: cell
 real(kind=sgl),INTENT(IN)    			:: CX, CY		!< circle center coordinates 
 real(kind=sgl),INTENT(IN)    			:: CRad 		!< circle radius
 integer(kind=irg),INTENT(INOUT)		:: iview(3)		!< zone axis indices
-character(1),INTENT(IN)	      			:: sp			!< drawing space
+character(1),INTENT(IN)	      		:: sp			!< drawing space
+
 character(10)     :: instr
 character(17)     :: str
 
- call PS_newpage(.FALSE.,'Stereographic Projection')
+ call PS_newpage(PS,.FALSE.,'Stereographic Projection')
 
  call PS_setlinewidth(0.012)
  call PS_circle(CX,CY,CRad)
@@ -1968,8 +2010,8 @@ character(17)     :: str
  call PS_text(CX+CRad+0.03,CY-0.025,'B')
  call PS_text(CX-0.03,CY-CRad-0.08,'M''')
  call PS_text(CX-0.03,CY+CRad+0.05,'M"')
- call PS_cellinfo(0.00,8.30)
- call IndexString(instr,iview,'d')
+ call PS_cellinfo(PS,cell,0.00,8.30)
+ call IndexString(cell%hexset,instr,iview,'d')
  call PS_text(CX,8.14,'Viewing Direction '//instr)
 
  if (sp.eq.'d') then 
@@ -1990,6 +2032,7 @@ end subroutine
 !
 !> @brief  get the u,v,w or h,k,l indices
 !
+!> @param hexset hexagonal setting logical
 !> @param ind index triplet
 !> @param sp space character
 !
@@ -1997,18 +2040,20 @@ end subroutine
 !> @date    5/19/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
+!> @date   06/09/14 MDG 4.0 added hexset argument
 !--------------------------------------------------------------------------
-subroutine GetIndex(ind,sp)
+subroutine GetIndex(hexset,ind,sp)
 
-use local
 use crystal
 use io
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(OUT) :: ind(3)		!< indices
-character(1),INTENT(IN)      	 :: sp			!< space 'd' or 'r'
-integer(kind=irg) 			 :: jnd(4)
+logical,INTENT(IN)                    :: hexset
+integer(kind=irg),INTENT(OUT)         :: ind(3)		!< indices
+character(1),INTENT(IN)               :: sp			!< space 'd' or 'r'
+
+integer(kind=irg) 		        :: jnd(4)
 
  if (sp.eq.'d') then 
   if (hexset.eqv..FALSE.) then
