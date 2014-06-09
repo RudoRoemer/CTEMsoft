@@ -44,12 +44,22 @@
 module defectmodule
 
 use local
+use crystalvars
+
+! we have to get rid of ALL these global variables !!!
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
 
 complex(kind=dbl),allocatable    	:: DF_Sarray(:,:,:),theta(:),DF_Svoid(:,:)
 real(kind=sgl),allocatable       	:: images(:,:,:),DF_foilsg(:,:),DF_inclusion(:,:),DF_R(:,:)
 
 integer(kind=irg)                	:: Nmat,DF_g(3),DF_npix,DF_npiy,DF_nums,DF_numinclusion,DF_numvoid
 real(kind=sgl)                   	:: DF_slice,DF_L,DF_gc(3),DF_gstar(3)
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
 
 contains
 
@@ -64,13 +74,10 @@ contains
 !
 !> @details Note that the end result MUST be expressed in the cartesian reference frame !
 !
+!> @param defects defect structure
+!> $param cell unit cell pointer
 !> @param i integer x coordinate 
 !> @param j integer y coordinate
-!> @param numvoids number of voids 
-!> @param numdisl number of dislocations
-!> @param numYdisl number of Yoffe dislocations (for ECCI image simulations)
-!> @param numsf number of stacking faults 
-!> @param numinc number of inclusions
 !
 !> @note This entire routine was thoroughly verified after the quaternion conversion !
 !>
@@ -90,13 +97,13 @@ contains
 !> @date  03/26/13 MDG 3.0 updated IO
 !> @date  10/30/13 MDG 3.1 debug of coordinate rotations
 !> @date  11/13/13 MDG 3.2 finally, the bug has been found!  
+!> @date  06/09/14 MDG 4.0 introduced defects argument and simplified routine
 !--------------------------------------------------------------------------
-subroutine CalcR(i,j,numvoids,numdisl,numYdisl,numsf,numinc)
+subroutine CalcR(defects,cell,i,j)
 
 use local
 use constants
 use crystal
-use crystalvars
 use dislocation
 use YSHModule
 use foilmodule
@@ -108,7 +115,10 @@ use rotations
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(IN)    	:: i,j,numvoids,numdisl,numYdisl,numsf,numinc
+type(defecttype),INTENT(INOUT)        :: defects
+type(unitcell),pointer	               :: cell
+integer(kind=irg),INTENT(IN)    	:: i,j
+
 integer(kind=irg)			:: k, islice, ii
 real(kind=dbl)        			:: dis,xpos,ypos,zpos,sumR(3),thick,tmp(3),tmp2(3), &
 					   tmpf(3),u(3),zaamp,zaphase,zar,zai,zr(3),zi(3), &
@@ -153,14 +163,14 @@ logical               			:: void
 !------------
 ! voids are easy to deal with; we simply return -10000 for each point tmpf that lies inside
 ! one of the voids; the calling routine then knows to use the void scattering matrix.
-if (numvoids.ne.0) then 
+if (defects%numvoids.ne.0) then 
 ! are we inside a void ?
     void = .FALSE.
-    voidloop: do ii=1,numvoids
+    voidloop: do ii=1,defects%numvoids
 ! subtract the void position from the current slice position to get the relative position vector
-     tmp = tmpf -  (/ voids(ii)%xpos, voids(ii)%ypos, voids(ii)%zpos /)
-     dis = CalcLength(tmp,'c')
-     if (dis.lt.voids(ii)%radius) then ! inside void
+     tmp = tmpf -  (/ defects%voids(ii)%xpos, defects%voids(ii)%ypos, defects%voids(ii)%zpos /)
+     dis = CalcLength(cell,tmp,'c')
+     if (dis.lt.defects%voids(ii)%radius) then ! inside void
        void = .TRUE.
        exit voidloop
      end if
@@ -184,17 +194,17 @@ if (numvoids.ne.0) then
 !--DISLOCATIONS--
 !-----------------
 ! let's put a few dislocations in ... (see section 8.4.2)
-do ii=1,numdisl
+do ii=1,defects%numdisl
 ! compute the difference vector between the current (xpos,ypos,zpos) in the foil reference frame
 ! and the defect center coordinate
-  tmp2 =  tmpf - dble((/ DF_L*DL(ii)%id, DF_L*DL(ii)%jd, DL(ii)%zfrac*foil%z0 /))
+  tmp2 =  tmpf - dble((/ DF_L*defects%DL(ii)%id, DF_L*defects%DL(ii)%jd, defects%DL(ii)%zfrac*foil%z0 /))
 
 ! then convert the difference vector to the defect reference frame for this dislocation (we will only need the x and y coordinates)
-  tmp = quat_rotate_vector( DL(ii)%a_df, tmp2 ) 
+  tmp = quat_rotate_vector( defects%DL(ii)%a_df, tmp2 ) 
 
 
 ! compute x1 + p_alpha x2  (eq. 8.38)
-  za(1:3) = tmp(1) + DL(ii)%pa(1:3)*tmp(2)
+  za(1:3) = tmp(1) + defects%DL(ii)%pa(1:3)*tmp(2)
 ! compute the displacement vector u (eq. 8.38) [this expands the log of a complex number and takes the real part only,
 ! taking proper care of the branch cut] 
    if (tmp(1).gt.0.0) then
@@ -231,9 +241,9 @@ do ii=1,numdisl
     end if
    end do  
   end if
-  u = 2.0*real(matmul(DL(ii)%dismat,cmplx(zr,zi)))
+  u = 2.0*real(matmul(defects%DL(ii)%dismat,cmplx(zr,zi)))
 ! transform displacement vector u to the Cartesian crystal reference frame
-  u = quat_rotate_vector( conjg(DL(ii)%a_dc), dble(u) )  
+  u = quat_rotate_vector( conjg(defects%DL(ii)%a_dc), dble(u) )  
   sumR = sumR + u 
 end do
 
@@ -245,21 +255,21 @@ end do
 ! to incorporate both top and bottom foil surfaces
 
 ! do we have any dislocations with surface relaxations ?  YSH model
-if (numYdisl.gt.0) then 
-   do ii=1,numYdisl
+if (defects%numYdisl.gt.0) then 
+   do ii=1,defects%numYdisl
 ! first, figure out what the coordinates are in the YSH reference frame for this dislocation ... 
 ! translate to the defect origin
-     tmp =  tmpf -  (/ DF_L*YD(ii)%id, DF_L*YD(ii)%jd, foil%z0*0.5 /)
+     tmp =  tmpf -  (/ DF_L*defects%YD(ii)%id, DF_L*defects%YD(ii)%jd, foil%z0*0.5 /)
 
 ! rotate into the defect reference frame
-     tmp = quat_rotate_vector( YD(ii)%a_di, tmp )   
+     tmp = quat_rotate_vector( defects%YD(ii)%a_di, tmp )   
 
 ! compute the displacement vector
 !     u = sngl(YSHDisp(dble(tmp(2)),-dble(tmp(1)),dble(tmp(3)),ii))
-     u = sngl(YSHDisp(dble(tmp(1)),dble(tmp(2)),dble(tmp(3)),ii))
+     u = sngl(YSHDisp(defects,dble(tmp(1)),dble(tmp(2)),dble(tmp(3)),ii))
 
 ! and rotate back to the image reference frame
-     u = quat_rotate_vector( YD(ii)%a_id, u )
+     u = quat_rotate_vector( defects%YD(ii)%a_id, u )
      u = quat_rotate_vector( conjg(foil%a_ic), u ) 
 
 ! that should do it !
@@ -273,9 +283,9 @@ end if
 ! stacking faults (this is easy because we've already done all the work in the stacking_fault module)
 ! all we need is the z-value at which the stacking fault plane is crossed in this particular image
 ! column; from that point on, we simply add the leading partial Burgers vector to the total displacement.
-do ii=1,numsf
-  if ((zpos.lt.SF(ii)%zpos(i,j)).and.(SF(ii)%zpos(i,j).ne.-10000.0)) then 
-    sumR = sumR + SF(ii)%lpbc
+do ii=1,defects%numsf
+  if ((zpos.lt.defects%SF(ii)%zpos(i,j)).and.(defects%SF(ii)%zpos(i,j).ne.-10000.0)) then 
+    sumR = sumR + defects%SF(ii)%lpbc
   end if
 end do
 
@@ -316,15 +326,15 @@ end do
 !--SMALL INCLUSIONS--
 !--------------------
 ! then the coherent precipitates, using the model in section 8.4.1
-  if (numinc.gt.0) then
-   do ii=1,numinc
+  if (defects%numinc.gt.0) then
+   do ii=1,defects%numinc
 ! subtract the inclusion position from the current slice position to get the relative position vector
-     tmp = tmpf - (/ inclusions(ii)%xpos, inclusions(ii)%ypos, inclusions(ii)%zpos /)
-     dis = CalcLength(tmp,'c')
-     if (dis.ge.inclusions(ii)%radius) then ! outside particle
-       tmp = tmp*(inclusions(ii)%radius/dis)**3
+     tmp = tmpf - (/ defects%inclusions(ii)%xpos, defects%inclusions(ii)%ypos, defects%inclusions(ii)%zpos /)
+     dis = CalcLength(cell,tmp,'c')
+     if (dis.ge.defects%inclusions(ii)%radius) then ! outside particle
+       tmp = tmp*(defects%inclusions(ii)%radius/dis)**3
      end if
-     sumR = sumR + inclusions(ii)%C*tmp
+     sumR = sumR + defects%inclusions(ii)%C*tmp
    end do
   end if
 

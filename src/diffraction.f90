@@ -244,6 +244,7 @@ real(kind=dbl),INTENT(IN)   		:: voltage		!< accelerating voltage [V]
 integer(kind=irg),INTENT(IN),OPTIONAL 	:: skip			!< scattering set identifier
 real(kind=dbl)   			:: temp1,temp2, oi_real(1)
 integer(kind=irg)			:: hkl(3), io_int(1)
+type(gnode)                           :: rlp
 
 ! store voltage in common block
  mAccvol = voltage
@@ -282,7 +283,7 @@ integer(kind=irg)			:: hkl(3), io_int(1)
   end if
 
   hkl=(/0,0,0/)
-  call CalcUcg(cell,hkl) 
+  call CalcUcg(cell,rlp,hkl) 
   oi_real(1) = rlp%Vmod
   call WriteValue('Mean inner potential [V] ', oi_real, 1)
   mPsihat = mPsihat + dble(rlp%Vmod)
@@ -395,7 +396,7 @@ end function
 !> @date  01/10/14 MDG 4.0 new cell type
 !> @date  -6/09/14 MDG 4.1 added cell as argument
 !--------------------------------------------------------------------------
-subroutine CalcUcg(cell,hkl)
+subroutine CalcUcg(cell,rlp,hkl)
 
 use crystalvars
 use crystal
@@ -407,6 +408,7 @@ use dynamical
 IMPLICIT NONE
 
 type(unitcell),pointer	                :: cell
+type(gnode),INTENT(INOUT)              :: rlp
 integer(kind=irg),INTENT(IN)      	:: hkl(3)		!< Miller indices
 
 integer(kind=irg)      		:: j,absflg,m,ii
@@ -1019,6 +1021,7 @@ real(kind=sgl),parameter        :: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/
                                   	eps = 1.0E-3
 logical,allocatable  	         :: dbdiff(:)
 integer(kind=irg)		 :: itmp(48,3)			!< array used for family computations etc
+type(gnode)                     :: rlp
 
 ! set some parameters
  cell % SG % SYM_reduce=.TRUE.
@@ -1102,7 +1105,7 @@ integer(kind=irg)		 :: itmp(48,3)			!< array used for family computations etc
 ! the lattice centering !
       a = IsGAllowed(cell,(/h,k,l/))
       if (a) then
-       call CalcUcg(cell,ind)
+       call CalcUcg(cell,rlp,ind)
 ! check for nonsymmorphic systematic absences
        if ((cell%nonsymmorphic).and.(rlp%Vmod.lt.eps)) then
         io_int = (/ h, k, l, 0 /)

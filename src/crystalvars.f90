@@ -47,6 +47,7 @@
 !> @date   10/17/13 MDG 3.1 added HOLZentries type
 !> @date    1/10/14 MDG 4.0 new version, many new entries in unitcell type
 !> @date    6/ 5/14 MDG 4.1 removed variable declaration for cell
+!> @date    6/ 9/14 MDG 4.2 added all defect type declarations
 !--------------------------------------------------------------------------
 module crystalvars
 
@@ -192,7 +193,6 @@ type orientation
   real(kind=sgl)  	:: tA(3), tB(3), gA(3), gB(3)
 end type
 
-
 !> cell is a pointer to the generic unit cell variable used in all programs.  
 ! This pointer is allocated by the InitializeCell routine in the initializers.f90 module
 ! 
@@ -201,6 +201,55 @@ end type
 ! function and subroutine arguments.
 ! type(unitcell) :: cell
 
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
 
+! define all defect types
+type dislocationtype
+  real(kind=dbl)     		:: burg(3),burgd(3),u(3),un(3),g(3),gn(3),id,jd, zfrac, zu
+  real(kind=dbl)     		:: top(3), bottom(3)
+  real(kind=dbl)		:: a_dc(4), a_id(4), a_di(4), a_df(4)
+  complex(kind=dbl)  		:: dismat(3,3),pa(3)
+end type dislocationtype
+
+type inclusiontype
+	real(kind=sgl)       ::  xpos,ypos,zpos,radius,C
+end type inclusiontype
+
+type stackingfaulttype
+  real(kind=sgl)             :: lpu(3),tpu(3),lpb(3),lpbc(3),tpb(3),plane(3),sep,id,jd, &
+                                lptop(3),lpbot(3),tptop(3),tpbot(3),thetan,a_if(3,3), &
+                                lpr(3),tpr(3), Rdisp(3), poisson
+  real(kind=sgl),allocatable     :: zpos(:,:)
+end type stackingfaulttype
+
+type voidtype
+	real(kind=sgl)       ::  xpos,ypos,zpos,radius
+end type voidtype
+
+type YDtype
+  real(kind=dbl)     	     :: burg(3), burgd(3), u(3), un(3), g(3), gn(3), id, jd, zu, bs, be, bx, beta
+  real(kind=dbl)     	     :: alpha, ca, sa, ta, cota,  top(3), bottom(3), sig
+  real(kind=dbl)	     :: a_dc(4), a_id(4), a_di(4)
+end type YDtype
+
+! here is a new type definition that simplifies defect handling quite a bit...
+! instead of passing many arrays to the defect routines, now we only need to 
+! pass a single master defect variable "defects", which must be defined by
+! the calling program as type(defecttype) :: defects
+type defecttype
+  integer(kind=irg)                        :: numvoids,numdisl,numYdisl,numsf,numinc
+  character(fnlen)                         :: dislYname(3*maxdefects)
+  character(fnlen)                         :: voidname
+  character(fnlen)                         :: incname
+  character(fnlen)	                    :: sfname(maxdefects)
+  character(fnlen)         	 	     :: dislname(3*maxdefects)
+  type (dislocationtype), allocatable      :: DL(:)
+  type (inclusiontype), allocatable        :: inclusions(:)
+  type (stackingfaulttype), allocatable    :: SF(:)
+  type (voidtype), allocatable             :: voids(:)
+  type (YDtype), allocatable               :: YD(:)    
+end type defecttype
 
 end module

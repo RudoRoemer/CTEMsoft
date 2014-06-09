@@ -45,6 +45,7 @@
 ! 
 !> @date 04/29/13 MDG 1.0 original 
 !> #date 01/10/14 MDG 2.0 new version, now use-d in crystalvars
+!> @date 06/09/14 MDG 3.0 removed all global variables and replaced them by arguments
 !--------------------------------------------------------------------------
 module gvectors
 
@@ -52,15 +53,6 @@ use local
 use crystalvars
 
 IMPLICIT NONE
-
-type(reflisttype),pointer 	:: reflist, & 	        ! linked list of reflections
-                                rltail, &  		! end of linked list
-                                rltmpa,rltmpb 	! temporary pointers
-
-! moved to unitcell type in crystalvars.f90 on 1/10/14
-!complex(kind=dbl),allocatable 	:: LUT(:,:,:)
-!logical,allocatable		:: dbdiff(:,:,:), dbdiffB(:,:,:)
-integer(kind=ish),allocatable	:: refdone(:,:,:)	! used to keep track of which reflections have already been dealt with.
 
 ! define the cutoff parameters for the Bethe potential approach (and set to zero initially)
 type BetheParameterType
@@ -90,20 +82,29 @@ type BetheParameterType
 	integer(kind=sgl),allocatable	:: weakreflistindex(:)		! used to map weak reflections onto the original reflist
 end type BetheParameterType
 
-type(BetheParameterType)	:: BetheParameter
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+! [06/09/14] ALL of the following global variable definitions need to be removed !!!
+
+! these may not be needed anymore [06/09/14]; only used in CTEMlacbed.openmp.f90, which is old...
 
 ! finally, create allocatable arrays with the same fields as the rlp list
 ! these may be needed for multithreaded applications, since linked lists
 ! cause OpenMP runtime problems.  This may not be a real problem but caused
 ! by me misunderstanding some aspects of OpenMP ... it's happened before ...
-integer(kind=irg),allocatable	:: Reflist_hkl(:,:)
-complex(kind=dbl),allocatable	:: Reflist_Ucg(:)
-real(kind=sgl),allocatable	:: Reflist_sg(:), Reflist_xg(:)
+!integer(kind=irg),allocatable	:: Reflist_hkl(:,:)
+! complex(kind=dbl),allocatable	:: Reflist_Ucg(:)
+!real(kind=sgl),allocatable	:: Reflist_sg(:), Reflist_xg(:)
 
 ! same for the BetheParameter arrays; somehow OpenMP doesn't like this type of variable...
-integer(kind=irg),allocatable	:: BPweaklist(:), BPstronglist(:), BPweakhkl(:,:), BPstronghkl(:,:), BPreflistindex(:)
-real(kind=sgl),allocatable	:: BPweaksg(:), BPstrongsg(:)
-integer(kind=irg)		:: BPnns, BPnnw
+!integer(kind=irg),allocatable	:: BPweaklist(:), BPstronglist(:), BPweakhkl(:,:), BPstronghkl(:,:), BPreflistindex(:)
+!real(kind=sgl),allocatable	:: BPweaksg(:), BPstrongsg(:)
+!integer(kind=irg)		:: BPnns, BPnnw
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
 
 
 contains
@@ -116,19 +117,25 @@ contains
 !
 !> @brief allocate and initialize the linked reflection list
 !
+!> @param cell unit cell pointer
+!> @param rltail reflist pointer
+!
 !> @date  10/20/98 MDG 1.0 original
 !> @date   5/22/01 MDG 2.0 f90
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  03/26/13 MDG 3.0 updated IO
 !> @date  01/10/14 MDG 4.0 account for new version of cell type
+!> @date  06/09/14 MDG 4.1 added cell and rltail as arguments
 !--------------------------------------------------------------------------
-subroutine MakeRefList
+subroutine MakeRefList(cell, rltail)
 
-use local
 use error
 use crystalvars
 
 IMPLICIT NONE
+
+type(unitcell),pointer	        :: cell
+type(reflisttype),pointer	:: rltail
 
 integer(kind=irg)  :: istat
 
@@ -137,7 +144,7 @@ if (.not.associated(cell%reflist)) then
   cell%DynNbeams = 0
   allocate(cell%reflist,stat=istat)
   if (istat.ne.0) call FatalError('MakeRefList:',' unable to allocate pointer')
-  rltail => cell%reflist                 	! tail points to new value
+  rltail => cell%reflist              ! tail points to new value
   nullify(rltail%next)              	! nullify next in new value
 end if
 
@@ -153,6 +160,8 @@ end subroutine MakeRefList
 !
 !> @brief add a reflection to the linked reflection list
 !
+!> @param rltail reflisttype variable
+!> @param cell unit cell pointer
 !> @param hkl Miller indices
 !
 !> @date  10/20/98 MDG 1.0 original
@@ -160,10 +169,10 @@ end subroutine MakeRefList
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  03/26/13 MDG 3.0 updated IO
 !> @date  01/10/14 MDG 4.0 account for new version of cell type
+!> @date  06/09/14 MDG 4.1 added rltail and cell as arguments
 !--------------------------------------------------------------------------
-subroutine AddReflection(hkl)
+subroutine AddReflection(rltail,cell,hkl)
 
-use local
 use error
 use dynamical
 use crystalvars
@@ -171,11 +180,14 @@ use diffraction
 
 IMPLICIT NONE
 
+type(reflisttype),pointer	:: rltail
+type(unitcell),pointer	        :: cell
 integer(kind=irg),INTENT(IN)	:: hkl(3)		!< Miller indices of reflection to be added to list
+
 integer(kind=irg)  		:: istat
 
 ! create reflist if it does not already exist
- if (.not.associated(cell%reflist)) call MakeRefList
+ if (.not.associated(cell%reflist)) call MakeRefList(cell,rltail)
 
 ! create a new entry
  allocate(rltail%next,stat=istat)  		! allocate new value
@@ -187,9 +199,7 @@ integer(kind=irg)  		:: istat
  cell%DynNbeams = cell%DynNbeams + 1         	! update reflection counter
  rltail%num = cell%DynNbeams            	! store reflection number
  rltail%hkl = hkl                  		! store Miller indices
-! call CalcUcg(hkl)                 		! compute potential Fourier coefficient
  rltail%Ucg = cell%LUT( hkl(1), hkl(2), hkl(3) ) ! and store it in the list
-! rltail%xg = rlp%xg                		! also store the extinction distance
  rltail%famnum = 0				! init this value for Prune_ReflectionList
 ! rltail%Ucgmod = cabs(rlp%Ucg)   		! added on 2/29/2012 for Bethe potential computations
 ! rltail%sangle = 1000.0*dble(CalcDiffAngle(hkl(1),hkl(2),hkl(3)))    ! added 4/18/2012 for EIC project HAADF/BF tomography simulations
@@ -207,47 +217,53 @@ end subroutine AddReflection
 !
 !> @brief output the contents of the rlp structure
 !
+!> @param rlp gnode structure
 !> @param first logical switch to provide long form output (optional)
+!> @param stdout optional output unit identifier
 !
-!> @date   10/20/98 MDG 1.0 original
-!> @date    5/22/01 MDG 2.0 f90
-!> @date   11/27/01 MDG 2.1 added kind support
-!> @date  03/26/13  MDG  3.0 updated IO
+!> @date  10/20/98 MDG 1.0 original
+!> @date   5/22/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  03/26/13 MDG 3.0 updated IO
+!> @date  06/09/14 MDG 4.0 added rlp and stdout arguments
 !--------------------------------------------------------------------------
-subroutine Printrlp(first)
+subroutine Printrlp(rlp,first,stdout)
 
-use local
 use io
 use constants
 use dynamical
 
 IMPLICIT NONE
 
+type(gnode),INTENT(IN)	               :: rlp
 logical,optional,intent(INOUT) 	:: first		!< switch for long/short output
-integer(kind=irg)			:: oi_int(3)
+integer(kind=irg),OPTIONAL,INTENT(IN) :: stdout
+
+integer(kind=irg)			:: oi_int(3), std
 real(kind=sgl)				:: oi_real(7)
 complex(kind=sgl)			:: oi_cmplx(1)
 
+std = 6
+if (PRESENT(stdout)) std = stdout
+
 if (present(first)) then
  if (first) then
-  mess = '     Scattering factors : '; call Message("(/A,$)")
-  
-  if (rlp%method.eq.'WK') then 
+  call Message('     Scattering factors : ', frm = "(/A,$)", stdout = std)
+    if (rlp%method.eq.'WK') then 
    if (rlp%absorption.eqv..TRUE.) then 
-    mess = ' Weickenmeier-Kohl (with absorption)'; call Message("(A/)")
+    call Message(' Weickenmeier-Kohl (with absorption)', frm = "(A/)", stdout = std)
    else
-    mess = ' Weickenmeier-Kohl'; call Message("(A/)")
+    call Message(' Weickenmeier-Kohl', frm = "(A/)", stdout = std)
    end if
   else
-    mess = ' Doyle-Turner/Smith-Burge'; call Message("(A/)")
+    call Message(' Doyle-Turner/Smith-Burge', frm = "(A/)", stdout = std)
   end if
 
   if (rlp%absorption.eqv..TRUE.) then
-    mess = '   h  k  l    |g|    Ucg_r  Ucg_i   |Ug|    phase   |Ugp|   phase   xi_g   xi_gp    ratio  Re-1/q_g-Im'
-    call Message("(A)") 
+    call Message('   h  k  l    |g|    Ucg_r  Ucg_i   |Ug|    phase   |Ugp|   phase   xi_g   xi_gp    ratio  Re-1/q_g-Im', &
+        frm = "(A)", stdout = std)
   else
-    mess = '   h  k  l    |g|    Ucg_r  |Ug|    phase    xi_g   1/q_g'
-    call Message("(A)") 
+    call Message('   h  k  l    |g|    Ucg_r  |Ug|    phase    xi_g   1/q_g', frm = "(A)", stdout = std)
   end if
   first = .FALSE.
  end if
@@ -255,26 +271,26 @@ end if
 
 if (rlp%absorption.eqv..TRUE.) then
  oi_int(1:3) = rlp%hkl(1:3)
- call WriteValue('',oi_int, 3, "(1x,3I3,1x,$)")
+ call WriteValue('',oi_int, 3, "(1x,3I3,1x,$)", stdout = std)
  oi_real(1) = rlp%g
- call WriteValue('',oi_real, 1, "(F9.4,$)")
+ call WriteValue('',oi_real, 1, "(F9.4,$)", stdout = std)
  oi_cmplx(1) = rlp%Ucg
- call WriteValue('',oi_cmplx, 1, "(2F7.3,1x,$)")
+ call WriteValue('',oi_cmplx, 1, "(2F7.3,1x,$)", stdout = std)
  oi_real(1:7)  = (/ rlp%Umod,rlp%Vphase*180.0/sngl(cPi),rlp%Upmod,rlp%Vpphase*180.0/sngl(cPi),rlp%xg,rlp%xgp,rlp%ar /)
- call WriteValue('',oi_real, 7, "(4F8.3,3F8.1,$)")
+ call WriteValue('',oi_real, 7, "(4F8.3,3F8.1,$)", stdout = std)
  oi_cmplx(1) = rlp%qg
- call WriteValue('',oi_cmplx, 1, "(2F8.3)")
+ call WriteValue('',oi_cmplx, 1, "(2F8.3)", stdout = std)
 else
  oi_int(1:3) = rlp%hkl(1:3)
- call WriteValue('',oi_int, 3, "(1x,3I3,1x,$)")
+ call WriteValue('',oi_int, 3, "(1x,3I3,1x,$)", stdout = std)
  oi_real(1) = rlp%g
- call WriteValue('',oi_real, 1, "(F9.4,$)")
+ call WriteValue('',oi_real, 1, "(F9.4,$)", stdout = std)
  oi_real(1) = real(rlp%Ucg)
- call WriteValue('',oi_real, 1, "(F7.3,1x,$)")
+ call WriteValue('',oi_real, 1, "(F7.3,1x,$)", stdout = std)
  oi_real(1:3)  = (/ rlp%Umod,rlp%Vphase*180.0/sngl(cPi),rlp%xg /)
- call WriteValue('',oi_real, 3, "(2F8.3,F8.1,$)")
+ call WriteValue('',oi_real, 3, "(2F8.3,F8.1,$)", stdout = std)
  oi_cmplx(1) = rlp%qg
- call WriteValue('',oi_cmplx, 1, "(2F8.3)")
+ call WriteValue('',oi_cmplx, 1, "(2F8.3)", stdout = std)
 end if
 
 end subroutine Printrlp
@@ -287,6 +303,8 @@ end subroutine Printrlp
 !
 !> @brief tag weak and strong reflections in cell%reflist
 !
+!> @param cell unit cell pointer
+!
 !> @details This routine steps through the cell%reflist linked list and 
 !> determines for each reflection whether it is strong or weak or should be
 !> ignored.  Strong and weak reflections are then linked in a new list via
@@ -295,14 +313,17 @@ end subroutine Printrlp
 !> BetheParameter variables.
 !
 !> @date  01/14/14 MDG 1.0 original version
+!> @date  06/09/14 MDG 2.0 added cell and BetheParameter arguments
 !--------------------------------------------------------------------------
-subroutine Apply_BethePotentials()
+subroutine Apply_BethePotentials(cell, BetheParameter)
 
-use local
 use crystalvars
 use diffraction
 
 IMPLICIT NONE
+
+type(unitcell),pointer	                        :: cell
+type(BetheParameterType),INTENT(INOUT)         :: BetheParameter
 
 integer(kind=irg),allocatable	:: glist(:,:)
 real(kind=dbl),allocatable	:: rh(:)
@@ -413,6 +434,10 @@ end subroutine Apply_BethePotentials
 !> We'll use the famnum field in the rlp linked list to flag the strong reflections.
 !> Linked list entries that are not used are instantly removed from the linked list.
 !
+!> @param cell unit cell pointer
+!> @param khead start of reflisttype linked list
+!> @param reflist reflection linked list
+!> @param BetheParameter Bethe parameter structure 
 !> @param numk number of wave vectors to consider
 !> @param nbeams total number of unique beams
 !
@@ -421,10 +446,10 @@ end subroutine Apply_BethePotentials
 !> @date  10/05/13 MDG 1.2 changed the order of nested loops to speed things up a bit
 !> @date  10/07/13 MDG 1.3 added section to reset the famhkl entries after pruning
 !> @date  01/10/14 MDG 4.0 account for new version of cell type
+!> @date  06/09/14 MDG 4.1 added cell, reflist, BetheParameter and khead arguments
 !--------------------------------------------------------------------------
-subroutine Prune_ReflectionList(numk,nbeams)
+subroutine Prune_ReflectionList(cell,khead,reflist,BetheParameter,numk,nbeams)
 
-use local
 use io
 use crystal
 use dynamical
@@ -433,13 +458,18 @@ use diffraction
 
 IMPLICIT NONE
 
+type(unitcell),pointer	                :: cell
+type(kvectorlist),pointer              :: khead
+type(reflisttype),pointer	        :: reflist
+type(BetheParameterType),INTENT(INOUT):: BetheParameter
 integer(kind=irg),INTENT(IN)		:: numk
 integer(kind=irg),INTENT(OUT)		:: nbeams
 
 integer(kind=irg)			:: ik, ig, istrong, curfam(3), newfam(3)
 real(kind=sgl)     			:: sgp, lUg, cut1, cut2
 !integer(kind=irg),allocatable		:: strongreflections(:,:)
-
+type(kvectorlist),pointer	        :: ktmp
+type(reflisttype),pointer	        :: rltmpa, rltmpb
 
 ! reset the value of DynNbeams in case it was modified in a previous call 
 cell%DynNbeams = cell%DynNbeamsLinked
@@ -474,7 +504,7 @@ nbeams = 0
 ! 	sgp = abs(CalcsgHOLZ(float(rltmpa%hkl),sngl(ktmp%kt),sngl(mLambda)))
 ! 	write (*,*) rltmpa%hkl,CalcsgHOLZ(float(rltmpa%hkl),sngl(ktmp%kt), &
 !			sngl(mLambda)),Calcsg(float(rltmpa%hkl),sngl(ktmp%k),DynFN)
-        sgp = abs(Calcsg(float(rltmpa%hkl),sngl(ktmp%k),DynFN)) 
+        sgp = abs(Calcsg(cell,float(rltmpa%hkl),sngl(ktmp%k),DynFN)) 
 ! we have to deal separately with double diffraction reflections, since
 ! they have a zero potential coefficient !        
         if ( cell%dbdiff(rltmpa%hkl(1),rltmpa%hkl(2),rltmpa%hkl(3)) ) then  ! it is a double diffraction reflection
@@ -499,7 +529,7 @@ nbeams = 0
    rltmpa => rltmpa%next
   end do reflectionloop
 
-  mess = ' Renumbering reflections'; call Message("(A)")
+  call Message(' Renumbering reflections', frm = "(A)")
 
 ! change the following with the new next2 pointer in the reflist type !!!
   
@@ -569,6 +599,9 @@ end subroutine Prune_ReflectionList
 !> decide which reflections are weak, and which are strong (again for the Bloch wave
 !> case, but potentially also for other cases? Further research needed...).
 !
+!> @param cell unit cell pointer
+!> @param reflist reflection list pointer
+!> @param BetheParameter Bethe parameter structure 
 !> @param calcmode string that describes the particular matrix mode
 !> @param kk incident wave vector
 !> @param kt tangential component of incident wave vector (encodes the Laue Center)
@@ -578,29 +611,35 @@ end subroutine Prune_ReflectionList
 !> @date   05/06/13 MDG 1.0 original
 !> @date   08/30/13 MDG 1.1 correction of effective excitation error
 !> @date   09/20/13 MDG 1.2 added second order Bethe potential correction switch
+!> @date   06/09/14 MDG 2.0 added cell, reflist and BetheParameter as arguments
 !--------------------------------------------------------------------------
-recursive subroutine Compute_DynMat(calcmode,kk,kt,IgnoreFoilNormal,IncludeSecondOrder)
+recursive subroutine Compute_DynMat(cell,reflist,BetheParameter,calcmode,kk,kt,IgnoreFoilNormal,IncludeSecondOrder)
 
-use local
 use dynamical
 use error
 use constants
+use crystalvars
 use crystal
 use diffraction
 use io
 
 IMPLICIT NONE
 
+type(unitcell),pointer	                :: cell
+type(reflisttype),pointer	        :: reflist
+type(BetheParameterType),INTENT(INOUT) :: BetheParameter
 character(*),INTENT(IN)		:: calcmode		!< computation mode
 real(kind=dbl),INTENT(IN)		:: kk(3),kt(3)		!< incident wave vector and tangential component
 logical,INTENT(IN)			:: IgnoreFoilNormal	!< how to deal with the foil normal
 logical,INTENT(IN),OPTIONAL		:: IncludeSecondOrder	!< second order Bethe potential correction switch
 
 complex(kind=dbl)  			:: czero,pre, weaksum, ughp, uhph
-integer(kind=irg) 		 	:: istat,ir,ic,nn, iweak, istrong, iw, ig, ll(3), gh(3), nnn, nweak
-real(kind=sgl)     			:: glen,exer,gg(3), kpg(3), gplen, sgp, lUg, cut1, cut2
+integer(kind=irg) 		 	:: istat,ir,ic,nn, iweak, istrong, iw, ig, ll(3), gh(3), nnn, nweak, io_int(1)
+real(kind=sgl)     			:: glen,exer,gg(3), kpg(3), gplen, sgp, lUg, cut1, cut2, io_real(3)
 real(kind=dbl)				:: lsfour, weaksgsum 
 logical					:: AddSecondOrder
+type(gnode)                           :: rlp
+type(reflisttype),pointer	        :: rltmpa, rltmpb
  
 AddSecondOrder = .FALSE.
 if (present(IncludeSecondOrder)) AddSecondOrder = .TRUE.
@@ -623,7 +662,7 @@ if (calcmode.ne.'BLOCHBETHE') then
 	  allocate(DynMat(cell%DynNbeams,cell%DynNbeams),stat=istat)
 	  DynMat = czero
 ! get the absorption coefficient
-	  call CalcUcg( (/0,0,0/) )
+	  call CalcUcg(cell, rlp, (/0,0,0/) )
 	  DynUpz = rlp%Vpmod
 
 ! are we supposed to fill the off-diagonal part ?
@@ -638,7 +677,7 @@ if (calcmode.ne.'BLOCHBETHE') then
 ! compute Fourier coefficient of electrostatic lattice potential 
 	     gh = rltmpa%hkl - rltmpb%hkl
 	     if (calcmode.eq.'D-H-W') then
-	      call CalcUcg(gh)
+	      call CalcUcg(cell, rlp,gh)
 	      DynMat(ir,ic) = pre*rlp%qg
 	     else
 	      DynMat(ir,ic) = cell%LUT(gh(1),gh(2),gh(3))
@@ -655,11 +694,11 @@ if (calcmode.ne.'BLOCHBETHE') then
 	  rltmpa => reflist%next   ! point to the front of the list
 ! ir is the row index
 	  do ir=1,cell%DynNbeams
-	   glen = CalcLength(float(rltmpa%hkl),'r')
+	   glen = CalcLength(cell,float(rltmpa%hkl),'r')
 	   if (glen.eq.0.0) then
 	    DynMat(ir,ir) = cmplx(0.0,DynUpz,dbl)
 	   else  ! compute the excitation error
-	    exer = Calcsg(float(rltmpa%hkl),sngl(kk),DynFN)
+	    exer = Calcsg(cell,float(rltmpa%hkl),sngl(kk),DynFN)
 
 	    rltmpa%sg = exer
 	    if (calcmode.eq.'DIAGH') then  !
@@ -678,7 +717,7 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
 ! this number depends on some externally supplied parameters, which we will get from a namelist
 ! file (which should be read only once by the Set_Bethe_Parameters routine), or from default values
 ! if there is no namelist file in the folder.
-	if (BetheParameter%cutoff.eq.0.0) call Set_Bethe_Parameters
+	if (BetheParameter%cutoff.eq.0.0) call Set_Bethe_Parameters(BetheParameter)
 
 
 ! reset the value of DynNbeams in case it was modified in a previous call 
@@ -723,10 +762,10 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
 ! we're taking the foil normal to be parallel to the incident beam direction at each point of
 ! the standard stereographic triangle, so cos(alpha) = 1 always in eqn. 5.11 of CTEM
         kpg = kk+gg                		! k0 + g (vectors)
-        gplen = CalcLength(kpg,'r')  	! |k0+g|
+        gplen = CalcLength(cell,kpg,'r')  	! |k0+g|
         rltmpa%sg = (1.0/mLambda**2 - gplen**2)*0.5/gplen
      else
-	rltmpa%sg = Calcsg(gg,sngl(kk),DynFN)
+	rltmpa%sg = Calcsg(cell,gg,sngl(kk),DynFN)
 ! here we need to determine the components of the Laue Center w.r.t. the g1 and g2 vectors
 ! and then pass those on to the routine; 
 !	rltmpa%sg = CalcsgHOLZ(gg,sngl(kt),sngl(mLambda))
@@ -778,9 +817,12 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
 ! weakcutoff parameters have unreasonable values) then we abort the run
 ! and we report some numbers to the user 
 	 if (nn.eq.0) then
-	   mess = ' no beams found for the following parameters:'; call Message("(A)")
-	   write (stdout,*) ' wave vector = ',kk,'  -> number of beams = ',nn
-	   mess =  '   -> check cutoff and weakcutoff parameters for reasonableness'; call Message("(A)")
+	   call Message(' no beams found for the following parameters:', frm = "(A)")
+	   io_real(1:3) = kk(1:3)
+           call WriteValue(' wave vector = ', io_real,3)
+           io_int(1) = nn
+           call WriteValue('  -> number of beams = ', io_int, 1)
+	   call Message( '   -> check cutoff and weakcutoff parameters for reasonableness', frm = "(A)")
 	   call FatalError('Compute_DynMat','No beams in list')
 	end if
 
@@ -843,7 +885,7 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
 	  DynMat = czero
 
 ! get the absorption coefficient
-	  call CalcUcg( (/0,0,0/) )
+	  call CalcUcg(cell, rlp, (/0,0,0/) )
 	  DynUpz = rlp%Vpmod
 
 ! ir is the row index
@@ -908,13 +950,14 @@ end subroutine Compute_DynMat
 !> @param silent optional, if present, then no output
 !> @date   05/08/13 MDG 1.0 original
 !--------------------------------------------------------------------------
-subroutine Set_Bethe_Parameters(silent)
+subroutine Set_Bethe_Parameters(BetheParameter,silent)
 
 use local
 use io
 
 IMPLICIT NONE
 
+type(BetheParameterType),INTENT(INOUT)        :: BetheParameter
 logical,INTENT(IN),OPTIONAL	:: silent
 
 character(fnlen),parameter 	:: Bethefilename = 'BetheParameters.nml'
@@ -937,8 +980,8 @@ if (fexist.eq..TRUE.) then ! check for the file in the local folder
  READ(UNIT=dataunit,NML=BetheList)
  CLOSE(UNIT=dataunit)
  if (.not.present(silent)) then
-   mess = 'Read Bethe parameters from BetheParameters.nml'; call Message("(A)")
-   write (stdout,nml=BetheList)
+   call Message('Read Bethe parameters from BetheParameters.nml', frm = "(A)")
+   write (6,nml=BetheList)
  end if
 end if
 
@@ -958,6 +1001,7 @@ end subroutine Set_Bethe_Parameters
 !
 !> @brieffind the G vector (displacement FOLZ w.r.t. ZOLZ, Chapter 3)
 !
+!> @param cell unit cell pointer
 !> @param k wavevector
 !> @param ga first reflection
 !> @param gb second reflection
@@ -965,11 +1009,11 @@ end subroutine Set_Bethe_Parameters
 !> @param gp
 !
 !> @date  01/29/02 MDG 1.0 original
-!> @date   04/29/13 MDG 2.0 rewrite
+!> @date  04/29/13 MDG 2.0 rewrite
+!> @date  06/09/14 MDG 2.1 added cell argument 
 !--------------------------------------------------------------------------
-subroutine ShortestGFOLZ(k,ga,gb,gshort,gp)
+subroutine ShortestGFOLZ(cell,k,ga,gb,gshort,gp)
 
-use local
 use io
 use crystal
 use crystalvars
@@ -977,6 +1021,7 @@ use error
 
 IMPLICIT NONE
 
+type(unitcell),pointer	        :: cell
 integer(kind=irg),INTENT(IN)	:: k(3)
 integer(kind=irg),INTENT(IN)	:: ga(3)
 integer(kind=irg),INTENT(IN)	:: gb(3)
@@ -1001,7 +1046,7 @@ integer(kind=irg)            	:: ih,ik,il,NN, io_int(1)
     do il=-inm,inm
 ! does this reflection lie in the plane NN ?
      if ((ih*k(1)+ik*k(2)+il*k(3)).eq.NN) then
-      glen = CalcLength(float((/ih,ik,il/)),'r')
+      glen = CalcLength(cell,float((/ih,ik,il/)),'r')
       if (glen.lt.gmin) then
        gmin = glen
        gshort =  (/ ih,ik,il /) 
@@ -1021,12 +1066,12 @@ integer(kind=irg)            	:: ih,ik,il,NN, io_int(1)
  end if
  g3 = float(gshort)
 ! projected components of G
- gam11 = CalcDot(g1,g1,'r')
- gam12 = CalcDot(g1,g2,'r')
- gam22 = CalcDot(g2,g2,'r')
+ gam11 = CalcDot(cell,g1,g1,'r')
+ gam12 = CalcDot(cell,g1,g2,'r')
+ gam22 = CalcDot(cell,g2,g2,'r')
  gmin = 1.0/(gam11*gam22-gam12**2)
- gp(1) = (CalcDot(g3,g1,'r')*gam22-CalcDot(g3,g2,'r')*gam12)*gmin
- gp(2) = (CalcDot(g3,g2,'r')*gam11-CalcDot(g3,g1,'r')*gam12)*gmin
+ gp(1) = (CalcDot(cell,g3,g1,'r')*gam22-CalcDot(cell,g3,g2,'r')*gam12)*gmin
+ gp(2) = (CalcDot(cell,g3,g2,'r')*gam11-CalcDot(cell,g3,g1,'r')*gam12)*gmin
 
 end subroutine ShortestGFOLZ
 
@@ -1041,11 +1086,20 @@ end subroutine ShortestGFOLZ
 !
 !> @brief delete the entire linked list
 !
+!> @param cell unit cell pointer
+!
 !> @date   04/29/13 MDG 1.0 original
+!> @date   06/09/14 MDG 1.1 added cell argument
 !--------------------------------------------------------------------------
-subroutine Delete_gvectorlist()
+subroutine Delete_gvectorlist(cell)
+
+use crystalvars
 
 IMPLICIT NONE
+
+type(unitcell),pointer	:: cell
+
+type(reflisttype),pointer :: rltail, rltmpa
 
 ! deallocate the entire linked list before returning, to prevent memory leaks
 rltail => cell%reflist

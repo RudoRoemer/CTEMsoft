@@ -75,8 +75,8 @@ contains
 !
 !> @details This new implementation uses quaternions for all rotations. 
 ! 
-!> @param s string to indicate which rotation is being considered
-!> @param q rotation (unit) quaternion
+!> @param cell unit cell pointer
+!> @param dinfo
 ! 
 !> @date  1/ 5/99 MDG 1.0 original
 !> @date  1/11/10 MDG 2.0 rewrite of beam direction part
@@ -84,10 +84,10 @@ contains
 !> @date  4/23/11 MDG 2.2 redefined origin to be at center of image
 !> @date  6/03/13 MDG 3.0 replaced rotation matrices by quaternions throughout
 !> @date 10/30/13 MDG 3.1 complete debug of quaternion and rotation implementation 
+!> @date 06/09/14 MDG 4.0 added cell as argument
 !--------------------------------------------------------------------------
-subroutine initialize_foil_geometry(dinfo)
+subroutine initialize_foil_geometry(cell,dinfo)
 
-use local
 use math
 use constants
 use crystal
@@ -100,6 +100,7 @@ use rotations
 
 IMPLICIT NONE
 
+type(unitcell),pointer	        :: cell
 integer(kind=sgl),INTENT(IN)	:: dinfo
 
 real(kind=dbl)      		:: ey(3),ex(3),t,dx,dy 
@@ -156,7 +157,7 @@ character(10)			:: pret
 ! The beam direction is the inverse transform of the microscope e_z-axis to the foil reference frame [verified 11/12/13]
   foil%B = quat_rotate_vector( foil%a_fm, (/ 0.D0,0.D0,-1.D0 /) )
   foil%Bn = foil%B
-  call NormVec(foil%Bn,'c')
+  call NormVec(cell,foil%Bn,'c')
   if (dinfo.eq.1) then
     io_real(1:3) = foil%B(1:3)
     call WriteValue('  Beam direction (foil reference frame) = ',io_real,3,"('[',F12.5,',',F12.5,',',F12.5,']')")
@@ -164,15 +165,15 @@ character(10)			:: pret
 
 ! transform both the foil normal and the q-vector to the crystal cartesian reference frame (eq. 8.8) [verified 4/23/11,
 ! and again on 11/12/13 afterchanges elsewhere]
-  call TransSpace(foil%F,foil%Fn,'d','c')
-  call TransSpace(foil%q,foil%qn,'r','c')
-  call NormVec(foil%Fn,'c')
-  call NormVec(foil%qn,'c')
+  call TransSpace(cell,foil%F,foil%Fn,'d','c')
+  call TransSpace(cell,foil%q,foil%qn,'r','c')
+  call NormVec(cell,foil%Fn,'c')
+  call NormVec(cell,foil%qn,'c')
 ! a_fc (crystal to foil)  
   a_fc(3,1:3) = foil%Fn(1:3)
   a_fc(1,1:3) = foil%qn(1:3)
-  call CalcCross(foil%Fn,foil%qn,ey,'c','c',0)
-  call NormVec(ey,'c')
+  call CalcCross(cell,foil%Fn,foil%qn,ey,'c','c',0)
+  call NormVec(cell,ey,'c')
   a_fc(2,1:3) = ey(1:3)
   foil%a_fc = om2qu(a_fc)
   if (dinfo.eq.1) then
@@ -208,8 +209,8 @@ character(10)			:: pret
 ! express the beam direction in the Bravais reference frame [verified 4/23/11, and again on 11/12/13
 ! after changes elsewhere]
   ex = quat_rotate_vector( conjg(foil%a_fc), dble(foil%Bn) ) 
-  call TransSpace(ex,ey,'c','d')
-  call NormVec(ey,'c')
+  call TransSpace(cell,ex,ey,'c','d')
+  call NormVec(cell,ey,'c')
   if (dinfo.eq.1) then
     io_real(1:3) = ey(1:3)
     call WriteValue('  Beam direction (crystal reference frame) = ', io_real, 3, "('[',F12.5,',',F12.5,',',F12.5,']'/)")
@@ -220,7 +221,7 @@ if (.not.allocated(foil%sg)) allocate(foil%sg(foil%npix,foil%npiy))
 ! if the foil is not bent, then we set this array to zero, otherwise we compute the elliptical paraboloid
 if ((foil%brx.eq.0.0).and.(foil%bry.eq.0.0)) then
   if (dinfo.eq.1) then
-    mess = ' Initializing a flat foil '; call Message("(A)")
+    call Message(' Initializing a flat foil ', frm = "(A)")
   end if
   foil%sg = 0.0
 else
@@ -235,7 +236,7 @@ else
     end do
   end do
   if (dinfo.eq.1) then
-    mess = ' Initializing a bent foil '; call Message("(A)")
+    call Message(' Initializing a bent foil ', frm = "(A)")
     io_real(1)=minval(foil%sg); io_real(2)=maxval(foil%sg); 
     call WriteValue('Range of local excitation error deviations : ', io_real, 2, "(F10.6,',',F10.6/)")
   end if
@@ -252,18 +253,20 @@ end subroutine initialize_foil_geometry
 !
 !> @brief  Reads the foil geometry data
 !
+!> @param cell unit cell pointer
 !> @param foilnmlfile name of foil namelist file
 !> @param npix number of x image pixels
 !> @param npiy number of y image pixels
 !> @param L pixel size for column approximation
 !> @param dinfo flag to print information
 ! 
-!> @date 1/5/11   MDG 1.0 original
-!> @date 6/04/13 MDG 2.0 general rewrite
+!> @date 010/5/11 MDG 1.0 original
+!> @date 06/04/13 MDG 2.0 general rewrite
+!> @date 06/09/14 MDG 3.0 added cell as argument
 !--------------------------------------------------------------------------
-subroutine read_foil_data(foilnmlfile,npix,npiy,L,dinfo)
+subroutine read_foil_data(cell,foilnmlfile,npix,npiy,L,dinfo)
 
-use local
+use crystalvars
 use crystal
 use io
 use files
@@ -272,6 +275,7 @@ use rotations
 
 IMPLICIT NONE
 
+type(unitcell),pointer	        :: cell
 character(fnlen),INTENT(IN)	:: foilnmlfile
 integer(kind=irg),INTENT(IN)	:: npix, npiy, dinfo
 real(kind=sgl),INTENT(IN)	:: L
@@ -300,7 +304,7 @@ namelist / foildata / foilF, foilq, foilalP, foilalS, foilalR, foilbeP, foilz0, 
  cpy = 0.0
  
  if (dinfo.eq.1) then 
-  mess = 'opening '//foilnmlfile; call Message("(/A/)")
+  call Message('opening '//foilnmlfile, frm = "(/A/)")
  end if
 
  OPEN(UNIT=dataunit,FILE=trim(foilnmlfile),DELIM='APOSTROPHE')
@@ -308,10 +312,9 @@ namelist / foildata / foilF, foilq, foilalP, foilalS, foilalR, foilbeP, foilz0, 
  CLOSE(UNIT=dataunit)
 
 ! verify that the foil normal (in real space) and q (in reciprocal space) are orthogonal
-x = CalcDot(foilF,foilq,'c')
+x = CalcDot(cell,foilF,foilq,'c')
 if (abs(x).gt.0.005) then
-  mess = 'Foil normal must be orthogonal to q'; call Message("(A)")
-  write (*,*) '[',foilF,'] . (', foilq, ') = ',x
+  call Message('Foil normal must be orthogonal to q', frm = "(A)")
   stop
 end if
 
@@ -341,7 +344,7 @@ do i=1,6
 end do
 
 ! initialize a bunch of foil related quantities, using quaternions for all rotations
-call initialize_foil_geometry(dinfo)
+call initialize_foil_geometry(cell,dinfo)
 
 ! compute the projected thickness
 amat = qu2om(foil%a_fm)

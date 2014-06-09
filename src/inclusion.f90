@@ -42,12 +42,7 @@
 module inclusion
 
 use local
-
-type inclusiontype
-	real(kind=sgl)       ::  xpos,ypos,zpos,radius,C
-end type inclusiontype
-
-type (inclusiontype), allocatable  :: inclusions(:)
+use crystalvars
 
 contains
 
@@ -59,29 +54,28 @@ contains
 !
 !> @brief  read inclusion parameters from file
 ! 
-!> @param numinc number of inclusions
-!> @param incname name of inclusion file
+!> @param defects defect structure
 !> @param DF_L column edge length 
 !> @param DF_npix number of x-pixels
 !> @param DF_npiy number of y-pixels
 !> @param dinfo logical to trigger verbose output
 ! 
-!> @date 1/5/99   MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90 version
-!> @date   11/27/01 MDG 2.1 added kind support
-!> @date   03/25/13 MDG 3.0 updated IO
+!> @date  01/05/99 MDG 1.0 original
+!> @date  05/19/01 MDG 2.0 f90 version
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  03/25/13 MDG 3.0 updated IO
+!> @date  06/09/14 MDG 4.0 added defects argument
 !--------------------------------------------------------------------------
-subroutine read_inclusion_data(numinc,incname,DF_L,DF_npix,DF_npiy,dinfo)
+subroutine read_inclusion_data(defects,DF_L,DF_npix,DF_npiy,dinfo)
 
-use local
 use io
 use files
 use foilmodule
+use quaternions
 
 IMPLICIT NONE
 
-character(50),INTENT(IN)       	:: incname
-integer(kind=irg),INTENT(OUT):: numinc
+type(defecttype),INTENT(INOUT) :: defects
 integer(kind=irg),INTENT(IN)	:: dinfo,DF_npix,DF_npiy
 real(kind=sgl),INTENT(IN)	:: DF_L
 
@@ -89,28 +83,31 @@ integer(kind=irg) :: i, io_int(1)
 real(kind=sgl)      :: Vx,Vy,Vz,Vrad,C,tmp(3)
 
 ! open the inclusion data file
-mess = 'Opening '//incname; call Message("(A)")
-open(unit=dataunit,file=incname,form='formatted')
-read(unit=dataunit,*) numinc
-allocate(inclusions(numinc))
+call Message('Opening '//trim(defects%incname), frm = "(A)")
+open(unit=dataunit,file=trim(defects%incname),form='formatted')
+read(unit=dataunit,*) defects%numinc
+
+allocate(defects%inclusions(defects%numinc))
+
 if (dinfo.eq.1) then
-  io_int(1) = numinc
+  io_int(1) = defects%numinc
   call WriteValue(' Number of inclusions',io_int, 1, "(I)")
 end if
 
 
 ! read each subsequent line 
-do i=1,numinc
+do i=1,defects%numinc
   read(unit=dataunit,*) Vx,Vy,Vz,Vrad,C
-  inclusions(i)%xpos = Vx * 0.5 * float(DF_npix)*DF_L
-  inclusions(i)%ypos = Vy * 0.5 * float(DF_npiy)*DF_L
-  inclusions(i)%zpos = Vz * foil%z0         ! vertical fractional location in interval [-1,1]
-  inclusions(i)%radius = Vrad    ! radius in nanometers
-  inclusions(i)%C = C                 ! this is the parameter defined in equation (8.36) of the CTEM book.
-  tmp = quat_rotate_vector( foil%a_fc, dble((/ inclusions(i)%xpos, inclusions(i)%ypos, inclusions(i)%zpos /)) )  
-  inclusions(i)%xpos = tmp(1)
-  inclusions(i)%ypos = tmp(2)
-  inclusions(i)%zpos = tmp(3)
+  defects%inclusions(i)%xpos = Vx * 0.5 * float(DF_npix)*DF_L
+  defects%inclusions(i)%ypos = Vy * 0.5 * float(DF_npiy)*DF_L
+  defects%inclusions(i)%zpos = Vz * foil%z0         ! vertical fractional location in interval [-1,1]
+  defects%inclusions(i)%radius = Vrad    ! radius in nanometers
+  defects%inclusions(i)%C = C                 ! this is the parameter defined in equation (8.36) of the CTEM book.
+  tmp = quat_rotate_vector( foil%a_fc, dble((/ defects%inclusions(i)%xpos, defects%inclusions(i)%ypos, &
+        defects%inclusions(i)%zpos /)) )  
+  defects%inclusions(i)%xpos = tmp(1)
+  defects%inclusions(i)%ypos = tmp(2)
+  defects%inclusions(i)%zpos = tmp(3)
   if (dinfo.eq.1) write (*,*) i,Vx,Vy,Vz,Vrad,C
 end do
 

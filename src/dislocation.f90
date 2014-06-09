@@ -43,17 +43,7 @@ module dislocation
 
 use local
 use quaternions
-
-! define a dislocation, along with all matrices and such, but using quaternions instead of rotations !
-type dislocationtype
-  real(kind=dbl)     		:: burg(3),burgd(3),u(3),un(3),g(3),gn(3),id,jd, zfrac, zu
-  real(kind=dbl)     		:: top(3), bottom(3)
-  real(kind=dbl)		:: a_dc(4), a_id(4), a_di(4), a_df(4)
-  complex(kind=dbl)  		:: dismat(3,3),pa(3)
-end type dislocationtype
-
-type (dislocationtype), allocatable  :: DL(:)    
-
+use crystalvars
 
 contains
 
@@ -80,8 +70,6 @@ contains
 !> @date   06/04/13 MDG 3.0 rewrite
 !--------------------------------------------------------------------------
 subroutine TransFourthRankTensor(al,cin,cout)
-
-use local
 
 IMPLICIT NONE
 
@@ -385,6 +373,8 @@ end subroutine
 !> incident beam direction, to avoid getting stacking-fault fringes in the wrong plane...
 !> Actual stacking faults are added in using a different module (stacking_fault.f90).
 !>
+!> @param defects defect structure
+!> @param cell unit cell pointer
 !> @param inum
 !> @param dinfo
 !> @param DF_L column width
@@ -394,15 +384,14 @@ end subroutine
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  06/04/13 MDG 3.0 rewrite
 !> @date  10/30/13 MDG 3.1 debug of all rotation parts
+!> @date  06.09/14 MDG 4.0 added cell, defects arguments
 !--------------------------------------------------------------------------
-subroutine makedislocation(inum,dinfo,DF_L)
+subroutine makedislocation(defects,cell,inum,dinfo,DF_L)
 
-use local
 use math
 use constants
 use foilmodule
 use crystal
-use crystalvars
 use symmetry
 use symmetryvars
 use quaternions
@@ -410,6 +399,8 @@ use rotations
 
 IMPLICIT NONE
 
+type(unitcell),pointer	                :: cell
+type(defecttype),INTENT(INOUT)         :: defects
 integer(kind=irg),INTENT(IN)		:: inum
 integer(kind=irg),INTENT(IN)		:: dinfo
 real(kind=sgl),INTENT(IN)		:: DF_L
@@ -424,25 +415,25 @@ integer(kind=irg)       		:: i,j,k,l,imin,ind(3),jnd(3)
 
 
 ! convert line direction and g-vector to the Cartesian crystal reference frame
-call TransSpace(DL(inum)%u,DL(inum)%un,'d','c')
-call TransSpace(DL(inum)%g,DL(inum)%gn,'r','c')
+call TransSpace(cell,defects%DL(inum)%u,defects%DL(inum)%un,'d','c')
+call TransSpace(cell,defects%DL(inum)%g,defects%DL(inum)%gn,'r','c')
 ! normalize both vectors
-call NormVec(DL(inum)%un,'c')
-call NormVec(DL(inum)%gn,'c')
+call NormVec(cell,defects%DL(inum)%un,'c')
+call NormVec(cell,defects%DL(inum)%gn,'c')
 
 ! first find the length of the dislocation line inside the foil along the
 ! dislocation z-axis, which is the line direction; also, compute the intersection
 ! points of the line with the top and bottom surfaces  (all components in [nm])
-zang = CalcAngle(DL(inum)%u,dble(foil%F),'d')
+zang = CalcAngle(cell,defects%DL(inum)%u,dble(foil%F),'d')
 zz = cos(zang)
 if (abs(zz).gt.0.00001) then 
-  DL(inum)%zu = 0.5*foil%z0/zz
+  defects%DL(inum)%zu = 0.5*foil%z0/zz
 else
-  DL(inum)%zu = 100000.0         ! this is when the dislocation is nearly parallel to the foil
+  defects%DL(inum)%zu = 100000.0         ! this is when the dislocation is nearly parallel to the foil
 end if
 
 ! transform the line direction to the foil reference frame
-tmp = quat_rotate_vector( foil%a_fc, dble(DL(inum)%un) ) / DF_L
+tmp = quat_rotate_vector( foil%a_fc, dble(defects%DL(inum)%un) ) / DF_L
 
 if (dinfo.eq.1) then
   write (*,*) 'transformed line direction ', tmp, zang, zz
@@ -450,72 +441,76 @@ end if
 
 ! determine the top and bottom intersection coordinates 
 if (zz.gt.0.0) then  ! u points to the top of the foil
-    DL(inum)%top = (/ DL(inum)%id + tmp(1)*DL(inum)%zu, DL(inum)%jd + tmp(2)*DL(inum)%zu, 0.5D0*foil%z0 /)
-    DL(inum)%bottom = (/ DL(inum)%id - tmp(1)*DL(inum)%zu, DL(inum)%jd - tmp(2)*DL(inum)%zu, -0.5D0*foil%z0 /)
+    defects%DL(inum)%top = (/ defects%DL(inum)%id + tmp(1)*defects%DL(inum)%zu, defects%DL(inum)%jd + &
+        tmp(2)*defects%DL(inum)%zu, 0.5D0*foil%z0 /)
+    defects%DL(inum)%bottom = (/ defects%DL(inum)%id - tmp(1)*defects%DL(inum)%zu, defects%DL(inum)%jd - &
+        tmp(2)*defects%DL(inum)%zu, -0.5D0*foil%z0 /)
 else                 ! u points to the bottom of the foil
-    DL(inum)%top = (/ DL(inum)%id - tmp(1)*DL(inum)%zu, DL(inum)%jd - tmp(2)*DL(inum)%zu, -0.5D0*foil%z0 /)
-    DL(inum)%bottom = (/ DL(inum)%id + tmp(1)*DL(inum)%zu, DL(inum)%jd + tmp(2)*DL(inum)%zu, 0.5D0*foil%z0 /)
+    defects%DL(inum)%top = (/ defects%DL(inum)%id - tmp(1)*defects%DL(inum)%zu, defects%DL(inum)%jd - &
+        tmp(2)*defects%DL(inum)%zu, -0.5D0*foil%z0 /)
+    defects%DL(inum)%bottom = (/ defects%DL(inum)%id + tmp(1)*defects%DL(inum)%zu, defects%DL(inum)%jd + &
+        tmp(2)*defects%DL(inum)%zu, 0.5D0*foil%z0 /)
 end if  
 
 if (dinfo.eq.1) then
-  write (*,*) DL(inum)%id,DL(inum)%jd
-  write (*,*) 'dislocation top intersection at ',DL(inum)%top
-  write (*,*) 'dislocation bottom intersection at ',DL(inum)%bottom
+  write (*,*) defects%DL(inum)%id,defects%DL(inum)%jd
+  write (*,*) 'dislocation top intersection at ',defects%DL(inum)%top
+  write (*,*) 'dislocation bottom intersection at ',defects%DL(inum)%bottom
 end if 
 
 ! a_dc (crystal to defect)  matrix corrected on 11/29/10 to put defect x-axis in the plane of u and B
 if (dinfo.eq.1) then
   write (*,*) 'cartesian quantities'
-  write (*,*) 'unit line direction = ',DL(inum)%un
+  write (*,*) 'unit line direction = ',defects%DL(inum)%un
   write (*,*) 'unit beam direction = ',foil%Bn
 end if
 
 ! transform beam direction (currently in foil frame) to cartesian 
 tmp = quat_rotate_vector(conjg(foil%a_fc), dble(foil%Bn))
 !tmp = quat_rotate_vector(conjg(foil%a_fc), (/ 0.0D0, 0.0D0, -1.0D0/) )
-call NormVec(tmp,'c')
+call NormVec(cell,tmp,'c')
 
 ! the defect z axis is the line direction and x is in the plane of u and B to avoid the intrinsic discontinuity (cut plane)
-a_dc(3,1:3) = DL(inum)%un(1:3)
-call CalcCross(dble(DL(inum)%un),tmp,ex,'c','c',0)
-call NormVec(ex,'c')
+a_dc(3,1:3) = defects%DL(inum)%un(1:3)
+call CalcCross(cell,dble(defects%DL(inum)%un),tmp,ex,'c','c',0)
+call NormVec(cell,ex,'c')
 a_dc(1,1:3) = ex(1:3)
-call CalcCross(dble(DL(inum)%un),ex,ey,'c','c',0)
-call NormVec(ey,'c')
+call CalcCross(cell,dble(defects%DL(inum)%un),ex,ey,'c','c',0)
+call NormVec(cell,ey,'c')
 a_dc(2,1:3) = ey(1:3)
-DL(inum)%a_dc = om2qu(a_dc)
+defects%DL(inum)%a_dc = om2qu(a_dc)
 
 if (dinfo.eq.1) then
   call PrintMatrixd('a_dc',a_dc)
 end if
 
 ! a_di (image to defect)
-DL(inum)%a_di = quat_mult( DL(inum)%a_dc, conjg(foil%a_ic) )
-DL(inum)%a_id = conjg(DL(inum)%a_di)
+defects%DL(inum)%a_di = quat_mult( defects%DL(inum)%a_dc, conjg(foil%a_ic) )
+defects%DL(inum)%a_id = conjg(defects%DL(inum)%a_di)
 
 if (dinfo.eq.1) then
-  call print_orientation(init_orientation(DL(inum)%a_di,'qu'),'om','a_di: ')
-  call print_orientation(init_orientation(DL(inum)%a_id,'qu'),'om','a_id: ')
+  call print_orientation(init_orientation(defects%DL(inum)%a_di,'qu'),'om','a_di: ')
+  call print_orientation(init_orientation(defects%DL(inum)%a_id,'qu'),'om','a_id: ')
 end if
 
 ! finally, get the foil to defect transformation (used in defect module)
-DL(inum)%a_df = quat_mult( DL(inum)%a_di, conjg(foil%a_fi) )
+defects%DL(inum)%a_df = quat_mult( defects%DL(inum)%a_di, conjg(foil%a_fi) )
 
 ! Burgers vector (in the defect reference frame !!!)
 ! first transform Burgers vector to crystal cartesian reference frame
-call TransSpace(dble(DL(inum)%burg),tmp,'d','c')
+call TransSpace(cell,dble(defects%DL(inum)%burg),tmp,'d','c')
 ! then convert this to the defect reference frame
-DL(inum)%burgd(1:3) = quat_rotate_vector(DL(inum)%a_dc,dble(tmp))
+defects%DL(inum)%burgd(1:3) = quat_rotate_vector(defects%DL(inum)%a_dc,dble(tmp))
 
 if (dinfo.eq.1) then
-  write (*,*) 'rotated burgers vector  = ', DL(inum)%burgd(1:3) 
+  write (*,*) 'rotated burgers vector  = ', defects%DL(inum)%burgd(1:3) 
 end if
 
 ! transform the elastic moduli
 lec = foil%elmo
 
 ! transform lec to defect reference frame
-a_dc = qu2om(DL(inum)%a_dc)
+a_dc = qu2om(defects%DL(inum)%a_dc)
 call TransFourthRankTensor(a_dc,lec,ec)
 if (dinfo.eq.1)  then 
   write (*,*) 'Elasticity tensor in defect reference frame'
@@ -562,13 +557,13 @@ call zroots(s,roots)
 k=1
 do j=1,6
   if (aimag(roots(j)).gt.0.0) then
-    DL(inum)%pa(k) = roots(j)
+    defects%DL(inum)%pa(k) = roots(j)
     k=k+1
   end if
 end do
 
 ! renumber them to avoid the symmetry degeneracy (see page 328 Head et al.)
-v(1:3) = ec(5,5) + 2.0*DL(inum)%pa(1:3)*ec(4,5) + ec(4,4)*DL(inum)%pa(1:3)**2
+v(1:3) = ec(5,5) + 2.0*defects%DL(inum)%pa(1:3)*ec(4,5) + ec(4,4)*defects%DL(inum)%pa(1:3)**2
 zmin = 100.0
 imin = 0
 
@@ -582,38 +577,38 @@ end do
 
 ! is the 3rd one the smallest ? if not, then swap with the current 3rd one.
 if (imin.ne.3) then
-  pas = DL(inum)%pa(imin)
-  DL(inum)%pa(imin)=DL(inum)%pa(3)
-  DL(inum)%pa(3)=pas
+  pas = defects%DL(inum)%pa(imin)
+  defects%DL(inum)%pa(imin)=defects%DL(inum)%pa(3)
+  defects%DL(inum)%pa(3)=pas
 end if
-  pas = DL(inum)%pa(1)
-  DL(inum)%pa(1)=DL(inum)%pa(2)
-  DL(inum)%pa(2)=pas
+  pas = defects%DL(inum)%pa(1)
+  defects%DL(inum)%pa(1)=defects%DL(inum)%pa(2)
+  defects%DL(inum)%pa(2)=pas
 
 ! eliminate really small numbers
 do i=1,3
-  if (abs(aimag(DL(inum)%pa(i))).lt.1.0e-8)  DL(inum)%pa(i)=cmplx(real(DL(inum)%pa(i)),0.0,dbl)
-  if (abs(real(DL(inum)%pa(i))).lt.1.0e-8)   DL(inum)%pa(i)=cmplx(0.0,aimag(DL(inum)%pa(i)),dbl)
+  if (abs(aimag(defects%DL(inum)%pa(i))).lt.1.0e-8)  defects%DL(inum)%pa(i)=cmplx(real(defects%DL(inum)%pa(i)),0.0,dbl)
+  if (abs(real(defects%DL(inum)%pa(i))).lt.1.0e-8)   defects%DL(inum)%pa(i)=cmplx(0.0,aimag(defects%DL(inum)%pa(i)),dbl)
 end do
 if (dinfo.eq.1) then
   write (*,*) ' sextic roots'
   do i=1,3
-    write (*,*) DL(inum)%pa(i)
+    write (*,*) defects%DL(inum)%pa(i)
   end do
   write (*,*) '---'
 end if
 
 !  compute the A_ka vectors (see description on page 328 of Head et al.)
-pasq = DL(inum)%pa**2
+pasq = defects%DL(inum)%pa**2
 if (dinfo.eq.1) write (*,*) 'Aka vectors'
 do k=1,3
   mat = zero
-  mat(1,1) = ec(1,1)+2.D0*DL(inum)%pa(k)*ec(1,6)+ec(6,6)*pasq(k)
-  mat(2,2) = ec(6,6)+2.D0*DL(inum)%pa(k)*ec(2,6)+ec(2,2)*pasq(k)
-  mat(3,3) = ec(5,5)+2.D0*DL(inum)%pa(k)*ec(4,5)+ec(4,4)*pasq(k)
-  mat(2,3) = ec(5,6)+DL(inum)%pa(k)*(ec(4,6)+ec(2,5))+ec(2,4)*pasq(k)
-  mat(1,3) = ec(1,5)+DL(inum)%pa(k)*(ec(1,4)+ec(5,6))+ec(4,6)*pasq(k)
-  mat(1,2) = ec(1,6)+DL(inum)%pa(k)*(ec(1,2)+ec(6,6))+ec(2,6)*pasq(k)
+  mat(1,1) = ec(1,1)+2.D0*defects%DL(inum)%pa(k)*ec(1,6)+ec(6,6)*pasq(k)
+  mat(2,2) = ec(6,6)+2.D0*defects%DL(inum)%pa(k)*ec(2,6)+ec(2,2)*pasq(k)
+  mat(3,3) = ec(5,5)+2.D0*defects%DL(inum)%pa(k)*ec(4,5)+ec(4,4)*pasq(k)
+  mat(2,3) = ec(5,6)+defects%DL(inum)%pa(k)*(ec(4,6)+ec(2,5))+ec(2,4)*pasq(k)
+  mat(1,3) = ec(1,5)+defects%DL(inum)%pa(k)*(ec(1,4)+ec(5,6))+ec(4,6)*pasq(k)
+  mat(1,2) = ec(1,6)+defects%DL(inum)%pa(k)*(ec(1,2)+ec(6,6))+ec(2,6)*pasq(k)
   if (k.eq.1) then
     aka(1,1) = mat(2,2)*mat(3,3)-mat(2,3)*mat(2,3)
     aka(1,2) = mat(1,3)*mat(2,3)-mat(1,2)*mat(3,3)
@@ -640,7 +635,7 @@ Lia = zero
 do i=1,3 
  do j=1,3
   do k=1,3
-   Lia(i,j) = Lia(i,j)+(ec(ind(i),jnd(k))+DL(inum)%pa(j)*ec(ind(i),ind(k)))*aka(k,j)
+   Lia(i,j) = Lia(i,j)+(ec(ind(i),jnd(k))+defects%DL(inum)%pa(j)*ec(ind(i),ind(k)))*aka(k,j)
   end do
  end do
 end do
@@ -667,20 +662,20 @@ if (dinfo.eq.1) call PrintMatrixd('Hij',Hij)
 
 ! compute matrix (this is what actually gets to be used for the 
 ! displacement field); needs to know the Burgers vector.
-DL(inum)%dismat = zero
+defects%DL(inum)%dismat = zero
 do k=1,3
  do l=1,3
    do i=1,3
     do j=1,3
-     DL(inum)%dismat(k,l) = DL(inum)%dismat(k,l) + DL(inum)%burgd(i)*Hij(j,i)*Mai(l,j)*aka(k,l)
+     defects%DL(inum)%dismat(k,l) = defects%DL(inum)%dismat(k,l) + defects%DL(inum)%burgd(i)*Hij(j,i)*Mai(l,j)*aka(k,l)
     end do
    end do
  end do
 end do
 
 ! scale by 1/4pi
-DL(inum)%dismat = DL(inum)%dismat*0.25D0/cPi
-if (dinfo.eq.1)  call PrintMatrixcd('dismat',DL(inum)%dismat)
+defects%DL(inum)%dismat = defects%DL(inum)%dismat*0.25D0/cPi
+if (dinfo.eq.1)  call PrintMatrixcd('dismat',defects%DL(inum)%dismat)
 
 ! and return to calling routine
 end subroutine makedislocation
@@ -695,6 +690,8 @@ end subroutine makedislocation
 !
 !> @brief  read dislocation namelist files
 !
+!> @param cell unit cell pointer
+!> @param DL dislocation structure
 !> @param dislname name of dislocation namelist file (string array)
 !> @param numdisl number of dislocations
 !> @param numsf number of stacking faults
@@ -708,17 +705,19 @@ end subroutine makedislocation
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   06/04/13 MDG 3.0 rewrite
+!> @date   06/09/14 MDG 4.0 added cell, DL argument
 !--------------------------------------------------------------------------
-subroutine read_dislocation_data(dislname,numdisl,numsf,DF_npix,DF_npiy,DF_gf,L,dinfo)
+subroutine read_dislocation_data(defects,cell,DF_npix,DF_npiy,DF_gf,L,dinfo)
 
-use local
+use crystalvars
 use io
 use files
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)	 	:: dislname(3*maxdefects)
-integer(kind=irg),INTENT(IN)		:: numdisl, numsf, DF_npix, DF_npiy, dinfo
+type(defecttype),INTENT(INOUT)         :: defects
+type(unitcell),pointer	                :: cell
+integer(kind=irg),INTENT(IN)		:: DF_npix, DF_npiy, dinfo
 real(kind=sgl),INTENT(IN)		:: DF_gf(3), L
 
 integer(kind=irg) 			:: i
@@ -730,36 +729,36 @@ namelist / dislocationdata / id, jd, u, bv, zfrac, poisson
 ! zfrac goes between -0.5 and +0.5, with -0.5 being the top surface and +0.5 the bottom
 ! this only really matters for dislocations that are parallel to the foil surfaces
 
-! allocate the memory for the dislocation parameters
-  allocate(DL(numdisl+2*numsf))
+! allocate the memory for the dislocation parameters; must be done in main program
+allocate(defects%DL(defects%numdisl+2*defects%numsf))
 
 if (dinfo.eq.1) then
-  do i=1,numdisl
-    write (*,*) i,'->',trim(dislname(i)),'<-'
+  do i=1,defects%numdisl
+    write (*,*) i,'->',trim(defects%dislname(i)),'<-'
   end do
 end if
 
 ! these are just the individual dislocations; the ones that belong to 
 ! stacking faults are handled separately
-   do i=1,numdisl
+   do i=1,defects%numdisl
     zfrac = 0.0   ! unless the dislocation line is parallel to the foil surface, zfrac is always 0.0 
     
-    mess = 'opening '//trim(dislname(i)); call Message("(/A)")
-    OPEN(UNIT=dataunit,FILE=trim(dislname(i)),DELIM='APOSTROPHE')
+    call Message('opening '//trim(defects%dislname(i)), frm = "(/A)")
+    OPEN(UNIT=dataunit,FILE=trim(defects%dislname(i)),DELIM='APOSTROPHE')
     READ(UNIT=dataunit,NML=dislocationdata)
     CLOSE(UNIT=dataunit)
     
-! center of dislocation inside the foil is transformed to foil coordinates [nm] with DL(i)%kd=0 (center of foil) [verified 4/23/11]
+! center of dislocation inside the foil is transformed to foil coordinates [nm] with defects%DL(i)%kd=0 (center of foil) [verified 4/23/11]
 ! the point (0,0) is at the center of the image ... hence the factor of 0.5
-    DL(i)%id = id * 0.5 * float(DF_npix) ! * L   scaling (zooming) is done later in the image reference frame...
-    DL(i)%jd = jd * 0.5 * float(DF_npiy) ! * L
-    DL(i)%u = u
-    DL(i)%burg = bv
-    DL(i)%g = DF_gf
-    DL(i)%zfrac = zfrac ! - 0.5
+    defects%DL(i)%id = id * 0.5 * float(DF_npix) ! * L   scaling (zooming) is done later in the image reference frame...
+    defects%DL(i)%jd = jd * 0.5 * float(DF_npiy) ! * L
+    defects%DL(i)%u = u
+    defects%DL(i)%burg = bv
+    defects%DL(i)%g = DF_gf
+    defects%DL(i)%zfrac = zfrac ! - 0.5
      
 ! and pre-compute the dislocation displacement field parameters
-       call makedislocation(i,dinfo, L)
+       call makedislocation(defects,cell,i,dinfo, L)
   end do
   
 end subroutine read_dislocation_data

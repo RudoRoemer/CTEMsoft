@@ -60,13 +60,7 @@ type kvectorlist
   type(kvectorlist),pointer	:: next     		! connection to next wave vector
 end type kvectorlist
 
-type(kvectorlist),pointer 	:: khead, &    	! end of linked list
-                        	ktmp, &     	! temporary pointer
-                        	ktail       		! end of linked list
-
-
 contains
-
 
 !--------------------------------------------------------------------------
 !
@@ -111,6 +105,8 @@ end function Kdelta
 !> b) list makes use of crystal symmetry (although that feature can be turned off); c) routine
 !> has been cleaned up, and there is now a Delete_kvectorlist function as well.
 !
+!> @param khead head of linked list
+!> @param cell unit cell pointer
 !> @param k central wave vector
 !> @param ga reciprocal lattice vector normal to k
 !> @param ktmax maximum length of tangential component
@@ -126,10 +122,10 @@ end function Kdelta
 !> conditions.  This might also allow Addkvector and Add_knode to become a single routine.
 !
 !> @date   04/29/13 MDG 1.0 original
+!> @date   06/09/14 MDG 2.0 added khead and cell as arguments
 !--------------------------------------------------------------------------
-subroutine Calckvectors(k,ga,ktmax,npx,npy,numk,isym,ijmax,mapmode,usehex)
+subroutine Calckvectors(khead,cell,k,ga,ktmax,npx,npy,numk,isym,ijmax,mapmode,usehex)
 
-use local
 use io
 use error
 use constants
@@ -139,6 +135,8 @@ use crystalvars
 
 IMPLICIT NONE
 
+type(kvectorlist),pointer              :: khead
+type(unitcell),pointer	                :: cell
 real(kind=dbl),INTENT(IN)		:: k(3)		!< initial wave vector
 real(kind=dbl),INTENT(IN)		:: ga(3)	!< "horizontal" reciprocal lattice vector
 real(kind=dbl),INTENT(IN)		:: ktmax	!< maximum length of tangential wave vector
@@ -155,10 +153,11 @@ integer(kind=irg)       		:: istat,i,j,istart,iend,jstart,jend, imin, imax, jmin
 real(kind=dbl)				:: glen, gan(3), gperp(3), kstar(3), delta
 logical					:: hexgrid = .FALSE.
 character(3)				:: grid
+type(kvectorlist),pointer             :: ktail, ktmp
 
 ! first, if khead already exists, delete it
  if (associated(khead)) then    	 	! deallocate the entire linked list
-    call Delete_kvectorlist()
+    call Delete_kvectorlist(khead)
  end if   
  
 ! do we know this mapmode ?
@@ -169,13 +168,13 @@ end if
 
 if (mapmode.eq.'Conical') then ! used for CBED without symmetry application, including CTEMZAdefect
 ! compute geometrical factors 
- glen = CalcLength(ga,'r')              		! length of ga
+ glen = CalcLength(cell,ga,'r')              		! length of ga
  gan = ga/glen                                 	! normalized ga
  delta = 2.0*ktmax*glen/(2.0*float(npx)+1.0)   	! grid step size in nm-1 
- call TransSpace(k,kstar,'d','r')       		! transform incident direction to reciprocal space
- call CalcCross(ga,kstar,gperp,'r','r',0)      	! compute g_perp = ga x k
- call NormVec(gperp,'r')                       	! normalize g_perp
- call NormVec(kstar,'r')                       	! normalize reciprocal beam vector
+ call TransSpace(cell,k,kstar,'d','r')       		! transform incident direction to reciprocal space
+ call CalcCross(cell,ga,kstar,gperp,'r','r',0)      	! compute g_perp = ga x k
+ call NormVec(cell,gperp,'r')                       	! normalize g_perp
+ call NormVec(cell,kstar,'r')                       	! normalize reciprocal beam vector
 
 ! allocate the head and tail of the linked list
  allocate(khead,stat=istat)   				! allocate new value
@@ -187,7 +186,7 @@ if (mapmode.eq.'Conical') then ! used for CBED without symmetry application, inc
  ktail%j = 0                             		! j-index of beam
  ktail%kt = (/0.0,0.0,0.0/)				! no tangential component for central beam direction
  ktail%k = kstar/mLambda				! divide by wavelength
- ktail%kn = CalcDot(ktail%k,kstar,'r')			! normal component
+ ktail%kn = CalcDot(cell,ktail%k,kstar,'r')			! normal component
 
 ! set the loop limits
  imin = -npx; imax = npx; jmin = -npy; jmax = npy; 
@@ -197,7 +196,7 @@ if (mapmode.eq.'Conical') then ! used for CBED without symmetry application, inc
   do j=jmin,jmax
    if (.not.((i.eq.0).and.(j.eq.0))) then  		! the point (0,0) has already been taken care of
     if ((i**2+j**2).le.ijmax) then 			! only directions inside the incident cone
-     call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 	! add k-vector to linked list
+     call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 	! add k-vector to linked list
     end if
    end if
   end do
@@ -216,13 +215,13 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
   end if
 
 ! compute geometrical factors 
- glen = CalcLength(ga,'r')              		! length of ga
+ glen = CalcLength(cell,ga,'r')              		! length of ga
  gan = ga/glen                                 	! normalized ga
  delta = 2.0*ktmax*glen/(2.0*float(npx)+1.0)   	! grid step size in nm-1 
- call TransSpace(k,kstar,'d','r')       		! transform incident direction to reciprocal space
- call CalcCross(ga,kstar,gperp,'r','r',0)      	! compute g_perp = ga x k
- call NormVec(gperp,'r')                       	! normalize g_perp
- call NormVec(kstar,'r')                       	! normalize reciprocal beam vector
+ call TransSpace(cell,k,kstar,'d','r')       		! transform incident direction to reciprocal space
+ call CalcCross(cell,ga,kstar,gperp,'r','r',0)      	! compute g_perp = ga x k
+ call NormVec(cell,gperp,'r')                       	! normalize g_perp
+ call NormVec(cell,kstar,'r')                       	! normalize reciprocal beam vector
 
 ! allocate the head and tail of the linked list
  allocate(khead,stat=istat)   				! allocate new value
@@ -234,7 +233,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
  ktail%j = 0                             		! j-index of beam
  ktail%kt = (/0.0,0.0,0.0/)				! no tangential component for central beam direction
  ktail%k = kstar/mLambda				! divide by wavelength
- ktail%kn = CalcDot(ktail%k,kstar,'r')			! normal component
+ ktail%kn = CalcDot(cell,ktail%k,kstar,'r')			! normal component
 
 ! implement symmetry Table 7.3 from CTEM book
   select case(isym)  ! negative values -> systematic row; positive -> zone axis
@@ -280,7 +279,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
    case('srw')		! systematic row incident beam orientations
      do i=imin,imax
       if (i.ne.0) then  				! the point (0,0) has already been taken care of
-       call Add_knode(i,0,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
+       call Add_knode(ktail,cell,i,0,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
       end if
      end do
 
@@ -289,7 +288,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
       do j=jmin,jmax
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
+         call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
         end if
        end if
       end do
@@ -301,7 +300,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
        if ((j.eq.0).and.(i.lt.0)) cycle jloop_sqb   	! skip the points  (i<0,0)
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
+         call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
         end if
        end if
       end do jloop_sqb   
@@ -312,7 +311,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
       do i=j,imax
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
+         call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
         end if
        end if
       end do
@@ -323,7 +322,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
       do i=1-Kdelta(j,0),npx
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
+         call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
        end if
       end do
@@ -334,7 +333,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
       do i=j,npx
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
+         call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
        end if
       end do
@@ -345,7 +344,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
       do i=1-Kdelta(j,0)-j,npx-j
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
+         call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
        end if
       end do
@@ -356,7 +355,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
       do i=0,npx-j
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
+         call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
        end if
       end do
@@ -367,7 +366,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
       do i=1-Kdelta(j,0),npx-j
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
+         call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
        end if
       end if
       end do
@@ -378,7 +377,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
       do i=j,npx-j
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
+         call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
        end if
       end do
@@ -389,7 +388,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
       do i=j/2,min(2*j,npy)
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
+         call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
        end if
       end do
@@ -400,7 +399,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
       do i=-j/2,min(j,npy-1)
        if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
-         call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
+         call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
        end if
       end do
@@ -436,7 +435,7 @@ if (mapmode.eq.'RoscaLambert') then
    ktail%i = 0                             	! i-index of beam
    ktail%j = 0                             	! j-index of beam
    kstar = (/ 0.0, 0.0, 1.0 /)			! we always use c* as the center of the RoscaLambert projection
-   call NormVec(kstar,'c')                	! normalize incident direction
+   call NormVec(cell,kstar,'c')                	! normalize incident direction
    kstar = kstar/mLambda           		! divide by wavelength
 ! and transform to reciprocal crystal space using the structure matrix
    ktail%k = matmul(transpose(cell%dsm),kstar)
@@ -452,7 +451,7 @@ if (mapmode.eq.'RoscaLambert') then
 	jend = npy
 	  do j=jstart,jend
 	    do i=istart,iend   ! 
-		call AddkVector(numk,delta,i,j)
+		call AddkVector(ktail,cell,numk,delta,i,j)
 	    end do
 	  end do
 
@@ -463,7 +462,7 @@ if (mapmode.eq.'RoscaLambert') then
 	jend = npy
 	  do j=jstart,jend
 	   do i=istart,iend   ! 
-		call AddkVector(numk,delta,i,j)
+		call AddkVector(ktail,cell,numk,delta,i,j)
 	   end do
 	  end do
 
@@ -474,7 +473,7 @@ if (mapmode.eq.'RoscaLambert') then
 	jend = npy
 	  do j=jstart,jend
 	   do i=istart,iend   ! 
-		call AddkVector(numk,delta,i,j)
+		call AddkVector(ktail,cell,numk,delta,i,j)
 	   end do
 	  end do
 
@@ -485,7 +484,7 @@ if (mapmode.eq.'RoscaLambert') then
 	jend = npy
 	  do i=istart,iend
 	   do j=jstart,i   ! 
-		call AddkVector(numk,delta,i,j)
+		call AddkVector(ktail,cell,numk,delta,i,j)
 	   end do
 	  end do
 
@@ -496,7 +495,7 @@ if (mapmode.eq.'RoscaLambert') then
 	jend = npy
 	  do j=jstart,jend
 	    do i=istart,iend   ! 
-		call AddkVector(numk,delta,i,j,hexgrid)
+		call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
 	    end do
 	  end do
 
@@ -507,7 +506,7 @@ if (mapmode.eq.'RoscaLambert') then
 	jend = npy
 	  do j=jstart,jend
 	    do i=j,iend   ! 
-		call AddkVector(numk,delta,i,j,hexgrid)
+		call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
 	    end do
 	  end do
 
@@ -518,7 +517,7 @@ if (mapmode.eq.'RoscaLambert') then
 	jend = npx   ! was npy
 	  do j=jstart,jend
 	    do i=2*j,iend   ! 
-		call AddkVector(numk,delta,i,j,hexgrid)
+		call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
 	    end do
 	  end do
 
@@ -529,8 +528,8 @@ if (mapmode.eq.'RoscaLambert') then
 	jend = npy/2
 	  do j=jstart,jend
 	    do i=2*j,iend   ! 
-		call AddkVector(numk,delta,i,j,hexgrid)
-		call AddkVector(numk,delta,i-j,-j,hexgrid)
+		call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
+		call AddkVector(ktail,cell,numk,delta,i-j,-j,hexgrid)
 	    end do
 	  end do
 
@@ -554,6 +553,9 @@ end subroutine Calckvectors
 !> general routine, so that we do not need to consider each symmetry case separately.
 !> This will require a floating point version of the Apply2DPGSymmetry routine in symmetry.f90.
 !
+!> @param khead of head of linked list
+!> @param cell unit cell pointer
+!> @param TDPG 2D point group structure
 !> @param k central wave vector
 !> @param ga reciprocal lattice vector normal to k
 !> @param ktmax maximum length of tangential component
@@ -566,10 +568,10 @@ end subroutine Calckvectors
 !> @param debug when present, an output file with the kselected array is produced
 !
 !> @date   10/03/13 MDG 1.0 original
+!> @date   06/09/14 MDG 2.0 added khead and cell arguments
 !--------------------------------------------------------------------------
-recursive subroutine CalckvectorsSymmetry(k,ga,ktmax,npx,npy,numk,isym,ijmax,klaue,debug)
+recursive subroutine CalckvectorsSymmetry(khead,cell,TDPG,k,ga,ktmax,npx,npy,numk,isym,ijmax,klaue,debug)
 
-use local
 use io
 use error
 use constants
@@ -580,6 +582,9 @@ use Lambert
 
 IMPLICIT NONE
 
+type(kvectorlist),pointer              :: khead
+type(unitcell),pointer	                :: cell
+type(symdata2D),INTENT(INOUT)          :: TDPG
 real(kind=dbl),INTENT(IN)		:: k(3)		!< initial wave vector
 real(kind=dbl),INTENT(IN)		:: ga(3)	!< "horizontal" reciprocal lattice vector
 real(kind=dbl),INTENT(IN)		:: ktmax	!< maximum length of tangential wave vector
@@ -598,6 +603,7 @@ real(kind=dbl)				:: glen, gan(3), gperp(3), kstar(3), delta, Lauexy(2)
 logical					:: hexgrid = .FALSE.
 real(kind=sgl)				:: kt(3),kr(3)
 real(kind=sgl)				:: ktlen
+type(kvectorlist),pointer             :: ktail
 
 nx = 2*npx
 ny = 2*npy
@@ -607,14 +613,14 @@ allocate(kselected(-nx:nx,-ny:ny))
 kselected = 0
 
 ! compute geometrical factors 
- glen = CalcLength(ga,'r')              		! length of ga
+ glen = CalcLength(cell,ga,'r')              		! length of ga
  Lauexy = glen * klaue					! scaled Laue center coordinates
  gan = ga/glen                                 	! normalized ga
  delta = 2.0*ktmax*glen/(2.0*float(npx)+1.0)   	! grid step size in nm-1 
- call TransSpace(k,kstar,'d','r')       		! transform incident direction to reciprocal space
- call CalcCross(ga,kstar,gperp,'r','r',0)      	! compute g_perp = ga x k
- call NormVec(gperp,'r')                       	! normalize g_perp
- call NormVec(kstar,'r')                       	! normalize reciprocal beam vector
+ call TransSpace(cell,k,kstar,'d','r')       		! transform incident direction to reciprocal space
+ call CalcCross(cell,ga,kstar,gperp,'r','r',0)      	! compute g_perp = ga x k
+ call NormVec(cell,gperp,'r')                       	! normalize g_perp
+ call NormVec(cell,kstar,'r')                       	! normalize reciprocal beam vector
 
 ! allocate the head and tail of the linked list
  allocate(khead,stat=istat)   				! allocate new value
@@ -628,11 +634,11 @@ kselected = 0
 ! use the Laue center coordinates to define the tangential component of the incident wave vector
  kt = - Lauexy(1)*gan - Lauexy(2)*gperp  		! tangential component of k
  ktail%kt = kt                    			! store tangential component of k
- ktlen = CalcLength(kt,'r')**2      			! squared length of tangential component
+ ktlen = CalcLength(cell,kt,'r')**2      			! squared length of tangential component
 
  kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar 	! complete wave vector
  ktail%k = kr                     			! store in pointer list
- ktail%kn = CalcDot(ktail%k,kstar,'r')    		! normal component of k
+ ktail%kn = CalcDot(cell,ktail%k,kstar,'r')    		! normal component of k
   
  kselected(0,0) = 2
 
@@ -646,9 +652,9 @@ kselected = 0
   	if (kselected(i,j).eq.0) then
           if ((i*i+j*j).le.ijmax) then
 ! first of all, add the present point to the linked list
-	   call Add_knode(i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
+	   call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
 ! then compute the equivalent points and flag all of them in kselected
-	   call Apply2DPGSymmetry(i,j,isym,iequiv,nequiv)
+	   call Apply2DPGSymmetry(TDPG,i,j,isym,iequiv,nequiv)
 	   kselected(iequiv(1,1),iequiv(2,1)) = 2
 	   if (nequiv.gt.1) then 
 	    do jj=2,nequiv
@@ -665,7 +671,7 @@ kselected = 0
   	if (kselected(i,j).eq.0) then
           if ((i*i+j*j).le.ijmax) then
 ! first of all, add the present point to the linked list
-	    call Add_knode(i,j,numk,delta,gan,gperp,kstar,sngl(Lauexy))
+	    call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,sngl(Lauexy))
 	    kselected(i,j) = 2
         end if
        end if
@@ -695,6 +701,8 @@ end subroutine CalckvectorsSymmetry
 !
 !> @brief add one entry to the linked wave vector list (standard mode)
 !
+!> @param ktail current entry in linked list
+!> @param cell unit cell pointer 
 !> @param i x image coordinate 
 !> @param j y image coordinate 
 !> @param numk total number of wave vectors in list
@@ -708,8 +716,9 @@ end subroutine CalckvectorsSymmetry
 !> @todo implement Laue center coordinates for hexagonal grid
 !
 !> @date   04/29/13 MDG 1.0 original
+!> @date   06/09/14 MDG 2.0 added ktail and cell as arguments
 !--------------------------------------------------------------------------
-subroutine Add_knode(i,j,numk,delta,gan,gperp,kstar,klaue,hexgrid)
+subroutine Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,klaue,hexgrid)
 
 use local
 use error
@@ -719,6 +728,8 @@ use diffraction
 
 IMPLICIT NONE
 
+type(kvectorlist),pointer              :: ktail
+type(unitcell),pointer	                :: cell
 integer(kind=irg),INTENT(IN)		:: i
 integer(kind=irg),INTENT(IN)		:: j
 integer(kind=irg),INTENT(INOUT)	:: numk
@@ -750,13 +761,11 @@ else
 end if
 
 ktail%kt = kt                    		! store tangential component of k
-ktlen = CalcLength(kt,'r')**2      		! squared length of tangential component
-
-! write (*,*) i,j,kt,ktlen
+ktlen = CalcLength(cell,kt,'r')**2      		! squared length of tangential component
 
 kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar 	! complete wave vector
 ktail%k = kr                     		! store in pointer list
-ktail%kn = CalcDot(ktail%k,kstar,'r')    	! normal component of k
+ktail%kn = CalcDot(cell,ktail%k,kstar,'r')    	! normal component of k
 
 end subroutine Add_knode
 
@@ -824,6 +833,8 @@ end function GetSextant
 !
 !> @todo replace the coordinate transformation with one defined in the Lambert module
 !
+!> @param ktail current entry in linked list
+!> @param cell unit cell pointer
 !> @param numk total number of wave vectors in list
 !> @param delta scale parameter
 !> @param i x image coordinate 
@@ -832,8 +843,9 @@ end function GetSextant
 !
 !> @date   11/21/12 MDG 1.0 original 
 !> @date   04/29/13 MDG 1.1 modified for kvectors module
+!> @date   06/09/14 MDG 2.0 added ktail as argument
 !--------------------------------------------------------------------------
-subroutine AddkVector(numk,delta,i,j,usehex)
+subroutine AddkVector(ktail,cell,numk,delta,i,j,usehex)
 
 use local
 use io
@@ -846,6 +858,8 @@ use dynamical
 
 IMPLICIT NONE
 
+type(kvectorlist),pointer              :: ktail
+type(unitcell),pointer	                :: cell
 integer(kind=irg),INTENT(INOUT)	:: numk
 real(kind=dbl),INTENT(IN)		:: delta
 integer(kind=irg),INTENT(IN)		:: i
@@ -863,6 +877,8 @@ real(kind=dbl),parameter		:: prea = 0.525037568D0   	!  3^(1/4)/sqrt(2pi)
 real(kind=dbl),parameter		:: preb = 1.050075136D0   	!  3^(1/4)sqrt(2/pi)
 real(kind=dbl),parameter		:: prec = 0.90689968D0   	!  pi/2sqrt(3)
 real(kind=dbl),parameter		:: pred = 2.09439510D0   	!  2pi/3
+
+! [06/09/14] all this needs to be replaced with calls to Lambert module !!!
 
 ! initalize some parameters
 iPi = 1.D0/cPi  ! inverse of pi
@@ -934,7 +950,7 @@ if (goahead) then
        ktail%i = i                      		! i-index of beam
        ktail%j = j                      		! j-index of beam
      end if 
-     call NormVec(kstar,'c')                		! normalize incident direction in cartesian space
+     call NormVec(cell,kstar,'c')                		! normalize incident direction in cartesian space
      kstar = kstar/mLambda                 		! divide by wavelength
 ! and transform to reciprocal crystal space using the direct structure matrix
      ktail%k = matmul(transpose(cell%dsm),kstar)
@@ -953,9 +969,12 @@ end subroutine AddkVector
 !
 !> @date   04/29/13 MDG 1.0 original
 !--------------------------------------------------------------------------
-subroutine Delete_kvectorlist()
+subroutine Delete_kvectorlist(khead)
 
 IMPLICIT NONE
+
+type(kvectorlist),pointer        :: khead
+type(kvectorlist),pointer        :: ktmp, ktail
 
 ! deallocate the entire linked list before returning, to prevent memory leaks
 ktail => khead

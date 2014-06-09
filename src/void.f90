@@ -42,12 +42,7 @@
 module void
 
 use local
-
-type voidtype
-	real(kind=sgl)       ::  xpos,ypos,zpos,radius
-end type voidtype
-
-type (voidtype), allocatable  :: voids(:)
+use crystalvars
 
 contains
 
@@ -59,21 +54,20 @@ contains
 !
 !> @brief  read void parameters from file
 ! 
-!> @param numvoid number of voids
-!> @param voidname name of void file
+!> @param defects defects structure
 !> @param DF_L column edge length 
 !> @param DF_npix number of x-pixels
 !> @param DF_npiy number of y-pixels
 !> @param dinfo logical to trigger verbose output
 ! 
-!> @date 1/5/99   MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90 version
-!> @date   11/27/01 MDG 2.1 added kind support
-!> @date   03/25/13 MDG 3.0 updated IO
+!> @date  01/05/99 MDG 1.0 original
+!> @date  05/19/01 MDG 2.0 f90 version
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  03/25/13 MDG 3.0 updated IO
+!> @date  06/09/14 MDG 4.0 added defects argument
 !--------------------------------------------------------------------------
-subroutine read_void_data(numvoid,voidname,DF_L,DF_npix,DF_npiy,dinfo)
+subroutine read_void_data(defects,DF_L,DF_npix,DF_npiy,dinfo)
 
-use local
 use io
 use files
 use foilmodule
@@ -81,36 +75,37 @@ use quaternions
 
 IMPLICIT NONE
 
-character(50),INTENT(IN)       	:: voidname
-integer(kind=irg),INTENT(OUT):: numvoid
-integer(kind=irg),INTENT(IN)	:: dinfo,DF_npix,DF_npiy
-real(kind=sgl),INTENT(IN)	:: DF_L
+type(defecttype),INTENT(INOUT)      :: defects
+integer(kind=irg),INTENT(IN)	      :: dinfo,DF_npix,DF_npiy
+real(kind=sgl),INTENT(IN)	      :: DF_L
 
 integer(kind=irg) 			:: i, io_int(1)
 real(kind=sgl)      			:: Vx,Vy,Vz,Vrad,tmp(3)
 
 ! open the void data file
-mess = 'Opening '//voidname; call Message("(A)")
-open(unit=dataunit,file=voidname,form='formatted')
-read(unit=dataunit,*) numvoid
-allocate(voids(numvoid))
+call Message('Opening '//trim(defects%voidname), frm = "(A)")
+open(unit=dataunit,file=trim(defects%voidname),form='formatted')
+read(unit=dataunit,*) defects%numvoids
+
+allocate(defects%voids(defects%numvoids))
+
 if (dinfo.eq.1) then
-  io_int(1) = numvoid
+  io_int(1) = defects%numvoids
   call WriteValue(' Number of voids',io_int, 1, "(I)")
 end if
 
 ! read each subsequent line 
-do i=1,numvoid
+do i=1,defects%numvoids
   read(unit=dataunit,*) Vx,Vy,Vz,Vrad
-  voids(i)%xpos = Vx * 0.5 * float(DF_npix) * DF_L
-  voids(i)%ypos = Vy * 0.5 * float(DF_npiy) * DF_L
-  voids(i)%zpos = Vz * foil%z0
-  voids(i)%radius = Vrad    ! radius in nanometers
+  defects%voids(i)%xpos = Vx * 0.5 * float(DF_npix) * DF_L
+  defects%voids(i)%ypos = Vy * 0.5 * float(DF_npiy) * DF_L
+  defects%voids(i)%zpos = Vz * foil%z0
+  defects%voids(i)%radius = Vrad    ! radius in nanometers
 ! transform to the foil reference frame  
-  tmp = quat_rotate_vector( foil%a_fc, dble((/ voids(i)%xpos, voids(i)%ypos, voids(i)%zpos /)) )  
-  voids(i)%xpos = tmp(1)
-  voids(i)%ypos = tmp(2)
-  voids(i)%zpos = tmp(3)
+  tmp = quat_rotate_vector( foil%a_fc, dble((/ defects%voids(i)%xpos, defects%voids(i)%ypos, defects%voids(i)%zpos /)) )  
+  defects%voids(i)%xpos = tmp(1)
+  defects%voids(i)%ypos = tmp(2)
+  defects%voids(i)%zpos = tmp(3)
   if (dinfo.eq.1) write (*,*) i,Vx,Vy,Vz,Vrad
 end do
 

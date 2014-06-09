@@ -3202,8 +3202,7 @@ else
   call WriteValue('					  \', ioreal, 3, "(2(F8.4,' '),F8.4,' /')")
 end if
 
-mess = ' '
-call Message("(A/)")
+call Message(' ', frm = "(A/)")
 
 end subroutine print_orientation
 
@@ -3298,9 +3297,7 @@ else
   call WriteValue('					  \', ioreal, 3, "(2(F8.4,' '),F8.4,' /')")
 end if
 
-
-mess = ' '
-call Message("(A/)")
+call Message(' ', frm = "(A/)")
 
 end subroutine print_orientation_d
 

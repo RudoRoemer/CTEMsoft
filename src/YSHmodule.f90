@@ -39,22 +39,15 @@
 !> @date   04/29/11 MDG 1.0 original
 !> @date   06/04/13 MDG 2.0 rewrite + quaternions instead of rotations
 !> @date   11/21/13 MDG 3.0 verification with new libraries and new ECCI program
+!> @date   06/09/14 MDG 4.0 removed global variable YD
 !--------------------------------------------------------------------------
 module YSHModule
 
 use local
 use quaternions
+use crystalvars
 
 IMPLICIT NONE 
-
-type YDtype
-  real(kind=dbl)     	:: burg(3), burgd(3), u(3), un(3), g(3), gn(3), id, jd, zu, bs, be, bx, beta
-  real(kind=dbl)     	:: alpha, ca, sa, ta, cota,  top(3), bottom(3), sig
-  real(kind=dbl)	:: a_dc(4), a_id(4), a_di(4)
-end type YDtype
-
-type (YDtype), allocatable  :: YD(:)    
-
 
 contains
 
@@ -74,6 +67,7 @@ contains
 !> equations are based on the Shaibani&Hazzledine 1981 paper, along with special limits for 
 !> the alpha->0 case, which were derived by MDG using Mathematica. 
 !
+!> @paraqm defects defects structure
 !> @param x dislocation x-coordinate
 !> @param y dislocation y-coordinate
 !> @param z dislocation z-coordinate
@@ -89,14 +83,15 @@ contains
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   06/04/13 MDG 3.0 rewrite
 !> @date   11/21/13 MDG 3.1 verification
+!> @date   06/09/14 MDG 4.0 added defects as argument
 !--------------------------------------------------------------------------
-function YSHDisp(x,y,z,ii) result(res)
+function YSHDisp(defects,x,y,z,ii) result(res)
 
-use local
 use constants
 
 IMPLICIT NONE
 
+type(defecttype),INTENT(INOUT) :: defects
 real(kind=dbl),INTENT(IN) 	:: x,y,z
 integer(kind=irg),INTENT(IN)  	:: ii
 
@@ -105,13 +100,13 @@ real(kind=dbl)    		:: eta, zeta, etap, zetap, r, oms, omts, xx, sgn, om, omp, A
 real(kind=dbl) 			:: res(3) 
 
 ! initialize the geometrical parameters
-eta  = y*YD(ii)%ca - z*YD(ii)%sa
-zeta = y*YD(ii)%sa + z*YD(ii)%ca
-etap  = -y*YD(ii)%ca - z*YD(ii)%sa
-zetap = y*YD(ii)%sa - z*YD(ii)%ca
+eta  = y*defects%YD(ii)%ca - z*defects%YD(ii)%sa
+zeta = y*defects%YD(ii)%sa + z*defects%YD(ii)%ca
+etap  = -y*defects%YD(ii)%ca - z*defects%YD(ii)%sa
+zetap = y*defects%YD(ii)%sa - z*defects%YD(ii)%ca
 r = sqrt(x**2+y**2+z**2) 
-oms = 1.D0-YD(ii)%sig
-omts = 1.D0-2.D0*YD(ii)%sig
+oms = 1.D0-defects%YD(ii)%sig
+omts = 1.D0-2.D0*defects%YD(ii)%sig
 
 ! cover the special case of negative x values (based on IDL tests)
 xx = x
@@ -124,8 +119,8 @@ else
 end if
 
 ! more parameters
-om =  (datan2(y,xx)-datan2(eta,xx)+datan2(xx*r*YD(ii)%sa,eta*y+xx**2*YD(ii)%ca))
-omp= (datan2(y,xx)-datan2(etap,xx)+datan2(xx*r*YD(ii)%sa,etap*y-xx**2*YD(ii)%ca))
+om =  (datan2(y,xx)-datan2(eta,xx)+datan2(xx*r*defects%YD(ii)%sa,eta*y+xx**2*defects%YD(ii)%ca))
+omp= (datan2(y,xx)-datan2(etap,xx)+datan2(xx*r*defects%YD(ii)%sa,etap*y-xx**2*defects%YD(ii)%ca))
 
 AA = r-z
 BB  = r-zeta
@@ -142,14 +137,15 @@ w = 0.D0
 eps = 1.0D-6
 
 ! screw component first
-if (abs(YD(ii)%bs).gt.eps) then 
-  ms = xx*sin(2.D0*YD(ii)%alpha)/r/BB
-  S = YD(ii)%bs/(4.D0*cPi)
-  if (YD(ii)%alpha.gt.0.01) then 
-    du = xx*ms+2.D0*eta*YD(ii)%ca**2/BB+2.D0*omts*YD(ii)%cota*(-1.D0+YD(ii)%ca+&
-            YD(ii)%ca*alA-y*YD(ii)%sa/AA-alB)-sin(2.D0*YD(ii)%alpha)
-    dv = y*ms-2.D0*xx*YD(ii)%ca/BB-YD(ii)%sa*(omp-om)+2.D0*omts*YD(ii)%cota*(xx*YD(ii)%sa/AA-om*YD(ii)%ca)
-    dw = z*ms+YD(ii)%ca*(omp-om)-2.D0*omts*om*YD(ii)%ca
+if (abs(defects%YD(ii)%bs).gt.eps) then 
+  ms = xx*sin(2.D0*defects%YD(ii)%alpha)/r/BB
+  S = defects%YD(ii)%bs/(4.D0*cPi)
+  if (defects%YD(ii)%alpha.gt.0.01) then 
+    du = xx*ms+2.D0*eta*defects%YD(ii)%ca**2/BB+2.D0*omts*defects%YD(ii)%cota*(-1.D0+defects%YD(ii)%ca+&
+            defects%YD(ii)%ca*alA-y*defects%YD(ii)%sa/AA-alB)-sin(2.D0*defects%YD(ii)%alpha)
+    dv = y*ms-2.D0*xx*defects%YD(ii)%ca/BB-defects%YD(ii)%sa*(omp-om)+2.D0*omts*defects%YD(ii)%cota* &
+         (xx*defects%YD(ii)%sa/AA-om*defects%YD(ii)%ca)
+    dw = z*ms+defects%YD(ii)%ca*(omp-om)-2.D0*omts*om*defects%YD(ii)%ca
   else 
     du = 2.D0*y/(r-z)
     dv = -2.D0*xx*(r+z)/(xx**2+y**2)
@@ -161,23 +157,24 @@ if (abs(YD(ii)%bs).gt.eps) then
 end if
 
 ! then the edge component in the y-z plane
-if (abs(YD(ii)%be).gt.eps) then 
-  qe = xx*(1.D0/BBp-1.D0/BB+2.D0*z*YD(ii)%ca/BB**2)
-  me = -qe/r-4.D0*oms*xx*YD(ii)%ca**2/r/BB
-  De = YD(ii)%be/(8.D0*cPi*oms)
-  if (YD(ii)%alpha.gt.0.01) then 
-    k = 4.D0*oms*omts*YD(ii)%cota**2
-    du = xx*me+lam+2.D0*YD(ii)%ca*(z+2.D0*oms*eta*YD(ii)%sa)/BB-4.D0*oms*YD(ii)%sa**2+k*(1.D0-YD(ii)%ca-YD(ii)%ca*alA+&
-             y*YD(ii)%sa/AA+alB)
-    dv = y*me+qe*YD(ii)%sa+th*YD(ii)%ca+k*(-xx*YD(ii)%sa/AA+om*YD(ii)%ca)
-    dw = z*me+qe*YD(ii)%ca+th*YD(ii)%sa-2.D0*xx*YD(ii)%ca*(1.D0/BBp+omts/BB)+k*om*YD(ii)%sa
+if (abs(defects%YD(ii)%be).gt.eps) then 
+  qe = xx*(1.D0/BBp-1.D0/BB+2.D0*z*defects%YD(ii)%ca/BB**2)
+  me = -qe/r-4.D0*oms*xx*defects%YD(ii)%ca**2/r/BB
+  De = defects%YD(ii)%be/(8.D0*cPi*oms)
+  if (defects%YD(ii)%alpha.gt.0.01) then 
+    k = 4.D0*oms*omts*defects%YD(ii)%cota**2
+    du = xx*me+lam+2.D0*defects%YD(ii)%ca*(z+2.D0*oms*eta*defects%YD(ii)%sa)/BB-4.D0*oms*defects%YD(ii)%sa**2+&
+           k*(1.D0-defects%YD(ii)%ca-defects%YD(ii)%ca*alA+y*defects%YD(ii)%sa/AA+alB)
+    dv = y*me+qe*defects%YD(ii)%sa+th*defects%YD(ii)%ca+k*(-xx*defects%YD(ii)%sa/AA+om*defects%YD(ii)%ca)
+    dw = z*me+qe*defects%YD(ii)%ca+th*defects%YD(ii)%sa-2.D0*xx*defects%YD(ii)%ca*(1.D0/BBp+omts/BB)+k*om*defects%YD(ii)%sa
 !    write (*,*) du,dv,dw
   else 
     rr = xx**2+y**2
-    du = 2.D0*z/(r-z)+4.D0*xx**2*(YD(ii)%sig*rr-r**2)/r/AA**2/(r+z)+2.D0*omts*oms*((xx**2+z*(z-r))/AA**2+alA)+omts*dlog((r+z)/AA)
-    dv = 4.D0*xx*y*(rr*YD(ii)%sig-r**2)/r/AA**2/(r+z)+2.D0*xx*y*(rr+2.D0*z*(r+z))*oms*omts/rr**2+&
+    du = 2.D0*z/(r-z)+4.D0*xx**2*(defects%YD(ii)%sig*rr-r**2)/r/AA**2/(r+z)+2.D0*omts*oms*((xx**2+z*(z-r))/AA**2+alA)+&
+         omts*dlog((r+z)/AA)
+    dv = 4.D0*xx*y*(rr*defects%YD(ii)%sig-r**2)/r/AA**2/(r+z)+2.D0*xx*y*(rr+2.D0*z*(r+z))*oms*omts/rr**2+&
             2.D0*oms*(cPi + datan2(y,xx) - datan2(-y,xx))
-    dw = 4.D0*xx*rr*YD(ii)%sig*(z-2.D0*r*oms)/r/AA**2/(r+z)
+    dw = 4.D0*xx*rr*defects%YD(ii)%sig*(z-2.D0*r*oms)/r/AA**2/(r+z)
   end if
   u = u+du*De
   v = v+sgn*dv*De
@@ -185,22 +182,24 @@ if (abs(YD(ii)%be).gt.eps) then
 end if
 
 ! and finally the bx edge component
-if (abs(YD(ii)%bx).gt.eps) then 
-  qx = etap/BBp-eta/BB-2.D0*z*eta*YD(ii)%ca/BB**2
-  mx = -qx/r+2.D0*omts*y*YD(ii)%ca/r/BB
-  Dx = YD(ii)%bx/(8.D0*cPi*oms)
-  if (YD(ii)%alpha.gt.0.01) then 
-    k = 4.D0*oms*omts*YD(ii)%cota**2
-    du = xx*mx+th+k*(xx*YD(ii)%ta/AA-om)
-    dv = y*mx+qx*YD(ii)%sa-lam*YD(ii)%ca-2.D0*YD(ii)%ca*(z*YD(ii)%ca+omts*y*YD(ii)%sa)/BB+k*(-1.D0+YD(ii)%ca-alA+y*YD(ii)%ta/AA+&
-          YD(ii)%ca*alB)
-    dw = z*mx+qx*YD(ii)%ca-lam*YD(ii)%sa-2.D0*etap*YD(ii)%ca/BBp+4.D0*YD(ii)%ca*(oms*y*YD(ii)%ca-omts*z*YD(ii)%sa)/BB+ &
-           k*YD(ii)%ta*(YD(ii)%ca-alA+YD(ii)%ca*alB)+4.D0*oms*YD(ii)%ca*YD(ii)%cota
+if (abs(defects%YD(ii)%bx).gt.eps) then 
+  qx = etap/BBp-eta/BB-2.D0*z*eta*defects%YD(ii)%ca/BB**2
+  mx = -qx/r+2.D0*omts*y*defects%YD(ii)%ca/r/BB
+  Dx = defects%YD(ii)%bx/(8.D0*cPi*oms)
+  if (defects%YD(ii)%alpha.gt.0.01) then 
+    k = 4.D0*oms*omts*defects%YD(ii)%cota**2
+    du = xx*mx+th+k*(xx*defects%YD(ii)%ta/AA-om)
+    dv = y*mx+qx*defects%YD(ii)%sa-lam*defects%YD(ii)%ca-2.D0*defects%YD(ii)%ca*&
+        (z*defects%YD(ii)%ca+omts*y*defects%YD(ii)%sa)/BB+ &
+        k*(-1.D0+defects%YD(ii)%ca-alA+y*defects%YD(ii)%ta/AA+defects%YD(ii)%ca*alB)
+    dw = z*mx+qx*defects%YD(ii)%ca-lam*defects%YD(ii)%sa-2.D0*etap*defects%YD(ii)%ca/BBp+&
+        4.D0*defects%YD(ii)%ca*(oms*y*defects%YD(ii)%ca-omts*z*defects%YD(ii)%sa)/BB+ &
+        k*defects%YD(ii)%ta*(defects%YD(ii)%ca-alA+defects%YD(ii)%ca*alB)+4.D0*oms*defects%YD(ii)%ca*defects%YD(ii)%cota
  else 
     rr = xx**2+y**2
-    du = -4.D0*xx*y*(rr*YD(ii)%sig-r**2)/r/AA**2/(r+z)-2.D0*xx*y*(rr+2.D0*z*(r+z))*oms*omts/rr**2+&
+    du = -4.D0*xx*y*(rr*defects%YD(ii)%sig-r**2)/r/AA**2/(r+z)-2.D0*xx*y*(rr+2.D0*z*(r+z))*oms*omts/rr**2+&
             2.D0*oms*(cPi + datan2(y,xx) - datan2(-y,xx))
-    dv = 2.D0*z/(r-z)-4.D0*y**2*(YD(ii)%sig*rr-r**2)/r/AA**2/(r+z)+2.D0*omts*oms*(-1.D0+(z*(r-z)-y**2)/AA**2-alA)- &
+    dv = 2.D0*z/(r-z)-4.D0*y**2*(defects%YD(ii)%sig*rr-r**2)/r/AA**2/(r+z)+2.D0*omts*oms*(-1.D0+(z*(r-z)-y**2)/AA**2-alA)- &
             omts*dlog((r+z)/AA)
     dw = 0.D0     ! not sure if this limit is correct ... Mathematica gives a directedinfinity value for the limit, which might mean that the 
     ! original YSH expression in the paper is incorrect for the w component ... this needs to be rederived and verified !!!
@@ -237,6 +236,8 @@ end function YSHDisp
 !> discontinuity, the other normal to that plane (which is by definition the x-axis).
 !> Check the SH paper for more details.
 !
+!> @param defects defects structure
+!> @param cell unit cell pointer
 !> @param i dislocation number
 !> @param dinfo triggers verbose output
 !> @param L column edge length
@@ -248,10 +249,10 @@ end function YSHDisp
 !> @date 11/27/01 MDG 2.1 added kind support
 !> @date 06/04/13 MDG 3.0 rewrite+added quaternions
 !> @date 11/21/13 MDG 3.1 verification + rewrite of output handling
+!> @date 06/09/14 MDG 4.0 added cell and defects arguments
 !--------------------------------------------------------------------------
-subroutine makeYSHdislocation(i,dinfo, L)    
+subroutine makeYSHdislocation(defects,cell,i,dinfo, L)    
 
-use local
 use foilmodule
 use constants
 use crystal
@@ -261,6 +262,8 @@ use rotations
 
 IMPLICIT NONE
 
+type(unitcell),pointer	              :: cell
+type(defecttype),INTENT(INOUT)       :: defects
 integer(kind=irg),INTENT(IN)        :: i
 integer(kind=irg),INTENT(IN)        :: dinfo
 real(kind=sgl),INTENT(IN)           :: L
@@ -272,13 +275,13 @@ real(kind=dbl)  	             :: alpha, beta, tu(3), tx(3), ty(3), te(3), tb(3),
 ! negative z-axis, which is really the negative foil normal, and the line direction
 ! (make sure to reduce the angle to [0,90] interval).
 ! Each YSH dislocation must have a line direction that points INTO the foil !!!
-alpha = CalcAngle(foil%F,dble(YD(i)%u),'d')*180.0/cPi
+alpha = CalcAngle(cell,foil%F,dble(defects%YD(i)%u),'d')*180.0/cPi
 if (alpha.ge.90.0) then 
   alpha = 180.0-alpha
   if (dinfo.eq.1) then 
     io_real(1:3) = foil%F(1:3)
     call WriteValue('Foil normal = ', io_real, 3, "('[',3F5.1,']')")
-    io_real(1:3) = YD(i)%u(1:3)
+    io_real(1:3) = defects%YD(i)%u(1:3)
     call WriteValue('line direction = ', io_real, 3, "('[',3F5.1,']')")
     io_real(1) = alpha
     call WriteValue(' --> alpha angle = ', io_real, 1, "(F5.1)")
@@ -289,25 +292,25 @@ else
 end if
 
 ! normalize the line direction
-call TransSpace(YD(i)%u,tu,'d','c')
-call NormVec(tu,'c')
+call TransSpace(cell,defects%YD(i)%u,tu,'d','c')
+call NormVec(cell,tu,'c')
 
 ! consider the case of alpha=0 separately
 if (alpha.gt.0.0) then
-  call TransSpace(foil%F,ty,'d','c')
-  call NormVec(ty,'c')                     !  F
-  call CalcCross(tu,ty,tx,'c','c',0)       ! x = u x F
-  call NormVec(tx,'c')
-  call CalcCross(tx,tu,te,'c','c',0)       ! e = x x u
-  call NormVec(te,'c')
-  call CalcCross(ty,tx,ty,'c','c',0)
-  call NormVec(ty,'c')
+  call TransSpace(cell,foil%F,ty,'d','c')
+  call NormVec(cell,ty,'c')                     !  F
+  call CalcCross(cell,tu,ty,tx,'c','c',0)       ! x = u x F
+  call NormVec(cell,tx,'c')
+  call CalcCross(cell,tx,tu,te,'c','c',0)       ! e = x x u
+  call NormVec(cell,te,'c')
+  call CalcCross(cell,ty,tx,ty,'c','c',0)
+  call NormVec(cell,ty,'c')
 else
   tx = foil%qn
-  call CalcCross(tx,tu,te,'c','c',0)       ! e = x x u
-  call NormVec(te,'c')
+  call CalcCross(cell,tx,tu,te,'c','c',0)       ! e = x x u
+  call NormVec(cell,te,'c')
 end if  
-bl = CalcLength(YD(i)%burg,'d')
+bl = CalcLength(cell,defects%YD(i)%burg,'d')
 
 if (dinfo.eq.1) then 
   io_real(1:3) = tx(1:3)
@@ -322,14 +325,14 @@ if (dinfo.eq.1) then
   call WriteValue(' bl = ',io_real, 1, "(F8.3)")
 end if
 
-call TransSpace(YD(i)%burg,tb,'d','c')
-call NormVec(tb,'c')
-YD(i)%bx = bl * CalcDot(tb,tx,'c')   ! edge component normal to cut plane
-YD(i)%be = bl * CalcDot(tb,te,'c')   ! edge component in cut plane
-YD(i)%bs = bl * CalcDot(tb,tu,'c')   ! screw component
+call TransSpace(cell,defects%YD(i)%burg,tb,'d','c')
+call NormVec(cell,tb,'c')
+defects%YD(i)%bx = bl * CalcDot(cell,tb,tx,'c')   ! edge component normal to cut plane
+defects%YD(i)%be = bl * CalcDot(cell,tb,te,'c')   ! edge component in cut plane
+defects%YD(i)%bs = bl * CalcDot(cell,tb,tu,'c')   ! screw component
 
 if (dinfo.eq.1) then 
-  io_real(1:3) = (/ YD(i)%bx,YD(i)%be,YD(i)%bs /)
+  io_real(1:3) = (/ defects%YD(i)%bx,defects%YD(i)%be,defects%YD(i)%bs /)
   call WriteValue('Burgers vector components (bx,be,bs) ', io_real, 3, "(3F12.6)") 
 end if
 ! verified MDG 7/31/11
@@ -342,47 +345,47 @@ end if
 ! is measured in a CCW sense.
 
 ! projection of defect x axis onto foil x and y axes
-call TransSpace(foil%q,fx,'d','c')
-call TransSpace(foil%F,fz,'d','c')
-call NormVec(fx,'c')
-call NormVec(fz,'c')
-call CalcCross(fz,fx,fy,'c','c',0)
-dx = CalcDot(tx,fx,'c')
-dy = CalcDot(tx,fy,'c')
+call TransSpace(cell,foil%q,fx,'d','c')
+call TransSpace(cell,foil%F,fz,'d','c')
+call NormVec(cell,fx,'c')
+call NormVec(cell,fz,'c')
+call CalcCross(cell,fz,fx,fy,'c','c',0)
+dx = CalcDot(cell,tx,fx,'c')
+dy = CalcDot(cell,tx,fy,'c')
 
 ! use the arctan function to get the angle with correct quadrant computation
-YD(i)%beta = atan2(dy,dx) !+ cPi*0.5
+defects%YD(i)%beta = atan2(dy,dx) !+ cPi*0.5
 
 if (dinfo.eq.1) then 
   io_real(1) = dx
   call WriteValue(' dx = ', io_real, 1, "(F8.3)")
   io_real(1) = dy
   call WriteValue(' dy = ', io_real, 1, "(F8.3)")
-  io_real(1) = YD(i)%beta
+  io_real(1) = defects%YD(i)%beta
   call WriteValue(' beta = ', io_real, 1, "(F8.3)")
 end if
 
 ! convert to a quaternion
-beta = YD(i)%beta
+beta = defects%YD(i)%beta
 a_di(1,1:3) = (/ cos(beta), sin(beta), 0.D0 /)
 a_di(2,1:3) = (/ -sin(beta), cos(beta), 0.D0 /)
 a_di(3,1:3) = (/ 0.D0, 0.D0, 1.D0 /)
-YD(i)%a_di = om2qu(a_di)
-YD(i)%a_id = conjg(YD(i)%a_di)
+defects%YD(i)%a_di = om2qu(a_di)
+defects%YD(i)%a_id = conjg(defects%YD(i)%a_di)
 
 if (dinfo.eq.1) then 
   write (*,*) 'beta = ',beta
-  write (*,*) YD(i)%a_di
-  write (*,*) YD(i)%a_id
+  write (*,*) defects%YD(i)%a_di
+  write (*,*) defects%YD(i)%a_id
 end if
 
 
 ! finally some geometrical parameters needed for the displacement field computation...
-YD(i)%alpha =  alpha
-YD(i)%ca = cos(alpha)
-YD(i)%sa = sin(alpha)
-YD(i)%ta = tan(alpha)
-YD(i)%cota = 1.0/YD(i)%ta
+defects%YD(i)%alpha =  alpha
+defects%YD(i)%ca = cos(alpha)
+defects%YD(i)%sa = sin(alpha)
+defects%YD(i)%ta = tan(alpha)
+defects%YD(i)%cota = 1.0/defects%YD(i)%ta
 
 ! that's it! the rest is handled in the CalcR routine.
 
@@ -397,8 +400,8 @@ end subroutine makeYSHdislocation
 !
 !> @brief read Yoffe dislocation input files
 ! 
-!> @param dislYname name of dislocation namelist file (string array)
-!> @param numYdisl number of dislocations
+!> @param defects defects structure
+!> @param cell unit cell pointer
 !> @param DF_npix number of x-pixels
 !> @param DF_npiy number of y-pixels
 !> @param DF_gf 
@@ -411,16 +414,16 @@ end subroutine makeYSHdislocation
 !> @date 03/25/13 MDG 3.0 updated IO
 !> @date 11/21/13 MDG 3.1 verification
 !--------------------------------------------------------------------------
-subroutine read_YSH_dislocation_data(dislYname,numYdisl,DF_npix,DF_npiy,DF_gf,L,dinfo)
+subroutine read_YSH_dislocation_data(defects,cell,DF_npix,DF_npiy,DF_gf,L,dinfo)
 
-use local
 use io
 use files
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)	:: dislYname(3*maxdefects)
-integer(kind=irg),INTENT(IN)	:: numYdisl, DF_npix, DF_npiy, dinfo
+type(defecttype),INTENT(INOUT) :: defects
+type(unitcell),pointer	        :: cell
+integer(kind=irg),INTENT(IN)	:: DF_npix, DF_npiy, dinfo
 real(kind=sgl),INTENT(IN)	:: DF_gf(3), L
 
 integer(kind=irg) 	        :: i
@@ -429,27 +432,27 @@ real(kind=sgl) 			:: id,jd,u(3),bv(3),poisson
 namelist / dislocationdata / id, jd, u, bv, poisson
 
 ! allocate the memory for the dislocation parameters
-  allocate(YD(3*maxdefects))
+allocate(defects%YD(3*maxdefects))
 
 ! these are just the individual dislocations; the ones that belong to 
 ! stacking faults are handled separately
-   do i=1,numYdisl
-    mess = 'opening '//trim(dislYname(i)); call Message("(/A)")
-    OPEN(UNIT=dataunit,FILE=trim(dislYname(i)),DELIM='APOSTROPHE')
+   do i=1,defects%numYdisl
+    call Message('opening '//trim(defects%dislYname(i)), frm = "(/A)")
+    OPEN(UNIT=dataunit,FILE=trim(defects%dislYname(i)),DELIM='APOSTROPHE')
     READ(UNIT=dataunit,NML=dislocationdata)
     CLOSE(UNIT=dataunit)
     
 ! top-of-the-foil intersection of dislocation line is transformed to foil coordinates [nm] with DL(i)%kd=0 (center of foil) [verified 4/23/11]
 ! the point (0,0) is at the center of the image ... hence the factor of 0.5
-    YD(i)%id = id * 0.5 * float(DF_npix) ! * L   scaling (zooming) is done later in the image reference frame...
-    YD(i)%jd = jd * 0.5 * float(DF_npiy) ! * L
-    YD(i)%u = u
-    YD(i)%burg = bv
-    YD(i)%g = DF_gf
-    YD(i)%sig = poisson
+    defects%YD(i)%id = id * 0.5 * float(DF_npix) ! * L   scaling (zooming) is done later in the image reference frame...
+    defects%YD(i)%jd = jd * 0.5 * float(DF_npiy) ! * L
+    defects%YD(i)%u = u
+    defects%YD(i)%burg = bv
+    defects%YD(i)%g = DF_gf
+    defects%YD(i)%sig = poisson
     
 ! and pre-compute the dislocation displacement field parameters
-    call makeYSHdislocation(i,dinfo, L)    
+    call makeYSHdislocation(defects,cell,i,dinfo, L)    
   end do
   
 end subroutine read_YSH_dislocation_data

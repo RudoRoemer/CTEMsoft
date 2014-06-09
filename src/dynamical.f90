@@ -25,17 +25,6 @@ use local
 
 IMPLICIT NONE
 
-! allocatable arrays
-complex(kind=dbl),allocatable :: W(:), &         	! eigenvalue vector for Bloch wave method
-                                 CG(:,:), &      	! eigenvector matrix
-                                 alpha(:), &     	! excitation amplitude vector
-                                 DHWMz(:,:),&		! Darwin-Howie-Whelan matrix
-                                 DynMat(:,:), &  	! dynamical matrix
-                                 DynMat0(:,:), &  	! dynamical matrix (for programs that need two or more of them)
-                                 DynMat1(:,:), &  	! dynamical matrix (for programs that need two or more of them)
-                                 DynMat2(:,:), &  	! dynamical matrix (for programs that need two or more of them)
-                                 DynMat3(:,:), &  	! dynamical matrix (for programs that need two or more of them)
-                                 phiz(:),Az(:,:) 	! used for Taylor expansion of scattering matrix
 
 ! The parameters in gnode are computed by CalcUcg 
 type gnode
@@ -54,15 +43,32 @@ type gnode
                           	   qg       ! interaction parameter for Darwin-Howie-Whelan equations [nm^-1]
 end type gnode
 
-type(gnode)            	:: rlp      ! reciprocal lattice point
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+! [06/09/14] the global variables below need to be removed !!!
+ 
+! allocatable arrays
+complex(kind=dbl),allocatable :: W(:), &         	! eigenvalue vector for Bloch wave method
+                                 CG(:,:), &      	! eigenvector matrix
+                                 alpha(:), &     	! excitation amplitude vector
+                                 DHWMz(:,:),&		! Darwin-Howie-Whelan matrix
+                                 DynMat(:,:), &  	! dynamical matrix
+                                 DynMat0(:,:), &  	! dynamical matrix (for programs that need two or more of them)
+                                 DynMat1(:,:), &  	! dynamical matrix (for programs that need two or more of them)
+                                 DynMat2(:,:), &  	! dynamical matrix (for programs that need two or more of them)
+                                 DynMat3(:,:), &  	! dynamical matrix (for programs that need two or more of them)
+                                 phiz(:),Az(:,:) 	! used for Taylor expansion of scattering matrix
 
 ! other vectors needed for dynamical computations
 real(kind=sgl)   		:: DynWV(3), &       ! wave vector expressed in reciprocal frame
                     		DynFN(3), &       ! Foil normal in reciprocal frame
 		    		DynUpz            ! U'_0 normal absorption parameter
 
-! moved to cell type in crystalvars.f90
-! integer(kind=irg)		:: DynNbeams, DynNbeamsLinked      ! number of beams
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
 
 end module dynamical
 
