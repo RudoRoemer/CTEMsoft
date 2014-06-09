@@ -2,27 +2,27 @@
 ! Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
 ! All rights reserved.
 !
-! Redistribution and use in source and binary forms, with or without modification, are 
+! Redistribution and use in source and binary forms, with or without modification, are
 ! permitted provided that the following conditions are met:
 !
-!     - Redistributions of source code must retain the above copyright notice, this list 
+!     - Redistributions of source code must retain the above copyright notice, this list
 !        of conditions and the following disclaimer.
-!     - Redistributions in binary form must reproduce the above copyright notice, this 
-!        list of conditions and the following disclaimer in the documentation and/or 
+!     - Redistributions in binary form must reproduce the above copyright notice, this
+!        list of conditions and the following disclaimer in the documentation and/or
 !        other materials provided with the distribution.
-!     - Neither the names of Marc De Graef, Carnegie Mellon University nor the names 
-!        of its contributors may be used to endorse or promote products derived from 
+!     - Neither the names of Marc De Graef, Carnegie Mellon University nor the names
+!        of its contributors may be used to endorse or promote products derived from
 !        this software without specific prior written permission.
 !
-! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
-! AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
-! IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
-! ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE 
-! LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-! DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
-! SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-! CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
-! OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+! AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+! IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+! ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+! LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+! DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+! SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+! CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+! OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 ! USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ! ###################################################################
 
@@ -30,47 +30,47 @@
 ! Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
 ! All rights reserved.
 !
-! Redistribution and use in source and binary forms, with or without modification, are 
+! Redistribution and use in source and binary forms, with or without modification, are
 ! permitted provided that the following conditions are met:
 !
-!     - Redistributions of source code must retain the above copyright notice, this list 
+!     - Redistributions of source code must retain the above copyright notice, this list
 !        of conditions and the following disclaimer.
-!     - Redistributions in binary form must reproduce the above copyright notice, this 
-!        list of conditions and the following disclaimer in the documentation and/or 
+!     - Redistributions in binary form must reproduce the above copyright notice, this
+!        list of conditions and the following disclaimer in the documentation and/or
 !        other materials provided with the distribution.
-!     - Neither the names of Marc De Graef, Carnegie Mellon University nor the names 
-!        of its contributors may be used to endorse or promote products derived from 
+!     - Neither the names of Marc De Graef, Carnegie Mellon University nor the names
+!        of its contributors may be used to endorse or promote products derived from
 !        this software without specific prior written permission.
 !
-! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
-! AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
-! IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
-! ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE 
-! LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-! DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
-! SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-! CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
-! OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+! AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+! IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+! ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+! LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+! DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+! SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+! CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+! OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 ! USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! so3 module 
+! so3 module
 !--------------------------------------------------------------------------
 !
 ! MODULE: so3
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief 
+!> @brief
 !> routines needed for uniform sampling of so3 via the cubochoric parameterization
 !
 !> @details This standalone module is used as follows:
 !>
 !> call SampleRFZ(pgnum, nsteps)
 !>
-!> where pgnum is the point group number (International Tables) and nsteps is the 
-!> required number of sampling steps along the cubic semi-edge.  The SampleRFZ 
+!> where pgnum is the point group number (International Tables) and nsteps is the
+!> required number of sampling steps along the cubic semi-edge.  The SampleRFZ
 !> routine creates a linked list named FZlist which has FZcnt entries in it.  The
 !> individual entries are the Rodrigues vector components and a link to the next
 !> entry.  So, going through the list afterwards can be done as follows:
@@ -90,12 +90,12 @@ module so3
 ! The module should be processor independent.  This can
 ! be accomplished by the use of the "kind" parameters.
 
-! Define the "kind" parameters for single and double precision reals, 
-  integer,parameter        		:: sgl = SELECTED_REAL_KIND(p=6,r=37)	
-  integer,parameter        		:: dbl = SELECTED_REAL_KIND(p=13,r=200)	
+! Define the "kind" parameters for single and double precision reals,
+  integer,parameter        		:: sgl = SELECTED_REAL_KIND(p=6,r=37)
+  integer,parameter        		:: dbl = SELECTED_REAL_KIND(p=13,r=200)
 
 ! Define the "kind" parameters for short and regular integers,
-  integer,parameter        		:: ish = SELECTED_INT_KIND(3) 
+  integer,parameter        		:: ish = SELECTED_INT_KIND(3)
   integer,parameter        		:: irg = SELECTED_INT_KIND(9)
 
 ! these are a bunch of constants used for the mapping; they are all in double precision
@@ -117,7 +117,7 @@ type LambertParameters
 	real(kind=dbl)		:: pi8		! pi/8
 	real(kind=dbl)		:: prek		! R1 2^(1/4)/beta
 	real(kind=dbl)		:: r24		! sqrt(24)
-        real(kind=dbl)	        :: rvmax2      ! square of max rodrigues vector length  
+        real(kind=dbl)	        :: rvmax2      ! square of max rodrigues vector length
 	real(kind=dbl)         :: BP(6)       ! used for Fundamental Zone determination
 end type LambertParameters
 
@@ -165,7 +165,7 @@ private :: InitLambertParameters
 ! convert cubochoric to Rodrigues
 private :: cu2ro
 
-! convert homochoric to Rodrigues 
+! convert homochoric to Rodrigues
 private :: ho2ro
 
 ! mappings from the 3D cubic grid to the 3D spherical grid
@@ -203,7 +203,7 @@ real(kind=dbl)	:: dpi
 dpi = 4.D0*datan(1.D0)
 
 ! do not change any of the following constants !
-LPs%Pi = dpi 
+LPs%Pi = dpi
 LPs%iPi = 1.D0/dpi
 LPs%sPi = dsqrt(dpi)
 LPs%srt = dsqrt(3.D0)/2.D0
@@ -222,10 +222,10 @@ LPs%prek =  LPs%R1*2.D0**(0.25D0)/LPs%beta
 LPs%r24 = dsqrt(24.D0)
 
 ! we need to make sure that we do not consider Rodrigues vectors of infinite length,
-! which would correspond to 180 degree rotations; we'll put the max length so that 
-! we can deal with 179.999 degree rotations, which should be good enough for most 
+! which would correspond to 180 degree rotations; we'll put the max length so that
+! we can deal with 179.999 degree rotations, which should be good enough for most
 ! practical cases (this may be changed if deemed necessary)
-LPs%rvmax2 = (dtan(179.999D0*dpi/2.D0/180.D0))**2  ! square of max rodrigues vector length 
+LPs%rvmax2 = (dtan(179.999D0*dpi/2.D0/180.D0))**2  ! square of max rodrigues vector length
 
 ! truncation values needed for the Cyclic fundamental zones of order 2, 3, 4, and 6
 LPs%BP(1:6) = (/ 0.D0, dtan(dpi/4.D0), dtan(dpi/6.D0), LPs%pi8, 0.D0, dtan(LPs%pi12) /)
@@ -241,9 +241,9 @@ end subroutine InitLambertParameters
 ! the labeling of the pyramids that make up the cube.
 !
 ! Citation:  "A new method of constructing a grid in 
-! the space of 3D rotations and its applications to 
+! the space of 3D rotations and its applications to
 ! texture analysis," D. Rosca, A. Morawiec, and M. De Graef,
-! submitted to Modeling and Simulations in Materials Science 
+! submitted to Modeling and Simulations in Materials Science
 ! and Engineering (April 2014).
 !
 !-------------------------------------------------------------
@@ -260,21 +260,21 @@ end subroutine InitLambertParameters
 !
 !> @details check the first figure in the cube-to-ball paper for the pyramid labels
 !
-!> @param xyz 3D coordinates to be considered (double precision)  
-! 
+!> @param xyz 3D coordinates to be considered (double precision)
+!
 !> @date 11/21/12    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function GetPyramid(xyz) result(res)
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)	:: xyz(3) 
+real(kind=dbl),INTENT(IN)	:: xyz(3)
 integer(kind=irg)		:: res
 
 if ((dabs(xyz(1)).le.xyz(3)).and.(dabs(xyz(2)).le.xyz(3))) then
   res = 1				! pyramid 1
   return
-end if  
+end if
 
 if ((dabs(xyz(1)).le.-xyz(3)).and.(dabs(xyz(2)).le.-xyz(3))) then
   res = 2				! pyramid 2
@@ -284,7 +284,7 @@ end if
 if ((dabs(xyz(3)).le.xyz(1)).and.(dabs(xyz(2)).le.xyz(1))) then
   res = 3				! pyramid 3
   return
-end if 
+end if
 
 if ((dabs(xyz(3)).le.-xyz(1)).and.(dabs(xyz(2)).le.-xyz(1))) then
   res = 4				! pyramid 4
@@ -308,11 +308,11 @@ end function GetPyramid
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief map from 3D cubic grid to 3D ball 
+!> @brief map from 3D cubic grid to 3D ball
 !
-!> @param lxyz 3D coordinates to be considered (double precision)  
+!> @param lxyz 3D coordinates to be considered (double precision)
 !> @param ierr error flag 0 = OK, 1 = outside of unit cube
-! 
+!
 !> @date 7/12/13    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function LambertCubeToBall(lxyz,ierr) result(res)
@@ -402,7 +402,7 @@ end function LambertCubeToBall
 !> @brief convert homochoric to Rodrigues
 !
 !> @param h homochoric coordinates (double precision)
-! 
+!
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 function ho2ro(h) result (res)
@@ -451,7 +451,7 @@ end function ho2ro
 !> @brief convert cubochoric to Rodrigues
 !
 !> @param c cubochoric coordinates  (double precision)
-! 
+!
 !> @note calling program MUST have initialized the Lambert parameters first!!!
 !
 !> @date 8/12/13   MDG 1.0 original
@@ -468,9 +468,9 @@ cc = c
 tmp = LambertCubeToBall(cc,ierr)
 
 ! if ierr=1, then the input point does not lie inside the sampling cube.
-! the calling program should make sure that this never happens, but if 
+! the calling program should make sure that this never happens, but if
 ! it does, we need to alert the user and abort the program right here...
-if (ierr.eq.1) then 
+if (ierr.eq.1) then
   write (*,*) 'Fatal Error: the sampling point coordinates are outside sampling cube...'
   write (*,*) c
   write (*,*) '   Sampling cube has semi edge length ',0.5D0*LPs%ap
@@ -485,12 +485,12 @@ end function cu2ro
 
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
-! next, we define a number of logical routines, that decide whether or not 
+! next, we define a number of logical routines, that decide whether or not
 ! a point in Rodrigues representation lies inside the fundamental zone (FZ)
 ! for a given crystal symmetry. This follows the Morawiec@Field paper:
 !
-! A. Morawiec & D. P. Field (1996) Rodrigues parameterization for orientation 
-! and misorientation distributions, Philosophical Magazine A, 73:4, 1113-1130, 
+! A. Morawiec & D. P. Field (1996) Rodrigues parameterization for orientation
+! and misorientation distributions, Philosophical Magazine A, 73:4, 1113-1130,
 ! DOI: 10.1080/01418619608243708
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
@@ -506,7 +506,7 @@ end function cu2ro
 !
 !> @param rod Rodrigues coordinates  (double precision)
 !> @param order depending on main symmetry axis
-! 
+!
 !> @note calling program MUST have initialized the Lambert parameters first!!!
 !
 !> @date 5/12/14   MDG 1.0 original
@@ -535,7 +535,7 @@ end function insideCyclicFZ
 !
 !> @param rod Rodrigues coordinates (double precision)
 !> @param order depending on main symmetry axis
-! 
+!
 !> @note calling program MUST have initialized the Lambert parameters first!!!
 !
 !> @todo we ignore here the fact that, among others, the 3m point group can be oriented in two ways;
@@ -592,7 +592,7 @@ end function insideDihedralFZ
 !
 !> @param rod Rodrigues coordinates  (double precision)
 !> @param ot 'oct' or 'tet', depending on symmetry
-! 
+!
 !> @note calling program MUST have initialized the Lambert parameters first!!!
 !
 !> @date 5/12/14   MDG 1.0 original
@@ -616,8 +616,8 @@ res = .FALSE.
 
 ! primary cube planes (only needed for octahedral case)
 if (ot.eq.'oct') then
-  c1 = (maxval(dabs(rod)).le.LPs%pi8) 
-else 
+  c1 = (maxval(dabs(rod)).le.LPs%pi8)
+else
   c1 = .TRUE.
 end if
 
@@ -640,9 +640,9 @@ end function insideCubicFZ
 !
 !> @brief Generate a uniform sampling of a Rodriguess FZ
 !
-!> @note This routine fills in a linked list FZlist of Rodrigues points that 
+!> @note This routine fills in a linked list FZlist of Rodrigues points that
 !> are inside a specific fundamental zone determined by the sample point group;
-!> this list can then be further dealt with in the calling program.  
+!> this list can then be further dealt with in the calling program.
 !
 !> @param nsteps number of steps along semi-edge in cubochoric grid
 !> @param pgnum point group number to determine the appropriate Rodrigues fundamental zone
@@ -682,7 +682,7 @@ if (associated(FZlist)) then
   FZtmp => FZlist%next
   FZtmp2 => FZlist
   do
-    deallocate(FZtmp2)  
+    deallocate(FZtmp2)
     if (.not. associated(FZtmp) ) EXIT
     FZtmp2 => FZtmp
     FZtmp => FZtmp%next
@@ -706,8 +706,8 @@ do while (x.lt.s)
 
 ! convert to Rodrigues representation
       rod = cu2ro( (/ x, y, z /) )
-            
-! is this point inside the selected Rodrigues FZ ?  
+
+! is this point inside the selected Rodrigues FZ ?
 ! limit the divergent Rodrigues space to 179.999 degrees, which
 ! corresponds to a length of the rod vector of 113924.
 ! (actually, LPs%rvmax2 is the square of this value, to avoid having to take square roots)
@@ -729,7 +729,7 @@ do while (x.lt.s)
 
 ! If insideFZ=.TRUE., then add this point to the linked list FZlist and keep
 ! track of how many points there are on this list
-       if (insideFZ) then 
+       if (insideFZ) then
         if (.not.associated(FZlist)) then ! do this only for the first point
           allocate(FZlist)
           FZtmp => FZlist
@@ -755,6 +755,8 @@ end do
 
 end subroutine SampleRFZ
 
+
+
 end module so3
 
 
@@ -769,53 +771,118 @@ end module so3
 !
 !> @date 5/12/14   MDG 1.0 original
 !--------------------------------------------------------------------------
-program sampler
+ MODULE m
+   IMPLICIT NONE
 
-use so3
+   ! Define interface of call-back routine.
+   ABSTRACT INTERFACE
+	 SUBROUTINE callbackInt (x)
+	   USE, INTRINSIC :: ISO_C_BINDING
+	   INTEGER(KIND=4), INTENT(IN), VALUE :: x
+	 END SUBROUTINE callbackInt
 
-IMPLICIT NONE
+	 SUBROUTINE callbackStr	(s)
+	   USE, INTRINSIC :: ISO_C_BINDING
+ 	   CHARACTER*(*) s
+!  CHARACTER(LEN=255), INTENT(IN), VALUE :: s
+	 END SUBROUTINE callbackStr
 
-integer(kind=irg)	        :: i, pgnum, nsteps
+	 SUBROUTINE callbackPtrArray(x, p)
+	   USE, INTRINSIC :: ISO_C_BINDING
+	   INTEGER(KIND=4), INTENT(IN), VALUE :: x
+	   TYPE(C_PTR), INTENT(OUT) :: p
+	   END SUBROUTINE callbackPtrArray
+     END INTERFACE
+end module m
 
-type(FZpointd),pointer         :: FZlist, FZtmp        ! pointers
-integer(kind=irg)              :: FZcnt                ! counts number of entries in linked list
 
 
-! point group number 
-write (*,"(A,$)") 'Enter the point group number : ' 
-read (*,*) pgnum
 
-! point group number 
-write (*,"(A,$)") 'Enter the number of intervals along the cube semi-edge length : ' 
-read (*,*) nsteps
+subroutine sampler(pgnum, nsteps, cproc)
 
-! get the linked list for the FZ for point group symmetry pgnum for 100 steps along the cubic semi-edge
-call SampleRFZ(nsteps, pgnum, FZlist, FZcnt)
-write (*,*) 'Total number of orientations inside Rodrigues Fundamental Zone ',FZcnt
+	use m
+	use so3
 
-! now we have the linked list so we can do anything we want with it.
-! in this test program, we create a VTK file so that we can visualize the RFZ with ParaView
-open (UNIT=22,FILE='test.vtk',FORM='formatted',STATUS='unknown')
-write (22,"(A)") '# vtk DataFile Version 2.0'
-write (22,"(A)") 'Uniform sampling of Rodrigues FZ'
-write (22,"(A)") 'ASCII'
-write (22,"(A)") 'DATASET POLYDATA'
-write (22,"(A,I8,A)") 'POINTS ',FZcnt,' float'
+	USE, INTRINSIC :: ISO_C_BINDING
+	IMPLICIT NONE
+	TYPE(C_FUNPTR), INTENT(IN), VALUE :: cproc
 
-! scan through the list
-FZtmp => FZlist
-do i = 1, FZcnt
-  write (22,"(3F16.4)") FZtmp%rod
-  FZtmp => FZtmp%next
-end do
+  integer :: memaddress
 
-write (22,"(A)") ' '
-write (22,"(A,I8)") ' POINT_DATA ',FZcnt
-write (22,"(A)") ' SCALARS radii float 1'
-write (22,"(A)") ' LOOKUP_TABLE default'
-do i=1,FZcnt 
-  write (22,"(F13.6)") 0.1
-end do
-close(UNIT=22,STATUS='keep')
+	integer(kind=irg)	        :: i, pgnum, nsteps, j
 
-end program sampler
+	type(FZpointd),pointer         :: FZlist, FZtmp        ! pointers
+	integer(kind=irg)              :: FZcnt                ! counts number of entries in linked list
+	!real(kind=dbl), ALLOCATABLE :: FZarray(:,:)
+	real(C_DOUBLE), pointer :: out(:)
+	type(C_PTR) :: outp
+	integer ierr
+
+	PROCEDURE(callbackPtrArray), POINTER :: proc
+	CALL C_F_PROCPOINTER (cproc, proc)
+	! point group number
+	write (*,*) 'Point group number : ', pgnum
+	!read (*,*) pgnum
+
+	! point group number
+	write (*,*) 'Number of intervals along the cube semi-edge length : ', nsteps
+	!read (*,*) nsteps
+
+	! get the linked list for the FZ for point group symmetry pgnum for 100 steps along the cubic semi-edge
+	call SampleRFZ(nsteps, pgnum, FZlist, FZcnt)
+	call proc(FZcnt, outp)
+	CALL C_F_POINTER(outp, out, [3*FZcnt])
+
+	memaddress = loc(out)
+  print *, memaddress
+
+ ! write (*,*) 'out memory addres ', out
+	write (*,*) 'Total number of orientations inside Rodrigues Fundamental Zone ',FZcnt
+	!allocate(FZarray(3, FZcnt))
+	!allocate(out(3*FZcnt), stat=ierr)
+	write(*,*) 'Error Number', ierr
+
+
+
+	! now we have the linked list so we can do anything we want with it.
+	! in this test program, we create a VTK file so that we can visualize the RFZ with ParaView
+	close(UNIT=22,STATUS='keep')
+	open (UNIT=22,FILE='test.vtk',FORM='formatted',STATUS='unknown')
+
+	write (22,"(A)") '# vtk DataFile Version 2.0'
+	write (22,"(A)") 'Uniform sampling of Rodrigues FZ'
+	write (22,"(A)") 'ASCII'
+	write (22,"(A)") 'DATASET POLYDATA'
+	write (22,"(A,I8,A)") 'POINTS ',FZcnt,' float'
+
+	!write(*,*) FZarray(:,400)
+
+	! scan through the list
+	FZtmp => FZlist
+	do i = 1, FZcnt
+	  write (22,"(3F16.4)") FZtmp%rod
+	  !write(*,*) i, FZtmp%rod
+	  !write(*,*) i, FZarray(:,i)
+	  !FZarray(:,i) = FZtmp%rod
+	  j = 3*i-2
+		  out(j) = FZtmp%rod(1)
+		  out(j+1) = FZtmp%rod(2)
+		  out(j+2) = FZtmp%rod(3)
+
+	  FZtmp => FZtmp%next
+	end do
+
+	!out = reshape(outTemp, (/3*FZcnt/))
+
+	outp = C_LOC(out)
+
+	write (22,"(A)") ' '
+	write (22,"(A,I8)") ' POINT_DATA ',FZcnt
+	write (22,"(A)") ' SCALARS radii float 1'
+	write (22,"(A)") ' LOOKUP_TABLE default'
+	do i=1,FZcnt
+	  write (22,"(F13.6)") 0.1
+	end do
+	close(UNIT=22,STATUS='keep')
+
+end subroutine sampler
