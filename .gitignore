@@ -16,15 +16,6 @@ IDL/**/*.sav
 .DS_Store
 .DS_Store?
 
-# CMake files
-/CMakeFiles/
-*.make
-*.cmake
-CMakeCache.txt
-**/Makefile
-**/link.txt
-**/progress.marks
-
 *.atools
 
 # executables
