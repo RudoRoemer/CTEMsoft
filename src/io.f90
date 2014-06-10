@@ -101,8 +101,6 @@ contains
 !--------------------------------------------------------------------------
 subroutine Message(mess,frm,stdout)
 
-use local
-
 character(*),INTENT(IN)		:: mess		!< message string
 character(*),OPTIONAL,INTENT(IN)  	:: frm		!< optional formatting string
 integer(kind=irg),OPTIONAL,INTENT(IN)	:: stdout	!< optional output unit identifier
@@ -144,8 +142,6 @@ end subroutine Message
 ! ###################################################################
 subroutine ReadValueString( Qstring, rd_string, frm, stdout)
 
-use local
-
 character(*),INTENT(IN)			:: Qstring
 character(*),INTENT(OUT)			:: rd_string
 character(*),INTENT(IN),OPTIONAL		:: frm
@@ -184,8 +180,6 @@ end subroutine ReadValueString
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
 subroutine ReadValueStringArray(Qstring, rd_string, num, frm, stdout)
-
-use local
 
 character(*),INTENT(IN)			:: Qstring
 character(1),INTENT(OUT)			:: rd_string(num)
@@ -230,8 +224,6 @@ end subroutine ReadValueStringArray
 ! ###################################################################
 subroutine ReadValueIntShort(Qstring, rd_int, num, stdout)
 
-use local
-
 character(*), INTENT(IN)			:: Qstring
 integer(kind=ish),INTENT(OUT)			:: rd_int(*)
 integer(kind=irg),INTENT(IN),OPTIONAL		:: num
@@ -270,8 +262,6 @@ end subroutine ReadValueIntShort
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
 subroutine ReadValueIntLong(Qstring, rd_int, num, stdout)
-
-use local
 
 character(*), INTENT(IN)			:: Qstring
 integer(kind=irg),INTENT(OUT)			:: rd_int(*)
@@ -312,8 +302,6 @@ end subroutine ReadValueIntLong
 ! ###################################################################
 subroutine ReadValueRealSingle(Qstring, rd_real, num, stdout)
 
-use local
-
 character(*), INTENT(IN)			:: Qstring
 real(kind=sgl),INTENT(OUT)			:: rd_real(*)
 integer(kind=irg),INTENT(IN),OPTIONAL		:: num
@@ -352,8 +340,6 @@ end subroutine ReadValueRealSingle
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
 subroutine ReadValueRealDouble(Qstring, rd_real, num, stdout)
-
-use local
 
 character(*), INTENT(IN)			:: Qstring
 real(kind=dbl),INTENT(OUT)			:: rd_real(*)
@@ -399,8 +385,6 @@ end subroutine ReadValueRealDouble
 ! ###################################################################
 subroutine WriteValueString(Qstring, out_string, frm, stdout)
 
-use local
-
 character(*),INTENT(IN)			:: Qstring 
 character(*),INTENT(IN)			:: out_string
 character(*),INTENT(IN),OPTIONAL		:: frm
@@ -441,8 +425,6 @@ end subroutine WriteValueString
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
 subroutine WriteValueIntShort(Qstring, out_int, num, frm, stdout)
-
-use local
 
 character(*), INTENT(IN)			:: Qstring
 integer(kind=ish),INTENT(IN)			:: out_int(*)
@@ -493,8 +475,6 @@ end subroutine WriteValueIntShort
 ! ###################################################################
 subroutine WriteValueIntLong(Qstring, out_int, num, frm, stdout)
 
-use local
-
 character(*), INTENT(IN)			:: Qstring
 integer(kind=irg),INTENT(IN)			:: out_int(*)
 character(*),INTENT(IN),OPTIONAL		:: frm
@@ -544,8 +524,6 @@ end subroutine WriteValueIntLong
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
 subroutine WriteValueRealSingle(Qstring, out_real, num, frm, stdout)
-
-use local
 
 character(*), INTENT(IN)			:: Qstring
 real(kind=sgl),INTENT(IN)			:: out_real(*)
@@ -598,8 +576,6 @@ end subroutine WriteValueRealSingle
 ! ###################################################################
 subroutine WriteValueRealDouble(Qstring, out_real, num, frm, stdout)
 
-use local
-
 character(*), INTENT(IN)			:: Qstring
 real(kind=dbl),INTENT(IN)			:: out_real(*)
 character(*),INTENT(IN),OPTIONAL		:: frm
@@ -649,8 +625,6 @@ end subroutine WriteValueRealDouble
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
 subroutine WriteValueRealComplex(Qstring, out_cmplx, num, frm, stdout)
-
-use local
 
 character(*), INTENT(IN)			:: Qstring
 complex(kind=sgl),INTENT(IN)			:: out_cmplx(*)

@@ -49,9 +49,7 @@
 module files
 
 use local
-
-! needs to be removed !!
-logical :: loadingfile
+use typedefs
 
 contains
 
@@ -74,9 +72,7 @@ subroutine DumpXtalInfo(cell, stdout)
 
 use constants
 use io
-use crystalvars
 use symmetry
-use symmetryvars
 
 IMPLICIT NONE
 
@@ -161,7 +157,6 @@ end subroutine DumpXtalInfo
 subroutine CrystalData(cell, loadingfile, fname, stdout)
 
 use io
-use crystalvars
 use crystal
 use symmetry
 
@@ -223,9 +218,7 @@ end subroutine CrystalData
 !--------------------------------------------------------------------------
 subroutine SaveData(cell)
 
-use local
 use io
-use crystalvars
 use crystal
  
 IMPLICIT NONE
@@ -266,12 +259,9 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine ReadDataFile(cell,fr)
 
-use local
 use io
-use crystalvars
 use crystal
 use symmetry
-use symmetryvars
 
 IMPLICIT NONE
 
@@ -370,9 +360,8 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !> @date   06/06/14 MDG 4.0 added stdout argument
 !--------------------------------------------------------------------------
-subroutine SafeOpenFile(ftyp,frm,fname,fread, stdout)
+subroutine SafeOpenFile(ftyp,frm,fname,fread, loadingfile, stdout)
 
-use local
 use error
 use io
 
@@ -382,6 +371,7 @@ character(2),INTENT(IN)                 :: ftyp         !< selects the logical u
 character(fnlen),INTENT(INOUT)          :: fname        !< file name string
 character(*),INTENT(IN)                 :: frm          !< formatting option
 logical,OPTIONAL,INTENT(IN)             :: fread        !< read if .TRUE., write if .FALSE.
+logical,INTENT(INOUT),OPTIONAL          :: loadingfile
 integer(kind=irg),INTENT(IN),OPTIONAL	  :: stdout
 
 character(1)                            :: ans
@@ -471,7 +461,6 @@ end subroutine SafeOpenFile
 !--------------------------------------------------------------------------
 subroutine SafeCloseFile(ftyp,stt,fname,quiet,stdout)
 
-use local
 use io
 use error
 
@@ -527,7 +516,6 @@ end subroutine SafeCloseFile
 !--------------------------------------------------------------------------
 subroutine CopyTemplateFiles(nt,templatelist,stdout)
 
-use local
 use io
 
 IMPLICIT NONE
@@ -609,7 +597,6 @@ end subroutine CopyTemplateFiles
 !--------------------------------------------------------------------------
 subroutine Interpret_Program_Arguments(nmldefault,numt,templatelist,progname,stdout)
 
-use local
 use io
 
 IMPLICIT NONE

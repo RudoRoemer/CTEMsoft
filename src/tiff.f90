@@ -155,8 +155,6 @@ end subroutine TIFF_Write_Byte_Into_Buffer
 !--------------------------------------------------------------------------
 subroutine TIFF_Write_Word(Word,Length)
 
-use local
-
 IMPLICIT NONE
 
 integer(kind=irg),intent(IN)    	:: Word		!< 4-byte word
@@ -194,8 +192,6 @@ end subroutine TIFF_Write_Word
 !--------------------------------------------------------------------------
 subroutine TIFF_Make_Tag(Numbre,Tag_ID, Data_Type,Cnt,Offset)
 
-use local
-
 IMPLICIT NONE
 
 integer(kind=irg),intent(IN)   :: Numbre		!< Tag number (only used for clarity)
@@ -230,8 +226,6 @@ end subroutine TIFF_Make_Tag
 !
 !--------------------------------------------------------------------------
 subroutine TIFF_Write_File
-
-use local
 
 IMPLICIT NONE
 

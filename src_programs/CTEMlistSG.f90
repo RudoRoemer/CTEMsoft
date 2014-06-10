@@ -48,9 +48,9 @@
 program CTEMlistSG
 
 use local
+use constants
 use io
-use crystalvars
-use symmetryvars
+use typedefs
 use symmetry
 
 IMPLICIT NONE
@@ -58,25 +58,29 @@ IMPLICIT NONE
 character(3)   				:: pos
 integer(kind=irg)        		:: p(4),ii,jj,i, io_int(1)
 real(kind=sgl)           		:: ppp, io_real(1)
+character(fnlen)                      :: progname, progdesc
+type(unitcell),pointer	               :: cell
+character(fnlen)                      :: mess
 
  progname = 'CTEMlistSG.f90'
  progdesc = 'List equivalent positions for arbitrary space group'
- call CTEMsoft
+ call CTEMsoft(progname, progdesc)
 
-cell % SYM_reduce=.TRUE.
-pos = 'xyz'
-call ReadValue(' Enter Space Group number : ', io_int, 1) 
-cell % SYM_SGnum = io_int(1)
-call GenerateSymmetry(.TRUE.)
+ allocate(cell)
+ 
+ cell % SG% SYM_reduce=.TRUE.
+ pos = 'xyz'
+ call ReadValue(' Enter Space Group number : ', io_int, 1) 
+ cell % SYM_SGnum = io_int(1)
+ call GenerateSymmetry(cell,.TRUE.)
 
- mess = '  Space Group Symbol       : '//SYM_SGname(cell % SYM_SGnum)
- call Message("(A)")
+ call Message('  Space Group Symbol       : '//SYM_SGname(cell % SYM_SGnum), frm = "(A)")
 
- io_int(1) = SG % SYM_MATnum
+ io_int(1) = cell%SG % SYM_MATnum
  call WriteValue(' number of operators      : ', io_int, 1, "(I3)")
 
 ! loop over all symmetry matrices
- do i=1,SG % SYM_MATnum
+ do i=1,cell%SG % SYM_MATnum
   io_int(1) = i; 
   call WriteValue(' ', io_int, 1,"(1x,i3,2x,'-> (',$)")
 
@@ -84,8 +88,8 @@ call GenerateSymmetry(.TRUE.)
   do ii=1,3
 
 ! loop over colums (get the numbers)
-   p(1:3)=int(SG % SYM_data(i,ii,1:3)) 
-   ppp = sngl(SG % SYM_data(i,ii,4))
+   p(1:3)=int(cell%SG % SYM_data(i,ii,1:3)) 
+   ppp = sngl(cell%SG % SYM_data(i,ii,4))
 
 ! print each entry 
 ! first the part containing x, y, and/or z
@@ -94,7 +98,7 @@ call GenerateSymmetry(.TRUE.)
      mess(1:1)='+'
      if (p(jj).eq.-1) mess(1:1)='-'
      mess(2:2) = pos(jj:jj)
-     call Message("(A2,$)")
+     call Message(mess, frm = "(A2,$)")
     end if
    end do 
 
@@ -102,16 +106,16 @@ call GenerateSymmetry(.TRUE.)
    if (ppp.ne.0.0) then
     mess(1:1)='+'
     if (ppp.lt.0.0) mess(1:1)='-'
-    call Message("(A1,$)");
+    call Message(mess, frm = "(A1,$)");
     io_real(1) = abs(ppp); 
     call WriteValue('', io_real, 1, "(f5.3,$)")
    end if
 
 ! print a comma, or close the brackets and do a newline
    if (ii.ne.3) then 
-     mess(1:1) = ','; call Message("(A1,$)")
+     mess(1:1) = ','; call Message(mess, frm = "(A1,$)")
     else
-     mess(1:1) = ')'; call Message("(A1)")
+     mess(1:1) = ')'; call Message(mess, frm = "(A1)")
    end if
 
   end do

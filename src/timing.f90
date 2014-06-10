@@ -43,22 +43,10 @@
 module timing
 
 use local
+use typedefs
 use io
 
 IMPLICIT NONE
-
-type timetype
-  real(kind=sgl)     	:: TIME_t_count
-  real(kind=sgl)     	:: TIME_unit_count
-  real(kind=sgl)     	:: TIME_interval
-  real(kind=sgl)     	:: TIME_fraction
-  integer(kind=irg)   	:: TIME_newcount
-  integer(kind=irg)   	:: TIME_count_rate
-  integer(kind=irg)   	:: TIME_count_max
-  integer(kind=irg)   	:: TIME_count
-  integer(kind=irg)   	:: TIME_old
-  integer(kind=irg)   	:: TIME_loops
-end type
 
 contains
 

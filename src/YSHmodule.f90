@@ -45,7 +45,7 @@ module YSHModule
 
 use local
 use quaternions
-use crystalvars
+use typedefs
 
 IMPLICIT NONE 
 
@@ -238,6 +238,7 @@ end function YSHDisp
 !
 !> @param defects defects structure
 !> @param cell unit cell pointer
+!> @param foil foil structure
 !> @param i dislocation number
 !> @param dinfo triggers verbose output
 !> @param L column edge length
@@ -250,8 +251,9 @@ end function YSHDisp
 !> @date 06/04/13 MDG 3.0 rewrite+added quaternions
 !> @date 11/21/13 MDG 3.1 verification + rewrite of output handling
 !> @date 06/09/14 MDG 4.0 added cell and defects arguments
+!> @date 06/10/14 MDG 4.1 added foil argument
 !--------------------------------------------------------------------------
-subroutine makeYSHdislocation(defects,cell,i,dinfo, L)    
+subroutine makeYSHdislocation(defects,cell,foil,i,dinfo, L)    
 
 use foilmodule
 use constants
@@ -264,6 +266,7 @@ IMPLICIT NONE
 
 type(unitcell),pointer	              :: cell
 type(defecttype),INTENT(INOUT)       :: defects
+type(foiltype),INTENT(INOUT)         :: foil
 integer(kind=irg),INTENT(IN)        :: i
 integer(kind=irg),INTENT(IN)        :: dinfo
 real(kind=sgl),INTENT(IN)           :: L
@@ -402,6 +405,7 @@ end subroutine makeYSHdislocation
 ! 
 !> @param defects defects structure
 !> @param cell unit cell pointer
+!> @param foil foil structure
 !> @param DF_npix number of x-pixels
 !> @param DF_npiy number of y-pixels
 !> @param DF_gf 
@@ -413,8 +417,9 @@ end subroutine makeYSHdislocation
 !> @date 11/27/01 MDG 2.1 added kind support
 !> @date 03/25/13 MDG 3.0 updated IO
 !> @date 11/21/13 MDG 3.1 verification
+!> @date 06/10/14 MDG 4.0 added defects, cell and foil arguments
 !--------------------------------------------------------------------------
-subroutine read_YSH_dislocation_data(defects,cell,DF_npix,DF_npiy,DF_gf,L,dinfo)
+subroutine read_YSH_dislocation_data(defects,cell,foil,DF_npix,DF_npiy,DF_gf,L,dinfo)
 
 use io
 use files
@@ -423,6 +428,7 @@ IMPLICIT NONE
 
 type(defecttype),INTENT(INOUT) :: defects
 type(unitcell),pointer	        :: cell
+type(foiltype),INTENT(INOUT)   :: foil
 integer(kind=irg),INTENT(IN)	:: DF_npix, DF_npiy, dinfo
 real(kind=sgl),INTENT(IN)	:: DF_gf(3), L
 
@@ -452,7 +458,7 @@ allocate(defects%YD(3*maxdefects))
     defects%YD(i)%sig = poisson
     
 ! and pre-compute the dislocation displacement field parameters
-    call makeYSHdislocation(defects,cell,i,dinfo, L)    
+    call makeYSHdislocation(defects,cell,foil,i,dinfo, L)    
   end do
   
 end subroutine read_YSH_dislocation_data

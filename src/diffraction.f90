@@ -47,18 +47,9 @@
 module diffraction
 
 use local
+use typedefs
 
-!
-! mAccvol       = microscope accelerating voltage  [V]
-! mLambda       = electron wavelength [nm]
-! mRelcor       = relativistic correction factor gamma [dimensionless]
-! mSigma        = interaction constant [ ]
-! mPsihat       = relativistic acceleration potential
-! camlen        = diffraction camera length [mm]
-! 
 
-real(kind=sgl)           :: kzero(3),camlen
-real(kind=dbl)           :: mAccvol,mLambda,mRelcor,mSigma,mPsihat
 
 ! atomic scattering factor parametrization (Doyle-Turner, Smith-Burge)
 ! used only if absorption is not taken into account;  otherwise
@@ -163,6 +154,27 @@ real(kind=sgl),parameter,private   :: scatfac(8,98) = reshape( (/ &
         6.502,5.478,2.510,0.000,0.28375,0.04975,0.00561,0.000,   &
         6.548,5.526,2.520,0.000,0.28461,0.04965,0.00557,0.000/), (/8,98/))
 
+
+
+
+
+!
+! mAccvol       = microscope accelerating voltage  [V]
+! mLambda       = electron wavelength [nm]
+! mRelcor       = relativistic correction factor gamma [dimensionless]
+! mSigma        = interaction constant [ ]
+! mPsihat       = relativistic acceleration potential
+! camlen        = diffraction camera length [mm]
+! 
+
+
+
+
+! WE STILL NEED TO GET RID OF MOST OF THESE GLOBAL VARIABLES !!!!!
+
+real(kind=sgl)           :: kzero(3),camlen
+real(kind=dbl)           :: mAccvol,mLambda,mRelcor,mSigma,mPsihat
+
 real(kind=dbl),allocatable    	:: phir(:,:),phii(:,:),SMr(:,:,:),SMi(:,:,:)
 
 real(kind=sgl),allocatable    	:: Vg(:),rg(:),Vgsave(:)
@@ -191,19 +203,20 @@ contains
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date  03/26/13  MDG  3.0 updated IO
 !--------------------------------------------------------------------------
-subroutine GetVoltage(cell)
+subroutine GetVoltage(cell, rlp)
 
-use crystalvars
 use io
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
+type(unitcell),pointer	   :: cell
+type(gnode),INTENT(INOUT) :: rlp
+
 real(kind=dbl)		:: io_real(1), voltage
 
  call ReadValue('Enter the microscope accelerating voltage [V, R] : ', io_real, 1)
  voltage = io_real(1)
- call CalcWaveLength(cell,voltage)
+ call CalcWaveLength(cell,rlp,voltage)
  
 end subroutine
 
@@ -229,22 +242,20 @@ end subroutine
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date  03/26/13  MDG  3.0 updated IO
 !--------------------------------------------------------------------------
-subroutine CalcWaveLength(cell,voltage,skip)
+subroutine CalcWaveLength(cell,rlp,voltage,skip)
 
 use constants
-use crystalvars
 use symmetry
 use io
-use dynamical
 
 IMPLICIT NONE
 
 type(unitcell),pointer	               :: cell
+type(gnode),INTENT(INOUT)             :: rlp
 real(kind=dbl),INTENT(IN)   		:: voltage		!< accelerating voltage [V]
 integer(kind=irg),INTENT(IN),OPTIONAL 	:: skip			!< scattering set identifier
 real(kind=dbl)   			:: temp1,temp2, oi_real(1)
 integer(kind=irg)			:: hkl(3), io_int(1)
-type(gnode)                           :: rlp
 
 ! store voltage in common block
  mAccvol = voltage
@@ -323,7 +334,6 @@ end subroutine
 !--------------------------------------------------------------------------
 function CalcDiffAngle(cell,h,k,l) result(tt)
 
-use crystalvars
 use crystal
 
 IMPLICIT NONE
@@ -352,7 +362,6 @@ end function
 !--------------------------------------------------------------------------
 function LorentzPF(theta,HEDM) result(tt)
 
-use local
 use crystal
 
 IMPLICIT NONE
@@ -394,16 +403,14 @@ end function
 !> @date  03/26/13 MDG 3.0 updated IO
 !> @date  03/26/13 MDG 3.1 added XRD support
 !> @date  01/10/14 MDG 4.0 new cell type
-!> @date  -6/09/14 MDG 4.1 added cell as argument
+!> @date  06/09/14 MDG 4.1 added cell as argument
 !--------------------------------------------------------------------------
 subroutine CalcUcg(cell,rlp,hkl)
 
-use crystalvars
 use crystal
 use symmetry
 use constants
 use others
-use dynamical
 
 IMPLICIT NONE
 
@@ -420,6 +427,7 @@ character(2)           		:: smb
 
 twopi = sngl(2.D0*cPi)
 czero = cmplx(0.0,0.0)
+rlp%hkl = hkl
 
 ! compute the scattering parameter s^2=(g/2)^2
  if (sum(hkl**2).eq.0) then 
@@ -660,7 +668,6 @@ end subroutine CalcUcg
 !--------------------------------------------------------------------------
 function CalcsgSingle(cell,gg,kk,FN) result(sg)
 
-use crystalvars
 use crystal
 
 IMPLICIT NONE
@@ -708,7 +715,6 @@ end function CalcsgSingle
 !--------------------------------------------------------------------------
 function CalcsgDouble(cell,gg,kk,FN) result(sg)
 
-use crystalvars
 use crystal
 
 IMPLICIT NONE
@@ -763,7 +769,6 @@ end function CalcsgDouble
 !--------------------------------------------------------------------------
 subroutine TBCalcSM(Ar,Ai,sg,z,xig,xigp,xizero,betag)
 
-use local
 use constants
 
 IMPLICIT NONE
@@ -865,7 +870,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine TBCalcInten(It,Is,sg,z,xig,xigp,xizero,betag)
 
-use local
 use constants
 
 IMPLICIT NONE
@@ -942,8 +946,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine TBCalcdz(im,nbm)
  
-use local
-
 IMPLICIT NONE
 
 integer(kind=irg),INTENT(IN)	:: im			!< ???
@@ -994,13 +996,10 @@ subroutine DiffPage(cell,PS)
 
 use postscript
 use crystal
-use crystalvars
 use symmetry
-use symmetryvars
 use math
 use io
 use constants
-use dynamical
 
 IMPLICIT NONE
 
@@ -1316,7 +1315,6 @@ subroutine DumpZAP(PS,cell,xo,yo,u,v,w,p,np,first,indi,laL,icnt,dbdiff)
 use io
 use postscript
 use crystal
-use crystalvars
 use error
 
 IMPLICIT NONE
@@ -1487,7 +1485,6 @@ end subroutine
 subroutine DumpPP(PS,cell,xo,yo,np,laL,icnt)
 
 use postscript
-use crystalvars
 
 IMPLICIT NONE 
 
@@ -1583,8 +1580,6 @@ end subroutine
 !> @date   03/26/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine studylist(list,slect,np,ppat)
-
-use local
 
 IMPLICIT NONE
 
@@ -1900,7 +1895,6 @@ end subroutine BWsolve
 ! ###################################################################
 subroutine CalcFresnelPropagator(beam,dimi,dimj,dz,scl,propname)
 
-use local
 use constants
 use io
 use files

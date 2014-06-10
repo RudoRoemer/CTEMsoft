@@ -27,9 +27,39 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft:symmetryvars.f90
+! CTEMsoft:crystalvars.f90
 !--------------------------------------------------------------------------
 !
+! MODULE: crystalvars
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief Definition of all variables and types for crystallographic computations
+!
+!> @details  Defines the unitcell type and the orientation type, as well as 
+!> the main cell variable used by all crystallographic computations
+! 
+!> @date     1/5/99 MDG 1.0 original
+!> @date    7/16/99 MDG 1.1 added error handling and TransCoor
+!> @date    4/ 5/00 MDG 1.2 modified TransCoor to include new mInvert
+!> @date    5/19/01 MDG 2.0 f90 version
+!> @date   03/19/13 MDG 3.0 update to new version
+!> @date   10/17/13 MDG 3.1 added HOLZentries type
+!> @date    1/10/14 MDG 4.0 new version, many new entries in unitcell type
+!> @date    6/ 5/14 MDG 4.1 removed variable declaration for cell
+!> @date    6/ 9/14 MDG 4.2 added all defect type declarations
+!--------------------------------------------------------------------------
+module typedefs
+
+use local
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+! this used to be the symmetryvars module 
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
 ! MODULE: symmetryvars
 !
 !> @author Marc De Graef, Carnegie Mellon University
@@ -83,10 +113,6 @@
 !> @date 03/19/13 MDG 3.0 updated file
 !> @date 01/10/14 MDG 4.0 new version
 !--------------------------------------------------------------------------
-
-module symmetryvars
-
-use local
 
 !>  SYM_SGname all space group names
 ! TRICLINIC SPACE GROUPS
@@ -393,10 +419,416 @@ type symdata2D
   integer(kind=irg)	:: SYM_direc(12,2,2)		!< point group matrices (filled in by Generate2DSymmetry)
 end type
 
-! define the 2D point group variable
-! moved elsewhere in Release 3.0
-! type (symdata2D)	:: TDPG
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+! and this used to be the crystalvars module 
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+!> [note added on 1/10/14]
+!> first we define the reflisttype (all the information needed for a given reciprocal lattice point or rlp).
+!> This used to be in the gvectors module, but the type definitions make more sense here.
+!> In this linked list, we want to keep everything that might be needed to perform rlp-related 
+!> simulations, except for the Fourier coefficient of the lattice potential, wich is kept in 
+!> a lookup table.  Anything that can easily be derived from the LUT does not need to be stored.
+!> [end note]
+!
+! linked list of reflections
+type reflisttype  
+  integer(kind=irg)          	:: num, &  		! sequential number
+                              	   hkl(3),&		! Miller indices
+                              	   famhkl(3),&		! family representative Miller indices
+				   HOLZN,& 		! belongs to this HOLZ layer
+				   strongnum,& 		! sequential number for strong beams
+				   weaknum,& 		! sequential number for weak beams
+				   famnum		! family number
+! removed 1/10/14		   nab(2)  		! decomposition with respect to ga and gb
+  logical                    	:: dbdiff  		! double diffraction reflection ?
+  real(kind=dbl)             	:: sg, &               ! excitation error
+                                  xg, &              ! extinction distance
+! removed 1/10/14                 Ucgmod, &          ! modulus of Fourier coefficient
+                                  sangle, &          ! scattering angle (mrad)
+                                  thetag             ! phase angle, needed for ECCI simulations
+  logical	                :: strong, weak       ! is this a strong beam or not; both .FALSE. means 'do not consider'
+  complex(kind=dbl)            :: Ucg	               ! Fourier coefficient, copied from cell%LUT
+  type(reflisttype),pointer 	:: next    		! connection to next entry in master linked list
+  type(reflisttype),pointer 	:: nexts    		! connection to next strong entry in linked list
+  type(reflisttype),pointer 	:: nextw    		! connection to next weak entry in linked list
+end type reflisttype
 
 
-end module symmetryvars
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
 
+! a structure that contains all the relevant HOLZ geometry information;
+! it can be filled by calling the GetHOLZGeometry subroutine in crystal.f90
+type HOLZentries
+  real(kind=sgl)	:: g1(3),g2(3),g3(3),gx(3),gy(3),LC1,LC2,H,FNr(3),FNg(3),gp(2),gtoc(2,2),gshort(3)
+  integer(kind=irg)	:: uvw(3),FN(3)
+end type
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+!> [note added on 1/10/14]
+!> To make this package functional for multi-phase materials, we must have
+!> a way to load the structural information for multiple crystal structures
+!> simultaneously.  And we must also be able to perform scattering computations
+!> for any given phase. This means that it is probably best if we define a 
+!> pointer type to a large collection of unit cell related parameters, so that
+!> we can easily switch from one to the other.  As a consequence, we need to 
+!> pass the cell pointer along with the other arguments for every single routine
+!> that performs simulations that require cell information.  So, first we define a 
+!> pointer to a unitcell, and then we can fill in all the information needed,
+!> including symmetry operators, atom coordinates, the potential coefficient lookup
+!> table, pointers to the linked g-vector list, etc. In order to reduce the number
+!> of changes to be made to the source code, we will keep the current variable names
+!> as much as possible.
+!> [end note]  
+!
+!> The following are the components of the unitcell type:
+!
+!> lattice parameters
+!> a		= a parameter [nm]
+!> b		= b parameter [nm]
+!> c		= c parameter [nm]
+!> alpha	= alpha angle [deg]
+!> beta	        = beta angle [deg]
+!> gamma	= gamma angle [deg]
+!> vol		= unit cell volume [nm^3]
+!
+!> metric information
+!> dmt	        = direct space metric tensor
+!> rmt		= reciprocal space metric tensor
+!> dsm	        = direct space structure matrix
+!> rsm	        = reciprocal space structure matrix
+!> [removed on 1/10/14] krdel	= Kronecker delta (unit matrix)
+!
+!> asymmetric unit contents
+!> ATOM_ntype	= actual number of occupied positions in asymmetric unit
+!> ATOM_type	= atomic number for each atom in asymmetric unit
+!> ATOM_pos	= fractional coordinates (x,y,z), occupation, Debye-Waller factor for each atom in asymmetric unit
+!
+!> the structure file name
+!> fname	= crystal structure file name
+!
+!> use hexagonal or regular indices (comes from old local.f90 module)
+!> hexset	= logical to determine whether to use 3(FALSE) or 4(TRUE) index notation 
+!
+!> atom coordinate array
+!> apos        = allocatable array for atom coordinates
+!
+!> storage space for the potential Fourier coefficient lookup table
+!> LUT	        = lookup table (allocatable)
+!
+!> double diffraction logical array
+!> dbdiff	= indicates whether a reflection could be due to double diffraction
+!
+!> is this space group non-symmorphic or not ?
+!> nonsymmorphic = logical .TRUE. or .FALSE.
+!
+!> space group symmetry
+!> SG          = space group symmetry structure defined in symmetryvars.f90
+!
+!> linked g-vector list (used to be in gvectors.f90)
+!> reflist     = starting point of linked list of g-vectors
+!
+!> firstw	= pointer to first weak beam entry in list
+!
+!> number of beams in linked list (used to be in dynamical.f90)
+!> DynNbeams   = current number being considered
+!> DynNbeamsLinked = total number
+!> nns	= number of strong beams
+!> nnw = number of weak beams
+type unitcell
+  real(kind=dbl)	                :: a,b,c,alpha,beta,gamma
+  real(kind=dbl)	                :: dmt(3,3),rmt(3,3),dsm(3,3),rsm(3,3),vol
+  integer(kind=irg)	                :: ATOM_type(maxpasym),ATOM_ntype,SYM_SGnum,xtal_system,SYM_SGset
+  real(kind=sgl)	                :: ATOM_pos(maxpasym,5)
+  integer(kind=irg)			 :: numat(maxpasym)		!< number of atoms of each type in the asymmetric unit
+  character(fnlen)	                :: fname
+  logical				 :: hexset
+  real(kind=dbl),allocatable           :: apos(:,:,:)
+  complex(kind=dbl),allocatable        :: LUT(:,:,:)
+  logical,allocatable                  :: dbdiff(:,:,:)
+  logical                              :: nonsymmorphic
+  type(symdata)                        :: SG
+  type(reflisttype),pointer            :: reflist
+  type(reflisttype),pointer 	        :: firstw    		! connection to first weak entry in linked list
+  integer(kind=irg)                    :: DynNbeams, DynNbeamsLinked, nns, nnw
+end type
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+!> this type is used to define an orientation relation, i.e., two parallel
+!> directions and two parallel planes
+type orientation
+  real(kind=sgl)  	:: tA(3), tB(3), gA(3), gB(3)
+end type
+
+!> cell is a pointer to the generic unit cell variable used in all programs.  
+! This pointer is allocated by the InitializeCell routine in the initializers.f90 module
+! 
+! in Release 2.0, the cell variable was a global variable.  In Release 3 and beyond,
+! we aim to have no global variables at all and, instead, pass all variables as 
+! function and subroutine arguments.
+! type(unitcell) :: cell
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+! define all defect types
+type dislocationtype
+  real(kind=dbl)     		:: burg(3),burgd(3),u(3),un(3),g(3),gn(3),id,jd, zfrac, zu
+  real(kind=dbl)     		:: top(3), bottom(3)
+  real(kind=dbl)		:: a_dc(4), a_id(4), a_di(4), a_df(4)
+  complex(kind=dbl)  		:: dismat(3,3),pa(3)
+end type dislocationtype
+
+type inclusiontype
+	real(kind=sgl)       ::  xpos,ypos,zpos,radius,C
+end type inclusiontype
+
+type stackingfaulttype
+  real(kind=sgl)             :: lpu(3),tpu(3),lpb(3),lpbc(3),tpb(3),plane(3),sep,id,jd, &
+                                lptop(3),lpbot(3),tptop(3),tpbot(3),thetan,a_if(3,3), &
+                                lpr(3),tpr(3), Rdisp(3), poisson
+  real(kind=sgl),allocatable     :: zpos(:,:)
+end type stackingfaulttype
+
+type voidtype
+	real(kind=sgl)       ::  xpos,ypos,zpos,radius
+end type voidtype
+
+type YDtype
+  real(kind=dbl)     	     :: burg(3), burgd(3), u(3), un(3), g(3), gn(3), id, jd, zu, bs, be, bx, beta
+  real(kind=dbl)     	     :: alpha, ca, sa, ta, cota,  top(3), bottom(3), sig
+  real(kind=dbl)	     :: a_dc(4), a_id(4), a_di(4)
+end type YDtype
+
+type apbtype
+	real(kind=sgl)       ::  xpos,ypos,zpos,radius,w,Rdisp(3)
+end type apbtype
+
+
+! here is a new type definition that simplifies defect handling quite a bit...
+! instead of passing many arrays to the defect routines, now we only need to 
+! pass a single master defect variable "defects", which must be defined by
+! the calling program as type(defecttype) :: defects
+! we've also added a few other variables here for lack of a better place to do so...
+type defecttype
+  integer(kind=irg)                        :: numvoids,numdisl,numYdisl,numsf,numinc,numapb
+  character(fnlen)                         :: dislYname(3*maxdefects)
+  character(fnlen)                         :: voidname
+  character(fnlen)                         :: incname
+  character(fnlen)                         :: apbname
+  character(fnlen)	                    :: sfname(maxdefects)
+  character(fnlen)         	 	     :: dislname(3*maxdefects)
+  integer(kind=irg)                	     :: Nmat,DF_g(3),DF_npix,DF_npiy,DF_nums,DF_numinclusion,DF_numvoid
+  real(kind=sgl)                   	     :: DF_slice,DF_L,DF_gc(3),DF_gstar(3)
+  real(kind=sgl),allocatable       	     :: DF_foilsg(:,:),DF_R(:,:)
+  type (dislocationtype), allocatable      :: DL(:)
+  type (inclusiontype), allocatable        :: inclusions(:)
+  type (stackingfaulttype), allocatable    :: SF(:)
+  type (voidtype), allocatable             :: voids(:)
+  type (YDtype), allocatable               :: YD(:)    
+  type (apbtype), allocatable              :: apbs(:)
+end type defecttype
+
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+! The parameters in gnode are computed by CalcUcg 
+type gnode
+  character(2)         	:: method   ! computation method (WK = Weickenmeier-Kohl, DT = Doyle-Turner/Smith-Burge, XR for XRD)
+  logical              	:: absorption ! is absorption included or not ?
+  integer(kind=irg) 		:: hkl(3)   ! Miller indices
+  real(kind=sgl)       	:: xg, &    ! extinction distance [nm]
+                         	   xgp, &   ! absorption length [nm]
+                          	   ar, &    ! aborption ratio
+                          	   g, &     ! length of reciprocal lattice vectors [nm^-1]
+                          	   Vmod,Vpmod, & ! modulus of Vg and Vgprime [V]
+                          	   Umod,Upmod, & ! modulus of Ug and Ugprime [nm^-2]
+                          	   Vphase,Vpphase ! phase factors of Vg and Vgprime [rad]
+  complex(kind=sgl)		:: Ucg, &   ! scaled potential Fourier coefficient [nm^-2]
+                          	   Vg, &    ! potential Fourier coefficient [V]
+                          	   qg       ! interaction parameter for Darwin-Howie-Whelan equations [nm^-1]
+end type gnode
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+! we'll also need to replace a bunch of variables that have to do with dynamical simulations
+type DynType
+  real(kind=sgl)   		            :: WV(3)                  ! wave vector expressed in reciprocal frame
+  real(kind=sgl)   		            :: FN(3)                  ! Foil normal in reciprocal frame
+  real(kind=sgl)   		            :: Upz                    ! U'_0 normal absorption parameter
+  complex(kind=dbl),allocatable            :: W(:), &         	! eigenvalue vector for Bloch wave method
+                                              CG(:,:), &      	! eigenvector matrix
+                                              alpha(:), &     	! excitation amplitude vector
+                                              DHWMz(:,:),&		! Darwin-Howie-Whelan matrix
+                                              DynMat(:,:), &  	! dynamical matrix
+                                              DynMat0(:,:), &  	! dynamical matrix (for programs that need two or more of them)
+                                              DynMat1(:,:), &  	! dynamical matrix (for programs that need two or more of them)
+                                              DynMat2(:,:), &  	! dynamical matrix (for programs that need two or more of them)
+                                              DynMat3(:,:), &  	! dynamical matrix (for programs that need two or more of them)
+                                              phiz(:),Az(:,:) 	! used for Taylor expansion of scattering matrix
+end type DynType
+
+
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+! define the cutoff parameters for the Bethe potential approach (and set to zero initially)
+type BetheParameterType
+        real(kind=sgl)                :: c1 = 20.0_sgl
+        real(kind=sgl)                :: c2 = 40.0_sgl
+        real(kind=sgl)                :: c3 = 1000.0_sgl
+        real(kind=sgl)                :: sgdbdiff = 0.05_sgl
+	real(kind=sgl)			:: weakcutoff = 0.0_sgl
+	real(kind=sgl)			:: cutoff = 0.0_sgl
+	real(kind=sgl)			:: sgcutoff = 0.0_sgl
+	integer(kind=irg)		:: nns
+	integer(kind=irg)		:: nnw
+	integer(kind=irg)		:: minweak
+	integer(kind=irg)		:: minstrong
+	integer(kind=irg)		:: maxweak
+	integer(kind=irg)		:: maxstrong
+	integer(kind=irg)		:: totweak
+	integer(kind=irg)		:: totstrong
+	integer(kind=irg),allocatable 	:: weaklist(:) 
+	integer(kind=irg),allocatable 	:: stronglist(:)
+	integer(kind=irg),allocatable 	:: weakhkl(:,:)
+	integer(kind=irg),allocatable 	:: stronghkl(:,:)
+	real(kind=sgl),allocatable	:: weaksg(:)
+	real(kind=sgl),allocatable	:: strongsg(:)
+	integer(kind=irg),allocatable 	:: strongID(:)
+	integer(kind=sgl),allocatable	:: reflistindex(:)		! used to map strong reflections onto the original reflist
+	integer(kind=sgl),allocatable	:: weakreflistindex(:)		! used to map weak reflections onto the original reflist
+end type BetheParameterType
+
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+type STEMtype
+	character(fnlen)		:: weightoutput
+	character(2)  			:: geometry
+	integer(kind=irg) 		:: numberofsvalues, numk, numCL
+	real(kind=sgl) 			:: BFradius,ADFinnerradius,ADFouterradius,kt,beamconvergence,cameralength, &
+	                          	   BFmrad,ADFimrad,ADFomrad, diffapmrad, diffapmcenter, CLarray(20)
+	logical,allocatable  		:: ZABFweightsarray(:,:,:),ZAADFweightsarray(:,:,:)       ! only used for the zone axis case
+	real(kind=sgl),allocatable  	:: sgarray(:,:),BFweightsarray(:,:,:),ADFweightsarray(:,:,:)   ! only used for the systematic row case
+end type STEMtype
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+! linked list of wave vectors (used by all diffraction programs)
+type kvectorlist  
+  integer(kind=irg) 		:: i,j         		! image coordinates
+  real(kind=dbl)    		:: kt(3)       	! tangential component of wavevector
+  real(kind=dbl)    		:: kn          	! normal component
+  real(kind=dbl)    		:: k(3)        	! full wave vector
+  type(kvectorlist),pointer	:: next     		! connection to next wave vector
+end type kvectorlist
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+! collection of formatting parameters
+type postscript_type
+ integer(kind=irg)   	:: pspage
+ real(kind=sgl)      	:: psdash(20),psfigwidth,psfigheight,psscale
+ character(20)      	:: psname
+end type
+
+! used by axonometry-related routines
+type axonotype
+ integer(kind=irg)   	:: xi,yi,beta,xmod,ymod,countx,county
+ real(kind=sgl)      	:: grid,scle,vscle,xstart,ystart
+ logical             	:: visibility
+end type
+
+! used by axis and its routines
+type axistype
+ real(kind=sgl)      	:: axw,xll,yll
+end type
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+type timetype
+  real(kind=sgl)     	:: TIME_t_count
+  real(kind=sgl)     	:: TIME_unit_count
+  real(kind=sgl)     	:: TIME_interval
+  real(kind=sgl)     	:: TIME_fraction
+  integer(kind=irg)   	:: TIME_newcount
+  integer(kind=irg)   	:: TIME_count_rate
+  integer(kind=irg)   	:: TIME_count_max
+  integer(kind=irg)   	:: TIME_count
+  integer(kind=irg)   	:: TIME_old
+  integer(kind=irg)   	:: TIME_loops
+end type
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+! all variables related to the foil orientation, normal, thickness, etc...
+! also, transformation quaternions from various reference frames to the foil and back
+! material properties are also stored here, such as the elastic moduli
+type foiltype
+  real(kind=dbl)		:: F(3), q(3),Fn(3),qn(3),brx,bry,brxy,cpx,cpy, & 
+				   alP,alS,alR,beP,elmo(6,6),z0,zb,B(3),Bn(3),Bm(3)
+  real(kind=dbl)		:: a_fc(4), a_fm(4), a_mi(4), a_ic(4), a_mc(4), a_fi(4)
+  integer(kind=irg)  		:: npix,npiy
+  real(kind=sgl),allocatable :: sg(:,:)
+end type foiltype
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+! the "orientation" type contains entries for all rotation and orientation representations
+type orientationtype
+  real(kind=sgl)	:: eulang(3)		! Bunge Euler angles in radians
+  real(kind=sgl)	:: om(3,3)		! 3x3 matrix
+  real(kind=sgl)	:: axang(4)		! axis-angle pair (angle in rad, component 4; axis in direction cosines)
+  real(kind=sgl)	:: rodrigues(3)		! Rodrigues vector
+  real(kind=sgl)	:: quat(4)		! quaternion representation (q(1) is scalar part, q(2:4) vector part)
+  real(kind=sgl)	:: homochoric(3)	! homochoric representation according to Frank's paper  
+  real(kind=sgl)	:: cubochoric(3)	! cubic grid representation (derived from homochoric)
+end type orientationtype
+
+
+! double precision version
+type orientationtyped
+  real(kind=dbl)	:: eulang(3)		! Bunge Euler angles in radians
+  real(kind=dbl)	:: om(3,3)		! 3x3 matrix
+  real(kind=dbl)	:: axang(4)		! axis-angle pair (angle in rad, component 4; axis in direction cosines)
+  real(kind=dbl)	:: rodrigues(3)		! Rodrigues vector
+  real(kind=dbl)	:: quat(4)		! quaternion representation (q(1) is scalar part, q(2:4) vector part)
+  real(kind=dbl)	:: homochoric(3)	! homochoric representation according to Frank's paper  
+  real(kind=dbl)	:: cubochoric(3)	! cubic grid representation (derived from homochoric)
+end type orientationtyped
+
+
+
+end module typedefs

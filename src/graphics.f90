@@ -51,6 +51,7 @@
 module graphics
 
 use local
+use typedefs
 
 contains
 !--------------------------------------------------------------------------
@@ -74,7 +75,6 @@ contains
 !--------------------------------------------------------------------------
 subroutine ProjectionMatrix(cell,iview,M)
 
-use crystalvars
 use crystal
 
 IMPLICIT NONE
@@ -216,9 +216,7 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine StereoProj(PS,cell,sp,iview,hm,km,lm,topbot)
 
-use crystalvars
 use crystal
-use symmetryvars
 use symmetry
 use math
 use postscript
@@ -342,7 +340,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine ComputeViewTrans(cell,iview,M,VD)
 
-use crystalvars
 use crystal
 
 IMPLICIT NONE
@@ -963,8 +960,6 @@ end subroutine
 !  ******************************************************************************
 integer function stringl(t)
 
-use local
-
 IMPLICIT NONE
 
 character(*)      :: t
@@ -1005,7 +1000,6 @@ integer function omag(x)
 ! [this could also be done by taking the base 10 logarithm, but this
 !  routine is faster]
 
-use local
 
 IMPLICIT NONE
 
@@ -1036,7 +1030,6 @@ end function
 !  ******************************************************************************
 real function limit(l,n,hilo)
 
-use local
 
 IMPLICIT NONE
 
@@ -1091,8 +1084,6 @@ subroutine border(mode,xmin,xmax,n)
 !    drawing
 !    n is max(O(min),O(max))
 ! 
-
-use local
 
 IMPLICIT NONE
 
@@ -1164,7 +1155,6 @@ end subroutine
 !  ******************************************************************************
 subroutine setticks(cp,d,low,high,ts,cs,cw,ch,sh,ich,typ,sx,sy)
 
-use local
 use postscript
 
 IMPLICIT NONE
@@ -1263,7 +1253,6 @@ end subroutine
 !  ******************************************************************************)
 subroutine setexponent(n,s)
 
-use local
 use postscript
 
 IMPLICIT NONE
@@ -1304,7 +1293,6 @@ end subroutine
 !  ******************************************************************************
 real function determinestep(m,range)
 
-use local
 
 IMPLICIT NONE
 
@@ -1333,7 +1321,6 @@ integer function getshift(low,high,m)
 !     determines the maximum length of the numbering at an axis
 !     
 
-use local
 
 IMPLICIT NONE
 
@@ -1370,7 +1357,6 @@ end function
 !  ******************************************************************************)
 subroutine drawborder(low,high,n,s,m)
 
-use local
 use postscript
 
 IMPLICIT NONE
@@ -1475,7 +1461,6 @@ end subroutine
 !  ******************************************************************************
 subroutine drawfigure(xmin,xmax,ymin,ymax,pmode,mark,points,xmode,ymode,xvec,yvec)
 
-use local
 use postscript
  
 IMPLICIT NONE
@@ -1642,9 +1627,9 @@ end module
 ! ###################################################################
 module cont_mod
 
-! all variable names start with a capital C
-
 use local
+
+! all variable names start with a capital C
 
 ! user defined pointer types
 type Cnode 
@@ -1699,7 +1684,6 @@ contains
 !---------------------------------------------
 subroutine make_node(i,j,nd)
 
-use local
 
 IMPLICIT NONE
 
@@ -1718,8 +1702,6 @@ end subroutine make_node
 !---------------------------------------------
 subroutine make_central_node(i,j,nd)
 
-use local
-
 IMPLICIT NONE
 
 integer(kind=irg)  :: i,j
@@ -1735,8 +1717,6 @@ end subroutine make_central_node
 
 !---------------------------------------------
 subroutine make_triangle(n1,n2,n3,t)
-
-use local
 
 IMPLICIT NONE
 
@@ -1763,8 +1743,6 @@ end subroutine make_triangle
 
 !---------------------------------------------
 subroutine make_vector(n1,n2,t1,t2)
-
-use local
 
 IMPLICIT NONE
 
@@ -1816,7 +1794,6 @@ end subroutine
 
 subroutine plot_line(t,v)
 
-use local
 use postscript 
 
 IMPLICIT NONE
@@ -1848,7 +1825,6 @@ end subroutine
 !---------------------------------------------
 subroutine plot_contour
 
-use local
 use postscript 
 
 IMPLICIT NONE
@@ -1944,7 +1920,6 @@ subroutine contour
 !
 
 
-use local
 use postscript
 use io
 

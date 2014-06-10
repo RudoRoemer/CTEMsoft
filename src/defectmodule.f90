@@ -44,18 +44,16 @@
 module defectmodule
 
 use local
-use crystalvars
+use typedefs
 
 ! we have to get rid of ALL these global variables !!!
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
 
-complex(kind=dbl),allocatable    	:: DF_Sarray(:,:,:),theta(:),DF_Svoid(:,:)
-real(kind=sgl),allocatable       	:: images(:,:,:),DF_foilsg(:,:),DF_inclusion(:,:),DF_R(:,:)
-
-integer(kind=irg)                	:: Nmat,DF_g(3),DF_npix,DF_npiy,DF_nums,DF_numinclusion,DF_numvoid
-real(kind=sgl)                   	:: DF_slice,DF_L,DF_gc(3),DF_gstar(3)
+! complex(kind=dbl),allocatable    	:: DF_Sarray(:,:,:),theta(:),DF_Svoid(:,:)
+!real(kind=sgl),allocatable       	:: images(:,:,:),DF_inclusion(:,:)
+!
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
@@ -75,7 +73,8 @@ contains
 !> @details Note that the end result MUST be expressed in the cartesian reference frame !
 !
 !> @param defects defect structure
-!> $param cell unit cell pointer
+!> @param cell unit cell pointer
+!> @param foil foil structure
 !> @param i integer x coordinate 
 !> @param j integer y coordinate
 !
@@ -98,8 +97,9 @@ contains
 !> @date  10/30/13 MDG 3.1 debug of coordinate rotations
 !> @date  11/13/13 MDG 3.2 finally, the bug has been found!  
 !> @date  06/09/14 MDG 4.0 introduced defects argument and simplified routine
+!> @date  06/10/14 MDG 4.1 added foil argument
 !--------------------------------------------------------------------------
-subroutine CalcR(defects,cell,i,j)
+subroutine CalcR(defects,cell,foil,i,j)
 
 use local
 use constants
@@ -117,6 +117,7 @@ IMPLICIT NONE
 
 type(defecttype),INTENT(INOUT)        :: defects
 type(unitcell),pointer	               :: cell
+type(foiltype),INTENT(INOUT)          :: foil
 integer(kind=irg),INTENT(IN)    	:: i,j
 
 integer(kind=irg)			:: k, islice, ii
@@ -130,8 +131,8 @@ complex(kind=sgl)     			:: zero
 logical               			:: void
 
 ! scale the image coordinates with respect to the origin at the center of the image
- xpos = float(i-DF_npix/2)*DF_L
- ypos = float(j-DF_npiy/2)*DF_L
+ xpos = float(i-defects%DF_npix/2)*defects%DF_L
+ ypos = float(j-defects%DF_npiy/2)*defects%DF_L
 
 ! determine the starting point of the z-integration for the tilted foil
 ! this depends on the foil normal components which give the equation
@@ -147,10 +148,10 @@ logical               			:: void
  zero = cmplx(0.0,0.0)
 
 ! loop over all slices (this is the main loop)
- sliceloop: do islice = 1,DF_nums 
+ sliceloop: do islice = 1,defects%DF_nums 
 
 ! zpos is the position down the column, starting at zt (in image coordinates)
-    zpos = zt - float(islice)*DF_slice
+    zpos = zt - float(islice)*defects%DF_slice
     
 ! set the displacements to zero
     sumR = 0.0
@@ -177,7 +178,7 @@ if (defects%numvoids.ne.0) then
     end do voidloop
 ! skip the rest of the computation for this slice if we are inside a void
     if (void.eqv..TRUE.) then 
-      DF_R(islice,1) = -10000.0
+      defects%DF_R(islice,1) = -10000.0
       cycle sliceloop
     end if
  end if 
@@ -188,7 +189,7 @@ if (defects%numvoids.ne.0) then
 !----CURVED FOIL---
 !------------------
 ! first we take the foil shape into account using equations (8.28) and (8.29)
- sumR = sumR + float(islice)*DF_slice*foil%sg(i,j)*DF_gstar
+ sumR = sumR + float(islice)*defects%DF_slice*foil%sg(i,j)*defects%DF_gstar
 
 !-----------------
 !--DISLOCATIONS--
@@ -197,7 +198,7 @@ if (defects%numvoids.ne.0) then
 do ii=1,defects%numdisl
 ! compute the difference vector between the current (xpos,ypos,zpos) in the foil reference frame
 ! and the defect center coordinate
-  tmp2 =  tmpf - dble((/ DF_L*defects%DL(ii)%id, DF_L*defects%DL(ii)%jd, defects%DL(ii)%zfrac*foil%z0 /))
+  tmp2 =  tmpf - dble((/ defects%DF_L*defects%DL(ii)%id, defects%DF_L*defects%DL(ii)%jd, defects%DL(ii)%zfrac*foil%z0 /))
 
 ! then convert the difference vector to the defect reference frame for this dislocation (we will only need the x and y coordinates)
   tmp = quat_rotate_vector( defects%DL(ii)%a_df, tmp2 ) 
@@ -259,7 +260,7 @@ if (defects%numYdisl.gt.0) then
    do ii=1,defects%numYdisl
 ! first, figure out what the coordinates are in the YSH reference frame for this dislocation ... 
 ! translate to the defect origin
-     tmp =  tmpf -  (/ DF_L*defects%YD(ii)%id, DF_L*defects%YD(ii)%jd, foil%z0*0.5 /)
+     tmp =  tmpf -  (/ defects%DF_L*defects%YD(ii)%id, defects%DF_L*defects%YD(ii)%jd, foil%z0*0.5 /)
 
 ! rotate into the defect reference frame
      tmp = quat_rotate_vector( defects%YD(ii)%a_di, tmp )   
@@ -347,7 +348,7 @@ end do
 ! finally any displacement fields defined by the user routine UserDisp
 ! sumR = sumR + UserDisp()        
 
-   DF_R(islice,1:3) = sumR(1:3)
+   defects%DF_R(islice,1:3) = sumR(1:3)
   end do sliceloop ! main loop over the slices
 
 end subroutine CalcR

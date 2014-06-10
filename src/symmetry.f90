@@ -50,8 +50,7 @@
 module symmetry
 
 use local
-use crystalvars
-use symmetryvars
+use typedefs
 
 contains
 
@@ -76,8 +75,6 @@ contains
 !> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable 
 !--------------------------------------------------------------------------
 subroutine SYM_fillgen(cell,t,isgn)
-
-use local
 
 IMPLICIT NONE
 
@@ -154,7 +151,6 @@ end subroutine SYM_fillgen
 !--------------------------------------------------------------------------!     
 subroutine MakeGenerators(cell)
 
-use crystalvars
 use math
 
 IMPLICIT NONE
@@ -279,8 +275,6 @@ end subroutine MakeGenerators
 !--------------------------------------------------------------------------
 subroutine matrixmult(cell, k1, k2)
    
-use local
-
 IMPLICIT NONE
 
 type(unitcell),pointer	:: cell
@@ -340,8 +334,6 @@ end subroutine matrixmult
 !--------------------------------------------------------------------------
 logical function isitnew(cell,nsym)
 
-use local
-
 IMPLICIT NONE
 
 type(unitcell),pointer	:: cell
@@ -393,9 +385,6 @@ end function isitnew
 !> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable 
 !--------------------------------------------------------------------------
 subroutine GenerateSymmetry(cell,dopg)
-
-use local
-use crystalvars
 
 IMPLICIT NONE
 
@@ -505,8 +494,6 @@ end subroutine GenerateSymmetry
 !--------------------------------------------------------------------------
 subroutine Calc2DFamily(cell,ind,ksame,numksame,nunique,itmp)
         
-use local
-
 IMPLICIT NONE
 
 type(unitcell),pointer	:: cell
@@ -576,8 +563,6 @@ end subroutine Calc2DFamily
 !> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable; replaced itmp by argument
 !--------------------------------------------------------------------------
 subroutine CalcFamily(cell,ind,num,space,itmp)
-  
-use local
 
 IMPLICIT NONE
 
@@ -652,9 +637,6 @@ end subroutine CalcFamily
 !> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable; replaced itmp by argument
 !--------------------------------------------------------------------------
 subroutine CalcOrbit(cell,m,n,ctmp)
-
-use local
-use crystalvars
 
 IMPLICIT NONE
 
@@ -743,8 +725,6 @@ end subroutine CalcOrbit
 !--------------------------------------------------------------------------
 subroutine CalcStar(cell,kk,n,stmp,space)
 
-use local
-
 IMPLICIT NONE
 
 type(unitcell),pointer	:: cell
@@ -821,8 +801,6 @@ end subroutine CalcStar
 !--------------------------------------------------------------------------
 subroutine CalcPositions(cell,switch)
 
-use local
-use crystalvars
 use io
 use error
 use crystal
@@ -936,9 +914,7 @@ end subroutine CalcPositions
 !--------------------------------------------------------------------------
 subroutine GetSetting(cell, iset)
 
-use local
 use io
-use crystalvars
 
 IMPLICIT NONE
 
@@ -1021,7 +997,6 @@ end subroutine GetSetting
 subroutine GetSpaceGroup(cell)
 
 use io
-use crystalvars
 
 IMPLICIT NONE
 
@@ -1044,9 +1019,9 @@ logical           	:: skip						!< logical variable
              call Message('Please select one of these space groups.', frm = "(A/)")
              do i=1,7
               if ((mod(i,4).eq.0).or.(i.eq.7)) then
-                write (5,"(1x,i3,':',A11,5x)") TRIG(i),SYM_SGname(TRIG(i))
+                write (6,"(1x,i3,':',A11,5x)") TRIG(i),SYM_SGname(TRIG(i))
               else
-                write (5,"(1x,i3,':',A11,5x,$)") TRIG(i),SYM_SGname(TRIG(i))
+                write (6,"(1x,i3,':',A11,5x,$)") TRIG(i),SYM_SGname(TRIG(i))
               end if
              end do 
              call Message(' -------------------------- ', frm = "(A)")
@@ -1078,9 +1053,9 @@ logical           	:: skip						!< logical variable
   do i=sgmin,sgmax
    j=i-sgmin+1
    if ((mod(j,4).eq.0).or.(i.eq.sgmax)) then
-    write (5,"(1x,i3,':',A11,5x)") i,SYM_SGname(i)
+    write (6,"(1x,i3,':',A11,5x)") i,SYM_SGname(i)
    else
-    write (5,"(1x,i3,':',A11,5x,$)") i,SYM_SGname(i)
+    write (6,"(1x,i3,':',A11,5x,$)") i,SYM_SGname(i)
    end if
   end do
   cell%SYM_SGnum = sgmin-1
@@ -1121,9 +1096,6 @@ end subroutine GetSpaceGroup
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 subroutine GetOrder(k,il,num,jcnt,itmp)
-
-use local
-use symmetryvars   ! uses itmp variable
 
 IMPLICIT NONE
 
@@ -1200,10 +1172,8 @@ end subroutine GetOrder
 !--------------------------------------------------------------------------
 subroutine ShortestG(cell,k,gone,gtwo,isym)
 
-use local
 use error
 use crystal
-use crystalvars
 use constants
 
 IMPLICIT NONE
@@ -1401,8 +1371,6 @@ end subroutine ShortestG
 !--------------------------------------------------------------------------
 logical function IsGAllowed(cell,g)
 
-use symmetryvars
-
 IMPLICIT NONE
 
 type(unitcell),pointer	:: cell
@@ -1465,8 +1433,6 @@ end function IsGAllowed
 !--------------------------------------------------------------------------
 subroutine BFsymmetry(cell,uvw,j,isym,ir)
 
-use local
-
 IMPLICIT NONE
 
 type(unitcell),pointer	:: cell
@@ -1514,7 +1480,6 @@ end subroutine BFsymmetry
 !--------------------------------------------------------------------------
 function GetPatternSymmetry(cell,uvw,pgnum,verbose) result(dgn)
 
-use local
 use io
 
 IMPLICIT NONE
@@ -1578,7 +1543,6 @@ end function GetPatternSymmetry
 !--------------------------------------------------------------------------
 function GetDiffractionGroup(cell,uvw,pgn) result(dgn)
 
-use symmetryvars
 use io
 
 IMPLICIT NONE
@@ -2130,9 +2094,7 @@ end function GetDiffractionGroup
 !--------------------------------------------------------------------------
 subroutine Generate2DSymmetry(TDPG,pgn)
 
-use local
 use error
-use symmetryvars
 
 IMPLICIT NONE
 
@@ -2278,10 +2240,8 @@ end subroutine Generate2DSymmetry
 !--------------------------------------------------------------------------
 subroutine CheckPatternSymmetry(cell,k,ga,isym,thetam)
 
-use local
 use error
 use crystal
-use symmetryvars
 use constants
 use io
 

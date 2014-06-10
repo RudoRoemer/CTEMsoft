@@ -50,62 +50,9 @@
 module gvectors
 
 use local
-use crystalvars
+use typedefs
 
 IMPLICIT NONE
-
-! define the cutoff parameters for the Bethe potential approach (and set to zero initially)
-type BetheParameterType
-        real(kind=sgl)                :: c1 = 20.0_sgl
-        real(kind=sgl)                :: c2 = 40.0_sgl
-        real(kind=sgl)                :: c3 = 1000.0_sgl
-        real(kind=sgl)                :: sgdbdiff = 0.05_sgl
-	real(kind=sgl)			:: weakcutoff = 0.0_sgl
-	real(kind=sgl)			:: cutoff = 0.0_sgl
-	real(kind=sgl)			:: sgcutoff = 0.0_sgl
-	integer(kind=irg)		:: nns
-	integer(kind=irg)		:: nnw
-	integer(kind=irg)		:: minweak
-	integer(kind=irg)		:: minstrong
-	integer(kind=irg)		:: maxweak
-	integer(kind=irg)		:: maxstrong
-	integer(kind=irg)		:: totweak
-	integer(kind=irg)		:: totstrong
-	integer(kind=irg),allocatable 	:: weaklist(:) 
-	integer(kind=irg),allocatable 	:: stronglist(:)
-	integer(kind=irg),allocatable 	:: weakhkl(:,:)
-	integer(kind=irg),allocatable 	:: stronghkl(:,:)
-	real(kind=sgl),allocatable	:: weaksg(:)
-	real(kind=sgl),allocatable	:: strongsg(:)
-	integer(kind=irg),allocatable 	:: strongID(:)
-	integer(kind=sgl),allocatable	:: reflistindex(:)		! used to map strong reflections onto the original reflist
-	integer(kind=sgl),allocatable	:: weakreflistindex(:)		! used to map weak reflections onto the original reflist
-end type BetheParameterType
-
-
-!--------------------------------------------------------------------------
-!--------------------------------------------------------------------------
-!--------------------------------------------------------------------------
-! [06/09/14] ALL of the following global variable definitions need to be removed !!!
-
-! these may not be needed anymore [06/09/14]; only used in CTEMlacbed.openmp.f90, which is old...
-
-! finally, create allocatable arrays with the same fields as the rlp list
-! these may be needed for multithreaded applications, since linked lists
-! cause OpenMP runtime problems.  This may not be a real problem but caused
-! by me misunderstanding some aspects of OpenMP ... it's happened before ...
-!integer(kind=irg),allocatable	:: Reflist_hkl(:,:)
-! complex(kind=dbl),allocatable	:: Reflist_Ucg(:)
-!real(kind=sgl),allocatable	:: Reflist_sg(:), Reflist_xg(:)
-
-! same for the BetheParameter arrays; somehow OpenMP doesn't like this type of variable...
-!integer(kind=irg),allocatable	:: BPweaklist(:), BPstronglist(:), BPweakhkl(:,:), BPstronghkl(:,:), BPreflistindex(:)
-!real(kind=sgl),allocatable	:: BPweaksg(:), BPstrongsg(:)
-!integer(kind=irg)		:: BPnns, BPnnw
-!--------------------------------------------------------------------------
-!--------------------------------------------------------------------------
-!--------------------------------------------------------------------------
-
 
 contains
 
@@ -130,7 +77,6 @@ contains
 subroutine MakeRefList(cell, rltail)
 
 use error
-use crystalvars
 
 IMPLICIT NONE
 
@@ -174,8 +120,6 @@ end subroutine MakeRefList
 subroutine AddReflection(rltail,cell,hkl)
 
 use error
-use dynamical
-use crystalvars
 use diffraction
 
 IMPLICIT NONE
@@ -231,7 +175,6 @@ subroutine Printrlp(rlp,first,stdout)
 
 use io
 use constants
-use dynamical
 
 IMPLICIT NONE
 
@@ -317,7 +260,6 @@ end subroutine Printrlp
 !--------------------------------------------------------------------------
 subroutine Apply_BethePotentials(cell, BetheParameter)
 
-use crystalvars
 use diffraction
 
 IMPLICIT NONE
@@ -437,6 +379,7 @@ end subroutine Apply_BethePotentials
 !> @param cell unit cell pointer
 !> @param khead start of reflisttype linked list
 !> @param reflist reflection linked list
+!> @param Dyn dynamical scattering structure
 !> @param BetheParameter Bethe parameter structure 
 !> @param numk number of wave vectors to consider
 !> @param nbeams total number of unique beams
@@ -448,11 +391,10 @@ end subroutine Apply_BethePotentials
 !> @date  01/10/14 MDG 4.0 account for new version of cell type
 !> @date  06/09/14 MDG 4.1 added cell, reflist, BetheParameter and khead arguments
 !--------------------------------------------------------------------------
-subroutine Prune_ReflectionList(cell,khead,reflist,BetheParameter,numk,nbeams)
+subroutine Prune_ReflectionList(cell,khead,reflist,Dyn,BetheParameter,numk,nbeams)
 
 use io
 use crystal
-use dynamical
 use kvectors
 use diffraction
 
@@ -461,6 +403,7 @@ IMPLICIT NONE
 type(unitcell),pointer	                :: cell
 type(kvectorlist),pointer              :: khead
 type(reflisttype),pointer	        :: reflist
+type(DynType),INTENT(INOUT)            :: Dyn
 type(BetheParameterType),INTENT(INOUT):: BetheParameter
 integer(kind=irg),INTENT(IN)		:: numk
 integer(kind=irg),INTENT(OUT)		:: nbeams
@@ -504,7 +447,7 @@ nbeams = 0
 ! 	sgp = abs(CalcsgHOLZ(float(rltmpa%hkl),sngl(ktmp%kt),sngl(mLambda)))
 ! 	write (*,*) rltmpa%hkl,CalcsgHOLZ(float(rltmpa%hkl),sngl(ktmp%kt), &
 !			sngl(mLambda)),Calcsg(float(rltmpa%hkl),sngl(ktmp%k),DynFN)
-        sgp = abs(Calcsg(cell,float(rltmpa%hkl),sngl(ktmp%k),DynFN)) 
+        sgp = abs(Calcsg(cell,float(rltmpa%hkl),sngl(ktmp%k),Dyn%FN)) 
 ! we have to deal separately with double diffraction reflections, since
 ! they have a zero potential coefficient !        
         if ( cell%dbdiff(rltmpa%hkl(1),rltmpa%hkl(2),rltmpa%hkl(3)) ) then  ! it is a double diffraction reflection
@@ -601,6 +544,7 @@ end subroutine Prune_ReflectionList
 !
 !> @param cell unit cell pointer
 !> @param reflist reflection list pointer
+!> @param Dyn dynamical scattering structure
 !> @param BetheParameter Bethe parameter structure 
 !> @param calcmode string that describes the particular matrix mode
 !> @param kk incident wave vector
@@ -613,12 +557,10 @@ end subroutine Prune_ReflectionList
 !> @date   09/20/13 MDG 1.2 added second order Bethe potential correction switch
 !> @date   06/09/14 MDG 2.0 added cell, reflist and BetheParameter as arguments
 !--------------------------------------------------------------------------
-recursive subroutine Compute_DynMat(cell,reflist,BetheParameter,calcmode,kk,kt,IgnoreFoilNormal,IncludeSecondOrder)
+recursive subroutine Compute_DynMat(cell,reflist,Dyn,BetheParameter,calcmode,kk,kt,IgnoreFoilNormal,IncludeSecondOrder)
 
-use dynamical
 use error
 use constants
-use crystalvars
 use crystal
 use diffraction
 use io
@@ -627,6 +569,7 @@ IMPLICIT NONE
 
 type(unitcell),pointer	                :: cell
 type(reflisttype),pointer	        :: reflist
+type(DynType),INTENT(INOUT)            :: Dyn
 type(BetheParameterType),INTENT(INOUT) :: BetheParameter
 character(*),INTENT(IN)		:: calcmode		!< computation mode
 real(kind=dbl),INTENT(IN)		:: kk(3),kt(3)		!< incident wave vector and tangential component
@@ -650,7 +593,7 @@ if (.not.associated(reflist)) call FatalError('Compute_DynMat',' reflection list
 ! if the dynamical matrix has already been allocated, deallocate it first
 ! this is partially so that no program will allocate DynMat itself; it must be done
 ! via this routine only.
-if (allocated(DynMat)) deallocate(DynMat)
+if (allocated(Dyn%DynMat)) deallocate(Dyn%DynMat)
 
 ! initialize some parameters
 czero = cmplx(0.0,0.0,dbl)	! complex zero
@@ -659,11 +602,11 @@ pre = cmplx(0.0,cPi,dbl)		! i times pi
 if (calcmode.ne.'BLOCHBETHE') then
 
 ! allocate DynMat
-	  allocate(DynMat(cell%DynNbeams,cell%DynNbeams),stat=istat)
-	  DynMat = czero
+	  allocate(Dyn%DynMat(cell%DynNbeams,cell%DynNbeams),stat=istat)
+	  Dyn%DynMat = czero
 ! get the absorption coefficient
 	  call CalcUcg(cell, rlp, (/0,0,0/) )
-	  DynUpz = rlp%Vpmod
+	  Dyn%Upz = rlp%Vpmod
 
 ! are we supposed to fill the off-diagonal part ?
 	 if ((calcmode.eq.'D-H-W').or.(calcmode.eq.'BLOCH')) then
@@ -678,9 +621,9 @@ if (calcmode.ne.'BLOCHBETHE') then
 	     gh = rltmpa%hkl - rltmpb%hkl
 	     if (calcmode.eq.'D-H-W') then
 	      call CalcUcg(cell, rlp,gh)
-	      DynMat(ir,ic) = pre*rlp%qg
+	      Dyn%DynMat(ir,ic) = pre*rlp%qg
 	     else
-	      DynMat(ir,ic) = cell%LUT(gh(1),gh(2),gh(3))
+	      Dyn%DynMat(ir,ic) = cell%LUT(gh(1),gh(2),gh(3))
 	     end if
 	    end if
 	    rltmpb => rltmpb%next  ! move to next column-entry
@@ -696,15 +639,15 @@ if (calcmode.ne.'BLOCHBETHE') then
 	  do ir=1,cell%DynNbeams
 	   glen = CalcLength(cell,float(rltmpa%hkl),'r')
 	   if (glen.eq.0.0) then
-	    DynMat(ir,ir) = cmplx(0.0,DynUpz,dbl)
+	    Dyn%DynMat(ir,ir) = cmplx(0.0,Dyn%Upz,dbl)
 	   else  ! compute the excitation error
-	    exer = Calcsg(cell,float(rltmpa%hkl),sngl(kk),DynFN)
+	    exer = Calcsg(cell,float(rltmpa%hkl),sngl(kk),Dyn%FN)
 
 	    rltmpa%sg = exer
 	    if (calcmode.eq.'DIAGH') then  !
-	     DynMat(ir,ir) = cmplx(0.0,2.D0*cPi*exer,dbl)
+	     Dyn%DynMat(ir,ir) = cmplx(0.0,2.D0*cPi*exer,dbl)
 	    else
-	     DynMat(ir,ir) = cmplx(2.D0*exer/mLambda,DynUpz,dbl)
+	     Dyn%DynMat(ir,ir) = cmplx(2.D0*exer/mLambda,Dyn%Upz,dbl)
 	    end if
 	   endif
 	   rltmpa => rltmpa%next   ! move to next row-entry
@@ -765,7 +708,7 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
         gplen = CalcLength(cell,kpg,'r')  	! |k0+g|
         rltmpa%sg = (1.0/mLambda**2 - gplen**2)*0.5/gplen
      else
-	rltmpa%sg = Calcsg(cell,gg,sngl(kk),DynFN)
+	rltmpa%sg = Calcsg(cell,gg,sngl(kk),Dyn%FN)
 ! here we need to determine the components of the Laue Center w.r.t. the g1 and g2 vectors
 ! and then pass those on to the routine; 
 !	rltmpa%sg = CalcsgHOLZ(gg,sngl(kt),sngl(mLambda))
@@ -880,13 +823,13 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
 	cell%DynNbeams = BetheParameter%nns
 
 ! allocate DynMat if it hasn't already been allocated and set to complex zero
-	  if (allocated(DynMat)) deallocate(DynMat)
-	  allocate(DynMat(cell%DynNbeams,cell%DynNbeams),stat=istat)
-	  DynMat = czero
+	  if (allocated(Dyn%DynMat)) deallocate(Dyn%DynMat)
+	  allocate(Dyn%DynMat(cell%DynNbeams,cell%DynNbeams),stat=istat)
+	  Dyn%DynMat = czero
 
 ! get the absorption coefficient
 	  call CalcUcg(cell, rlp, (/0,0,0/) )
-	  DynUpz = rlp%Vpmod
+	  Dyn%Upz = rlp%Vpmod
 
 ! ir is the row index
        do ir=1,BetheParameter%nns
@@ -895,7 +838,7 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
 ! compute the Bethe Fourier coefficient of the electrostatic lattice potential 
               if (ic.ne.ir) then  ! not a diagonal entry
                  ll = BetheParameter%stronghkl(1:3,ir) - BetheParameter%stronghkl(1:3,ic)
-                 DynMat(ir,ic) = cell%LUT(ll(1),ll(2),ll(3)) 
+                 Dyn%DynMat(ir,ic) = cell%LUT(ll(1),ll(2),ll(3)) 
         ! and subtract from this the total contribution of the weak beams
          weaksum = czero
          do iw=1,BetheParameter%nnw
@@ -906,7 +849,7 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
               weaksum = weaksum +  ughp * uhph *cmplx(1.D0/BetheParameter%weaksg(iw),0.0,dbl)
          end do
         ! and correct the dynamical matrix element to become a Bethe potential coefficient
-         DynMat(ir,ic) = DynMat(ir,ic) - cmplx(0.5D0*mLambda,0.0D0,dbl)*weaksum
+         Dyn%DynMat(ir,ic) = Dyn%DynMat(ir,ic) - cmplx(0.5D0*mLambda,0.0D0,dbl)*weaksum
 ! do we need to add the second order corrections ?
 		  if (AddSecondOrder) then 
 		    weaksum = czero
@@ -920,7 +863,7 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
                       weaksgsum = weaksgsum +  cabs(ughp)**2/BetheParameter%weaksg(iw)
                  end do
                  weaksgsum = weaksgsum * mLambda/2.D0
-                 DynMat(ir,ir) = cmplx(2.D0*BetheParameter%strongsg(ir)/mLambda-weaksgsum,DynUpz,dbl)
+                 Dyn%DynMat(ir,ir) = cmplx(2.D0*BetheParameter%strongsg(ir)/mLambda-weaksgsum,Dyn%Upz,dbl)
 ! do we need to add the second order corrections ?
 		  if (AddSecondOrder) then 
 		    weaksum = czero
@@ -952,7 +895,6 @@ end subroutine Compute_DynMat
 !--------------------------------------------------------------------------
 subroutine Set_Bethe_Parameters(BetheParameter,silent)
 
-use local
 use io
 
 IMPLICIT NONE
@@ -1016,7 +958,6 @@ subroutine ShortestGFOLZ(cell,k,ga,gb,gshort,gp)
 
 use io
 use crystal
-use crystalvars
 use error
 
 IMPLICIT NONE
@@ -1092,8 +1033,6 @@ end subroutine ShortestGFOLZ
 !> @date   06/09/14 MDG 1.1 added cell argument
 !--------------------------------------------------------------------------
 subroutine Delete_gvectorlist(cell)
-
-use crystalvars
 
 IMPLICIT NONE
 

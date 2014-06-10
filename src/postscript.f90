@@ -84,6 +84,7 @@
 module postscript
 
 use local
+use typedefs
 
 ! the following postscript preamble is inspired on the one from the old EMS package
 ! (before it was converted to JEMS) written by Pierre Stadelmann
@@ -112,24 +113,6 @@ character(55),parameter,private :: PSpreamble(23) = (/ &
         "%%EndProlog                                            ", &
         "72 dup scale                                           " /)
 
-! collection of formatting parameters
-type postscript_type
- integer(kind=irg)   	:: pspage
- real(kind=sgl)      	:: psdash(20),psfigwidth,psfigheight,psscale
- character(20)      	:: psname
-end type
-
-! used by axonometry-related routines
-type axonotype
- integer(kind=irg)   	:: xi,yi,beta,xmod,ymod,countx,county
- real(kind=sgl)      	:: grid,scle,vscle,xstart,ystart
- logical             	:: visibility
-end type
-
-! used by axis and its routines
-type axistype
- real(kind=sgl)      	:: axw,xll,yll
-end type
 
 ! font-related stuff
 character(20),parameter :: PSlbl = "Written by MDG, 2001"
@@ -172,6 +155,7 @@ type(postscript_type),INTENT(INOUT)    :: PS
 character(fnlen),INTENT(IN)            :: progdesc
 integer(kind=irg),INTENT(INOUT)        :: imanum
 logical,INTENT(IN),optional            :: dontask		!< optional parameter to select file opening route
+logical	                                :: loadingfile
 
 real(kind=sgl)    		        :: fw, fh		!< page format parameters
 integer(kind=irg) 		        :: i			!< loop counter
@@ -190,7 +174,7 @@ integer(kind=irg) 		        :: i			!< loop counter
    call Message('Opening temporary file for PostScript output', frm = "(A)")
  else
    loadingfile = .FALSE.
-   call SafeOpenFile('ps','formatted',PS%psname)
+   call SafeOpenFile('ps','formatted',PS%psname, loadingfile)
  end if
 
 ! write the preamble
@@ -231,7 +215,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_closefile(PS)
 
-use local
 use files
 
 IMPLICIT NONE
@@ -320,8 +303,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_cellinfo(PS, cell, xo, yo)
 
-use crystalvars
-
 IMPLICIT NONE
 
 type(postscript_type),INTENT(INOUT)        :: PS
@@ -361,8 +342,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_clippath
 
-use local
-
 IMPLICIT NONE
 
  write (psunit,"('Cl clip')")
@@ -386,8 +365,6 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_translate(x,y)
-
-use local
 
 IMPLICIT NONE
 
@@ -415,8 +392,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_move(x,y)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)  :: x,y	!< move to this location
@@ -442,8 +417,6 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_draw(x,y)
-
-use local
 
 IMPLICIT NONE
 
@@ -474,8 +447,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_line_gray(x1,y1,x2,y2,gray)
         
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)  	:: x1,y1		!< starting point
@@ -508,8 +479,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_setlinewidth(x)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)  	:: x		!< line width parameter
@@ -536,8 +505,6 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_square(x,y,edge)
-
-use local
 
 IMPLICIT NONE
 
@@ -576,8 +543,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_filledsquare(x,y,edge,graylevel)
        
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)  	:: x,y		!< center coordinates
@@ -616,8 +581,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_cross(x,y,edge,lw)
         
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)  	:: x,y		!< center coordinates
@@ -660,8 +623,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_sphere(x,y,r,clr)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)  	:: x,y			!< center coordinates
@@ -701,8 +662,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_arc(x0,y0,x,y,radius,ang1,ang2)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)  	:: x0,y0		!< new origin coordinates
@@ -734,8 +693,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_circle(x,y,radius)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)  	:: x,y			!< center coordinates
@@ -765,8 +722,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_filledcircle(x,y,radius,graylevel)
         
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)  	:: x,y		!< center coordinates
@@ -796,8 +751,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_drawframe(x,y)
         
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)  	:: x		!< frame width
@@ -827,8 +780,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_drawrect(x1,y1,x2,y2)
         
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)  	:: x1, y1		!< lower left
@@ -866,8 +817,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_line(x1,y1,x2,y2)
         
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)  	:: x1, y1		!< first point
@@ -900,8 +849,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_setdash(PS, num)
 
-use local
-
 IMPLICIT NONE
 
 type(postscript_type), INTENT(INOUT)        :: PS
@@ -932,8 +879,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_closepathS  
 
-use local
-
 IMPLICIT NONE
 
 write (psunit,"('Cl S')")
@@ -954,8 +899,6 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_stroke
-
-use local
 
 IMPLICIT NONE
 
@@ -978,8 +921,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_gsave
 
-use local
-
 IMPLICIT NONE
 
 write (psunit,"('gsave ')")
@@ -1000,8 +941,6 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_grestore
-
-use local
 
 IMPLICIT NONE
 
@@ -1024,8 +963,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_closepath   
 
-use local
-
 IMPLICIT NONE
 
 write (psunit,"('Cl ')")
@@ -1046,8 +983,6 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_newpath     
-
-use local
 
 IMPLICIT NONE
 
@@ -1073,8 +1008,6 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_text(x,y,line)
-
-use local
 
 IMPLICIT NONE
 
@@ -1106,8 +1039,6 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_textv(x,y,line)
-
-use local
 
 IMPLICIT NONE
 
@@ -1141,8 +1072,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_texttitle(x,y,line,q)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)	:: x,y	!< text start coordinates
@@ -1175,8 +1104,6 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_textvtitle(x,y,line,q)
-
-use local
 
 IMPLICIT NONE
 
@@ -1214,8 +1141,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_textint(x,y,line,vl)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)	:: x,y		!< text start coordinates
@@ -1249,8 +1174,6 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_textvar(x,y,line,vl)
-
-use local
 
 IMPLICIT NONE
 
@@ -1286,8 +1209,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_textvar8(x,y,line,vl)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)	:: x,y		!< text start coordinates
@@ -1322,8 +1243,6 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_textballoon(x,y,line,font,sc)
-
-use local
 
 IMPLICIT NONE
 
@@ -1370,8 +1289,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_balloon(x,y,le,he,w)
 
-use local
-
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)	:: x,y		!< start coordinates
@@ -1404,8 +1321,6 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_setfont(line,sc)
-
-use local
 
 IMPLICIT NONE
 
@@ -1443,8 +1358,6 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine Printhkl(x,y,h,k,l)
-
-use local
 
 IMPLICIT NONE
 
@@ -1515,7 +1428,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine DumpIndices(PS,hexset,S,h,k,l,c,x,y,n)
 
-use local
 use crystal
 
 IMPLICIT NONE
@@ -1646,8 +1558,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PrintIndices(S,hexset,h,k,l,x,y)
 
-use local
-
 IMPLICIT NONE
 
 character(1),INTENT(IN)           	:: S			!< space character 'd' or 'r'
@@ -1688,8 +1598,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine PS_DumpImage(imaint,imanum,x0,y0,npx,npy,scl)
 
-use local
-
 IMPLICIT NONE
 
 integer(kind=irg),INTENT(IN) 	        :: imaint(npx,npy)
@@ -1728,8 +1636,6 @@ end subroutine
 !> @date   06/08/14 MDG 4.0 added imaint and imanum as arguments
 !--------------------------------------------------------------------------
 subroutine PS_DumpImageDistort(imaint,imanum,x0,y0,npx,npy,sclx,scly)   
-
-use local
 
 IMPLICIT NONE
 
@@ -1795,8 +1701,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine IndexReduce(hkl)
 
-use local
-
 IMPLICIT NONE
 
 integer(kind=irg),INTENT(INOUT)  		:: hkl(3)		!< indices
@@ -1837,8 +1741,6 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine IndexReduceMB(hkl)
-
-use local
 
 IMPLICIT NONE
 
@@ -1885,7 +1787,6 @@ end subroutine
 !--------------------------------------------------------------------------
 subroutine IndexString(hexset,st,hkl,sp)
 
-use local
 use crystal 
 
 IMPLICIT NONE
@@ -1984,8 +1885,6 @@ end subroutine
 !> @date   06/09/14 MDG 4.0 added arguments PS, cell
 !--------------------------------------------------------------------------
 subroutine DrawSPFrame(PS,cell,CX,CY,CRad,iview,sp)
-
-use crystalvars
 
 IMPLICIT NONE
 

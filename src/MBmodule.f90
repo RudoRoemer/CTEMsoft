@@ -45,6 +45,7 @@
 module MBmodule
 
 use local
+use typedefs
 
 IMPLICIT NONE
 
@@ -59,6 +60,10 @@ contains
 !
 !> @brief compute the scattered intensities for a range of thicknesses
 !
+!> @param Dyn dynamical scattering structure
+!> @param cell unit cell pointer
+!> @param ktmp wave vector structure
+!> @param BetheParameter Bethe potential parameters
 !> @param nn number of strong beams
 !> @param nw number of weak beams
 !> @param nt number of thickness values
@@ -68,19 +73,22 @@ contains
 !> @date  10/13/98 MDG 1.0 original
 !> @date   7/04/01 MDG 2.0 f90
 !> @date  04/29/13 MDG 3.0 inclusion of Bethe weak beams
+!> @date  06/10/14 MDG 4.0 added Dyn, cell, ktmp, and BetheParameter arguments
 !--------------------------------------------------------------------------
-subroutine CalcBWint(nn,nw,nt,thick,inten)
+subroutine CalcBWint(Dyn,cell,ktmp,BetheParameter,nn,nw,nt,thick,inten)
 
-use local
 use io
 use diffraction
 use kvectors
 use gvectors
-use dynamical
 use constants
 
 IMPLICIT NONE
 
+type(DynType),INTENT(INOUT)    :: Dyn
+type(unitcell),pointer	        :: cell
+type(kvectorlist),pointer	:: ktmp
+type(BetheParameterType),INTENT(IN) :: BetheParameter
 integer(kind=irg),INTENT(IN)	:: nn			!< number of strong beams
 integer(kind=irg),INTENT(IN)	:: nw			!< number of weak beams
 integer(kind=irg),INTENT(IN)	:: nt			!< number of thickness values
@@ -89,11 +97,11 @@ real(kind=sgl),INTENT(INOUT)	:: inten(nt,nn+nw)	!< output intensities (both stro
 
 integer(kind=irg)		:: i,j,IPIV(nn), ll(3), jp
 complex(kind=dbl)		:: CGinv(nn,nn), Minp(nn,nn),diag(nn),Wloc(nn), lCG(nn,nn), lW(nn), &
-				lalpha(nn), delta(nn,nn), weak(nw,nn), Ucross(nw,nn), tmp(nw,nn), c
+				   lalpha(nn), delta(nn,nn), weak(nw,nn), Ucross(nw,nn), tmp(nw,nn), c
 real(kind=sgl) 			:: th
 
 ! compute the eigenvalues and eigenvectors
- Minp = DynMat
+ Minp = Dyn%DynMat
  IPIV = 0
  call BWsolve(Minp,Wloc,lCG,CGinv,nn,IPIV)
 
@@ -116,7 +124,7 @@ real(kind=sgl) 			:: th
      weak(jp,j) = cmplx(-1.D0,0.D0)/c
 ! cross potential coefficient
      ll(1:3) = BetheParameter%weakhkl(1:3,jp) - BetheParameter%stronghkl(1:3,j)
-     Ucross(jp,j) = LUT( ll(1),ll(2),ll(3) )
+     Ucross(jp,j) = cell%LUT( ll(1),ll(2),ll(3) )
    end do
  end do
 
@@ -153,6 +161,9 @@ end subroutine CalcBWint
 !
 !> @brief compute the Kossel intensities for a range of thicknesses
 !
+!> @param Dyn dynamical scattering structure
+!> @param cell unit cell pointer
+!> @param ktmp wave vector structure
 !> @param nn number of strong beams
 !> @param nw number of weak beams
 !> @param nt number of thickness values
@@ -163,19 +174,22 @@ end subroutine CalcBWint
 !> @date   7/04/01 MDG 2.0 f90
 !> @date  04/29/13 MDG 3.0 inclusion of Bethe weak beams
 !> @date  01/08/14 MDG 3.1 forked from CalcBWint, specialized for Kossel computation
+!> @date  06/10/14 MDG 4.0 added Dyn, cell, and ktmp arguments
 !--------------------------------------------------------------------------
-subroutine CalcKint(nn,nt,thick,Iz)
+subroutine CalcKint(Dyn,cell,ktmp,nn,nt,thick,Iz)
 
 use local
 use io
 use diffraction
 use kvectors
 use gvectors
-use dynamical
 use constants
 
 IMPLICIT NONE
 
+type(DynType),INTENT(INOUT)    :: Dyn
+type(unitcell),pointer	        :: cell
+type(kvectorlist),pointer	:: ktmp
 integer(kind=irg),INTENT(IN)	:: nn			!< number of strong beams
 integer(kind=irg),INTENT(IN)	:: nt			!< number of thickness values
 real(kind=sgl),INTENT(IN)	:: thick(nt)		!< thickness array
@@ -186,7 +200,7 @@ complex(kind=dbl)		:: CGinv(nn,nn), Minp(nn,nn), Wloc(nn), lCG(nn,nn), lW(nn), l
 real(kind=dbl)                :: s, q, t
 
 ! compute the eigenvalues and eigenvectors
- Minp = DynMat
+ Minp = Dyn%DynMat
  IPIV = 0
  call BWsolve(Minp,Wloc,lCG,CGinv,nn,IPIV)
 

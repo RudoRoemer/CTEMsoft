@@ -41,6 +41,7 @@
 module so3
 
 use local
+use constants
 use Lambert
 use rotations
 

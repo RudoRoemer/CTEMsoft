@@ -151,7 +151,7 @@ integer(kind=irg)                     :: std
  std = 6
  if (PRESENT(stdout)) std=stdout
 
- write (std,"(//1x,'CTEMsoft version ',A8,', Copyright (C) 2001-2014 Marc De Graef/CMU')") scversion
+ write (std,"(//1x,'CTEMsoft version ',A,', Copyright (C) 2001-2014 Marc De Graef/CMU')") trim(scversion)
  write (std,"(1x,'CTEMsoft comes with ABSOLUTELY NO WARRANTY.')")
  write (std,"(1x,'This is free software, and you are welcome to redistribute it')")
  write (std,"(1x,'under certain conditions; see License.txt file for details.'//)")

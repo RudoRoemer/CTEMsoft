@@ -53,7 +53,7 @@
 module crystal
 
 use local
-use crystalvars
+use typedefs
 
 public
 
@@ -107,9 +107,6 @@ contains
 !> @date   06/06/14 MDG 4.2 moved routine to crystal module
 !--------------------------------------------------------------------------
 subroutine ResetCell(cell)
-
-use crystalvars
-use symmetryvars
 
 IMPLICIT NONE
 
@@ -181,10 +178,8 @@ end subroutine ResetCell
 !--------------------------------------------------------------------------
 subroutine CalcMatrices(cell)
 
-use local
 use error
 use constants
-use crystalvars
 
 IMPLICIT NONE
 
@@ -287,8 +282,6 @@ end subroutine CalcMatrices
 !--------------------------------------------------------------------------
 subroutine TransSpaceDouble(cell,t,d,inspace,outspace)
 
-use crystalvars
-
 IMPLICIT NONE
 
 type(unitcell),pointer	:: cell
@@ -358,8 +351,6 @@ end subroutine TransSpaceDouble
 !> @date    06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
 subroutine TransSpaceSingle(cell, t, d, inspace, outspace)
-
-use crystalvars
 
 IMPLICIT NONE
 
@@ -439,7 +430,6 @@ end subroutine  TransSpaceSingle
 !--------------------------------------------------------------------------
 subroutine TransCoor(cell, t, d, talpha, space, direction)
 
-use crystalvars
 use math, ONLY: mInvert 
 
 IMPLICIT NONE
@@ -499,9 +489,6 @@ end subroutine TransCoor
 !--------------------------------------------------------------------------
 function CalcDotSingle(cell, p,q,space) result(cdot)
 
-use local
-use crystalvars
-use math
 
 IMPLICIT NONE
 
@@ -542,10 +529,6 @@ end function CalcDotSingle
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
 function CalcDotDouble(cell, p, q, space) result(cdot)
-
-use local
-use crystalvars
-use math
 
 IMPLICIT NONE
 
@@ -589,8 +572,6 @@ end function CalcDotDouble
 !--------------------------------------------------------------------------
 subroutine NormVecSingle(cell, p, space)
 
-use crystalvars
-
 IMPLICIT NONE
 
 type(unitcell),pointer				:: cell
@@ -630,8 +611,6 @@ end subroutine NormVecSingle
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
 subroutine NormVecDouble(cell, p, space)
-
-use local
 
 IMPLICIT NONE
 
@@ -673,8 +652,6 @@ end subroutine NormVecDouble
 !--------------------------------------------------------------------------
 function CalcLengthSingle(cell, p, space) result(x)
 
-use local
-
 IMPLICIT NONE
 
 type(unitcell),pointer		:: cell
@@ -710,8 +687,6 @@ end function CalcLengthSingle
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
 function CalcLengthDouble(cell, p, space) result(x)
-
-use local
 
 IMPLICIT NONE
 
@@ -749,7 +724,6 @@ end function CalcLengthDouble
 !--------------------------------------------------------------------------
 function CalcAngleSingle(cell, p, q, space) result(a)
 
-use crystalvars
 use error
 use constants
 
@@ -808,8 +782,6 @@ end function CalcAngleSingle
 !--------------------------------------------------------------------------
 function CalcAngleDouble(cell,p,q,space) result(a)
 
-use local
-use crystalvars
 use error
 use constants
 
@@ -878,7 +850,6 @@ end function CalcAngleDouble
 !--------------------------------------------------------------------------
 subroutine CalcCrossSingle(cell,p,q,r,inspace,outspace,iv)
 
-use crystalvars
 use math
 
 IMPLICIT NONE 
@@ -971,8 +942,6 @@ end subroutine CalcCrossSingle
 !--------------------------------------------------------------------------
 subroutine CalcCrossDouble(cell,p,q,r,inspace,outspace,iv)
 
-use local
-use crystalvars
 use math
 
 IMPLICIT NONE 
@@ -1056,8 +1025,6 @@ end subroutine CalcCrossDouble
 !--------------------------------------------------------------------------
 subroutine MilBrav(p,q,d)
 
-use local
-
 IMPLICIT NONE
 
 integer(kind=irg),INTENT(INOUT)		:: p(3)	        !< input/output vector
@@ -1126,8 +1093,6 @@ end subroutine MilBrav
 subroutine GetLatParm(cell, stdout)
 
 use io
-use symmetryvars
-use crystalvars
 
 IMPLICIT NONE
 
@@ -1279,7 +1244,6 @@ end subroutine GetLatParm
 subroutine GetAsymPos(cell, stdout)
 
 use io
-use crystalvars
 
 IMPLICIT NONE
 
@@ -1308,8 +1272,10 @@ integer(kind=irg)			:: j, io_int(1)	, std	!< auxiliary variables
 
 ! general atom coordinate
   list = (/ (' ',j=1,256) /)
-  call ReadValue(' ->  Fractional coordinates, site occupation, and Debye-Waller Factor [nm^2] : ', &
-     list, 256, frm = "(256A)" , stdout = std)
+  call Message(' ->  Fractional coordinates, site occupation, and Debye-Waller Factor [nm^2] : ', frm = "(A,' ',$)")
+  read (5,"(256A)") list
+
+write (*,*) 'completed read operation'
 
 ! interpret this string and extract coordinates and such ...
   call extractposition(list,pt) 
@@ -1555,8 +1521,6 @@ end subroutine extractposition
 subroutine CalcDensity(cell, dens, avZ, avA)
 
 use constants
-use crystalvars
-use symmetryvars
 
 IMPLICIT NONE
 
@@ -1609,7 +1573,6 @@ end subroutine CalcDensity
 !--------------------------------------------------------------------------
 subroutine GetOR(orel, stdout)
 
-use crystalvars
 use io
 
 IMPLICIT NONE
@@ -1669,7 +1632,6 @@ end subroutine GetOR
 !--------------------------------------------------------------------------
 function ComputeOR(orel, cellA, cellB, direction) result(TT)
 
-use crystalvars
 use math
 use io
 
@@ -1744,9 +1706,6 @@ end function ComputeOR
 !--------------------------------------------------------------------------
 function CalcsgHOLZ(cell,HOLZdata,gg,kt,lambda) result(exer)
 
-use local
-use crystalvars
-
 IMPLICIT NONE
 
 type(unitcell),pointer     :: cell
@@ -1805,7 +1764,6 @@ end function CalcsgHOLZ
 !--------------------------------------------------------------------------
 subroutine GetHOLZGeometry(cell,HOLZdata,g1,g2,uvw,fn)
 
-use crystalvars
 use io
 use error
 
@@ -1922,9 +1880,6 @@ end subroutine GetHOLZGeometry
 !> @date   06/05/14 MDG 4.1 added unit cell pointer argument and HOLZdata argument
 !--------------------------------------------------------------------------
 function GetHOLZcoordinates(cell,HOLZdata,gg,kt,lambda) result(pxy)
-
-use local
-use crystalvars
 
 IMPLICIT NONE
 
