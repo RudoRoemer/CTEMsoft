@@ -5,8 +5,9 @@
 #include "SampleRFZ_Mangling.h"
 
 struct thecstruct {
-int m, n;
-float r;
+int i, j;
+short s;
+float m;
 double d;
 };
 

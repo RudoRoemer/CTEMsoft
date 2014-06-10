@@ -820,7 +820,8 @@ subroutine sampler(pgnum, nsteps, cstruct, cproc)
 	
 	TYPE, BIND(C) :: MYFTYPE
 		INTEGER(C_INT) :: I, J
-		REAL(C_FLOAT) :: S
+		INTEGER(C_SHORT) :: S 
+		REAL(C_FLOAT) :: M
 		real(C_DOUBLE) :: D
 	END TYPE MYFTYPE
 
@@ -837,7 +838,7 @@ subroutine sampler(pgnum, nsteps, cstruct, cproc)
 	write (*,*) 'Number of intervals along the cube semi-edge length : ', nsteps
 	!read (*,*) nsteps
 
-	write(*,*) cstruct%I, cstruct%J, cstruct%S, cstruct%D 
+	write(*,*) cstruct%I, cstruct%J, cstruct%M, cstruct%S, cstruct%D 
 	! get the linked list for the FZ for point group symmetry pgnum for 100 steps along the cubic semi-edge
 	call SampleRFZ(nsteps, pgnum, FZlist, FZcnt)
 	call proc(FZcnt, outp)

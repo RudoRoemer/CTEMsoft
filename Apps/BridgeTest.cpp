@@ -36,9 +36,10 @@ int main(int argc, char* argv[])
  	double* outp = NULL;
  	
  	thecstruct *mycstruct = new thecstruct; 
-	mycstruct->m = 11;
-	mycstruct->n = 12;
-	mycstruct->r = 1.5;
+	mycstruct->i = 11;
+	mycstruct->j = 12;
+	mycstruct->s = 2;
+	mycstruct->m = 1.5;
 	mycstruct->d = 2.5;
 
   	std::cout << "Enter the point group number :  ";
