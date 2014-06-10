@@ -41,27 +41,32 @@
 program CTEMmkxtal
 
 use local
+use typedefs
 use io
-use crystalvars
 use crystal
 use symmetry
 use files
 
 IMPLICIT NONE
 
+type(unitcell), pointer	 :: cell
+character(fnlen)                :: progname, progdesc
+
  progname = 'CTEMmkxtal.f90'
  progdesc = 'Create a crystal structure file'
- call CTEMsoft
+ call CTEMsoft(progname, progdesc)
+
+ allocate(cell)
  
  cell%SYM_SGset=0
- call GetLatParm
- call GetSpaceGroup
- call GetAsymPos
- call SaveData
+ call GetLatParm(cell)
+ call GetSpaceGroup(cell)
+ call GetAsymPos(cell)
+ call SaveData(cell)
 
 
 
-end  program CTEMmkxtal
+end program CTEMmkxtal
        
 
 

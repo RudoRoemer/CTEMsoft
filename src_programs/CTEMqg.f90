@@ -43,6 +43,7 @@
 program CTEMqg
 
 use local
+use typedefs
 use io
 use crystal
 use files
@@ -50,7 +51,6 @@ use diffraction
 use symmetry
 use constants
 use postscript
-use dynamical
 
 IMPLICIT NONE
 
@@ -58,24 +58,34 @@ integer(kind=irg)        	:: ind(3),ans, oi_int(3)
 real(kind=sgl)			:: oi_real(7)
 complex(kind=sgl)		:: oi_cmplx(1)
 real(kind=sgl)           	:: preg
+character(fnlen)               :: progname, progdesc
+character(200)                 :: parta
+type(unitcell),pointer	        :: cell
+logical                        :: loadingfile
+type(gnode)                    :: rlp
 
  progname = 'CTEMqg.f90'
  progdesc = 'Display potential coefficient values'
- call CTEMsoft
+ call CTEMsoft(progname, progdesc)
+
+ allocate(cell)
  
- call CrystalData
- call GetVoltage
- call CalcPositions('v')
+ loadingfile = .TRUE.
+ call CrystalData(cell,loadingfile)
+ call GetVoltage(cell,rlp)
+ call CalcPositions(cell,'v')
  preg = 2.0 * sngl(cRestmass*cCharge/cPlanck**2)*1.0E-18
 
  ans = 1
  do while (ans.eq.1)
-  mess = 'Enter Miller indices :'; call Message("(/A)")
-  call GetIndex(ind,'r')
-  call CalcUcg(ind)
-  
-  mess = '   h  k  l    |g|    Ucg_r     Ucg_i      |Ug|      phase     |Ugp|     phase     xi_g   xi_gp    ratio    Re-1/q_g-Im'
-  call Message("(A)") 
+  call Message('Enter Miller indices :', frm = "(/A)")
+  call GetIndex(cell%hexset,ind,'r')
+  call CalcUcg(cell, rlp, ind)
+
+  parta = '   h  k  l    |g|    Ucg_r     Ucg_i      |Ug|      phase'// &
+        '     |Ugp|     phase     xi_g   xi_gp    ratio    Re-1/q_g-Im'  
+  call Message(parta, frm = "(200A)") 
+
  oi_int(1:3) = rlp%hkl(1:3)
  call WriteValue('',oi_int, 3, "(1x,3I3,1x,$)")
  oi_real(1) = rlp%g

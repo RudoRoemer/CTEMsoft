@@ -1272,8 +1272,10 @@ integer(kind=irg)			:: j, io_int(1)	, std	!< auxiliary variables
 
 ! general atom coordinate
   list = (/ (' ',j=1,256) /)
-  call ReadValue(' ->  Fractional coordinates, site occupation, and Debye-Waller Factor [nm^2] : ', &
-     list, 256, frm = "(256A)" , stdout = std)
+  call Message(' ->  Fractional coordinates, site occupation, and Debye-Waller Factor [nm^2] : ', frm = "(A,' ',$)")
+  read (5,"(256A)") list
+
+write (*,*) 'completed read operation'
 
 ! interpret this string and extract coordinates and such ...
   call extractposition(list,pt) 

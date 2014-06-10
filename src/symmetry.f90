@@ -1019,9 +1019,9 @@ logical           	:: skip						!< logical variable
              call Message('Please select one of these space groups.', frm = "(A/)")
              do i=1,7
               if ((mod(i,4).eq.0).or.(i.eq.7)) then
-                write (5,"(1x,i3,':',A11,5x)") TRIG(i),SYM_SGname(TRIG(i))
+                write (6,"(1x,i3,':',A11,5x)") TRIG(i),SYM_SGname(TRIG(i))
               else
-                write (5,"(1x,i3,':',A11,5x,$)") TRIG(i),SYM_SGname(TRIG(i))
+                write (6,"(1x,i3,':',A11,5x,$)") TRIG(i),SYM_SGname(TRIG(i))
               end if
              end do 
              call Message(' -------------------------- ', frm = "(A)")
@@ -1053,9 +1053,9 @@ logical           	:: skip						!< logical variable
   do i=sgmin,sgmax
    j=i-sgmin+1
    if ((mod(j,4).eq.0).or.(i.eq.sgmax)) then
-    write (5,"(1x,i3,':',A11,5x)") i,SYM_SGname(i)
+    write (6,"(1x,i3,':',A11,5x)") i,SYM_SGname(i)
    else
-    write (5,"(1x,i3,':',A11,5x,$)") i,SYM_SGname(i)
+    write (6,"(1x,i3,':',A11,5x,$)") i,SYM_SGname(i)
    end if
   end do
   cell%SYM_SGnum = sgmin-1

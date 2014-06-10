@@ -102,7 +102,7 @@ type(gnode)                                :: rlp
  call CrystalData(cell,loadingfile,xtalname)
 
  skip = 3        ! always use Weickenmeier&Kohl scattering coefficients, including absorptive form factors
- call CalcWaveLength(cell,dble(voltage),skip)
+ call CalcWaveLength(cell,rlp,dble(voltage),skip)
 
 ! compute the range of reflections for the lookup table and allocate the table
 ! The master list is easily created by brute force

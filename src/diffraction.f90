@@ -203,18 +203,20 @@ contains
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date  03/26/13  MDG  3.0 updated IO
 !--------------------------------------------------------------------------
-subroutine GetVoltage(cell)
+subroutine GetVoltage(cell, rlp)
 
 use io
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
+type(unitcell),pointer	   :: cell
+type(gnode),INTENT(INOUT) :: rlp
+
 real(kind=dbl)		:: io_real(1), voltage
 
  call ReadValue('Enter the microscope accelerating voltage [V, R] : ', io_real, 1)
  voltage = io_real(1)
- call CalcWaveLength(cell,voltage)
+ call CalcWaveLength(cell,rlp,voltage)
  
 end subroutine
 
@@ -240,7 +242,7 @@ end subroutine
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date  03/26/13  MDG  3.0 updated IO
 !--------------------------------------------------------------------------
-subroutine CalcWaveLength(cell,voltage,skip)
+subroutine CalcWaveLength(cell,rlp,voltage,skip)
 
 use constants
 use symmetry
@@ -249,11 +251,11 @@ use io
 IMPLICIT NONE
 
 type(unitcell),pointer	               :: cell
+type(gnode),INTENT(INOUT)             :: rlp
 real(kind=dbl),INTENT(IN)   		:: voltage		!< accelerating voltage [V]
 integer(kind=irg),INTENT(IN),OPTIONAL 	:: skip			!< scattering set identifier
 real(kind=dbl)   			:: temp1,temp2, oi_real(1)
 integer(kind=irg)			:: hkl(3), io_int(1)
-type(gnode)                           :: rlp
 
 ! store voltage in common block
  mAccvol = voltage
@@ -401,7 +403,7 @@ end function
 !> @date  03/26/13 MDG 3.0 updated IO
 !> @date  03/26/13 MDG 3.1 added XRD support
 !> @date  01/10/14 MDG 4.0 new cell type
-!> @date  -6/09/14 MDG 4.1 added cell as argument
+!> @date  06/09/14 MDG 4.1 added cell as argument
 !--------------------------------------------------------------------------
 subroutine CalcUcg(cell,rlp,hkl)
 
@@ -425,6 +427,7 @@ character(2)           		:: smb
 
 twopi = sngl(2.D0*cPi)
 czero = cmplx(0.0,0.0)
+rlp%hkl = hkl
 
 ! compute the scattering parameter s^2=(g/2)^2
  if (sum(hkl**2).eq.0) then 
