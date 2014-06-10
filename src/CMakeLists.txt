@@ -7,16 +7,15 @@ set(CTEMSoftLib_SRCS
 	${CTEMSoftLib_SOURCE_DIR}/apb.f90
 	${CTEMSoftLib_SOURCE_DIR}/constants.f90
 	${CTEMSoftLib_SOURCE_DIR}/crystal.f90
-	${CTEMSoftLib_SOURCE_DIR}/crystalvars.f90
+#       ${CTEMSoftLib_SOURCE_DIR}/crystalvars.f90
 	${CTEMSoftLib_SOURCE_DIR}/defectmodule.f90
 	${CTEMSoftLib_SOURCE_DIR}/diffraction.f90
 	${CTEMSoftLib_SOURCE_DIR}/dislocation.f90
 	#${CTEMSoftLib_SOURCE_DIR}/dispfield.f90  #also named ysh model at top
 #	${CTEMSoftLib_SOURCE_DIR}/doublediff.f90
-	${CTEMSoftLib_SOURCE_DIR}/dynamical.f90
+# 	${CTEMSoftLib_SOURCE_DIR}/dynamical.f90
 	${CTEMSoftLib_SOURCE_DIR}/eispack.f90
 	${CTEMSoftLib_SOURCE_DIR}/error.f90
-	##${CTEMSoftLib_SOURCE_DIR}/family.f90 #For Marc's book 
 	${CTEMSoftLib_SOURCE_DIR}/files.f90
 	${CTEMSoftLib_SOURCE_DIR}/foilmodule.f90
 	${CTEMSoftLib_SOURCE_DIR}/graphics.f90
@@ -43,9 +42,9 @@ set(CTEMSoftLib_SRCS
 	${CTEMSoftLib_SOURCE_DIR}/stacking_fault.f90
 	${CTEMSoftLib_SOURCE_DIR}/STEMmodule.f90
 	${CTEMSoftLib_SOURCE_DIR}/symmetry.f90
-	${CTEMSoftLib_SOURCE_DIR}/symmetryvars.f90
 	${CTEMSoftLib_SOURCE_DIR}/tiff.f90
 	${CTEMSoftLib_SOURCE_DIR}/timing.f90
+	${CTEMSoftLib_SOURCE_DIR}/typedefs.f90
 	${CTEMSoftLib_SOURCE_DIR}/void.f90
 	${CTEMSoftLib_SOURCE_DIR}/YSHmodule.f90
 )
