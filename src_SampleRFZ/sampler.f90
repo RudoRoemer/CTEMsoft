@@ -798,7 +798,7 @@ end module m
 
 
 
-subroutine sampler(pgnum, nsteps, cproc)
+subroutine sampler(pgnum, nsteps, cstruct, cproc)
 
 	use m
 	use so3
@@ -807,7 +807,7 @@ subroutine sampler(pgnum, nsteps, cproc)
 	IMPLICIT NONE
 	TYPE(C_FUNPTR), INTENT(IN), VALUE :: cproc
 
-  integer :: memaddress
+  	integer :: memaddress
 
 	integer(kind=irg)	        :: i, pgnum, nsteps, j
 
@@ -817,6 +817,15 @@ subroutine sampler(pgnum, nsteps, cproc)
 	real(C_DOUBLE), pointer :: out(:)
 	type(C_PTR) :: outp
 	integer ierr
+	
+	TYPE, BIND(C) :: MYFTYPE
+		INTEGER(C_INT) :: I, J
+		REAL(C_FLOAT) :: S
+		real(C_DOUBLE) :: D
+	END TYPE MYFTYPE
+
+	TYPE (MYFTYPE) :: cstruct
+
 
 	PROCEDURE(callbackPtrArray), POINTER :: proc
 	CALL C_F_PROCPOINTER (cproc, proc)
@@ -828,6 +837,7 @@ subroutine sampler(pgnum, nsteps, cproc)
 	write (*,*) 'Number of intervals along the cube semi-edge length : ', nsteps
 	!read (*,*) nsteps
 
+	write(*,*) cstruct%I, cstruct%J, cstruct%S, cstruct%D 
 	! get the linked list for the FZ for point group symmetry pgnum for 100 steps along the cubic semi-edge
 	call SampleRFZ(nsteps, pgnum, FZlist, FZcnt)
 	call proc(FZcnt, outp)

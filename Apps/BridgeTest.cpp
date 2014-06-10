@@ -34,6 +34,12 @@ int main(int argc, char* argv[])
 	int pgnum=0;
  	int nsteps=0;
  	double* outp = NULL;
+ 	
+ 	thecstruct *mycstruct = new thecstruct; 
+	mycstruct->m = 11;
+	mycstruct->n = 12;
+	mycstruct->r = 1.5;
+	mycstruct->d = 2.5;
 
   	std::cout << "Enter the point group number :  ";
   	std::cin >> pgnum;
@@ -43,7 +49,7 @@ int main(int argc, char* argv[])
   	std::cin >> nsteps;
 
 
- 	sampler_(&pgnum, &nsteps, &CppProg);
+ 	sampler_(&pgnum, &nsteps, mycstruct, &CppProg);
 
 
  	std::cout << "Done" << std::endl;
