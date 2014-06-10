@@ -155,6 +155,7 @@ type(postscript_type),INTENT(INOUT)    :: PS
 character(fnlen),INTENT(IN)            :: progdesc
 integer(kind=irg),INTENT(INOUT)        :: imanum
 logical,INTENT(IN),optional            :: dontask		!< optional parameter to select file opening route
+logical	                                :: loadingfile
 
 real(kind=sgl)    		        :: fw, fh		!< page format parameters
 integer(kind=irg) 		        :: i			!< loop counter
@@ -173,7 +174,7 @@ integer(kind=irg) 		        :: i			!< loop counter
    call Message('Opening temporary file for PostScript output', frm = "(A)")
  else
    loadingfile = .FALSE.
-   call SafeOpenFile('ps','formatted',PS%psname)
+   call SafeOpenFile('ps','formatted',PS%psname, loadingfile)
  end if
 
 ! write the preamble

@@ -452,6 +452,7 @@ end subroutine init_STEM
 !
 !> @param STEM STEM structure
 !> @param cell unit cell pointer
+!> @param foil foil structure
 !> @param khead top of kvector list
 !> @param reflist top of reflection list
 !> @param nn number of reflections
@@ -459,8 +460,9 @@ end subroutine init_STEM
 !> @date   04/29/11 MDG 1.0 original
 !> @date   06/12/13 MDG 2.0 rewrite 
 !> @date   06/09/14 MDG 3.0 added STEM and cell structures and khead+reflist linked lists
+!> @date   06/10/14 MDG 3.1 added foil, Dyn argument
 !--------------------------------------------------------------------------
-subroutine init_STEM_ZA(STEM,cell,khead,reflist,nn)
+subroutine init_STEM_ZA(STEM,cell,foil,Dyn,khead,reflist,nn)
 
 use crystal
 use diffraction
@@ -472,6 +474,8 @@ IMPLICIT NONE
 
 type(STEMtype),INTENT(INOUT)        :: STEM
 type(unitcell),pointer	             :: cell
+type(foiltype),INTENT(INOUT)        :: foil
+type(DynType),INTENT(INOUT)         :: Dyn
 type(kvectorlist),pointer	     :: khead
 type(reflisttype),pointer	     :: reflist
 integer(kind=irg),INTENT(IN)        :: nn
@@ -495,8 +499,8 @@ type(reflisttype),pointer	      :: rltmpa
   allocate(STEM%sgarray(nn,STEM%numk))
   
 ! transform the foil normal to real space and normalize
-  call TransSpace(cell,sngl(foil%F),DynFN,'d','r')
-  call NormVec(cell,DynFN,'r')
+  call TransSpace(cell,sngl(foil%F),Dyn%FN,'d','r')
+  call NormVec(cell,Dyn%FN,'r')
 
 ! allocate the weight factor arrays, one entry for each beam direction, reflection, and camera length
   allocate(STEM%ZABFweightsarray(nn,STEM%numk,STEM%numCL),STEM%ZAADFweightsarray(nn,STEM%numk,STEM%numCL))
@@ -522,7 +526,7 @@ type(reflisttype),pointer	      :: rltmpa
         if (kpg.le.STEM%BFmrad) STEM%ZABFweightsarray(ig,ik,iCL) = .TRUE.
         if ((kpg.ge.STEM%ADFimrad).AND.(kpg.le.STEM%ADFomrad)) STEM%ZAADFweightsarray(ig,ik,iCL) = .TRUE.
       end do  ! loop over camera lengths
-      STEM%sgarray(ig,ik) = Calcsg(cell,gg,sngl(ktmp%k),DynFN)
+      STEM%sgarray(ig,ik) = Calcsg(cell,gg,sngl(ktmp%k),Dyn%FN)
  ! and we move to the next reflection in the list
       rltmpa => rltmpa%next
     end do reflectionloopCL  
@@ -544,6 +548,8 @@ end subroutine init_STEM_ZA
 ! 
 !> @param STEM STEM structure
 !> @param cell unit cell pointer
+!> @param foil foil structure
+!> @param Dyn dynamical scattering structure
 !> @param STEMnmlfile filename of the namelist file
 !> @param khead top of kvector list
 !> @param reflist top of reflection list
@@ -557,8 +563,9 @@ end subroutine init_STEM_ZA
 !> @date   04/29/11 MDG 1.0 original
 !> @date   06/12/13 MDG 2.0 rewrite 
 !> @date   11/26/13 MDG 2.1 made geometry an input parameter instead of part of the STEMdata namelist
+!> @date   06/10/14 MDG 3.0 added STEM, cell, foil, and Dyn arguments
 !--------------------------------------------------------------------------
-subroutine read_STEM_data(STEM,cell,STEMnmlfile,khead,reflist,geometry,nn,g,kt,numk,beamdiv)
+subroutine read_STEM_data(STEM,cell,foil,Dyn,STEMnmlfile,khead,reflist,geometry,nn,g,kt,numk,beamdiv)
 
 use io
 use files
@@ -568,7 +575,9 @@ use gvectors
 IMPLICIT NONE
 
 type(STEMtype),INTENT(INOUT)                  :: STEM
-type(unitcell),pointer	                        :: cell
+type(unitcell),pointer	                       :: cell
+type(foiltype),INTENT(INOUT)                  :: foil
+type(DynType),INTENT(INOUT)                   :: Dyn
 character(fnlen),INTENT(IN)			:: STEMnmlfile
 type(kvectorlist),pointer	                :: khead
 type(reflisttype),pointer	                :: reflist
@@ -640,7 +649,7 @@ if (.not.PRESENT(beamdiv)) then
   if (geometry.eq.'SR') then
     call init_STEM(STEM,cell,nn,g)
   else
-    call init_STEM_ZA(STEM,cell,khead,reflist,nn)
+    call init_STEM_ZA(STEM,cell,foil,Dyn,khead,reflist,nn)
   end if
 end if 
 

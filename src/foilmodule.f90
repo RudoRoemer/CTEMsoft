@@ -41,29 +41,18 @@
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   06/03/13 MDG 3.0 updated IO, introduced quaternions instead of rotation matrices
 !> @data   11/14/13 MDG 3.1 changed F and q to integer indices from float
+!> @date   06/10/14 MDG 4.0 removed global variable foil
 !--------------------------------------------------------------------------
 
 module foilmodule
 
 use local
+use typedefs
 use quaternions
 
-! all variables related to the foil orientation, normal, thickness, etc...
-! also, transformation quaternions from various reference frames to the foil and back
-! material properties are also stored here, such as the elastic moduli
-type foiltype
-  real(kind=dbl)		:: F(3), q(3),Fn(3),qn(3),brx,bry,brxy,cpx,cpy, & 
-				   alP,alS,alR,beP,elmo(6,6),z0,zb,B(3),Bn(3),Bm(3)
-  real(kind=dbl)		:: a_fc(4), a_fm(4), a_mi(4), a_ic(4), a_mc(4), a_fi(4)
-  integer(kind=irg)  		:: npix,npiy
-  real(kind=sgl),allocatable :: sg(:,:)
-end type foiltype
-
-type (foiltype)        :: foil
+! type (foiltype)        :: foil
 
 contains
-
-
 
 !--------------------------------------------------------------------------
 !
@@ -84,23 +73,21 @@ contains
 !> @date  4/23/11 MDG 2.2 redefined origin to be at center of image
 !> @date  6/03/13 MDG 3.0 replaced rotation matrices by quaternions throughout
 !> @date 10/30/13 MDG 3.1 complete debug of quaternion and rotation implementation 
-!> @date 06/09/14 MDG 4.0 added cell as argument
+!> @date 06/09/14 MDG 4.0 added cell and foil as argument
 !--------------------------------------------------------------------------
-subroutine initialize_foil_geometry(cell,dinfo)
+subroutine initialize_foil_geometry(cell,foil,dinfo)
 
 use math
 use constants
 use crystal
-use crystalvars
 use symmetry
-use symmetryvars
 use io
-use quaternions
 use rotations
 
 IMPLICIT NONE
 
 type(unitcell),pointer	        :: cell
+type(foiltype),INTENT(INOUT)   :: foil
 integer(kind=sgl),INTENT(IN)	:: dinfo
 
 real(kind=dbl)      		:: ey(3),ex(3),t,dx,dy 
@@ -254,6 +241,7 @@ end subroutine initialize_foil_geometry
 !> @brief  Reads the foil geometry data
 !
 !> @param cell unit cell pointer
+!> @param foil foil structure
 !> @param foilnmlfile name of foil namelist file
 !> @param npix number of x image pixels
 !> @param npiy number of y image pixels
@@ -262,20 +250,19 @@ end subroutine initialize_foil_geometry
 ! 
 !> @date 010/5/11 MDG 1.0 original
 !> @date 06/04/13 MDG 2.0 general rewrite
-!> @date 06/09/14 MDG 3.0 added cell as argument
+!> @date 06/10/14 MDG 3.0 added cell and foil as arguments
 !--------------------------------------------------------------------------
-subroutine read_foil_data(cell,foilnmlfile,npix,npiy,L,dinfo)
+subroutine read_foil_data(cell,foil,foilnmlfile,npix,npiy,L,dinfo)
 
-use crystalvars
 use crystal
 use io
 use files
-use quaternions
 use rotations
 
 IMPLICIT NONE
 
 type(unitcell),pointer	        :: cell
+type(foiltype),INTENT(INOUT)   :: foil
 character(fnlen),INTENT(IN)	:: foilnmlfile
 integer(kind=irg),INTENT(IN)	:: npix, npiy, dinfo
 real(kind=sgl),INTENT(IN)	:: L
@@ -344,7 +331,7 @@ do i=1,6
 end do
 
 ! initialize a bunch of foil related quantities, using quaternions for all rotations
-call initialize_foil_geometry(cell,dinfo)
+call initialize_foil_geometry(cell,foil,dinfo)
 
 ! compute the projected thickness
 amat = qu2om(foil%a_fm)

@@ -55,6 +55,7 @@ contains
 !> @brief  read inclusion parameters from file
 ! 
 !> @param defects defect structure
+!> @param foil foil structure
 !> @param DF_L column edge length 
 !> @param DF_npix number of x-pixels
 !> @param DF_npiy number of y-pixels
@@ -65,8 +66,9 @@ contains
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  03/25/13 MDG 3.0 updated IO
 !> @date  06/09/14 MDG 4.0 added defects argument
+!> @date  06/10/14 MDG 4.1 added foil argument
 !--------------------------------------------------------------------------
-subroutine read_inclusion_data(defects,DF_L,DF_npix,DF_npiy,dinfo)
+subroutine read_inclusion_data(defects,foil,DF_L,DF_npix,DF_npiy,dinfo)
 
 use io
 use files
@@ -76,6 +78,7 @@ use quaternions
 IMPLICIT NONE
 
 type(defecttype),INTENT(INOUT) :: defects
+type(foiltype),INTENT(INOUT)   :: foil
 integer(kind=irg),INTENT(IN)	:: dinfo,DF_npix,DF_npiy
 real(kind=sgl),INTENT(IN)	:: DF_L
 

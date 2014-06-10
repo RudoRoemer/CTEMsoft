@@ -613,16 +613,22 @@ type YDtype
   real(kind=dbl)	     :: a_dc(4), a_id(4), a_di(4)
 end type YDtype
 
+type apbtype
+	real(kind=sgl)       ::  xpos,ypos,zpos,radius,w,Rdisp(3)
+end type apbtype
+
+
 ! here is a new type definition that simplifies defect handling quite a bit...
 ! instead of passing many arrays to the defect routines, now we only need to 
 ! pass a single master defect variable "defects", which must be defined by
 ! the calling program as type(defecttype) :: defects
 ! we've also added a few other variables here for lack of a better place to do so...
 type defecttype
-  integer(kind=irg)                        :: numvoids,numdisl,numYdisl,numsf,numinc
+  integer(kind=irg)                        :: numvoids,numdisl,numYdisl,numsf,numinc,numapb
   character(fnlen)                         :: dislYname(3*maxdefects)
   character(fnlen)                         :: voidname
   character(fnlen)                         :: incname
+  character(fnlen)                         :: apbname
   character(fnlen)	                    :: sfname(maxdefects)
   character(fnlen)         	 	     :: dislname(3*maxdefects)
   integer(kind=irg)                	     :: Nmat,DF_g(3),DF_npix,DF_npiy,DF_nums,DF_numinclusion,DF_numvoid
@@ -633,6 +639,7 @@ type defecttype
   type (stackingfaulttype), allocatable    :: SF(:)
   type (voidtype), allocatable             :: voids(:)
   type (YDtype), allocatable               :: YD(:)    
+  type (apbtype), allocatable              :: apbs(:)
 end type defecttype
 
 
@@ -779,6 +786,49 @@ type timetype
   integer(kind=irg)   	:: TIME_old
   integer(kind=irg)   	:: TIME_loops
 end type
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+! all variables related to the foil orientation, normal, thickness, etc...
+! also, transformation quaternions from various reference frames to the foil and back
+! material properties are also stored here, such as the elastic moduli
+type foiltype
+  real(kind=dbl)		:: F(3), q(3),Fn(3),qn(3),brx,bry,brxy,cpx,cpy, & 
+				   alP,alS,alR,beP,elmo(6,6),z0,zb,B(3),Bn(3),Bm(3)
+  real(kind=dbl)		:: a_fc(4), a_fm(4), a_mi(4), a_ic(4), a_mc(4), a_fi(4)
+  integer(kind=irg)  		:: npix,npiy
+  real(kind=sgl),allocatable :: sg(:,:)
+end type foiltype
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+! the "orientation" type contains entries for all rotation and orientation representations
+type orientationtype
+  real(kind=sgl)	:: eulang(3)		! Bunge Euler angles in radians
+  real(kind=sgl)	:: om(3,3)		! 3x3 matrix
+  real(kind=sgl)	:: axang(4)		! axis-angle pair (angle in rad, component 4; axis in direction cosines)
+  real(kind=sgl)	:: rodrigues(3)		! Rodrigues vector
+  real(kind=sgl)	:: quat(4)		! quaternion representation (q(1) is scalar part, q(2:4) vector part)
+  real(kind=sgl)	:: homochoric(3)	! homochoric representation according to Frank's paper  
+  real(kind=sgl)	:: cubochoric(3)	! cubic grid representation (derived from homochoric)
+end type orientationtype
+
+
+! double precision version
+type orientationtyped
+  real(kind=dbl)	:: eulang(3)		! Bunge Euler angles in radians
+  real(kind=dbl)	:: om(3,3)		! 3x3 matrix
+  real(kind=dbl)	:: axang(4)		! axis-angle pair (angle in rad, component 4; axis in direction cosines)
+  real(kind=dbl)	:: rodrigues(3)		! Rodrigues vector
+  real(kind=dbl)	:: quat(4)		! quaternion representation (q(1) is scalar part, q(2:4) vector part)
+  real(kind=dbl)	:: homochoric(3)	! homochoric representation according to Frank's paper  
+  real(kind=dbl)	:: cubochoric(3)	! cubic grid representation (derived from homochoric)
+end type orientationtyped
+
 
 
 end module typedefs

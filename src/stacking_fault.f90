@@ -278,6 +278,7 @@ end function point_inside_polygon
 ! 
 !> @param cell unit cell pointer
 !> @param defects defect structure
+!> @param foil foil structure
 !> @param inum
 !> @param DF_L column edge length
 !> @param nx
@@ -289,9 +290,10 @@ end function point_inside_polygon
 !> @date   11/05/13 MDG 1.0 new attempt to replace faulty original routine
 !> @date   11/13/13 MDG 1.1 traced error to problem with transformations in defectmodule
 !> @date   11/13/13 MDG 1.2 changed SF normal transformation for zpos array computation (to be tested)
-!> @date   06/09/14 MDG 2.0 added SF as argument 
+!> @date   06/09/14 MDG 2.0 added defects and cell as arguments
+!> @date   06/10/14 MDG 2.1 added foil as argument 
 !--------------------------------------------------------------------------
-subroutine makestackingfault(defects,cell,inum,DF_L,nx,ny,DF_g,dinfo)
+subroutine makestackingfault(defects,cell,foil,inum,DF_L,nx,ny,DF_g,dinfo)
  
 use math
 use constants
@@ -307,6 +309,7 @@ IMPLICIT NONE
 
 type(defecttype),INTENT(INOUT)              :: defects
 type(unitcell),pointer	                     :: cell
+type(foiltype),INTENT(INOUT)                :: foil
 real(kind=sgl),INTENT(IN)	             :: DF_L
 integer(kind=irg),INTENT(IN)	             :: inum, nx, ny, DF_g(3), dinfo
 
@@ -345,7 +348,7 @@ if (dinfo.eq.1) write (*,*) 'tpr_i = ',defects%SF(inum)%tpr(1:3)
   defects%DL(ndl+1)%u =  defects%SF(inum)%lpu
   defects%DL(ndl+1)%burg = defects%SF(inum)%lpb
   defects%DL(ndl+1)%g = float(DF_g)
-  call makedislocation(defects,cell,ndl+1,dinfo,DF_L)
+  call makedislocation(defects,cell,foil,ndl+1,dinfo,DF_L)
   if (dinfo.eq.1) write (*,*) 'Leading Partial Position ',defects%DL(ndl+1)%id,defects%DL(ndl+1)%jd
     
   defects%DL(ndl+2)%id = defects%SF(inum)%tpr(1) 
@@ -353,7 +356,7 @@ if (dinfo.eq.1) write (*,*) 'tpr_i = ',defects%SF(inum)%tpr(1:3)
   defects%DL(ndl+2)%u = defects%SF(inum)%tpu
   defects%DL(ndl+2)%burg = defects%SF(inum)%tpb
   defects%DL(ndl+2)%g = float(DF_g)
-  call makedislocation(defects,cell,ndl+2,dinfo,DF_L)
+  call makedislocation(defects,cell,foil,ndl+2,dinfo,DF_L)
   if (dinfo.eq.1)  write (*,*) 'Trailing Partial Position ',defects%DL(ndl+2)%id,defects%DL(ndl+2)%jd
 
 ! copy the top and bottom dislocation intersections (computed in make_dislocation) 
@@ -467,6 +470,7 @@ end subroutine makestackingfault
 ! 
 !> @param defects defect structure
 !> @param cell unit cell pointer
+!> @param foil foil structure
 !> @param inum
 !> @param DF_L column edge length
 !> @param nx
@@ -481,8 +485,9 @@ end subroutine makestackingfault
 !> @date   12/17/13 MDG 1.3 branch from original routine to deal with different ECCI geometry
 !> @date   12/18/13 MDG 1.4 debug of stacking fault location array
 !> @date   06/09/14 MDG 2.0 added cell, SF, YD arguments
+!> @date   06/10/14 MDG 2.1 added foil argument
 !--------------------------------------------------------------------------
-subroutine makestackingfaultECCI(defects,cell,inum,DF_L,nx,ny,DF_g,dinfo)
+subroutine makestackingfaultECCI(defects,cell,foil,inum,DF_L,nx,ny,DF_g,dinfo)
  
 use math
 use constants
@@ -499,6 +504,7 @@ IMPLICIT NONE
 
 type(defecttype),INTENT(INOUT) :: defects
 type(unitcell),pointer	        :: cell
+type(foiltype),INTENT(INOUT)   :: foil
 real(kind=sgl),INTENT(IN)	:: DF_L
 integer(kind=irg),INTENT(IN)	:: inum, nx, ny, DF_g(3), dinfo
 
@@ -559,9 +565,9 @@ call NormVec(cell,tun,'c')
   defects%YD(ndl+2)%g = float(DF_g)
   defects%YD(ndl+2)%sig = defects%SF(inum)%poisson
 
-  call makeYSHdislocation(defects,cell,ndl+1,dinfo,DF_L)
+  call makeYSHdislocation(defects,cell,foil,ndl+1,dinfo,DF_L)
   if (dinfo.eq.1) write (*,*) 'Leading Partial Position ',defects%YD(ndl+1)%id,defects%YD(ndl+1)%jd
-  call makeYSHdislocation(defects,cell,ndl+2,dinfo,DF_L)
+  call makeYSHdislocation(defects,cell,foil,ndl+2,dinfo,DF_L)
   if (dinfo.eq.1) write (*,*) 'Trailing Partial Position ',defects%YD(ndl+2)%id,defects%YD(ndl+2)%jd
 
 
@@ -716,6 +722,7 @@ end subroutine makestackingfaultECCI
 !
 !> @param defects defect structure
 !> @param cell unit cell pointer
+!> @param foil foil structure
 !> @param DF_L 
 !> @param DF_npix number of x-pixels
 !> @param DF_npiy number of y-pixels
@@ -729,8 +736,9 @@ end subroutine makestackingfaultECCI
 !> @date   06/04/13 MDG 3.0 rewrite
 !> @date   12/17/13 MDG 3.1 added ECCI mode
 !> @date   06/09/14 MDG 4.0 added cell, defects arguments
+!> @date   06/10/14 MDG 4.1 added foil argument
 !--------------------------------------------------------------------------
-subroutine read_stacking_fault_data(defects,cell,DF_L,DF_npix,DF_npiy,DF_g,dinfo,ECCI)
+subroutine read_stacking_fault_data(defects,cell,foil,DF_L,DF_npix,DF_npiy,DF_g,dinfo,ECCI)
 
 use YSHmodule
 use io
@@ -741,6 +749,7 @@ IMPLICIT NONE
 
 type(unitcell),pointer	                :: cell
 type(defecttype),INTENT(INOUT)         :: defects
+type(foiltype),INTENT(INOUT)           :: foil
 integer(kind=irg),INTENT(IN)		:: DF_npix, DF_npiy, DF_g(3), dinfo
 real(kind=sgl),INTENT(IN)		:: DF_L
 logical,INTENT(IN),OPTIONAL	        :: ECCI
@@ -779,10 +788,10 @@ namelist / SFdata / SFi, SFj, SFsep, SFplane, SFlpu, SFlpb, SFtpu, SFtpb, SFR, p
 ! initialize the stacking fault variables and both partial dislocations; this might depend
 ! on the imaging mode (TEM vs. ECCI)
     if (present(ECCI)) then
-      call makestackingfaultECCI(defects,cell,i,DF_L,DF_npix,DF_npiy,DF_g,dinfo)
+      call makestackingfaultECCI(defects,cell,foil,i,DF_L,DF_npix,DF_npiy,DF_g,dinfo)
       defects%numYdisl = defects%numYdisl + 2
     else
-      call makestackingfault(defects,cell,i,DF_L,DF_npix,DF_npiy,DF_g,dinfo)
+      call makestackingfault(defects,cell,foil,i,DF_L,DF_npix,DF_npiy,DF_g,dinfo)
       defects%numdisl = defects%numdisl + 2
     end if
  end do

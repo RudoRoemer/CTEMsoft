@@ -51,9 +51,6 @@ module files
 use local
 use typedefs
 
-! needs to be removed !!
-logical :: loadingfile
-
 contains
 
 !--------------------------------------------------------------------------
@@ -363,7 +360,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !> @date   06/06/14 MDG 4.0 added stdout argument
 !--------------------------------------------------------------------------
-subroutine SafeOpenFile(ftyp,frm,fname,fread, stdout)
+subroutine SafeOpenFile(ftyp,frm,fname,fread, loadingfile, stdout)
 
 use error
 use io
@@ -374,6 +371,7 @@ character(2),INTENT(IN)                 :: ftyp         !< selects the logical u
 character(fnlen),INTENT(INOUT)          :: fname        !< file name string
 character(*),INTENT(IN)                 :: frm          !< formatting option
 logical,OPTIONAL,INTENT(IN)             :: fread        !< read if .TRUE., write if .FALSE.
+logical,INTENT(INOUT),OPTIONAL          :: loadingfile
 integer(kind=irg),INTENT(IN),OPTIONAL	  :: stdout
 
 character(1)                            :: ans

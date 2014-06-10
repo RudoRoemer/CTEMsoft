@@ -41,12 +41,7 @@
 module apb
 
 use local
-
-type apbtype
-	real(kind=sgl)       ::  xpos,ypos,zpos,radius,w,Rdisp(3)
-end type apbtype
-
-type (apbtype), allocatable  :: apbs(:)
+use typedefs
 
 contains
 
@@ -58,18 +53,19 @@ contains
 !
 !> @brief  read apb parameters from file
 ! 
-!> @param numapb number of inclusions
-!> @param apbname name of inclusion file
+!> @param defects defect structure
+!> @param cell unit cell pointer
+!> @param foil foil structure
 !> @param DF_L column edge length 
 !> @param DF_npix number of x-pixels
 !> @param DF_npiy number of y-pixels
 !> @param dinfo logical to trigger verbose output
 ! 
 !> @date   02/10/14 MDG 1.0 new code
+!> @date   06/10/14 MDG 2.0 removed all global variables; added defect, foil arguments
 !--------------------------------------------------------------------------
-subroutine read_apb_data(numapb,apbname,DF_L,DF_npix,DF_npiy,dinfo)
+subroutine read_apb_data(defects,cell,foil,DF_L,DF_npix,DF_npiy,dinfo)
 
-use local
 use io
 use files
 use crystal
@@ -77,8 +73,9 @@ use foilmodule
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)    :: apbname
-integer(kind=irg),INTENT(OUT)  :: numapb
+type(defecttype),INTENT(INOUT) :: defects
+type(unitcell),pointer	        :: cell
+type(foiltype),INTENT(INOUT)   :: foil
 integer(kind=irg),INTENT(IN)   :: dinfo,DF_npix,DF_npiy
 real(kind=sgl),INTENT(IN)      :: DF_L
 
@@ -86,33 +83,32 @@ integer(kind=irg)              :: i, io_int(1)
 real(kind=sgl)                 :: Vx,Vy,Vz,Vrad,w,tmp(3), tmp2(3), Rx, Ry, Rz
 
 ! open the apbdata file
-mess = 'Opening '//apbname; call Message("(A)")
-open(unit=dataunit,file=apbname,form='formatted')
-read(dataunit,*) numapb ! PGC unit=dataunit -> dataunit
-allocate(apbs(numapb))
+call Message('Opening '//trim(defects%apbname), frm = "(A)")
+open(unit=dataunit,file=trim(defects%apbname),form='formatted')
+read(dataunit,*) defects%numapb ! PGC unit=dataunit -> dataunit
+allocate(defects%apbs(defects%numapb))
 if (dinfo.eq.1) then
-  io_int(1) = numapb
+  io_int(1) = defects%numapb
   call WriteValue(' Number of APBs ',io_int, 1, "(I)")
 end if
 
 
 ! read each subsequent line 
-do i=1,numapb
+do i=1,defects%numapb
   read(dataunit,*) Vx,Vy,Vz,Vrad,w,Rx,Ry,Rz ! PGC unit=dataunit -> dataunit
-  apbs(i)%xpos = Vx * 0.5 * float(DF_npix)*DF_L
-  apbs(i)%ypos = Vy * 0.5 * float(DF_npiy)*DF_L
-  apbs(i)%zpos = Vz * foil%z0         ! vertical fractional location in interval [-1,1]
-  apbs(i)%radius = Vrad               ! radius in nanometers
-  apbs(i)%w = w   
+  defects%apbs(i)%xpos = Vx * 0.5 * float(DF_npix)*DF_L
+  defects%apbs(i)%ypos = Vy * 0.5 * float(DF_npiy)*DF_L
+  defects%apbs(i)%zpos = Vz * foil%z0         ! vertical fractional location in interval [-1,1]
+  defects%apbs(i)%radius = Vrad               ! radius in nanometers
+  defects%apbs(i)%w = w   
   tmp = (/ Rx, Ry, Rz /)
-  call TransSpace(tmp,tmp2,'d','c') 
-  apbs(i)%Rdisp = tmp2 
+  call TransSpace(cell,tmp,tmp2,'d','c') 
+  defects%apbs(i)%Rdisp = tmp2 
 
-  tmp = quat_rotate_vector( foil%a_fc, dble((/ apbs(i)%xpos, apbs(i)%ypos, apbs(i)%zpos /)) )  
-  apbs(i)%xpos = tmp(1)
-  apbs(i)%ypos = tmp(2)
-  apbs(i)%zpos = tmp(3)
-  write (*,*) apbs(i)
+  tmp = quat_rotate_vector( foil%a_fc, dble((/ defects%apbs(i)%xpos, defects%apbs(i)%ypos, defects%apbs(i)%zpos /)) )  
+  defects%apbs(i)%xpos = tmp(1)
+  defects%apbs(i)%ypos = tmp(2)
+  defects%apbs(i)%zpos = tmp(3)
 end do
 
 ! close datafile

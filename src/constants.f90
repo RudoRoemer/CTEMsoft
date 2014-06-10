@@ -145,4 +145,45 @@ real(kind=sgl),parameter	:: ATOM_weights(98) = (/1.00794, 4.002602, 6.941, 9.012
 							231.03588, 238.02891, 237.0, 244.0, 243.0, &
 							247.0, 251.0, 252.0 /)
 
+
+! these are a bunch of constants used for Lambert and related projections; they are all in double precision
+type LambertParametersType
+	real(kind=dbl)		:: Pi=3.141592653589793D0    	!  pi
+	real(kind=dbl)		:: iPi=0.318309886183791D0    	!  1/pi
+	real(kind=dbl)		:: sPi=1.772453850905516D0	!  sqrt(pi)
+	real(kind=dbl)		:: sPio2=1.253314137315500D0	!  sqrt(pi/2)
+	real(kind=dbl)		:: sPi2=0.886226925452758D0	!  sqrt(pi)/2
+	real(kind=dbl)		:: srt=0.866025403784439D0    	!  sqrt(3)/2
+	real(kind=dbl)		:: isrt=0.577350269189626D0    !  1/sqrt(3)
+	real(kind=dbl)		:: alpha=1.346773687088598D0   !  sqrt(pi)/3^(1/4)
+	real(kind=dbl)		:: rtt=1.732050807568877D0  	!  sqrt(3)
+	real(kind=dbl)		:: prea=0.525037567904332D0    !  3^(1/4)/sqrt(2pi)
+	real(kind=dbl)		:: preb=1.050075135808664D0   	!  3^(1/4)sqrt(2/pi)
+	real(kind=dbl)		:: prec=0.906899682117109D0    !  pi/2sqrt(3)
+	real(kind=dbl)		:: pred=2.094395102393195D0   	!  2pi/3
+	real(kind=dbl)		:: pree=0.759835685651593D0   	!  3^(-1/4)
+	real(kind=dbl)		:: pref=1.381976597885342D0	!  sqrt(6/pi)
+! the following constants are used for the cube to quaternion hemisphere mapping
+	real(kind=dbl)		:: a=1.925749019958253D0	! pi^(5/6)/6^(1/6)
+	real(kind=dbl)		:: ap=2.145029397111025D0	! pi^(2/3)
+	real(kind=dbl)		:: sc=0.897772786961286D0	! a/ap
+	real(kind=dbl)		:: beta=0.962874509979126D0	! pi^(5/6)/6^(1/6)/2
+	real(kind=dbl)		:: R1=1.330670039491469D0	! (3pi/4)^(1/3)
+	real(kind=dbl)		:: r2=1.414213562373095D0	! sqrt(2)
+	real(kind=dbl)		:: r22=0.707106781186547D0	! 1/sqrt(2)
+	real(kind=dbl)		:: pi12=0.261799387799149D0	! pi/12
+	real(kind=dbl)		:: pi8=0.392699081698724D0	! pi/8
+	real(kind=dbl)		:: prek=1.643456402972504D0	! R1 2^(1/4)/beta
+	real(kind=dbl)		:: r24=4.898979485566356D0	! sqrt(24)
+        real(kind=dbl)	        :: rvmax2=13131225398.930372238D0      ! square of max rodrigues vector length  
+	real(kind=dbl)		:: tfit(7)=(/ -0.5000096149170321D0, -0.02486606148871731D0, &
+                                             -0.004549381779362819D0, 0.0005118668366387526D0, &
+                                             -0.0016500827333575548D0, 0.0007593352203388718D0, &
+                                             -0.0002040422502566876D0 /)	! fit parameters
+	real(kind=dbl)              :: BP(6)= (/ 0.D0, 1.D0, 0.577350269189626D0, 0.414213562373095D0, 0.D0,  &
+                                              0.267949192431123D0 /)       ! used for Fundamental Zone determination
+end type LambertParametersType
+
+type(LambertParametersType)        :: LPs
+
 end module

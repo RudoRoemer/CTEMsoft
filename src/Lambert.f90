@@ -60,48 +60,14 @@
 module Lambert
 
 use local
+use constants
 use quaternions
 
 IMPLICIT NONE
 
-! these are a bunch of constants used for the projections; they are all in double precision
-type LambertParameters
-	real(kind=dbl)		:: Pi    	!  pi
-	real(kind=dbl)		:: iPi    	!  1/pi
-	real(kind=dbl)		:: sPi		!  sqrt(pi)
-	real(kind=dbl)		:: sPio2	!  sqrt(pi/2)
-	real(kind=dbl)		:: sPi2		!  sqrt(pi)/2
-	real(kind=dbl)		:: srt    	!  sqrt(3)/2
-	real(kind=dbl)		:: isrt    	!  1/sqrt(3)
-	real(kind=dbl)		:: alpha    	!  sqrt(pi)/3^(1/4)
-	real(kind=dbl)		:: rtt  	!  sqrt(3)
-	real(kind=dbl)		:: prea    	!  3^(1/4)/sqrt(2pi)
-	real(kind=dbl)		:: preb   	!  3^(1/4)sqrt(2/pi)
-	real(kind=dbl)		:: prec    	!  pi/2sqrt(3)
-	real(kind=dbl)		:: pred   	!  2pi/3
-	real(kind=dbl)		:: pree   	!  3^(-1/4)
-	real(kind=dbl)		:: pref		!  sqrt(6/pi)
-! the following constants are used for the cube to quaternion hemisphere mapping
-	real(kind=dbl)		:: a		! pi^(5/6)/6^(1/6)
-	real(kind=dbl)		:: ap		! pi^(2/3)
-	real(kind=dbl)		:: sc		! a/ap
-	real(kind=dbl)		:: beta		! pi^(5/6)/6^(1/6)/2
-	real(kind=dbl)		:: R1		! (3pi/4)^(1/3)
-	real(kind=dbl)		:: r2		! sqrt(2)
-	real(kind=dbl)		:: pi12		! pi/12
-	real(kind=dbl)		:: prek		! R1 2^(1/4)/beta
-	real(kind=dbl)		:: r24		! sqrt(24)
-	real(kind=dbl)		:: tfit(7)	! fit parameters
-end type LambertParameters
-
-type(LambertParameters)	:: LPs
-
 !------------
 ! public functions and subroutines
 !------------
-
-! this routine should be called to init all the Lambert parameters
-public::InitLambertParameters
 
 ! mappings from 2D square grid to the Northern hemisphere of a 2D sphere
 public :: LambertSquareToSphere
@@ -210,61 +176,6 @@ interface LambertInverse
 end interface
 
 contains
-
-!--------------------------------------------------------------------------
-!
-! SUBROUTINE: InitLambertParameters
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief initialize the various constants used for Lambert projections
-!
-!> @note We could define these parameters explicitly, but this way they are
-!> computed according to machine precision.
-!
-!> @date 7/10/13   MDG 1.0 original
-!--------------------------------------------------------------------------
-subroutine InitLambertParameters
-
-IMPLICIT NONE
-
-real(kind=dbl)		:: dpi
-
-dpi = 4.D0*datan(1.D0)
-
-LPs%Pi = dpi
-LPs%iPi = 1.D0/dpi
-LPs%sPi = dsqrt(dpi)
-LPs%sPio2 = dsqrt(dpi*0.5D0)
-LPs%sPi2 = LPs%sPi*0.5D0
-LPs%srt = dsqrt(3.D0)/2.D0
-LPs%isrt = 1.D0/dsqrt(3.D0)
-LPs%alpha = dsqrt(dpi)/3.D0**(0.25D0)
-LPs%rtt = dsqrt(3.D0)
-LPs%prea = 3.D0**(0.25D0)/dsqrt(2.D0*dpi)
-LPs%preb = 3.D0**(0.25D0)*dsqrt(2.D0/dpi)
-LPs%prec = dpi*0.5D0/dsqrt(3.D0)
-LPs%pred = 2.D0*dpi/3.D0
-LPs%pree = 3.D0**(-0.25D0)
-LPs%pref = dsqrt(6.D0/dpi)
-
-LPs%a = dpi**(5.D0/6.D0)/6.D0**(1.D0/6.D0)
-LPs%ap = dpi**(2.D0/3.D0)
-LPs%sc = LPs%a/LPs%ap
-LPs%beta = 0.5D0*LPs%a
-LPs%R1 = (3.D0*dpi/4.D0)**(1.D0/3.D0)
-LPs%r2 = dsqrt(2.D0)
-LPs%pi12 = dpi/12.D0
-LPs%prek =  LPs%R1*2.D0**(0.25D0)/LPs%beta
-LPs%r24 = dsqrt(24.D0)
-
-! fit parameters determined with Mathematica
-LPs%tfit = (/ -0.5000096149170321D0, -0.02486606148871731D0, &
-              -0.004549381779362819D0, 0.0005118668366387526D0, &
-              -0.0016500827333575548D0, 0.0007593352203388718D0, &
-              -0.0002040422502566876D0 /)
-
-end subroutine InitLambertParameters
 
 !--------------------------------------------------------------------------
 !

@@ -51,16 +51,18 @@ contains
 !
 !> @brief perform all steps to initialize a unit cell type variable
 !
+!> @param cell unit cell pointer
 !> @param xtalname file name for crystal structure
 !> @param dmin smallest d-spacing to consider
 !> @param voltage accelerating voltage (needed to compute relativistic scattering factors)
 !
-!> @date 01/10/14 MDG original
+!> @date 01/10/14 MDG 1.0 original
+!> @date 06/10/14 MDG 2.0 rewrite without global variables
 !--------------------------------------------------------------------------
-subroutine Initialize_Cell(xtalname, dmin, voltage, verbose)
+subroutine Initialize_Cell(cell,Dyn,xtalname, dmin, voltage, verbose)
 
 use local
-use crystalvars
+use typedefs
 use crystal
 use symmetry
 use files
@@ -68,10 +70,11 @@ use io
 use error
 use gvectors
 use diffraction
-use dynamical
 
 IMPLICIT NONE
 
+type(unitcell),pointer	                    :: cell
+type(DynType),INTENT(INOUT)                :: Dyn
 character(fnlen),INTENT(IN)                :: xtalname
 real(kind=sgl),INTENT(IN)                  :: dmin
 real(kind=sgl),INTENT(IN)                  :: voltage
@@ -79,6 +82,8 @@ logical,INTENT(IN),OPTIONAL	             :: verbose
 integer(kind=irg)                          :: istat, io_int(3), skip
 integer(kind=irg)	                    :: imh, imk, iml, gg(3), ix, iy, iz
 real(kind=sgl)                             :: dhkl, io_real(3), ddt
+logical                                    :: loadingfile
+type(gnode)                                :: rlp
 
 
 ! make sure the cell variable exists
@@ -88,33 +93,34 @@ real(kind=sgl)                             :: dhkl, io_real(3), ddt
 ! end if
 
 ! clear the cell variable (set everything to zero)
- call ResetCell
+ call ResetCell(cell)
 
 ! load the crystal structure file, which also computes all the important 
 ! matrices as well as all the symmetry arrays
  cell%SG%SYM_reduce=.TRUE.
- call CrystalData(xtalname)
+ loadingfile = .FALSE.
+ call CrystalData(cell,loadingfile,xtalname)
 
  skip = 3        ! always use Weickenmeier&Kohl scattering coefficients, including absorptive form factors
- call CalcWaveLength(dble(voltage),skip)
+ call CalcWaveLength(cell,dble(voltage),skip)
 
 ! compute the range of reflections for the lookup table and allocate the table
 ! The master list is easily created by brute force
  imh = 1
  do 
-   dhkl = 1.0/CalcLength(  (/float(imh) ,0.0_sgl,0.0_sgl/), 'r')
+   dhkl = 1.0/CalcLength(cell,  (/float(imh) ,0.0_sgl,0.0_sgl/), 'r')
    if (dhkl.lt.dmin) EXIT
    imh = imh + 1
  end do
  imk = 1
  do 
-   dhkl = 1.0/CalcLength( (/0.0_sgl,float(imk),0.0_sgl/), 'r')
+   dhkl = 1.0/CalcLength(cell, (/0.0_sgl,float(imk),0.0_sgl/), 'r')
    if (dhkl.lt.dmin) EXIT
    imk = imk + 1
  end do
  iml = 1
  do 
-   dhkl = 1.0/CalcLength( (/0.0_sgl,0.0_sgl,float(iml)/), 'r')
+   dhkl = 1.0/CalcLength(cell, (/0.0_sgl,0.0_sgl,float(iml)/), 'r')
    if (dhkl.lt.dmin) EXIT
    iml = iml + 1
  end do
@@ -143,8 +149,8 @@ real(kind=sgl)                             :: dhkl, io_real(3), ddt
 
 ! first, we deal with the transmitted beam
  gg = (/ 0,0,0 /)
- call CalcUcg(gg)   
- DynUpz = rlp%Vpmod         ! U'0 normal absorption parameter 
+ call CalcUcg(cell,rlp,gg)   
+ Dyn%Upz = rlp%Vpmod         ! U'0 normal absorption parameter 
  if (present(verbose)) then
    io_real(1) = rlp%xgp
    call WriteValue(' Normal absorption length [nm] = ', io_real, 1)
@@ -154,8 +160,7 @@ real(kind=sgl)                             :: dhkl, io_real(3), ddt
  cell%LUT(0,0,0) = rlp%Ucg
 
  if (present(verbose)) then
-  mess = 'Generating Fourier coefficient lookup table ... '
-  call Message("(/A,$)")
+  call Message('Generating Fourier coefficient lookup table ... ', frm = "(/A,$)")
  end if
  
 ! now do the same for the other allowed reflections
@@ -165,9 +170,9 @@ ixl: do ix=-2*imh,2*imh
 iyl:  do iy=-2*imk,2*imk
 izl:   do iz=-2*iml,2*iml
         gg = (/ ix, iy, iz /)
-        if (IsGAllowed(gg)) then  ! is this reflection allowed by lattice centering ?
+        if (IsGAllowed(cell,gg)) then  ! is this reflection allowed by lattice centering ?
 ! add the reflection to the look up table
- 	   call CalcUcg( gg )
+ 	   call CalcUcg(cell,rlp,gg )
            cell%LUT(ix, iy, iz) = rlp%Ucg
 ! flag this reflection as a double diffraction candidate if cabs(Ucg)<ddt threshold
            if (cabs(rlp%Ucg).le.ddt) then 
@@ -179,12 +184,11 @@ izl:   do iz=-2*iml,2*iml
     end do ixl
 
   if (present(verbose)) then
-   mess = 'Done'
-   call Message("(A/)")
+   call Message('Done', frm = "(A/)")
   end if
   
 ! generate all atom positions
- call CalcPositions('v')
+ call CalcPositions(cell,'v')
 
 ! that's it
 end subroutine Initialize_Cell
@@ -199,6 +203,9 @@ end subroutine Initialize_Cell
 !
 !> @brief initialize the potential reflection list for a given wave vector
 !
+!> @param cell unit cell pointer
+!> @param BetheParameter Bethe potential structure
+!> @param Dyn Dynamical interactions structure
 !> @param k zone axis direction cosines in direct Bravais lattice
 !> @param dmin smallest lattice d-spacing to consider
 !> @param verbose (optional) used for debugging purposes mostly
@@ -206,19 +213,22 @@ end subroutine Initialize_Cell
 !> @date 01/10/14 MDG 1.0 original, based on old Compute_ReflectionList
 !> @date 01/13/14 MDG 1.1 update for new cell type definition and new Bethe potential criterion
 !--------------------------------------------------------------------------
-subroutine Initialize_ReflectionList(k,dmin,verbose)
+subroutine Initialize_ReflectionList(cell, BetheParameter, Dyn, k, dmin, verbose)
 
 use local
+use typedefs
 use io
 use crystal
 use constants
-use dynamical
 use gvectors
 use diffraction
 use symmetry
 
 IMPLICIT NONE
 
+type(unitcell),pointer	                       :: cell
+type(BetheParameterType),INTENT(INOUT)        :: BetheParameter
+type(DynType),INTENT(INOUT)                   :: Dyn
 real(kind=sgl),INTENT(IN)			:: k(3)
 real(kind=sgl),INTENT(IN)                     :: dmin
 logical,INTENT(IN),OPTIONAL	               :: verbose
@@ -228,7 +238,7 @@ integer(kind=irg)				:: imh, imk, iml, gg(3), ix, iy, iz, i, minholz, RHOLZ, im,
 real(kind=sgl)					:: dhkl, io_real(9), H, g3(3), g3n(3), FNg(3), ddt, s, kr(3), exer, &
                                                 rBethe_i, rBethe_d, sgp, r_g, la, dval
 integer(kind=irg)				:: io_int(3), gshort(3), gp(3)
-
+type(reflisttype),pointer	                :: rltail
 
 ! set the truncation parameters 
   rBethe_i = BetheParameter%c3          ! if larger than this value, we ignore the reflection completely
@@ -243,13 +253,13 @@ integer(kind=irg)				:: io_int(3), gshort(3), gp(3)
   
 ! get rid of the existing linked list, if any 
   if (associated(cell%reflist)) then
-    call Delete_gvectorlist()
+    call Delete_gvectorlist(cell)
     nullify(cell%reflist)
   end if 
   
 ! transmitted beam has excitation error zero
   gg = (/ 0,0,0 /)
-  call AddReflection( gg )   ! this guarantees that 000 is always the first reflection
+  call AddReflection(rltail, cell, gg )   ! this guarantees that 000 is always the first reflection
   rltail%sg = 0.0
 
 ! now compute |sg|/|U_g|/lambda for the other allowed reflections; if this parameter is less than
@@ -259,20 +269,20 @@ iyl:  do iy=-imk,imk
 izl:   do iz=-iml,iml
         if ((abs(ix)+abs(iy)+abs(iz)).ne.0) then  ! avoid double counting the origin
          gg = (/ ix, iy, iz /)
-         dval = 1.0/CalcLength( float(gg), 'r' )
+         dval = 1.0/CalcLength(cell, float(gg), 'r' )
 
-         if ((IsGAllowed(gg)).and.(dval.gt.dmin)) then ! allowed by the lattice centering, if any
-          sgp = Calcsg(float(gg),k,DynFN)
+         if ((IsGAllowed(cell,gg)).and.(dval.gt.dmin)) then ! allowed by the lattice centering, if any
+          sgp = Calcsg(cell,float(gg),k,Dyn%FN)
           if (cell%dbdiff(ix, iy, iz)) then ! potential double diffraction reflection
             if (abs(sgp).le.rBethe_d) then 
-              call AddReflection( gg )
+              call AddReflection(rltail, cell, gg )
               rltail%sg = sgp
               rltail%dbdiff = .TRUE.
             end if
           else
             r_g = la * abs(sgp)/cabs(cell%LUT(ix, iy, iz))
             if (r_g.le.rBethe_i) then 
-              call AddReflection( gg )
+              call AddReflection(rltail, cell, gg )
               rltail%sg = sgp
               rltail%dbdiff = .FALSE.
             end if

@@ -375,6 +375,7 @@ end subroutine
 !>
 !> @param defects defect structure
 !> @param cell unit cell pointer
+!> @param foil foil structure
 !> @param inum
 !> @param dinfo
 !> @param DF_L column width
@@ -384,9 +385,10 @@ end subroutine
 !> @date  11/27/01 MDG 2.1 added kind support
 !> @date  06/04/13 MDG 3.0 rewrite
 !> @date  10/30/13 MDG 3.1 debug of all rotation parts
-!> @date  06.09/14 MDG 4.0 added cell, defects arguments
+!> @date  06/09/14 MDG 4.0 added cell, defects arguments
+!> @date  06/10/14 MDG 4.1 added foil as argument
 !--------------------------------------------------------------------------
-subroutine makedislocation(defects,cell,inum,dinfo,DF_L)
+subroutine makedislocation(defects,cell,foil,inum,dinfo,DF_L)
 
 use math
 use constants
@@ -400,6 +402,7 @@ IMPLICIT NONE
 
 type(unitcell),pointer	                :: cell
 type(defecttype),INTENT(INOUT)         :: defects
+type(foiltype),INTENT(INOUT)           :: foil
 integer(kind=irg),INTENT(IN)		:: inum
 integer(kind=irg),INTENT(IN)		:: dinfo
 real(kind=sgl),INTENT(IN)		:: DF_L
@@ -689,8 +692,9 @@ end subroutine makedislocation
 !
 !> @brief  read dislocation namelist files
 !
+!> @param defects defect structure
 !> @param cell unit cell pointer
-!> @param DL dislocation structure
+!> @param foil foil structure
 !> @param dislname name of dislocation namelist file (string array)
 !> @param numdisl number of dislocations
 !> @param numsf number of stacking faults
@@ -706,7 +710,7 @@ end subroutine makedislocation
 !> @date   06/04/13 MDG 3.0 rewrite
 !> @date   06/09/14 MDG 4.0 added cell, DL argument
 !--------------------------------------------------------------------------
-subroutine read_dislocation_data(defects,cell,DF_npix,DF_npiy,DF_gf,L,dinfo)
+subroutine read_dislocation_data(defects,cell,foil,DF_npix,DF_npiy,DF_gf,L,dinfo)
 
 use io
 use files
@@ -715,6 +719,7 @@ IMPLICIT NONE
 
 type(defecttype),INTENT(INOUT)         :: defects
 type(unitcell),pointer	                :: cell
+type(foiltype),INTENT(INOUT)           :: foil
 integer(kind=irg),INTENT(IN)		:: DF_npix, DF_npiy, dinfo
 real(kind=sgl),INTENT(IN)		:: DF_gf(3), L
 
@@ -756,7 +761,7 @@ end if
     defects%DL(i)%zfrac = zfrac ! - 0.5
      
 ! and pre-compute the dislocation displacement field parameters
-       call makedislocation(defects,cell,i,dinfo, L)
+       call makedislocation(defects,cell,foil,i,dinfo, L)
   end do
   
 end subroutine read_dislocation_data

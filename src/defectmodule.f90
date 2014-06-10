@@ -73,7 +73,8 @@ contains
 !> @details Note that the end result MUST be expressed in the cartesian reference frame !
 !
 !> @param defects defect structure
-!> $param cell unit cell pointer
+!> @param cell unit cell pointer
+!> @param foil foil structure
 !> @param i integer x coordinate 
 !> @param j integer y coordinate
 !
@@ -96,8 +97,9 @@ contains
 !> @date  10/30/13 MDG 3.1 debug of coordinate rotations
 !> @date  11/13/13 MDG 3.2 finally, the bug has been found!  
 !> @date  06/09/14 MDG 4.0 introduced defects argument and simplified routine
+!> @date  06/10/14 MDG 4.1 added foil argument
 !--------------------------------------------------------------------------
-subroutine CalcR(defects,cell,i,j)
+subroutine CalcR(defects,cell,foil,i,j)
 
 use local
 use constants
@@ -115,6 +117,7 @@ IMPLICIT NONE
 
 type(defecttype),INTENT(INOUT)        :: defects
 type(unitcell),pointer	               :: cell
+type(foiltype),INTENT(INOUT)          :: foil
 integer(kind=irg),INTENT(IN)    	:: i,j
 
 integer(kind=irg)			:: k, islice, ii
