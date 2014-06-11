@@ -1,19 +1,10 @@
 #include <iostream>
 #include <string>
 #include <sstream>
-#include "BridgeTest.h"
 #include "Data.h"
 
-double* g_out = NULL;
 
-void CppProg(int FZcnt, double* &outp)
-{
 
-  outp = static_cast<double*>(malloc(FZcnt * 3 * sizeof(double)));
-  ::memset(outp, 0xAB, FZcnt * 3 * sizeof(double));
-  printf("outp: %p \n", outp);
-  g_out = outp;
-}
 //
 // void StrProg(const char* str)
 // {
@@ -33,24 +24,9 @@ int main(int argc, char* argv[])
 	std::string mystr;
 	
 	
-	Data pgnum1; 
-	
-	pgnum1.setinputNumber(50); 
-	
-	std::cout << pgnum1.getinputNumber() << std::endl; 
-	
-	
-	
 	int pgnum=0;
  	int nsteps=0;
- 	double* outp = NULL;
  	
- 	thecstruct *mycstruct = new thecstruct; 
-	mycstruct->i = 11;
-	mycstruct->j = 12;
-	mycstruct->s = 2;
-	mycstruct->m = 1.5;
-	mycstruct->d = 2.5;
 
   	std::cout << "Enter the point group number :  ";
   	std::cin >> pgnum;
@@ -59,14 +35,20 @@ int main(int argc, char* argv[])
   	std::cout << "Enter the number of intervals along the cube semi-edge length : ";
   	std::cin >> nsteps;
 
+	Data generator; 
 
- 	sampler_(&pgnum, &nsteps, mycstruct, &CppProg);
+	
+	generator.setPointGroup(pgnum);
+	generator.setNumSteps(nsteps);
+	generator.execute();
 
+	double* d = generator.getDataPointer();
+	
 
  	std::cout << "Done" << std::endl;
- 	std::cout << *(g_out+0) << std::endl;
-	std::cout << *(g_out+1) << std::endl;
-	std::cout << *(g_out+8069) << std::endl;
+ 	std::cout << *(d+0) << std::endl;
+	std::cout << *(d+1) << std::endl;
+	std::cout << *(d+8069) << std::endl;
 
  	//std::cout << "Test" << std::endl;
 //  	nmltypefile nmlfile;
