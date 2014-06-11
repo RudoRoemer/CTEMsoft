@@ -12,6 +12,7 @@ INCLUDE_DIRECTORIES( ${Apps_BINARY_DIR} )
 
 set(BridgeTest_SRCS
 	${Apps_SOURCE_DIR}/BridgeTest.cpp
+	${Apps_SOURCE_DIR}/Data.cpp
 )
 
 

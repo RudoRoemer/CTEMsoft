@@ -2,7 +2,7 @@
 #include <string>
 #include <sstream>
 #include "BridgeTest.h"
-
+#include "Data.h"
 
 double* g_out = NULL;
 
@@ -31,6 +31,16 @@ int main(int argc, char* argv[])
 {
 	std::cout << "Fortran to C++ Bridge..." << std::endl;
 	std::string mystr;
+	
+	
+	Data pgnum1; 
+	
+	pgnum1.setinputNumber(50); 
+	
+	std::cout << pgnum1.getinputNumber() << std::endl; 
+	
+	
+	
 	int pgnum=0;
  	int nsteps=0;
  	double* outp = NULL;
