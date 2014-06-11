@@ -106,5 +106,7 @@ CMakeLists.txt.user
 /x64/
 /i386/
 /qtcreator/
-
+/sublime/
 /Debug
+.floo
+
