@@ -1895,7 +1895,7 @@ real(kind=sgl),INTENT(IN)    			:: CRad 		!< circle radius
 integer(kind=irg),INTENT(INOUT)		:: iview(3)		!< zone axis indices
 character(1),INTENT(IN)	      		:: sp			!< drawing space
 
-character(10)     :: instr
+character(12)     :: instr
 character(17)     :: str
 
  call PS_newpage(PS,.FALSE.,'Stereographic Projection')

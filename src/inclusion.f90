@@ -88,7 +88,7 @@ real(kind=sgl)      :: Vx,Vy,Vz,Vrad,C,tmp(3)
 ! open the inclusion data file
 call Message('Opening '//trim(defects%incname), frm = "(A)")
 open(unit=dataunit,file=trim(defects%incname),form='formatted')
-read(unit=dataunit,*) defects%numinc
+read(unit=dataunit) defects%numinc
 
 allocate(defects%inclusions(defects%numinc))
 
@@ -100,7 +100,7 @@ end if
 
 ! read each subsequent line 
 do i=1,defects%numinc
-  read(unit=dataunit,*) Vx,Vy,Vz,Vrad,C
+  read(unit=dataunit) Vx,Vy,Vz,Vrad,C
   defects%inclusions(i)%xpos = Vx * 0.5 * float(DF_npix)*DF_L
   defects%inclusions(i)%ypos = Vy * 0.5 * float(DF_npiy)*DF_L
   defects%inclusions(i)%zpos = Vz * foil%z0         ! vertical fractional location in interval [-1,1]

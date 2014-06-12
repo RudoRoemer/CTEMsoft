@@ -760,7 +760,7 @@ real(kind=sgl)      :: alfa,v1,v2,w1,w2,w3,n(3),e(3),l(3),h(3),pointx,pointy,xr,
  if (dmode.eq.'export') then
   close (unit=psunit,status='keep')
  else
-  call initframe(AX,'stop',.FALSE.)
+  call initframe(AX,'stop ',.FALSE.)
   call PS_closefile(PS)
   call Message('Use a postscript viewing program to display the file '//PS%psname, frm = ("A"))
  end if
@@ -825,6 +825,7 @@ character(fnlen),INTENT(IN)          :: axname
 real(kind=sgl)          :: inten(1)
 logical                 :: more
 character(1)            :: selection 
+character(fnlen)        :: dummyname
     
  AXO%countx=nx
  AXO%county=ny
@@ -844,7 +845,9 @@ character(1)            :: selection
    case('6'); call setmenu(AXO,'change_xmod')
    case('7'); call setmenu(AXO,'change_ymod')
    case('8'); call setmenu(AXO,'change_vscale')
-   case('d','D'); call drawing(AXO,PS,AX,progdesc,imanum,zz,inten,nx,ny,'online',' ')
+   case('d','D')
+        dummyname = ''
+        call drawing(AXO,PS,AX,progdesc,imanum,zz,inten,nx,ny,'online',dummyname)
    case('e','E'); call drawing(AXO,PS,AX,progdesc,imanum,zz,inten,nx,ny,'export',axname)
    case('q','Q'); more = .FALSE.
    case default;
@@ -1602,7 +1605,7 @@ character(*)               :: title,xtitle,ytitle
   ymin=power(nint(ymin))
   ymax=power(nint(ymax))
  end if
- call initframe(AX,'stop',.FALSE.)
+ call initframe(AX,'stop ',.FALSE.)
 end subroutine
 
 end module

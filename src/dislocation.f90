@@ -213,7 +213,7 @@ real(kind=dbl)              			:: dxold,errr,abx,cdx
           if (abs(dx).le.eps*abs(x)) return
 	end if
      end do
-     pause 'too many iterations'
+     STOP 'too many iterations'
      return
 end subroutine laguer
 
@@ -491,8 +491,8 @@ defects%DL(inum)%a_di = quat_mult( defects%DL(inum)%a_dc, conjg(foil%a_ic) )
 defects%DL(inum)%a_id = conjg(defects%DL(inum)%a_di)
 
 if (dinfo.eq.1) then
-  call print_orientation(init_orientation(defects%DL(inum)%a_di,'qu'),'om','a_di: ')
-  call print_orientation(init_orientation(defects%DL(inum)%a_id,'qu'),'om','a_id: ')
+  call print_orientation_d(init_orientation_d(defects%DL(inum)%a_di,'qu'),'om','a_di:     ')
+  call print_orientation_d(init_orientation_d(defects%DL(inum)%a_id,'qu'),'om','a_id:     ')
 end if
 
 ! finally, get the foil to defect transformation (used in defect module)
@@ -641,11 +641,11 @@ do i=1,3
   end do
  end do
 end do
-if (dinfo.eq.1)  call PrintMatrixcd('Lia',Lia)
+if (dinfo.eq.1)  call PrintMatrixcd('Lia ',Lia)
 
 ! and invert it
 call cInvert(Lia,Mai)
-if (dinfo.eq.1)  call PrintMatrixcd('Mai',Mai)
+if (dinfo.eq.1)  call PrintMatrixcd('Mai ',Mai)
 
 ! compute Bij ( real matrix )
 Bij = 0.D0
@@ -656,11 +656,11 @@ do i=1,3
   end do
  end do
 end do
-if (dinfo.eq.1)  call PrintMatrixd('Bij',Bij)
+if (dinfo.eq.1)  call PrintMatrixd('Bij ',Bij)
 
 ! and invert to get Hij
 call mInvert(Bij,Hij,.FALSE.)
-if (dinfo.eq.1) call PrintMatrixd('Hij',Hij)
+if (dinfo.eq.1) call PrintMatrixd('Hij ',Hij)
 
 ! compute matrix (this is what actually gets to be used for the 
 ! displacement field); needs to know the Burgers vector.
