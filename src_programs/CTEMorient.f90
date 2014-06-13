@@ -37,16 +37,16 @@
 !> @brief stereographic projection of a crystal orientation relation
 !
 ! 
-!> @date   10/13/98 MDG 1.0 original
-!> @date    5/22/01 MDG 2.0 f90
-!> @date  4/16/13 MDG 3.0 rewrite 
+!> @date 10/13/98 MDG 1.0 original
+!> @date 05/22/01 MDG 2.0 f90
+!> @date 04/16/13 MDG 3.0 rewrite 
+!> @date 06/13/14 MDG 4.0 rewrite without global variables
 !--------------------------------------------------------------------------
 program CTEMorient
 
 use local
-use crystalvars
+use typedefs
 use crystal
-use symmetryvars
 use graphics
 use files
 use postscript
@@ -56,20 +56,47 @@ use math
 IMPLICIT NONE
 
 character(1)      		:: sp
-logical           			:: nn,topbot
-type(unitcell)    		:: cellA, cellB
+logical           		:: nn,topbot
 type(orientation) 		:: orel
 real(kind=sgl)    		:: rr(3),gg(3),g(3),r(3),M(3,3),negthresh,p(3),Ep(3,3),E(3,3),TT(3,3), io_real(3), &
-					   CX, CY, CRad, xst, yst
+				   CX, CY, CRad, xst, yst
 real(kind=dbl)    		:: dE(3,3),dgg(3)
-integer(kind=irg) 		:: h,k,l,cr,hkl(3),iview(3),inm, i, ih, ik, il
+integer(kind=irg) 		:: h,k,l,cr,hkl(3),iview(3),inm, i, ih, ik, il, imanum
+character(fnlen)		:: progname, progdesc
+type(unitcell),pointer		:: cellA, cellB
+type(postscript_type)		:: PS
+logical				:: loadingfile
+
+interface
+	subroutine LocalDrawFrame(PS,CX,CY,CRad,iview,sp,cellA,cellB,orel)
+
+	use local
+	use typedefs
+	use io
+	use postscript
+
+
+	type(postscript_type),INTENT(INOUT)	:: PS
+	real(kind=sgl),INTENT(IN)               :: CX, CY, CRad
+	integer(kind=irg),INTENT(INOUT)		:: iview(3)
+	character(1),INTENT(IN)		       	:: sp
+	type(unitcell),pointer       		:: cellA,cellB
+	type(orientation),INTENT(IN)  		:: orel
+
+	end subroutine LocalDrawFrame
+end interface
+
+
 
  progname = 'CTEMorient.f90'
  progdesc = 'Stereographic projection of orientation relation'
- call CTEMsoft
+ call CTEMsoft(progname, progdesc)
+
+ allocate(cellA, cellB)
 
  inm=2
- SG % SYM_reduce=.TRUE.
+ cellA % SG % SYM_reduce=.TRUE.
+ cellB % SG % SYM_reduce=.TRUE.
  topbot=.FALSE.
 
 ! 20cm radius projection circle, centered on page [inches]
@@ -79,49 +106,42 @@ integer(kind=irg) 		:: h,k,l,cr,hkl(3),iview(3),inm, i, ih, ik, il
  negthresh=-0.0001
 
 ! read crystal A information
- call CrystalData
-
-! store Crystal A matrices
- cellA = cell
+ loadingfile = .TRUE.
+ call CrystalData(cellA, loadingfile)
 
 ! read crystal B information
- call CrystalData
-
-! store Crystal B matrices 
- cellB = cell
+ call CrystalData(cellB, loadingfile)
 
 ! get orientation relation
  call GetOR(orel)
 
 ! compute E matrix  [page 74]
- cell = cellA
- call TransSpace(orel % gA,r,'r','d')
- call NormVec(r,'d')
- call NormVec(orel % tA,'d')
- call CalcCross(orel % tA,r,p,'d','d',0)
- call NormVec(p,'d')
+ call TransSpace(cellA,orel % gA,r,'r','d')
+ call NormVec(cellA,r,'d')
+ call NormVec(cellA,orel % tA,'d')
+ call CalcCross(cellA,orel % tA,r,p,'d','d',0)
+ call NormVec(cellA,p,'d')
  E(1,1:3)=r(1:3)
  E(2,1:3)=p(1:3)
  E(3,1:3)=orel % tA(1:3)
  call mInvert(dble(E),dE,.FALSE.)
  E = dE
- mess = 'Transformation matrix E'; call Message("(A)")
+ call Message('Transformation matrix E', frm = "(A)")
  do i=1,3
   io_real(1:3) = E(i,1:3)
   call WriteValue('', io_real, 3)
  end do
 
 ! compute E-prime matrix 
- cell = cellB
- call TransSpace(orel % gB,r,'r','d')
- call NormVec(r,'d')
- call NormVec(orel % tB,'d')
- call CalcCross(orel % tB,r,p,'d','d',0)
- call NormVec(p,'d')
+ call TransSpace(cellB,orel % gB,r,'r','d')
+ call NormVec(cellB,r,'d')
+ call NormVec(cellB,orel % tB,'d')
+ call CalcCross(cellB,orel % tB,r,p,'d','d',0)
+ call NormVec(cellB,p,'d')
  Ep(1,1:3)=r(1:3)
  Ep(2,1:3)=p(1:3)
  Ep(3,1:3)=orel % tB(1:3)
- mess ='Transformation matrix E-prime'; call Message("(A)")
+ call Message('Transformation matrix E-prime', frm = "(A)")
  do i=1,3
   io_real(1:3) = Ep(i,1:3)
   call WriteValue('', io_real, 3)
@@ -129,12 +149,12 @@ integer(kind=irg) 		:: h,k,l,cr,hkl(3),iview(3),inm, i, ih, ik, il
 
 ! and multiply both matrices to get transformation matrix M
  TT = matmul(E,Ep)
- mess = 'Transformation matrix for orientation relation'; call Message("(A)")
+ call Message('Transformation matrix for orientation relation', frm = "(A)")
  do i=1,3
   io_real(1:3) = TT(i,1:3)
   call WriteValue('', io_real, 3)
  end do
- mess = ' --- '; call Message("(A)")
+ call Message(' --- ', frm = "(A)")
  
 ! real space or reciprocal space
  call GetDrawingSpace(sp)
@@ -142,16 +162,17 @@ integer(kind=irg) 		:: h,k,l,cr,hkl(3),iview(3),inm, i, ih, ik, il
 ! and from here one it is the same as a regular stereographic projection
 ! except that there are two sets of points to be drawn.
 ! viewing direction
- call GetViewingDirection(iview)
+ call GetViewingDirection(cellA%hexset,iview)
 
 ! create transformation matrix
- call ProjectionMatrix(iview,M)
+ call ProjectionMatrix(cellA,iview,M)
 
 ! open PostScript file
- call PS_openfile
+ imanum = 1
+ call PS_openfile(PS, progdesc, imanum)
 
 ! write text and draw projection circle
- call DrawFrame(CX,CY,CRad,iview,sp,cellA,cellB,orel)
+ call LocalDrawFrame(PS,CX,CY,CRad,iview,sp,cellA,cellB,orel)
 
 ! loop over all planes or directions
  do h=-inm,inm
@@ -180,9 +201,8 @@ integer(kind=irg) 		:: h,k,l,cr,hkl(3),iview(3),inm, i, ih, ik, il
      il = hkl(3)
 
 ! crystal A
-     cell = cellA
-     call TransSpace(g,r,sp,'c')
-     call NormVec(r,'c')
+     call TransSpace(cellA,g,r,sp,'c')
+     call NormVec(cellA,r,'c')
 
 ! apply viewing tansformation
      rr = matmul(M,r)
@@ -194,19 +214,18 @@ integer(kind=irg) 		:: h,k,l,cr,hkl(3),iview(3),inm, i, ih, ik, il
      if (rr(3).gt.negthresh) then
       call PS_filledcircle(xst,yst,0.015/PS % psscale,0.0)
       nn = .TRUE.
-      call DumpIndices(sp,ih,ik,il,cr,xst,yst,nn)
+      call DumpIndices(PS,cellA%hexset,sp,ih,ik,il,cr,xst,yst,nn)
      else if (topbot) then
       call PS_circle(xst,yst,0.035/PS % psscale)
       nn = .FALSE.
-      call DumpIndices(sp,ih,ik,il,cr,xst,yst,nn)
+      call DumpIndices(PS, cellA%hexset,sp,ih,ik,il,cr,xst,yst,nn)
      end if
 
 ! crystal B
-     cell = cellB
-     call TransCoor(dble(g),dgg,dble(TT),sp,'on')
+     call TransCoor(cellB,dble(g),dgg,dble(TT),sp,'on')
      gg = sngl(dgg)
-     call TransSpace(gg,r,sp,'c')
-     call NormVec(r,'c')
+     call TransSpace(cellB,gg,r,sp,'c')
+     call NormVec(cellB,r,'c')
 
 ! apply viewing tansformation
      rr = matmul(M,r)
@@ -218,11 +237,11 @@ integer(kind=irg) 		:: h,k,l,cr,hkl(3),iview(3),inm, i, ih, ik, il
      if (rr(3).gt.negthresh) then
       call PS_filledsquare(xst,yst,0.035/PS % psscale,0.0)
       nn = .TRUE.
-      call DumpIndices(sp,ih,ik,il,cr,xst,yst,nn)
+      call DumpIndices(PS, cellB%hexset,sp,ih,ik,il,cr,xst,yst,nn)
      else if (topbot) then
       call PS_square(xst,yst,0.050/PS % psscale)
       nn = .FALSE.
-      call DumpIndices(sp,ih,ik,il,cr,xst,yst,nn)
+      call DumpIndices(PS, cellB%hexset,sp,ih,ik,il,cr,xst,yst,nn)
      end if
     end if
    end do 
@@ -230,51 +249,53 @@ integer(kind=irg) 		:: h,k,l,cr,hkl(3),iview(3),inm, i, ih, ik, il
  end do 
 
 ! close Postscript file
- call PS_closefile
+ call PS_closefile(PS)
 
 end program CTEMorient
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE: DrawFrame
+! SUBROUTINE: LocalDrawFrame
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief draw the page layout
 !
+!> @param PS Postscript structure
 !> @param CX x-center coordinate
 !> @param CY y-center coordinate
 !> @param CRad circle radius
 !> @param iview viewing direction indices
 !> @param sp drawing space
-!> @param cella unit cell structure A
-!> @param cellb unit cell structure B
+!> @param cellA unit cell structure A
+!> @param cellB unit cell structure B
 !> @param orel orientation relation
 ! 
 !> @date   10/13/98 MDG 1.0 original
 !> @date    5/22/01 MDG 2.0 f90
 !> @date  4/16/13 MDG 3.0 rewrite 
 !--------------------------------------------------------------------------
-subroutine DrawFrame(CX,CY,CRad,iview,sp,cella,cellb,orel)
+subroutine LocalDrawFrame(PS,CX,CY,CRad,iview,sp,cellA,cellB,orel)
 
 use local
+use typedefs
 use io
 use postscript
-use crystalvars
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)               	:: CX, CY, CRad
-integer(kind=irg),INTENT(INOUT)	:: iview(3)
+type(postscript_type),INTENT(INOUT)	:: PS
+real(kind=sgl),INTENT(IN)               :: CX, CY, CRad
+integer(kind=irg),INTENT(INOUT)		:: iview(3)
 character(1),INTENT(IN)		       	:: sp
-type(unitcell),INTENT(IN)    		:: cella,cellb
+type(unitcell),pointer       		:: cellA,cellB
 type(orientation),INTENT(IN)  		:: orel
 
-character(17)      				:: str
-character(12)      				:: instr
-integer(kind=irg)            			:: hkl(3)
+character(17)      			:: str
+character(12)      			:: instr
+integer(kind=irg)            		:: hkl(3)
 
- call PS_newpage(.FALSE.,'Stereographic Projection')
+ call PS_newpage(PS,.FALSE.,'Stereographic Projection')
  call PS_setlinewidth(0.016)
  call PS_circle(CX,CY,CRad)
  call PS_setlinewidth(0.004)
@@ -288,13 +309,13 @@ integer(kind=irg)            			:: hkl(3)
  call PS_setfont(PSfonts(2),0.12/PS % psscale)
  call PS_text(0.35,8.30,'Crystal A : '//cella % fname)
  call PS_filledcircle(0.0,8.30,0.015,0.0)
- call DumpIndices(sp,0,0,0,1,0.0,8.30,.TRUE.)
+ call DumpIndices(PS,cellA%hexset,sp,0,0,0,1,0.0,8.30,.TRUE.)
  call PS_setfont(PSfonts(2),0.12)
  call PS_text(0.35,8.10,'Crystal B : '//cellb % fname)
  call PS_filledsquare(0.0,8.10,0.035,0.0)
- call DumpIndices(sp,0,0,0,2,0.0,8.10,.TRUE.)
+ call DumpIndices(PS,cellB%hexset,sp,0,0,0,2,0.0,8.10,.TRUE.)
  call PS_setfont(PSfonts(2),0.12)
- call IndexString(instr,iview,'d')
+ call IndexString(cellA%hexset,instr,iview,'d')
  call PS_text(0.0,7.90,'Viewing Direction '//instr//' [A]')
 
  if (sp.eq.'d') then 
@@ -307,22 +328,22 @@ integer(kind=irg)            			:: hkl(3)
  call PS_text(CX,8.20,'Orientation Relation ')
  hkl(1:3)=int(orel % gA(1:3))
 
- call IndexString(instr,hkl,'r')
+ call IndexString(cellA%hexset,instr,hkl,'r')
  call PS_text(CX,8.00,'\(hkl\) : ')
  call PS_text(CX+0.4,8.00,'A-'//instr)
  hkl(1:3)=int(orel % gB(1:3))
 
- call IndexString(instr,hkl,'r')
+ call IndexString(cellB%hexset,instr,hkl,'r')
  call PS_text(CX+0.9,8.00,'|| B-'//instr)
 
 ! Space=.True.
  hkl(1:3)=int(orel % tA(1:3))
- call IndexString(instr,hkl,'d')
+ call IndexString(cellA%hexset,instr,hkl,'d')
  call PS_text(CX,7.80,'[uvw] : ')
  call PS_text(CX+0.4,7.80,'A-'//instr)
  hkl(1:3)=int(orel % tB(1:3))
- call IndexString(instr,hkl,'d')
+ call IndexString(cellB%hexset,instr,hkl,'d')
  call PS_text(CX+0.9,7.80,'|| B-'//instr)
  
-end subroutine DrawFrame
+end subroutine LocalDrawFrame
 

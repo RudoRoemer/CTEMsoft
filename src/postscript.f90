@@ -174,7 +174,7 @@ integer(kind=irg) 		        :: i			!< loop counter
    call Message('Opening temporary file for PostScript output', frm = "(A)")
  else
    loadingfile = .FALSE.
-   call SafeOpenFile('ps','formatted',PS%psname, loadingfile)
+   call SafeOpenFile('ps','formatted',PS%psname, loadingfile = loadingfile)
  end if
 
 ! write the preamble

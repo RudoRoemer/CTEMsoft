@@ -649,19 +649,19 @@ end type defecttype
 
 ! The parameters in gnode are computed by CalcUcg 
 type gnode
-  character(2)         	:: method   ! computation method (WK = Weickenmeier-Kohl, DT = Doyle-Turner/Smith-Burge, XR for XRD)
-  logical              	:: absorption ! is absorption included or not ?
-  integer(kind=irg) 		:: hkl(3)   ! Miller indices
-  real(kind=sgl)       	:: xg, &    ! extinction distance [nm]
-                         	   xgp, &   ! absorption length [nm]
-                          	   ar, &    ! aborption ratio
-                          	   g, &     ! length of reciprocal lattice vectors [nm^-1]
-                          	   Vmod,Vpmod, & ! modulus of Vg and Vgprime [V]
-                          	   Umod,Upmod, & ! modulus of Ug and Ugprime [nm^-2]
-                          	   Vphase,Vpphase ! phase factors of Vg and Vgprime [rad]
-  complex(kind=sgl)		:: Ucg, &   ! scaled potential Fourier coefficient [nm^-2]
-                          	   Vg, &    ! potential Fourier coefficient [V]
-                          	   qg       ! interaction parameter for Darwin-Howie-Whelan equations [nm^-1]
+  character(2)          :: method   ! computation method (WK = Weickenmeier-Kohl, DT = Doyle-Turner/Smith-Burge, XR for XRD)
+  logical               :: absorption ! is absorption included or not ?
+  integer(kind=irg)     :: hkl(3)   ! Miller indices
+  real(kind=sgl)        :: xg, &    ! extinction distance [nm]
+                           xgp, &   ! absorption length [nm]
+                           ar, &    ! aborption ratio
+                           g, &     ! length of reciprocal lattice vectors [nm^-1]
+                           Vmod,Vpmod, & ! modulus of Vg and Vgprime [V]
+                           Umod,Upmod, & ! modulus of Ug and Ugprime [nm^-2]
+                           Vphase,Vpphase ! phase factors of Vg and Vgprime [rad]
+  complex(kind=sgl)     :: Ucg, &   ! scaled potential Fourier coefficient [nm^-2]
+                           Vg, &    ! potential Fourier coefficient [V]
+                           qg       ! interaction parameter for Darwin-Howie-Whelan equations [nm^-1]
 end type gnode
 
 !--------------------------------------------------------------------------

@@ -36,57 +36,113 @@
 !
 !> @brief generate multiple pages with crystallographic information for a given structure
 ! 
-!> @date   12/11/98 MDG 1.0 original
-!> @date    5/22/01 MDG 2.0 f90
-!> @date  4/16/13 MDG 3.0 rewrite
+!> @date  12/11/98 MDG 1.0 original
+!> @date  05/22/01 MDG 2.0 f90
+!> @date  04/16/13 MDG 3.0 rewrite
+!> @date  06/14/14 MDG 4.0 removed all globals
 !--------------------------------------------------------------------------
 program CTEMxtalinfo
 
 use local
+use typedefs
 use io
-use crystalvars
 use crystal
 use files
-use symmetryvars
 use symmetry
 use postscript
 use diffraction
 
-logical          		:: topbot
-real(kind=sgl)		:: io_real(1)
+logical                 :: topbot, loadingfile
+real(kind=sgl)          :: io_real(1)
+integer(kind=irg)       :: imanum
+character(fnlen)        :: progname, progdesc
+type(unitcell),pointer  :: cell
+type(postscript_type)   :: PS
+type(gnode)             :: rlp
 
+interface
+        subroutine InfoPage(PS, cell)
+        
+        use local
+        use typedefs
+        use io
+        use constants
+        use crystal
+        use files
+        use symmetry
+        use postscript
+
+        type(postscript_type)           :: PS
+        type(unitcell),pointer          :: cell
+        end subroutine InfoPage
+
+        subroutine StrucFacPage(PS, cell, rlp)
+        
+        use local
+        use typedefs
+        use io
+        use constants
+        use crystal
+        use files
+        use symmetry
+        use postscript
+        use diffraction
+        
+        type(postscript_type),INTENT(INOUT)             :: PS
+        type(unitcell),pointer                          :: cell
+        type(gnode),INTENT(INOUT)                       :: rlp
+        end subroutine StrucFacPage
+
+
+        subroutine StereoPage(PS, cell)
+        
+        use local
+        use typedefs
+        use postscript
+        use io 
+        use graphics
+        
+        type(postscript_type)           :: PS
+        type(unitcell),pointer          :: cell
+        end subroutine StereoPage
+
+end interface
 
  progname = 'CTEMxtalinfo.f90'
  progdesc = 'Important crystallographic data for TEM applications'
- call CTEMsoft
+ call CTEMsoft(progname, progdesc)
+
+ allocate(cell)
  
  inm=2
- SG % SYM_reduce=.TRUE.
+ cell % SG % SYM_reduce=.TRUE.
  topbot=.FALSE.
 
 ! read crystal information
- call CrystalData
- call GetVoltage
+ loadingfile = .TRUE.
+ call CrystalData(cell, loadingfile)
+ call GetVoltage(cell, rlp)
  call ReadValue(' Camera Length [mm, R] : ', io_real, 1)
  camlen = io_real(1)
 
 ! generate all atom positions in the fundamental unit cell
- call CalcPositions('v')
+ call CalcPositions(cell,'v')
 
 ! open PostScript file
- call PS_openfile
- pspage = 0
- mess = 'Crystallographic Information'; call Message("(/A/)")
- call InfoPage 
- mess = 'Structure Factors'; call Message("(/A/)")
- call StrucFacPage
- mess = 'Stereographic Projections'; call Message("(/A/)")
- call StereoPage
- mess = 'Diffraction Patterns' ; call Message("(/A/)")
- call DiffPage
+ imanum = 1
+ call PS_openfile(PS, progdesc, imanum)
+ PS % pspage = 0
+ call Message('Crystallographic Information', frm = "(/A/)")
+ call InfoPage(PS, cell)
+ call Message('Structure Factors', frm = "(/A/)")
+ call StrucFacPage(PS, cell, rlp)
+ call Message('Stereographic Projections', frm = "(/A/)")
+ call StereoPage(PS, cell)
+ call Message('Diffraction Patterns' , frm = "(/A/)")
+ call DiffPage(PS,cell,rlp)
 
 ! close Postscript file
- call PS_closefile
+ call PS_closefile(PS)
 
 end program CTEMxtalinfo
 
@@ -102,28 +158,27 @@ end program CTEMxtalinfo
 !> @date    5/22/01 MDG 2.0 f90
 !> @date  4/16/13 MDG 3.0 rewrite
 !--------------------------------------------------------------------------
-subroutine InfoPage
+subroutine InfoPage(PS, cell)
 
 use local
+use typedefs
 use io
 use constants
-use crystalvars
 use crystal
 use files
-use symmetryvars
 use symmetry
 use postscript
 
-!logical       :: SaveSpace
-real          			:: ast,bst,cst,alphast,betast,gammast,coor(5)
-integer       			:: iap
-!character(10) :: instr
-!character(17) :: str
-character(1),parameter  	:: xsys(7) = (/'c','t','o','h','R','m','a'/)
-character(2)  :: brvs
+type(unitcell),pointer          :: cell
+type(postscript_type)           :: PS
+real(kind=sgl)                  :: ast,bst,cst,alphast,betast,gammast,coor(5)
+integer(kind=irg)               :: iap
+character(1),parameter          :: xsys(7) = (/'c','t','o','h','R','m','a'/)
+character(2)                    :: brvs
+
 !
 ! start first page 
- call PS_newpage(.TRUE.,trim(cell % fname))
+ call PS_newpage(PS,.TRUE.,trim(cell % fname))
 
 ! write text 
  call PS_text(5.25,0.05,'Distances [nm], angles [degrees]')
@@ -263,9 +318,9 @@ subroutine DumpMatrix(x,y,g,tt)
 use local
 use postscript
 
-real(kind=sgl),INTENT(IN)         	:: g(3,3),x,y
-character(3),INTENT(IN)	 		:: tt
-real(kind=sgl)					:: dy,dx
+real(kind=sgl),INTENT(IN)              :: g(3,3),x,y
+character(3),INTENT(IN)                :: tt
+real(kind=sgl)                         :: dy,dx
 
 ! set the matrix label
  call PS_setlinewidth(0.012)
@@ -329,9 +384,9 @@ subroutine DumpAtom(x,y,A,AT,coor)
 use local
 use postscript
 
-real(kind=sgl),INTENT(IN)         	:: x,y,coor(5)
-character(2),INTENT(IN) 			:: A
-integer(kind=irg),INTENT(IN)      	:: AT
+real(kind=sgl),INTENT(IN)               :: x,y,coor(5)
+character(2),INTENT(IN)                 :: A
+integer(kind=irg),INTENT(IN)            :: AT
 
  write (psunit,900) x,y,A,AT 
  dx=x+0.40
@@ -363,31 +418,34 @@ end subroutine DumpAtom
 !> @date    5/22/01 MDG 2.0 f90
 !> @date  4/16/13 MDG 3.0 rewrite
 !--------------------------------------------------------------------------
-subroutine StrucFacPage
+subroutine StrucFacPage(PS, cell, rlp)
 
 use local
+use typedefs
 use io
 use constants
-use crystalvars
 use crystal
 use files
-use symmetryvars
 use symmetry
 use postscript
 use diffraction
-use dynamical
 
-integer(kind=irg),parameter     		:: inm = 4
-integer(kind=irg),allocatable   		:: family(:,:,:),numfam(:),idx(:)
-integer(kind=irg)               			:: h,k,l,totfam,ind(3),icnt, oi_int(1)
-logical               					:: first
-logical,allocatable   					:: z(:,:,:)
-real(kind=sgl)                  			:: g(3),twopi,xs,rag
-real(kind=sgl),allocatable      			:: Vgg(:,:),ddg(:),gg(:),xi(:),xip(:),twth(:)
-character(1)          					:: space
+type(postscript_type),INTENT(INOUT)             :: PS
+type(unitcell),pointer                          :: cell
+type(gnode),INTENT(INOUT)                       :: rlp
+
+integer(kind=irg),parameter                     :: inm = 4
+integer(kind=irg),allocatable                   :: family(:,:,:),numfam(:),idx(:)
+integer(kind=irg)                               :: h,k,l,totfam,ind(3),icnt, oi_int(1), itmp(48,3)
+logical                                         :: first
+logical,allocatable                             :: z(:,:,:)
+real(kind=sgl)                                  :: g(3),twopi,xs,rag
+real(kind=sgl),allocatable                      :: Vgg(:,:),ddg(:),gg(:),xi(:),xip(:),twth(:)
+character(1)                                    :: space
+
 
 ! start page 
- call PS_newpage(.TRUE.,'Structure Factor Information')
+ call PS_newpage(PS,.TRUE.,'Structure Factor Information')
 
 ! write text 
  call PS_text(4.0,0.05,'Distances [nm], angles [mrad], potential [V,rad]')
@@ -418,7 +476,7 @@ character(1)          					:: space
  call PS_text(xs+5.66,8.13,'g ')
 
 ! initialize parameters
- SG % SYM_reduce=.TRUE.
+ cell % SG % SYM_reduce=.TRUE.
  thr = 1.E-5
  twopi = 2.0*cPi
  space = 'r'
@@ -452,13 +510,13 @@ character(1)          					:: space
     if (.not.z(-h,-k,-l)) then
 
 ! if it is a new one, then determine the entire family
-     call CalcUcg(ind)
+     call CalcUcg(cell,rlp,ind)
 
 ! but ignore the reciprocal lattice point if Vgg is small
      if (rlp%Vmod.ge.thr) then 
 
 ! copy family in array and label all its members in z-array
-      call CalcFamily(ind,num,space)
+      call CalcFamily(cell,ind,num,space,itmp)
       do i=1,num
        do j=1,3
         family(icnt,i,j)=itmp(i,j)
@@ -493,7 +551,7 @@ character(1)          					:: space
 ! compute d-spacings, g-spacings, two-theta, and extinction distance
  do k=1,icnt
   g(1:3)=float(family(k,1,1:3))
-  gg(k)=CalcLength(g,'r')
+  gg(k)=CalcLength(cell,g,'r')
   ddg(k)=1.0/gg(k)
   twth(k)=2.0*asin(0.5*mLambda*gg(k))
   xip(k) = Vgg(k,5)
@@ -504,7 +562,7 @@ character(1)          					:: space
  ind(1)=0
  ind(2)=0
  ind(3)=0
- call CalcUcg(ind)
+ call CalcUcg(cell,rlp,ind)
  Vgg(icnt,1)=rlp%Vmod 
  Vgg(icnt,2)=rlp%Vphase
  Vgg(icnt,3)=rlp%Vpmod 
@@ -523,7 +581,7 @@ character(1)          					:: space
  i=1
  j=icnt
  rag = 0.0
- call DumpLine(i,family(j,1,1),family(j,1,2),family(j,1,3),numfam(j),ddg(j),rag,twth(j), &
+ call DumpLine(PS,i,family(j,1,1),family(j,1,2),family(j,1,3),numfam(j),ddg(j),rag,twth(j), &
                Vgg(j,1),Vgg(j,2),Vgg(j,3),Vgg(j,4),xi(j),xip(j))
  do i=2,icnt
   j=idx(i)
@@ -532,7 +590,7 @@ character(1)          					:: space
   else
    rag = 0.0
   endif
- call DumpLine(i,family(j,1,1),family(j,1,2),family(j,1,3),numfam(j),ddg(j),rag,twth(j), &
+ call DumpLine(PS,i,family(j,1,1),family(j,1,2),family(j,1,3),numfam(j),ddg(j),rag,twth(j), &
                Vgg(j,1),Vgg(j,2),Vgg(j,3),Vgg(j,4),xi(j),xip(j))
  end do
 
@@ -565,17 +623,18 @@ end subroutine StrucFacPage
 !> @date    5/22/01 MDG 2.0 f90
 !> @date  4/16/13 MDG 3.0 rewrite
 !--------------------------------------------------------------------------
-subroutine DumpLine(i,h,k,l,p,d,g,th,vm,vp,vpm,vpp,xi,xip)
+subroutine DumpLine(PS,i,h,k,l,p,d,g,th,vm,vp,vpm,vpp,xi,xip)
 
 use local
 use postscript
 
-integer         	:: h,k,l,p,i
-real            	:: d,g,th,xi,vm,vp,vpm,vpp,xip
+type(postscript_type),INTENT(INOUT)     :: PS
+integer                                 :: h,k,l,p,i
+real                                    :: d,g,th,xi,vm,vp,vpm,vpp,xip
 
 ! start a new page (if needed) and label columns
  if ((mod(i-1,50).eq.0).AND.(i.ne.1)) then
-  call PS_newpage(.TRUE.,'Structure Factor Information')
+  call PS_newpage(PS,.TRUE.,'Structure Factor Information')
 
 ! write text 
   call PS_text(4.0,0.05,'Distances [nm], angles [mrad], potential [V,rad]')
@@ -666,24 +725,26 @@ end subroutine DumpLine
 !> @date    5/22/01 MDG 2.0 f90
 !> @date  4/16/13 MDG 3.0 rewrite
 !--------------------------------------------------------------------------
-subroutine StereoPage
+subroutine StereoPage(PS, cell)
 
 use local
-use symmetryvars
+use typedefs
 use postscript
 use io 
 use graphics
 
-character(1)   			:: sp
-logical        			:: topbot
-integer(kind=irg)        	:: hm,km,lm,iview(3), io_int(3)
+type(unitcell),pointer          :: cell
+type(postscript_type)           :: PS
+character(1)                    :: sp
+logical                         :: topbot
+integer(kind=irg)               :: hm,km,lm,iview(3), io_int(3)
 
- SG % SYM_reduce=.TRUE.
+ cell % SG % SYM_reduce=.TRUE.
  topbot=.TRUE.
- mess = 'Enter the maximum index for h,k and l, or for '; call Message("(A)")
- mess = 'u,v, and w. For a hexagonal system, please use'; call Message("(A)")
- mess = '4-index notation [uv.w] or (hk.l) to determine'; call Message("(A)")
- mess = 'the largest index.'; call Message("(A)")
+ call Message('Enter the maximum index for h,k and l, or for ', frm = "(A)")
+ call Message('u,v, and w. For a hexagonal system, please use', frm = "(A)")
+ call Message('4-index notation [uv.w] or (hk.l) to determine', frm = "(A)")
+ call Message('the largest index.', frm = "(A)")
  call ReadValue(' Enter maximum indices : ', io_int, 3)
  hm = io_int(1)
  km = io_int(2)
@@ -694,11 +755,11 @@ integer(kind=irg)        	:: hm,km,lm,iview(3), io_int(3)
  iview(2)=0
  iview(3)=1
 ! call the drawing routine
- call StereoProj(sp,iview,hm,km,lm,topbot)
+ call StereoProj(PS,cell,sp,iview,hm,km,lm,topbot)
 ! then [001] projection of reciprocal space
  sp = 'r'
 ! call the drawing routine
- call StereoProj(sp,iview,hm,km,lm,topbot)
+ call StereoProj(PS,cell,sp,iview,hm,km,lm,topbot)
 
 end subroutine StereoPage
 

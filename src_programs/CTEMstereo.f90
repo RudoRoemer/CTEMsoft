@@ -39,16 +39,16 @@
 !> @todo fix a bug that causes a segmentation fault when different range parameters are
 !> entered.  The program does produce a correct ps file, but does not end gracefully....
 !
-!> @date   10/13/98 MDG 1.0 original
-!> @date    5/21/01 MDG 2.0 f90
-!> @date  4/16/13 MDG 3.0 rewrite
+!> @date  10/13/98 MDG 1.0 original
+!> @date  05/21/01 MDG 2.0 f90
+!> @date  04/16/13 MDG 3.0 rewrite
+!> @date  06/13/14 MDG 4.0 removed all globals
 !--------------------------------------------------------------------------
 program CTEMstereo
 
 use local
-use crystalvars
+use typedefs
 use crystal
-use symmetryvars
 use graphics
 use files
 use postscript
@@ -56,41 +56,49 @@ use io
 
 IMPLICIT NONE
 
-character(1)   			:: sp
-logical        			:: topbot
-integer(kind=irg)        	:: iview(3), io_int(3)
+character(1)                    :: sp
+logical                         :: topbot
+integer(kind=irg)               :: iview(3), io_int(3), imanum
+character(fnlen)                :: progname, progdesc
+type(unitcell),pointer          :: cell
+logical                         :: loadingfile
+type(postscript_type)           :: PS
 
  progname = 'CTEMstereo.f90'
  progdesc = 'Stereographic projections (direct/ reciprocal space)'
- call CTEMsoft
+ call CTEMsoft(progname, progdesc)
  
- SG % SYM_reduce=.TRUE.
+ allocate(cell)
+
+ cell % SG % SYM_reduce=.TRUE.
  topbot=.FALSE.
 
 ! read crystal information
- call CrystalData
+ loadingfile = .TRUE.
+ call CrystalData(cell, loadingfile)
 
 ! real space or reciprocal space
  call GetDrawingSpace(sp)
 
 ! viewing direction
- call GetViewingDirection(iview)
+ call GetViewingDirection(cell%hexset,iview)
 
 ! open PostScript file
- call PS_openfile
+ imanum = 1
+ call PS_openfile(PS, progdesc, imanum)
 
 ! get index ranges
- mess = '  Enter the maximum index for h,k and l, or for '; call Message("(/A)")
- mess = '  u,v, and w. For a hexagonal system, please use'; call Message("(A)")
- mess = '  4-index notation [uv.w] or (hk.l) to determine'; call Message("(A)")
- mess = '  the largest index.'; call Message("(A/)")
+ call Message('  Enter the maximum index for h,k and l, or for ', frm = "(/A)")
+ call Message('  u,v, and w. For a hexagonal system, please use', frm = "(A)")
+ call Message('  4-index notation [uv.w] or (hk.l) to determine', frm = "(A)")
+ call Message('  the largest index.', frm = "(A/)")
  call ReadValue(' Enter maximum indices (h,k,l) : ', io_int, 3)
 
 ! call the drawing routine
- call StereoProj(sp,iview,io_int(1),io_int(2),io_int(3),topbot)
+ call StereoProj(PS,cell,sp,iview,io_int(1),io_int(2),io_int(3),topbot)
 
 ! close Postscript file
- call PS_closefile
+ call PS_closefile(PS)
 
 end program CTEMstereo
 

@@ -37,15 +37,15 @@
 !> @brief PostScript output of kinematical zone axis diffraction patterns
 !
 ! 
-!> @date 12/11/98   MDG 1.0 original
+!> @date 12/11/98 MDG 1.0 original
 !> @date 04/08/13 MDG 2.0 rewrite
+!> @date 04/13/14 MDG 3.0 removed all globals
 !--------------------------------------------------------------------------
 program CTEMzap
 
 use local
-use crystalvars
+use typedefs
 use crystal
-use symmetryvars
 use symmetry
 use graphics
 use files
@@ -55,31 +55,41 @@ use diffraction
 
 IMPLICIT NONE
 
-real(kind=sgl)			:: io_real(1)
-
+real(kind=sgl)                  :: io_real(1)
+character(fnlen)                :: progname, progdesc
+integer(kind=irg)               :: imanum
+type(unitcell),pointer          :: cell
+type(gnode)                     :: rlp
+type(postscript_type)           :: PS
+logical                         :: loadingfile
 
  progname = 'CTEMzap.f90'
  progdesc = 'Kinematical Zone Axis Diffraction Patterns'
- call CTEMsoft
+ call CTEMsoft(progname, progdesc)
 
- SG % SYM_reduce=.TRUE.
+ allocate(cell)
+
+
+ cell % SG % SYM_reduce=.TRUE.
 
 ! read crystal information, microscope voltage, and camera length
- call CrystalData
- call GetVoltage
+ loadingfile = .TRUE.
+ call CrystalData(cell, loadingfile)
+ call GetVoltage(cell, rlp)
  call ReadValue(' Camera length L  [mm, real] ', io_real, 1)
  camlen = io_real(1)
 
 ! generate all atom positions in the fundamental unit cell
- call CalcPositions('v')
+ call CalcPositions(cell,'v')
 
 ! open PostScript file
- call PS_openfile
+ imanum = 1
+ call PS_openfile(PS, progdesc, imanum)
 
 ! generate a set of zone axis patterns
- call DiffPage
+ call DiffPage(PS, cell, rlp)
 
 ! close Postscript file
- call PS_closefile
+ call PS_closefile(PS)
 
 end program CTEMzap
