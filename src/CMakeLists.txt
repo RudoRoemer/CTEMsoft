@@ -27,6 +27,8 @@ set(CTEMSoftLib_SRCS
 	${CTEMSoftLib_SOURCE_DIR}/math.f90
 	${CTEMSoftLib_SOURCE_DIR}/multibeams.f90
 	${CTEMSoftLib_SOURCE_DIR}/MBmodule.f90
+ 	${CTEMSoftLib_SOURCE_DIR}/NameListTypedefs.f90
+ 	${CTEMSoftLib_SOURCE_DIR}/NameListHandlers.f90
  	${CTEMSoftLib_SOURCE_DIR}/noise.f90
 	${CTEMSoftLib_SOURCE_DIR}/others.f90
 	${CTEMSoftLib_SOURCE_DIR}/pgm.f90
