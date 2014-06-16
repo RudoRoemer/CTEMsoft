@@ -128,7 +128,7 @@ real(kind=dbl)        			:: dis,xpos,ypos,zpos,sumR(3),thick,tmp(3),tmp2(3), &
                          			 
 complex(kind=dbl)     			:: za(3)
 complex(kind=sgl)     			:: zero
-logical               			:: void
+logical               			:: isvoid
 
 ! scale the image coordinates with respect to the origin at the center of the image
  xpos = float(i-defects%DF_npix/2)*defects%DF_L
@@ -166,18 +166,18 @@ logical               			:: void
 ! one of the voids; the calling routine then knows to use the void scattering matrix.
 if (defects%numvoids.ne.0) then 
 ! are we inside a void ?
-    void = .FALSE.
+    isvoid = .FALSE.
     voidloop: do ii=1,defects%numvoids
 ! subtract the void position from the current slice position to get the relative position vector
      tmp = tmpf -  (/ defects%voids(ii)%xpos, defects%voids(ii)%ypos, defects%voids(ii)%zpos /)
      dis = CalcLength(cell,tmp,'c')
      if (dis.lt.defects%voids(ii)%radius) then ! inside void
-       void = .TRUE.
+       isvoid = .TRUE.
        exit voidloop
      end if
     end do voidloop
 ! skip the rest of the computation for this slice if we are inside a void
-    if (void.eqv..TRUE.) then 
+    if (isvoid.eqv..TRUE.) then 
       defects%DF_R(islice,1) = -10000.0
       cycle sliceloop
     end if

@@ -140,12 +140,12 @@ real(kind=sgl) 			:: th
   end do
 ! strong beams
   do j=1,nn
-   inten(i,j) = cabs(sum(delta(j,1:nn)))**2
+   inten(i,j) = cdabs(sum(delta(j,1:nn)))**2
   end do 
 ! weak beams
   tmp = matmul(Ucross,delta)
   do jp=1,nw
-   inten(i,nn+jp) = cabs( sum(weak(jp,1:nn)*tmp(jp,1:nn)) )**2
+   inten(i,nn+jp) = cdabs( sum(weak(jp,1:nn)*tmp(jp,1:nn)) )**2
   end do  
  end do
    
@@ -211,7 +211,7 @@ real(kind=dbl)                :: s, q, t
  lalpha(1:nn) = CGinv(1:nn,1)
 
 ! make sure the alpha excitation coefficients are normalized 
- s = sum(cabs(lalpha(1:nn))**2)
+ s = sum(cdabs(lalpha(1:nn))**2)
  if (s.gt.1.D0) then
   s = dcmplx(1.D0/dsqrt(s),0.D0)
   lalpha = lalpha*s
@@ -221,7 +221,7 @@ real(kind=dbl)                :: s, q, t
  Iz = 0.D0
  do j=1,nn
     q = -4.D0*cPi*aimag(lW(j))
-    s = cabs(lalpha(j))**2
+    s = cdabs(lalpha(j))**2
     do k=1,nt
       t = q*thick(k)
       if (abs(t).lt.30.D0) Iz(k) = Iz(k) +  s * exp(t)

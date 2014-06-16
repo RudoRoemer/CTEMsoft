@@ -342,44 +342,44 @@ integer(kind=irg),parameter       :: PDG(31) = (/2,2,5,5,5,8,8,8,12,12,12,12,15,
                                                  31,27,26,27,31,31,30,31/)
 
 !> short hand for .FALSE. logical parameter
-logical,parameter :: F=.FALSE.
+logical,parameter,private :: FF=.FALSE.
 
 !> short hand for .TRUE. logical parameter
-logical,parameter :: T=.TRUE.
+logical,parameter,private :: TT=.TRUE.
 
 !> Table 3 from BESR paper
 logical,parameter       :: DGPG(32,31) = reshape((/ &
-     F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F, &
-     F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F, &
-     F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F,F, &
-     F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F,F,F, &
-     F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F,F,F,F, &
-     F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F,F,F,F,F, &
-     F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F,F,F,F,F,F, &
-     F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F,F,F,F,F,F,T, &
-     F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F,F,F,F,F,F,T,F, &
-     F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F,F,F,F,F,F,T,F,F, &
-     F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F, &
-     F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F, &
-     F,F,F,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,T, &
-     F,F,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,T,F, &
-     F,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F, &
-     F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,T,F,F, &
-     F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F, &
-     F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F, &
-     F,F,F,F,F,F,F,F,T,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F, &
-     F,F,F,F,F,F,F,T,F,F,F,F,F,F,T,F,F,F,F,F,F,F,F,F,F,F,T,F,T,F,F,T, &
-     F,F,F,F,T,F,F,T,F,F,T,F,F,F,T,F,F,F,F,T,F,F,T,F,F,F,T,F,T,F,F,T, &
-     F,F,F,F,F,F,T,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F, &
-     F,F,F,F,F,T,F,F,F,F,F,T,F,T,F,F,F,F,F,F,F,F,F,T,F,F,F,T,F,T,F,F, &
-     F,F,F,F,F,F,T,F,F,F,F,F,T,T,F,F,F,F,F,F,F,F,F,F,T,T,F,F,F,F,T,F, &
-     F,F,F,T,F,F,T,F,F,F,F,F,T,T,F,F,F,F,T,F,F,T,F,F,T,T,F,F,F,F,T,F, &
-     F,F,T,F,F,T,T,F,T,T,F,T,T,T,F,F,F,T,F,F,T,F,F,T,T,T,F,T,F,T,T,F, &
-     F,F,F,F,T,F,F,F,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F,F,F,F,F,F,F, &
-     F,T,F,F,T,F,F,T,F,F,T,F,F,F,T,F,T,F,F,T,F,F,T,F,F,F,T,F,T,F,F,T, &
-     F,F,T,F,F,F,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F,F,F,F,F,F,F,F,F, &
-     F,F,F,T,F,F,F,F,F,F,F,F,F,F,F,F,F,F,T,F,F,F,F,F,F,F,F,F,F,F,F,F, &
-     T,F,T,T,F,T,T,F,T,T,F,T,T,T,F,T,F,T,T,F,T,T,F,T,T,T,F,T,F,T,T,F/), (/32,31/))
+     FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF, &
+     FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF, &
+     FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF, &
+     FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF, &
+     FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF, &
+     FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF, &
+     FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF, &
+     FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT, &
+     FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF, &
+     FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF, &
+     FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF, &
+     FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF, &
+     FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT, &
+     FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF, &
+     FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF, &
+     FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF, &
+     FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF, &
+     FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF, &
+     FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF, &
+     FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,TT,FF,FF,TT, &
+     FF,FF,FF,FF,TT,FF,FF,TT,FF,FF,TT,FF,FF,FF,TT,FF,FF,FF,FF,TT,FF,FF,TT,FF,FF,FF,TT,FF,TT,FF,FF,TT, &
+     FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF, &
+     FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,TT,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,TT,FF,TT,FF,FF, &
+     FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,TT,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,TT,FF,FF,FF,FF,TT,FF, &
+     FF,FF,FF,TT,FF,FF,TT,FF,FF,FF,FF,FF,TT,TT,FF,FF,FF,FF,TT,FF,FF,TT,FF,FF,TT,TT,FF,FF,FF,FF,TT,FF, &
+     FF,FF,TT,FF,FF,TT,TT,FF,TT,TT,FF,TT,TT,TT,FF,FF,FF,TT,FF,FF,TT,FF,FF,TT,TT,TT,FF,TT,FF,TT,TT,FF, &
+     FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF, &
+     FF,TT,FF,FF,TT,FF,FF,TT,FF,FF,TT,FF,FF,FF,TT,FF,TT,FF,FF,TT,FF,FF,TT,FF,FF,FF,TT,FF,TT,FF,FF,TT, &
+     FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF, &
+     FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,TT,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF,FF, &
+     TT,FF,TT,TT,FF,TT,TT,FF,TT,TT,FF,TT,TT,TT,FF,TT,FF,TT,TT,FF,TT,TT,FF,TT,TT,TT,FF,TT,FF,TT,TT,FF/), (/32,31/))
 
 
 ! these lines are from an older version; not sure if they are still needed...
@@ -649,19 +649,19 @@ end type defecttype
 
 ! The parameters in gnode are computed by CalcUcg 
 type gnode
-  character(2)         	:: method   ! computation method (WK = Weickenmeier-Kohl, DT = Doyle-Turner/Smith-Burge, XR for XRD)
-  logical              	:: absorption ! is absorption included or not ?
-  integer(kind=irg) 		:: hkl(3)   ! Miller indices
-  real(kind=sgl)       	:: xg, &    ! extinction distance [nm]
-                         	   xgp, &   ! absorption length [nm]
-                          	   ar, &    ! aborption ratio
-                          	   g, &     ! length of reciprocal lattice vectors [nm^-1]
-                          	   Vmod,Vpmod, & ! modulus of Vg and Vgprime [V]
-                          	   Umod,Upmod, & ! modulus of Ug and Ugprime [nm^-2]
-                          	   Vphase,Vpphase ! phase factors of Vg and Vgprime [rad]
-  complex(kind=sgl)		:: Ucg, &   ! scaled potential Fourier coefficient [nm^-2]
-                          	   Vg, &    ! potential Fourier coefficient [V]
-                          	   qg       ! interaction parameter for Darwin-Howie-Whelan equations [nm^-1]
+  character(2)          :: method   ! computation method (WK = Weickenmeier-Kohl, DT = Doyle-Turner/Smith-Burge, XR for XRD)
+  logical               :: absorption ! is absorption included or not ?
+  integer(kind=irg)     :: hkl(3)   ! Miller indices
+  real(kind=sgl)        :: xg, &    ! extinction distance [nm]
+                           xgp, &   ! absorption length [nm]
+                           ar, &    ! aborption ratio
+                           g, &     ! length of reciprocal lattice vectors [nm^-1]
+                           Vmod,Vpmod, & ! modulus of Vg and Vgprime [V]
+                           Umod,Upmod, & ! modulus of Ug and Ugprime [nm^-2]
+                           Vphase,Vpphase ! phase factors of Vg and Vgprime [rad]
+  complex(kind=sgl)     :: Ucg, &   ! scaled potential Fourier coefficient [nm^-2]
+                           Vg, &    ! potential Fourier coefficient [V]
+                           qg       ! interaction parameter for Darwin-Howie-Whelan equations [nm^-1]
 end type gnode
 
 !--------------------------------------------------------------------------
@@ -755,7 +755,7 @@ end type kvectorlist
 type postscript_type
  integer(kind=irg)   	:: pspage
  real(kind=sgl)      	:: psdash(20),psfigwidth,psfigheight,psscale
- character(20)      	:: psname
+ character(fnlen)      	:: psname
 end type
 
 ! used by axonometry-related routines

@@ -39,62 +39,67 @@
 !> @details  also lists the Fourier coefficients of the lattice potential
 !>  
 ! 
-!> @date 1/5/99   MDG 1.0 original
-!> @date  5/18/01 MDG 2.0 f90
-!> @date  3/07/02 MDG 2.1 added CalcUcg support
-!> @date 4/16/13 MDG 3.0 rewrite
+!> @date 01/05/99 MDG 1.0 original
+!> @date 05/18/01 MDG 2.0 f90
+!> @date 03/07/02 MDG 2.1 added CalcUcg support
+!> @date 04/16/13 MDG 3.0 rewrite
+!> @date 06/13/14 MDG 4.0 rewrite without global variables
 !--------------------------------------------------------------------------
 program CTEMstar
 
 use local
+use typedefs
 use io
 use files
 use gvectors
-use symmetryvars
 use symmetry
 use diffraction
-use dynamical
 
 IMPLICIT NONE
 
 integer(kind=irg) 	:: g(3),gg(3),ans,n,i, io_int(3)
 real(kind=dbl)    	:: kk(3),stmp(0:47,3)
-logical           	:: first
+logical           	:: first, loadingfile
 character(1)      	:: space
+character(fnlen)	:: progname, progdesc
+type(unitcell),pointer	:: cell
+type(gnode)		:: rlp
 
  progname = 'CTEMstar.f90'
  progdesc = 'Computes the star of a reciprocal lattice vector'
- call CTEMsoft
+ call CTEMsoft(progname, progdesc)
+
+ allocate(cell)
 
 ! initialize crystal
- SG % SYM_reduce=.FALSE.
+ cell % SG % SYM_reduce=.FALSE.
  space = 'r'
- call CrystalData
- call GetVoltage
- call CalcPositions('v')
+ loadingfile = .TRUE.
+ call CrystalData(cell, loadingfile)
+ call GetVoltage(cell, rlp)
+ call CalcPositions(cell,'v')
 
- if (SG % SYM_centrosym) then 
-  mess = 'structure is centrosymmetric'; call Message("(A/)") 
+ if (cell % SG % SYM_centrosym) then 
+  call Message('structure is centrosymmetric',frm = "(A/)") 
  else 
-  mess = 'structure is non-centrosymmetric'; call Message("(A/)") 
+  call Message('structure is non-centrosymmetric', frm = "(A/)") 
  end if
  ans = 1
 
  do while (ans.eq.1)
-  mess = ''; call Message("(/A)")
+  call Message(' ',"(/A)")
   call ReadValue(' Enter reciprocal lattice coordinates [I] : ', io_int, 3)
-  write (*,*) io_int
   g(1:3) = io_int(1:3)
   kk = dble(g)
-  call CalcStar(kk,n,stmp,space)
+  call CalcStar(cell,kk,n,stmp,space)
   io_int(1) = n
   call WriteValue(' Number of equivalent planes in star = ', io_int, 1, "(I3)")
 ! compute and display the structure factor
   first = .TRUE.
   do i=0,n-1
    gg(1:3) = nint(stmp(i,1:3))
-   call CalcUcg(gg)
-   call Printrlp(first)
+   call CalcUcg(cell,rlp,gg)
+   call Printrlp(rlp,first)
   end do
   call ReadValue(' Another star ? (1/0) ', io_int, 1)
   ans = io_int(1)

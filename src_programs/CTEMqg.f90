@@ -54,13 +54,13 @@ use postscript
 
 IMPLICIT NONE
 
-integer(kind=irg)        	:: ind(3),ans, oi_int(3)
-real(kind=sgl)			:: oi_real(7)
-complex(kind=sgl)		:: oi_cmplx(1)
-real(kind=sgl)           	:: preg
+integer(kind=irg)              :: ind(3),ans, oi_int(3)
+real(kind=sgl)                 :: oi_real(7)
+complex(kind=sgl)              :: oi_cmplx(1)
+real(kind=sgl)                 :: preg
 character(fnlen)               :: progname, progdesc
 character(200)                 :: parta
-type(unitcell),pointer	        :: cell
+type(unitcell),pointer         :: cell
 logical                        :: loadingfile
 type(gnode)                    :: rlp
 

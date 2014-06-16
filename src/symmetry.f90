@@ -569,15 +569,16 @@ IMPLICIT NONE
 type(unitcell),pointer	:: cell
 integer(kind=irg),INTENT(OUT)		:: num				!< number of equivalent entries generated
 integer(kind=irg),INTENT(IN)		:: ind(3)			!< input triplet
-character(1),INTENT(IN)		:: space			!< 'd' or 'r'
+character(1),INTENT(IN)			:: space			!< 'd' or 'r'
 integer(kind=irg),INTENT(OUT)		:: itmp(48,3)			!< array used for family computations etc
 
 integer(kind=irg)			:: m,i,j			!< loop counters and such
-real(kind=sgl)				:: h,k,l,ih,ik,il,idiff	!< auxiliary variables
+real(kind=sgl)				:: h,k,l,ih,ik,il,idiff		!< auxiliary variables
 logical					:: newpoint			!< is this a new point ?
 real,parameter				:: eps=0.0001_sgl		!< comparison threshold
 
 ! first take the identity
+ itmp = 0
  j=1
  itmp(j,1:3)=ind(1:3)
  h=float(ind(1))

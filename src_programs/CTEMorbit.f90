@@ -43,8 +43,7 @@
 program CTEMorbit
 
 use local
-use crystalvars
-use symmetryvars
+use typedefs
 use symmetry
 use files
 use io
@@ -54,20 +53,25 @@ IMPLICIT NONE
 real(kind=dbl)           	:: ctmp(192,3)
 integer(kind=irg)        	:: i,m,n,ans, io_int(1) 
 real(kind=sgl)			:: io_real(3)
+character(fnlen)		:: progname, progdesc
+type(unitcell),pointer		:: cell
+logical                        :: loadingfile
 
  progname = 'CTEMorbit.f90'
  progdesc = 'List the orbit of a given position'
- call CTEMsoft
+ call CTEMsoft(progname, progdesc)
  
- SG % SYM_reduce=.TRUE.
- call CrystalData
+ allocate(cell)
+ cell % SG % SYM_reduce=.TRUE.
+ loadingfile=.TRUE.
+ call CrystalData(cell,loadingfile)
  ans = 1
 
  do while (ans.eq.1)
   call ReadValue(' Enter fractional coordinates of atom : ', io_real, 3)
   cell % ATOM_pos(1,1:3) = io_real(1:3)
   m=1
-  call CalcOrbit(m,n,ctmp)
+  call CalcOrbit(cell,m,n,ctmp)
   io_int(1) = n
   call WriteValue('   # equivalent atoms in orbit        : ', io_int, 1, "(I3)")
 
@@ -78,8 +82,7 @@ real(kind=sgl)			:: io_real(3)
    call WriteValue('', io_int, 1, "(1x,i3,' -> (',$)")
    call WriteValue('', io_real, 3, "(f7.4,',',f7.4,',',f7.4,');   ',$)") 
    if (mod(i+1,2).eq.1) then
-     mess = ' '
-     call Message("(A)")
+     call Message(' ', frm = "(A)")
    end if
   end do
   call ReadValue(' Another orbit ? (1/0) ', io_int, 1)

@@ -313,7 +313,7 @@ irloop: do ir = 2,icnt
 ! to be written
      rh(ih) = 0.D0 
    else 
-     rh(ih) = sgp/cabs( cell%LUT(gmh(1), gmh(2), gmh(3)) )
+     rh(ih) = sgp/cdabs( cell%LUT(gmh(1), gmh(2), gmh(3)) )
    end if
   end do
 
@@ -430,7 +430,7 @@ nbeams = 0
 !!!! this will all need to be changed with the new Bethe potential criteria ...  
   rltmpa => rltmpa%next
   reflectionloop: do ig=2,cell%DynNbeamsLinked
-    lUg = cabs(rltmpa%Ucg) * mLambda
+    lUg = cdabs(rltmpa%Ucg) * mLambda
     cut1 = BetheParameter%cutoff * lUg
     cut2 = BetheParameter%weakcutoff * lUg
 
@@ -724,7 +724,7 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
 !  weakcutoff lambda |Ug| > |sg|  -> strong reflection
 !
         sgp = abs(rltmpa%sg) 
-        lUg = cabs(rltmpa%Ucg) * mLambda
+        lUg = cdabs(rltmpa%Ucg) * mLambda
         cut1 = BetheParameter%cutoff * lUg
         cut2 = BetheParameter%weakcutoff * lUg
 
@@ -860,7 +860,7 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
 		  do iw=1,BetheParameter%nnw
                       ll = BetheParameter%stronghkl(1:3,ir) - BetheParameter%weakhkl(1:3,iw)
                       ughp = cell%LUT(ll(1),ll(2),ll(3)) 
-                      weaksgsum = weaksgsum +  cabs(ughp)**2/BetheParameter%weaksg(iw)
+                      weaksgsum = weaksgsum +  cdabs(ughp)**2/BetheParameter%weaksg(iw)
                  end do
                  weaksgsum = weaksgsum * mLambda/2.D0
                  Dyn%DynMat(ir,ir) = cmplx(2.D0*BetheParameter%strongsg(ir)/mLambda-weaksgsum,Dyn%Upz,dbl)
@@ -916,7 +916,7 @@ weakcutoff = 80.0  	! dimensionless cutoff parameter, smaller = strong, larger =
 cutoff = 160.0		! overall cutoff parameter
 sgcutoff = 0.05		! sg cutoff for double diffraction reflections
 
-if (fexist.eq..TRUE.) then ! check for the file in the local folder
+if (fexist) then ! check for the file in the local folder
 ! read the parameters from the file
  OPEN(UNIT=dataunit,FILE=trim(Bethefilename),DELIM='APOSTROPHE')
  READ(UNIT=dataunit,NML=BetheList)

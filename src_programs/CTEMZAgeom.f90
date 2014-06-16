@@ -37,32 +37,38 @@
 !> @brief CTEMZAgeom computes zone axis geometry
 ! 
 !> @date  12/17/13 MDG  1.0 simple interface
+!> @date  06/13/14 MDG  2.0 removed all globals
 !--------------------------------------------------------------------------
 program CTEMZAgeom 
 
 use local
+use typedefs
 use error
-use crystalvars 
 use crystal
-use symmetryvars
 use symmetry
 use files
 use io
 
-integer(kind=irg)    :: kk(3), ga(3), gb(3), io_int(6), j, i, dgn
+integer(kind=irg)       :: kk(3), ga(3), gb(3), io_int(6), j, i, dgn
+character(fnlen)        :: progname, progdesc
+type(unitcell),pointer  :: cell
+logical                 :: loadingfile
 
 ! display the standard program info
  progname = 'CTEMZAgeom.f90'
  progdesc = 'Simple program to figure out zone axis geometry'
- call CTEMsoft
+ call CTEMsoft(progname, progdesc)
+
+ allocate(cell)
   
 ! first get the crystal data and microscope voltage
- SG%SYM_reduce=.TRUE.
- call CrystalData
+ cell%SG%SYM_reduce=.TRUE.
+ loadingfile = .TRUE.
+ call CrystalData(cell, loadingfile)
 
 ! get the zone axis
-  call ReadValue('Enter the zone axis indices : ',io_int,3)
-  kk(1:3) = io_int(1:3)  
+ call ReadValue('Enter the zone axis indices : ',io_int,3)
+ kk(1:3) = io_int(1:3)  
 
 ! determine the point group number and get the ZAP 2-D symmetry
  j=0
@@ -72,19 +78,16 @@ integer(kind=irg)    :: kk(3), ga(3), gb(3), io_int(6), j, i, dgn
 
 ! use the new routine to get the whole pattern 2D symmetry group, since that
 ! is the one that determines the independent beam directions.
- dgn = GetPatternSymmetry(kk,j,.TRUE.)
+ dgn = GetPatternSymmetry(cell,kk,j,.TRUE.)
  
 ! determine and display the shortest reciprocal lattice vectors for this zone
- call ShortestG(kk,ga,gb,j)
- mess = 'Reciprocal lattice vectors : '; 
+ call ShortestG(cell,kk,ga,gb,j)
  io_int(1:3) = ga(1:3)
  io_int(4:6) = gb(1:3)
  call WriteValue(' Reciprocal lattice vectors : ', io_int, 6, "('(',3I3,') and (',3I3,')',/)")
 
-  mess = ' --> Note that the first of these vectors is by default the horizontal direction in '
-  call Message("(A)")
-  mess = '     any diffraction pattern or image simulation. All reference frames are right-handed.'
-  call Message("(A/)")
+  call Message(' --> Note that the first of these vectors is by default the horizontal direction in ', frm = "(A)")
+  call Message('     any diffraction pattern or image simulation. All reference frames are right-handed.', frm = "(A/)")
 
 end program CTEMZAgeom
 

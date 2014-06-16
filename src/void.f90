@@ -88,7 +88,7 @@ real(kind=sgl)      			:: Vx,Vy,Vz,Vrad,tmp(3)
 ! open the void data file
 call Message('Opening '//trim(defects%voidname), frm = "(A)")
 open(unit=dataunit,file=trim(defects%voidname),form='formatted')
-read(unit=dataunit,*) defects%numvoids
+read(unit=dataunit) defects%numvoids
 
 allocate(defects%voids(defects%numvoids))
 
@@ -99,7 +99,7 @@ end if
 
 ! read each subsequent line 
 do i=1,defects%numvoids
-  read(unit=dataunit,*) Vx,Vy,Vz,Vrad
+  read(unit=dataunit) Vx,Vy,Vz,Vrad
   defects%voids(i)%xpos = Vx * 0.5 * float(DF_npix) * DF_L
   defects%voids(i)%ypos = Vy * 0.5 * float(DF_npiy) * DF_L
   defects%voids(i)%zpos = Vz * foil%z0

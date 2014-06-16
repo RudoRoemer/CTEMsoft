@@ -174,7 +174,7 @@ integer(kind=irg) 		        :: i			!< loop counter
    call Message('Opening temporary file for PostScript output', frm = "(A)")
  else
    loadingfile = .FALSE.
-   call SafeOpenFile('ps','formatted',PS%psname, loadingfile)
+   call SafeOpenFile('ps','formatted',PS%psname, loadingfile = loadingfile)
  end if
 
 ! write the preamble
@@ -1895,7 +1895,7 @@ real(kind=sgl),INTENT(IN)    			:: CRad 		!< circle radius
 integer(kind=irg),INTENT(INOUT)		:: iview(3)		!< zone axis indices
 character(1),INTENT(IN)	      		:: sp			!< drawing space
 
-character(10)     :: instr
+character(12)     :: instr
 character(17)     :: str
 
  call PS_newpage(PS,.FALSE.,'Stereographic Projection')

@@ -992,7 +992,7 @@ end subroutine
 !> @date   01/10/14 MDG 4.0 update for new cell type
 !> @date   06/09/14 MDG 4.1 added cell, PS as arguments
 !--------------------------------------------------------------------------
-subroutine DiffPage(cell,PS)
+subroutine DiffPage(PS,cell,rlp)
 
 use postscript
 use crystal
@@ -1003,24 +1003,24 @@ use constants
 
 IMPLICIT NONE
 
-type(unitcell),pointer	        :: cell
+type(unitcell),pointer          :: cell
 type(postscript_type),INTENT(INOUT) :: PS
+type(gnode),INTENT(INOUT)       :: rlp
 
-integer(kind=irg),parameter    :: inm = 5
+integer(kind=irg),parameter     :: inm = 5
 character(1)                    :: list(256)
 logical                         :: first,np,ppat,a
 logical,allocatable             :: z(:,:,:),zr(:,:,:)
 integer(kind=irg)               :: i,j,h,k,l,m,totfam,hh,ll,fmax,inmhkl(3),ricnt,icnt,ind(3),uu,vv,ww,slect(256), &
-                                 	js,ii,num,hc,hhcc,iinm,dpcnt,imo,ih,ik,il,ier,iref, io_int(4)
+                                   js,ii,num,hc,hhcc,iinm,dpcnt,imo,ih,ik,il,ier,iref, io_int(4)
 integer(kind=irg),allocatable   :: idx(:)
 integer(kind=irg),allocatable   :: family(:,:),numfam(:)
 real(kind=sgl)                  :: twopi,ggl,g(3),Vmax,laL,gmax,RR,thr, oi_real(1)
 real(kind=sgl),allocatable      :: gg(:)
 real(kind=sgl),parameter        :: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/),yoff(0:5)=(/6.0,6.0,3.0,3.0,0.0,0.0/), &
-                                  	eps = 1.0E-3
-logical,allocatable  	         :: dbdiff(:)
-integer(kind=irg)		 :: itmp(48,3)			!< array used for family computations etc
-type(gnode)                     :: rlp
+                                   eps = 1.0E-3
+logical,allocatable             :: dbdiff(:)
+integer(kind=irg)               :: itmp(48,3)   !< array used for family computations etc
 
 ! set some parameters
  cell % SG % SYM_reduce=.TRUE.
@@ -1238,9 +1238,11 @@ type(gnode)                     :: rlp
    call WriteValue('', io_int,4,"(I3,' [',3I3,'];',$)")
   endif
  end do
- call Message('Enter selection (e.g. 4,10-20,) ', frm = "(//,A)")
+ call Message('Enter selection (e.g. 4,10-20, ... ) ', frm = "(//,A)")
  call Message('[Include 0 to also draw a powder pattern] ', frm = "(A)")
- call ReadValue('',list,256,"(256A)")
+ list = (/ (' ',j=1,256) /)
+ call Message(' -> ', frm = "(A,' ',$)")
+ read (5,"(256A)") list
  call studylist(list,slect,fmax,ppat)
 
  if (cell%nonsymmorphic) then
@@ -1757,7 +1759,7 @@ complex(kind=dbl),allocatable 	:: MIWORK(:)
 ! it appears that the eigenvectors may not always be normalized ...
 ! so we renormalize them here...
 do i=1,nn
-  normsum = sum(cabs(CGG(1:nn,i))**2)
+  normsum = sum(cdabs(CGG(1:nn,i))**2)
   normsum = cmplx(1.0,0.0,dbl)/sqrt(normsum)
   CGG(1:nn,i) = CGG(1:nn,i)*normsum
 end do
@@ -1777,9 +1779,9 @@ end do
  call zgetri(nn,CGinv,LDA,JPIV,MIWORK,MILWORK,INFO)
  if (INFO.ne.0) call FatalError('Error in BWsolve: ','ZGETRI return not zero')
 
- if ((cabs(sum(matmul(CGG,CGinv)))-dble(nn)).gt.1.E-8) then
+ if ((cdabs(sum(matmul(CGG,CGinv)))-dble(nn)).gt.1.E-8) then
   call Message('Error in matrix inversion; continuing', frm = "(A)")
-  io_real(1) = cabs(sum(matmul(CGG,CGinv)))-dble(nn)
+  io_real(1) = cdabs(sum(matmul(CGG,CGinv)))-dble(nn)
   call WriteValue('   Matrix inversion error; this number should be zero: ',io_real,1,"(F)")
  endif
   
@@ -1905,7 +1907,7 @@ real(kind=sgl)                  :: beam(3),b,bm(2),dz,fidim,fjdim,prefac,scl, oi
 real(kind=sgl),allocatable      :: idimi(:),jdimj(:)
 complex(kind=sgl),allocatable   :: fr(:,:)
 integer(kind=irg)               :: dimi,dimj,i,ix,iy
-character(20)                   :: propname
+character(fnlen)                   :: propname
 
 INTENT(IN) :: beam,dimi,dimj,dz
 

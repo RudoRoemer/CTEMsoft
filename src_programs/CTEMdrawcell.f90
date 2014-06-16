@@ -41,17 +41,17 @@
 !
 !> @todo Reciprocal space drawing has not yet been implemented.
 ! 
-!> @date   10/13/98 MDG 1.0 original
-!> @date    5/22/01 MDG 2.0 f90
-!> @date  4/16/13 MDG 3.0 rewrite
+!> @date  10/13/98 MDG 1.0 original
+!> @date  05/22/01 MDG 2.0 f90
+!> @date  04/16/13 MDG 3.0 rewrite
+
 !--------------------------------------------------------------------------
 program CTEMdrawcell 
 
 use local
+use typedefs
 use io
-use crystalvars
 use crystal
-use symmetryvars
 use symmetry
 use graphics
 use postscript
@@ -59,45 +59,76 @@ use math
 use constants
 use files
         
-integer(kind=irg),parameter    		:: n=1000
-character(1)                   		:: sp
-character(3)                   		:: acol(n)
+integer(kind=irg),parameter             :: n=1000
+character(1)                            :: sp
+character(3)                            :: acol(n)
+        
+real(kind=sgl)                          :: p(4),q(4),xmax,x(n),y(n),z(n),x1,y1,z1,asize(n),M(4,4),VD,diam, io_real(3)
+integer(kind=irg)                       :: idx(n),iview(3),iform, io_int(3), imanum
+character(fnlen)                        :: progname, progdesc
+type(unitcell),pointer                  :: cell
+logical                                 :: loadingfile
+type(postscript_type)                   :: PS
 
-real(kind=sgl)                 		:: p(4),q(4),xmax,x(n),y(n),z(n),x1,y1,z1,asize(n),M(4,4),VD,diam, io_real(3)
-integer(kind=irg)              		:: idx(n),iview(3),iform, io_int(3)
+interface
+        subroutine LocalDrawFrame(PS,cell,iview,sp,CX,CY)
+
+        use local
+        use typedefs
+        use io
+        use postscript
+
+        IMPLICIT NONE
+
+        type(postscript_type),INTENT(INOUT)     :: PS
+        type(unitcell),pointer          :: cell
+        integer(kind=irg),INTENT(INOUT) :: iview(3)             !< viewing direction
+        character(1),INTENT(IN)         :: sp                   !< drawing space character
+        real(kind=sgl)                  :: CX, CY               !< center of page		
+        end subroutine LocalDrawFrame
+end interface
 
  progname = 'CTEMdrawcell.f90'
  progdesc='Draw one or more unit cells in perspective mode'
- call CTEMsoft
+ call CTEMsoft(progname, progdesc)
  
- SG % SYM_reduce=.TRUE.
+ allocate(cell)
+
+ cell % SG % SYM_reduce=.TRUE.
  CX=7.0
  CY=7.0
 
 ! read crystal information
- call CrystalData
+ loadingfile = .TRUE.
+ call CrystalData(cell, loadingfile)
 
 ! real space or reciprocal space
- call GetDrawingSpace(sp)
+ sp = 'd'
+! call GetDrawingSpace(sp)
+! if (sp.ne.'d') then
+!   call Message('Reciprocal space drawings not implemented in this version', frm = "(/A/)")
+!   stop
+! end if
 
 ! create all atoms
- call CalcPositions('m')
+ call CalcPositions(cell,'m')
 
 ! Viewing Distance = 3 times CX = 6 times xmax
  call ReadValue(' Viewing distance [nm] : ',io_real, 1)
  VD = io_real(1)
 
 ! viewing direction
- call GetViewingDirection(iview)
+ call GetViewingDirection(cell%hexset,iview)
 
 ! create transformation matrix
- call ComputeViewTrans(iview,M,VD)
+ call ComputeViewTrans(cell,iview,M,VD)
 
 ! open PostScript file
- call PS_openfile
+ imanum = 1
+ call PS_openfile(PS, progdesc, imanum)
 
 ! write text and draw box
- call DrawFrame(iview,sp,CX,CY)
+ call LocalDrawFrame(PS,cell,iview,sp,CX,CY)
 
 ! draw unit cell outline first
 ! which radii should be used for the drawing ?
@@ -111,8 +142,8 @@ integer(kind=irg)              		:: idx(n),iview(3),iform, io_int(3)
  ymin=100.0
  ymax=-100.0
  do i=1,cell % ATOM_ntype
-  do j=1,numat(i)
-   p=(/sngl(apos(i,j,1)),sngl(apos(i,j,2)),sngl(apos(i,j,3)),1.0/)
+  do j=1,cell%numat(i)
+   p=(/sngl(cell%apos(i,j,1)),sngl(cell%apos(i,j,2)),sngl(cell%apos(i,j,3)),1.0/)
    q = matmul(p,M)
    x1=VD*q(1)/q(4) 
    y1=VD*q(2)/q(4) 
@@ -157,13 +188,13 @@ integer(kind=irg)              		:: idx(n),iview(3),iform, io_int(3)
  end do 
 
 ! close PostScript file
- call PS_closefile
+ call PS_closefile(PS)
 
 end program CTEMdrawcell
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE:DrawFrame
+! SUBROUTINE:LocalDrawFrame
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -178,31 +209,34 @@ end program CTEMdrawcell
 !> @date    5/22/01 MDG 2.0 f90
 !> @date  4/16/13 MDG 3.0 rewrite
 !--------------------------------------------------------------------------
-subroutine DrawFrame(iview,sp,CX,CY)
+subroutine LocalDrawFrame(PS,cell,iview,sp,CX,CY)
 
 use local
+use typedefs
 use io
 use postscript
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(INOUT)	:: iview(3)		!< viewing direction
-character(1),INTENT(IN)      		:: sp			!< drawing space character
-real(kind=sgl)					:: CX, CY		!< center of page		
-character(12)     				:: instr
-character(17)     				:: str
+type(postscript_type),INTENT(INOUT)     :: PS
+type(unitcell),pointer          :: cell
+integer(kind=irg),INTENT(INOUT) :: iview(3)             !< viewing direction
+character(1),INTENT(IN)         :: sp                   !< drawing space character
+real(kind=sgl)                  :: CX, CY               !< center of page		
+character(12)                   :: instr
+character(17)                   :: str
 
  if (sp.eq.'d') then 
-  call PS_newpage(.FALSE.,'Crystal Structure Drawing')
+  call PS_newpage(PS,.FALSE.,'Crystal Structure Drawing')
  else
-  call PS_newpage(.FALSE.,'Reciprocal Lattice Drawing')
+  call PS_newpage(PS,.FALSE.,'Reciprocal Lattice Drawing')
  endif
  call PS_setlinewidth(0.012)
  call PS_drawrect(0.0,0.0,CX,CY)
  call PS_setlinewidth(0.008)
  call PS_setfont(PSfonts(2),0.12/PS % psscale)
- call PS_cellinfo(0.0,8.3)
- call IndexString(instr,iview,'d')
+ call PS_cellinfo(PS,cell,0.0,8.3)
+ call IndexString(cell%hexset,instr,iview,'d')
  call PS_text(CX*0.5,8.14,'Viewing Direction '//instr)
  if (sp.eq.'d') then 
   str='direct space'
@@ -211,4 +245,4 @@ character(17)     				:: str
  endif
  call PS_text(CX*0.5,8.00,'Drawing of '//str)
 
-end subroutine DrawFrame
+end subroutine LocalDrawFrame

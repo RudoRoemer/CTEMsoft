@@ -27,78 +27,43 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:CTEMstereo.f90
+! CTEMsoft2013:NameListTypedefs.f90
 !--------------------------------------------------------------------------
 !
-! PROGRAM:CTEMstereo 
+! PROGRAM: NameListTypedefs
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief STandard stereographic projections
+!> @brief collection of namelist type declarations
 !
-!> @todo fix a bug that causes a segmentation fault when different range parameters are
-!> entered.  The program does produce a correct ps file, but does not end gracefully....
-!
-!> @date  10/13/98 MDG 1.0 original
-!> @date  05/21/01 MDG 2.0 f90
-!> @date  04/16/13 MDG 3.0 rewrite
-!> @date  06/13/14 MDG 4.0 removed all globals
+!> @date 06/13/14 MDG 1.0 initial version
 !--------------------------------------------------------------------------
-program CTEMstereo
+module NameListTypedefs
 
 use local
-use typedefs
-use crystal
-use graphics
-use files
-use postscript
-use io
 
 IMPLICIT NONE
 
-character(1)                    :: sp
-logical                         :: topbot
-integer(kind=irg)               :: iview(3), io_int(3), imanum
-character(fnlen)                :: progname, progdesc
-type(unitcell),pointer          :: cell
-logical                         :: loadingfile
-type(postscript_type)           :: PS
+! namelist for the CTEMKossel program
+type KosselNameListType
+        integer(kind=irg)       :: stdout
+        integer(kind=irg)       :: numthick
+        integer(kind=irg)       :: npix
+        integer(kind=irg)       :: maxHOLZ
+        integer(kind=irg)       :: k(3)
+        integer(kind=irg)       :: fn(3)
+        real(kind=sgl)          :: voltage
+        real(kind=sgl)          :: dmin
+        real(kind=sgl)          :: convergence
+        real(kind=sgl)          :: startthick
+        real(kind=sgl)          :: thickinc
+        real(kind=sgl)          :: minten
+        character(fnlen)        :: xtalname
+        character(fnlen)        :: outname
+end type KosselNameListType
 
- progname = 'CTEMstereo.f90'
- progdesc = 'Stereographic projections (direct/ reciprocal space)'
- call CTEMsoft(progname, progdesc)
- 
- allocate(cell)
 
- cell % SG % SYM_reduce=.TRUE.
- topbot=.FALSE.
 
-! read crystal information
- loadingfile = .TRUE.
- call CrystalData(cell, loadingfile)
 
-! real space or reciprocal space
- call GetDrawingSpace(sp)
 
-! viewing direction
- call GetViewingDirection(cell%hexset,iview)
-
-! open PostScript file
- imanum = 1
- call PS_openfile(PS, progdesc, imanum)
-
-! get index ranges
- call Message('  Enter the maximum index for h,k and l, or for ', frm = "(/A)")
- call Message('  u,v, and w. For a hexagonal system, please use', frm = "(A)")
- call Message('  4-index notation [uv.w] or (hk.l) to determine', frm = "(A)")
- call Message('  the largest index.', frm = "(A/)")
- call ReadValue(' Enter maximum indices (h,k,l) : ', io_int, 3)
-
-! call the drawing routine
- call StereoProj(PS,cell,sp,iview,io_int(1),io_int(2),io_int(3),topbot)
-
-! close Postscript file
- call PS_closefile(PS)
-
-end program CTEMstereo
-
+end module NameListTypedefs

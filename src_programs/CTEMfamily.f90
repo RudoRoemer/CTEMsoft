@@ -48,9 +48,8 @@
 program CTEMfamily
 
 use local
-use crystalvars
+use typedefs
 use crystal
-use symmetryvars
 use symmetry
 use postscript
 use io
@@ -60,16 +59,23 @@ use files
 
 IMPLICIT NONE
 
-character(1)         	:: sp
-logical              	:: nn,topbot
-real(kind=sgl)       	:: rr(3),g(3),r(3),M(3,3), CX, CY, CRad, negthresh,xst,yst
-integer(kind=irg)    	:: h,k,l,hkl(3),iview(3),cr,ans,sgn,i,num, io_int(1)
+character(1)         		:: sp
+logical              		:: nn,topbot
+real(kind=sgl)       		:: rr(3),g(3),r(3),M(3,3), CX, CY, CRad, negthresh,xst,yst
+integer(kind=irg)    		:: h,k,l,hkl(3),iview(3),cr,ans,sgn,i,num, io_int(1), imanum
+character(fnlen)                :: progname, progdesc
+character(200)                  :: parta
+type(unitcell),pointer	        :: cell
+logical                         :: loadingfile
+type(postscript_type)           :: PS
+integer(kind=irg)           	:: itmp(48,3)
 
  progname = 'CTEMfamily.f90'
  progdesc = 'Stereographic projection of a family of directions/planes'
- call CTEMsoft
+ call CTEMsoft(progname, progdesc)
  
- SG % SYM_reduce=.TRUE.
+  allocate(cell)
+ cell % SG % SYM_reduce=.TRUE.
  topbot=.TRUE.
 
 ! 20cm radius projection circle [inches]
@@ -77,9 +83,11 @@ integer(kind=irg)    	:: h,k,l,hkl(3),iview(3),cr,ans,sgn,i,num, io_int(1)
  CX = 3.25
  CY = 3.5
  negthresh=-0.0001
+ imanum = 1
 
 ! read crystal information
- call CrystalData
+ loadingfile = .TRUE.
+ call CrystalData(cell, loadingfile)
  sgn = 1 
 
 ! main loop 
@@ -89,25 +97,28 @@ integer(kind=irg)    	:: h,k,l,hkl(3),iview(3),cr,ans,sgn,i,num, io_int(1)
   call GetDrawingSpace(sp)
 
 ! viewing direction (watch for hexagonal indices !)
-  call GetViewingDirection(iview)
+  call GetViewingDirection(cell%hexset,iview)
 
 ! create transformation matrix
-  call ProjectionMatrix(iview,M)
+  call ProjectionMatrix(cell,iview,M)
 
 ! open PostScript file
   loadingfile = .FALSE.
-  call PS_openfile
+  call PS_openfile(PS, progdesc, imanum)
 
 ! write text and draw projection circle
-  call DrawSPFrame(CX, CY, CRad, iview, sp)
+  call DrawSPFrame(PS, cell, CX, CY, CRad, iview, sp)
   ans = 1
 
 ! loop over families
   do while (ans.eq.1)
 
 ! loop over all points and draw projection+label
-   call GetIndex(hkl,sp)
-   call CalcFamily(hkl,num,sp)
+   call GetIndex(cell%hexset,hkl,sp)
+   call CalcFamily(cell,hkl,num,sp,itmp)
+   io_int(:1) = num
+   call WriteValue('Multiplicity = ', io_int, 1, "(I3)")
+
    do i=1,num
     h=itmp(i,1)
     k=itmp(i,2)
@@ -125,8 +136,8 @@ integer(kind=irg)    	:: h,k,l,hkl(3),iview(3),cr,ans,sgn,i,num, io_int(1)
     h=hkl(1)
     k=hkl(2)
     l=hkl(3)
-    call TransSpace(g,r,sp,'c')
-    call NormVec(r,'c')
+    call TransSpace(cell,g,r,sp,'c')
+    call NormVec(cell,r,'c')
 
 ! apply viewing tansformation
     rr = matmul(M,r)
@@ -140,11 +151,11 @@ integer(kind=irg)    	:: h,k,l,hkl(3),iview(3),cr,ans,sgn,i,num, io_int(1)
     if (rr(3).gt.negthresh) then
      call PS_filledcircle(xst,yst,0.015/PS % psscale,0.0)
      nn = .TRUE.
-     call DumpIndices(sp,h,k,l,cr,xst,yst,nn)
+     call DumpIndices(PS,cell%hexset,sp,h,k,l,cr,xst,yst,nn)
     else if (topbot) then
      call PS_circle(xst,yst,0.035/PS % psscale)
      nn = .FALSE.
-     call DumpIndices(sp,h,k,l,cr,xst,yst,nn)
+     call DumpIndices(PS,cell%hexset,sp,h,k,l,cr,xst,yst,nn)
     endif
    end do
 
@@ -154,7 +165,7 @@ integer(kind=irg)    	:: h,k,l,hkl(3),iview(3),cr,ans,sgn,i,num, io_int(1)
   end do
 
 ! close Postscript file
-  call PS_closefile
+  call PS_closefile(PS)
 
 ! loop for another drawing ?
    call ReadValue(' Another pattern (1/0) ? ', io_int,1)
