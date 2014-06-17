@@ -116,7 +116,7 @@ use multibeams
 use postscript
 use timing
 use MBmodule
-!use omp_lib
+use omp_lib
 
 IMPLICIT NONE
 
@@ -222,6 +222,8 @@ end interface
 
 ! force dynamical matrix routine to read new Bethe parameters from file
   call Set_Bethe_Parameters(BetheParameters,.TRUE.)
+! BetheParameters%c2 = 40.0
+! BetheParameters%c1 = 40.0 
 
 !----------------------------MAIN COMPUTATIONAL LOOP-----------------------
   czero = cmplx(0.D0,0.D0)
@@ -231,8 +233,6 @@ end interface
 ! allocate space for the results
   allocate(Iz(knl%numthick),Izsum(2*npx+1,2*npy+1,knl%numthick))
   
-! BetheParameters%c2 = 40.0
-! BetheParameters%c1 = 40.0 
   verbose = .FALSE.
 
 ! in preparation for the threaded portion of the program, we need to 
@@ -267,7 +267,7 @@ end interface
 !  call WriteValue(' Setting number of threads to ',io_int, 1, frm = "(I4)")
 
 !! use OpenMP to run on multiple cores ... 
-!!$OMP PARALLEL default(shared) PRIVATE(ik,TID,kk,kn,ipx,ipy,ii,iequiv,nequiv,ip,jp,myreflist)
+!!$OMP PARALLEL default(shared) PRIVATE(ik,TID,kk,kn,ipx,ipy,ii,iequiv,nequiv,ip,jp,reflist,firstw)
 
 !  NUMTHREADS = OMP_GET_NUM_THREADS()
 !  TID = OMP_GET_THREAD_NUM()
@@ -291,11 +291,11 @@ end interface
         call Apply_BethePotentials(cell, BetheParameters)
 
 ! generate the dynamical matrix
-        call GetDynMat(cell, Dyn)
+        call GetDynMat(cell, Dyn, cell%reflist, cell%firstw)
 
 ! solve the dynamical eigenvalue equation for this beam direction
         kn = karray(4,ik)
-        call CalcKint(Dyn, cell, kn, cell%nns, knl%numthick, thickarray, Iz)
+        call CalcKint(Dyn, kn, cell%nns, knl%numthick, thickarray, Iz)
 
         ipx = kij(1,ik)
         ipy = kij(2,ik)
@@ -393,12 +393,16 @@ end subroutine ComputeKosselpattern
 !
 !> @brief compute the dynamical matrix, including Bethe potentials
 !
-!> @param 
+!> @param cell unit cell pointer
+!> @param Dyn dynamical scattering structure
+!> @param listroot top of the main reflection list
+!> @param listrootw top of the weak reflection list
 !
 !> @date  04/22/14 MDG 1.0 new library version
 !> @date  06/15/14 MDG 2.0 updated for removal of globals
+!> @date  06/17/14 MDG 2.1 added listroot pointers to accommodate multiple threads
 !--------------------------------------------------------------------------
-recursive subroutine GetDynMat(cell, Dyn)
+recursive subroutine GetDynMat(cell, Dyn, listroot, listrootw)
 
 use local
 use typedefs
@@ -413,6 +417,8 @@ IMPLICIT NONE
 
 type(unitcell),pointer           :: cell
 type(DynType),INTENT(INOUT)      :: Dyn
+type(reflisttype),pointer        :: listroot
+type(reflisttype),pointer        :: listrootw
 
 complex(kind=dbl)                :: czero, ughp, uhph, weaksum 
 real(kind=dbl)                   :: weaksgsum
@@ -430,11 +436,13 @@ czero = cmplx(0.0,0.0,dbl)      ! complex zero
         call CalcUcg(cell, rlp, (/0,0,0/) )
         Dyn%Upz = rlp%Vpmod
 
-        rlr => cell%reflist%next
+!       rlr => cell%reflist%next
+        rlr => listroot%next
         ir = 1
         do
           if (.not.associated(rlr)) EXIT
-          rlc => cell%reflist%next
+!         rlc => cell%reflist%next
+          rlc => listroot%next
           ic = 1
           do
           if (.not.associated(rlc)) EXIT
@@ -442,7 +450,8 @@ czero = cmplx(0.0,0.0,dbl)      ! complex zero
 ! here we need to do the Bethe corrections if necessary
             if (cell%nnw.ne.0) then
               weaksum = czero
-              rlw => cell%firstw
+!             rlw => cell%firstw
+              rlw => listrootw
               do
                if (.not.associated(rlw)) EXIT
                ll = rlr%hkl - rlw%hkl
@@ -463,7 +472,8 @@ czero = cmplx(0.0,0.0,dbl)      ! complex zero
 ! determine the total contribution of the weak beams
             if (cell%nnw.ne.0) then
               weaksgsum = 0.D0
-              rlw => cell%firstw
+!             rlw => cell%firstw
+              rlw => listrootw
               do
                if (.not.associated(rlw)) EXIT
                 ll = rlr%hkl - rlw%hkl

@@ -162,7 +162,6 @@ end subroutine CalcBWint
 !> @brief compute the Kossel intensities for a range of thicknesses
 !
 !> @param Dyn dynamical scattering structure
-!> @param cell unit cell pointer
 !> @param ktmp wave vector structure
 !> @param nn number of strong beams
 !> @param nt number of thickness values
@@ -177,7 +176,7 @@ end subroutine CalcBWint
 !> @date  06/15/14 MDG 4.1 removed global W, CG and alpha initializations
 !> @date  06/16/14 MDG 4.2 made routine recursive for OPenMP
 !--------------------------------------------------------------------------
-recursive subroutine CalcKint(Dyn,cell,kn,nn,nt,thick,Iz)
+recursive subroutine CalcKint(Dyn,kn,nn,nt,thick,Iz)
 
 use local
 use io
@@ -189,8 +188,6 @@ use constants
 IMPLICIT NONE
 
 type(DynType),INTENT(INOUT)     :: Dyn
-type(unitcell),pointer          :: cell
-! type(kvectorlist),pointer       :: ktmp
 real(kind=sgl),INTENT(IN)       :: kn
 integer(kind=irg),INTENT(IN)    :: nn                   !< number of strong beams
 integer(kind=irg),INTENT(IN)    :: nt                   !< number of thickness values
