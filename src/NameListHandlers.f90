@@ -67,26 +67,28 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)             :: nmlfile
 type(KosselNameListType),INTENT(INOUT)  :: knl
 
-integer(kind=irg)                       :: stdout, numthick, npix, maxHOLZ, k(3), fn(3)
+integer(kind=irg)                       :: stdout, numthick, npix, maxHOLZ, nthreads, k(3), fn(3)
 real(kind=sgl)                          :: voltage, dmin, convergence, startthick, thickinc, minten
 character(fnlen)                        :: xtalname, outname
 
-namelist /Kossellist/ stdout, xtalname, voltage, k, fn, dmin, convergence, minten, &
+namelist /Kossellist/ stdout, xtalname, voltage, k, fn, dmin, convergence, minten, nthreads, &
                               startthick, thickinc, numthick, outname, npix, maxHOLZ
 
 ! set the input parameters to default values (except for xtalname, which must be present)
-xtalname = 'undefined'          ! initial value to check that the keyword is present in the nml file
 stdout = 6                      ! standard output
-voltage = 200000.0              ! acceleration voltage [V]
+numthick = 10                   ! number of increments
+npix = 256                      ! output arrays will have size npix x npix
+maxHOLZ = 3                     ! output arrays will have size npix x npix
+nthreads = 4                    ! default number of threads for OpenMP
 k = (/ 0, 0, 1 /)               ! beam direction [direction indices]
 fn = (/ 0, 0, 1 /)              ! foil normal [direction indices]
+voltage = 200000.0              ! acceleration voltage [V]
 dmin = 0.025                    ! smallest d-spacing to include in dynamical matrix [nm]
 convergence = 25.0              ! beam convergence angle [mrad]
 startthick = 10.0               ! starting thickness [nm]
 thickinc = 10.0                 ! thickness increment
-numthick = 10                   ! number of increments
-npix = 256                      ! output arrays will have size npix x npix
 minten = 1.0E-5                 ! minimum intensity in diffraction disk to make it into the output file
+xtalname = 'undefined'          ! initial value to check that the keyword is present in the nml file
 outname = 'Kosselout.data'      ! output filename
 
 ! read the namelist file
@@ -100,18 +102,20 @@ outname = 'Kosselout.data'      ! output filename
  end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the knl fields
-knl%xtalname = xtalname
 knl%stdout = stdout
-knl%voltage = voltage
+knl%numthick = numthick
+knl%npix = npix
+knl%maxHOLZ = maxHOLZ
+knl%nthreads = nthreads
 knl%k = k
 knl%fn = fn
+knl%voltage = voltage
 knl%dmin = dmin
 knl%convergence = convergence
 knl%startthick = startthick
 knl%thickinc = thickinc
-knl%numthick = numthick
-knl%npix = npix
 knl%minten = minten
+knl%xtalname = xtalname
 knl%outname = outname
 
 end subroutine GetKosselNameList

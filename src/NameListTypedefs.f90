@@ -50,6 +50,7 @@ type KosselNameListType
         integer(kind=irg)       :: numthick
         integer(kind=irg)       :: npix
         integer(kind=irg)       :: maxHOLZ
+        integer(kind=irg)       :: nthreads
         integer(kind=irg)       :: k(3)
         integer(kind=irg)       :: fn(3)
         real(kind=sgl)          :: voltage

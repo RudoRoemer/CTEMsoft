@@ -104,6 +104,9 @@ type(gnode)                                :: rlp
  skip = 3        ! always use Weickenmeier&Kohl scattering coefficients, including absorptive form factors
  call CalcWaveLength(cell,rlp,dble(voltage),skip)
 
+! generate all atom positions
+ call CalcPositions(cell,'v')
+
 ! compute the range of reflections for the lookup table and allocate the table
 ! The master list is easily created by brute force
  imh = 1
@@ -187,8 +190,6 @@ izl:   do iz=-2*iml,2*iml
    call Message('Done', frm = "(A/)")
   end if
   
-! generate all atom positions
- call CalcPositions(cell,'v')
 
 ! that's it
 end subroutine Initialize_Cell
@@ -212,8 +213,10 @@ end subroutine Initialize_Cell
 !
 !> @date 01/10/14 MDG 1.0 original, based on old Compute_ReflectionList
 !> @date 01/13/14 MDG 1.1 update for new cell type definition and new Bethe potential criterion
+!> @date 06/15/14 MDG 2.0 update for removal of all globals
+!> @date 06/16/14 MDG 2.1 added recursive
 !--------------------------------------------------------------------------
-subroutine Initialize_ReflectionList(cell, BetheParameter, Dyn, k, dmin, verbose)
+recursive subroutine Initialize_ReflectionList(cell, BetheParameter, Dyn, k, dmin, verbose)
 
 use local
 use typedefs
@@ -226,19 +229,19 @@ use symmetry
 
 IMPLICIT NONE
 
-type(unitcell),pointer	                       :: cell
-type(BetheParameterType),INTENT(INOUT)        :: BetheParameter
-type(DynType),INTENT(INOUT)                   :: Dyn
-real(kind=sgl),INTENT(IN)			:: k(3)
-real(kind=sgl),INTENT(IN)                     :: dmin
-logical,INTENT(IN),OPTIONAL	               :: verbose
+type(unitcell),pointer                          :: cell
+type(BetheParameterType),INTENT(INOUT)          :: BetheParameter
+type(DynType),INTENT(INOUT)                     :: Dyn
+real(kind=sgl),INTENT(IN)                       :: k(3)
+real(kind=sgl),INTENT(IN)                       :: dmin
+logical,INTENT(IN),OPTIONAL                     :: verbose
 
-integer(kind=irg)				:: imh, imk, iml, gg(3), ix, iy, iz, i, minholz, RHOLZ, im, istat, N, &
-						ig, numr, ir, irsel
-real(kind=sgl)					:: dhkl, io_real(9), H, g3(3), g3n(3), FNg(3), ddt, s, kr(3), exer, &
-                                                rBethe_i, rBethe_d, sgp, r_g, la, dval
-integer(kind=irg)				:: io_int(3), gshort(3), gp(3)
-type(reflisttype),pointer	                :: rltail
+integer(kind=irg)                               :: imh, imk, iml, gg(3), ix, iy, iz, i, minholz, RHOLZ, im, istat, N, &
+                                                   ig, numr, ir, irsel
+real(kind=sgl)                                  :: dhkl, io_real(9), H, g3(3), g3n(3), FNg(3), ddt, s, kr(3), exer, &
+                                                   rBethe_i, rBethe_d, sgp, r_g, la, dval
+integer(kind=irg)                               :: io_int(3), gshort(3), gp(3)
+type(reflisttype),pointer                       :: rltail
 
 ! set the truncation parameters 
   rBethe_i = BetheParameter%c3          ! if larger than this value, we ignore the reflection completely

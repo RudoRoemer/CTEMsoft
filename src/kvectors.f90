@@ -69,8 +69,8 @@ function Kdelta(i,j) result(res)
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(IN)  	:: i,j
-integer(kind=irg)		:: res
+integer(kind=irg),INTENT(IN)    :: i,j
+integer(kind=irg)               :: res
 
  if (i.eq.j) then 
    res = 1
@@ -568,28 +568,28 @@ use Lambert
 
 IMPLICIT NONE
 
-type(kvectorlist),pointer              :: khead
-type(unitcell),pointer	                :: cell
-type(symdata2D),INTENT(INOUT)          :: TDPG
-real(kind=dbl),INTENT(IN)		:: k(3)		!< initial wave vector
-real(kind=dbl),INTENT(IN)		:: ga(3)	!< "horizontal" reciprocal lattice vector
-real(kind=dbl),INTENT(IN)		:: ktmax	!< maximum length of tangential wave vector
-integer(kind=irg),INTENT(IN)		:: npx		!< number of kvectors along x
-integer(kind=irg),INTENT(IN)		:: npy		!< number of kvectors along y
-integer(kind=irg),INTENT(OUT)		:: numk		!< total number of kvectors in linked list
-integer(kind=irg),INTENT(IN)		:: isym		!< Laue symmetry group number 
-integer(kind=irg),INTENT(INOUT)	:: ijmax	!< max parameter used for Conical and StandardConical modes
-real(kind=sgl),INTENT(IN)		:: klaue(2)	!< fractional Laue center coordinates
-logical,INTENT(IN),OPTIONAL		:: debug
+type(kvectorlist),pointer               :: khead
+type(unitcell),pointer                  :: cell
+type(symdata2D),INTENT(INOUT)           :: TDPG
+real(kind=dbl),INTENT(IN)               :: k(3)         !< initial wave vector
+real(kind=dbl),INTENT(IN)               :: ga(3)        !< "horizontal" reciprocal lattice vector
+real(kind=dbl),INTENT(IN)               :: ktmax        !< maximum length of tangential wave vector
+integer(kind=irg),INTENT(IN)            :: npx          !< number of kvectors along x
+integer(kind=irg),INTENT(IN)            :: npy          !< number of kvectors along y
+integer(kind=irg),INTENT(OUT)           :: numk         !< total number of kvectors in linked list
+integer(kind=irg),INTENT(IN)            :: isym         !< Laue symmetry group number 
+integer(kind=irg),INTENT(INOUT)         :: ijmax        !< max parameter used for Conical and StandardConical modes
+real(kind=sgl),INTENT(IN)               :: klaue(2)     !< fractional Laue center coordinates
+logical,INTENT(IN),OPTIONAL             :: debug
 
-integer(kind=irg),allocatable		:: kselected(:,:)	!< keeps track of which k-vectors have already been considered
+integer(kind=irg),allocatable           :: kselected(:,:)       !< keeps track of which k-vectors have already been considered
 
-integer(kind=irg)       		:: istat,i,j, iequiv(2,12), nequiv, jj, nx, ny
-real(kind=dbl)				:: glen, gan(3), gperp(3), kstar(3), delta, Lauexy(2)
-logical					:: hexgrid = .FALSE.
-real(kind=sgl)				:: kt(3),kr(3)
-real(kind=sgl)				:: ktlen
-type(kvectorlist),pointer             :: ktail
+integer(kind=irg)                       :: istat,i,j, iequiv(2,12), nequiv, jj, nx, ny
+real(kind=dbl)                          :: glen, gan(3), gperp(3), kstar(3), delta, Lauexy(2)
+logical                                 :: hexgrid = .FALSE.
+real(kind=sgl)                          :: kt(3),kr(3)
+real(kind=sgl)                          :: ktlen
+type(kvectorlist),pointer               :: ktail
 
 nx = 2*npx
 ny = 2*npy
@@ -599,66 +599,67 @@ allocate(kselected(-nx:nx,-ny:ny))
 kselected = 0
 
 ! compute geometrical factors 
- glen = CalcLength(cell,ga,'r')              		! length of ga
- Lauexy = glen * klaue					! scaled Laue center coordinates
- gan = ga/glen                                 	! normalized ga
- delta = 2.0*ktmax*glen/(2.0*float(npx)+1.0)   	! grid step size in nm-1 
- call TransSpace(cell,k,kstar,'d','r')       		! transform incident direction to reciprocal space
- call CalcCross(cell,ga,kstar,gperp,'r','r',0)      	! compute g_perp = ga x k
- call NormVec(cell,gperp,'r')                       	! normalize g_perp
- call NormVec(cell,kstar,'r')                       	! normalize reciprocal beam vector
+ glen = CalcLength(cell,ga,'r')                         ! length of ga
+ Lauexy = glen * klaue                                  ! scaled Laue center coordinates
+ gan = ga/glen                                          ! normalized ga
+ delta = 2.0*ktmax*glen/(2.0*float(npx)+1.0)            ! grid step size in nm-1 
+ call TransSpace(cell,k,kstar,'d','r')                  ! transform incident direction to reciprocal space
+ call CalcCross(cell,ga,kstar,gperp,'r','r',0)          ! compute g_perp = ga x k
+ call NormVec(cell,gperp,'r')                           ! normalize g_perp
+ call NormVec(cell,kstar,'r')                           ! normalize reciprocal beam vector
 
 ! allocate the head and tail of the linked list
- allocate(khead,stat=istat)   				! allocate new value
+ allocate(khead,stat=istat)                             ! allocate new value
  if (istat.ne.0) call FatalError('Calckvectors','unable to allocate khead pointer')
- ktail => khead                      			! tail points to new value
- nullify(ktail%next)                			! nullify next in new value
- numk = 1                          			! keep track of number of k-vectors so far
- ktail%i = 0                             		! i-index of beam
- ktail%j = 0                             		! j-index of beam
+ ktail => khead                                         ! tail points to new value
+ nullify(ktail%next)                                    ! nullify next in new value
+ numk = 1                                               ! keep track of number of k-vectors so far
+ ktail%i = 0                                            ! i-index of beam
+ ktail%j = 0                                            ! j-index of beam
  
 ! use the Laue center coordinates to define the tangential component of the incident wave vector
- kt = - Lauexy(1)*gan - Lauexy(2)*gperp  		! tangential component of k
- ktail%kt = kt                    			! store tangential component of k
- ktlen = CalcLength(cell,kt,'r')**2      			! squared length of tangential component
+ kt = - Lauexy(1)*gan - Lauexy(2)*gperp                 ! tangential component of k
+ ktail%kt = kt                                          ! store tangential component of k
+ ktlen = CalcLength(cell,kt,'r')**2                     ! squared length of tangential component
 
- kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar 	! complete wave vector
- ktail%k = kr                     			! store in pointer list
- ktail%kn = CalcDot(cell,ktail%k,kstar,'r')    		! normal component of k
+ kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar           ! complete wave vector
+ ktail%k = kr                                           ! store in pointer list
+ ktail%kn = CalcDot(cell,ktail%k,kstar,'r')             ! normal component of k
   
  kselected(0,0) = 2
 
- if (maxval(abs(klaue)).eq.0.0) then 			! zone axis orientation, so we should use symmetry
+ if (maxval(abs(klaue)).eq.0.0) then                    ! zone axis orientation, so we should use symmetry
 ! we scan over the entire range of potential beam directions, defined by npx and npy along with
 ! the conical truncation parameter ijmax; for each point we check whether or not it has been considered
 ! before; it it has, we move on, if it hasn't, then we add this point to the linked list in the usual way.
 ! we do this by computing the equivalent (i,j) using the Whole Pattern symmetry.
      do i=-nx,nx
       do j=-ny,ny
-  	if (kselected(i,j).eq.0) then
+        if (kselected(i,j).eq.0) then
           if ((i*i+j*j).le.ijmax) then
 ! first of all, add the present point to the linked list
-	   call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
-! then compute the equivalent points and flag all of them in kselected
-	   call Apply2DPGSymmetry(TDPG,i,j,isym,iequiv,nequiv)
-	   kselected(iequiv(1,1),iequiv(2,1)) = 2
-	   if (nequiv.gt.1) then 
-	    do jj=2,nequiv
-	     kselected(iequiv(1,jj),iequiv(2,jj)) = 1
-	    end do
-	   end if
+           call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
+!write (*,*) numk,ktail%k
+! then  ompute the equivalent points and flag all of them in kselected
+           call Apply2DPGSymmetry(TDPG,i,j,isym,iequiv,nequiv)
+           kselected(iequiv(1,1),iequiv(2,1)) = 2
+           if (nequiv.gt.1) then 
+            do jj=2,nequiv
+             kselected(iequiv(1,jj),iequiv(2,jj)) = 1
+            end do
+           end if
         end if
        end if
       end do
      end do
-  else							! not a zone axis, so no symmmetry
+  else                                                  ! not a zone axis, so no symmmetry
      do i=-nx,nx
       do j=-ny,ny
-  	if (kselected(i,j).eq.0) then
+        if (kselected(i,j).eq.0) then
           if ((i*i+j*j).le.ijmax) then
 ! first of all, add the present point to the linked list
-	    call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,sngl(Lauexy))
-	    kselected(i,j) = 2
+            call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,sngl(Lauexy))
+            kselected(i,j) = 2
         end if
        end if
       end do
@@ -666,12 +667,12 @@ kselected = 0
   end if
 
 ! for debugging purposes, we can write the kselected array to a file.
-if (present(debug)) then
-  open(unit=20,file='kselected.data',status='unknown',form='unformatted')
-  write (20) 2*nx+1,2*ny+1
-  write (20) kselected
-  close(unit=20,status='keep')
-end if
+!if (present(debug)) then
+! open(unit=20,file='kselected.data',status='unknown',form='unformatted')
+! write (20) 2*nx+1,2*ny+1
+! write (20) kselected
+! close(unit=20,status='keep')
+!nd if
 
 ! and clean up the kselected array
 deallocate(kselected)

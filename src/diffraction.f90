@@ -1699,13 +1699,14 @@ end subroutine
 !
 !> @todo This routine needs to be thoroughly debugged and validated ...
 !
-!> @date   10/20/98 MDG 1.0 original
-!> @date    5/22/01 MDG 2.0 f90
-!> @date   11/27/01 MDG 2.1 added kind support
-!> @date  08/09/10  MDG 2.2  rewritten to include both ZGEEV and ZGEES/ZTREVC
-!> @date  03/26/13  MDG  3.0 clean up of old comments
+!> @date  10/20/98 MDG 1.0 original
+!> @date  05/22/01 MDG 2.0 f90
+!> @date  11/27/01 MDG 2.1 added kind support
+!> @date  08/09/10 MDG 2.2  rewritten to include both ZGEEV and ZGEES/ZTREVC
+!> @date  03/26/13 MDG 3.0 clean up of old comments
+!> @date  06/15/14 MDG 4.0 updated for removal of all globals
 !--------------------------------------------------------------------------
-recursive subroutine BWsolve(M,W,CGG,CGinv,nn,IPIV,keeporder)
+recursive subroutine BWsolve(M,W,CGG,CGinv,nn,IPIV)
 
 use local
 use error
@@ -1713,20 +1714,20 @@ use io
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(IN)		:: nn			!< number of beams
-complex(kind=dbl),INTENT(IN)	:: M(nn,nn)	!< input dynamical matrix
-complex(kind=dbl),INTENT(OUT)	:: W(nn)		!< Bloch eigenvalues
-complex(kind=dbl),INTENT(OUT)	:: CGG(nn,nn)	!< Bloch eigenvectors
-complex(kind=dbl),INTENT(OUT)	:: CGinv(nn,nn)	!< inverse of eigenvector array
-integer(kind=irg),INTENT(IN)		:: IPIV(nn)		!< pivot array, currently unused
-logical,INTENT(IN),OPTIONAL		:: keeporder	!< optional legacy parameter, should be removed
+integer(kind=irg),INTENT(IN)    :: nn           !< number of beams
+complex(kind=dbl),INTENT(IN)    :: M(nn,nn)     !< input dynamical matrix
+complex(kind=dbl),INTENT(OUT)   :: W(nn)        !< Bloch eigenvalues
+complex(kind=dbl),INTENT(OUT)   :: CGG(nn,nn)   !< Bloch eigenvectors
+complex(kind=dbl),INTENT(OUT)   :: CGinv(nn,nn) !< inverse of eigenvector array
+integer(kind=irg),INTENT(IN)    :: IPIV(nn)     !< pivot array, currently unused
+!logical,INTENT(IN),OPTIONAL     :: keeporder    !< optional legacy parameter, should be removed
 
-integer(kind=irg)    				:: INFO, LDA, LDVR, LDVL, LWORK, JPIV(nn),MILWORK, i
-integer(kind=irg),parameter   		:: LWMAX = 5000 
-complex(kind=dbl)    			:: VL(nn,nn),  WORK(LWMAX), normsum
-real(kind=dbl)       				:: RWORK(2*nn), io_real(1)
-character            				:: JOBVL, JOBVR
-complex(kind=dbl),allocatable 	:: MIWORK(:)
+integer(kind=irg)               :: INFO, LDA, LDVR, LDVL, LWORK, JPIV(nn),MILWORK, i, io_int(1)
+integer(kind=irg),parameter     :: LWMAX = 5000 
+complex(kind=dbl)               :: VL(nn,nn),  WORK(LWMAX), normsum
+real(kind=dbl)                  :: RWORK(2*nn), io_real(1)
+character                       :: JOBVL, JOBVR
+complex(kind=dbl),allocatable   :: MIWORK(:)
 
 !----------------------------------------------------------------
 ! historical comment: ZGEEV potentially changes the order of the eigenvalues
@@ -1746,7 +1747,7 @@ complex(kind=dbl),allocatable 	:: MIWORK(:)
 ! first initialize the parameters for the LAPACK ZGEEV, CGETRF, and CGETRI routines
  JOBVL = 'N'   ! do not compute the left eigenvectors
  JOBVR = 'V'   ! do compute the right eigenvectors
- LWORK = -1 ! so that we can ask the routine for the actually needed value
+ LWORK = -1    ! so that we can ask the routine for the actually needed value
 
 ! call the routine to determine the optimal workspace size
   call zgeev(JOBVL,JOBVR,nn,M,LDA,W,VL,LDVL,CGG,LDVR,WORK,LWORK,RWORK,INFO)
@@ -1758,32 +1759,40 @@ complex(kind=dbl),allocatable 	:: MIWORK(:)
 
 ! it appears that the eigenvectors may not always be normalized ...
 ! so we renormalize them here...
-do i=1,nn
-  normsum = sum(cdabs(CGG(1:nn,i))**2)
-  normsum = cmplx(1.0,0.0,dbl)/sqrt(normsum)
-  CGG(1:nn,i) = CGG(1:nn,i)*normsum
-end do
+  do i=1,nn
+    normsum = sum(cdabs(CGG(1:nn,i))**2)
+    normsum = cmplx(1.0,0.0,dbl)/sqrt(normsum)
+    CGG(1:nn,i) = CGG(1:nn,i)*normsum
+  end do
 
-! make a new copy of CG for the matrix inversion routines
+! make a copy of CG for the matrix inversion routines
  CGinv = CGG
 
 ! invert CGinv to get the Bloch wave excitation amplitudes 
  LDA = nn
  call zgetrf(nn,nn,CGinv,LDA,JPIV,INFO)
- if (INFO.ne.0) call FatalError('Error in BWsolve: ','ZGETRF return not zero')
+ if (INFO.ne.0) then
+  io_int(1) = INFO
+  call WriteValue('zgetrf error code: ',io_int,1,frm="(I5)")
+  call FatalError('Error in BWsolve: ','ZGETRF return not zero')
+ end if
 
  MILWORK = 64*nn 
  allocate(MIWORK(MILWORK))
 
  MIWORK = dcmplx(0.0_dbl,0.0_dbl)
  call zgetri(nn,CGinv,LDA,JPIV,MIWORK,MILWORK,INFO)
- if (INFO.ne.0) call FatalError('Error in BWsolve: ','ZGETRI return not zero')
+ if (INFO.ne.0) then
+  io_int(1) = INFO
+  call WriteValue('zgetri error code: ',io_int,1,frm="(I5)")
+  call FatalError('Error in BWsolve: ','ZGETRI return not zero')
+ end if
 
- if ((cdabs(sum(matmul(CGG,CGinv)))-dble(nn)).gt.1.E-8) then
-  call Message('Error in matrix inversion; continuing', frm = "(A)")
-  io_real(1) = cdabs(sum(matmul(CGG,CGinv)))-dble(nn)
-  call WriteValue('   Matrix inversion error; this number should be zero: ',io_real,1,"(F)")
- endif
+! if ((cdabs(sum(matmul(CGG,CGinv)))-dble(nn)).gt.1.E-8) then
+!  call Message('Error in matrix inversion; continuing', frm = "(A)")
+!  io_real(1) = cdabs(sum(matmul(CGG,CGinv)))-dble(nn)
+!  call WriteValue('   Matrix inversion error; this number should be zero: ',io_real,1,"(F)")
+! endif
   
  deallocate(MIWORK)
  

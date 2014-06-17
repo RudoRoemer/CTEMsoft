@@ -165,7 +165,6 @@ end subroutine CalcBWint
 !> @param cell unit cell pointer
 !> @param ktmp wave vector structure
 !> @param nn number of strong beams
-!> @param nw number of weak beams
 !> @param nt number of thickness values
 !> @param thick thickness array
 !> @param inten output intensity list, including weak beams
@@ -175,8 +174,10 @@ end subroutine CalcBWint
 !> @date  04/29/13 MDG 3.0 inclusion of Bethe weak beams
 !> @date  01/08/14 MDG 3.1 forked from CalcBWint, specialized for Kossel computation
 !> @date  06/10/14 MDG 4.0 added Dyn, cell, and ktmp arguments
+!> @date  06/15/14 MDG 4.1 removed global W, CG and alpha initializations
+!> @date  06/16/14 MDG 4.2 made routine recursive for OPenMP
 !--------------------------------------------------------------------------
-subroutine CalcKint(Dyn,cell,ktmp,nn,nt,thick,Iz)
+recursive subroutine CalcKint(Dyn,cell,kn,nn,nt,thick,Iz)
 
 use local
 use io
@@ -187,32 +188,33 @@ use constants
 
 IMPLICIT NONE
 
-type(DynType),INTENT(INOUT)    :: Dyn
-type(unitcell),pointer	        :: cell
-type(kvectorlist),pointer	:: ktmp
-integer(kind=irg),INTENT(IN)	:: nn			!< number of strong beams
-integer(kind=irg),INTENT(IN)	:: nt			!< number of thickness values
-real(kind=sgl),INTENT(IN)	:: thick(nt)		!< thickness array
-real(kind=sgl),INTENT(INOUT)	:: Iz(nt)	        !< output intensities
+type(DynType),INTENT(INOUT)     :: Dyn
+type(unitcell),pointer          :: cell
+! type(kvectorlist),pointer       :: ktmp
+real(kind=sgl),INTENT(IN)       :: kn
+integer(kind=irg),INTENT(IN)    :: nn                   !< number of strong beams
+integer(kind=irg),INTENT(IN)    :: nt                   !< number of thickness values
+real(kind=sgl),INTENT(IN)       :: thick(nt)            !< thickness array
+real(kind=sgl),INTENT(INOUT)    :: Iz(nt)               !< output intensities
 
-integer(kind=irg)		:: j, IPIV(nn), k
-complex(kind=dbl)		:: CGinv(nn,nn), Minp(nn,nn), Wloc(nn), lCG(nn,nn), lW(nn), lalpha(nn)
-real(kind=dbl)                :: s, q, t
+integer(kind=irg)               :: j, IPIV(nn), k
+complex(kind=dbl)               :: CGinv(nn,nn), Minp(nn,nn), Wloc(nn), lCG(nn,nn), lW(nn), lalpha(nn)
+real(kind=dbl)                  :: s, q, t
+
 
 ! compute the eigenvalues and eigenvectors
  Minp = Dyn%DynMat
  IPIV = 0
  call BWsolve(Minp,Wloc,lCG,CGinv,nn,IPIV)
 
+
 ! the alpha coefficients are in the first column of the inverse matrix
-! the minus sign in W(i) stems from the fact that k_n is in the direction
-! opposite to the foil normal
- lW = cPi*Wloc/cmplx(ktmp%kn,0.0)
+ lW = cPi*Wloc/cmplx(kn,0.0)
  lalpha(1:nn) = CGinv(1:nn,1)
 
 ! make sure the alpha excitation coefficients are normalized 
  s = sum(cdabs(lalpha(1:nn))**2)
- if (s.gt.1.D0) then
+ if (s.ne.1.D0) then
   s = dcmplx(1.D0/dsqrt(s),0.D0)
   lalpha = lalpha*s
  endif 

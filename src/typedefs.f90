@@ -670,19 +670,19 @@ end type gnode
 
 ! we'll also need to replace a bunch of variables that have to do with dynamical simulations
 type DynType
-  real(kind=sgl)   		            :: WV(3)                  ! wave vector expressed in reciprocal frame
-  real(kind=sgl)   		            :: FN(3)                  ! Foil normal in reciprocal frame
-  real(kind=sgl)   		            :: Upz                    ! U'_0 normal absorption parameter
-  complex(kind=dbl),allocatable            :: W(:), &         	! eigenvalue vector for Bloch wave method
-                                              CG(:,:), &      	! eigenvector matrix
-                                              alpha(:), &     	! excitation amplitude vector
-                                              DHWMz(:,:),&		! Darwin-Howie-Whelan matrix
-                                              DynMat(:,:), &  	! dynamical matrix
-                                              DynMat0(:,:), &  	! dynamical matrix (for programs that need two or more of them)
-                                              DynMat1(:,:), &  	! dynamical matrix (for programs that need two or more of them)
-                                              DynMat2(:,:), &  	! dynamical matrix (for programs that need two or more of them)
-                                              DynMat3(:,:), &  	! dynamical matrix (for programs that need two or more of them)
-                                              phiz(:),Az(:,:) 	! used for Taylor expansion of scattering matrix
+  real(kind=sgl)                            :: WV(3)                  ! wave vector expressed in reciprocal frame
+  real(kind=sgl)                            :: FN(3)                  ! Foil normal in reciprocal frame
+  real(kind=sgl)                            :: Upz                    ! U'_0 normal absorption parameter
+  complex(kind=dbl),allocatable            :: W(:), &           ! eigenvalue vector for Bloch wave method
+                                              CG(:,:), &        ! eigenvector matrix
+                                              alpha(:), &       ! excitation amplitude vector
+                                              DHWMz(:,:),&      ! Darwin-Howie-Whelan matrix
+                                              DynMat(:,:), &    ! dynamical matrix
+                                              DynMat0(:,:), &   ! dynamical matrix (for programs that need two or more of them)
+                                              DynMat1(:,:), &   ! dynamical matrix (for programs that need two or more of them)
+                                              DynMat2(:,:), &   ! dynamical matrix (for programs that need two or more of them)
+                                              DynMat3(:,:), &   ! dynamical matrix (for programs that need two or more of them)
+                                              phiz(:),Az(:,:)   ! used for Taylor expansion of scattering matrix
 end type DynType
 
 
@@ -691,32 +691,32 @@ end type DynType
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
 
-! define the cutoff parameters for the Bethe potential approach (and set to zero initially)
+! define the cutoff parameters for the Bethe potential approach 
 type BetheParameterType
-        real(kind=sgl)                :: c1 = 20.0_sgl
-        real(kind=sgl)                :: c2 = 40.0_sgl
-        real(kind=sgl)                :: c3 = 1000.0_sgl
-        real(kind=sgl)                :: sgdbdiff = 0.05_sgl
-	real(kind=sgl)			:: weakcutoff = 0.0_sgl
-	real(kind=sgl)			:: cutoff = 0.0_sgl
-	real(kind=sgl)			:: sgcutoff = 0.0_sgl
-	integer(kind=irg)		:: nns
-	integer(kind=irg)		:: nnw
-	integer(kind=irg)		:: minweak
-	integer(kind=irg)		:: minstrong
-	integer(kind=irg)		:: maxweak
-	integer(kind=irg)		:: maxstrong
-	integer(kind=irg)		:: totweak
-	integer(kind=irg)		:: totstrong
-	integer(kind=irg),allocatable 	:: weaklist(:) 
-	integer(kind=irg),allocatable 	:: stronglist(:)
-	integer(kind=irg),allocatable 	:: weakhkl(:,:)
-	integer(kind=irg),allocatable 	:: stronghkl(:,:)
-	real(kind=sgl),allocatable	:: weaksg(:)
-	real(kind=sgl),allocatable	:: strongsg(:)
-	integer(kind=irg),allocatable 	:: strongID(:)
-	integer(kind=sgl),allocatable	:: reflistindex(:)		! used to map strong reflections onto the original reflist
-	integer(kind=sgl),allocatable	:: weakreflistindex(:)		! used to map weak reflections onto the original reflist
+        real(kind=sgl)                 :: c1 = 20.0_sgl
+        real(kind=sgl)                 :: c2 = 40.0_sgl
+        real(kind=sgl)                 :: c3 = 1000.0_sgl
+        real(kind=sgl)                 :: sgdbdiff = 0.05_sgl
+	real(kind=sgl)                 :: weakcutoff = 0.0_sgl
+	real(kind=sgl)                 :: cutoff = 0.0_sgl
+	real(kind=sgl)                 :: sgcutoff = 0.0_sgl
+        integer(kind=irg)              :: nns
+        integer(kind=irg)              :: nnw
+        integer(kind=irg)              :: minweak
+        integer(kind=irg)              :: minstrong
+        integer(kind=irg)              :: maxweak
+        integer(kind=irg)              :: maxstrong
+        integer(kind=irg)              :: totweak
+        integer(kind=irg)              :: totstrong
+        integer(kind=irg),allocatable  :: weaklist(:) 
+        integer(kind=irg),allocatable  :: stronglist(:)
+        integer(kind=irg),allocatable  :: weakhkl(:,:)
+        integer(kind=irg),allocatable  :: stronghkl(:,:)
+	real(kind=sgl),allocatable     :: weaksg(:)
+	real(kind=sgl),allocatable     :: strongsg(:)
+        integer(kind=irg),allocatable  :: strongID(:)
+        integer(kind=sgl),allocatable  :: reflistindex(:)              ! used to map strong reflections onto the original reflist
+        integer(kind=sgl),allocatable  :: weakreflistindex(:)          ! used to map weak reflections onto the original reflist
 end type BetheParameterType
 
 

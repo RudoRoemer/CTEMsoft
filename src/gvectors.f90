@@ -264,14 +264,14 @@ use diffraction
 
 IMPLICIT NONE
 
-type(unitcell),pointer	                        :: cell
+type(unitcell),pointer                         :: cell
 type(BetheParameterType),INTENT(INOUT)         :: BetheParameter
 
-integer(kind=irg),allocatable	:: glist(:,:)
-real(kind=dbl),allocatable	:: rh(:)
-type(reflisttype),pointer	:: rl, lastw, lasts
-integer(kind=irg)              :: icnt, istat, gmh(3), ir, ih
-real(kind=dbl)                 :: sgp, la, m
+integer(kind=irg),allocatable   :: glist(:,:)
+real(kind=dbl),allocatable      :: rh(:)
+type(reflisttype),pointer       :: rl, lastw, lasts
+integer(kind=irg)               :: icnt, istat, gmh(3), ir, ih
+real(kind=dbl)                  :: sgp, la, m
 
 
 la = 1.D0/mLambda
