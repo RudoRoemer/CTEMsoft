@@ -214,7 +214,7 @@ nsy = (nsy - 1)/2
 
 ! MCnthreads = 8
 io_int(1:6) = (/ numEbins, numzbins, nsx, nsy, num_el, MCnthreads /)
-call WriteValue(' NumEbins, numzbins, nsx, nsy, num_el, MCnthreads ',io_int,6,"(5I,',',I)")
+call WriteValue(' NumEbins, numzbins, nsx, nsy, num_el, MCnthreads ',io_int,6,"(5I8,',',I8)")
 etotal = num_el 
 
 read (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
