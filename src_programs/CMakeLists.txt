@@ -1,71 +1,113 @@
 project(Apps)
 
+#-------------------------------------------------------------------------------
+# Function COMPILE_TOOL to help alleviate lots of extra code below for adding
+# simple command line tools that just need one or two source files
+#
+function(COMPILE_TOOL)
+    set(options)
+    set(oneValueArgs TARGET DEBUG_EXTENSION BINARY_DIR COMPONENT INSTALL_DEST DEFINITION)
+    set(multiValueArgs SOURCES LINK_LIBRARIES)
+    cmake_parse_arguments(FTOOL "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
-macro (Create_exe_and_tll INPUT)
-	ADD_EXECUTABLE(${INPUT} ${Apps_SOURCE_DIR}/${INPUT}.f90)
-	TARGET_LINK_LIBRARIES(${INPUT} CTEMSoftLib)
-	
-	
-	set(install_dir "bin")
+    if( ${FTOOL_DEFINITION} )
+    add_definitions(-D${DEFINITION})
+    endif()
+
+    BuildToolBundle(
+        TARGET ${FTOOL_TARGET}
+        SOURCES ${FTOOL_SOURCES}
+        DEBUG_EXTENSION ${FTOOL_DEBUG_EXTENSION}
+        VERSION_MAJOR ${FTOOL_CTEMsoft_VER_MAJOR}
+        VERSION_MINOR ${FTOOL_CTEMsoft_VER_MINOR}
+        VERSION_PATCH ${FTOOL_CTEMsoft_VER_PATCH}
+        BINARY_DIR    ${FTOOL_BINARY_DIR}
+        LINK_LIBRARIES "${FTOOL_LINK_LIBRARIES}"
+        LIB_SEARCH_DIRS ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        COMPONENT     Applications
+        INSTALL_DEST  "${FTOOL_INSTALL_DEST}"
+        SOLUTION_FOLDER "Tools"
+    )
+
+endfunction()
+
+
+#-----------------------------------------------------------------------------------------
+# Set the install directory for all the tools apps that are getting created
+set(install_dir "bin")
 	set(lib_install_dir "lib")
 	if(WIN32)
 		set(install_dir ".")
 		set(lib_install_dir "")
 	endif()
 
-		INSTALL(TARGETS ${INPUT}
-			COMPONENT Applications
-			RUNTIME DESTINATION ${install_dir}
-			LIBRARY DESTINATION ${lib_install_dir}
-			ARCHIVE DESTINATION ${lib_install_dir}
-			BUNDLE DESTINATION "."
-		)
 
 
-endmacro (Create_exe_and_tll)
-#add_executable(CTEMEBSDmaster ${Apps_SOURCE_DIR}/CTEMEBSDmaster.f90)
-#TARGET_LINK_LIBRARIES(CTEMEBSDmaster CTEMSoftLib)
+#-----------------------------------------------------------------------------------------
+# List all the executables here that only have a SINGLE source file
+set(TOOLS
+  CTEMmbcbed
+  CTEMSRdefect #MP 
+  CTEMZAdefect 
+  CTEMECP
+  CTEMECCI #read_stacking_fault_data has wrong number of args passed to it
+  CTEMKossel
+  CTEMMC  #MP
+  CTEMEBSD
+  CTEMEBSDmaster
+  CTEMmkxtal
+  CTEMlistSG
+  CTEMqg
+  CTEMfamily
+  CTEMstar
+  CTEMorbit
+  CTEMZAgeom
+  CTEMlatgeom
+  CTEMstereo
+  CTEMorient
+  CTEMxtalinfo
+  CTEMzap
+  CTEMdrawcell
+)
 
 
-Create_exe_and_tll(CTEMlacbed)
-Create_exe_and_tll(CTEMmbcbed)
-Create_exe_and_tll(CTEMSRdefect) #MP 
-Create_exe_and_tll(CTEMZAdefect) 
-Create_exe_and_tll(CTEMECP)
-Create_exe_and_tll(CTEMECCI) #read_stacking_fault_data has wrong number of args passed to it
-Create_exe_and_tll(CTEMKossel)
-Create_exe_and_tll(CTEMMC)  #MP
-Create_exe_and_tll(CTEMEBSD)
-Create_exe_and_tll(CTEMEBSDmaster)
-Create_exe_and_tll(CTEMmkxtal)
-Create_exe_and_tll(CTEMlistSG)
-Create_exe_and_tll(CTEMqg)
-Create_exe_and_tll(CTEMfamily)
-Create_exe_and_tll(CTEMstar)
-Create_exe_and_tll(CTEMorbit)
-Create_exe_and_tll(CTEMZAgeom)
-Create_exe_and_tll(CTEMlatgeom)
-Create_exe_and_tll(CTEMstereo)
-Create_exe_and_tll(CTEMorient)
-Create_exe_and_tll(CTEMxtalinfo)
-Create_exe_and_tll(CTEMzap)
-Create_exe_and_tll(CTEMdrawcell)
+
+#-----------------------------------------------------------------------------------------
+# Now loop over each of the tool executables and create targets
+FOREACH(TOOL ${TOOLS} )
+
+  COMPILE_TOOL(
+	TARGET ${TOOL}
+	SOURCES ${Apps_SOURCE_DIR}/${TOOL}.f90
+	DEBUG_EXTENSION ${EXE_DEBUG_EXTENSION}
+    VERSION_MAJOR ${CTEMsoft_VER_MAJOR}
+    VERSION_MINOR ${CTEMsoft_VER_MINOR}
+    VERSION_PATCH ${CTEMsoft_VER_PATCH}
+    BINARY_DIR    ${${PROJECT_NAME}_BINARY_DIR}
+    COMPONENT     Applications
+    INSTALL_DEST  "${install_dir}"
+    LINK_LIBRARIES CTEMSoftLib
+	)
 
 
-#Create_exe_and_tll(CTEMBWshow)
-#Create_exe_and_tll(CTEMECPSM)
-#Create_exe_and_tll(CTEMMCTKD) 
-##Create_exe_and_tll(CTEMSRBW) #Explicit interface required for 'extractbwdata' 
-#Create_exe_and_tll(CTEMSRCBED)
-#Create_exe_and_tll(CTEMTBBFDF)
-#Create_exe_and_tll(CTEMTBBW)
-#Create_exe_and_tll(CTEMTBSM)
-#Create_exe_and_tll(CTEMexpeditions)
-#Create_exe_and_tll(CTEMgamma)
-#Create_exe_and_tll(CTEMgammadefect)
-#Create_exe_and_tll(CTEMholz)
-##Create_exe_and_tll(CTEMlens) #can't open rksuite
-##Create_exe_and_tll(CTEMoverlap) #doesn't look like dbdiffB has been initialized anywhere
-#Create_exe_and_tll(CTEMped)
-#Create_exe_and_tll(CTEMvr)
-##Create_exe_and_tll(CTEMvrfft)  #need fft? 
+ENDFOREACH()
+
+
+
+#  CTEMBWshow)
+#  CTEMECPSM)
+#  CTEMMCTKD) 
+##  CTEMSRBW) #Explicit interface required for 'extractbwdata' 
+#  CTEMSRCBED)
+#  CTEMTBBFDF)
+#  CTEMTBBW)
+#  CTEMTBSM)
+#  CTEMexpeditions)
+#  CTEMgamma)
+#  CTEMgammadefect)
+#  CTEMholz)
+##  CTEMlens) #can't open rksuite
+##  CTEMoverlap) #doesn't look like dbdiffB has been initialized anywhere
+#  CTEMped)
+#  CTEMvr)
+##  CTEMvrfft)  #need fft? 
