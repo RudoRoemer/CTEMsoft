@@ -37,9 +37,6 @@
 !> @brief Kossel patterns, taken from master EBSD pattern simulation, with adjustment for 
 !> Bloch wave part ...
 !
-!> @todo implement OpenMP multithreading for the actual computation part; requires modifications
-!> in CTEMlib.a routines (mostly THREADPRIVATE commands in several modules)
-!
 !> @details So, in this new version, not only are we getting rid of all globals,
 !> we're also attempting to split the program into two parts, so that the actual
 !> computation routine can be called from elsewhere (i.e., no namelist handling
@@ -49,6 +46,7 @@
 !> @date 01/07/14 MDG 2.0 new version
 !> @date 06/13/14 MDG 3.0 rewrite without globals ... 
 !> @date 06/13/14 MDG 3.1 separation of nml handling from computation part
+!> @date 06/18/14 MDG 3.2 corrected pointer allocation errors that prevented successful OpenMP runs
 !--------------------------------------------------------------------------
 program CTEMKossel
 
@@ -127,7 +125,7 @@ real(kind=sgl)                  :: ktmax, io_real(3), bragg, thetac,  galen, del
                                    frac, klaue(2), thetam, kk(3), kn
 integer(kind=irg)               :: ijmax,ga(3),gb(3),cnt, pgnum, NUMTHREADS, TID, ki, kj, &
                                    newcount,count_rate,count_max, io_int(6), i, j, isym, skip, &
-                                   npx, npy, numt, numk, ik, ip, jp, istat, dgn, &
+                                   npx, npy, numt, numk, ik, ip, jp, istat, dgn, nns, nnw, nref, &
                                    numset, nn, gzero, ipx, ipy, ii, iequiv(2,12), nequiv
 character(3)                    :: method
 
@@ -136,9 +134,10 @@ real(kind=sgl),allocatable      :: thickarray(:)
 real(kind=sgl),allocatable      :: Iz(:), Izsum(:,:,:)
 real(kind=sgl),allocatable      :: karray(:,:)
 integer(kind=irg),allocatable   :: kij(:,:)
-real(kind=dbl)                  :: pre, tpi
+real(kind=dbl)                  :: pre, tpi, cc
 complex(kind=dbl)               :: czero
-logical                         :: verbose
+complex(kind=dbl),allocatable   :: DynMat(:,:)
+logical                         :: verbose, first
 
 type(unitcell),pointer          :: cell
 type(gnode)                     :: rlp
@@ -146,10 +145,11 @@ type(DynType)                   :: Dyn
 type(kvectorlist),pointer       :: khead, ktmp
 type(symdata2D)                 :: TDPG
 type(BetheParameterType)        :: BetheParameters
+type(reflisttype),pointer       :: reflist, firstw
 
 interface
-        subroutine GetDynMat(cell, Dyn)
-        
+        recursive subroutine GetDynMat(cell, listroot, listrootw, rlp, DynMat, nns, nnw)
+
         use local
         use typedefs
         use io
@@ -162,18 +162,25 @@ interface
         IMPLICIT NONE
         
         type(unitcell),pointer           :: cell
-        type(DynType),INTENT(INOUT)      :: Dyn
+        type(reflisttype),pointer        :: listroot
+        type(reflisttype),pointer        :: listrootw
+        type(gnode),INTENT(INOUT)        :: rlp
+        complex(kind=dbl),INTENT(INOUT)  :: DynMat(nns,nns)
+        integer(kind=irg),INTENT(IN)     :: nns
+        integer(kind=irg),INTENT(IN)     :: nnw
         end subroutine GetDynMat
+
 end interface
+
+  nullify(cell)
+  nullify(khead)
+  nullify(ktmp)
 
   allocate(cell)
 
   verbose = .TRUE.
-  call Initialize_Cell(cell,Dyn,knl%xtalname, knl%dmin, knl%voltage, verbose)
+  call Initialize_Cell(cell,Dyn,rlp,knl%xtalname, knl%dmin, knl%voltage, verbose)
 
-! set the foil normal 
-  Dyn%FN = float(knl%fn)
- 
 ! determine the point group number
   j=0
   do i=1,32
@@ -192,11 +199,10 @@ end interface
   io_int(4:6)=gb(1:3)
   call WriteValue(' Reciprocal lattice vectors : ', io_int, 6,"('(',3I3,') and (',3I3,')',/)")
  
- ! for some of the 2D point groups, the standard orientation of the group according to ITC vol A
+! for some of the 2D point groups, the standard orientation of the group according to ITC vol A
 ! may not be the orientation that we have here, so we need to determine by how much the 2D point
 ! group is rotated (CCW) with respect to the standard setting...
   call CheckPatternSymmetry(cell,knl%k,ga,isym,thetam)
-
 
 ! determine range of incident beam directions
   bragg = CalcDiffAngle(cell,ga(1),ga(2),ga(3))*0.5
@@ -222,14 +228,13 @@ end interface
 
 ! force dynamical matrix routine to read new Bethe parameters from file
   call Set_Bethe_Parameters(BetheParameters,.TRUE.)
-! BetheParameters%c2 = 40.0
-! BetheParameters%c1 = 40.0 
 
 !----------------------------MAIN COMPUTATIONAL LOOP-----------------------
   czero = cmplx(0.D0,0.D0)
   pre = cmplx(0.D0,1.D0) * cPi
   numset = cell % ATOM_ntype  ! number of special positions in the unit cell
   tpi = 2.D0*cPi
+
 ! allocate space for the results
   allocate(Iz(knl%numthick),Izsum(2*npx+1,2*npy+1,knl%numthick))
   
@@ -262,40 +267,44 @@ end interface
   call system_clock(cnt,count_rate,count_max)
 
 ! set the number of OpenMP threads 
-!  call OMP_SET_NUM_THREADS(knl%nthreads)
-!  io_int(1) = knl%nthreads
-!  call WriteValue(' Setting number of threads to ',io_int, 1, frm = "(I4)")
+  call OMP_SET_NUM_THREADS(knl%nthreads)
+  io_int(1) = knl%nthreads
+  call WriteValue(' Setting number of threads to ',io_int, 1, frm = "(I4)")
 
-!! use OpenMP to run on multiple cores ... 
-!!$OMP PARALLEL default(shared) PRIVATE(ik,TID,kk,kn,ipx,ipy,ii,iequiv,nequiv,ip,jp,reflist,firstw)
+! use OpenMP to run on multiple cores ... 
+!$OMP PARALLEL default(shared) PRIVATE(DynMat,first,ik,TID,kk,kn,ipx,ipy,ii,iequiv,nequiv,ip,jp,reflist,firstw,nns,nnw,nref)
 
-!  NUMTHREADS = OMP_GET_NUM_THREADS()
-!  TID = OMP_GET_THREAD_NUM()
+! set the foil normal 
+  Dyn%FN = float(knl%fn)
 
-! each thread needs to have its own reflist linked list !!!
-!  allocate(mycell)
-! and copy some of the contents of cell into mycell
-!  call CellCopy(cell,mycell)
+  NUMTHREADS = OMP_GET_NUM_THREADS()
+  TID = OMP_GET_THREAD_NUM()
 
+  nullify(reflist)
+  nullify(firstw)
 
-!!$OMP DO SCHEDULE(STATIC,1)    
+  nns = 0
+  nnw = 0
 
+!$OMP DO SCHEDULE(DYNAMIC,100)    
 !  work through the beam direction list
   beamloop: do ik=1,numk
 
 ! generate the reflectionlist
         kk(1:3) = karray(1:3,ik)
-        call Initialize_ReflectionList(cell, BetheParameters, Dyn, kk, knl%dmin, verbose)
+        call Initialize_ReflectionList(cell, reflist, BetheParameters, Dyn, kk, knl%dmin, nref, verbose)
 
-! determine strong and wel reflections
-        call Apply_BethePotentials(cell, BetheParameters)
+! determine strong and weak reflections
+        call Apply_BethePotentials(cell, reflist, firstw, BetheParameters, nref, nns, nnw)
 
 ! generate the dynamical matrix
-        call GetDynMat(cell, Dyn, cell%reflist, cell%firstw)
+        allocate(DynMat(nns,nns))
+        call GetDynMat(cell, reflist, firstw, rlp, DynMat, nns, nnw)
 
 ! solve the dynamical eigenvalue equation for this beam direction
         kn = karray(4,ik)
-        call CalcKint(Dyn, kn, cell%nns, knl%numthick, thickarray, Iz)
+        call CalcKint(DynMat, kn, nns, knl%numthick, thickarray, Iz)
+        deallocate(DynMat)
 
         ipx = kij(1,ik)
         ipy = kij(2,ik)
@@ -303,7 +312,7 @@ end interface
 ! apply pattern symmetry 
         call Apply2DPGSymmetry(TDPG,ipx,ipy,isym,iequiv,nequiv)
 
-!!$OMP CRITICAL
+!$OMP CRITICAL
         do ii=1,nequiv
 ! is this point inside the viewing square ?
           ip = iequiv(1,ii) + npx + 1
@@ -312,22 +321,22 @@ end interface
            Izsum(ip,jp,1:knl%numthick) = Iz(1:knl%numthick)
           end if
         end do
-!!$OMP END CRITICAL
-      
-! select next beam direction
-!       if (ik.ne.numk) ktmp => ktmp%next
+!$OMP END CRITICAL
 
 ! update computation progress
-        if (float(ik)/float(numk) .gt. frac) then
+        if (TID.eq.0) then 
+         if (float(ik)/float(numk) .gt. frac) then
           io_int(1) = nint(100.0*frac) 
           call WriteValue('       ', io_int, 1, "(1x,I3,' percent completed')") 
           frac = frac + 0.05
+         end if
         end if  
         
+   call Delete_gvectorlist(reflist)
+
   end do beamloop
     
-
-!!$OMP END PARALLEL
+!$OMP END PARALLEL
 
 
 ! stop the clock and report the total time     
@@ -394,15 +403,18 @@ end subroutine ComputeKosselpattern
 !> @brief compute the dynamical matrix, including Bethe potentials
 !
 !> @param cell unit cell pointer
-!> @param Dyn dynamical scattering structure
 !> @param listroot top of the main reflection list
 !> @param listrootw top of the weak reflection list
+!> @param Dyn dynamical scattering structure
+!> @param nns number of strong reflections
+!> @param nnw number of weak reflections
 !
 !> @date  04/22/14 MDG 1.0 new library version
 !> @date  06/15/14 MDG 2.0 updated for removal of globals
-!> @date  06/17/14 MDG 2.1 added listroot pointers to accommodate multiple threads
+!> @date  06/17/14 MDG 2.1 added listroot pointers etc to accommodate multiple threads
+!> @date  06/18/14 MDG 2.2 corrected some pointer allocation errors in other routines; this one now works fine.
 !--------------------------------------------------------------------------
-recursive subroutine GetDynMat(cell, Dyn, listroot, listrootw)
+recursive subroutine GetDynMat(cell, listroot, listrootw, rlp, DynMat, nns, nnw)
 
 use local
 use typedefs
@@ -416,41 +428,41 @@ use constants
 IMPLICIT NONE
 
 type(unitcell),pointer           :: cell
-type(DynType),INTENT(INOUT)      :: Dyn
 type(reflisttype),pointer        :: listroot
 type(reflisttype),pointer        :: listrootw
+type(gnode),INTENT(INOUT)        :: rlp
+complex(kind=dbl),INTENT(INOUT)  :: DynMat(nns,nns)
+integer(kind=irg),INTENT(IN)     :: nns
+integer(kind=irg),INTENT(IN)     :: nnw
 
 complex(kind=dbl)                :: czero, ughp, uhph, weaksum 
 real(kind=dbl)                   :: weaksgsum
-integer(kind=sgl)                :: ir, ic, ll(3), istat
+real(kind=sgl)                   :: Upz
+integer(kind=sgl)                :: ir, ic, ll(3), istat, wc
 type(reflisttype),pointer        :: rlr, rlc, rlw
-type(gnode)                      :: rlp
 
 czero = cmplx(0.0,0.0,dbl)      ! complex zero
 
-! create the dynamical matrix for his reference case
-! get the absorption coefficient
-        if (allocated(Dyn%DynMat)) deallocate(Dyn%DynMat)
-        allocate(Dyn%DynMat(cell%nns,cell%nns),stat=istat)
-        Dyn%DynMat = czero
-        call CalcUcg(cell, rlp, (/0,0,0/) )
-        Dyn%Upz = rlp%Vpmod
+nullify(rlr)
+nullify(rlc)
+nullify(rlw)
 
-!       rlr => cell%reflist%next
+        DynMat = czero
+        call CalcUcg(cell, rlp, (/0,0,0/) )
+        Upz = rlp%Vpmod
+
         rlr => listroot%next
         ir = 1
         do
           if (.not.associated(rlr)) EXIT
-!         rlc => cell%reflist%next
           rlc => listroot%next
           ic = 1
           do
           if (.not.associated(rlc)) EXIT
           if (ic.ne.ir) then  ! not a diagonal entry
 ! here we need to do the Bethe corrections if necessary
-            if (cell%nnw.ne.0) then
+            if (nnw.ne.0) then
               weaksum = czero
-!             rlw => cell%firstw
               rlw => listrootw
               do
                if (.not.associated(rlw)) EXIT
@@ -463,16 +475,15 @@ czero = cmplx(0.0,0.0,dbl)      ! complex zero
               end do
 !        ! and correct the dynamical matrix element to become a Bethe potential coefficient
               ll = rlr%hkl - rlc%hkl
-              Dyn%DynMat(ir,ic) = cell%LUT(ll(1),ll(2),ll(3))  - cmplx(0.5D0*mLambda,0.0D0,dbl)*weaksum
+              DynMat(ir,ic) = cell%LUT(ll(1),ll(2),ll(3))  - cmplx(0.5D0*mLambda,0.0D0,dbl)*weaksum
              else
               ll = rlr%hkl - rlc%hkl
-              Dyn%DynMat(ir,ic) = cell%LUT(ll(1),ll(2),ll(3))
+              DynMat(ir,ic) = cell%LUT(ll(1),ll(2),ll(3))
             end if
           else  ! it is a diagonal entry, so we need the excitation error and the absorption length
 ! determine the total contribution of the weak beams
-            if (cell%nnw.ne.0) then
+            if (nnw.ne.0) then
               weaksgsum = 0.D0
-!             rlw => cell%firstw
               rlw => listrootw
               do
                if (.not.associated(rlw)) EXIT
@@ -482,9 +493,9 @@ czero = cmplx(0.0,0.0,dbl)      ! complex zero
                 rlw => rlw%nextw
               end do
               weaksgsum = weaksgsum * mLambda/2.D0
-              Dyn%DynMat(ir,ir) = cmplx(2.D0*rlr%sg/mLambda-weaksgsum,Dyn%Upz,dbl)
+              DynMat(ir,ir) = cmplx(2.D0*rlr%sg/mLambda-weaksgsum,Upz,dbl)
             else
-              Dyn%DynMat(ir,ir) = cmplx(2.D0*rlr%sg/mLambda,Dyn%Upz,dbl)
+              DynMat(ir,ir) = cmplx(2.D0*rlr%sg/mLambda,Upz,dbl)
             end if           
         
            end if       
@@ -496,3 +507,7 @@ czero = cmplx(0.0,0.0,dbl)      ! complex zero
         end do
 
 end subroutine GetDynMat
+
+
+
+

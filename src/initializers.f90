@@ -59,7 +59,7 @@ contains
 !> @date 01/10/14 MDG 1.0 original
 !> @date 06/10/14 MDG 2.0 rewrite without global variables
 !--------------------------------------------------------------------------
-subroutine Initialize_Cell(cell,Dyn,xtalname, dmin, voltage, verbose)
+subroutine Initialize_Cell(cell,Dyn,rlp,xtalname, dmin, voltage, verbose)
 
 use local
 use typedefs
@@ -73,17 +73,17 @@ use diffraction
 
 IMPLICIT NONE
 
-type(unitcell),pointer	                    :: cell
+type(unitcell),pointer                     :: cell
 type(DynType),INTENT(INOUT)                :: Dyn
+type(gnode),INTENT(INOUT)                  :: rlp
 character(fnlen),INTENT(IN)                :: xtalname
 real(kind=sgl),INTENT(IN)                  :: dmin
 real(kind=sgl),INTENT(IN)                  :: voltage
-logical,INTENT(IN),OPTIONAL	             :: verbose
+logical,INTENT(IN),OPTIONAL                :: verbose
 integer(kind=irg)                          :: istat, io_int(3), skip
-integer(kind=irg)	                    :: imh, imk, iml, gg(3), ix, iy, iz
+integer(kind=irg)                          :: imh, imk, iml, gg(3), ix, iy, iz
 real(kind=sgl)                             :: dhkl, io_real(3), ddt
 logical                                    :: loadingfile
-type(gnode)                                :: rlp
 
 
 ! make sure the cell variable exists
@@ -175,7 +175,7 @@ izl:   do iz=-2*iml,2*iml
         gg = (/ ix, iy, iz /)
         if (IsGAllowed(cell,gg)) then  ! is this reflection allowed by lattice centering ?
 ! add the reflection to the look up table
- 	   call CalcUcg(cell,rlp,gg )
+           call CalcUcg(cell,rlp,gg )
            cell%LUT(ix, iy, iz) = rlp%Ucg
 ! flag this reflection as a double diffraction candidate if cabs(Ucg)<ddt threshold
            if (cabs(rlp%Ucg).le.ddt) then 
@@ -209,6 +209,8 @@ end subroutine Initialize_Cell
 !> @param Dyn Dynamical interactions structure
 !> @param k zone axis direction cosines in direct Bravais lattice
 !> @param dmin smallest lattice d-spacing to consider
+!> @param listroot pointer to top of list (could be cell%reflist)
+!> @param nref number of reflections in main list (used to be DynNbeams)
 !> @param verbose (optional) used for debugging purposes mostly
 !
 !> @date 01/10/14 MDG 1.0 original, based on old Compute_ReflectionList
@@ -216,7 +218,7 @@ end subroutine Initialize_Cell
 !> @date 06/15/14 MDG 2.0 update for removal of all globals
 !> @date 06/16/14 MDG 2.1 added recursive
 !--------------------------------------------------------------------------
-recursive subroutine Initialize_ReflectionList(cell, BetheParameter, Dyn, k, dmin, verbose)
+recursive subroutine Initialize_ReflectionList(cell, listroot, BetheParameter, Dyn, k, dmin, nref, verbose)
 
 use local
 use typedefs
@@ -230,10 +232,12 @@ use symmetry
 IMPLICIT NONE
 
 type(unitcell),pointer                          :: cell
+type(reflisttype),pointer                       :: listroot
 type(BetheParameterType),INTENT(INOUT)          :: BetheParameter
-type(DynType),INTENT(INOUT)                     :: Dyn
+type(DynType),INTENT(IN)                        :: Dyn
 real(kind=sgl),INTENT(IN)                       :: k(3)
 real(kind=sgl),INTENT(IN)                       :: dmin
+integer(kind=irg),INTENT(INOUT)                 :: nref
 logical,INTENT(IN),OPTIONAL                     :: verbose
 
 integer(kind=irg)                               :: imh, imk, iml, gg(3), ix, iy, iz, i, minholz, RHOLZ, im, istat, N, &
@@ -254,16 +258,14 @@ type(reflisttype),pointer                       :: rltail
   imk = (gp(2)-1)/4
   iml = (gp(3)-1)/4
   
-! get rid of the existing linked list, if any 
-  if (associated(cell%reflist)) then
-    call Delete_gvectorlist(cell)
-    nullify(cell%reflist)
-  end if 
-  
+  nullify(listroot)
+  nullify(rltail)
+ 
 ! transmitted beam has excitation error zero
   gg = (/ 0,0,0 /)
-  call AddReflection(rltail, cell, gg )   ! this guarantees that 000 is always the first reflection
+  call AddReflection(rltail, listroot, cell, nref, gg )   ! this guarantees that 000 is always the first reflection
   rltail%sg = 0.0
+
 
 ! now compute |sg|/|U_g|/lambda for the other allowed reflections; if this parameter is less than
 ! the threshhold, rBethe_i, then add the reflection to the list of potential reflections
@@ -278,14 +280,14 @@ izl:   do iz=-iml,iml
           sgp = Calcsg(cell,float(gg),k,Dyn%FN)
           if (cell%dbdiff(ix, iy, iz)) then ! potential double diffraction reflection
             if (abs(sgp).le.rBethe_d) then 
-              call AddReflection(rltail, cell, gg )
+              call AddReflection(rltail, listroot, cell, nref, gg )
               rltail%sg = sgp
               rltail%dbdiff = .TRUE.
             end if
           else
             r_g = la * abs(sgp)/cdabs(cell%LUT(ix, iy, iz))
             if (r_g.le.rBethe_i) then 
-              call AddReflection(rltail, cell, gg )
+              call AddReflection(rltail, listroot, cell, nref, gg )
               rltail%sg = sgp
               rltail%dbdiff = .FALSE.
             end if
@@ -296,15 +298,13 @@ izl:   do iz=-iml,iml
       end do iyl
     end do ixl
     
-  cell%DynNbeamsLinked = cell%DynNbeams
-
   if (present(verbose)) then 
     if (verbose) then 
-      io_int(1) = cell%DynNbeams
+      io_int(1) = nref
       call WriteValue(' Length of the master list of reflections : ', io_int, 1, "(I8)")
     end if
   end if
-  
+
 end subroutine Initialize_ReflectionList
 
 

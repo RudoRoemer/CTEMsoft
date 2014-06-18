@@ -437,25 +437,25 @@ end type
 !
 ! linked list of reflections
 type reflisttype  
-  integer(kind=irg)          	:: num, &  		! sequential number
-                              	   hkl(3),&		! Miller indices
-                              	   famhkl(3),&		! family representative Miller indices
-				   HOLZN,& 		! belongs to this HOLZ layer
-				   strongnum,& 		! sequential number for strong beams
-				   weaknum,& 		! sequential number for weak beams
-				   famnum		! family number
+  integer(kind=irg)             :: num, &               ! sequential number
+                                   hkl(3),&             ! Miller indices
+                                   famhkl(3),&          ! family representative Miller indices
+                                   HOLZN,&              ! belongs to this HOLZ layer
+                                   strongnum,&          ! sequential number for strong beams
+                                   weaknum,&            ! sequential number for weak beams
+                                   famnum               ! family number
 ! removed 1/10/14		   nab(2)  		! decomposition with respect to ga and gb
-  logical                    	:: dbdiff  		! double diffraction reflection ?
-  real(kind=dbl)             	:: sg, &               ! excitation error
-                                  xg, &              ! extinction distance
+  logical                       :: dbdiff               ! double diffraction reflection ?
+  real(kind=dbl)                :: sg, &               ! excitation error
+                                   xg, &              ! extinction distance
 ! removed 1/10/14                 Ucgmod, &          ! modulus of Fourier coefficient
-                                  sangle, &          ! scattering angle (mrad)
-                                  thetag             ! phase angle, needed for ECCI simulations
-  logical	                :: strong, weak       ! is this a strong beam or not; both .FALSE. means 'do not consider'
-  complex(kind=dbl)            :: Ucg	               ! Fourier coefficient, copied from cell%LUT
-  type(reflisttype),pointer 	:: next    		! connection to next entry in master linked list
-  type(reflisttype),pointer 	:: nexts    		! connection to next strong entry in linked list
-  type(reflisttype),pointer 	:: nextw    		! connection to next weak entry in linked list
+                                   sangle, &          ! scattering angle (mrad)
+                                   thetag             ! phase angle, needed for ECCI simulations
+  logical                       :: strong, weak       ! is this a strong beam or not; both .FALSE. means 'do not consider'
+  complex(kind=dbl)             :: Ucg                  ! Fourier coefficient, copied from cell%LUT
+  type(reflisttype),pointer     :: next                 ! connection to next entry in master linked list
+  type(reflisttype),pointer     :: nexts                ! connection to next strong entry in linked list
+  type(reflisttype),pointer     :: nextw                ! connection to next weak entry in linked list
 end type reflisttype
 
 
@@ -545,20 +545,20 @@ end type
 !> nns	= number of strong beams
 !> nnw = number of weak beams
 type unitcell
-  real(kind=dbl)	                :: a,b,c,alpha,beta,gamma
-  real(kind=dbl)	                :: dmt(3,3),rmt(3,3),dsm(3,3),rsm(3,3),vol
-  integer(kind=irg)	                :: ATOM_type(maxpasym),ATOM_ntype,SYM_SGnum,xtal_system,SYM_SGset
-  real(kind=sgl)	                :: ATOM_pos(maxpasym,5)
-  integer(kind=irg)			 :: numat(maxpasym)		!< number of atoms of each type in the asymmetric unit
-  character(fnlen)	                :: fname
-  logical				 :: hexset
+  real(kind=dbl)                       :: a,b,c,alpha,beta,gamma
+  real(kind=dbl)                       :: dmt(3,3),rmt(3,3),dsm(3,3),rsm(3,3),vol
+  integer(kind=irg)                    :: ATOM_type(maxpasym),ATOM_ntype,SYM_SGnum,xtal_system,SYM_SGset
+  real(kind=sgl)                       :: ATOM_pos(maxpasym,5)
+  integer(kind=irg)                    :: numat(maxpasym)      !< number of atoms of each type in the asymmetric unit
+  character(fnlen)                     :: fname
+  logical                              :: hexset
   real(kind=dbl),allocatable           :: apos(:,:,:)
   complex(kind=dbl),allocatable        :: LUT(:,:,:)
   logical,allocatable                  :: dbdiff(:,:,:)
   logical                              :: nonsymmorphic
   type(symdata)                        :: SG
   type(reflisttype),pointer            :: reflist
-  type(reflisttype),pointer 	        :: firstw    		! connection to first weak entry in linked list
+  type(reflisttype),pointer            :: firstw                ! connection to first weak entry in linked list
   integer(kind=irg)                    :: DynNbeams, DynNbeamsLinked, nns, nnw
 end type
 
@@ -569,7 +569,7 @@ end type
 !> this type is used to define an orientation relation, i.e., two parallel
 !> directions and two parallel planes
 type orientation
-  real(kind=sgl)  	:: tA(3), tB(3), gA(3), gB(3)
+  real(kind=sgl)        :: tA(3), tB(3), gA(3), gB(3)
 end type
 
 !> cell is a pointer to the generic unit cell variable used in all programs.  

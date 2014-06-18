@@ -63,7 +63,7 @@
 module local
 
 ! for OpenMP implementations ... 
-use omp_lib
+! use omp_lib
 
 !> @note This module must be "use"d by every program, subroutine, and function!
 

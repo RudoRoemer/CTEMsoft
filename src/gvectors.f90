@@ -64,8 +64,9 @@ contains
 !
 !> @brief allocate and initialize the linked reflection list
 !
-!> @param cell unit cell pointer
-!> @param rltail reflist pointer
+!> @param listroot top of linked list
+!> @param rltail auxiliary pointer
+!> @param nref number of reflections in list 
 !
 !> @date  10/20/98 MDG 1.0 original
 !> @date   5/22/01 MDG 2.0 f90
@@ -73,25 +74,27 @@ contains
 !> @date  03/26/13 MDG 3.0 updated IO
 !> @date  01/10/14 MDG 4.0 account for new version of cell type
 !> @date  06/09/14 MDG 4.1 added cell and rltail as arguments
+!> @date  06/17/14 MDG 4.2 modification for separate reflist pointers; removed cell pointer
 !--------------------------------------------------------------------------
-subroutine MakeRefList(cell, rltail)
+recursive subroutine MakeRefList(listroot, rltail, nref)
 
 use error
 
 IMPLICIT NONE
 
-type(unitcell),pointer	        :: cell
-type(reflisttype),pointer	:: rltail
+type(reflisttype),pointer       :: listroot 
+type(reflisttype),pointer       :: rltail
+integer(kind=irg),INTENT(INOUT) :: nref
 
 integer(kind=irg)  :: istat
 
 ! create it if it does not already exist
-if (.not.associated(cell%reflist)) then
-  cell%DynNbeams = 0
-  allocate(cell%reflist,stat=istat)
+if (.not.associated(listroot)) then
+  nref = 0
+  allocate(listroot,stat=istat)
   if (istat.ne.0) call FatalError('MakeRefList:',' unable to allocate pointer')
-  rltail => cell%reflist              ! tail points to new value
-  nullify(rltail%next)              	! nullify next in new value
+  rltail => listroot               ! tail points to new value
+  nullify(rltail%next)             ! nullify next in new value
 end if
 
 end subroutine MakeRefList
@@ -107,7 +110,9 @@ end subroutine MakeRefList
 !> @brief add a reflection to the linked reflection list
 !
 !> @param rltail reflisttype variable
+!> @param listroot reflisttype variable
 !> @param cell unit cell pointer
+!> @param nref number of reflections
 !> @param hkl Miller indices
 !
 !> @date  10/20/98 MDG 1.0 original
@@ -116,35 +121,43 @@ end subroutine MakeRefList
 !> @date  03/26/13 MDG 3.0 updated IO
 !> @date  01/10/14 MDG 4.0 account for new version of cell type
 !> @date  06/09/14 MDG 4.1 added rltail and cell as arguments
+!> @date  06/17/14 MDG 4.2 modification for separate reflist pointers
 !--------------------------------------------------------------------------
-subroutine AddReflection(rltail,cell,hkl)
+recursive subroutine AddReflection(rltail,listroot,cell,nref,hkl)
 
 use error
 use diffraction
 
 IMPLICIT NONE
 
-type(reflisttype),pointer	:: rltail
-type(unitcell),pointer	        :: cell
-integer(kind=irg),INTENT(IN)	:: hkl(3)		!< Miller indices of reflection to be added to list
+type(reflisttype),pointer       :: rltail
+type(reflisttype),pointer       :: listroot
+type(unitcell),pointer          :: cell
+integer(kind=irg),INTENT(INOUT) :: nref
+integer(kind=irg),INTENT(IN)    :: hkl(3)               !< Miller indices of reflection to be added to list
 
-integer(kind=irg)  		:: istat
+integer(kind=irg)               :: istat
 
-! create reflist if it does not already exist
- if (.not.associated(cell%reflist)) call MakeRefList(cell,rltail)
+! create linked list if it does not already exist
+ if (.not.associated(rltail)) then
+   nullify(rltail)
+ end if
+ if (.not.associated(listroot)) then
+   call MakeRefList(listroot,rltail,nref)
+ end if
 
 ! create a new entry
- allocate(rltail%next,stat=istat)  		! allocate new value
+ allocate(rltail%next,stat=istat)               ! allocate new value
  if (istat.ne.0) call FatalError('AddReflection',' unable to add new reflection')
 
- rltail => rltail%next             		! tail points to new value
- nullify(rltail%next)              		! nullify next in new value
+ rltail => rltail%next                          ! tail points to new value
+ nullify(rltail%next)                           ! nullify next in new value
 
- cell%DynNbeams = cell%DynNbeams + 1         	! update reflection counter
- rltail%num = cell%DynNbeams            	! store reflection number
- rltail%hkl = hkl                  		! store Miller indices
+ nref = nref + 1                                ! update reflection counter
+ rltail%num = nref                              ! store reflection number
+ rltail%hkl = hkl                               ! store Miller indices
  rltail%Ucg = cell%LUT( hkl(1), hkl(2), hkl(3) ) ! and store it in the list
- rltail%famnum = 0				! init this value for Prune_ReflectionList
+ rltail%famnum = 0                              ! init this value for Prune_ReflectionList
 ! rltail%Ucgmod = cabs(rlp%Ucg)   		! added on 2/29/2012 for Bethe potential computations
 ! rltail%sangle = 1000.0*dble(CalcDiffAngle(hkl(1),hkl(2),hkl(3)))    ! added 4/18/2012 for EIC project HAADF/BF tomography simulations
 ! rltail%thetag = rlp%Vphase                   ! added 12/14/2013 for CTEMECCI program
@@ -247,41 +260,53 @@ end subroutine Printrlp
 !> @brief tag weak and strong reflections in cell%reflist
 !
 !> @param cell unit cell pointer
+!> @param BetheParameter Bethe Potential parameter structure
+!> @param listroot top of reflection linked list
+!> @param listrootw top of weak reflection linked list
+!> @param nref total number of reflections
+!> @param nns number of strong reflections
+!> @param nnw number of weak reflections
 !
-!> @details This routine steps through the cell%reflist linked list and 
+!> @details This routine steps through the listroot linked list and 
 !> determines for each reflection whether it is strong or weak or should be
 !> ignored.  Strong and weak reflections are then linked in a new list via
 !> the nexts and nextw pointers, along with the nns and nnw counters.
-!> This routine produces no output parameters, and makes use of the
-!> BetheParameter variables.
+!> This routine makes use of the BetheParameter variables.
 !
 !> @date  01/14/14 MDG 1.0 original version
 !> @date  06/09/14 MDG 2.0 added cell and BetheParameter arguments
+!> @date  06/17/14 MDG 2.1 added listroot, listrootw, nns, nnw arguments
 !--------------------------------------------------------------------------
-subroutine Apply_BethePotentials(cell, BetheParameter)
+recursive subroutine Apply_BethePotentials(cell, listroot, listrootw, BetheParameter, nref, nns, nnw)
 
+use io
 use diffraction
 
 IMPLICIT NONE
 
 type(unitcell),pointer                         :: cell
-type(BetheParameterType),INTENT(INOUT)         :: BetheParameter
+type(reflisttype),pointer                      :: listroot
+type(reflisttype),pointer                      :: listrootw
+type(BetheParameterType),INTENT(IN)            :: BetheParameter
+integer(kind=irg),INTENT(IN)                   :: nref
+integer(kind=irg),INTENT(OUT)                  :: nns
+integer(kind=irg),INTENT(OUT)                  :: nnw
 
-integer(kind=irg),allocatable   :: glist(:,:)
-real(kind=dbl),allocatable      :: rh(:)
-type(reflisttype),pointer       :: rl, lastw, lasts
-integer(kind=irg)               :: icnt, istat, gmh(3), ir, ih
-real(kind=dbl)                  :: sgp, la, m
+integer(kind=irg),allocatable                  :: glist(:,:)
+real(kind=dbl),allocatable                     :: rh(:)
+type(reflisttype),pointer                      :: rl, lastw, lasts
+integer(kind=irg)                              :: icnt, istat, gmh(3), ir, ih
+real(kind=dbl)                                 :: sgp, la, m
 
 
-la = 1.D0/mLambda
-
-nullify(cell%firstw)
+nullify(lasts)
+nullify(lastw)
+nullify(rl)
 
 ! first we extract the list of g-vectors from reflist, so that we can compute 
 ! all the g-h difference vectors
-allocate(glist(3,cell%DynNbeams),rh(cell%DynNbeams),stat=istat)
-rl => cell%reflist%next
+allocate(glist(3,nref),rh(nref),stat=istat)
+rl => listroot%next
 icnt = 0
 do
   if (.not.associated(rl)) EXIT
@@ -291,15 +316,17 @@ do
 end do
 
 ! initialize the strong and weak reflection counters
-cell%nns = 1
-cell%nnw = 0
+nns = 1
+nnw = 0
 
 ! the first reflection is always strong
-rl => cell%reflist%next
+rl => listroot%next
 rl%strong = .TRUE.
 rl%weak = .FALSE.
 lasts => rl
 nullify(lasts%nextw)
+
+la = 1.D0/mLambda
 
 ! next we need to iterate through all reflections in glist and 
 ! determine which category the reflection belongs to: strong, weak, ignore
@@ -311,7 +338,7 @@ irloop: do ir = 2,icnt
    gmh(1:3) = glist(1:3,ir) - glist(1:3,ih)
    if (cell%dbdiff(gmh(1),gmh(2),gmh(3))) then  ! it is a double diffraction reflection with |U|=0
 ! to be written
-     rh(ih) = 0.D0 
+     rh(ih) = 10000.D0 
    else 
      rh(ih) = sgp/cdabs( cell%LUT(gmh(1), gmh(2), gmh(3)) )
    end if
@@ -319,19 +346,18 @@ irloop: do ir = 2,icnt
 
 ! which category does reflection ir belong to ?
   m = minval(rh)
-! write (*,*) glist(1:3,ir),'; minval(rh) = ',m
 
 ! m > c2 => ignore this reflection
   if (m.gt.BetheParameter%c2) then
-!    write (*,*) '    -> ignore'
     rl%weak = .FALSE.
     rl%strong = .FALSE.
     CYCLE irloop
   end if
+
 ! c1 < m < c2 => weak reflection
   if ((BetheParameter%c1.lt.m).and.(m.le.BetheParameter%c2)) then
-    if (cell%nnw.eq.0) then
-      cell%firstw => rl
+    if (nnw.eq.0) then
+      listrootw => rl
       lastw => rl
     else
       lastw%nextw => rl
@@ -340,8 +366,7 @@ irloop: do ir = 2,icnt
     end if
     rl%weak = .TRUE.
     rl%strong = .FALSE.
-    cell%nnw = cell%nnw + 1
-!    write (*,*) '    -> weak ',cell%nnw
+    nnw = nnw + 1
     CYCLE irloop
   end if
 
@@ -352,8 +377,7 @@ irloop: do ir = 2,icnt
     lasts => rl
     rl%weak = .FALSE.
     rl%strong = .TRUE.
-    cell%nns = cell%nns + 1
-!    write (*,*) '    -> strong ',cell%nns
+    nns = nns + 1
   end if  
 end do irloop
 
@@ -1027,21 +1051,22 @@ end subroutine ShortestGFOLZ
 !
 !> @brief delete the entire linked list
 !
-!> @param cell unit cell pointer
+!> @param top top of the list to be removed
 !
 !> @date   04/29/13 MDG 1.0 original
 !> @date   06/09/14 MDG 1.1 added cell argument
+!> @date   06/17/14 MDG 1.2 replaced cell by top
 !--------------------------------------------------------------------------
-subroutine Delete_gvectorlist(cell)
+recursive subroutine Delete_gvectorlist(top)
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
+type(reflisttype),pointer       :: top
 
-type(reflisttype),pointer :: rltail, rltmpa
+type(reflisttype),pointer       :: rltail, rltmpa
 
 ! deallocate the entire linked list before returning, to prevent memory leaks
-rltail => cell%reflist
+rltail => top
 rltmpa => rltail % next
 do 
   deallocate(rltail)
