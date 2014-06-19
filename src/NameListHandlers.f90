@@ -67,9 +67,21 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)             :: nmlfile
 type(KosselNameListType),INTENT(INOUT)  :: knl
 
-integer(kind=irg)                       :: stdout, numthick, npix, maxHOLZ, nthreads, k(3), fn(3)
-real(kind=sgl)                          :: voltage, dmin, convergence, startthick, thickinc, minten
-character(fnlen)                        :: xtalname, outname
+integer(kind=irg)       :: stdout
+integer(kind=irg)       :: numthick
+integer(kind=irg)       :: npix
+integer(kind=irg)       :: maxHOLZ
+integer(kind=irg)       :: nthreads
+integer(kind=irg)       :: k(3)
+integer(kind=irg)       :: fn(3)
+real(kind=sgl)          :: voltage
+real(kind=sgl)          :: dmin
+real(kind=sgl)          :: convergence
+real(kind=sgl)          :: startthick
+real(kind=sgl)          :: thickinc
+real(kind=sgl)          :: minten
+character(fnlen)        :: xtalname
+character(fnlen)        :: outname
 
 namelist /Kossellist/ stdout, xtalname, voltage, k, fn, dmin, convergence, minten, nthreads, &
                               startthick, thickinc, numthick, outname, npix, maxHOLZ
@@ -119,5 +131,99 @@ knl%xtalname = xtalname
 knl%outname = outname
 
 end subroutine GetKosselNameList
+
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:GetMCNameList
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read namelist file and fill mcnl structure (used by CTEMMC.f90)
+!
+!> @param nmlfile namelist file name
+!> @param mcnl Monte Carloname list structure
+!
+!> @date 06/18/14  MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine GetMCNameList(nmlfile, mcnl)
+
+use error
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)             :: nmlfile
+type(MCNameListType),INTENT(INOUT)      :: mcnl
+
+integer(kind=irg)       :: stdout
+integer(kind=irg)       :: numsx
+integer(kind=irg)       :: primeseed
+integer(kind=irg)       :: num_el
+integer(kind=irg)       :: nthreads
+real(kind=dbl)          :: sig
+real(kind=dbl)          :: omega
+real(kind=dbl)          :: EkeV
+real(kind=dbl)          :: Ehistmin
+real(kind=dbl)          :: Ebinsize
+real(kind=dbl)          :: depthmax
+real(kind=dbl)          :: depthstep
+character(4)            :: MCmode
+character(fnlen)        :: xtalname
+character(fnlen)        :: dataname
+
+! define the IO namelist to facilitate passing variables to the program.
+namelist  / MCdata / stdout, xtalname, sig, numsx, num_el, primeseed, EkeV, &
+                dataname, nthreads, Ehistmin, Ebinsize, depthmax, depthstep, omega, MCmode
+
+! set the input parameters to default values (except for xtalname, which must be present)
+stdout = 6
+numsx = 1501
+primeseed = 932117
+num_el = 12500000
+nthreads = 1
+sig = 70.D0
+omega = 0.D0
+EkeV = 30.D0
+Ehistmin = 5.D0
+Ebinsize = 0.5D0
+depthmax = 100.D0
+depthstep = 1.0D0
+MCmode = 'CSDA'
+xtalname = 'undefined'
+dataname = 'MCoutput.data'
+
+! read the namelist file
+ open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+ read(UNIT=dataunit,NML=MCdata)
+ close(UNIT=dataunit,STATUS='keep')
+
+! check for required entries
+ if (trim(xtalname).eq.'undefined') then
+  call FatalError('CTEMMC:',' structure file name is undefined in '//nmlfile)
+ end if
+
+! if we get here, then all appears to be ok, and we need to fill in the knl fields
+mcnl%stdout = stdout
+mcnl%numsx = numsx
+mcnl%primeseed = primeseed
+mcnl%num_el = num_el
+mcnl%nthreads = nthreads
+mcnl%sig = sig
+mcnl%omega = omega
+mcnl%EkeV = EkeV
+mcnl%Ehistmin = Ehistmin
+mcnl%Ebinsize = Ebinsize
+mcnl%depthmax = depthmax
+mcnl%depthstep = depthstep
+mcnl%MCmode = MCmode
+mcnl%xtalname = xtalname
+mcnl%dataname = dataname
+mcnl%stdout = stdout
+
+end subroutine GetMCNameList
+
+
+
+
 
 end module NameListHandlers

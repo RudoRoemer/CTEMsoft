@@ -63,6 +63,25 @@ type KosselNameListType
         character(fnlen)        :: outname
 end type KosselNameListType
 
+! namelist for the CTEMMC program
+type MCNameListType
+        integer(kind=irg)       :: stdout
+        integer(kind=irg)       :: numsx
+        integer(kind=irg)       :: primeseed
+        integer(kind=irg)       :: num_el
+        integer(kind=irg)       :: nthreads
+        real(kind=dbl)          :: sig
+        real(kind=dbl)          :: omega
+        real(kind=dbl)          :: EkeV
+        real(kind=dbl)          :: Ehistmin
+        real(kind=dbl)          :: Ebinsize
+        real(kind=dbl)          :: depthmax
+        real(kind=dbl)          :: depthstep
+        character(4)            :: MCmode
+        character(fnlen)        :: xtalname
+        character(fnlen)        :: dataname
+end type MCNameListType
+
 
 
 

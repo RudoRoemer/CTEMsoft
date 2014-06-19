@@ -46,6 +46,7 @@
 !>	far away.
 !
 !> @todo implement more detailed Monte Carlo scheme in addition to CSDA.
+!> Also, switch the actual single_run routine to OpenCL and GPU...
 !                
 !> @date 11/**/12  PGC 1.0 IDL version
 !> @date 12/04/12  MDG 1.1 conversion to Fortran-90
@@ -56,24 +57,36 @@
 !> @date 07/23/13  MDG 3.0 complete rewrite
 !> @date 09/25/13  MDG 3.1 modified output file format
 !> @date 03/17/14  MDG 3.2 modified output file format for IDL GUI
+!> @date 06/19/14  MDG 4.0 converted to remove all globals and split namelist handling from computation
 !--------------------------------------------------------------------------
 program CTEMMC
 
 use local
 use files
+use NameListTypedefs
+use NameListHandlers
 use io
 
 IMPLICIT NONE
 
-character(fnlen)			:: nmldeffile
+character(fnlen)                        :: nmldeffile, progname, progdesc
+type(MCNameListType)                    :: mcnl
 
-! deal with the command line arguments, if any
 nmldeffile = 'CTEMMC.nml'
 progname = 'CTEMMC.f90'
-call Interpret_Program_Arguments(nmldeffile,1,(/ 20 /) )
+progdesc = 'Monte Carlo backscattered electron simulation'
+
+! deal with the command line arguments, if any
+call Interpret_Program_Arguments(nmldeffile,1,(/ 20 /), progname)
+
+! deal with the namelist stuff
+call GetMCNameList(nmldeffile,mcnl)
+
+! print some information
+call CTEMsoft(progname, progdesc)
 
 ! perform a Monte Carlo simulation
- call DoMCsimulation(nmldeffile)
+ call DoMCsimulation(mcnl, progname)
  
 end program CTEMMC 
  
@@ -94,12 +107,15 @@ end program CTEMMC
 !> @date 07/30/13  MDG 3.1 added Patrick's code for double sample tilt (sigma, omega)
 !> @date 09/25/13  MDG 3.2 added a few parameters to the output file 
 !> @date 03/17/14  MDG 3.3 added a few more for the IDL visualization program
+!> @date 06/19/14  MDG 4.0 rewrite with name list handling removed
 !--------------------------------------------------------------------------
-subroutine DoMCsimulation(nmlfile)
+subroutine DoMCsimulation(mcnl, progname)
 
 use local
+use typedefs
+use NameListTypedefs
+use initializers
 use crystal
-use crystalvars
 use symmetry
 use error
 use io
@@ -111,92 +127,50 @@ use omp_lib
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)	:: nmlfile	! namelist file
+type(MCNameListType),INTENT(IN)         :: mcnl
+character(fnlen),INTENT(IN)             :: progname
 
-integer(kind=irg)	:: NUMTHREADS	! possible number of threads 
 
-! all geometrical parameters
-real(kind=dbl)		:: sig		! TD sample tile angle [degrees]
-real(kind=dbl)		:: omega	! RD sample tile angle [degrees]
-integer(kind=irg)	:: numsx 	! number of Lambert map points along x
-integer(kind=irg)	:: numsy	! number of Lambert map points along y
-integer,parameter    	:: k12 = selected_int_kind(15)
-integer(kind=k12)	:: num_el	! total number of electrons to try
-integer(kind=irg)	:: nthreads 	! number of threads requested
-real(kind=dbl)		:: EkeV		! electron energy in keV
-real(kind=dbl)		:: Ehistmin 	! minimum energy for energy histogram (in keV)
-real(kind=dbl)		:: Ebinsize  	! binsize in keV
-integer(kind=irg)	:: numEbins, numzbins
-real(kind=dbl)		:: depthmax 	! maximum depth for which to keep track of exit energy statistics [in nm]
-real(kind=dbl)		:: depthstep 	! stepsize for depth-energy accumulator array [in nm]
-character(4)		:: MCmode	! Monte Carlo mode
+type(unitcell),pointer  :: cell
+type(DynType)           :: Dyn
+type(gnode)             :: rlp
 
-! material parameters (some of these can be computed automatically when merged with CTEM source code)
-character(60)		:: dataname	! output file name
-character(fnlen)	:: xtalname	! crystal structure name (needed for density computation)
-real(kind=dbl)		:: Ze		! average atomic number
-real(kind=dbl)		:: density	! density in g/cm^3
-real(kind=dbl)		:: at_wt	! average atomic weight in g/mole
+integer(kind=irg)       :: numsy        ! number of Lambert map points along y
+integer(kind=irg)       :: numEbins     ! number of energy bins
+integer(kind=irg)       :: numzbins     ! number of depth bins
+integer(kind=irg)       :: nel          ! number of electrons per thread
+integer(kind=irg)       :: NUMTHREADS   ! number of allocated threads
+integer,parameter       :: k12 = selected_int_kind(15)
+real(kind=dbl)          :: Ze           ! average atomic number
+real(kind=dbl)          :: density      ! density in g/cm^3
+real(kind=dbl)          :: at_wt        ! average atomic weight in g/mole
+logical                 :: verbose
 
 ! variable passing array
-real(kind=dbl)		:: varpas(13) 
-integer(kind=irg)	:: i, TID, nx, skip
-real(kind=sgl)		:: dens, avA, avZ, io_real(3) ! used with CalcDensity routine
+real(kind=dbl)          :: varpas(13) 
+integer(kind=irg)       :: i, TID, nx, skip, io_int(1)
+real(kind=sgl)          :: dens, avA, avZ, io_real(3), dmin ! used with CalcDensity routine
 
 ! variables used for parallel random number generator (based on http://http://jblevins.org/log/openmp)
 type(rng_t), allocatable :: rngs(:)
-integer(kind=irg)	:: primeseed
 
 ! various allocatable arrays, energy histogram is first index, x,y on scintillator 2nd and 3rd indices
-integer(kind=irg),allocatable	:: accum_e(:,:,:), acc_e(:,:,:), accum_z(:,:,:,:), acc_z(:,:,:,:)
+integer(kind=irg),allocatable   :: accum_e(:,:,:), acc_e(:,:,:), accum_z(:,:,:,:), acc_z(:,:,:,:)
 
 ! various 
-integer(kind=irg)	:: istat
+integer(kind=irg)       :: istat
 
-! define the IO namelist to facilitate passing variables to the program.
-namelist  / MCdata / xtalname, sig, numsx, num_el, primeseed, EkeV, &
-		dataname, nthreads, Ehistmin, Ebinsize, depthmax, depthstep, omega, MCmode
- 
-! define reasonable default values for the namelist parameters
-MCmode = 'CSDA'			! default is Continuous Slowing Down Approximation; alternate = 
-xtalname = 'undefined'
-sig = 70.0
-omega = 0.0
-numsx = 1501
-primeseed = 932117
-num_el = 10000000_k12  ! try 10 million electrons unless otherwise specified   
-nthreads = 4
-EkeV = 30.D0
-Ehistmin = EkeV - 10.0D0
-Ebinsize = 0.25D0  ! we'll keep this fixed for now
-depthmax = 50.D0
-depthstep = 1.D0
-dataname = 'undefined.data'
+ numsy = mcnl%numsx
 
-! then we read the MCdata namelist, which may override some of these defaults  
- OPEN(UNIT=dataunit,FILE=trim(nmlfile),DELIM='APOSTROPHE')
- READ(UNIT=dataunit,NML=MCdata)
- CLOSE(UNIT=dataunit)
+ nullify(cell)
+ allocate(cell)
 
- if (trim(xtalname).eq.'undefined') then
-  call FatalError('CTEMMC:',' structure file name is undefined in '//nmlfile)
- end if
-
- numsy = numsx
-
-! print some information
- progname = 'CTEMMC.f90'
- progdesc = 'Monte Carlo Electron Trajectory Simulation for EBSD+Lambert'
- call CTEMsoft
-
-! first get the crystal data and microscope voltage
- SG%SYM_reduce=.TRUE.
- call CrystalData(xtalname)
- skip = 3
- call CalcWaveLength(EkeV*1000.D0,skip)
+ verbose = .TRUE.
+ dmin = 0.05
+ call Initialize_Cell(cell,Dyn,rlp,mcnl%xtalname, dmin, sngl(mcnl%EkeV), verbose)
 
 ! then get the density, average atomic number and average atomic weight
- call CalcDensity(dens, avZ, avA)
+ call CalcDensity(cell, dens, avZ, avA)
  density = dble(dens)
  Ze = dble(avZ)
  at_wt = dble(avA)
@@ -204,26 +178,25 @@ dataname = 'undefined.data'
  call WriteValue('Density, avZ, avA = ',io_real,3,"(2f10.5,',',f10.5)")
 
 ! allocate the accumulator arrays for number of electrons and energy
- numEbins =  int((EkeV-Ehistmin)/Ebinsize)+1
- numzbins =  int(depthmax/depthstep)+1
- nx = (numsx-1)/2
+ numEbins =  int((mcnl%EkeV-mcnl%Ehistmin)/mcnl%Ebinsize)+1
+ numzbins =  int(mcnl%depthmax/mcnl%depthstep)+1
+ nx = (mcnl%numsx-1)/2
  allocate(accum_e(numEbins,-nx:nx,-nx:nx),accum_z(numEbins,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
+ allocate(rngs(mcnl%nthreads),stat=istat)
 
 ! now put most of these variables in an array to be passed to the single_run subroutine
- varpas = (/ sig, dble(numsx), dble(numsy), dble(num_el), EkeV, &
-	   Ze, density, at_wt, Ehistmin, Ebinsize, depthmax, depthstep, omega/)
-
-! init the lambert parameters
- call InitLambertParameters
+ varpas = (/ dble(mcnl%sig), dble(mcnl%numsx), dble(numsy), dble(mcnl%num_el), mcnl%EkeV, &
+           Ze, density, at_wt, mcnl%Ehistmin, mcnl%Ebinsize, mcnl%depthmax, mcnl%depthstep, dble(mcnl%omega)/)
 
 ! set the number of OpenMP threads and allocate the corresponding number of random number streams
- call OMP_SET_NUM_THREADS(nthreads)
- write (*,*) 'setting number of threads to ',nthreads
- allocate(rngs(nthreads),stat=istat)
+ io_int(1) = mcnl%nthreads
+ call WriteValue(' Attempting to set number of threads to ',io_int,1,"(I4)")
+ call OMP_SET_NUM_THREADS(mcnl%nthreads)
 
 ! use OpenMP to run on multiple cores ... 
+ nel = mcnl%num_el
 !$OMP PARALLEL  PRIVATE(i,TID,acc_e,acc_z,istat) &
-!$OMP& SHARED(NUMTHREADS,varpas,accum_e,accum_z,num_el,numEbins,numzbins)
+!$OMP& SHARED(NUMTHREADS,varpas,accum_e,accum_z,nel,numEbins,numzbins)
 
  NUMTHREADS = OMP_GET_NUM_THREADS()
  TID = OMP_GET_THREAD_NUM()
@@ -236,7 +209,7 @@ dataname = 'undefined.data'
 
  do i=1,NUMTHREADS
 ! get a unique seed for this thread  (take the primeseed and add the thread ID)
-  call rng_seed(rngs(i), primeseed + i)
+  call rng_seed(rngs(i), mcnl%primeseed + i)
 
 ! do the Monte Carlo run  
   call single_run(varpas,rngs(i),acc_e,acc_z,nx,numEbins,numzbins)
@@ -253,24 +226,26 @@ dataname = 'undefined.data'
 !$OMP END PARALLEL
 
 ! and here we create the output file
- write (*,*) ' '
- write (*,*) ' All threads complete; saving data to file ',trim(dataname)
+ call Message(' ',"(A)")
+ call Message(' All threads complete; saving data to file '//trim(mcnl%dataname), frm = "(A)")
 
- write (*,*) ' Total number of electrons generated = ',num_el*nthreads
- write (*,*) ' Number of electrons on detector       = ',sum(accum_e)
+ io_int(1) = mcnl%num_el*NUMTHREADS
+ call WriteValue(' Total number of electrons generated = ',io_int, 1, "(I15)")
+ io_int(1) = sum(accum_e)
+ call WriteValue(' Number of electrons on detector       = ',io_int, 1, "(I15)")
 
- open(dataunit,file=trim(dataname),status='unknown',form='unformatted')
+ open(dataunit,file=trim(mcnl%dataname),status='unknown',form='unformatted')
 ! write the program identifier
  write (dataunit) progname
 ! write the version number
  write (dataunit) scversion
 ! then the name of the crystal data file
- write (dataunit) xtalname
+ write (dataunit) mcnl%xtalname
 ! energy information etc...
- write (dataunit) numEbins, numzbins, numsx, numsy, num_el*NUMTHREADS, NUMTHREADS
- write (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
- write (dataunit) sig, omega
- write (dataunit) MCmode
+ write (dataunit) numEbins, numzbins, mcnl%numsx, numsy, mcnl%num_el*NUMTHREADS, NUMTHREADS
+ write (dataunit) mcnl%EkeV, mcnl%Ehistmin, mcnl%Ebinsize, mcnl%depthmax, mcnl%depthstep
+ write (dataunit) mcnl%sig, mcnl%omega
+ write (dataunit) mcnl%MCmode
 ! and here are the actual results
  write (dataunit) accum_e
  write (dataunit) accum_z
@@ -311,59 +286,59 @@ use rng
 use Lambert
 
 ! all geometrical parameters for the scintillator setup
-real(kind=dbl)		:: sig		! TD sample tile angle [degrees]
-real(kind=dbl)		:: omega	! RD sample tile angle [degrees]
-integer(kind=irg)	:: numsx 	! number of scintillator points along x
-integer(kind=irg)	:: numsy	! number of scintillator points along y
-real(kind=dbl)		:: Ehistmin 	! minimum energy for energy histogram (in keV)
-real(kind=dbl)		:: Ebinsize 	! binsize in keV
-integer(kind=irg),INTENT(IN)	:: numEbins, numzbins
-integer(kind=irg),INTENT(IN)	:: nx
-real(kind=dbl)		:: Emin		! Ehistmin - Ebinsize/2
-integer(kind=irg)	:: iE		! energy bin counter
-integer(kind=irg)	:: iz		! exit depth bin counter
-real(kind=dbl)		:: depthmax 	! maximum depth for which to keep track of exit energy statistics [in nm]
-real(kind=dbl)		:: depthstep 	! stepsize for depth-energy accumulator array [in nm]
+real(kind=dbl)          :: sig          ! TD sample tile angle [degrees]
+real(kind=dbl)          :: omega        ! RD sample tile angle [degrees]
+integer(kind=irg)       :: numsx        ! number of scintillator points along x
+integer(kind=irg)       :: numsy        ! number of scintillator points along y
+real(kind=dbl)          :: Ehistmin     ! minimum energy for energy histogram (in keV)
+real(kind=dbl)          :: Ebinsize     ! binsize in keV
+integer(kind=irg),INTENT(IN)    :: numEbins, numzbins
+integer(kind=irg),INTENT(IN)    :: nx
+real(kind=dbl)          :: Emin         ! Ehistmin - Ebinsize/2
+integer(kind=irg)       :: iE           ! energy bin counter
+integer(kind=irg)       :: iz           ! exit depth bin counter
+real(kind=dbl)          :: depthmax     ! maximum depth for which to keep track of exit energy statistics [in nm]
+real(kind=dbl)          :: depthstep    ! stepsize for depth-energy accumulator array [in nm]
 
 ! Monte Carlo related parameters
-real(kind=dbl)		:: EkeV, Ec			! electron energy in keV
-real(kind=dbl)		:: scaled = 1.0D8 		! cm to Angstrom scalefactor
-real(kind=dbl)		:: min_energy = 1.D0  		! in keV
-real(kind=dbl)		:: presig = 1.5273987D19   	! = 1/( 5.21D-21 * (4*cPi) )
-real(kind=dbl)		:: xyz(3), xyzn(3) 		! electron coordinates
-real(kind=dbl)		:: cxyz(3), cxstart, czstart			! direction cosines
-real(kind=dbl)		:: alpha, psi			! angles
-real(kind=dbl)		:: lambda, step, pre, sige, prealpha, predEds, delta, dd, dxy(2)  	! stepsize parameters
-real(kind=dbl)		:: J, dEds, dE			! energy-related variables
-real(kind=dbl)		:: cphi, sphi, cpsi, spsi, tpi	! cosines and sines and such ... 
-real(kind=dbl)		:: cxyzp(3), dsq, edis, dsqi, tano, znmax	! trajectory parameters
+real(kind=dbl)          :: EkeV, Ec                     ! electron energy in keV
+real(kind=dbl)          :: scaled = 1.0D8               ! cm to Angstrom scalefactor
+real(kind=dbl)          :: min_energy = 1.D0            ! in keV
+real(kind=dbl)          :: presig = 1.5273987D19        ! = 1/( 5.21D-21 * (4*cPi) )
+real(kind=dbl)          :: xyz(3), xyzn(3)              ! electron coordinates
+real(kind=dbl)          :: cxyz(3), cxstart, czstart    ! direction cosines
+real(kind=dbl)          :: alpha, psi                   ! angles
+real(kind=dbl)          :: lambda, step, pre, sige, prealpha, predEds, delta, dd, dxy(2)        ! stepsize parameters
+real(kind=dbl)          :: J, dEds, dE                  ! energy-related variables
+real(kind=dbl)          :: cphi, sphi, cpsi, spsi, tpi  ! cosines and sines and such ... 
+real(kind=dbl)          :: cxyzp(3), dsq, edis, dsqi, tano, znmax       ! trajectory parameters
 
-integer(kind=irg)	:: idxy(2),px,py		! scintillator coordinates
+integer(kind=irg)       :: idxy(2),px,py, io_int(2)                ! scintillator coordinates
 
 ! auxiliary variables
-integer(kind=irg)	:: num 			! number of scattering events to try
-integer(kind=irg)	:: bsct			! back-scattered electron counter
-integer,parameter    	:: k12 = selected_int_kind(15)
-integer(kind=k12)    	:: num_el       	! total number of electrons to try
-integer(kind=k12)	:: el			! electron counter
-integer(kind=irg)	:: traj			! trajectory counter
-integer(kind=irg)	:: ierr			! Lambert projection error status flag
+integer(kind=irg)       :: num                  ! number of scattering events to try
+integer(kind=irg)       :: bsct                 ! back-scattered electron counter
+integer,parameter       :: k12 = selected_int_kind(15)
+integer(kind=k12)       :: num_el               ! total number of electrons to try
+integer(kind=k12)       :: el                   ! electron counter
+integer(kind=irg)       :: traj                 ! trajectory counter
+integer(kind=irg)       :: ierr                 ! Lambert projection error status flag
 
 ! material parameters
-real(kind=dbl)		:: Ze			! average atomic number
-real(kind=dbl)		:: density		! density in g/cm^3
-real(kind=dbl)		:: at_wt		! average atomic weight in g/mole
+real(kind=dbl)          :: Ze                   ! average atomic number
+real(kind=dbl)          :: density              ! density in g/cm^3
+real(kind=dbl)          :: at_wt                ! average atomic weight in g/mole
 
 ! variable passing arrays
-real(kind=dbl),INTENT(IN)	:: varpas(13)
-integer(kind=irg),INTENT(OUT)	:: accum_e(numEbins,-nx:nx,-nx:nx), accum_z(numEbins,numzbins,-nx/10:nx/10,-nx/10:nx/10)
-integer(kind=irg)		:: TID
+real(kind=dbl),INTENT(IN)       :: varpas(13)
+integer(kind=irg),INTENT(OUT)   :: accum_e(numEbins,-nx:nx,-nx:nx), accum_z(numEbins,numzbins,-nx/10:nx/10,-nx/10:nx/10)
+integer(kind=irg)               :: TID
 
 ! parallel random number variable 
-type(rng_t), intent(inout) 	:: rngt
-real(kind=dbl)			:: rr	! random number
+type(rng_t), intent(inout)      :: rngt
+real(kind=dbl)                  :: rr   ! random number
 
-real(kind=dbl), parameter :: cPi=3.141592653589D0, cAvogadro = 6.0221415D+23, cDtoR = 0.017453293D0
+real(kind=dbl), parameter :: cDtoR = 0.017453293D0
 
 
 ! get the current thread number
@@ -410,23 +385,26 @@ real(kind=dbl), parameter :: cPi=3.141592653589D0, cAvogadro = 6.0221415D+23, cD
 
 ! every million steps, print something to the screen
     if ((TID.eq.0).and.(mod(el,1000000_k12).eq.0)) then
-      write (*,*) ' Completed electron # ',el,'; bse hits = ',sum(accum_e)
+        io_int(1) = el
+        call WriteValue(' Completed electron # ',io_int, 1, "(I15,$)")
+        io_int(1) = sum(accum_e)
+        call WriteValue('; BSE hits = ',io_int, 1, frm = "(I15)")
     end if
 
     Ec = EkeV   ! set the initial energy for this incident electron
 
 ! these could in principle be sampled from an area corresponding to the beam size
-    xyz = (/ 0.D0, 0.D0, 0.D0 /)  	! initial coordinates
+    xyz = (/ 0.D0, 0.D0, 0.D0 /)        ! initial coordinates
 
 ! get the mean free path for this energy and scale it by a random number 
     alpha = prealpha / Ec
-    step = Ec*(Ec+1024.D0)/Ze/(Ec+511.D0)		! step is used here as a dummy variable
+    step = Ec*(Ec+1024.D0)/Ze/(Ec+511.D0)               ! step is used here as a dummy variable
     sige =  presig * step * step * alpha * (1.D0+alpha)
     lambda = pre * sige
     rr = rng_uniform(rngt)
     step = - lambda * log(rr)
  
-    cxyz = (/ cxstart, 0.D0, czstart /)		! direction cosines for beam on tilted sample
+    cxyz = (/ cxstart, 0.D0, czstart /)         ! direction cosines for beam on tilted sample
  
 ! advance the coordinates 
     xyz = xyz + step * scaled * cxyz
@@ -460,8 +438,8 @@ real(kind=dbl), parameter :: cPi=3.141592653589D0, cAvogadro = 6.0221415D+23, cD
       dsq = dsqrt(1.D0-cxyz(3)*cxyz(3))
       dsqi = 1.D0/dsq
       cxyzp = (/ sphi * (cxyz(1) * cxyz(3) * cpsi - cxyz(2) * spsi) * dsqi + cxyz(1) * cphi, &
-      		sphi * (cxyz(2) * cxyz(3) * cpsi + cxyz(1) * spsi) * dsqi + cxyz(2) * cphi, &
-        	-sphi * cpsi * dsq + cxyz(3) * cphi /)
+                sphi * (cxyz(2) * cxyz(3) * cpsi + cxyz(1) * spsi) * dsqi + cxyz(2) * cphi, &
+                -sphi * cpsi * dsq + cxyz(3) * cphi /)
     end if
 !  From MCML paper END
 
@@ -471,7 +449,7 @@ real(kind=dbl), parameter :: cPi=3.141592653589D0, cAvogadro = 6.0221415D+23, cD
     
 ! get the step size between scattering events (inline code rather than function call)
     alpha = prealpha / Ec
-    step = Ec*(Ec+1024.D0)/Ze/(Ec+511.D0)		! step is used here as a dummy variable
+    step = Ec*(Ec+1024.D0)/Ze/(Ec+511.D0)               ! step is used here as a dummy variable
     sige =  presig * step * step * alpha * (1.D0+alpha)
     lambda = pre * sige
 
@@ -488,11 +466,11 @@ real(kind=dbl), parameter :: cPi=3.141592653589D0, cAvogadro = 6.0221415D+23, cD
 !    if (xyzn(3).gt.0.D0) then    ! old line
         bsct = bsct + 1  ! yes, we have a back-scattered electron
 
-	
+        
 ! Let's figure out where in the Lambert array this point should be projected ...   
 ! We know the direction cosines were normalized, so no reason to check the error flag
-	dxy = delta * LambertSphereToSquare( cxyzp, ierr )       
-	
+        dxy = delta * LambertSphereToSquare( cxyzp, ierr )       
+        
 ! and get the nearest pixel [ take into account reversal of coordinate frame (x,y) -> (y,-x) ]
         idxy = (/ nint(dxy(2)), nint(-dxy(1)) /)
         
@@ -501,11 +479,11 @@ real(kind=dbl), parameter :: cPi=3.141592653589D0, cAvogadro = 6.0221415D+23, cD
            if (Ec.gt.Emin) then     
              iE = nint((Ec-Ehistmin)/Ebinsize)+1
 ! first add this electron to the correct exit distance vs. energy bin (coarser than the angular plot)
-	     edis = dabs(xyz(3)/cxyzp(3))   ! distance from last scattering point to surface along trajectory
-	     iz = nint(edis*0.1D0/depthstep) +1
-	     if ( (iz.gt.0).and.(iz.le.numzbins) ) then
-	      px = nint(idxy(1)/10.0)
-	      py = nint(idxy(2)/10.0)
+             edis = dabs(xyz(3)/cxyzp(3))   ! distance from last scattering point to surface along trajectory
+             iz = nint(edis*0.1D0/depthstep) +1
+             if ( (iz.gt.0).and.(iz.le.numzbins) ) then
+              px = nint(idxy(1)/10.0)
+              py = nint(idxy(2)/10.0)
               accum_z(iE,iz,px,py) = accum_z(iE,iz,px,py) + 1
             end if
 ! then add it to the modified Lambert accumulator array.
