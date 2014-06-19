@@ -397,7 +397,7 @@ energyloop: do iE=numEbins,1,-1
 ! set the accelerating voltage
    skip = 3
    call CalcWaveLength(cell, rlp, dble(EkeVs(iE)*1000.0),skip)
-
+write(*,*) 'wavelength set'
 
 !=============================================
 ! ---------- create the incident beam directions list
@@ -410,6 +410,7 @@ energyloop: do iE=numEbins,1,-1
                 isym,ijmax,'RoscaLambert',usehex)
    else 
 ! Calckvectors(k,ga,ktmax,npx,npy,numk,isym,ijmax,mapmode,usehex)
+write(*,*) 'calling Calckvectors'
     call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,emnl%npx,npy,numk, &
                 isym,ijmax,'RoscaLambert',usehex)
    end if
@@ -467,9 +468,7 @@ energyloop: do iE=numEbins,1,-1
      allocate(DynMat(nns,nns))
      call GetDynMat(cell, reflist, firstw, rlp, DynMat, nns, nnw)
 
-! solve the dynamical eigenvalue equation for this beam direction
-!       call CalcKint(DynMat, kn, nns, knl%numthick, thickarray, Iz)
-!       deallocate(DynMat)
+     write (*,*) ik, nref, nns, nnw
 
 ! then we need to initialize the Sgh and Lgh arrays
      if (allocated(Sgh)) deallocate(Sgh)
@@ -483,6 +482,7 @@ energyloop: do iE=numEbins,1,-1
 ! solve the dynamical eigenvalue equation for this beam direction  Lgh,thick,kn,nn,gzero,kin,debug
      kn = karray(4,ik)
      call CalcLgh3(DynMat,Lgh,dble(thick(iE)),dble(kn),nns,gzero,kin,debug,depthstep,lambdaE(iE,1:izzmax),izzmax)
+     deallocate(DynMat)
 
 ! dynamical contribution
      do ip=1,numset

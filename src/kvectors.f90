@@ -122,28 +122,28 @@ use crystal
 
 IMPLICIT NONE
 
-type(kvectorlist),pointer              :: khead
-type(unitcell),pointer	                :: cell
-real(kind=dbl),INTENT(IN)		:: k(3)		!< initial wave vector
-real(kind=dbl),INTENT(IN)		:: ga(3)	!< "horizontal" reciprocal lattice vector
-real(kind=dbl),INTENT(IN)		:: ktmax	!< maximum length of tangential wave vector
-integer(kind=irg),INTENT(IN)		:: npx		!< number of kvectors along x
-integer(kind=irg),INTENT(IN)		:: npy		!< number of kvectors along y
-integer(kind=irg),INTENT(OUT)		:: numk		!< total number of kvectors in linked list
-integer(kind=irg),INTENT(IN)		:: isym		!< Laue symmetry group number 
-integer(kind=irg),INTENT(INOUT)	:: ijmax	!< max parameter used for Conical and StandardConical modes
-character(*),INTENT(IN)		:: mapmode 	!< controls the type of mapping used ('Standard' or 'RoscaLambert')
+type(kvectorlist),pointer               :: khead
+type(unitcell),pointer                  :: cell
+real(kind=dbl),INTENT(IN)               :: k(3)         !< initial wave vector
+real(kind=dbl),INTENT(IN)               :: ga(3)        !< "horizontal" reciprocal lattice vector
+real(kind=dbl),INTENT(IN)               :: ktmax        !< maximum length of tangential wave vector
+integer(kind=irg),INTENT(IN)            :: npx          !< number of kvectors along x
+integer(kind=irg),INTENT(IN)            :: npy          !< number of kvectors along y
+integer(kind=irg),INTENT(OUT)           :: numk         !< total number of kvectors in linked list
+integer(kind=irg),INTENT(IN)            :: isym         !< Laue symmetry group number 
+integer(kind=irg),INTENT(INOUT)         :: ijmax        !< max parameter used for Conical and StandardConical modes
+character(*),INTENT(IN)                 :: mapmode      !< controls the type of mapping used ('Standard' or 'RoscaLambert')
 !real(kind=sgl),INTENT(IN)		:: klaue(2)	!< Laue center coordinates
-logical,INTENT(IN),OPTIONAL		:: usehex	!< hexagonal mode for RoscaLambert mapmode
+logical,INTENT(IN),OPTIONAL             :: usehex       !< hexagonal mode for RoscaLambert mapmode
 
-integer(kind=irg)       		:: istat,i,j,istart,iend,jstart,jend, imin, imax, jmin, jmax
-real(kind=dbl)				:: glen, gan(3), gperp(3), kstar(3), delta
-logical					:: hexgrid = .FALSE.
-character(3)				:: grid
-type(kvectorlist),pointer             :: ktail, ktmp
+integer(kind=irg)                       :: istat,i,j,istart,iend,jstart,jend, imin, imax, jmin, jmax
+real(kind=dbl)                          :: glen, gan(3), gperp(3), kstar(3), delta
+logical                                 :: hexgrid = .FALSE.
+character(3)                            :: grid
+type(kvectorlist),pointer               :: ktail, ktmp
 
 ! first, if khead already exists, delete it
- if (associated(khead)) then    	 	! deallocate the entire linked list
+ if (associated(khead)) then                    ! deallocate the entire linked list
     call Delete_kvectorlist(khead)
  end if   
  
@@ -405,25 +405,25 @@ end if ! mapmode.eq.'Standard' or 'StandardConical'
 ! well, here we only allow for the RoscaLambert mode.
 
 if (mapmode.eq.'RoscaLambert') then 
-   if (usehex) then  		! hexagonal grid step size
+   if (usehex) then             ! hexagonal grid step size
       delta =  2.D0*dsqrt(cPi)/3.0D0**0.75D0/dble(npx)
       hexgrid = .TRUE.
-   else				! square grid step size
+   else                         ! square grid step size
       delta = dsqrt(cPi*0.5D0)/dble(npx)
       hexgrid = .FALSE.
    end if
 
 ! allocate the head of the linked list
-   allocate(khead,stat=istat)         		! allocate new value
+   allocate(khead,stat=istat)                   ! allocate new value
    if (istat.ne.0) call FatalError('Calckvectors',' unable to allocate khead pointer')
-   ktail => khead                      	! tail points to new value
-   nullify(ktail%next)                		! nullify next in new value
-   numk = 1                          		! keep track of number of k-vectors so far
-   ktail%i = 0                             	! i-index of beam
-   ktail%j = 0                             	! j-index of beam
-   kstar = (/ 0.0, 0.0, 1.0 /)			! we always use c* as the center of the RoscaLambert projection
-   call NormVec(cell,kstar,'c')                	! normalize incident direction
-   kstar = kstar/mLambda           		! divide by wavelength
+   ktail => khead                       ! tail points to new value
+   nullify(ktail%next)                          ! nullify next in new value
+   numk = 1                                     ! keep track of number of k-vectors so far
+   ktail%i = 0                                  ! i-index of beam
+   ktail%j = 0                                  ! j-index of beam
+   kstar = (/ 0.0, 0.0, 1.0 /)                  ! we always use c* as the center of the RoscaLambert projection
+   call NormVec(cell,kstar,'c')                 ! normalize incident direction
+   kstar = kstar/mLambda                        ! divide by wavelength
 ! and transform to reciprocal crystal space using the structure matrix
    ktail%k = matmul(transpose(cell%dsm),kstar)
    ktail%kn = 1.0/mLambda
@@ -432,95 +432,97 @@ if (mapmode.eq.'RoscaLambert') then
  select case (isym)
  
    case (1)  ! triclinic symmetry
-   	istart = -npx
-	iend = npx
-   	jstart = -npy
-	jend = npy
-	  do j=jstart,jend
-	    do i=istart,iend   ! 
-		call AddkVector(ktail,cell,numk,delta,i,j)
-	    end do
-	  end do
+        istart = -npx
+        iend = npx
+        jstart = -npy
+        jend = npy
+          do j=jstart,jend
+            do i=istart,iend   ! 
+                call AddkVector(ktail,cell,numk,delta,i,j)
+            end do
+          end do
 
   case (2)   !  monoclinic symmetry
-  	istart = -npx
-	iend = npx
-   	jstart = 0
-	jend = npy
-	  do j=jstart,jend
-	   do i=istart,iend   ! 
-		call AddkVector(ktail,cell,numk,delta,i,j)
-	   end do
-	  end do
+        istart = -npx
+        iend = npx
+        jstart = 0
+        jend = npy
+          do j=jstart,jend
+           do i=istart,iend   ! 
+                call AddkVector(ktail,cell,numk,delta,i,j)
+           end do
+          end do
 
   case (3,4,10)  ! orthorhombic mmm, tetragonal 4/m, cubic m-3
-  	istart = 0
-	iend = npx
-   	jstart = 0
-	jend = npy
-	  do j=jstart,jend
-	   do i=istart,iend   ! 
-		call AddkVector(ktail,cell,numk,delta,i,j)
-	   end do
-	  end do
+        istart = 0
+        iend = npx
+        jstart = 0
+        jend = npy
+          do j=jstart,jend
+           do i=istart,iend   ! 
+                call AddkVector(ktail,cell,numk,delta,i,j)
+           end do
+          end do
 
   case (5,11)  ! tetragonal 4/mmm, cubic m-3m
-    	istart = 0
-	iend = npx
-   	jstart = 0
-	jend = npy
-	  do i=istart,iend
-	   do j=jstart,i   ! 
-		call AddkVector(ktail,cell,numk,delta,i,j)
-	   end do
-	  end do
+        istart = 0
+        iend = npx
+        jstart = 0
+        jend = npy
+          do i=istart,iend
+           do j=jstart,i   ! 
+                call AddkVector(ktail,cell,numk,delta,i,j)
+           end do
+          end do
 
   case (6,7)   ! npy is now npyhex !
-   	istart = 0
-	iend = npy
-   	jstart = 0
-	jend = npy
-	  do j=jstart,jend
-	    do i=istart,iend   ! 
-		call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
-	    end do
-	  end do
+        istart = 0
+        iend = npy
+        jstart = 0
+        jend = npy
+          do j=jstart,jend
+            do i=istart,iend   ! 
+                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
+            end do
+          end do
 
   case (8)   ! npy is now npyhex !
-   	istart = 0
-	iend = npy
-   	jstart = 0
-	jend = npy
-	  do j=jstart,jend
-	    do i=j,iend   ! 
-		call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
-	    end do
-	  end do
+        istart = 0
+        iend = npy
+        jstart = 0
+        jend = npy
+          do j=jstart,jend
+            do i=j,iend   ! 
+                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
+            end do
+          end do
 
   case (9)   ! npy is now npyhex !
-   	istart = 0
-	iend = npx   ! was npy
-   	jstart = 0
-	jend = npx   ! was npy
-	  do j=jstart,jend
-	    do i=2*j,iend   ! 
-		call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
-	    end do
-	  end do
+        istart = 0
+        iend = npx   ! was npy
+        jstart = 0
+        jend = npx   ! was npy
+          do j=jstart,jend
+            do i=2*j,iend   ! 
+                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
+            end do
+          end do
 
   case (12)   ! npy is now npyhex !  This is the second setting of Laue group -3m.
-   	istart = 0
-	iend = npy
-   	jstart = 0
-	jend = npy/2
-	  do j=jstart,jend
-	    do i=2*j,iend   ! 
-		call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
-		call AddkVector(ktail,cell,numk,delta,i-j,-j,hexgrid)
-	    end do
-	  end do
+        istart = 0
+        iend = npy
+        jstart = 0
+        jend = npy/2
+          do j=jstart,jend
+            do i=2*j,iend   ! 
+                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
+                call AddkVector(ktail,cell,numk,delta,i-j,-j,hexgrid)
+            end do
+          end do
 
  end select
+
+write (*,*) 'end of Calckvectors'
 
 end if
 
@@ -832,6 +834,7 @@ end function GetSextant
 subroutine AddkVector(ktail,cell,numk,delta,i,j,usehex)
 
 use io
+use typedefs
 use constants
 use error
 use diffraction
@@ -839,25 +842,25 @@ use crystal
 
 IMPLICIT NONE
 
-type(kvectorlist),pointer              :: ktail
-type(unitcell),pointer	                :: cell
-integer(kind=irg),INTENT(INOUT)	:: numk
-real(kind=dbl),INTENT(IN)		:: delta
-integer(kind=irg),INTENT(IN)		:: i
-integer(kind=irg),INTENT(IN)		:: j
-logical,INTENT(IN),OPTIONAL		:: usehex
+type(kvectorlist),pointer               :: ktail
+type(unitcell),pointer                  :: cell
+integer(kind=irg),INTENT(INOUT)         :: numk
+real(kind=dbl),INTENT(IN)               :: delta
+integer(kind=irg),INTENT(IN)            :: i
+integer(kind=irg),INTENT(IN)            :: j
+logical,INTENT(IN),OPTIONAL             :: usehex
 
 
-integer(kind=irg)         		:: istat, ks
-real(kind=dbl)                 	:: kstar(3), x, y, rr, q, iPi, XX, YY, xp, yp
-logical 				:: goahead
-real(kind=dbl),parameter		:: srt = 0.86602540D0   	! sqrt(3.D0)/2.D0
-real(kind=dbl),parameter		:: isrt = 0.577350269D0   	! 1.D0/sqrt(3.D0)
-real(kind=dbl),parameter		:: rtt = 1.7320508076D0   	!  sqrt(3)
-real(kind=dbl),parameter		:: prea = 0.525037568D0   	!  3^(1/4)/sqrt(2pi)
-real(kind=dbl),parameter		:: preb = 1.050075136D0   	!  3^(1/4)sqrt(2/pi)
-real(kind=dbl),parameter		:: prec = 0.90689968D0   	!  pi/2sqrt(3)
-real(kind=dbl),parameter		:: pred = 2.09439510D0   	!  2pi/3
+integer(kind=irg)                       :: istat, ks, ii
+real(kind=dbl)                          :: kstar(3), x, y, rr, q, iPi, XX, YY, xp, yp
+logical                                 :: goahead, hex
+real(kind=dbl),parameter                :: srt = 0.86602540D0           ! sqrt(3.D0)/2.D0
+real(kind=dbl),parameter                :: isrt = 0.577350269D0         ! 1.D0/sqrt(3.D0)
+real(kind=dbl),parameter                :: rtt = 1.7320508076D0         !  sqrt(3)
+real(kind=dbl),parameter                :: prea = 0.525037568D0         !  3^(1/4)/sqrt(2pi)
+real(kind=dbl),parameter                :: preb = 1.050075136D0         !  3^(1/4)sqrt(2/pi)
+real(kind=dbl),parameter                :: prec = 0.90689968D0          !  pi/2sqrt(3)
+real(kind=dbl),parameter                :: pred = 2.09439510D0          !  2pi/3
 
 ! [06/09/14] all this needs to be replaced with calls to Lambert module !!!
 
@@ -869,70 +872,73 @@ goahead = .FALSE.
 if (present(usehex)) then
   x = (i - j*0.5)*delta
   y = j*delta*srt
+  hex = .TRUE.
 else
   x = i*delta
   y = j*delta
+  hex = .FALSE.
 end if
 
 ! r^2
 rr = x*x+y*y
-	
+
 ! this is the more correct mapping from a uniform square grid to a sphere via an equal area map
 ! to the 2D circle first; it is computationally slightly longer due to the trigonometric function calls
 ! but it is mathematically more correct.  We do distinguish here between the square and hexagon
 ! projections; Note that the hexagonal case must be mirrored x <-> y with respect to the 
 ! analytical derivation in the MSMSE paper due to a rotation of the hexagonal cell.
 
-if ( .not.((i.eq.0).and.(j.eq.0)) ) then  ! skip (0,0) 
-      if (usehex) then  ! we're projecting from a hexagonal array
+if ( maxval(abs( (/i,j/) )).ne.0 ) then  ! skip (0,0) 
+      if (hex.eqv..FALSE.) then  ! we're projecting from a square array
+! decide which equation to use  [ (8) or (9) from Rosca's paper, with r=1 ]
+             if (dabs(x).le.dabs(y)) then
+                 q = 2.D0*y*iPi*dsqrt(cPi-y*y)
+                  kstar = (/ q*dsin(x*cPi*0.25D0/y), q*dcos(x*cPi*0.25D0/y), 1.D0-2.D0*y*y*iPi /)  
+             else
+                  q = 2.D0*x*iPi*dsqrt(cPi-x*x)
+                  kstar = (/ q*dcos(y*cPi*0.25D0/x), q*dsin(y*cPi*0.25D0/x), 1.D0-2.D0*x*x*iPi /)  
+             end if
+             goahead = .TRUE.
+      end if
+      if (hex.eqv..TRUE.) then  ! we're projecting from a hexagonal array
 ! decide which sextant the point (i,j) is located in.
           ks = GetSextant(x,y)
-	  select case (ks)
-	  case (0,3)
-	  	XX = preb*y*dcos(x*prec/y)
-	  	YY = preb*y*dsin(x*prec/y)
-	  case (1,4)
-	  	xp = y+rtt*x
-	  	yp = y*pred/xp
-	  	XX = prea*xp*dsin(yp)
-	  	YY = prea*xp*dcos(yp)
-	  case (2,5)
-	  	xp = y-rtt*x
-	  	yp = y*pred/xp
-	  	XX = prea*xp*dsin(yp)
-	  	YY = -prea*xp*dcos(yp)	  
-	  end select
-	  q = XX**2+YY**2
-	  kstar = (/ 0.5D0*XX*dsqrt(4.D0-q), 0.5D0*YY*dsqrt(4.D0-q),1.D0-0.5D0*q /)
+          select case (ks)
+          case (0,3)
+                XX = preb*y*dcos(x*prec/y)
+                YY = preb*y*dsin(x*prec/y)
+          case (1,4)
+                xp = y+rtt*x
+                yp = y*pred/xp
+                XX = prea*xp*dsin(yp)
+                YY = prea*xp*dcos(yp)
+          case (2,5)
+                xp = y-rtt*x
+                yp = y*pred/xp
+                XX = prea*xp*dsin(yp)
+                YY = -prea*xp*dcos(yp)    
+          end select
+          q = XX**2+YY**2
+          kstar = (/ 0.5D0*XX*dsqrt(4.D0-q), 0.5D0*YY*dsqrt(4.D0-q),1.D0-0.5D0*q /)
           goahead = .TRUE.
-      else   ! we're projecting from a square array
-! decide which equation to use  [ (8) or (9) from Rosca's paper, with r=1 ]
-	     if (dabs(x).le.dabs(y)) then
-                 q = 2.D0*y*iPi*dsqrt(cPi-y*y)
-  	          kstar = (/ q*dsin(x*cPi*0.25D0/y), q*dcos(x*cPi*0.25D0/y), 1.D0-2.D0*y*y*iPi /)  
-	     else
-                  q = 2.D0*x*iPi*dsqrt(cPi-x*x)
-  	          kstar = (/ q*dcos(y*cPi*0.25D0/x), q*dsin(y*cPi*0.25D0/x), 1.D0-2.D0*x*x*iPi /)  
-    	     end if
-             goahead = .TRUE.
       end if
 end if 
  
 if (goahead) then 
-     allocate(ktail%next,stat=istat)  			! allocate new value
+     allocate(ktail%next,stat=istat)                    ! allocate new value
      if (istat.ne.0) call FatalError('Addkvector:',' unable to allocate ktail pointer')
-     ktail => ktail%next          			! tail points to new value
-     nullify(ktail%next)          			! nullify next in new value
-     numk = numk + 1       				! keep track of number of k-vectors so far
-     if (usehex) then 					! transform the hex coordinates to square-array coordinates
-       ktail%i = i - j/2+mod(j,2)/2           	! i-index of beam
-       ktail%j = j                      		! j-index of beam
-     else  						! leave the square coordinates unchanged
-       ktail%i = i                      		! i-index of beam
-       ktail%j = j                      		! j-index of beam
+     ktail => ktail%next                                ! tail points to new value
+     nullify(ktail%next)                                ! nullify next in new value
+     numk = numk + 1                                    ! keep track of number of k-vectors so far
+     if (hex) then                                   ! transform the hex coordinates to square-array coordinates
+       ktail%i = i - j/2+mod(j,2)/2             ! i-index of beam
+       ktail%j = j                                      ! j-index of beam
+     else                                               ! leave the square coordinates unchanged
+       ktail%i = i                                      ! i-index of beam
+       ktail%j = j                                      ! j-index of beam
      end if 
-     call NormVec(cell,kstar,'c')                		! normalize incident direction in cartesian space
-     kstar = kstar/mLambda                 		! divide by wavelength
+     call NormVec(cell,kstar,'c')                       ! normalize incident direction in cartesian space
+     kstar = kstar/mLambda                              ! divide by wavelength
 ! and transform to reciprocal crystal space using the direct structure matrix
      ktail%k = matmul(transpose(cell%dsm),kstar)
      ktail%kn = 1.0/mLambda
