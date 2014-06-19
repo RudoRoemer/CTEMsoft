@@ -86,7 +86,7 @@ FOREACH(TOOL ${TOOLS} )
     BINARY_DIR    ${${PROJECT_NAME}_BINARY_DIR}
     COMPONENT     Applications
     INSTALL_DEST  "${install_dir}"
-    LINK_LIBRARIES CTEMSoftLib
+    LINK_LIBRARIES CTEMSoftLib gomp
 	)
 
 
