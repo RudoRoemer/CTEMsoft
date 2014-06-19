@@ -59,24 +59,36 @@
 !> @date  01/27/14  MDG 4.1 continued rewrite, fixed problem with kvector list, replaced gvector routines
 !>		   	     with updated routines; changed program name to CTEMEBSDmaster.
 !> @date  05/03/14  MDG 4.2 test version to resolve bug in the Sgh matrix part (solved)
+!> @date  06/19/14  MDG 4.3 rewrite, removal of all globals, split of namelist handling from computation; add OpenMP
 !--------------------------------------------------------------------------
 program CTEMEBSDmaster
 
 use local
+use NameListTypedefs
+use NameListHandlers
 use files
 use io
 
 IMPLICIT NONE
 
-character(fnlen)	:: nmldeffile
+character(fnlen)                        :: nmldeffile, progname, progdesc
+type(EBSDMasterNameListType)            :: emnl
 
-! deal with the command line arguments, if any
 nmldeffile = 'CTEMEBSDmaster.nml'
 progname = 'CTEMEBSDmaster.f90'
-call Interpret_Program_Arguments(nmldeffile,1,(/ 21 /) )
+progdesc = 'EBSD Energy-dependent Master Pattern Simulation'
+
+! deal with the command line arguments, if any
+call Interpret_Program_Arguments(nmldeffile,1,(/ 21 /), progname)
+
+! deal with the namelist stuff
+call GetEBSDMasterNameList(nmldeffile,emnl)
+
+! print some information
+call CTEMsoft(progname, progdesc)
 
 ! generate a set of master EBSD patterns
- call ComputeMasterPattern(nmldeffile)
+ call ComputeMasterPattern(emnl, progname)
 
 end program CTEMEBSDmaster
 
@@ -95,12 +107,15 @@ end program CTEMEBSDmaster
 !> @date 05/14/13  MDG 2.1 replaced IO by namelist file
 !> @date 08/01/13  MDG 3.0 complete rewrite, eliminated old Lambert projection
 !> @date 09/25/13  MDG 3.1 replaced k-vector code by kvectors module
+!> @date 06/19/14  MDG 4.0 no more globals, nml split, added OpenMP
 !--------------------------------------------------------------------------
-subroutine ComputeMasterPattern(nmlfile)
+subroutine ComputeMasterPattern(emnl, progname)
 
-use symmetryvars
+use typedefs
+use NameListTypedefs
+use initializers
+use MBmodule
 use symmetry
-use crystalvars
 use crystal
 use constants
 use error
@@ -111,42 +126,49 @@ use local
 use files
 use diffraction
 use multibeams
-use dynamical
 use timing
 use Lambert
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)	:: nmlfile
+type(EBSDMasterNameListType),INTENT(IN) :: emnl
+character(fnlen),INTENT(IN)             :: progname
 
 
-real(kind=dbl)   	:: ctmp(192,3), arg, sig, omega
-integer(kind=irg)      :: isym,i,j,ik,npx,npy,ipx,ipy,debug,iE,izz, izzmax, iequiv(2,12), nequiv, num_el, MCnthreads, & ! counters
-                    	numk, & ! number of independent incident beam directions
-                    	ir,nat(100),kk(3), npyhex, skip, ijmax, Esel, one, &
-                    	numset,n,ix,iy,iz, io_int(6),  &
-                    	istat,gzero,ic,ip,ikk     ! counters
+real(kind=dbl)          :: ctmp(192,3), arg, sig, omega
+integer(kind=irg)      :: isym,i,j,ik,npy,ipx,ipy,debug,iE,izz, izzmax, iequiv(2,12), nequiv, num_el, MCnthreads, & ! counters
+                        numk, & ! number of independent incident beam directions
+                        ir,nat(100),kk(3), npyhex, skip, ijmax, one, &
+                        numset,n,ix,iy,iz, io_int(6), nns, nnw, nref,  &
+                        istat,gzero,ic,ip,ikk     ! counters
 real(kind=dbl)         :: tpi,Znsq, kkl, DBWF, kin !
-real(kind=sgl) 		:: dmin, io_real(5), selE
-real(kind=sgl),allocatable 	:: sr(:,:,:,:), srhex(:,:,:,:), EkeVs(:), svals(:) ! results
-complex(kind=dbl)  		:: czero
-complex(kind=dbl),allocatable 	:: Lgh(:,:), Sgh(:,:,:)
-logical 		:: usehex, switchmirror
-character(fnlen) 	:: xtalname, outname
+real(kind=sgl)          :: io_real(5), selE, kn
+real(kind=sgl),allocatable      :: sr(:,:,:,:), srhex(:,:,:,:), EkeVs(:), svals(:) ! results
+complex(kind=dbl)               :: czero
+complex(kind=dbl),allocatable   :: Lgh(:,:), Sgh(:,:,:)
+logical                 :: usehex, switchmirror, verbose
+character(fnlen)        :: xtalname
 ! the following will need to be moved elsewhere at some point...
-integer(kind=irg),parameter	:: LaueTest(11) = (/ 149, 151, 153, 156, 158, 160, 161, 164, 165, 166, 167 /)  ! space groups with 2 or mirror at 30 degrees
+integer(kind=irg),parameter     :: LaueTest(11) = (/ 149, 151, 153, 156, 158, 160, 161, 164, 165, 166, 167 /)  ! space groups with 2 or mirror at 30 degrees
 
 ! Monte Carlo derived quantities
-integer(kind=irg)   	:: numEbins, numzbins, nsx, nsy    ! variables used in MC energy file
-real(kind=dbl)     	:: EkeV, Ehistmin, Ebinsize, depthmax, depthstep, etotal ! enery variables from MC program
+integer(kind=irg)       :: numEbins, numzbins, nsx, nsy    ! variables used in MC energy file
+real(kind=dbl)          :: EkeV, Ehistmin, Ebinsize, depthmax, depthstep, etotal ! enery variables from MC program
 integer(kind=irg),allocatable :: accum_e(:,:,:), accum_z(:,:,:,:), thick(:)
 real(kind=sgl),allocatable :: lambdaE(:,:)
-character(fnlen) 	:: energyfile
-character(fnlen)       :: oldprogname
-character(8)  		:: MCscversion
-character(4)		:: MCmode
+character(fnlen)        :: oldprogname
+character(8)            :: MCscversion
+character(4)            :: MCmode
 
-namelist /EBSDmastervars/ dmin,npx,outname,energyfile,Esel
+type(unitcell),pointer          :: cell
+type(DynType)                   :: Dyn
+type(gnode)                     :: rlp
+type(reflisttype),pointer       :: reflist,firstw
+type(BetheParameterType)        :: BetheParameters
+type(kvectorlist),pointer       :: khead, ktmp
+real(kind=sgl),allocatable      :: karray(:,:)
+integer(kind=irg),allocatable   :: kij(:,:)
+complex(kind=dbl),allocatable   :: DynMat(:,:)
 
 ! note that the CTEMMC.f90 program creates a statistical output file that 
 ! must be read by the present program, so that things like energy etc are 
@@ -158,36 +180,15 @@ namelist /EBSDmastervars/ dmin,npx,outname,energyfile,Esel
 ! So that means that the beam voltage range is already known; we do not need to
 ! ask for this again...
 
-! read namelist file with all input parameters
-! here are the default values in case some parameters are absent from the file
-dmin 		= 0.015   	! minimum d-spacing in order to be admitted to the list (must become user entry)
-npx		= 500		! Nx pixels (total = 2Nx+1)
-outname		= 'EBSDmasterout.data'	! default filename for final output
-energyfile	= 'undefined' 	! default filename for z_0(E_e) data from CTEMMC Monte Carlo simulations
-Esel           = -1            ! selected energy value for single energy run
-
 tpi = 2.D0*cPi
 
-! then we read the rundata namelist, which may override some of these defaults  
-OPEN(UNIT=dataunit,FILE=nmlfile,DELIM='APOSTROPHE')
-READ(UNIT=dataunit,NML=EBSDmastervars)
-CLOSE(UNIT=dataunit)
-
-if (trim(energyfile).eq.'undefined') then
-  call FatalError('CTEMEBSDmaster:',' energy file name is undefined in '//nmlfile)
-end if
-
-! print some information
-progname = 'CTEMEBSDmaster.f90'
-progdesc = 'EBSD Energy-dependent Master Pattern Simulation'
-call CTEMsoft
-
+!=============================================
+!=============================================
 ! ---------- read Monte Carlo output file and extract necessary parameters
 ! first, we need to load the data from the MC program.  
-mess = 'opening '//trim(energyfile)
-call Message("(A)")
+call Message('opening '//trim(emnl%energyfile), frm = "(A)" )
 
-open(dataunit,file=trim(energyfile),status='unknown',form='unformatted')
+open(dataunit,file=trim(emnl%energyfile),status='unknown',form='unformatted')
 
 ! lines from CTEMMC.f90... these are the things we need to read in...
 ! write (dataunit) progname
@@ -227,25 +228,27 @@ read (dataunit) MCmode
 allocate(accum_e(numEbins,-nsx:nsx,-nsy:nsy),accum_z(numEbins,numzbins,-nsx/10:nsx/10,-nsy/10:nsy/10),stat=istat)
 read(dataunit) accum_e
 ! actually, we do not yet need the accum_e array; that is for the actual EBSD image computation program
-! but we need to skip it in this unformatted file...
+! but we need to skip it in this unformatted file so that we can read the accum_z array ...
 deallocate(accum_e)
 
 read(dataunit) accum_z    ! we only need this array for the depth integrations
 
 close(dataunit,status='keep')
-mess = ' -> completed reading '//trim(energyfile)
-call Message("(A)")
+call Message(' -> completed reading '//trim(emnl%energyfile), frm = "(A)")
 
-! square master pattern
-npy = npx
+!=============================================
+!=============================================
 
-! ---------- start of symmetry and crystallography section
-! first get the crystal data and some other crystallographic and symmetry information 
- SG%SYM_reduce=.TRUE.
- call CrystalData(xtalname)
 
-! generate all atom positions
- call CalcPositions('v')
+!=============================================
+!=============================================
+! crystallography section
+
+nullify(cell)
+allocate(cell)
+
+ verbose = .TRUE.
+ call Initialize_Cell(cell,Dyn,rlp,xtalname, emnl%dmin, sngl(EkeV), verbose)
 
 ! the following line needs to be verified ... 
 !  hexset = .TRUE.    ! if hexagonal structure this switch selects between three and four index notation (4 if true)
@@ -253,10 +256,10 @@ npy = npx
 ! determine the point group number
  j=0
  do i=1,32
-  if (SGPG(i).le.cell % SYM_SGnum) j=i
+  if (SGPG(i).le.cell%SYM_SGnum) j=i
  end do
  isym = j
-  
+
 ! and convert this to the corresponding  Laue point group number since diffraction 
 ! patterns are always centrosymmetric (hence, there are only 11 different cases for
 ! the symmetry of the incident beam).   
@@ -272,7 +275,7 @@ npy = npx
  end if
  if (switchmirror) then
   isym = 12
-  mess = ' Switching computational wedge to second setting for this space group'; call Message("(A)")
+  call Message(' Switching computational wedge to second setting for this space group', frm = "(A)")
  end if
  write (*,*) ' Laue group # ',isym, PGTHD(j)
 
@@ -281,8 +284,11 @@ npy = npx
 usehex = .FALSE.
 if (((isym.ge.6).and.(isym.le.9)).or.(isym.eq.12)) usehex = .TRUE.
 ! ---------- end of symmetry and crystallography section
+!=============================================
+!=============================================
 
-
+!=============================================
+!=============================================
 ! this is where we determine the value for the thickness integration limit for the CalcLgh3 routine...
 allocate(EkeVs(numEbins),thick(numEbins))
 
@@ -317,30 +323,40 @@ end do
 ! and get rid of the accum_z array
 deallocate(accum_z)
 ! ---------- end of 'read Monte Carlo output file and extract necessary parameters' section
+!=============================================
+!=============================================
 
+
+!=============================================
+!=============================================
 ! ---------- a couple of initializations
    numset = cell % ATOM_ntype  
+   npy = emnl%npx
    allocate(svals(numset),stat=istat)
    gzero = 1  ! index of incident beam
    debug = 0  ! no longer used
 ! ----------
+!=============================================
+!=============================================
 
+!=============================================
+!=============================================
 ! ---------- allocate memory for the master pattern
 ! we need to sample the stereographic projection Northern hemisphere or a portion
 ! thereoff, depending on the order of the Laue group.  There are 11 Laue groups, 
 ! which leads to 9 different shapes for the stereographic asymmetric unit for the 
 ! independent incident beam directions.  
 ! allocate space for the results (needs to be altered for general symmetry case)
-if (Esel.eq.-1) then
-  allocate(sr(-npx:npx,-npy:npy,1:numEbins,1:numset),stat=istat)
+if (emnl%Esel.eq.-1) then
+  allocate(sr(-emnl%npx:emnl%npx,-npy:npy,1:numEbins,1:numset),stat=istat)
 else
-  allocate(sr(-npx:npx,-npy:npy,1,1:numset),stat=istat)
+  allocate(sr(-emnl%npx:emnl%npx,-npy:npy,1,1:numset),stat=istat)
 end if 
 
 ! in the trigonal/hexagonal case, we need intermediate storage arrays
   if (usehex) then
    npyhex = nint(2.0*float(npy)/sqrt(3.0))
-   allocate(srhex(-npx:npx,-npyhex:npyhex,1:numEbins,1:numset),stat=istat)
+   allocate(srhex(-emnl%npx:emnl%npx,-npyhex:npyhex,1:numEbins,1:numset),stat=istat)
   end if
 
 ! set various arrays to zero
@@ -349,22 +365,28 @@ end if
      srhex = 0.0
    end if
 ! ---------- end allocate memory for the master pattern
+!=============================================
+!=============================================
 
 ! force dynamical matrix routine to read new Bethe parameters from file
 ! this will all be changed with the new version of the Bethe potentials
-   call Set_Bethe_Parameters()
+   call Set_Bethe_Parameters(BetheParameters)
 
+!=============================================
+!=============================================
 ! ---------- from here on, we need to repeat the entire computation for each energy value
+! so this is where we could in principle implement an OpenMP approach; alternatively, 
+! we could do the inner loop over the incident beam directions in OpenMP (probably simpler)
+
 energyloop: do iE=numEbins,1,-1
 ! is this a single-energy run ?
-   if (Esel.ne.-1) then
-     if (Esel.ne.iE) CYCLE energyloop
+   if (emnl%Esel.ne.-1) then
+     if (emnl%Esel.ne.iE) CYCLE energyloop
    end if
    
 ! print a message to indicate where we are in the computation
    io_int(1)=iE
-   mess = 'Starting computation for energy bin'
-   call Message("(/A$)")
+   call Message('Starting computation for energy bin', frm = "(/A$)")
    call WriteValue(' ',io_int,1,"(I4$)")
    io_real(1) = EkeVs(iE)
    call WriteValue('; energy [keV] = ',io_real,1,"(F6.2/)")
@@ -374,112 +396,127 @@ energyloop: do iE=numEbins,1,-1
 
 ! set the accelerating voltage
    skip = 3
-   call CalcWaveLength(dble(EkeVs(iE)*1000.0),skip)
+   call CalcWaveLength(cell, rlp, dble(EkeVs(iE)*1000.0),skip)
 
-! ---------- create the master reflection list
-! Then we must determine the masterlist of reflections (also a linked list);
-! This list basically samples a large reciprocal space volume; it does not 
-! distinguish between zero and higher order Laue zones, since that 
-! distinction becomes meaningless when we consider the complete 
-! fundamental zone.  
- 
-  call Compute_ReflectionList(dmin,(/0,0,1/),(/1,0,0/),(/0,1,0/),'ALL',.FALSE.,0)
-! ---------- end of "create the master reflection list"
 
+!=============================================
 ! ---------- create the incident beam directions list
 ! determine all independent incident beam directions (use a linked list starting at khead)
 ! numk is the total number of k-vectors to be included in this computation;
 ! note that this needs to be redone for each energy, since the wave vector changes with energy
-
+   nullify(khead)
    if (usehex) then
-    call Calckvectors( (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,npx,npyhex,numk,isym,ijmax,'RoscaLambert',usehex)
+    call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,emnl%npx,npyhex,numk, &
+                isym,ijmax,'RoscaLambert',usehex)
    else 
 ! Calckvectors(k,ga,ktmax,npx,npy,numk,isym,ijmax,mapmode,usehex)
-    call Calckvectors( (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,npx,npy,numk,isym,ijmax,'RoscaLambert',usehex)
+    call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,emnl%npx,npy,numk, &
+                isym,ijmax,'RoscaLambert',usehex)
    end if
    io_int(1)=numk
    call WriteValue('# independent beam directions to be considered = ', io_int, 1, "(I8)")
+
+! convert the kvector linked list into arrays for OpenMP
+  allocate(karray(4,numk), kij(2,numk),stat=istat)
+! point to the first beam direction
+  ktmp => khead
+! and loop through the list, keeping k, kn, and i,j
+  karray(1:3,1) = sngl(ktmp%k(1:3))
+  karray(4,1) = sngl(ktmp%kn)
+  kij(1:2,1) = (/ ktmp%i, ktmp%j /)
+  do ik=2,numk
+    ktmp => ktmp%next
+    karray(1:3,ik) = sngl(ktmp%k(1:3))
+    karray(4,ik) = sngl(ktmp%kn)
+    kij(1:2,ik) = (/ ktmp%i, ktmp%j /)
+  end do
+! and remove the linked list
+  call Delete_kvectorlist(khead)
+
 ! ---------- end of "create the incident beam directions list"
+!=============================================
+
+! here's where we introduce the OpenMP calls, to spead up the overall calculations...
 
 ! ---------- and here we start the beam direction loop
-! point to the first beam direction
-   ktmp => khead
-! loop over all beam orientations, selecting them from the linked list
    beamloop:do ik = 1,numk
 
-! compute the dynamical matrix using Bloch waves with Bethe potentials 
-! we will put the foil normal equal to the beam direction for each direction
-     DynFN = ktmp%k
-     call Compute_DynMat('BLOCHBETHE', ktmp%k, ktmp%kt, .FALSE.)
+
+!=============================================
+! ---------- create the master reflection list for this beam direction
+! Then we must determine the masterlist of reflections (also a linked list);
+! This list basically samples a large reciprocal space volume; it does not 
+! distinguish between zero and higher order Laue zones, since that 
+! distinction becomes meaningless when we consider the complete 
+! reciprocal lattice.  
+     nullify(reflist)
+     Dyn%FN = karray(1:3,ik) ! this is the foil normal and beam direction
+     call Initialize_ReflectionList(cell, reflist, BetheParameters, Dyn, Dyn%FN, emnl%dmin, nref, verbose)
+! ---------- end of "create the master reflection list"
+!=============================================
+
+! lines copied from CTEMKossel, may need to be modified ... 
+
+! determine strong and weak reflections
+     nullify(firstw)
+     nns = 0
+     nnw = 0
+     call Apply_BethePotentials(cell, reflist, firstw, BetheParameters, nref, nns, nnw)
+
+! generate the dynamical matrix
+     allocate(DynMat(nns,nns))
+     call GetDynMat(cell, reflist, firstw, rlp, DynMat, nns, nnw)
+
+! solve the dynamical eigenvalue equation for this beam direction
+!       call CalcKint(DynMat, kn, nns, knl%numthick, thickarray, Iz)
+!       deallocate(DynMat)
 
 ! then we need to initialize the Sgh and Lgh arrays
      if (allocated(Sgh)) deallocate(Sgh)
      if (allocated(Lgh)) deallocate(Lgh)
-     allocate(Sgh(BetheParameter%nns,BetheParameter%nns,numset),Lgh(BetheParameter%nns,BetheParameter%nns))
+     allocate(Sgh(nns,nns,numset),Lgh(nns,nns))
      Sgh = czero
 
-! this should become a function call, since a similar routine is used in other programs as well
-
-! for each special position in the asymmetric unit ...
-     do ip=1,numset
-       call CalcOrbit(ip,n,ctmp)  ! get all equivalent points
-       nat(ip) = n
-! get Zn-squared for this special position and keep track of the total value
-       Znsq = float(cell%ATOM_type(ip))**2
-! ir is the row index
-       do ir=1,BetheParameter%nns
-! ic is the column index
-         do ic=1,BetheParameter%nns
-               kk = BetheParameter%stronghkl(1:3,ir) - BetheParameter%stronghkl(1:3,ic)
-! We'll assume isotropic Debye-Waller factors for now ...
-! That means we need the square of the length of s=  kk^2/4
-               kkl = 0.25 * CalcLength(float(kk),'r')**2
-               do ikk=1,n
-! get the argument of the complex exponential
-                 arg = tpi*sum(kk(1:3)*ctmp(ikk,1:3))
-! Debye-Waller exponential
-                 DBWF = exp(-cell%ATOM_pos(ip,5)*kkl)
-!  multiply with the prefactor and add to the structure matrix Sgh
-                 Sgh(ir,ic,ip) = Sgh(ir,ic,ip) + cmplx(Znsq * DBWF,0.0) * cmplx(cos(arg),sin(arg))
-               end do
-           end do
-       end do  
-     end do
+     call CalcSgh(cell,reflist,nns,Sgh,nat)
 
 ! for now, we're disabling the kinematical part
 ! solve the dynamical eigenvalue equation for this beam direction  Lgh,thick,kn,nn,gzero,kin,debug
-     call CalcLgh3(DynMat,Lgh,dble(thick(iE)),ktmp%kn,BetheParameter%nns,gzero,kin,debug,depthstep,lambdaE(iE,1:izzmax),izzmax)
+     kn = karray(4,ik)
+     call CalcLgh3(DynMat,Lgh,dble(thick(iE)),dble(kn),nns,gzero,kin,debug,depthstep,lambdaE(iE,1:izzmax),izzmax)
 
 ! dynamical contribution
      do ip=1,numset
-       svals(ip) = real(sum(Lgh(1:BetheParameter%nns,1:BetheParameter%nns)*Sgh(1:BetheParameter%nns,1:BetheParameter%nns,ip)))
+       svals(ip) = real(sum(Lgh(1:nns,1:nns)*Sgh(1:nns,1:nns,ip)))
      end do
      svals = svals/float(sum(nat))
 
 ! and store the resulting values, applying point group symmetry where needed.
-     ipx = ktmp%i
-     ipy = ktmp%j
+     ipx = kij(1,ik)
+     ipy = kij(2,ik)
      call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
      if (usehex) then
        do ix=1,nequiv
          srhex(iequiv(1,ix),iequiv(2,ix),iE,1:numset) = svals(1:numset)
-	end do
+        end do
      else
-        if (Esel.eq.-1) then
+        if (emnl%Esel.eq.-1) then
          do ix=1,nequiv
            sr(iequiv(1,ix),iequiv(2,ix),iE,1:numset) = svals(1:numset)
-	  end do
-	else
+          end do
+        else
          do ix=1,nequiv
            sr(iequiv(1,ix),iequiv(2,ix),1,1:numset) = svals(1:numset)
-	  end do
+          end do
         endif
      end if
   
      if (mod(ik,2500).eq.0) write (*,*) 'completed beam direction ',ik
-! select next beam direction
-     ktmp => ktmp%next
+
     end do beamloop
+
+! end of OpenMP portion
+
+  deallocate(karray, kij)
 
 ! stop the clock and report the total time     
 !   call Time_stop(numk)
@@ -535,7 +572,7 @@ energyloop: do iE=numEbins,1,-1
 ! since these computations can take a long time, here we store 
 ! all the output at the end of each pass through the energyloop.
 
-  open(unit=dataunit,file=trim(outname),status='unknown',action='write',form = 'unformatted')
+  open(unit=dataunit,file=trim(emnl%outname),status='unknown',action='write',form = 'unformatted')
 ! write the program identifier
   write (dataunit) progname
 ! write the version number
@@ -543,14 +580,14 @@ energyloop: do iE=numEbins,1,-1
 ! then the name of the crystal data file
   write (dataunit) xtalname
 ! then the name of the corresponding Monte Carlo data file
-  write (dataunit) energyfile
+  write (dataunit) emnl%energyfile
 ! energy information and array size    
-  if (Esel.eq.-1) then
-    write (dataunit) npx,npy,numEbins,numset
+  if (emnl%Esel.eq.-1) then
+    write (dataunit) emnl%npx,npy,numEbins,numset
     write (dataunit) EkeVs
   else
     one = 1
-    write (dataunit) npx,npy,one,numset 
+    write (dataunit) emnl%npx,npy,one,numset 
     write (dataunit) selE
   end if
 ! atom type array for asymmetric unit  
@@ -565,21 +602,18 @@ energyloop: do iE=numEbins,1,-1
   write (dataunit) sr
   close(unit=dataunit,status='keep')
 
- if ((Esel.eq.-1).and.(iE.ne.1)) then 
-  mess = 'Intermediate data stored in file '//trim(outname)
-  call Message("(A/)")
+ if ((emnl%Esel.eq.-1).and.(iE.ne.1)) then 
+  call Message('Intermediate data stored in file '//trim(emnl%outname), frm = "(A/)")
  end if
 
- if ((Esel.eq.-1).and.(iE.eq.1)) then 
-  mess = 'Final data stored in file '//trim(outname)
-  call Message("(A/)")
+ if ((emnl%Esel.eq.-1).and.(iE.eq.1)) then 
+  call Message('Final data stored in file '//trim(emnl%outname), frm = "(A/)")
  end if
 
 end do energyloop
 
-if (Esel.ne.-1) then
-  mess = 'Final data stored in file '//trim(outname)
-  call Message("(A/)")
+if (emnl%Esel.ne.-1) then
+  call Message('Final data stored in file '//trim(emnl%outname), frm = "(A/)")
 end if
 
 end subroutine ComputeMasterPattern
@@ -624,23 +658,23 @@ integer(kind=irg),INTENT(IN)        :: gzero
 integer(kind=irg),INTENT(IN)        :: debug
 real(kind=dbl),INTENT(OUT)          :: kin
 real(kind=dbl),INTENT(IN)           :: depthstep
-real(kind=sgl),INTENT(IN)	      :: lambdaE(izz)
+real(kind=sgl),INTENT(IN)             :: lambdaE(izz)
 integer(kind=irg),INTENT(IN)        :: izz
 
-integer         		:: i,j, iz
-complex(kind=dbl) 		:: CGinv(nn,nn), Minp(nn,nn), tmp3(nn,nn)
+integer                         :: i,j, iz
+complex(kind=dbl)               :: CGinv(nn,nn), Minp(nn,nn), tmp3(nn,nn)
 
-real(kind=dbl)  		:: tpi, dzt
-complex(kind=dbl) 		:: Ijk(nn,nn), q, getMIWORK, qold
+real(kind=dbl)                  :: tpi, dzt
+complex(kind=dbl)               :: Ijk(nn,nn), q, getMIWORK, qold
 
-integer(kind=irg)    		:: INFO, LDA, LDVR, LDVL,  JPIV(nn), MILWORK
-complex(kind=dbl)    		:: CGG(nn,nn), W(nn)
-complex(kind=dbl),allocatable 	:: MIWORK(:)
+integer(kind=irg)               :: INFO, LDA, LDVR, LDVL,  JPIV(nn), MILWORK
+complex(kind=dbl)               :: CGG(nn,nn), W(nn)
+complex(kind=dbl),allocatable   :: MIWORK(:)
 
-integer(kind=irg),parameter   	:: LWMAX = 5000 
-complex(kind=dbl)    		:: VL(nn,nn),  WORK(LWMAX)
-real(kind=dbl)       		:: RWORK(2*nn)
-character            		:: JOBVL, JOBVR
+integer(kind=irg),parameter     :: LWMAX = 5000 
+complex(kind=dbl)               :: VL(nn,nn),  WORK(LWMAX)
+real(kind=dbl)                  :: RWORK(2*nn)
+character                       :: JOBVL, JOBVR
 integer(kind=sgl)              :: LWORK
 
 

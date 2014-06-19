@@ -82,8 +82,15 @@ type MCNameListType
         character(fnlen)        :: dataname
 end type MCNameListType
 
-
-
+! namelist for the CTEMEBSDmaster program
+type EBSDMasterNameListType
+        integer(kind=irg)       :: stdout
+        integer(kind=irg)       :: npx
+        integer(kind=irg)       :: Esel
+        real(kind=sgl)          :: dmin
+        character(fnlen)        :: energyfile
+        character(fnlen)        :: outname
+end type EBSDMasterNameListType
 
 
 end module NameListTypedefs

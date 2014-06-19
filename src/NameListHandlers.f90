@@ -202,7 +202,7 @@ dataname = 'MCoutput.data'
   call FatalError('CTEMMC:',' structure file name is undefined in '//nmlfile)
  end if
 
-! if we get here, then all appears to be ok, and we need to fill in the knl fields
+! if we get here, then all appears to be ok, and we need to fill in the mcnl fields
 mcnl%stdout = stdout
 mcnl%numsx = numsx
 mcnl%primeseed = primeseed
@@ -222,6 +222,70 @@ mcnl%stdout = stdout
 
 end subroutine GetMCNameList
 
+
+
+
+
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:GetEBSDMasterNameList
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read namelist file and fill mcnl structure (used by CTEMEBSDmaster.f90)
+!
+!> @param nmlfile namelist file name
+!> @param emnl EBSD master name list structure
+!
+!> @date 06/19/14  MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine GetEBSDMasterNameList(nmlfile, emnl)
+
+use error
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                     :: nmlfile
+type(EBSDMasterNameListType),INTENT(INOUT)      :: emnl
+
+integer(kind=irg)       :: stdout
+integer(kind=irg)       :: npx
+integer(kind=irg)       :: Esel
+real(kind=sgl)          :: dmin
+character(fnlen)        :: energyfile
+character(fnlen)        :: outname
+
+! define the IO namelist to facilitate passing variables to the program.
+namelist /EBSDmastervars/ dmin,npx,outname,energyfile,Esel
+
+! set the input parameters to default values (except for xtalname, which must be present)
+stdout = 6
+npx = 500                       ! Nx pixels (total = 2Nx+1)
+Esel = -1                       ! selected energy value for single energy run
+dmin = 0.025                    ! smallest d-spacing to include in dynamical matrix [nm]
+energyfile = 'undefined'        ! default filename for z_0(E_e) data from CTEMMC Monte Carlo simulations
+outname = 'EBSDmasterout.data'  ! default filename for final output
+
+! read the namelist file
+ open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+ read(UNIT=dataunit,NML=EBSDmastervars)
+ close(UNIT=dataunit,STATUS='keep')
+
+! check for required entries
+ if (trim(energyfile).eq.'undefined') then
+  call FatalError('CTEMEBSDmaster:',' energy file name is undefined in '//nmlfile)
+ end if
+
+! if we get here, then all appears to be ok, and we need to fill in the emnl fields
+emnl%stdout = stdout
+emnl%npx = npx
+emnl%Esel = Esel
+emnl%dmin = dmin
+emnl%energyfile = energyfile
+emnl%outname = outname
+
+end subroutine GetEBSDMasterNameList
 
 
 

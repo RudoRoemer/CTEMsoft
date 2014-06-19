@@ -229,6 +229,202 @@ real(kind=dbl)                  :: s, q, t
    
 end subroutine CalcKint
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: CalcSgh
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief compute structure factor-like array for EBSD, ECCI and ECP simulations
+!
+!> @param cell unit cell pointer
+!> @param nn dimension of array
+!> @param Sgh output array
+!> @param nat normalization array
+!
+!> @date 03/05/14  MDG 1.0 original (used to be in-line in ECP and ECCI programs)
+!> @date 03/11/14  MDG 1.1 converted to diagonal Sgh array only
+!> @date 06/19/14  MDG 2.0 no globals, taken out of CTEMECCI.f90
+!--------------------------------------------------------------------------
+recursive subroutine CalcSgh(cell,reflist,nn,Sgh,nat)
+
+use local
+use typedefs
+use crystal
+use gvectors
+use constants
+use symmetry
+
+IMPLICIT NONE
+
+type(unitcell),pointer                  :: cell
+type(reflisttype),pointer               :: reflist
+integer(kind=irg),INTENT(IN)            :: nn
+complex(kind=dbl),INTENT(INOUT)         :: Sgh(nn,nn)
+integer(kind=irg),INTENT(INOUT)         :: nat(100)
+
+integer(kind=irg)                       :: ip, ir, ic, kkk(3), ikk, n
+real(kind=sgl)                          :: Znsq, DBWF, kkl
+complex(kind=dbl)                       :: carg
+real(kind=dbl)                          :: ctmp(192,3),arg, tpi
+type(reflisttype),pointer               :: rltmpa, rltmpb
+
+  tpi = 2.D0 * cPi
+
+! for each special position we need to compute its contribution to the Sgh array
+  do ip=1,cell % ATOM_ntype
+    call CalcOrbit(cell,ip,n,ctmp)
+    nat(ip) = n
+! get Zn-squared for this special position, and include the site occupation parameter as well
+    Znsq = float(cell%ATOM_type(ip))**2 * cell%ATOM_pos(ip,4)
+! loop over all contributing reflections
+! ir is the row index
+    rltmpa => reflist%next    ! point to the front of the list
+    do ir=1,nn
+! ic is the column index
+      rltmpb => reflist%next    ! point to the front of the list
+      do ic=1,nn
+        kkk = rltmpb%hkl - rltmpa%hkl
+! We'll assume isotropic Debye-Waller factors for now ...
+! That means we need the square of the length of s=  kk^2/4
+        kkl = 0.25 * CalcLength(cell,float(kkk),'r')**2
+! Debye-Waller exponential times Z^2
+        DBWF = Znsq * exp(-cell%ATOM_pos(ip,5)*kkl)
+! here is where we should insert the proper weight factor, Z^2 exp[-M_{h-g}]
+! and also the detector geometry...   For now, we do nothing with the detector
+! geometry; the Rossouw et al 1994 paper lists a factor A that does not depend
+! on anything in particular, so we assume it is 1. 
+        do ikk=1,n
+! get the argument of the complex exponential
+          arg = tpi*sum(kkk(1:3)*ctmp(ikk,1:3))
+          carg = dcmplx(dcos(arg),dsin(arg))
+! multiply with the prefactor and add
+          Sgh(ir,ic) = Sgh(ir,ic) + carg * dcmplx(DBWF,0.D0)
+        end do
+        rltmpb => rltmpb%nexts  ! move to next column-entry
+      end do
+     rltmpa => rltmpa%nexts  ! move to next row-entry
+   end do  
+  end do
+  
+end subroutine CalcSgh
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: GetDynMat
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief compute the dynamical matrix, including Bethe potentials
+!
+!> @param cell unit cell pointer
+!> @param listroot top of the main reflection list
+!> @param listrootw top of the weak reflection list
+!> @param Dyn dynamical scattering structure
+!> @param nns number of strong reflections
+!> @param nnw number of weak reflections
+!
+!> @date  04/22/14 MDG 1.0 new library version
+!> @date  06/15/14 MDG 2.0 updated for removal of globals
+!> @date  06/17/14 MDG 2.1 added listroot pointers etc to accommodate multiple threads
+!> @date  06/18/14 MDG 2.2 corrected some pointer allocation errors in other routines; this one now works fine.
+!--------------------------------------------------------------------------
+recursive subroutine GetDynMat(cell, listroot, listrootw, rlp, DynMat, nns, nnw)
+
+use local
+use typedefs
+use io
+use crystal
+use diffraction
+use kvectors
+use gvectors
+use constants
+
+IMPLICIT NONE
+
+type(unitcell),pointer           :: cell
+type(reflisttype),pointer        :: listroot
+type(reflisttype),pointer        :: listrootw
+type(gnode),INTENT(INOUT)        :: rlp
+complex(kind=dbl),INTENT(INOUT)  :: DynMat(nns,nns)
+integer(kind=irg),INTENT(IN)     :: nns
+integer(kind=irg),INTENT(IN)     :: nnw
+
+complex(kind=dbl)                :: czero, ughp, uhph, weaksum 
+real(kind=dbl)                   :: weaksgsum
+real(kind=sgl)                   :: Upz
+integer(kind=sgl)                :: ir, ic, ll(3), istat, wc
+type(reflisttype),pointer        :: rlr, rlc, rlw
+
+czero = cmplx(0.0,0.0,dbl)      ! complex zero
+
+nullify(rlr)
+nullify(rlc)
+nullify(rlw)
+
+        DynMat = czero
+        call CalcUcg(cell, rlp, (/0,0,0/) )
+        Upz = rlp%Vpmod
+
+        rlr => listroot%next
+        ir = 1
+        do
+          if (.not.associated(rlr)) EXIT
+          rlc => listroot%next
+          ic = 1
+          do
+          if (.not.associated(rlc)) EXIT
+          if (ic.ne.ir) then  ! not a diagonal entry
+! here we need to do the Bethe corrections if necessary
+            if (nnw.ne.0) then
+              weaksum = czero
+              rlw => listrootw
+              do
+               if (.not.associated(rlw)) EXIT
+               ll = rlr%hkl - rlw%hkl
+               ughp = cell%LUT(ll(1),ll(2),ll(3)) 
+               ll = rlw%hkl - rlc%hkl
+               uhph = cell%LUT(ll(1),ll(2),ll(3)) 
+               weaksum = weaksum +  ughp * uhph *cmplx(1.D0/rlw%sg,0.0,dbl)
+               rlw => rlw%nextw
+              end do
+!        ! and correct the dynamical matrix element to become a Bethe potential coefficient
+              ll = rlr%hkl - rlc%hkl
+              DynMat(ir,ic) = cell%LUT(ll(1),ll(2),ll(3))  - cmplx(0.5D0*mLambda,0.0D0,dbl)*weaksum
+             else
+              ll = rlr%hkl - rlc%hkl
+              DynMat(ir,ic) = cell%LUT(ll(1),ll(2),ll(3))
+            end if
+          else  ! it is a diagonal entry, so we need the excitation error and the absorption length
+! determine the total contribution of the weak beams
+            if (nnw.ne.0) then
+              weaksgsum = 0.D0
+              rlw => listrootw
+              do
+               if (.not.associated(rlw)) EXIT
+                ll = rlr%hkl - rlw%hkl
+                ughp = cell%LUT(ll(1),ll(2),ll(3)) 
+                weaksgsum = weaksgsum +  cdabs(ughp)**2/rlw%sg
+                rlw => rlw%nextw
+              end do
+              weaksgsum = weaksgsum * mLambda/2.D0
+              DynMat(ir,ir) = cmplx(2.D0*rlr%sg/mLambda-weaksgsum,Upz,dbl)
+            else
+              DynMat(ir,ir) = cmplx(2.D0*rlr%sg/mLambda,Upz,dbl)
+            end if           
+        
+           end if       
+           rlc => rlc%nexts
+           ic = ic + 1
+          end do        
+          rlr => rlr%nexts
+          ir = ir+1
+        end do
+
+end subroutine GetDynMat
+
+
+
 
 
 end module MBmodule
