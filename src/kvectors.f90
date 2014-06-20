@@ -111,6 +111,7 @@ end function Kdelta
 !
 !> @date   04/29/13 MDG 1.0 original
 !> @date   06/09/14 MDG 2.0 added khead and cell as arguments
+!> @date   06/19/14
 !--------------------------------------------------------------------------
 subroutine Calckvectors(khead,cell,k,ga,ktmax,npx,npy,numk,isym,ijmax,mapmode,usehex)
 
@@ -521,8 +522,6 @@ if (mapmode.eq.'RoscaLambert') then
           end do
 
  end select
-
-write (*,*) 'end of Calckvectors'
 
 end if
 

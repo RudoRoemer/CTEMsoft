@@ -181,6 +181,7 @@ complex(kind=dbl),allocatable   :: DynMat(:,:)
 ! ask for this again...
 
 tpi = 2.D0*cPi
+czero = dcmplx(0.D0,0.D0)
 
 !=============================================
 !=============================================
@@ -370,7 +371,7 @@ end if
 
 ! force dynamical matrix routine to read new Bethe parameters from file
 ! this will all be changed with the new version of the Bethe potentials
-   call Set_Bethe_Parameters(BetheParameters)
+!  call Set_Bethe_Parameters(BetheParameters)
 
 !=============================================
 !=============================================
@@ -397,7 +398,6 @@ energyloop: do iE=numEbins,1,-1
 ! set the accelerating voltage
    skip = 3
    call CalcWaveLength(cell, rlp, dble(EkeVs(iE)*1000.0),skip)
-write(*,*) 'wavelength set'
 
 !=============================================
 ! ---------- create the incident beam directions list
@@ -410,7 +410,6 @@ write(*,*) 'wavelength set'
                 isym,ijmax,'RoscaLambert',usehex)
    else 
 ! Calckvectors(k,ga,ktmax,npx,npy,numk,isym,ijmax,mapmode,usehex)
-write(*,*) 'calling Calckvectors'
     call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,emnl%npx,npy,numk, &
                 isym,ijmax,'RoscaLambert',usehex)
    end if
@@ -434,6 +433,8 @@ write(*,*) 'calling Calckvectors'
 ! and remove the linked list
   call Delete_kvectorlist(khead)
 
+  verbose = .FALSE.
+
 ! ---------- end of "create the incident beam directions list"
 !=============================================
 
@@ -452,6 +453,7 @@ write(*,*) 'calling Calckvectors'
 ! reciprocal lattice.  
      nullify(reflist)
      Dyn%FN = karray(1:3,ik) ! this is the foil normal and beam direction
+     call NormVec(cell, Dyn%FN, 'r')
      call Initialize_ReflectionList(cell, reflist, BetheParameters, Dyn, Dyn%FN, emnl%dmin, nref, verbose)
 ! ---------- end of "create the master reflection list"
 !=============================================
@@ -468,14 +470,12 @@ write(*,*) 'calling Calckvectors'
      allocate(DynMat(nns,nns))
      call GetDynMat(cell, reflist, firstw, rlp, DynMat, nns, nnw)
 
-     write (*,*) ik, nref, nns, nnw
-
 ! then we need to initialize the Sgh and Lgh arrays
      if (allocated(Sgh)) deallocate(Sgh)
      if (allocated(Lgh)) deallocate(Lgh)
      allocate(Sgh(nns,nns,numset),Lgh(nns,nns))
      Sgh = czero
-
+     Lgh = czero
      call CalcSgh(cell,reflist,nns,Sgh,nat)
 
 ! for now, we're disabling the kinematical part
@@ -483,6 +483,8 @@ write(*,*) 'calling Calckvectors'
      kn = karray(4,ik)
      call CalcLgh3(DynMat,Lgh,dble(thick(iE)),dble(kn),nns,gzero,kin,debug,depthstep,lambdaE(iE,1:izzmax),izzmax)
      deallocate(DynMat)
+
+write(*,*) ik,'; max Lgh = ',maxval(cdabs(Lgh))
 
 ! dynamical contribution
      do ip=1,numset
@@ -658,25 +660,24 @@ integer(kind=irg),INTENT(IN)        :: gzero
 integer(kind=irg),INTENT(IN)        :: debug
 real(kind=dbl),INTENT(OUT)          :: kin
 real(kind=dbl),INTENT(IN)           :: depthstep
-real(kind=sgl),INTENT(IN)             :: lambdaE(izz)
+real(kind=sgl),INTENT(IN)           :: lambdaE(izz)
 integer(kind=irg),INTENT(IN)        :: izz
 
-integer                         :: i,j, iz
-complex(kind=dbl)               :: CGinv(nn,nn), Minp(nn,nn), tmp3(nn,nn)
+integer                             :: i,j, iz
+complex(kind=dbl)                   :: CGinv(nn,nn), Minp(nn,nn), tmp3(nn,nn)
 
-real(kind=dbl)                  :: tpi, dzt
-complex(kind=dbl)               :: Ijk(nn,nn), q, getMIWORK, qold
+real(kind=dbl)                      :: tpi, dzt
+complex(kind=dbl)                   :: Ijk(nn,nn), q, getMIWORK, qold
 
-integer(kind=irg)               :: INFO, LDA, LDVR, LDVL,  JPIV(nn), MILWORK
-complex(kind=dbl)               :: CGG(nn,nn), W(nn)
-complex(kind=dbl),allocatable   :: MIWORK(:)
+integer(kind=irg)                   :: INFO, LDA, LDVR, LDVL,  JPIV(nn), MILWORK
+complex(kind=dbl)                   :: CGG(nn,nn), W(nn)
+complex(kind=dbl),allocatable       :: MIWORK(:)
 
-integer(kind=irg),parameter     :: LWMAX = 5000 
-complex(kind=dbl)               :: VL(nn,nn),  WORK(LWMAX)
-real(kind=dbl)                  :: RWORK(2*nn)
-character                       :: JOBVL, JOBVR
-integer(kind=sgl)              :: LWORK
-
+integer(kind=irg),parameter         :: LWMAX = 5000 
+complex(kind=dbl)                   :: VL(nn,nn),  WORK(LWMAX)
+real(kind=dbl)                      :: RWORK(2*nn)
+character                           :: JOBVL, JOBVR
+integer(kind=sgl)                   :: LWORK
 
 ! compute the eigenvalues and eigenvectors
 ! using the LAPACK CGEEV, CGETRF, and CGETRI routines
@@ -723,7 +724,7 @@ integer(kind=sgl)              :: LWORK
 
 ! then compute the integrated intensity matrix
  W = W/cmplx(2.0*kn,0.0)
-  
+
 ! recall that alpha(1:nn) = CGinv(1:nn,gzero)
 
 ! first the Ijk matrix (this is Winkelmann's B^{ij}(t) matrix)
@@ -738,12 +739,15 @@ dzt = depthstep/thick
   do j=1,nn
      q =  cmplx(0.D0,0.D0)
      qold = tpi * dcmplx(aimag(W(i))+aimag(W(j)),real(W(i))-real(W(j)))
+write(*,*) i,j,qold
      do iz = 1,izz
        q = q + dble(lambdaE(iz)) * cdexp( - qold * dble(iz) ) !MNS changed cexp to cdexp to be compatible with gfortran
      end do
      Ijk(i,j) = conjg(CGinv(i,gzero)) * q * CGinv(j,gzero)
   end do
  end do
+
+write(*,*) 'maxes: ',maxval(cdabs(Ijk)),maxval(lambdaE), izz
 
 Ijk = Ijk * dzt
 

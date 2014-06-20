@@ -271,6 +271,7 @@ type(reflisttype),pointer               :: rltmpa, rltmpb
 
   tpi = 2.D0 * cPi
 
+
 ! for each special position we need to compute its contribution to the Sgh array
   do ip=1,cell % ATOM_ntype
     call CalcOrbit(cell,ip,n,ctmp)
