@@ -311,6 +311,140 @@ type(reflisttype),pointer               :: rltmpa, rltmpb
   
 end subroutine CalcSgh
 
+! ###################################################################
+! 
+! SUBROUTINE: CalcLgh
+! 
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief compute the Lgh matrix for EBSD, ECCI, ECP, etc simulations
+!
+!> @param DMat dynamical matrix
+!> @param Lgh output array
+!> @param thick integration thickness
+!> @param kn normal wave vector component
+!> @param nn number of strong beams
+!> @param gzero index of incident beam
+!> @param depthstep depth step size
+!> @param lambdaE energy weight factors
+!> @param izz number of energy weight factors
+!
+!> @date 10/13/98  MDG 1.0 original
+!> @date 07/04/01  MDG 2.0 f90
+!> @date 06/19/14  MDG 3.0 no globals
+!> @date 06/23/14  MDG 4.0 moved to MBmodule
+! ###################################################################
+recursive subroutine CalcLgh(DMat,Lgh,thick,kn,nn,gzero,depthstep,lambdaE,izz)
+
+use local
+use io
+use files
+use constants
+use error
+
+IMPLICIT NONE
+
+complex(kind=dbl),INTENT(IN)        :: DMat(nn,nn)
+complex(kind=dbl),INTENT(OUT)       :: Lgh(nn,nn)
+real(kind=dbl),INTENT(IN)           :: thick
+real(kind=dbl),INTENT(IN)           :: kn
+integer(kind=irg),INTENT(IN)        :: nn
+integer(kind=irg),INTENT(IN)        :: gzero
+real(kind=dbl),INTENT(IN)           :: depthstep
+real(kind=sgl),INTENT(IN)           :: lambdaE(izz)
+integer(kind=irg),INTENT(IN)        :: izz
+
+integer                             :: i,j, iz
+complex(kind=dbl)                   :: CGinv(nn,nn), Minp(nn,nn), tmp3(nn,nn)
+
+real(kind=dbl)                      :: tpi, dzt
+complex(kind=dbl)                   :: Ijk(nn,nn), q, getMIWORK, qold
+
+integer(kind=irg)                   :: INFO, LDA, LDVR, LDVL,  JPIV(nn), MILWORK
+complex(kind=dbl)                   :: CGG(nn,nn), W(nn)
+complex(kind=dbl),allocatable       :: MIWORK(:)
+
+integer(kind=irg),parameter         :: LWMAX = 5000 
+complex(kind=dbl)                   :: VL(nn,nn),  WORK(LWMAX)
+real(kind=dbl)                      :: RWORK(2*nn)
+character                           :: JOBVL, JOBVR
+integer(kind=sgl)                   :: LWORK
+
+! compute the eigenvalues and eigenvectors
+! using the LAPACK CGEEV, CGETRF, and CGETRI routines
+! 
+ Minp = DMat
+
+! set some initial LAPACK variables 
+ LDA = nn
+ LDVL = nn
+ LDVR = nn
+ INFO = 0
+ 
+! first initialize the parameters for the LAPACK ZGEEV, CGETRF, and CGETRI routines
+ JOBVL = 'N'   ! do not compute the left eigenvectors
+ JOBVR = 'V'   ! do compute the right eigenvectors
+ LWORK = -1 ! so that we can ask the routine for the actually needed value
+
+! call the routine to determine the optimal workspace size
+  call zgeev(JOBVL,JOBVR,nn,Minp,LDA,W,VL,LDVL,CGG,LDVR,WORK,LWORK,RWORK,INFO)
+  LWORK = MIN( LWMAX, INT( WORK( 1 ) ) )
+
+! then call the eigenvalue solver
+  call zgeev(JOBVL,JOBVR,nn,Minp,LDA,W,VL,LDVL,CGG,LDVR,WORK,LWORK,RWORK,INFO)
+  if (INFO.ne.0) call FatalError('Error in CalcLgh3: ','ZGEEV return not zero')
+
+ CGinv = CGG
+
+ call zgetrf(nn,nn,CGinv,LDA,JPIV,INFO)
+ MILWORK = -1
+ call zgetri(nn,CGinv,LDA,JPIV,getMIWORK,MILWORK,INFO)
+ MILWORK =  INT(real(getMIWORK))
+ if (.not.allocated(MIWORK)) allocate(MIWORK(MILWORK))
+ MIWORK = dcmplx(0.D0,0.D0)
+ call zgetri(nn,CGinv,LDA,JPIV,MIWORK,MILWORK,INFO)
+ deallocate(MIWORK)
+
+! in all the time that we've used these routines, we haven't
+! had a single problem with the matrix inversion, so we don't
+! really need to do this test:
+!
+! if ((cabs(sum(matmul(CGG,CGinv)))-dble(nn)).gt.1.E-8) write (*,*) 'Error in matrix inversion; continuing'
+
+
+! then compute the integrated intensity matrix
+ W = W/cmplx(2.0*kn,0.0)
+
+! recall that alpha(1:nn) = CGinv(1:nn,gzero)
+
+! first the Ijk matrix (this is Winkelmann's B^{ij}(t) matrix)
+! combined with numerical integration over [0, z0] interval,
+! taking into account depth profiles from Monte Carlo simulations ...
+! the depth profile lambdaE must be added to the absorption 
+! components of the Bloch wave eigenvalues.
+
+tpi = 2.D0*cPi*depthstep
+dzt = depthstep/thick
+ do i=1,nn
+  do j=1,nn
+     q =  cmplx(0.D0,0.D0)
+     qold = tpi * dcmplx(aimag(W(i))+aimag(W(j)),real(W(i))-real(W(j)))
+     do iz = 1,izz
+       q = q + dble(lambdaE(iz)) * cdexp( - qold * dble(iz) ) !MNS changed cexp to cdexp to be compatible with gfortran
+     end do
+     Ijk(i,j) = conjg(CGinv(i,gzero)) * q * CGinv(j,gzero)
+  end do
+ end do
+
+Ijk = Ijk * dzt
+
+! then the summations for Lgh and kin
+tmp3 = matmul(CGG,transpose(Ijk)) 
+Lgh = matmul(tmp3,transpose(conjg(CGG)))
+
+end subroutine CalcLgh
+
+
 !--------------------------------------------------------------------------
 !
 ! SUBROUTINE: GetDynMat

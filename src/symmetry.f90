@@ -562,7 +562,7 @@ end subroutine Calc2DFamily
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable; replaced itmp by argument
 !--------------------------------------------------------------------------
-subroutine CalcFamily(cell,ind,num,space,itmp)
+recursive subroutine CalcFamily(cell,ind,num,space,itmp)
 
 IMPLICIT NONE
 
@@ -637,7 +637,7 @@ end subroutine CalcFamily
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable; replaced itmp by argument
 !--------------------------------------------------------------------------
-subroutine CalcOrbit(cell,m,n,ctmp)
+recursive subroutine CalcOrbit(cell,m,n,ctmp)
 
 IMPLICIT NONE
 
@@ -724,7 +724,7 @@ end subroutine CalcOrbit
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable; replaced itmp by argument
 !--------------------------------------------------------------------------
-subroutine CalcStar(cell,kk,n,stmp,space)
+recursive subroutine CalcStar(cell,kk,n,stmp,space)
 
 IMPLICIT NONE
 
@@ -1370,7 +1370,7 @@ end subroutine ShortestG
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !> @date  06/05/14 MDG 4.1 added unit cell pointer as argument
 !--------------------------------------------------------------------------
-logical function IsGAllowed(cell,g)
+recursive logical function IsGAllowed(cell,g)
 
 IMPLICIT NONE
 

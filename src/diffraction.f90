@@ -405,7 +405,7 @@ end function
 !> @date  01/10/14 MDG 4.0 new cell type
 !> @date  06/09/14 MDG 4.1 added cell as argument
 !--------------------------------------------------------------------------
-subroutine CalcUcg(cell,rlp,hkl)
+recursive subroutine CalcUcg(cell,rlp,hkl)
 
 use crystal
 use symmetry
@@ -666,7 +666,7 @@ end subroutine CalcUcg
 !> @date   03/26/13 MDG 3.0 updated IO
 !> @date   06/09/14 MDG 4.0 added cell as argument 
 !--------------------------------------------------------------------------
-function CalcsgSingle(cell,gg,kk,FN) result(sg)
+recursive function CalcsgSingle(cell,gg,kk,FN) result(sg)
 
 use crystal
 
@@ -713,7 +713,7 @@ end function CalcsgSingle
 !> @date   03/26/13 MDG 3.0 updated IO
 !> @date   06/09/14 MDG 4.0 added cell as argument
 !--------------------------------------------------------------------------
-function CalcsgDouble(cell,gg,kk,FN) result(sg)
+recursive function CalcsgDouble(cell,gg,kk,FN) result(sg)
 
 use crystal
 

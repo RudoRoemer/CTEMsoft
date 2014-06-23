@@ -122,7 +122,7 @@ type(KosselNameListType),INTENT(IN)     :: knl
 character(fnlen),INTENT(IN)             :: progname
 
 real(kind=sgl)                  :: ktmax, io_real(3), bragg, thetac,  galen, delta, kstar(3), gperp(3), &
-                                   frac, klaue(2), thetam, kk(3), kn
+                                   frac, klaue(2), thetam, kk(3), kn, FN(3)
 integer(kind=irg)               :: ijmax,ga(3),gb(3),cnt, pgnum, NUMTHREADS, TID, ki, kj, &
                                    newcount,count_rate,count_max, io_int(6), i, j, isym, skip, &
                                    npx, npy, numt, numk, ik, ip, jp, istat, dgn, nns, nnw, nref, &
@@ -269,7 +269,8 @@ type(reflisttype),pointer       :: reflist, firstw,rltmp
 
 ! generate the reflectionlist
         kk(1:3) = karray(1:3,ik)
-        call Initialize_ReflectionList(cell, reflist, BetheParameters, Dyn, kk, knl%dmin, nref, verbose)
+        FN = kk
+        call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, kk, knl%dmin, nref, verbose)
 
 ! determine strong and weak reflections
         call Apply_BethePotentials(cell, reflist, firstw, BetheParameters, nref, nns, nnw)

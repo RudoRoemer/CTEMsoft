@@ -673,16 +673,16 @@ type DynType
   real(kind=sgl)                            :: WV(3)                  ! wave vector expressed in reciprocal frame
   real(kind=sgl)                            :: FN(3)                  ! Foil normal in reciprocal frame
   real(kind=sgl)                            :: Upz                    ! U'_0 normal absorption parameter
-  complex(kind=dbl),allocatable            :: W(:), &           ! eigenvalue vector for Bloch wave method
-                                              CG(:,:), &        ! eigenvector matrix
-                                              alpha(:), &       ! excitation amplitude vector
-                                              DHWMz(:,:),&      ! Darwin-Howie-Whelan matrix
-                                              DynMat(:,:), &    ! dynamical matrix
-                                              DynMat0(:,:), &   ! dynamical matrix (for programs that need two or more of them)
-                                              DynMat1(:,:), &   ! dynamical matrix (for programs that need two or more of them)
-                                              DynMat2(:,:), &   ! dynamical matrix (for programs that need two or more of them)
-                                              DynMat3(:,:), &   ! dynamical matrix (for programs that need two or more of them)
-                                              phiz(:),Az(:,:)   ! used for Taylor expansion of scattering matrix
+! complex(kind=dbl),allocatable            :: W(:), &           ! eigenvalue vector for Bloch wave method
+!                                             CG(:,:), &        ! eigenvector matrix
+!                                             alpha(:), &       ! excitation amplitude vector
+!                                             DHWMz(:,:),&      ! Darwin-Howie-Whelan matrix
+  complex(kind=dbl),allocatable           :: DynMat(:,:)    ! dynamical matrix
+!                                             DynMat0(:,:), &   ! dynamical matrix (for programs that need two or more of them)
+!                                             DynMat1(:,:), &   ! dynamical matrix (for programs that need two or more of them)
+!                                             DynMat2(:,:), &   ! dynamical matrix (for programs that need two or more of them)
+!                                             DynMat3(:,:), &   ! dynamical matrix (for programs that need two or more of them)
+!                                             phiz(:),Az(:,:)   ! used for Taylor expansion of scattering matrix
 end type DynType
 
 
@@ -693,9 +693,9 @@ end type DynType
 
 ! define the cutoff parameters for the Bethe potential approach 
 type BetheParameterType
-        real(kind=sgl)                 :: c1 = 20.0_sgl
-        real(kind=sgl)                 :: c2 = 40.0_sgl
-        real(kind=sgl)                 :: c3 = 1000.0_sgl
+        real(kind=sgl)                 :: c1 = 10.0_sgl
+        real(kind=sgl)                 :: c2 = 20.0_sgl
+        real(kind=sgl)                 :: c3 = 200.0_sgl
         real(kind=sgl)                 :: sgdbdiff = 0.05_sgl
 	real(kind=sgl)                 :: weakcutoff = 0.0_sgl
 	real(kind=sgl)                 :: cutoff = 0.0_sgl

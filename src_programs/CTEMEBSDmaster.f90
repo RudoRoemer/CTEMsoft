@@ -141,7 +141,7 @@ integer(kind=irg)      :: isym,i,j,ik,npy,ipx,ipy,debug,iE,izz, izzmax, iequiv(2
                         numk, & ! number of independent incident beam directions
                         ir,nat(100),kk(3), npyhex, skip, ijmax, one, NUMTHREADS, TID, &
                         numset,n,ix,iy,iz, io_int(6), nns, nnw, nref,  &
-                        istat,gzero,ic,ip,ikk     ! counters
+                        istat,gzero,ic,ip,ikk, totstrong, totweak     ! counters
 real(kind=dbl)         :: tpi,Znsq, kkl, DBWF, kin !
 real(kind=sgl)          :: io_real(5), selE, kn, FN(3), kkk(3)
 real(kind=sgl),allocatable      :: sr(:,:,:,:), srhex(:,:,:,:), EkeVs(:), svals(:) ! results
@@ -162,14 +162,16 @@ character(8)            :: MCscversion
 character(4)            :: MCmode
 
 type(unitcell),pointer          :: cell
-type(DynType)                   :: Dyn
-type(gnode)                     :: rlp
+type(DynType),save              :: Dyn
+type(gnode),save                :: rlp
 type(reflisttype),pointer       :: reflist,firstw, rltmp
 type(BetheParameterType)        :: BetheParameters
 type(kvectorlist),pointer       :: khead, ktmp
 real(kind=sgl),allocatable      :: karray(:,:)
 integer(kind=irg),allocatable   :: kij(:,:)
 complex(kind=dbl),allocatable   :: DynMat(:,:)
+
+!$OMP THREADPRIVATE(rlp) 
 
 ! note that the CTEMMC.f90 program creates a statistical output file that 
 ! must be read by the present program, so that things like energy etc are 
@@ -394,8 +396,6 @@ energyloop: do iE=numEbins,1,-1
    call WriteValue('; energy [keV] = ',io_real,1,"(F6.2/)")
    selE = EkeVs(iE)
 
-   nat = 0
-
 ! set the accelerating voltage
    skip = 3
    call CalcWaveLength(cell, rlp, dble(EkeVs(iE)*1000.0),skip)
@@ -435,6 +435,8 @@ energyloop: do iE=numEbins,1,-1
   call Delete_kvectorlist(khead)
 
   verbose = .FALSE.
+  totstrong = 0
+  totweak = 0
 
 ! ---------- end of "create the incident beam directions list"
 !=============================================
@@ -447,15 +449,15 @@ energyloop: do iE=numEbins,1,-1
   call WriteValue(' Attempting to set number of threads to ',io_int, 1, frm = "(I4)")
 
 ! use OpenMP to run on multiple cores ... 
-!$OMP PARALLEL default(shared) PRIVATE(DynMat,Sgh,Lgh,ik,FN,TID,kn,ipx,ipy,ix,iequiv,nequiv,reflist,firstw) &
-!$OMP& PRIVATE(kkk,nns,nnw,nref,svals,nat,rlp,io_int)
-
+!!$OMP PARALLEL default(shared) COPYIN(rlp) &
+!$OMP PARALLEL COPYIN(rlp) &
+!$OMP& PRIVATE(DynMat,Sgh,Lgh,ik,FN,TID,kn,ipx,ipy,ix,iequiv,nequiv,reflist,firstw) &
+!$OMP& PRIVATE(kkk,nns,nnw,nref,svals,nat,io_int)
 
   NUMTHREADS = OMP_GET_NUM_THREADS()
   TID = OMP_GET_THREAD_NUM()
 
 !$OMP DO SCHEDULE(DYNAMIC,100)    
-
 ! ---------- and here we start the beam direction loop
    beamloop:do ik = 1,numk
 
@@ -468,11 +470,12 @@ energyloop: do iE=numEbins,1,-1
 ! reciprocal lattice.  
      nullify(reflist)
 !    kkk = karray(1:3,ik)
-     FN = (/ 0.0, 0.0, 1.0 /) !karray(1:3,ik)
+     kkk = karray(1:3,ik)
+     FN = kkk
 !    call TransSpace(cell,kkk,FN,'r','d')
-     call NormVec(cell,FN,'d')
+!    call NormVec(cell,FN,'d')
 !    FN = karray(1:3,ik)
-     call Initialize_ReflectionList(cell, reflist, BetheParameters, Dyn, FN, emnl%dmin, nref, verbose)
+     call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, kkk, emnl%dmin, nref, verbose)
 ! ---------- end of "create the master reflection list"
 !=============================================
 
@@ -487,6 +490,8 @@ energyloop: do iE=numEbins,1,-1
 ! generate the dynamical matrix
      allocate(DynMat(nns,nns))
      call GetDynMat(cell, reflist, firstw, rlp, DynMat, nns, nnw)
+     totstrong = totstrong + nns
+     totweak = totweak + nnw
 
 ! if (TID.eq.0) write (*,*) ik, FN, nref, nns, nnw
 
@@ -496,19 +501,21 @@ energyloop: do iE=numEbins,1,-1
      allocate(Sgh(nns,nns,numset),Lgh(nns,nns))
      Sgh = czero
      Lgh = czero
+     nat = 0
      call CalcSgh(cell,reflist,nns,numset,Sgh,nat)
 
 ! for now, we're disabling the kinematical part
 ! solve the dynamical eigenvalue equation for this beam direction  Lgh,thick,kn,nn,gzero,kin,debug
      kn = karray(4,ik)
-     call CalcLgh3(DynMat,Lgh,dble(thick(iE)),dble(kn),nns,gzero,depthstep,lambdaE(iE,1:izzmax),izzmax)
+     call CalcLgh(DynMat,Lgh,dble(thick(iE)),dble(kn),nns,gzero,depthstep,lambdaE(iE,1:izzmax),izzmax)
      deallocate(DynMat)
 
 ! dynamical contribution
+     svals = 0.0
      do ix=1,numset
        svals(ix) = real(sum(Lgh(1:nns,1:nns)*Sgh(1:nns,1:nns,ix)))
      end do
-     svals = svals/float(sum(nat))
+     svals = svals/float(sum(nat(1:numset)))
 
 ! and store the resulting values, applying point group symmetry where needed.
      ipx = kij(1,ik)
@@ -600,6 +607,13 @@ energyloop: do iE=numEbins,1,-1
 ! since these computations can take a long time, here we store 
 ! all the output at the end of each pass through the energyloop.
 
+
+  io_int(1) = nint(float(totstrong)/float(numk))
+  call WriteValue(' -> Average number of strong reflections = ',io_int, 1, "(I5)")
+  io_int(1) = nint(float(totweak)/float(numk))
+  call WriteValue(' -> Average number of weak reflections   = ',io_int, 1, "(I5)")
+
+
   open(unit=dataunit,file=trim(emnl%outname),status='unknown',action='write',form = 'unformatted')
 ! write the program identifier
   write (dataunit) progname
@@ -645,136 +659,3 @@ if (emnl%Esel.ne.-1) then
 end if
 
 end subroutine ComputeMasterPattern
-
-! ###################################################################
-! 
-!  subroutine CalcLgh3
-! 
-!  Author: Marc De Graef
-!  
-!  Description: integrate the dynamical equations using the Bloch Wave
-!  formalism.
-! 
-!  History
-! 
-!> @todo this may need to be rewritten to use the original LAPACK routines
-!> instead of the eispack routines
-!
-!  modified by  rev reason
-!  -------- --- --- -----------
-!  10/13/98 MDG 1.0 original
-!   7/04/01 MDG 2.0 f90
-!  12/12/12 MDG 3.0 attempt at actual numerical integration for the matrix elements I_jk
-!  05/04/14 MDG 3.1 minor clean up
-! ###################################################################
-subroutine CalcLgh3(DMat,Lgh,thick,kn,nn,gzero,depthstep,lambdaE,izz)
-
-use local
-use io
-use files
-use constants
-use error
-
-IMPLICIT NONE
-
-complex(kind=dbl),INTENT(IN)        :: DMat(nn,nn)
-complex(kind=dbl),INTENT(OUT)       :: Lgh(nn,nn)
-real(kind=dbl),INTENT(IN)           :: thick
-real(kind=dbl),INTENT(IN)           :: kn
-integer(kind=irg),INTENT(IN)        :: nn
-integer(kind=irg),INTENT(IN)        :: gzero
-real(kind=dbl),INTENT(IN)           :: depthstep
-real(kind=sgl),INTENT(IN)           :: lambdaE(izz)
-integer(kind=irg),INTENT(IN)        :: izz
-
-integer                             :: i,j, iz
-complex(kind=dbl)                   :: CGinv(nn,nn), Minp(nn,nn), tmp3(nn,nn)
-
-real(kind=dbl)                      :: tpi, dzt
-complex(kind=dbl)                   :: Ijk(nn,nn), q, getMIWORK, qold
-
-integer(kind=irg)                   :: INFO, LDA, LDVR, LDVL,  JPIV(nn), MILWORK
-complex(kind=dbl)                   :: CGG(nn,nn), W(nn)
-complex(kind=dbl),allocatable       :: MIWORK(:)
-
-integer(kind=irg),parameter         :: LWMAX = 5000 
-complex(kind=dbl)                   :: VL(nn,nn),  WORK(LWMAX)
-real(kind=dbl)                      :: RWORK(2*nn)
-character                           :: JOBVL, JOBVR
-integer(kind=sgl)                   :: LWORK
-
-! compute the eigenvalues and eigenvectors
-! using the LAPACK CGEEV, CGETRF, and CGETRI routines
-! 
- Minp = DMat
-
-! set some initial LAPACK variables 
- LDA = nn
- LDVL = nn
- LDVR = nn
- INFO = 0
- 
-! first initialize the parameters for the LAPACK ZGEEV, CGETRF, and CGETRI routines
- JOBVL = 'N'   ! do not compute the left eigenvectors
- JOBVR = 'V'   ! do compute the right eigenvectors
- LWORK = -1 ! so that we can ask the routine for the actually needed value
-
-! call the routine to determine the optimal workspace size
-  call zgeev(JOBVL,JOBVR,nn,Minp,LDA,W,VL,LDVL,CGG,LDVR,WORK,LWORK,RWORK,INFO)
-  LWORK = MIN( LWMAX, INT( WORK( 1 ) ) )
-
-! then call the eigenvalue solver
-  call zgeev(JOBVL,JOBVR,nn,Minp,LDA,W,VL,LDVL,CGG,LDVR,WORK,LWORK,RWORK,INFO)
-  if (INFO.ne.0) call FatalError('Error in CalcLgh3: ','ZGEEV return not zero')
-
- CGinv = CGG
-
- call zgetrf(nn,nn,CGinv,LDA,JPIV,INFO)
- MILWORK = -1
- call zgetri(nn,CGinv,LDA,JPIV,getMIWORK,MILWORK,INFO)
- MILWORK =  INT(real(getMIWORK))
- if (.not.allocated(MIWORK)) allocate(MIWORK(MILWORK))
- MIWORK = dcmplx(0.D0,0.D0)
- call zgetri(nn,CGinv,LDA,JPIV,MIWORK,MILWORK,INFO)
- deallocate(MIWORK)
-
-! in all the time that we've used these routines, we haven't
-! had a single problem with the matrix inversion, so we don't
-! really need to do this test:
-!
-! if ((cabs(sum(matmul(CGG,CGinv)))-dble(nn)).gt.1.E-8) write (*,*) 'Error in matrix inversion; continuing'
-
-
-! then compute the integrated intensity matrix
- W = W/cmplx(2.0*kn,0.0)
-
-! recall that alpha(1:nn) = CGinv(1:nn,gzero)
-
-! first the Ijk matrix (this is Winkelmann's B^{ij}(t) matrix)
-! combined with numerical integration over [0, z0] interval,
-! taking into account depth profiles from Monte Carlo simulations ...
-! the depth profile lambdaE must be added to the absorption 
-! components of the Bloch wave eigenvalues.
-
-tpi = 2.D0*cPi*depthstep
-dzt = depthstep/thick
- do i=1,nn
-  do j=1,nn
-     q =  cmplx(0.D0,0.D0)
-     qold = tpi * dcmplx(aimag(W(i))+aimag(W(j)),real(W(i))-real(W(j)))
-     do iz = 1,izz
-       q = q + dble(lambdaE(iz)) * cdexp( - qold * dble(iz) ) !MNS changed cexp to cdexp to be compatible with gfortran
-     end do
-     Ijk(i,j) = conjg(CGinv(i,gzero)) * q * CGinv(j,gzero)
-  end do
- end do
-
-Ijk = Ijk * dzt
-
-! then the summations for Lgh and kin
-tmp3 = matmul(CGG,transpose(Ijk)) 
-Lgh = matmul(tmp3,transpose(conjg(CGG)))
-
-end subroutine CalcLgh3
-
-     

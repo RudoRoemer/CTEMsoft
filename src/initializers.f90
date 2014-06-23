@@ -206,7 +206,7 @@ end subroutine Initialize_Cell
 !
 !> @param cell unit cell pointer
 !> @param BetheParameter Bethe potential structure
-!> @param Dyn Dynamical interactions structure
+!> @param FN  foil normal
 !> @param k zone axis direction cosines in direct Bravais lattice
 !> @param dmin smallest lattice d-spacing to consider
 !> @param listroot pointer to top of list (could be cell%reflist)
@@ -217,8 +217,9 @@ end subroutine Initialize_Cell
 !> @date 01/13/14 MDG 1.1 update for new cell type definition and new Bethe potential criterion
 !> @date 06/15/14 MDG 2.0 update for removal of all globals
 !> @date 06/16/14 MDG 2.1 added recursive
+!> @date 06/23/14 MDG 2.2 replaced Dyn structure by FN
 !--------------------------------------------------------------------------
-recursive subroutine Initialize_ReflectionList(cell, listroot, BetheParameter, Dyn, k, dmin, nref, verbose)
+recursive subroutine Initialize_ReflectionList(cell, listroot, BetheParameter, FN, k, dmin, nref, verbose)
 
 use local
 use typedefs
@@ -234,7 +235,7 @@ IMPLICIT NONE
 type(unitcell),pointer                          :: cell
 type(reflisttype),pointer                       :: listroot
 type(BetheParameterType),INTENT(INOUT)          :: BetheParameter
-type(DynType),INTENT(IN)                        :: Dyn
+real(kind=sgl),INTENT(IN)                       :: FN(3)
 real(kind=sgl),INTENT(IN)                       :: k(3)
 real(kind=sgl),INTENT(IN)                       :: dmin
 integer(kind=irg),INTENT(INOUT)                 :: nref
@@ -277,7 +278,7 @@ izl:   do iz=-iml,iml
          dval = 1.0/CalcLength(cell, float(gg), 'r' )
 
          if ((IsGAllowed(cell,gg)).and.(dval.gt.dmin)) then ! allowed by the lattice centering, if any
-          sgp = Calcsg(cell,float(gg),k,Dyn%FN)
+          sgp = Calcsg(cell,float(gg),k,FN)
           if (cell%dbdiff(ix, iy, iz)) then ! potential double diffraction reflection
             if (abs(sgp).le.rBethe_d) then 
               call AddReflection(rltail, listroot, cell, nref, gg )

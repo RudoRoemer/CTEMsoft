@@ -48,6 +48,7 @@
 !> @date   03/19/13 MDG 3.0 improved interface for single and double precision
 !> @date   01/10/14 MDG 4.0 new version, suitable for multiphase calculations
 !> @date   06/05/14 MDG 4.1 many modifications to remove/replace global variables, in particular "cell"
+!> @date   06/23/14 MDG 4.2 added recursive statement to most functions
 !--------------------------------------------------------------------------
 
 module crystal
@@ -280,7 +281,7 @@ end subroutine CalcMatrices
 !> @date    03/19/13 MDG 3.0 changed using interface protocol
 !> @date    01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
-subroutine TransSpaceDouble(cell,t,d,inspace,outspace)
+recursive subroutine TransSpaceDouble(cell,t,d,inspace,outspace)
 
 IMPLICIT NONE
 
@@ -350,7 +351,7 @@ end subroutine TransSpaceDouble
 !> @date    01/10/14 MDG 4.0 checked for changes to unitcell type
 !> @date    06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-subroutine TransSpaceSingle(cell, t, d, inspace, outspace)
+recursive subroutine TransSpaceSingle(cell, t, d, inspace, outspace)
 
 IMPLICIT NONE
 
@@ -428,7 +429,7 @@ end subroutine  TransSpaceSingle
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-subroutine TransCoor(cell, t, d, talpha, space, direction)
+recursive subroutine TransCoor(cell, t, d, talpha, space, direction)
 
 use math, ONLY: mInvert 
 
@@ -487,7 +488,7 @@ end subroutine TransCoor
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-function CalcDotSingle(cell, p,q,space) result(cdot)
+recursive function CalcDotSingle(cell, p,q,space) result(cdot)
 
 
 IMPLICIT NONE
@@ -528,7 +529,7 @@ end function CalcDotSingle
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-function CalcDotDouble(cell, p, q, space) result(cdot)
+recursive function CalcDotDouble(cell, p, q, space) result(cdot)
 
 IMPLICIT NONE
 
@@ -570,7 +571,7 @@ end function CalcDotDouble
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-subroutine NormVecSingle(cell, p, space)
+recursive subroutine NormVecSingle(cell, p, space)
 
 IMPLICIT NONE
 
@@ -610,7 +611,7 @@ end subroutine NormVecSingle
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-subroutine NormVecDouble(cell, p, space)
+recursive subroutine NormVecDouble(cell, p, space)
 
 IMPLICIT NONE
 
@@ -650,7 +651,7 @@ end subroutine NormVecDouble
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-function CalcLengthSingle(cell, p, space) result(x)
+recursive function CalcLengthSingle(cell, p, space) result(x)
 
 IMPLICIT NONE
 
@@ -686,7 +687,7 @@ end function CalcLengthSingle
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-function CalcLengthDouble(cell, p, space) result(x)
+recursive function CalcLengthDouble(cell, p, space) result(x)
 
 IMPLICIT NONE
 
@@ -722,7 +723,7 @@ end function CalcLengthDouble
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-function CalcAngleSingle(cell, p, q, space) result(a)
+recursive function CalcAngleSingle(cell, p, q, space) result(a)
 
 use error
 use constants
@@ -780,7 +781,7 @@ end function CalcAngleSingle
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-function CalcAngleDouble(cell,p,q,space) result(a)
+recursive function CalcAngleDouble(cell,p,q,space) result(a)
 
 use error
 use constants
@@ -848,7 +849,7 @@ end function CalcAngleDouble
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
-subroutine CalcCrossSingle(cell,p,q,r,inspace,outspace,iv)
+recursive subroutine CalcCrossSingle(cell,p,q,r,inspace,outspace,iv)
 
 use math
 
@@ -940,7 +941,7 @@ end subroutine CalcCrossSingle
 !> @date   03/19/13 MDG 3.0 interface support
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
-subroutine CalcCrossDouble(cell,p,q,r,inspace,outspace,iv)
+recursive subroutine CalcCrossDouble(cell,p,q,r,inspace,outspace,iv)
 
 use math
 
@@ -1023,7 +1024,7 @@ end subroutine CalcCrossDouble
 !> @date   03/19/13 MDG 3.0 interface support
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
-subroutine MilBrav(p,q,d)
+recursive subroutine MilBrav(p,q,d)
 
 IMPLICIT NONE
 

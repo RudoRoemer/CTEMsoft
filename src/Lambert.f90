@@ -1774,7 +1774,7 @@ end function LambertInverseDouble
 !> @date  12/05/12 MDG 2.1 adapted as a subroutine
 !> @date  09/20/13 MDG 3.0 re-adapted to generate 2D equivalent point list
 !--------------------------------------------------------------------------
-subroutine Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
+recursive subroutine Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
 
 IMPLICIT NONE
 
@@ -1896,7 +1896,7 @@ end subroutine Apply2DLaueSymmetry
 !> @date  10/02/13 MDG 1.0 first version
 !> @date  06/09/14 MDG 2.0 added TDPG argument 
 !--------------------------------------------------------------------------
-subroutine Apply2DPGSymmetry(TDPG,ipx,ipy,isym,iequiv,nequiv)
+recursive subroutine Apply2DPGSymmetry(TDPG,ipx,ipy,isym,iequiv,nequiv)
 
 use io
 use typedefs
