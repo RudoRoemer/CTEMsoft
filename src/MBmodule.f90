@@ -246,7 +246,7 @@ end subroutine CalcKint
 !> @date 03/11/14  MDG 1.1 converted to diagonal Sgh array only
 !> @date 06/19/14  MDG 2.0 no globals, taken out of CTEMECCI.f90
 !--------------------------------------------------------------------------
-recursive subroutine CalcSgh(cell,reflist,nn,Sgh,nat)
+recursive subroutine CalcSgh(cell,reflist,nn,numset,Sgh,nat)
 
 use local
 use typedefs
@@ -260,7 +260,8 @@ IMPLICIT NONE
 type(unitcell),pointer                  :: cell
 type(reflisttype),pointer               :: reflist
 integer(kind=irg),INTENT(IN)            :: nn
-complex(kind=dbl),INTENT(INOUT)         :: Sgh(nn,nn)
+integer(kind=irg),INTENT(IN)            :: numset
+complex(kind=dbl),INTENT(INOUT)         :: Sgh(nn,nn,numset)
 integer(kind=irg),INTENT(INOUT)         :: nat(100)
 
 integer(kind=irg)                       :: ip, ir, ic, kkk(3), ikk, n
@@ -300,7 +301,7 @@ type(reflisttype),pointer               :: rltmpa, rltmpb
           arg = tpi*sum(kkk(1:3)*ctmp(ikk,1:3))
           carg = dcmplx(dcos(arg),dsin(arg))
 ! multiply with the prefactor and add
-          Sgh(ir,ic) = Sgh(ir,ic) + carg * dcmplx(DBWF,0.D0)
+          Sgh(ir,ic,ip) = Sgh(ir,ic,ip) + carg * dcmplx(DBWF,0.D0)
         end do
         rltmpb => rltmpb%nexts  ! move to next column-entry
       end do

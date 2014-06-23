@@ -87,6 +87,7 @@ type EBSDMasterNameListType
         integer(kind=irg)       :: stdout
         integer(kind=irg)       :: npx
         integer(kind=irg)       :: Esel
+        integer(kind=irg)       :: nthreads
         real(kind=sgl)          :: dmin
         character(fnlen)        :: energyfile
         character(fnlen)        :: outname

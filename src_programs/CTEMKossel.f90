@@ -145,7 +145,7 @@ type(DynType)                   :: Dyn
 type(kvectorlist),pointer       :: khead, ktmp
 type(symdata2D)                 :: TDPG
 type(BetheParameterType)        :: BetheParameters
-type(reflisttype),pointer       :: reflist, firstw
+type(reflisttype),pointer       :: reflist, firstw,rltmp
 
 
   nullify(cell)
@@ -245,13 +245,14 @@ type(reflisttype),pointer       :: reflist, firstw
 ! set the number of OpenMP threads 
   call OMP_SET_NUM_THREADS(knl%nthreads)
   io_int(1) = knl%nthreads
-  call WriteValue(' Setting number of threads to ',io_int, 1, frm = "(I4)")
+  call WriteValue(' Attempting to set number of threads to ',io_int, 1, frm = "(I4)")
 
 ! use OpenMP to run on multiple cores ... 
 !$OMP PARALLEL default(shared) PRIVATE(DynMat,first,ik,TID,kk,kn,ipx,ipy,ii,iequiv,nequiv,ip,jp,reflist,firstw,nns,nnw,nref)
 
 ! set the foil normal 
   Dyn%FN = float(knl%fn)
+  call NormVec(cell, Dyn%FN, 'd')
 
   NUMTHREADS = OMP_GET_NUM_THREADS()
   TID = OMP_GET_THREAD_NUM()

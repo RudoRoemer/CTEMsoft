@@ -128,6 +128,7 @@ use diffraction
 use multibeams
 use timing
 use Lambert
+use omp_lib
 
 IMPLICIT NONE
 
@@ -138,11 +139,11 @@ character(fnlen),INTENT(IN)             :: progname
 real(kind=dbl)          :: ctmp(192,3), arg, sig, omega
 integer(kind=irg)      :: isym,i,j,ik,npy,ipx,ipy,debug,iE,izz, izzmax, iequiv(2,12), nequiv, num_el, MCnthreads, & ! counters
                         numk, & ! number of independent incident beam directions
-                        ir,nat(100),kk(3), npyhex, skip, ijmax, one, &
+                        ir,nat(100),kk(3), npyhex, skip, ijmax, one, NUMTHREADS, TID, &
                         numset,n,ix,iy,iz, io_int(6), nns, nnw, nref,  &
                         istat,gzero,ic,ip,ikk     ! counters
 real(kind=dbl)         :: tpi,Znsq, kkl, DBWF, kin !
-real(kind=sgl)          :: io_real(5), selE, kn
+real(kind=sgl)          :: io_real(5), selE, kn, FN(3), kkk(3)
 real(kind=sgl),allocatable      :: sr(:,:,:,:), srhex(:,:,:,:), EkeVs(:), svals(:) ! results
 complex(kind=dbl)               :: czero
 complex(kind=dbl),allocatable   :: Lgh(:,:), Sgh(:,:,:)
@@ -163,7 +164,7 @@ character(4)            :: MCmode
 type(unitcell),pointer          :: cell
 type(DynType)                   :: Dyn
 type(gnode)                     :: rlp
-type(reflisttype),pointer       :: reflist,firstw
+type(reflisttype),pointer       :: reflist,firstw, rltmp
 type(BetheParameterType)        :: BetheParameters
 type(kvectorlist),pointer       :: khead, ktmp
 real(kind=sgl),allocatable      :: karray(:,:)
@@ -249,7 +250,7 @@ nullify(cell)
 allocate(cell)
 
  verbose = .TRUE.
- call Initialize_Cell(cell,Dyn,rlp,xtalname, emnl%dmin, sngl(EkeV), verbose)
+ call Initialize_Cell(cell,Dyn,rlp,xtalname, emnl%dmin, sngl(1000.0*EkeV), verbose)
 
 ! the following line needs to be verified ... 
 !  hexset = .TRUE.    ! if hexagonal structure this switch selects between three and four index notation (4 if true)
@@ -440,9 +441,23 @@ energyloop: do iE=numEbins,1,-1
 
 ! here's where we introduce the OpenMP calls, to spead up the overall calculations...
 
+! set the number of OpenMP threads 
+  call OMP_SET_NUM_THREADS(emnl%nthreads)
+  io_int(1) = emnl%nthreads
+  call WriteValue(' Attempting to set number of threads to ',io_int, 1, frm = "(I4)")
+
+! use OpenMP to run on multiple cores ... 
+!$OMP PARALLEL default(shared) PRIVATE(DynMat,Sgh,Lgh,ik,FN,TID,kn,ipx,ipy,ix,iequiv,nequiv,reflist,firstw) &
+!$OMP& PRIVATE(kkk,nns,nnw,nref,svals,nat,rlp,io_int)
+
+
+  NUMTHREADS = OMP_GET_NUM_THREADS()
+  TID = OMP_GET_THREAD_NUM()
+
+!$OMP DO SCHEDULE(DYNAMIC,100)    
+
 ! ---------- and here we start the beam direction loop
    beamloop:do ik = 1,numk
-
 
 !=============================================
 ! ---------- create the master reflection list for this beam direction
@@ -452,9 +467,12 @@ energyloop: do iE=numEbins,1,-1
 ! distinction becomes meaningless when we consider the complete 
 ! reciprocal lattice.  
      nullify(reflist)
-     Dyn%FN = karray(1:3,ik) ! this is the foil normal and beam direction
-     call NormVec(cell, Dyn%FN, 'r')
-     call Initialize_ReflectionList(cell, reflist, BetheParameters, Dyn, Dyn%FN, emnl%dmin, nref, verbose)
+!    kkk = karray(1:3,ik)
+     FN = (/ 0.0, 0.0, 1.0 /) !karray(1:3,ik)
+!    call TransSpace(cell,kkk,FN,'r','d')
+     call NormVec(cell,FN,'d')
+!    FN = karray(1:3,ik)
+     call Initialize_ReflectionList(cell, reflist, BetheParameters, Dyn, FN, emnl%dmin, nref, verbose)
 ! ---------- end of "create the master reflection list"
 !=============================================
 
@@ -470,25 +488,25 @@ energyloop: do iE=numEbins,1,-1
      allocate(DynMat(nns,nns))
      call GetDynMat(cell, reflist, firstw, rlp, DynMat, nns, nnw)
 
+! if (TID.eq.0) write (*,*) ik, FN, nref, nns, nnw
+
 ! then we need to initialize the Sgh and Lgh arrays
      if (allocated(Sgh)) deallocate(Sgh)
      if (allocated(Lgh)) deallocate(Lgh)
      allocate(Sgh(nns,nns,numset),Lgh(nns,nns))
      Sgh = czero
      Lgh = czero
-     call CalcSgh(cell,reflist,nns,Sgh,nat)
+     call CalcSgh(cell,reflist,nns,numset,Sgh,nat)
 
 ! for now, we're disabling the kinematical part
 ! solve the dynamical eigenvalue equation for this beam direction  Lgh,thick,kn,nn,gzero,kin,debug
      kn = karray(4,ik)
-     call CalcLgh3(DynMat,Lgh,dble(thick(iE)),dble(kn),nns,gzero,kin,debug,depthstep,lambdaE(iE,1:izzmax),izzmax)
+     call CalcLgh3(DynMat,Lgh,dble(thick(iE)),dble(kn),nns,gzero,depthstep,lambdaE(iE,1:izzmax),izzmax)
      deallocate(DynMat)
 
-write(*,*) ik,'; max Lgh = ',maxval(cdabs(Lgh))
-
 ! dynamical contribution
-     do ip=1,numset
-       svals(ip) = real(sum(Lgh(1:nns,1:nns)*Sgh(1:nns,1:nns,ip)))
+     do ix=1,numset
+       svals(ix) = real(sum(Lgh(1:nns,1:nns)*Sgh(1:nns,1:nns,ix)))
      end do
      svals = svals/float(sum(nat))
 
@@ -496,6 +514,7 @@ write(*,*) ik,'; max Lgh = ',maxval(cdabs(Lgh))
      ipx = kij(1,ik)
      ipy = kij(2,ik)
      call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
+!$OMP CRITICAL
      if (usehex) then
        do ix=1,nequiv
          srhex(iequiv(1,ix),iequiv(2,ix),iE,1:numset) = svals(1:numset)
@@ -511,12 +530,19 @@ write(*,*) ik,'; max Lgh = ',maxval(cdabs(Lgh))
           end do
         endif
      end if
+!$OMP END CRITICAL
   
-     if (mod(ik,2500).eq.0) write (*,*) 'completed beam direction ',ik
+     if (mod(ik,2500).eq.0) then
+       io_int(1) = ik
+       call WriteValue('  completed beam direction ',io_int, 1, "(I8)")
+     end if
+
+     call Delete_gvectorlist(reflist)
 
     end do beamloop
 
 ! end of OpenMP portion
+!$OMP END PARALLEL
 
   deallocate(karray, kij)
 
@@ -641,7 +667,7 @@ end subroutine ComputeMasterPattern
 !  12/12/12 MDG 3.0 attempt at actual numerical integration for the matrix elements I_jk
 !  05/04/14 MDG 3.1 minor clean up
 ! ###################################################################
-subroutine CalcLgh3(DMat,Lgh,thick,kn,nn,gzero,kin,debug,depthstep,lambdaE,izz)
+subroutine CalcLgh3(DMat,Lgh,thick,kn,nn,gzero,depthstep,lambdaE,izz)
 
 use local
 use io
@@ -657,8 +683,6 @@ real(kind=dbl),INTENT(IN)           :: thick
 real(kind=dbl),INTENT(IN)           :: kn
 integer(kind=irg),INTENT(IN)        :: nn
 integer(kind=irg),INTENT(IN)        :: gzero
-integer(kind=irg),INTENT(IN)        :: debug
-real(kind=dbl),INTENT(OUT)          :: kin
 real(kind=dbl),INTENT(IN)           :: depthstep
 real(kind=sgl),INTENT(IN)           :: lambdaE(izz)
 integer(kind=irg),INTENT(IN)        :: izz
@@ -705,7 +729,6 @@ integer(kind=sgl)                   :: LWORK
 
  CGinv = CGG
 
-!if (debug.eq.1) write (*,*) 'inverting matrix'
  call zgetrf(nn,nn,CGinv,LDA,JPIV,INFO)
  MILWORK = -1
  call zgetri(nn,CGinv,LDA,JPIV,getMIWORK,MILWORK,INFO)
@@ -739,15 +762,12 @@ dzt = depthstep/thick
   do j=1,nn
      q =  cmplx(0.D0,0.D0)
      qold = tpi * dcmplx(aimag(W(i))+aimag(W(j)),real(W(i))-real(W(j)))
-write(*,*) i,j,qold
      do iz = 1,izz
        q = q + dble(lambdaE(iz)) * cdexp( - qold * dble(iz) ) !MNS changed cexp to cdexp to be compatible with gfortran
      end do
      Ijk(i,j) = conjg(CGinv(i,gzero)) * q * CGinv(j,gzero)
   end do
  end do
-
-write(*,*) 'maxes: ',maxval(cdabs(Ijk)),maxval(lambdaE), izz
 
 Ijk = Ijk * dzt
 

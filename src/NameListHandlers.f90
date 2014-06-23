@@ -252,16 +252,18 @@ type(EBSDMasterNameListType),INTENT(INOUT)      :: emnl
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: npx
 integer(kind=irg)       :: Esel
+integer(kind=irg)       :: nthreads
 real(kind=sgl)          :: dmin
 character(fnlen)        :: energyfile
 character(fnlen)        :: outname
 
 ! define the IO namelist to facilitate passing variables to the program.
-namelist /EBSDmastervars/ dmin,npx,outname,energyfile,Esel
+namelist /EBSDmastervars/ dmin,npx,nthreads,outname,energyfile,Esel
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 stdout = 6
 npx = 500                       ! Nx pixels (total = 2Nx+1)
+nthreads = 1
 Esel = -1                       ! selected energy value for single energy run
 dmin = 0.025                    ! smallest d-spacing to include in dynamical matrix [nm]
 energyfile = 'undefined'        ! default filename for z_0(E_e) data from CTEMMC Monte Carlo simulations
@@ -281,6 +283,7 @@ outname = 'EBSDmasterout.data'  ! default filename for final output
 emnl%stdout = stdout
 emnl%npx = npx
 emnl%Esel = Esel
+emnl%nthreads = nthreads
 emnl%dmin = dmin
 emnl%energyfile = energyfile
 emnl%outname = outname
