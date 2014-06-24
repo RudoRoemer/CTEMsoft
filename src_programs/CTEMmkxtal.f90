@@ -49,8 +49,8 @@ use files
 
 IMPLICIT NONE
 
-type(unitcell), pointer	 :: cell
-character(fnlen)                :: progname, progdesc
+type(unitcell), pointer         :: cell
+character(fnlen)                :: progname, progdesc, fname
 
  progname = 'CTEMmkxtal.f90'
  progdesc = 'Create a crystal structure file'
@@ -62,6 +62,8 @@ character(fnlen)                :: progname, progdesc
  call GetLatParm(cell)
  call GetSpaceGroup(cell)
  call GetAsymPos(cell)
+ call ReadValue('Enter output file name (*.xtal) ', fname)
+ cell%fname = fname
  call SaveData(cell)
 
 
