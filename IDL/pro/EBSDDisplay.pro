@@ -324,9 +324,11 @@ EBSDdata = {EBSDdatastruct, $
 	eventverbose: fix(0), $			; used for event debugging (0=off, 1=on)
 	scversion: '', $			; source code version number
 	pathname: '', $				; pathname (obviously)
+	mcpathname: '', $			; MC pathname (obviously)
 	suffix: '', $				; filename suffix 
 	homefolder: '', $			; startup folder of the program
 	EBSDroot: 'undefined', $		; current pathname (is stored in preferences file)
+	EBSDMCroot: 'undefined', $		; current pathname (is stored in preferences file)
 	prefname: '~/.EBSDgui.prefs', $		; filename of preferences file (including path)
 	nprefs: fix(0), $			; number of preferences in file
 	MCLSmode: fix(0), $			; Monte Carlo Lambert Selector tag

@@ -63,6 +63,7 @@ if (rs eq 1) then begin
     case nm of 
 ; root folder
 	'EBSDroot': EBSDdata.EBSDroot=val
+	'EBSDMCroot': EBSDdata.EBSDMCroot=val
 	'f90exepath': EBSDdata.f90exepath=val
 
 ; various parameters

@@ -46,10 +46,11 @@ common EBSD_data_common, EBSDdata
 
 ; prefs file
   openw,1,EBSDdata.prefname
-  nprefs = 24
+  nprefs = 25
   EBSDdata.nprefs = nprefs
   printf,1,nprefs
   printf,1,'EBSDroot::'+EBSDdata.EBSDroot
+  printf,1,'EBSDMCroot::'+EBSDdata.EBSDMCroot
   printf,1,'f90exepath::'+EBSDdata.f90exepath
 
   printf,1,'detl::'+string(EBSDdata.detL,format="(F9.2)")

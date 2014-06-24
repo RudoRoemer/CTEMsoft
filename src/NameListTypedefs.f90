@@ -119,7 +119,7 @@ type EBSDNameListType
         character(fnlen)        :: masterfile
         character(fnlen)        :: energyfile 
         character(fnlen)        :: datafile
-! everything below here is not part of the namelist input structure
+! everything below here is not part of the namelist input structure, but is used to pass arguments to subroutines
         integer(kind=irg)       :: numangles
         integer(kind=irg)       :: numEbins
         integer(kind=irg)       :: numzbins 

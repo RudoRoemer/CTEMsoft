@@ -87,7 +87,7 @@ if keyword_set(MPFILE) then begin
   spos = strpos(res,'/',/reverse_search)
   dpos = strpos(res,'.',/reverse_search)
   plen = strlen(res)
-  EBSDdata.pathname = strmid(res,0,spos)
+  EBSDdata.mcpathname = strmid(res,0,spos)
   EBSDdata.mcfilename = strmid(res,spos+1)
     Core_Print,'MC filename = ->'+EBSDdata.mcfilename+'<-'
   WIDGET_CONTROL, SET_VALUE=EBSDdata.mcfilename, EBSDwidget_s.mcfilename
@@ -151,7 +151,7 @@ if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
   Core_Print,'Reading data file '+EBSDdata.mcfilename
   EBSDdata.Esel = 0
 
-  openu,1,EBSDdata.pathname+'/'+EBSDdata.mcfilename,/f77
+  openu,1,EBSDdata.mcpathname+'/'+EBSDdata.mcfilename,/f77
 ; first a string of 132 characters
   progname = bytarr(132)
   readu,1,progname

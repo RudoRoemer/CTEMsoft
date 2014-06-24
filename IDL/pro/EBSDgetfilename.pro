@@ -77,15 +77,15 @@ common EBSD_data_common, EBSDdata
 	spos = strpos(res,'/',/reverse_search)
 	dpos = strpos(res,'.',/reverse_search)
 	plen = strlen(res)
-	EBSDdata.pathname = strmid(res,0,spos)
+	EBSDdata.mcpathname = strmid(res,0,spos)
 	EBSDdata.mcfilename = strmid(res,spos+1)
 	EBSDdata.suffix = strmid(res,dpos+1)
-	EBSDdata.EBSDroot = EBSDdata.pathname
+	EBSDdata.EBSDMCroot = EBSDdata.mcpathname
 
   	WIDGET_CONTROL, SET_VALUE=EBSDdata.mcfilename, EBSDwidget_s.mcfilename
 
   	Core_Print,' full path '+res
-  	Core_Print,' path '+EBSDdata.pathname
+  	Core_Print,' path '+EBSDdata.mcpathname
   	Core_Print,' data file '+EBSDdata.mcfilename
   	Core_Print,' suffix '+EBSDdata.suffix
     end else begin
