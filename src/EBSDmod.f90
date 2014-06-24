@@ -1,0 +1,478 @@
+! ###################################################################
+! Copyright (c) 2013-2014, Marc De Graef/Carnegie Mellon University
+! All rights reserved.
+!
+! Redistribution and use in source and binary forms, with or without modification, are 
+! permitted provided that the following conditions are met:
+!
+!     - Redistributions of source code must retain the above copyright notice, this list 
+!        of conditions and the following disclaimer.
+!     - Redistributions in binary form must reproduce the above copyright notice, this 
+!        list of conditions and the following disclaimer in the documentation and/or 
+!        other materials provided with the distribution.
+!     - Neither the names of Marc De Graef, Carnegie Mellon University nor the names 
+!        of its contributors may be used to endorse or promote products derived from 
+!        this software without specific prior written permission.
+!
+! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+! AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+! IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+! ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE 
+! LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
+! DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
+! SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
+! CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
+! OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+! USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+! ###################################################################
+!--------------------------------------------------------------------------
+! CTEMsoft2013:EBSDmod.f90
+!--------------------------------------------------------------------------
+!
+! MODULE: EBSDmod
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief CTEMEBSD helper routines
+!
+!> @date  06/24/14  MDG 1.0 original, lifted from CTEMEBSD.f90 to simplify code
+!--------------------------------------------------------------------------
+module EBSDmod
+
+use local
+use typedefs
+
+IMPLICIT NONE
+
+type EBSDAngleType
+        real(kind=sgl),allocatable      :: quatang(:,:)
+end type EBSDAngleType
+
+type EBSDLargeAccumType
+        integer(kind=irg),allocatable   :: accum_e(:,:,:)
+        real(kind=irg),allocatable      :: accum_e_detector(:,:,:)
+end type EBSDLargeAccumType
+
+type EBSDMasterType
+        real(kind=sgl),allocatable      :: sr(:,:,:) 
+        real(kind=sgl),allocatable      :: rgx(:,:), rgy(:,:), rgz(:,:)          ! auxiliary detector arrays needed for interpolation
+end type EBSDMasterType
+        
+contains
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:EBSDreadangles
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read angles from an angle file
+!
+!> @param enl EBSD name list structure
+!> @param quatang array of unit quaternions (output)
+!
+!> @date 06/24/14  MDG 1.0 original
+!--------------------------------------------------------------------------
+subroutine EBSDreadangles(enl,angles,verbose)
+
+use NameListTypedefs
+use io
+use files
+use quaternions
+use rotations
+
+IMPLICIT NONE
+
+
+type(EBSDNameListType),INTENT(INOUT)    :: enl
+type(EBSDAngleType),pointer             :: angles
+logical,INTENT(IN),OPTIONAL             :: verbose
+
+integer(kind=irg)                       :: io_int(1), i
+character(2)                            :: angletype
+real(kind=sgl),allocatable              :: eulang(:,:)   ! euler angle array
+real(kind=sgl)                          :: qax(4)        ! axis-angle rotation quaternion
+
+real(kind=sgl),parameter                :: dtor = 0.0174533  ! convert from degrees to radians
+integer(kind=irg)                       :: istat
+
+
+!====================================
+! get the angular information, either in Euler angles or in quaternions, from a file
+!====================================
+! open the angle file 
+open(unit=dataunit,file=trim(enl%anglefile),status='old',action='read')
+
+! get the type of angle first [ 'eu' or 'qu' ]
+read(dataunit,*) angletype
+if (angletype.eq.'eu') then 
+  enl%anglemode = 'euler'
+else
+  enl%anglemode = 'quats'
+end if
+
+! then the number of angles in the file
+read(dataunit,*) enl%numangles
+
+if (present(verbose)) then 
+  io_int(1) = enl%numangles
+  call WriteValue('Number of angle entries = ',io_int,1)
+end if
+
+if (enl%anglemode.eq.'euler') then
+! allocate the euler angle array
+  allocate(eulang(3,enl%numangles),stat=istat)
+! if istat.ne.0 then do some error handling ... 
+  do i=1,enl%numangles
+    read(dataunit,*) eulang(1:3,i)
+  end do
+  close(unit=dataunit,status='keep')
+
+  if (enl%eulerconvention.eq.'hkl') then
+    if (present(verbose)) call Message('  -> converting Euler angles to TSL representation', frm = "(A/)")
+    eulang(1,1:enl%numangles) = eulang(1,1:enl%numangles) + 90.0
+  end if
+
+! convert the euler angle triplets to quaternions
+  allocate(angles%quatang(4,enl%numangles),stat=istat)
+! if (istat.ne.0) then ...
+
+  if (present(verbose)) call Message('  -> converting Euler angles to quaternions', frm = "(A/)")
+  
+  do i=1,enl%numangles
+    angles%quatang(1:4,i) = eu2qu(eulang(1:3,i)*dtor)
+  end do
+
+else
+! the input file has quaternions, not Euler triplets
+  allocate(angles%quatang(4,enl%numangles),stat=istat)
+  do i=1,enl%numangles
+    read(dataunit,*) angles%quatang(1:4,i)
+  end do
+end if
+
+close(unit=dataunit,status='keep')
+
+!====================================
+! Do we need to apply an additional axis-angle pair rotation to all the quaternions ?
+!
+if (enl%axisangle(4).ne.0.0) then
+  enl%axisangle(4) = enl%axisangle(4) * dtor
+  qax = ax2qu( enl%axisangle )
+  do i=1,enl%numangles
+    angles%quatang(1:4,i) = quat_mult(qax,angles%quatang(1:4,i))
+  end do 
+end if
+
+end subroutine EBSDreadangles
+
+
+
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:EBSDreadMCfile
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read angles from an angle file
+!
+!> @param enl EBSD name list structure
+!> @param accum_e energy histogram (square Lambert projection)
+!
+!> @date 06/24/14  MDG 1.0 original
+!--------------------------------------------------------------------------
+subroutine EBSDreadMCfile(enl,acc,verbose)
+
+use NameListTypedefs
+use files
+use io
+
+IMPLICIT NONE
+
+type(EBSDNameListType),INTENT(INOUT)    :: enl
+type(EBSDLargeAccumType),pointer        :: acc
+logical,INTENT(IN),OPTIONAL             :: verbose
+
+integer(kind=irg)                       :: istat
+
+!====================================
+! ------ read Monte Carlo data file
+!====================================
+! first, we need to load the data from the MC program.  This is an array of integers, which
+! has an energy histogram for each sampled exit direction.  These are integer values to minimize
+! storage, but they should all be divided by the total number of counts, which can be done 
+! at the end of the computation.  We will then need to multiply by the beam current and by
+! the dwell time to get units of electron counts.
+!
+! the datafile format is written by EBSDMC.f90 as follows (all in Lambert projections)
+! write(dataunit) numEbins, numzbins, numsx, numsy, num_el, nthreads
+! write (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
+! write(dataunit) accum_e
+! write (dataunit) accum_z
+
+if (present(verbose)) call Message('opening '//trim(enl%energyfile), frm = "(A)")
+
+open(dataunit,file=trim(enl%energyfile),status='unknown',form='unformatted')
+
+! read the program identifier
+ read (dataunit) enl%MCprogname
+! read the version number
+ read (dataunit) enl%MCscversion
+! then the name of the crystal data file
+ read (dataunit) enl%MCxtalname
+! energy information etc...
+ read(dataunit) enl%numEbins, enl%numzbins, enl%nsx, enl%nsy, enl%num_el, enl%MCnthreads
+ enl%nsx = (enl%nsx - 1)/2
+ enl%nsy = (enl%nsy - 1)/2
+! more energy information
+ read (dataunit) enl%EkeV, enl%Ehistmin, enl%Ebinsize, enl%depthmax, enl%depthstep
+! angular information
+ read (dataunit) enl%MCsig, enl%MComega
+! Monte Carlo mode ('CSDA' or other)
+ read (dataunit) enl%MCmode
+! and finally the actual energy histogram (in square Lambert projection format)
+ allocate(acc%accum_e(enl%numEbins,-enl%nsx:enl%nsx,-enl%nsy:enl%nsy),stat=istat)
+ read(dataunit) acc%accum_e
+ enl%num_el = sum(acc%accum_e)
+! we do not need the other array in this energyfile
+! read(dataunit) accum_z    ! we only need this array for the depth integrations in CTEMEBSDmaster.f90
+close(dataunit,status='keep')
+
+if (present(verbose)) call Message(' -> completed reading '//trim(enl%energyfile), frm = "(A)")
+
+end subroutine EBSDreadMCfile
+
+
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:EBSDreadMasterfile
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read EBSD master pattern from file
+!
+!> @param enl EBSD name list structure
+!> @param quatang array of unit quaternions (output)
+!
+!> @date 06/24/14  MDG 1.0 original
+!--------------------------------------------------------------------------
+subroutine EBSDreadMasterfile(enl, master, verbose)
+
+use NameListTypedefs
+use files
+use io
+
+IMPLICIT NONE
+
+type(EBSDNameListType),INTENT(INOUT)    :: enl
+type(EBSDMasterType),pointer            :: master
+logical,INTENT(IN),OPTIONAL             :: verbose
+
+real(kind=sgl),allocatable              :: sr(:,:,:) 
+real(kind=sgl),allocatable              :: EkeVs(:) 
+integer(kind=irg),allocatable           :: atomtype(:)
+
+real(kind=sgl),allocatable              :: srtmp(:,:,:,:)
+integer(kind=irg)                       :: istat
+
+
+!====================================
+! ----- Read energy-dispersed Lambert projections (master pattern)
+! this has been updated on 3/26/14 to accommodate the new EBSDmaster file format
+! but will need to be redone in HDF5 at a later time.
+!====================================
+open(unit=dataunit,file=trim(enl%masterfile),status='old',form='unformatted')
+  read (dataunit) enl%Masterprogname
+! read the version number
+  read (dataunit) enl%Masterscversion
+! then the name of the crystal data file
+  read (dataunit) enl%Masterxtalname
+! then the name of the corresponding Monte Carlo data file
+  read (dataunit) enl%Masterenergyfile
+! energy information and array size    
+  read (dataunit) enl%npx,enl%npy,enl%nE,enl%numset
+! make sure that MC and Master results are compatible
+  if (enl%numEbins.ne.enl%nE) then
+    call Message('Energy histogram and Lambert stack have different energy dimension; aborting program', frm = "(A)")
+!   write (*,*) 'energy histogram = ',shape(accum_e)
+!   write (*,*) 'Lambert stack = ', nE, npx, npy
+    stop
+  end if
+  allocate(master%sr(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE),srtmp(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE,enl%numset), &
+           EkeVs(enl%nE),atomtype(enl%numset),stat=istat)
+  read (dataunit) EkeVs
+  read (dataunit) atomtype
+  deallocate(EkeVs, atomtype)   ! arrays are only needed by IDL visualization routine
+! is this a regular (square) or hexagonal projection ?
+  read (dataunit) enl%sqorhe
+! and finally the results array
+  read (dataunit) srtmp
+! convert to a smaller array by summing over all atom types 
+! [in a later version of the program we might allow for the 
+! user to request an element specific EBSD pattern calculation]
+  master%sr = sum(srtmp,4)
+  deallocate(srtmp)
+close(unit=dataunit,status='keep')
+!====================================
+
+if (present(verbose)) call Message(' -> completed reading Master EBSD pattern file', frm = "(A)")
+
+end subroutine EBSDreadMasterfile
+
+
+
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:EBSDGenerateDetector
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief generate the detector arrays
+!
+!> @param enl EBSD name list structure
+!
+!> @date 06/24/14  MDG 1.0 original
+!--------------------------------------------------------------------------
+subroutine EBSDGenerateDetector(enl, acc, master, verbose)
+
+use NameListTypedefs
+use files
+use constants
+use io
+use Lambert
+
+IMPLICIT NONE
+
+type(EBSDNameListType),INTENT(INOUT)    :: enl
+type(EBSDLargeAccumType),pointer        :: acc
+type(EBSDMasterType),pointer            :: master
+logical,INTENT(IN),OPTIONAL             :: verbose
+
+real(kind=sgl),allocatable              :: scin_x(:), scin_y(:)                 ! scintillator coordinate ararays [microns]
+real(kind=sgl),parameter                :: dtor = 0.0174533  ! convert from degrees to radians
+real(kind=sgl)                          :: alp, ca, sa
+real(kind=sgl)                          :: L2, Ls, Lc     ! distances
+real(kind=sgl),allocatable              :: z(:,:)           
+integer(kind=irg)                       :: nix, niy, binx, biny , i, j, Emin, Emax, istat, k      ! various parameters
+real(kind=sgl)                          :: dc(3), scl           ! direction cosine array
+real(kind=sgl)                          :: sx, dx, dxm, dy, dym, rhos, x, bindx         ! various parameters
+real(kind=sgl)                          :: ixy(2)
+
+
+!====================================
+! ------ generate the detector arrays
+!====================================
+! This needs to be done only once for a given detector geometry
+allocate(scin_x(enl%numsx),scin_y(enl%numsy),stat=istat)
+! if (istat.ne.0) then ...
+scin_x = - ( enl%xpc - ( 1.0 - enl%numsx ) * 0.5 - (/ (i-1, i=1,enl%numsx) /) ) * enl%delta
+scin_y = ( enl%ypc - ( 1.0 - enl%numsy ) * 0.5 - (/ (i-1, i=1,enl%numsy) /) ) * enl%delta
+
+! auxiliary angle to rotate between reference frames
+alp = 0.5 * cPi - (enl%MCsig - enl%thetac) * dtor
+ca = cos(alp)
+sa = sin(alp)
+
+! we will need to incorporate a series of possible distortions 
+! here as well, as described in Gert nolze's paper; for now we 
+! just leave this place holder comment instead
+
+! compute auxilliary interpolation arrays
+! if (istat.ne.0) then ...
+
+L2 = enl%L * enl%L
+do j=1,enl%numsy
+  sx = L2 + scin_y(j) * scin_y(j)
+  Ls = ca * scin_y(j) + enl%L*sa
+  Lc = -sa * scin_y(j) + enl%L*ca
+  do i=1,enl%numsx
+   rhos = 1.0/sqrt(sx + scin_x(i)**2)
+   master%rgx(i,j) = Ls * rhos
+   master%rgy(i,j) = scin_x(i) * rhos
+   master%rgz(i,j) = Lc * rhos
+  end do
+end do
+deallocate(scin_x, scin_y)
+
+! normalize the direction cosines.
+allocate(z(enl%numsx,enl%numsy))
+  z = 1.0/sqrt(master%rgx*master%rgx+master%rgy*master%rgy+master%rgz*master%rgz)
+  master%rgx = master%rgx*z
+  master%rgy = master%rgy*z
+  master%rgz = master%rgz*z
+deallocate(z)
+!====================================
+
+!====================================
+! ------ create the equivalent detector energy array
+!====================================
+! from the Monte Carlo energy data, we need to extract the relevant
+! entries for the detector geometry defined above.  Once that is 
+! done, we can get rid of the larger energy array
+!
+! in the old version, we either computed the background model here, or 
+! we would load a background pattern from file.  In this version, we are
+! using the background that was computed by the MC program, and has 
+! an energy histogram embedded in it, so we need to interpolate this 
+! histogram to the pixels of the scintillator.  In other words, we need
+! to initialize a new accum_e array for the detector by interpolating
+! from the Lambert projection of the MC results.
+!
+
+! determine the scale factor for the Lambert interpolation; the square has
+! an edge length of 2 x sqrt(pi/2)
+  scl = float(enl%nsx) / LPs%sPio2
+
+! get the indices of the minimum and maximum energy
+  Emin = nint((enl%energymin - enl%Ehistmin)/enl%Ebinsize) +1
+  if (Emin.lt.1)  Emin=1
+  if (Emin.gt.enl%numEbins)  Emin=enl%numEbins
+
+  Emax = nint((enl%energymax - enl%Ehistmin)/enl%Ebinsize) +1
+  if (Emax.lt.1)  Emax=1
+  if (Emax.gt.enl%numEbins)  Emax=enl%numEbins
+
+  do i=1,enl%numsx
+    do j=1,enl%numsy
+! do the coordinate transformation for this detector pixel
+       dc = (/ master%rgx(i,j),master%rgy(i,j),master%rgz(i,j) /)
+! make sure the third one is positive; if not, switch all 
+       if (dc(3).lt.0.0) dc = -dc
+! convert these direction cosines to coordinates in the Rosca-Lambert projection
+        ixy = scl * LambertSphereToSquare( dc, istat )
+        x = ixy(1)
+        ixy(1) = ixy(2)
+        ixy(2) = -x
+! four-point interpolation (bi-quadratic)
+        nix = int(enl%nsx+ixy(1))-enl%nsx
+        niy = int(enl%nsy+ixy(2))-enl%nsy
+        dx = ixy(1)-nix
+        dy = ixy(2)-niy
+        dxm = 1.0-dx
+        dym = 1.0-dy
+! interpolate the intensity 
+        do k=Emin,Emax 
+          acc%accum_e_detector(k,i,j) =   acc%accum_e(k,nix,niy) * dxm * dym + &
+                                        acc%accum_e(k,nix+1,niy) * dx * dym + &
+                                        acc%accum_e(k,nix,niy+1) * dxm * dy + &
+                                        acc%accum_e(k,nix+1,niy+1) * dx * dy
+        end do
+    end do
+  end do 
+  acc%accum_e_detector = acc%accum_e_detector * 0.25
+
+! and finally, get rid of the original accum_e array which is no longer needed
+! [we'll do that in the calling program ]
+!  deallocate(accum_e)
+
+!====================================
+end subroutine EBSDGenerateDetector
+
+
+
+
+end module EBSDmod
+

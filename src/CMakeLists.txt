@@ -26,6 +26,7 @@ set(CTEMSoftLib_SRCS
 	${CTEMSoftLib_BINARY_DIR}/local.f90  # NOTE THIS FILE IS GENERATED DURING CMAKE TIME
 	${CTEMSoftLib_SOURCE_DIR}/math.f90
 	${CTEMSoftLib_SOURCE_DIR}/multibeams.f90
+	${CTEMSoftLib_SOURCE_DIR}/EBSDmod.f90
 	${CTEMSoftLib_SOURCE_DIR}/MBmodule.f90
  	${CTEMSoftLib_SOURCE_DIR}/NameListTypedefs.f90
  	${CTEMSoftLib_SOURCE_DIR}/NameListHandlers.f90
