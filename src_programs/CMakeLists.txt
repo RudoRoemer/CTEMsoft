@@ -50,6 +50,7 @@ Create_exe_and_tll(CTEMorient)
 Create_exe_and_tll(CTEMxtalinfo)
 Create_exe_and_tll(CTEMzap)
 Create_exe_and_tll(CTEMdrawcell)
+Create_exe_and_tll(CTEMBethe)
 
 Create_exe_and_tll(structest)
 

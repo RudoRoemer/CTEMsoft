@@ -1778,14 +1778,14 @@ recursive subroutine Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(IN)	:: ipx
-integer(kind=irg),INTENT(IN)	:: ipy
-integer(kind=irg),INTENT(IN)	:: isym
-integer(kind=irg),INTENT(OUT)	:: iequiv(2,12)
-integer(kind=irg),INTENT(OUT)	:: nequiv
+integer(kind=irg),INTENT(IN)    :: ipx
+integer(kind=irg),INTENT(IN)    :: ipy
+integer(kind=irg),INTENT(IN)    :: isym
+integer(kind=irg),INTENT(OUT)   :: iequiv(2,12)
+integer(kind=irg),INTENT(OUT)   :: nequiv
  
-integer(kind=irg)	:: fly
-real(kind=sgl)		:: my
+integer(kind=irg)       :: fly
+real(kind=sgl)          :: my
 
 iequiv = 0
 
@@ -1798,77 +1798,77 @@ if (maxval(abs( (/ ipx, ipy /) )).ne.0.0) then
   case (1)
 ! do nothing (triclinic symmetry)
   case (2)
-	iequiv(1:2,2) = (/ ipx, -ipy /)
-	nequiv = 2
+        iequiv(1:2,2) = (/ ipx, -ipy /)
+        nequiv = 2
   case (4)
-	iequiv(1:2,2) = (/ -ipy, ipx /)
-	iequiv(1:2,3) = (/ ipy, -ipx /)
-	iequiv(1:2,4) = (/ -ipx, -ipy /)
-	nequiv = 4
+        iequiv(1:2,2) = (/ -ipy, ipx /)
+        iequiv(1:2,3) = (/ ipy, -ipx /)
+        iequiv(1:2,4) = (/ -ipx, -ipy /)
+        nequiv = 4
   case (3,10)
-	iequiv(1:2,2) = (/ -ipx, ipy /)
-	iequiv(1:2,3) = (/ ipx, -ipy /)
-	iequiv(1:2,4) = (/ -ipx, -ipy /)
-	nequiv = 4
+        iequiv(1:2,2) = (/ -ipx, ipy /)
+        iequiv(1:2,3) = (/ ipx, -ipy /)
+        iequiv(1:2,4) = (/ -ipx, -ipy /)
+        nequiv = 4
   case (5,11)
-	iequiv(1:2,2) = (/ -ipx, ipy /)
-	iequiv(1:2,3) = (/ ipx, -ipy /)
-	iequiv(1:2,4) = (/ -ipx, -ipy /)
-	iequiv(1:2,5) = (/ ipy, ipx /)
-	iequiv(1:2,6) = (/ -ipy, ipx /)
-	iequiv(1:2,7) = (/ ipy, -ipx /)
-	iequiv(1:2,8) = (/ -ipy, -ipx /)
-	nequiv = 8
+        iequiv(1:2,2) = (/ -ipx, ipy /)
+        iequiv(1:2,3) = (/ ipx, -ipy /)
+        iequiv(1:2,4) = (/ -ipx, -ipy /)
+        iequiv(1:2,5) = (/ ipy, ipx /)
+        iequiv(1:2,6) = (/ -ipy, ipx /)
+        iequiv(1:2,7) = (/ ipy, -ipx /)
+        iequiv(1:2,8) = (/ -ipy, -ipx /)
+        nequiv = 8
 ! from here on, the coordinate grid is assumed to be hexagonal !!!
   case (6,7)  ! the transformations were computed and verified using Mathematica on 8/28/12
-    	fly = floor( float(ipy)/2.0)
-    	iequiv(1:2,2) = (/ ipy-2*fly -floor( float(ipx+3*ipy-3*fly)/2.0 ), ipx-ipy+fly /)
-	iequiv(1:2,3) = (/ ipy-fly-floor( float(ipx-fly)/2.0 ), -ipx-fly /)
-	nequiv = 3
+        fly = floor( float(ipy)/2.0)
+        iequiv(1:2,2) = (/ ipy-2*fly -floor( float(ipx+3*ipy-3*fly)/2.0 ), ipx-ipy+fly /)
+        iequiv(1:2,3) = (/ ipy-fly-floor( float(ipx-fly)/2.0 ), -ipx-fly /)
+        nequiv = 3
   case (13)  ! the transformations were computed and verified using Mathematica on 9/14/12
   ! mirror is parallel to the a_1 axis
-    	my = float(mod(ipy,2))/2.0
-   	fly = floor( float(ipy)/2.0)
-	iequiv(1:2,2) = (/ ipy-floor(float(ipx+fly)/2.0),int(ipx+ipy/2-my) /)
-	iequiv(1:2,3) = (/ ipy-2*fly -floor( float(ipx+3*ipy-3*fly)/2.0), ipx-ipy+fly /)
-	iequiv(1:2,4) = (/ ipx, -ipy /)
-	iequiv(1:2,5) = (/ ipy-fly-floor( float(ipx-fly)/2.0), -ipx-fly /)
-	iequiv(1:2,6) = (/ -fly-floor(float(ipx+ipy-fly)/2.0), int(-ipx+ipy/2+my) /)
-	nequiv = 6
+        my = float(mod(ipy,2))/2.0
+        fly = floor( float(ipy)/2.0)
+        iequiv(1:2,2) = (/ ipy-floor(float(ipx+fly)/2.0),int(ipx+ipy/2-my) /)
+        iequiv(1:2,3) = (/ ipy-2*fly -floor( float(ipx+3*ipy-3*fly)/2.0), ipx-ipy+fly /)
+        iequiv(1:2,4) = (/ ipx, -ipy /)
+        iequiv(1:2,5) = (/ ipy-fly-floor( float(ipx-fly)/2.0), -ipx-fly /)
+        iequiv(1:2,6) = (/ -fly-floor(float(ipx+ipy-fly)/2.0), int(-ipx+ipy/2+my) /)
+        nequiv = 6
    case (8)  ! the transformations were computed and verified using Mathematica on 9/10/12
-    	my = float(mod(ipy,2))
-    	fly = floor( float(ipy)/2.0)
-	iequiv(1:2,2) = (/ ipx-fly-floor( float(ipx+2*ipy-3*fly)/2.0), ipx+fly /)
-	iequiv(1:2,3) = (/ ipy-2*fly -floor( float(ipx+3*ipy-3*fly)/2.0), ipx-ipy+fly /)
-	iequiv(1:2,4) = (/ int(-ipx+my), -ipy /)
-	iequiv(1:2,5) = (/ ipy-fly-floor( float(ipx-fly)/2.0), -ipx-fly /)
-	iequiv(1:2,6) = (/ ipx+ipy-floor( float(ipx+ipy-fly)/2.0), int(-ipx+ipy/2+my/2) /)
-	nequiv = 6
+        my = float(mod(ipy,2))
+        fly = floor( float(ipy)/2.0)
+        iequiv(1:2,2) = (/ ipx-fly-floor( float(ipx+2*ipy-3*fly)/2.0), ipx+fly /)
+        iequiv(1:2,3) = (/ ipy-2*fly -floor( float(ipx+3*ipy-3*fly)/2.0), ipx-ipy+fly /)
+        iequiv(1:2,4) = (/ int(-ipx+my), -ipy /)
+        iequiv(1:2,5) = (/ ipy-fly-floor( float(ipx-fly)/2.0), -ipx-fly /)
+        iequiv(1:2,6) = (/ ipx+ipy-floor( float(ipx+ipy-fly)/2.0), int(-ipx+ipy/2+my/2) /)
+        nequiv = 6
   case (9)  ! the transformations were computed and verified using Mathematica on 8/28/12
-    	my = float(mod(ipy,2))/2.0
-    	fly = floor( float(ipy)/2.0)
-	iequiv(1:2,2) = (/ fly + floor( float(ipx+ipy -fly)/2.0 ), int(ipx-ipy/2-my) /)
-	iequiv(1:2,3) = (/ ipx-fly-floor( float(ipx+2*ipy-3*fly)/2.0), ipx+fly /)
-	iequiv(1:2,4) = (/ ipx,-ipy /)
-	iequiv(1:2,5) = (/ ipy-2*fly -floor( float(ipx+3*ipy-3*fly)/2.0), ipx-ipy+fly /)
-	iequiv(1:2,6) = (/ ipx-floor( float(ipx+2*ipy-fly)/2.0), -ipx-fly /)
-	iequiv(1:2,7) = (/ int(-ipx+2*my), -ipy /)
-	iequiv(1:2,8) = (/ -fly-floor( float(ipx+ipy-fly)/2.0), int(-ipx+ipy/2+my) /)
-	iequiv(1:2,9) = (/ ipy-fly-floor( float(ipx-fly)/2.0), -ipx-fly /)
-	iequiv(1:2,10) = (/ int(-ipx+2*my), ipy /)
-	iequiv(1:2,11) = (/ ipx+ipy-floor( float(ipx+ipy-fly)/2.0), int((-2*ipx+ipy+2*my)/2) /)
-	iequiv(1:2,12) = (/ ipy-2*fly -floor( float(ipx-3*fly)/2.0), ipx+fly /)
-	nequiv = 12
+        my = float(mod(ipy,2))/2.0
+        fly = floor( float(ipy)/2.0)
+        iequiv(1:2,2) = (/ fly + floor( float(ipx+ipy -fly)/2.0 ), int(ipx-ipy/2-my) /)
+        iequiv(1:2,3) = (/ ipx-fly-floor( float(ipx+2*ipy-3*fly)/2.0), ipx+fly /)
+        iequiv(1:2,4) = (/ ipx,-ipy /)
+        iequiv(1:2,5) = (/ ipy-2*fly -floor( float(ipx+3*ipy-3*fly)/2.0), ipx-ipy+fly /)
+        iequiv(1:2,6) = (/ ipx-floor( float(ipx+2*ipy-fly)/2.0), -ipx-fly /)
+        iequiv(1:2,7) = (/ int(-ipx+2*my), -ipy /)
+        iequiv(1:2,8) = (/ -fly-floor( float(ipx+ipy-fly)/2.0), int(-ipx+ipy/2+my) /)
+        iequiv(1:2,9) = (/ ipy-fly-floor( float(ipx-fly)/2.0), -ipx-fly /)
+        iequiv(1:2,10) = (/ int(-ipx+2*my), ipy /)
+        iequiv(1:2,11) = (/ ipx+ipy-floor( float(ipx+ipy-fly)/2.0), int((-2*ipx+ipy+2*my)/2) /)
+        iequiv(1:2,12) = (/ ipy-2*fly -floor( float(ipx-3*fly)/2.0), ipx+fly /)
+        nequiv = 12
 ! finally, take the special case of the -3m Laue group with mirror at 30 degrees from a_1.... 
  case (12)  ! the transformations were computed and verified using Mathematica on 9/6/12
-    	my = float(mod(ipy,2))
-    	fly = floor( float(ipy)/2.0)
-	iequiv(1:2,2) = (/ ipx+fly-floor( float(ipx-ipy+fly)/2.0), ipx-ipy+fly /)
-	iequiv(1:2,3) = (/ ipy-2*fly -floor( float(ipx+3*ipy-3*fly)/2.0), ipx-ipy+fly /)
-	iequiv(1:2,4) = (/ ipx-floor( float(ipx+2*ipy-fly)/2.0), -ipx-fly /)
-	iequiv(1:2,5) = (/ ipy-fly-floor( float(ipx-fly)/2.0), -ipx-fly /)
-	iequiv(1:2,6) = (/ int(-ipx+my), ipy /)
-	nequiv = 6
+        my = float(mod(ipy,2))
+        fly = floor( float(ipy)/2.0)
+        iequiv(1:2,2) = (/ ipx+fly-floor( float(ipx-ipy+fly)/2.0), ipx-ipy+fly /)
+        iequiv(1:2,3) = (/ ipy-2*fly -floor( float(ipx+3*ipy-3*fly)/2.0), ipx-ipy+fly /)
+        iequiv(1:2,4) = (/ ipx-floor( float(ipx+2*ipy-fly)/2.0), -ipx-fly /)
+        iequiv(1:2,5) = (/ ipy-fly-floor( float(ipx-fly)/2.0), -ipx-fly /)
+        iequiv(1:2,6) = (/ int(-ipx+my), ipy /)
+        nequiv = 6
  end select
 end if
     
@@ -1904,17 +1904,17 @@ use symmetry
 
 IMPLICIT NONE
 
-type(symdata2D),INTENT(INOUT)  :: TDPG
-integer(kind=irg),INTENT(IN)	:: ipx
-integer(kind=irg),INTENT(IN)	:: ipy
-integer(kind=irg),INTENT(IN)	:: isym
-integer(kind=irg),INTENT(OUT)	:: iequiv(2,12)
-integer(kind=irg),INTENT(OUT)	:: nequiv
+type(symdata2D),INTENT(INOUT)   :: TDPG
+integer(kind=irg),INTENT(IN)    :: ipx
+integer(kind=irg),INTENT(IN)    :: ipy
+integer(kind=irg),INTENT(IN)    :: isym
+integer(kind=irg),INTENT(OUT)   :: iequiv(2,12)
+integer(kind=irg),INTENT(OUT)   :: nequiv
  
-integer(kind=irg)		:: i, j, pequiv(2,12), mequiv
-real(kind=sgl),parameter	:: eps = 1.0E-6 
-real(kind=sgl)			:: diff
-logical				:: newp
+integer(kind=irg)               :: i, j, pequiv(2,12), mequiv
+real(kind=sgl),parameter        :: eps = 1.0E-6 
+real(kind=sgl)                  :: diff
+logical                         :: newp
 
 ! make sure that the symmetry matrices have been predefined; if not, then
 ! compute them first

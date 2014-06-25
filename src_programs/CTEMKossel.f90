@@ -102,6 +102,7 @@ use NameListTypedefs
 use initializers
 use symmetry
 use Lambert, ONLY: Apply2DPGSymmetry
+! use Lambert, ONLY: Apply2DLaueSymmetry
 use crystal
 use constants
 use io
@@ -167,10 +168,11 @@ type(reflisttype),pointer       :: reflist, firstw,rltmp
 ! is the one that determines the independent beam directions.
   dgn = GetPatternSymmetry(cell,knl%k,j,.TRUE.)
   pgnum = j
-  isym = WPPG(dgn) ! WPPG lists the whole pattern point group numbers vs. diffraction group numbers
+  isym = 0
 
 ! determine the shortest reciprocal lattice points for this zone
   call ShortestG(cell,knl%k,ga,gb,isym)
+  isym = WPPG(dgn) ! WPPG lists the whole pattern point group numbers vs. diffraction group numbers
   io_int(1:3)=ga(1:3)
   io_int(4:6)=gb(1:3)
   call WriteValue(' Reciprocal lattice vectors : ', io_int, 6,"('(',3I3,') and (',3I3,')',/)")
@@ -200,6 +202,7 @@ type(reflisttype),pointer       :: reflist, firstw,rltmp
   ijmax = float(npx)**2   ! truncation value for beam directions
 
 ! get the linked list of wave vectors
+  isym = 1
   call CalckvectorsSymmetry(khead,cell,TDPG,dble(knl%k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,klaue,.FALSE.)
 
 ! force dynamical matrix routine to read new Bethe parameters from file
@@ -289,6 +292,7 @@ type(reflisttype),pointer       :: reflist, firstw,rltmp
 
 ! apply pattern symmetry 
         call Apply2DPGSymmetry(TDPG,ipx,ipy,isym,iequiv,nequiv)
+        ! call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
 
 !$OMP CRITICAL
         do ii=1,nequiv

@@ -1100,15 +1100,15 @@ subroutine GetOrder(k,il,num,jcnt,itmp)
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN) 		:: k(3)		!< input vector (zone axis)
-integer(kind=irg),INTENT(OUT)		:: il(48)	!< output index list
-integer(kind=irg),INTENT(IN)		:: num		!< number of  entries to test
-integer(kind=irg),INTENT(OUT)		:: jcnt		!< number of entries in output
-integer(kind=irg),INTENT(IN)		:: itmp(48,3)	!< array used for family computations etc
+real(kind=sgl),INTENT(IN)               :: k(3)         !< input vector (zone axis)
+integer(kind=irg),INTENT(OUT)           :: il(48)       !< output index list
+integer(kind=irg),INTENT(IN)            :: num          !< number of  entries to test
+integer(kind=irg),INTENT(OUT)           :: jcnt         !< number of entries in output
+integer(kind=irg),INTENT(IN)            :: itmp(48,3)   !< array used for family computations etc
 
-integer(kind=irg)			:: i		!< loop counter
-real(kind=sgl)				:: gn(3)	!< auxiliary variable
-real(kind=sgl),parameter 		:: eps=1.0E-5	!< threshold value
+integer(kind=irg)                       :: i            !< loop counter
+real(kind=sgl)                          :: gn(3)        !< auxiliary variable
+real(kind=sgl),parameter                :: eps=1.0E-5   !< threshold value
 
  jcnt = 0
  do i=1,num
@@ -1179,17 +1179,17 @@ use constants
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
-integer(kind=irg),INTENT(INOUT)	:: isym				!< used to resolve some potential ambiguities for 3-fold and 6-fold symmetries
-integer(kind=irg),INTENT(IN)		:: k(3)				!< input zone axis indices
-integer(kind=irg),INTENT(OUT)		:: gone(3)			!< output first vector
-integer(kind=irg),INTENT(OUT)		:: gtwo(3)			!< output second vector
+type(unitcell),pointer  :: cell
+integer(kind=irg),INTENT(INOUT) :: isym                         !< used to resolve some potential ambiguities for 3-fold and 6-fold symmetries
+integer(kind=irg),INTENT(IN)            :: k(3)                 !< input zone axis indices
+integer(kind=irg),INTENT(OUT)           :: gone(3)              !< output first vector
+integer(kind=irg),INTENT(OUT)           :: gtwo(3)              !< output second vector
 
-integer(kind=irg)			:: ga(3),gb(3),nzero(3),u,v,w,snz,ml(4),igsave(3)		!< auxiliary variables
-integer(kind=irg)			:: ima,imb,ina,inb,el(6),denom,minsum,inm,il(48),jcnt,num 	!< auxiliary variables
-real(kind=sgl)				:: fel(6),fit,gsave(3)		!< auxiliary variables
-integer(kind=irg),allocatable 		:: ifit(:,:,:,:)		!< array used to search
-integer(kind=irg)			:: itmp(48,3)			!< array used for family computations etc
+integer(kind=irg)                       :: ga(3),gb(3),nzero(3),u,v,w,snz,ml(4),igsave(3)       !< auxiliary variables
+integer(kind=irg)                       :: ima,imb,ina,inb,el(6),denom,minsum,inm,il(48),jcnt,num !< auxiliary variables
+real(kind=sgl)                          :: fel(6),fit,gsave(3)  !< auxiliary variables
+integer(kind=irg),allocatable           :: ifit(:,:,:,:)        !< array used to search
+integer(kind=irg)                       :: itmp(48,3)           !< array used for family computations etc
 
  u = k(1)
  v = k(2)
@@ -1485,13 +1485,13 @@ use io
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
-integer(kind=irg),INTENT(IN)		:: uvw(3)	!< zone axis indices
-integer(kind=irg),INTENT(IN)		:: pgnum	!< point group number
-logical,INTENT(IN),OPTIONAL		:: verbose	!< print output or not
+type(unitcell),pointer  :: cell
+integer(kind=irg),INTENT(IN)            :: uvw(3)       !< zone axis indices
+integer(kind=irg),INTENT(IN)            :: pgnum        !< point group number
+logical,INTENT(IN),OPTIONAL             :: verbose      !< print output or not
 
-integer(kind=irg)			:: dgn		!< output diffraction group number
-integer(kind=irg)			:: io_int(3)
+integer(kind=irg)                       :: dgn          !< output diffraction group number
+integer(kind=irg)                       :: io_int(3)
 
 ! get the diffraction group number
  dgn = GetDiffractionGroup(cell,uvw,pgnum)
@@ -1501,9 +1501,13 @@ integer(kind=irg)			:: io_int(3)
    call Message(' ',"(A)")
    io_int(1:3) = uvw(1:3)
    call WriteValue(' Zone Axis : ',io_int,3,"('[',I3,I3,I3,']')")
+   io_int(1) = pgnum
    call Message(' Crystal point group           : '//PGTHD(pgnum), frm = "(/A)")
+   call WriteValue(' Crystal point group number    : ', io_int, 1, "(I3)")
    call Message(' Laue group                    : '// PGTHD(PGLaue(pgnum)), frm = "(A)")
+   io_int(1) = dgn
    call Message(' Diffraction group             : '//DG(dgn), frm = "(A)")
+   call WriteValue(' Diffraction group number      : ', io_int, 1, "(I3)")
    call Message(' Projection diffraction group  : '// DG(PDG(dgn)), frm = "(A/)")
 
    call Message(' Bright Field symmetry         : '//PGTWD(BFPG(dgn)), frm = "(A)")
@@ -1548,15 +1552,15 @@ use io
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
-integer(kind=irg),INTENT(IN)		:: uvw(3)			!< zone axis indices
-integer(kind=irg),INTENT(IN)		:: pgn				!< point group number
+type(unitcell),pointer  :: cell
+integer(kind=irg),INTENT(IN)            :: uvw(3)                       !< zone axis indices
+integer(kind=irg),INTENT(IN)            :: pgn                          !< point group number
 
-real(kind=dbl)				:: kstar(48,3)			!< star variable
-integer(kind=irg)			:: ng				!< number of members in star
-integer(kind=irg)			:: auvw(3), mina, nz, i, s 	!< abs(uvw), min(auvw), number of zeroes
-integer(kind=irg)			:: dgn				!< (output) diffraction group number
-logical					:: found
+real(kind=dbl)                          :: kstar(48,3)                  !< star variable
+integer(kind=irg)                       :: ng                           !< number of members in star
+integer(kind=irg)                       :: auvw(3), mina, nz, i, s      !< abs(uvw), min(auvw), number of zeroes
+integer(kind=irg)                       :: dgn                          !< (output) diffraction group number
+logical                                 :: found
 
 ! compute the order of the family of directions (in direct space)
  call CalcStar(cell,dble(uvw),ng,kstar,'d')
@@ -2099,113 +2103,113 @@ use error
 
 IMPLICIT NONE
 
-type (symdata2D),INTENT(INOUT)	:: TDPG
-integer(kind=irg),INTENT(IN)	:: pgn		!< point group number
+type (symdata2D),INTENT(INOUT)  :: TDPG
+integer(kind=irg),INTENT(IN)    :: pgn          !< point group number
 
 ! here we define all 8 possible 2x2 matrices (remember column major order !)
-integer(kind=irg),parameter 	:: mI(2,2) = reshape( (/ 1, 0, 0, 1 /), (/2,2/))	! identity
-integer(kind=irg),parameter 	:: mA(2,2) = reshape( (/-1, 0, 0, 1 /), (/2,2/))	! mirror
-integer(kind=irg),parameter 	:: mB(2,2) = reshape( (/ 0, 1,-1, 0 /), (/2,2/))	! 4-fold
-integer(kind=irg),parameter 	:: mC(2,2) = reshape( (/ 0, 1, 1, 0 /), (/2,2/))	! diagonal mirror
-integer(kind=irg),parameter 	:: mD(2,2) = reshape( (/-1, 1,-1, 0 /), (/2,2/))	! 3-fold
-integer(kind=irg),parameter 	:: mE(2,2) = reshape( (/ 0,-1, 1,-1 /), (/2,2/))	! 3-fold twice
-integer(kind=irg),parameter 	:: mF(2,2) = reshape( (/-1, 0,-1, 1 /), (/2,2/))	! 6-fold
-integer(kind=irg),parameter 	:: mG(2,2) = reshape( (/ 1,-1, 0,-1 /), (/2,2/))	! 6-fold twice
+integer(kind=irg),parameter     :: mI(2,2) = reshape( (/ 1, 0, 0, 1 /), (/2,2/))        ! identity
+integer(kind=irg),parameter     :: mA(2,2) = reshape( (/-1, 0, 0, 1 /), (/2,2/))        ! mirror
+integer(kind=irg),parameter     :: mB(2,2) = reshape( (/ 0, 1,-1, 0 /), (/2,2/))        ! 4-fold
+integer(kind=irg),parameter     :: mC(2,2) = reshape( (/ 0, 1, 1, 0 /), (/2,2/))        ! diagonal mirror
+integer(kind=irg),parameter     :: mD(2,2) = reshape( (/-1, 1,-1, 0 /), (/2,2/))        ! 3-fold
+integer(kind=irg),parameter     :: mE(2,2) = reshape( (/ 0,-1, 1,-1 /), (/2,2/))        ! 3-fold twice
+integer(kind=irg),parameter     :: mF(2,2) = reshape( (/-1, 0,-1, 1 /), (/2,2/))        ! 6-fold
+integer(kind=irg),parameter     :: mG(2,2) = reshape( (/ 1,-1, 0,-1 /), (/2,2/))        ! 6-fold twice
 
 
 TDPG%SYM_pgnum = pgn
 
 select case (pgn)
   case (1) ! 1
-	TDPG%SYM_MATnum = 1
-	TDPG%SYM_direc(1,1:2,1:2) = mI
+        TDPG%SYM_MATnum = 1
+        TDPG%SYM_direc(1,1:2,1:2) = mI
 !------------
   case (2) ! 2
-	TDPG%SYM_MATnum = 2
-	TDPG%SYM_direc(1,1:2,1:2) = mI
-	TDPG%SYM_direc(2,1:2,1:2) = -mI
+        TDPG%SYM_MATnum = 2
+        TDPG%SYM_direc(1,1:2,1:2) = mI
+        TDPG%SYM_direc(2,1:2,1:2) = -mI
 !------------
   case (3) ! m
-	TDPG%SYM_MATnum = 2
-	TDPG%SYM_direc(1,1:2,1:2) = mI
-	TDPG%SYM_direc(2,1:2,1:2) = mA
+        TDPG%SYM_MATnum = 2
+        TDPG%SYM_direc(1,1:2,1:2) = mI
+        TDPG%SYM_direc(2,1:2,1:2) = mA
 !------------
   case (4) ! 2mm
-	TDPG%SYM_MATnum = 4
-	TDPG%SYM_direc(1,1:2,1:2) = mI
-	TDPG%SYM_direc(2,1:2,1:2) = -mI
-	TDPG%SYM_direc(3,1:2,1:2) = mA
-	TDPG%SYM_direc(4,1:2,1:2) = -mA
+        TDPG%SYM_MATnum = 4
+        TDPG%SYM_direc(1,1:2,1:2) = mI
+        TDPG%SYM_direc(2,1:2,1:2) = -mI
+        TDPG%SYM_direc(3,1:2,1:2) = mA
+        TDPG%SYM_direc(4,1:2,1:2) = -mA
 !------------
   case (5) ! 4
-	TDPG%SYM_MATnum = 4
-	TDPG%SYM_direc(1,1:2,1:2) = mI
-	TDPG%SYM_direc(2,1:2,1:2) = -mI
-	TDPG%SYM_direc(3,1:2,1:2) = mB
-	TDPG%SYM_direc(4,1:2,1:2) = -mB
+        TDPG%SYM_MATnum = 4
+        TDPG%SYM_direc(1,1:2,1:2) = mI
+        TDPG%SYM_direc(2,1:2,1:2) = -mI
+        TDPG%SYM_direc(3,1:2,1:2) = mB
+        TDPG%SYM_direc(4,1:2,1:2) = -mB
 !------------
   case (6) ! 4mm
-	TDPG%SYM_MATnum = 8
-	TDPG%SYM_direc(1,1:2,1:2) = mI
-	TDPG%SYM_direc(2,1:2,1:2) = -mI
-	TDPG%SYM_direc(3,1:2,1:2) = mA
-	TDPG%SYM_direc(4,1:2,1:2) = -mA
-	TDPG%SYM_direc(5,1:2,1:2) = mB
-	TDPG%SYM_direc(6,1:2,1:2) = -mB
-	TDPG%SYM_direc(7,1:2,1:2) = mC
-	TDPG%SYM_direc(8,1:2,1:2) = -mC
+        TDPG%SYM_MATnum = 8
+        TDPG%SYM_direc(1,1:2,1:2) = mI
+        TDPG%SYM_direc(2,1:2,1:2) = -mI
+        TDPG%SYM_direc(3,1:2,1:2) = mA
+        TDPG%SYM_direc(4,1:2,1:2) = -mA
+        TDPG%SYM_direc(5,1:2,1:2) = mB
+        TDPG%SYM_direc(6,1:2,1:2) = -mB
+        TDPG%SYM_direc(7,1:2,1:2) = mC
+        TDPG%SYM_direc(8,1:2,1:2) = -mC
 !------------
   case (7) ! 3
-	TDPG%SYM_MATnum = 3
-	TDPG%SYM_direc(1,1:2,1:2) = mI
-	TDPG%SYM_direc(2,1:2,1:2) = mD
-	TDPG%SYM_direc(3,1:2,1:2) = mE
+        TDPG%SYM_MATnum = 3
+        TDPG%SYM_direc(1,1:2,1:2) = mI
+        TDPG%SYM_direc(2,1:2,1:2) = mD
+        TDPG%SYM_direc(3,1:2,1:2) = mE
 !------------
   case (8) ! 3m1
-	TDPG%SYM_MATnum = 6
-	TDPG%SYM_direc(1,1:2,1:2) = mI
-	TDPG%SYM_direc(2,1:2,1:2) = mD
-	TDPG%SYM_direc(3,1:2,1:2) = mE
-	TDPG%SYM_direc(4,1:2,1:2) = -mC
-	TDPG%SYM_direc(5,1:2,1:2) = -mF
-	TDPG%SYM_direc(6,1:2,1:2) = -mG
+        TDPG%SYM_MATnum = 6
+        TDPG%SYM_direc(1,1:2,1:2) = mI
+        TDPG%SYM_direc(2,1:2,1:2) = mD
+        TDPG%SYM_direc(3,1:2,1:2) = mE
+        TDPG%SYM_direc(4,1:2,1:2) = -mC
+        TDPG%SYM_direc(5,1:2,1:2) = -mF
+        TDPG%SYM_direc(6,1:2,1:2) = -mG
 !------------
   case (9) ! 6
-	TDPG%SYM_MATnum = 6
-	TDPG%SYM_direc(1,1:2,1:2) = mI
-	TDPG%SYM_direc(2,1:2,1:2) = -mI
-	TDPG%SYM_direc(3,1:2,1:2) = mD
-	TDPG%SYM_direc(4,1:2,1:2) = -mD
-	TDPG%SYM_direc(5,1:2,1:2) = mE
-	TDPG%SYM_direc(6,1:2,1:2) = -mE
+        TDPG%SYM_MATnum = 6
+        TDPG%SYM_direc(1,1:2,1:2) = mI
+        TDPG%SYM_direc(2,1:2,1:2) = -mI
+        TDPG%SYM_direc(3,1:2,1:2) = mD
+        TDPG%SYM_direc(4,1:2,1:2) = -mD
+        TDPG%SYM_direc(5,1:2,1:2) = mE
+        TDPG%SYM_direc(6,1:2,1:2) = -mE
 !------------
   case (10) ! 6mm
-	TDPG%SYM_MATnum = 12
-	TDPG%SYM_direc(1,1:2,1:2) = mI
-	TDPG%SYM_direc(2,1:2,1:2) = -mI
-	TDPG%SYM_direc(3,1:2,1:2) = mD
-	TDPG%SYM_direc(4,1:2,1:2) = -mD
-	TDPG%SYM_direc(5,1:2,1:2) = mE
-	TDPG%SYM_direc(6,1:2,1:2) = -mE
-	TDPG%SYM_direc(7,1:2,1:2) = mF
-	TDPG%SYM_direc(8,1:2,1:2) = -mF
-	TDPG%SYM_direc(9,1:2,1:2) = mG
-	TDPG%SYM_direc(10,1:2,1:2) = -mG
-	TDPG%SYM_direc(11,1:2,1:2) = mC
-	TDPG%SYM_direc(12,1:2,1:2) = -mC	
+        TDPG%SYM_MATnum = 12
+        TDPG%SYM_direc(1,1:2,1:2) = mI
+        TDPG%SYM_direc(2,1:2,1:2) = -mI
+        TDPG%SYM_direc(3,1:2,1:2) = mD
+        TDPG%SYM_direc(4,1:2,1:2) = -mD
+        TDPG%SYM_direc(5,1:2,1:2) = mE
+        TDPG%SYM_direc(6,1:2,1:2) = -mE
+        TDPG%SYM_direc(7,1:2,1:2) = mF
+        TDPG%SYM_direc(8,1:2,1:2) = -mF
+        TDPG%SYM_direc(9,1:2,1:2) = mG
+        TDPG%SYM_direc(10,1:2,1:2) = -mG
+        TDPG%SYM_direc(11,1:2,1:2) = mC
+        TDPG%SYM_direc(12,1:2,1:2) = -mC	
 !------------
   case (11) ! 31m
-	TDPG%SYM_MATnum = 6
-	TDPG%SYM_direc(1,1:2,1:2) = mI
-	TDPG%SYM_direc(2,1:2,1:2) = mC
-	TDPG%SYM_direc(3,1:2,1:2) = mD
-	TDPG%SYM_direc(4,1:2,1:2) = mE
-	TDPG%SYM_direc(5,1:2,1:2) = mF
-	TDPG%SYM_direc(6,1:2,1:2) = mG
+        TDPG%SYM_MATnum = 6
+        TDPG%SYM_direc(1,1:2,1:2) = mI
+        TDPG%SYM_direc(2,1:2,1:2) = mC
+        TDPG%SYM_direc(3,1:2,1:2) = mD
+        TDPG%SYM_direc(4,1:2,1:2) = mE
+        TDPG%SYM_direc(5,1:2,1:2) = mF
+        TDPG%SYM_direc(6,1:2,1:2) = mG
 !------------
   case default
-	call FatalError('Generate2DSymmetry',' unknown 2D point group number')
-	stop
+        call FatalError('Generate2DSymmetry',' unknown 2D point group number')
+        stop
 end select
 
 
@@ -2248,15 +2252,15 @@ use io
 
 IMPLICIT NONE
 
-type(unitcell),pointer			:: cell
-integer(kind=irg),INTENT(IN)		:: k(3)		!< zone axis
-integer(kind=irg),INTENT(IN)		:: ga(3)	!< g-vector
-integer(kind=irg),INTENT(INOUT)	:: isym		!< 2D point group number
-real(kind=sgl),INTENT(OUT)		:: thetam	!< rotation angle (degrees, CCW)
+type(unitcell),pointer                  :: cell
+integer(kind=irg),INTENT(IN)            :: k(3)         !< zone axis
+integer(kind=irg),INTENT(IN)            :: ga(3)        !< g-vector
+integer(kind=irg),INTENT(INOUT) :: isym         !< 2D point group number
+real(kind=sgl),INTENT(OUT)              :: thetam       !< rotation angle (degrees, CCW)
 
-integer(kind=irg)			:: num
-real(kind=sgl)				:: io_real(1)
-integer(kind=irg)			:: itmp(48,3)	!< array used for family computations etc
+integer(kind=irg)                       :: num
+real(kind=sgl)                          :: io_real(1)
+integer(kind=irg)                       :: itmp(48,3)   !< array used for family computations etc
 
 ! no action is needed for the following 2D point groups: 1, 2, 2mm, 3, 4, 4mm, 6, 6mm
 thetam = 0.0

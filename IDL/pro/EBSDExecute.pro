@@ -159,13 +159,13 @@ end
     for i=0,len[0]-1 do Core_Print,cmderroutput[i]
   end else status = 1 
 
-;if keyword_set(single) then begin
-;  cmd = '/bin/rm '+EBSDdata.pathname+'/'+'tmpangle.txt'
-;  spawn, cmd
-;end
+if keyword_set(single) then begin
+  cmd = '/bin/rm '+EBSDdata.pathname+'/'+'tmpangle.txt'
+  spawn, cmd
+end
 
-;  cmd = '/bin/rm '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
-;  spawn, cmd
+  cmd = '/bin/rm '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
+  spawn, cmd
 
 ; next, we need to load the pattern if we are in single mode
 if keyword_set(single) then begin

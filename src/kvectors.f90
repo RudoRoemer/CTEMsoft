@@ -641,7 +641,8 @@ kselected = 0
 ! first of all, add the present point to the linked list
            call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
 !write (*,*) numk,ktail%k
-! then  ompute the equivalent points and flag all of them in kselected
+! then compute the equivalent points and flag all of them in kselected
+!          call Apply2DLaueSymmetry(i,i,isym,iequiv,nequiv)
            call Apply2DPGSymmetry(TDPG,i,j,isym,iequiv,nequiv)
            kselected(iequiv(1,1),iequiv(2,1)) = 2
            if (nequiv.gt.1) then 
