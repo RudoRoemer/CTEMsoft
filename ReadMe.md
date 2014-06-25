@@ -14,7 +14,7 @@ The code uses the CMake approach for compilation, and requires the gfortran comp
 Feedback on the code and visualization routines is always welcome!
 
 ## Precompiled Binaries ##
-Precompiled binaries, manuals, and IDL Virtual Machine apps, are located at [Here](http://muri.materials.cmu.edu/); they are known to work on OS X 10.8.9 and 10.9.3
+Precompiled binaries, manuals, and IDL Virtual Machine apps, are located at [Here](http://muri.materials.cmu.edu/binaries/CTEMsoft-2.0-OSX.zip); they are known to work on OS X 10.8.9 and 10.9.3
 
 ## History ##
 This code has a long history. The very first version was written in the mid-1990s in fortran-77 and contained only a few simple crystallography and diffraction routines.  Around 2000, all the code was ported to fortran-90, and served as the basis for a TEM textbook (Introduction to Conventional Transmission Electron Microscopy, M. De Graef, 2003 Cambridge University Press).  Since 2003, many additions have been made.  During 2013, I was on sabbatical at the Ohio State University (Center for Electron Microscopy and MicroAnalysis), and the entire package was rewritten, visualization routines were created, all of which resulted in the present Release; most importantly, we started to add developers (it was pretty much a one-man-party until then), and the source code is now managed by a private git-repository, from which we will periodically push to github.com. 
