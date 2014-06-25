@@ -68,7 +68,7 @@ use io
 
 IMPLICIT NONE
 
-character(fnlen)	:: nmldeffile
+character(fnlen)        :: nmldeffile
 
 ! deal with the command line arguments, if any
 nmldeffile = 'CTEMEBSDmaster.nml'
@@ -117,34 +117,34 @@ use Lambert
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)	:: nmlfile
+character(fnlen),INTENT(IN)     :: nmlfile
 
 
-real(kind=dbl)   	:: ctmp(192,3), arg, sig, omega
-integer(kind=irg)      :: isym,i,j,ik,npx,npy,ipx,ipy,debug,iE,izz, izzmax, iequiv(2,12), nequiv, num_el, MCnthreads, & ! counters
-                    	numk, & ! number of independent incident beam directions
-                    	ir,nat(100),kk(3), npyhex, skip, ijmax, Esel, one, &
-                    	numset,n,ix,iy,iz, io_int(6),  &
-                    	istat,gzero,ic,ip,ikk     ! counters
-real(kind=dbl)         :: tpi,Znsq, kkl, DBWF, kin !
-real(kind=sgl) 		:: dmin, io_real(5), selE
-real(kind=sgl),allocatable 	:: sr(:,:,:,:), srhex(:,:,:,:), EkeVs(:), svals(:) ! results
-complex(kind=dbl)  		:: czero
-complex(kind=dbl),allocatable 	:: Lgh(:,:), Sgh(:,:,:)
-logical 		:: usehex, switchmirror
-character(fnlen) 	:: xtalname, outname
+real(kind=dbl)          :: ctmp(192,3), arg, sig, omega
+integer(kind=irg)       :: isym,i,j,ik,npx,npy,ipx,ipy,debug,iE,izz, izzmax, iequiv(2,12), nequiv, num_el, MCnthreads, & ! counters
+                           numk, & ! number of independent incident beam directions
+                           ir,nat(100),kk(3), npyhex, skip, ijmax, Esel, one, &
+                           numset,n,ix,iy,iz, io_int(6),  &
+                           istat,gzero,ic,ip,ikk     ! counters
+real(kind=dbl)          :: tpi,Znsq, kkl, DBWF, kin !
+real(kind=sgl)          :: dmin, io_real(5), selE
+real(kind=sgl),allocatable      :: sr(:,:,:,:), srhex(:,:,:,:), EkeVs(:), svals(:) ! results
+complex(kind=dbl)               :: czero
+complex(kind=dbl),allocatable   :: Lgh(:,:), Sgh(:,:,:)
+logical                 :: usehex, switchmirror
+character(fnlen)        :: xtalname, outname
 ! the following will need to be moved elsewhere at some point...
-integer(kind=irg),parameter	:: LaueTest(11) = (/ 149, 151, 153, 156, 158, 160, 161, 164, 165, 166, 167 /)  ! space groups with 2 or mirror at 30 degrees
+integer(kind=irg),parameter     :: LaueTest(11) = (/ 149, 151, 153, 156, 158, 160, 161, 164, 165, 166, 167 /)  ! space groups with 2 or mirror at 30 degrees
 
 ! Monte Carlo derived quantities
-integer(kind=irg)   	:: numEbins, numzbins, nsx, nsy    ! variables used in MC energy file
-real(kind=dbl)     	:: EkeV, Ehistmin, Ebinsize, depthmax, depthstep, etotal ! enery variables from MC program
+integer(kind=irg)       :: numEbins, numzbins, nsx, nsy    ! variables used in MC energy file
+real(kind=dbl)          :: EkeV, Ehistmin, Ebinsize, depthmax, depthstep, etotal ! enery variables from MC program
 integer(kind=irg),allocatable :: accum_e(:,:,:), accum_z(:,:,:,:), thick(:)
 real(kind=sgl),allocatable :: lambdaE(:,:)
-character(fnlen) 	:: energyfile
-character(fnlen)       :: oldprogname
-character(8)  		:: MCscversion
-character(4)		:: MCmode
+character(fnlen)        :: energyfile
+character(fnlen)        :: oldprogname
+character(8)            :: MCscversion
+character(4)            :: MCmode
 
 namelist /EBSDmastervars/ dmin,npx,outname,energyfile,Esel
 
@@ -160,10 +160,10 @@ namelist /EBSDmastervars/ dmin,npx,outname,energyfile,Esel
 
 ! read namelist file with all input parameters
 ! here are the default values in case some parameters are absent from the file
-dmin 		= 0.015   	! minimum d-spacing in order to be admitted to the list (must become user entry)
-npx		= 500		! Nx pixels (total = 2Nx+1)
-outname		= 'EBSDmasterout.data'	! default filename for final output
-energyfile	= 'undefined' 	! default filename for z_0(E_e) data from CTEMMC Monte Carlo simulations
+dmin            = 0.015         ! minimum d-spacing in order to be admitted to the list (must become user entry)
+npx             = 500           ! Nx pixels (total = 2Nx+1)
+outname         = 'EBSDmasterout.data'  ! default filename for final output
+energyfile      = 'undefined'   ! default filename for z_0(E_e) data from CTEMMC Monte Carlo simulations
 Esel           = -1            ! selected energy value for single energy run
 
 tpi = 2.D0*cPi
@@ -382,6 +382,8 @@ energyloop: do iE=numEbins,1,-1
 ! distinguish between zero and higher order Laue zones, since that 
 ! distinction becomes meaningless when we consider the complete 
 ! fundamental zone.  
+  if (associated(reflist)) call Delete_gvectorlist()
+  nullify(reflist)
  
   call Compute_ReflectionList(dmin,(/0,0,1/),(/1,0,0/),(/0,1,0/),'ALL',.FALSE.,0)
 ! ---------- end of "create the master reflection list"
@@ -463,16 +465,16 @@ energyloop: do iE=numEbins,1,-1
      if (usehex) then
        do ix=1,nequiv
          srhex(iequiv(1,ix),iequiv(2,ix),iE,1:numset) = svals(1:numset)
-	end do
+        end do
      else
         if (Esel.eq.-1) then
          do ix=1,nequiv
            sr(iequiv(1,ix),iequiv(2,ix),iE,1:numset) = svals(1:numset)
-	  end do
-	else
+          end do
+        else
          do ix=1,nequiv
            sr(iequiv(1,ix),iequiv(2,ix),1,1:numset) = svals(1:numset)
-	  end do
+          end do
         endif
      end if
   
@@ -624,24 +626,24 @@ integer(kind=irg),INTENT(IN)        :: gzero
 integer(kind=irg),INTENT(IN)        :: debug
 real(kind=dbl),INTENT(OUT)          :: kin
 real(kind=dbl),INTENT(IN)           :: depthstep
-real(kind=sgl),INTENT(IN)	      :: lambdaE(izz)
+real(kind=sgl),INTENT(IN)           :: lambdaE(izz)
 integer(kind=irg),INTENT(IN)        :: izz
 
-integer         		:: i,j, iz
-complex(kind=dbl) 		:: CGinv(nn,nn), Minp(nn,nn), tmp3(nn,nn)
+integer                         :: i,j, iz
+complex(kind=dbl)               :: CGinv(nn,nn), Minp(nn,nn), tmp3(nn,nn)
+        
+real(kind=dbl)                  :: tpi, dzt
+complex(kind=dbl)               :: Ijk(nn,nn), q, getMIWORK, qold
 
-real(kind=dbl)  		:: tpi, dzt
-complex(kind=dbl) 		:: Ijk(nn,nn), q, getMIWORK, qold
+integer(kind=irg)               :: INFO, LDA, LDVR, LDVL,  JPIV(nn), MILWORK
+complex(kind=dbl)               :: CGG(nn,nn), W(nn)
+complex(kind=dbl),allocatable   :: MIWORK(:)
 
-integer(kind=irg)    		:: INFO, LDA, LDVR, LDVL,  JPIV(nn), MILWORK
-complex(kind=dbl)    		:: CGG(nn,nn), W(nn)
-complex(kind=dbl),allocatable 	:: MIWORK(:)
-
-integer(kind=irg),parameter   	:: LWMAX = 5000 
-complex(kind=dbl)    		:: VL(nn,nn),  WORK(LWMAX)
-real(kind=dbl)       		:: RWORK(2*nn)
-character            		:: JOBVL, JOBVR
-integer(kind=sgl)              :: LWORK
+integer(kind=irg),parameter     :: LWMAX = 5000 
+complex(kind=dbl)               :: VL(nn,nn),  WORK(LWMAX)
+real(kind=dbl)                  :: RWORK(2*nn)
+character                       :: JOBVL, JOBVR
+integer(kind=sgl)               :: LWORK
 
 
 ! compute the eigenvalues and eigenvectors
