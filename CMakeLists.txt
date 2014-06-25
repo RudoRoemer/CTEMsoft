@@ -60,7 +60,7 @@ set(CMAKE_MODULE_PATH ${CTEMsoft_SOURCE_DIR}/Support/CMakeModules ${CMAKE_MODULE
 set(EXE_DEBUG_EXTENSION "_debug")
 
 set(CTEMsoft_VER_MAJOR "2")
-set(CTEMsoft_VER_MINOR "0")
+set(CTEMsoft_VER_MINOR "1")
 set(CTEMsoft_VER_PATCH "0")
 
 
