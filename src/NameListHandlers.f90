@@ -414,6 +414,106 @@ enl%datafile = datafile
 
 end subroutine GetEBSDNameList
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:GetKosselNameList
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read namelist file and fill knl structure (used by CTEMKossel.f90)
+!
+!> @param nmlfile namelist file name
+!> @param knl Kossel name list structure
+!
+!> @date 06/13/14  MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine GetECPNameList(nmlfile, ecpnl)
+
+use error
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)             :: nmlfile
+type(ECPNameListType),INTENT(INOUT)     :: ecpnl
+
+integer(kind=irg)       :: stdout
+integer(kind=irg)       :: k(3)
+integer(kind=irg)       :: fn(3)
+integer(kind=irg)       :: numthick
+integer(kind=irg)       :: npix
+integer(kind=irg)       :: nthreads
+real(kind=sgl)          :: voltage
+real(kind=sgl)          :: dmin
+real(kind=sgl)          :: ktmax
+real(kind=sgl)          :: thetac
+real(kind=sgl)          :: startthick
+real(kind=sgl)          :: thickinc
+real(kind=sgl)          :: zintstep
+!real(kind=dbl)          :: abcdist(3)
+!real(kind=dbl)          :: albegadist(3)
+!logical                 :: distort
+character(7)            :: compmode
+character(fnlen)        :: outname
+character(fnlen)        :: xtalname
+
+! namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, distort, abcdist, albegadist, ktmax, &
+namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, ktmax, &
+                   startthick, thickinc, nthreads, numthick, npix, outname, thetac, compmode, zintstep
+
+! default values
+stdout = 6                              ! standard output
+k = (/ 0, 0, 1 /)                       ! beam direction [direction indices]
+fn = (/ 0, 0, 1 /)                      ! foil normal [direction indices]
+numthick = 10                           ! number of increments
+npix = 256                              ! output arrays will have size npix x npix
+nthreads = 1                            ! number of OpenMP threads
+voltage = 30000.0                       ! acceleration voltage [V]
+dmin = 0.025                            ! smallest d-spacing to include in dynamical matrix [nm]
+ktmax = 0.0                             ! beam convergence in units of |g_a|
+thetac = 0.0                            ! beam convergence in mrad (either ktmax or thetac must be given)
+startthick = 2.0                        ! starting thickness [nm]
+thickinc = 2.0                          ! thickness increment
+zintstep = 1.0                          ! integration step size for ScatMat mode
+!abcdist = (/ -1.D0,-1.0D0,-1.0D0/)      ! distorted a, b, c [nm]
+!albegadist = (/ 90.D0, 90.D0, 90.D0 /)  ! distorted angles [degrees]
+!distort = .FALSE.                       ! distort the input unit cell ?  
+compmode = 'Blochwv'                    ! 'Blochwv' or 'ScatMat' solution mode (Bloch is default)
+outname = 'ecp.data'                    ! output filename
+xtalname = 'undefined'                  ! initial value to check that the keyword is present in the nml file
+
+! read the namelist file
+ open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+ read(UNIT=dataunit,NML=ECPlist)
+ close(UNIT=dataunit,STATUS='keep')
+
+! check for required entries
+ if (trim(xtalname).eq.'undefined') then
+  call FatalError('CTEMEECP:',' crystal file name is undefined in '//nmlfile)
+ end if
+
+ecpnl%stdout = stdout
+ecpnl%k = k
+ecpnl%fn = fn
+ecpnl%numthick = numthick
+ecpnl%npix = npix
+ecpnl%nthreads = nthreads
+ecpnl%voltage = voltage
+ecpnl%dmin = dmin
+ecpnl%ktmax = ktmax
+ecpnl%thetac = thetac
+ecpnl%startthick = startthick
+ecpnl%thickinc = thickinc
+ecpnl%zintstep = zintstep
+!ecpnl%abcdist = abcdist
+!ecpnl%albegadist = albegadist
+!ecpnl%distort = distort
+ecpnl%compmode = compmode
+ecpnl%outname = outname
+ecpnl%xtalname = xtalname
+
+end subroutine GetECPNameList
+
+
 
 
 end module NameListHandlers

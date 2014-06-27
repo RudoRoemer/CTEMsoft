@@ -39,24 +39,37 @@
 !> @date 03/18/10 MDG 1.0 f90
 !> @date 08/09/10 MDG 2.0 corrected weight factors and g-vector ordering problem
 !> @date 11/18/13 MDG 3.0 major rewrite with new libraries 
+!> @date 06/27/14 MDG 4.0 removal of all globals; separation of namelist handling from computation
 !--------------------------------------------------------------------------
 program CTEMECP
 
 use local
+use typedefs
+use NameListTypedefs
+use NameListHandlers
 use files
 use io
 
 IMPLICIT NONE
 
-character(fnlen)	:: nmldeffile
+character(fnlen)                        :: nmldeffile, progname, progdesc
+type(ECPNameListType)                   :: ecpnl
 
-! deal with the command line arguments, if any
 nmldeffile = 'CTEMECP.nml'
 progname = 'CTEMECP.f90'
-call Interpret_Program_Arguments(nmldeffile,2,(/ 0, 40 /) )
+progdesc = 'Large angle electron channeling pattern simulation'
+
+! deal with the command line arguments, if any
+call Interpret_Program_Arguments(nmldeffile,2,(/ 0, 40 /), progname)
+
+! deal with the namelist stuff
+call GetECPNameList(nmldeffile,ecpnl)
+
+! print some information
+call CTEMsoft(progname, progdesc)
 
 ! perform the zone axis computations
-call ECpattern(nmldeffile)
+call ECpattern(ecpnl, progname)
 
 end program CTEMECP
 
@@ -81,123 +94,70 @@ end program CTEMECP
 !> @date 11/18/13  MDG 1.0 major rewrite from older ECP program
 !> @date 11/22/13  MDG 1.1 output modified for IDL interface
 !> @date 03/04/14  MDG 1.2 added scattering matrix mode
+!> @date 06/27/14  MDG 2.0 removal of globals, split of namelist and computation; OpenMP
 !--------------------------------------------------------------------------
-subroutine ECpattern(nmlfile)
+subroutine ECpattern(ecpnl, progname)
 
-
-use symmetryvars
-use symmetry
-use crystalvars
+use local
+use typedefs
+use NameListTypedefs
 use crystal
+use symmetry
+use Lambert
+use initializers
 use constants
 use gvectors
 use kvectors
 use error
 use io
-use local
 use files
 use diffraction
-use multibeams
-use dynamical
-use timing
+use omp_lib
+use MBModule
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)	       :: nmlfile
+type(ECPNameListType),INTENT(IN)        :: ecpnl
+character(fnlen),INTENT(IN)             :: progname
 
-character(fnlen)         :: xtalname, outname
-character(3)             :: method
-real(kind=sgl)           :: voltage, dmin, startthick, thickinc, thetac, galen, bragg, klaue(2), io_real(6), &
-                            kstar(3), gperp(3), delta
-integer(kind=irg)        :: numthick, nt, npix, skip, dgn, pgnum, io_int(6), maxHOLZ, ik, k(3), numk, ga(3), gb(3), &
-                            fn(3), nn, npx, npy, isym, numset, it, ijmax, jp
+character(3)                    :: method
+real(kind=sgl)                  :: galen, bragg, klaue(2), io_real(6), kstar(3), gperp(3), delta, thetac, &
+                                   kk(3), ktmax, FN(3), kn, fnat
+integer(kind=irg)               :: nt, skip, dgn, pgnum, io_int(6), maxHOLZ, ik, numk, ga(3), gb(3), TID, &
+                                   nn, npx, npy, isym, numset, it, ijmax, jp, istat, iequiv(2,12), nequiv, NUMTHREADS, & 
+                                   nns, nnw, nref, tots, totw
+real(kind=dbl)                  :: ctmp(192,3),arg
+integer                         :: i,j,ir,nat(100), n,ipx,ipy,gzero,ic,ip,ikk     ! counters
+real(kind=sgl)                  :: pre, tpi,Znsq, kkl, DBWF, frac
+real,allocatable                :: thick(:), sr(:,:,:) ! thickness array, results
+complex(kind=dbl),allocatable   :: Lgh(:,:,:),Sgh(:,:),Sghtmp(:,:,:)
+complex(kind=dbl)               :: czero
+real(kind=sgl),allocatable      :: karray(:,:)
+integer(kind=irg),allocatable   :: kij(:,:)
+complex(kind=dbl),allocatable   :: DynMat(:,:)
+logical                         :: verbose
 
-real(kind=dbl)           :: ctmp(192,3),arg, abcdist(3), albegadist(3)
-integer                  :: i,j,ir,nat(100),kk(3),&
-                            n,ipx,ipy,minbeams, &
-                            maxbeams,gzero,ic,ip,ikk     ! counters
-real(kind=sgl)           :: ktmax,& ! maximum tangential component of wave vector
-                            pre,&   ! prefactors 
-                            tpi,Znsq, kkl, &
-                            DBWF, frac, zintstep
-real,allocatable         :: thick(:), sr(:,:,:) ! thickness array, results
-!real(kind=dbl), allocatable           :: Kossel(:)
-complex(kind=dbl),allocatable         :: Lgh(:,:,:),Sgh(:,:)
-complex(kind=dbl)        :: czero
-logical	                 :: distort
-character(7)             :: compmode
+type(unitcell),pointer          :: cell
+type(gnode)                     :: rlp
+type(DynType)                   :: Dyn
+type(kvectorlist),pointer       :: khead, ktmp
+type(symdata2D)                 :: TDPG
+type(BetheParameterType)        :: BetheParameters
+type(reflisttype),pointer       :: reflist, firstw,rltmp
 
-namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, distort, abcdist, albegadist, ktmax, &
-                   startthick, thickinc, numthick, npix, outname, thetac, compmode, zintstep
-
-! set the input parameters to default values (except for xtalname, which must be present)
-xtalname = 'undefined'		        ! initial value to check that the keyword is present in the nml file
-stdout = 6			        ! standard output
-voltage = 30000.0		        ! acceleration voltage [V]
-k = (/ 0, 0, 1 /)		        ! beam direction [direction indices]
-fn = (/ 0, 0, 1 /)		        ! foil normal [direction indices]
-dmin = 0.025			        ! smallest d-spacing to include in dynamical matrix [nm]
-distort = .FALSE.                      ! distort the input unit cell ?  
-abcdist = (/ 0.4, 0.4, 0.4/)           ! distorted a, b, c [nm]
-albegadist = (/ 90.0, 90.0, 90.0 /)    ! distorted angles [degrees]
-ktmax = 0.0                            ! beam convergence in units of |g_a|
-thetac = 0.0                           ! beam convergence in mrad (either ktmax or thetac must be given)
-startthick = 2.0		        ! starting thickness [nm]
-thickinc = 2.0			        ! thickness increment
-numthick = 10			        ! number of increments
-npix = 256			        ! output arrays will have size npix x npix
-outname = 'ecp.data'        	        ! output filename
-compmode = 'Blochwv'                   ! 'Blochwv' or 'ScatMat' solution mode (Bloch is default)
-zintstep = 1.0                        ! integration step size for ScatMat mode
 
 ! init some parameters
-gzero = 1
-frac = 0.05
+  gzero = 1
+  frac = 0.05
 
-! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
-read(UNIT=dataunit,NML=ECPlist)
-close(UNIT=dataunit,STATUS='keep')
+  nullify(cell)
+  nullify(khead)
+  nullify(ktmp)
 
-if (trim(xtalname).eq.'undefined') then
-  call FatalError('CTEMECP:',' structure file name is undefined in '//nmlfile)
-end if
+  allocate(cell)
 
-! print some information
- progname = 'CTEMECP.f90'
- progdesc = 'Large angle electron channeling pattern simulation'
- call CTEMsoft
-
-! first get the crystal data and microscope voltage
- SG%SYM_reduce=.TRUE.
- call CrystalData(xtalname)
-
-! do we need to apply a unit cell distortion ?  If so, then recompute the 
-! unit cell parameters with the new lattice parameters and then continue 
-if (distort) then
-!! apply a deformation to this unit cell
-    io_real(1:3) = abcdist(1:3)
-    call WriteValue(' New lattice parameters a, b, and c [nm] ', io_real, 3, "(2(F8.5,','),F8.5)")
-    io_real(1:3) = albegadist(1:3)
-    call WriteValue(' New lattice angles alpha, beta, gamma [degrees] ', io_real, 3, "(2(F6.2,','),F6.2)")
-    cell%a = abcdist(1); cell%b = abcdist(2); cell%c = abcdist(3)
-    cell%alpha = albegadist(1); cell%beta = albegadist(2); cell%gamma = albegadist(3)
-    call CalcMatrices
-else
-    abcdist = (/ cell%a, cell%b, cell%c /)
-    albegadist = (/ cell%alpha, cell%beta, cell%gamma /)
-end if
-
-! initialize the wave length and lattice potential computations
- skip = 3
- call CalcWaveLength(dble(voltage),skip)
-
-! generate all atom positions
- call CalcPositions('v')
-
-! transform the foil normal
- call TransSpace(float(fn),DynFN,'d','r')
- call NormVec(DynFN,'r')
+  verbose = .TRUE.
+  call Initialize_Cell(cell,Dyn,rlp,ecpnl%xtalname, ecpnl%dmin, ecpnl%voltage,verbose)
 
 ! determine the point group number
  j=0
@@ -207,498 +167,253 @@ end if
 
 ! use the new routine to get the whole pattern 2D symmetry group, since that
 ! is the one that determines the independent beam directions.
- dgn = GetPatternSymmetry(k,j,.TRUE.)
+ dgn = GetPatternSymmetry(cell,ecpnl%k,j,.TRUE.)
  pgnum = j
  isym = WPPG(dgn) ! WPPG lists the whole pattern point group numbers vs. diffraction group numbers
 
 ! determine the shortest reciprocal lattice points for this zone
- call ShortestG(k,ga,gb,isym)
+ call ShortestG(cell,ecpnl%k,ga,gb,isym)
  io_int(1:3)=ga(1:3)
  io_int(4:6)=gb(1:3)
  call WriteValue(' Reciprocal lattice vectors : ', io_int, 6,"('(',3I3,') and (',3I3,')',/)")
 
-! initialize the HOLZ geometry type
- call GetHOLZGeometry(float(ga),float(gb),k,fn) 
-
-! construct the list of all possible reflections
- method = 'ALL'
- bragg = CalcDiffAngle(ga(1),ga(2),ga(3))*0.5
- if (ktmax.ne.0.0) then 
-   thetac = (ktmax * 2.0 * bragg)*1000.0
+! diffraction geometry
+ bragg = CalcDiffAngle(cell,ga(1),ga(2),ga(3))*0.5
+ if (ecpnl%ktmax.ne.0.0) then 
+   thetac = (ecpnl%ktmax * 2.0 * bragg)*1000.0
+   io_real(1) = thetac
  else
-   ktmax = thetac / (2000.0 * bragg)
+   ktmax = ecpnl%thetac / (2000.0 * bragg)
+   io_real(1) = ecpnl%thetac
  end if
- io_real(1) = thetac
  call WriteValue(' Pattern convergence angle [mrad] = ',io_real,1,"(F8.3)")
  io_real(1) = bragg*1000.0
  call WriteValue(' Bragg angle of g_a [mrad] = ',io_real,1,"(F6.3)")
- call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxHOLZ,thetac/1000.0)
- galen = CalcLength(float(ga),'r')
 
 ! the number of pixels across the disk is equal to 2*npix + 1
-  npx = npix
+  npx = ecpnl%npix
   npy = npx
   io_int(1) = 2.0*npx + 1
-  call WriteValue('Number of image pixels along diameter of central disk = ', io_int, 1, "(I4)")
-  mess=' '; call Message("(A/)")
-  
-! set parameters for wave vector computation
-  klaue = (/ 0.0, 0.0 /)
-  ijmax = float(npx)**2   ! truncation value for beam directions
+  call WriteValue('Number of image pixels along diameter of central disk = ', io_int, 1, "(I4/)")
 
 ! for now, the solution to the symmetry problem is to do the computation for the entire 
 ! illumination cone without application of symmetry.  Instead, we'll get the speed up by 
 ! going to multiple cores later on.
   isym = 1
-  call CalckvectorsSymmetry(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,klaue)
+! set parameters for wave vector computation
+  klaue = (/ 0.0, 0.0 /)
+  ijmax = float(npx)**2   ! truncation value for beam directions
+  call CalckvectorsSymmetry(khead,cell,TDPG,dble(ecpnl%k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,klaue)
   io_int(1)=numk
   call WriteValue('Starting computation for # beam directions = ', io_int, 1, "(I8)")
 
-!  ktmp => khead
-!  do ik=1,numk
-!    write (*,*) ktmp%k, ktmp%kt
-!    ktmp => ktmp%next
-!  end do
-!
-
 ! force dynamical matrix routine to read new Bethe parameters from file
-  call Set_Bethe_Parameters(.TRUE.)
+  call Set_Bethe_Parameters(BetheParameters,.TRUE.)
+write(*,*) 'Bethe Parameters : ',BetheParameters%c1,BetheParameters%c2
 
 ! set the thickness array
-  nt = numthick
+  nt = ecpnl%numthick
   allocate(thick(nt))
-  thick = startthick + thickinc * (/ (i-1,i=1,nt) /)
+  thick = ecpnl%startthick + ecpnl%thickinc * (/ (i-1,i=1,nt) /)
 
   nat = 0
   
-  call Time_report(frac)
-  call Time_start
-
-  
 !----------------------------MAIN COMPUTATIONAL LOOP-----------------------
+  czero = cmplx(0.D0,0.D0)
+  pre = cmplx(0.D0,1.D0) * cPi
+  numset = cell % ATOM_ntype  ! number of special positions in the unit cell
+  tpi = 2.D0*cPi
+
+! in preparation for the threaded portion of the program, we need to 
+! copy the wave vectors into an array rather than a linked list
+  allocate(karray(4,numk), kij(2,numk),stat=istat)
 ! point to the first beam direction
   ktmp => khead
-  minbeams = 10000
-  maxbeams = 0
-  czero = cmplx(0.0,0.0,dbl)
-  pre = cmplx(0.0,cPi,dbl)
-  call CalcUcg((/0,0,0/))   ! get the normal absorption parameter
-  DynUpz = rlp%Vpmod
-  numset = cell % ATOM_ntype  ! number of special positions in the unit cell
-  tpi = 2.0*cPi
+! and loop through the list, keeping k, kn, and i,j
+  karray(1:3,1) = sngl(ktmp%k(1:3))
+  karray(4,1) = sngl(ktmp%kn)
+  kij(1:2,1) = (/ ktmp%i, ktmp%j /)
+  do ik=2,numk
+    ktmp => ktmp%next
+    karray(1:3,ik) = sngl(ktmp%k(1:3))
+    karray(4,ik) = sngl(ktmp%kn)
+    kij(1:2,ik) = (/ ktmp%i, ktmp%j /)
+  end do
+! and remove the linked list
+  call Delete_kvectorlist(khead)
+
 ! allocate space for the results
-  allocate(sr(2*npx+1,2*npy+1,nt)) ! ,EKI(2*npx+1,2*npy+1,nt))
+  allocate(sr(2*npx+1,2*npy+1,nt)) 
+  sr = 0.0
+
+! set the number of OpenMP threads 
+  call OMP_SET_NUM_THREADS(ecpnl%nthreads)
+  io_int(1) = ecpnl%nthreads
+  call WriteValue(' Attempting to set number of threads to ',io_int, 1, frm = "(I4)")
+
+! use OpenMP to run on multiple cores ... 
+!$OMP PARALLEL default(shared) PRIVATE(DynMat,ik,TID,kk,kn,ipx,ipy,iequiv,nequiv,fnat,ip,jp,reflist,firstw,nns,nnw,nref) &
+!$OMP& PRIVATE(Sgh, Lgh, SGHtmp)
+! set the foil normal 
+! Dyn%FN = float(ecpnl%fn)
+! call NormVec(cell, Dyn%FN, 'd')
+
+  NUMTHREADS = OMP_GET_NUM_THREADS()
+  TID = OMP_GET_THREAD_NUM()
+
+  nullify(reflist)
+  nullify(firstw)
+
+  nns = 0
+  nnw = 0
+  tots = 0
+  totw = 0
+
+!$OMP DO SCHEDULE(DYNAMIC,100)    
 
 !  work through the beam direction list
   beamloop: do ik=1,numk
 
-	ip = -ktmp%i
- 	jp =  ktmp%j
+! generate the reflectionlist
+        kk(1:3) = karray(1:3,ik)
+        FN = kk
+        call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, kk, ecpnl%dmin, nref)
 
-! compute the dynamical matrix using Bloch waves with Bethe potentials; note that the IgnoreFoilNormal flag
-! has been set to .FALSE.; if it is set to .TRUE., the computation of the ZOLZ will still be mostly correct,
-! but the excitation errors of the HOLZ reflections will be increasingly incorrect with HOLZ order.  This was
-! useful during program testing but should probably be removed as an option altogether...
-	call Compute_DynMat('BLOCHBETHE', ktmp%k, ktmp%kt, .FALSE.)
-        nn = DynNbeams
-        
-        if (ik.eq.1) then
-	  open(unit=dataunit,file='ECPmatrix.data',status='unknown',form='unformatted')
-	  write (dataunit) nn
-	  write (dataunit) DynMat
-	  close(unit=dataunit,status='keep')
-	end if
+! determine strong and weak reflections
+        call Apply_BethePotentials(cell, reflist, firstw, BetheParameters, nref, nns, nnw)
 
-! then we need to initialize the Sgh array for the strong beams;
-! this may need to be modified if we want to include real detector
-! geometries and such; check Rossouw's paper for more information.
-! this is now modified with respect to the older version to include
-! Bethe potential strong reflections only  
-        allocate(Sgh(nn,nn),Lgh(nn,nn,nt)) ! ,Kossel(nt))        
-        Sgh = cmplx(0.0,0.0)
+! generate the dynamical matrix
+        allocate(DynMat(nns,nns))
+        call GetDynMat(cell, reflist, firstw, rlp, DynMat, nns, nnw)
 
-! for each special position we need to compute this array
-        do ip=1,numset
-            call CalcOrbit(ip,n,ctmp)
-            nat(ip) = n
-! get Zn-squared for this special position
-            Znsq = float(cell%ATOM_type(ip))**2 * cell%ATOM_pos(ip,4)
-! loop over all contributing reflections
-! ir is the row index
-            do ir=1,nn
-! ic is the column index
-             do ic=1,nn
-              kk = BetheParameter%stronghkl(1:3,ir) - BetheParameter%stronghkl(1:3,ic)
-! We'll assume isotropic Debye-Waller factors for now ...
-! That means we need the square of the length of s=  kk^2/4
-              kkl = 0.25 * CalcLength(float(kk),'r')**2
-! Debye-Waller exponential
-                DBWF = Znsq * exp(-cell%ATOM_pos(ip,5)*kkl)
-! here is where we should insert the proper weight factor, Z^2 exp[-M_{h-g}]
-! and also the detector geometry...   For now, we do nothing with the detector
-! geometry; the Rossouw et al 1994 paper lists a factor A that does not depend
-! on anything in particular, so we assume it is 1. 
-              do ikk=1,n
-! get the argument of the complex exponential
-                arg = tpi*sum(kk(1:3)*ctmp(ikk,1:3))
-! multiply with the prefactor and add
-                Sgh(ir,ic) = Sgh(ir,ic) + cmplx(DBWF,0.0) * cmplx(cos(arg),sin(arg))
-              end do
-             end do
-            end do  
-          end do
+! then we need to initialize the Sgh and Lgh arrays
+        if (allocated(Sgh)) deallocate(Sgh)
+        if (allocated(Lgh)) deallocate(Lgh)
+        if (allocated(Sghtmp)) deallocate(Sghtmp)
+
+        allocate(Sghtmp(nns,nns,numset),Lgh(nns,nns,nt),Sgh(nns,nns))
+        Sgh = czero
+        Lgh = czero
+        nat = 0
+        call CalcSgh(cell,reflist,nns,numset,Sghtmp,nat)
+        fnat = 1.0/float(sum(nat(1:numset)))
+
+! sum Sghtmp over the sites
+        Sgh = sum(Sghtmp,3)
 
 ! solve the dynamical eigenvalue equation
-          if (compmode.eq.'Blochwv') then 
-            allocate(W(nn),CG(nn,nn),alpha(nn))
-            call CalcLgh(nn,nt,thick,ktmp%kn,gzero,Lgh)
-            deallocate(W,CG,alpha)
-          end if
-          if (compmode.eq.'ScatMat') then 
-            call CalcLghSM(nn,nt,thick,zintstep,ktmp%kn,gzero,Lgh)
-          end if
-          if (compmode.eq.'ScanMat') then 
-            call CalcLghSMscan(nn,nt,thick,zintstep,ktmp%kn,gzero,Lgh)
-          end if
+        kn = karray(4,ik)
+        call CalcLghECP(DynMat,Lgh,nns,nt,thick,dble(kn),gzero)
+        deallocate(DynMat)
 
 ! and store the resulting values
-          ipx = ktmp%i + npx + 1
-          ipy = ktmp%j + npy + 1
-          do it=1,nt
-            sr(ipx,ipy,it) = real(sum(Lgh(1:nn,1:nn,it)*Sgh(1:nn,1:nn)))/float(sum(nat))
-          end do
+        ipx = kij(1,ik)
+        ipy = kij(2,ik)
+        if (isym.ne.1) call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
 
-          deallocate(Lgh, Sgh) !, Kossel)
-! select next beam direction
-          ktmp => ktmp%next
+!$OMP CRITICAL
+        if (isym.ne.1) then 
+          do ip=1,nequiv
+           do jp=1,nt
+            sr(iequiv(1,ip),iequiv(2,ip),jp) = sr(iequiv(1,ip),iequiv(2,ip),jp) + &
+                  real(sum(Lgh(1:nns,1:nns,jp)*Sgh(1:nns,1:nns)))*fnat
+           end do
+          end do
+        else
+           do jp=1,nt
+            sr(ipx,ipy,jp) = real(sum(Lgh(1:nns,1:nns,jp)*Sgh(1:nns,1:nns)))*fnat
+           end do
+        end if
+        totw = totw + nnw
+        tots = tots + nns
+!$OMP END CRITICAL
+
+        deallocate(Lgh, Sgh, Sghtmp) 
           
-! update computation progress
-   if (float(ik)/float(numk) .gt. frac) then
-     call Time_remaining(ik,numk)
-     frac = frac + 0.05
-   end if  
+        if (mod(ik,2500).eq.0) then
+          io_int(1) = ik
+          call WriteValue('  completed beam direction ',io_int, 1, "(I8)")
+        end if
+
+        call Delete_gvectorlist(reflist)
 
   end do beamloop
 
-! stop the clock and report the total time     
-  call Time_stop(numk)
+!$OMP END PARALLEL
+
 
 ! store additional information for the IDL interface  
-  open(unit=dataunit,file=trim(outname),status='unknown',action='write',form='unformatted')
+  open(unit=dataunit,file=trim(ecpnl%outname),status='unknown',action='write',form='unformatted')
 ! write the program identifier
   write (dataunit) trim(progname)
 ! write the version number
   write (dataunit) scversion
 ! first write the array dimensions
-  write (dataunit) 2*npix+1,2*npix+1,nt
+  write (dataunit) 2*ecpnl%npix+1,2*ecpnl%npix+1,nt
 ! then the name of the crystal data file
-  write (dataunit) xtalname
+  write (dataunit) ecpnl%xtalname
 ! altered lattice parameters; also combine compmode in this parameter
 !  Bloch waves, no distortion: 0
 !  Bloch waves, distortion:    1
 !  ScatMat, no distortion      2
 !  ScatMat, distortion         3
-  if (distort) then 
-    if (compmode.eq.'Blochwv') then
+! if (distort) then 
+!   if (compmode.eq.'Blochwv') then
       write (dataunit) 1
-    else
-      write (dataunit) 3
-    end if
-  else
-    if (compmode.eq.'Blochwv') then
-      write (dataunit) 0
-    else
-      write (dataunit) 2
-    end if
-  end if
+!   else
+!     write (dataunit) 3
+!   end if
+! else
+!   if (compmode.eq.'Blochwv') then
+!     write (dataunit) 0
+!   else
+!     write (dataunit) 2
+!   end if
+! end if
 ! new lattice parameters and angles
-  write (dataunit) abcdist
-  write (dataunit) albegadist
+  write (dataunit) (/ cell%a, cell%b, cell%c /)  ! abcdist
+  write (dataunit) (/ cell%alpha, cell%beta, cell%gamma /) ! albegadist
 ! the accelerating voltage [V]
-  write (dataunit) voltage
+  write (dataunit) ecpnl%voltage
 ! convergence angle [mrad]
   write (dataunit) thetac
 ! max kt value in units of ga
   write (dataunit) ktmax
 ! the zone axis indices
-  write (dataunit) k
+  write (dataunit) ecpnl%k
 ! the foil normal indices
-  write (dataunit) fn
+  write (dataunit) ecpnl%fn
 ! number of k-values in disk
   write (dataunit) numk
 ! dmin value
-  write (dataunit) dmin
+  write (dataunit) ecpnl%dmin
 ! horizontal reciprocal lattice vector
   write (dataunit) ga  
 ! length horizontal reciprocal lattice vector (need for proper Laue center coordinate scaling)
   write (dataunit) galen
 ! we need to store the gperp vectors
-  delta = 2.0*ktmax*galen/float(2*npix+1)        ! grid step size in nm-1 
-  call TransSpace(float(k),kstar,'d','r')        ! transform incident direction to reciprocal space
-  call CalcCross(float(ga),kstar,gperp,'r','r',0)! compute g_perp = ga x k
-  call NormVec(gperp,'r')                        ! normalize g_perp
+  delta = 2.0*ktmax*galen/float(2*ecpnl%npix+1)        ! grid step size in nm-1 
+  call TransSpace(cell,float(ecpnl%k),kstar,'d','r')        ! transform incident direction to reciprocal space
+  call CalcCross(cell,float(ga),kstar,gperp,'r','r',0)! compute g_perp = ga x k
+  call NormVec(cell,gperp,'r')                        ! normalize g_perp
   write (dataunit) delta
   write (dataunit) gperp
 ! eight integers with the labels of various symmetry groups
   write (dataunit) (/ pgnum, PGLaue(pgnum), dgn, PDG(dgn), BFPG(dgn), WPPG(dgn), DFGN(dgn), DFSP(dgn) /)
 ! thickness data
-  write (dataunit) startthick, thickinc
+  write (dataunit) ecpnl%startthick, ecpnl%thickinc
 ! and the actual data array
   write (dataunit) sr
   close(unit=dataunit,status='keep')
 
-  mess = 'Data stored in output file '//trim(outname)
-  call Message("(/A/)")
+  call Message('Data stored in output file '//trim(ecpnl%outname), frm = "(/A/)")
+
+  tots = nint(float(tots)/float(numk))
+  totw = nint(float(totw)/float(numk))
+
+  io_int(1:2) = (/ tots, totw /)
+  call WriteValue(' Average # strong, weak beams = ',io_int, 2, "(I5,',',I5/)")
 
 end subroutine ECpattern
-
-!--------------------------------------------------------------------------
-!
-! SUBROUTINE:CalcLgh
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief integrate the Bloch wave function over the foil thickness
-!
-!> @param nn number of strong beams
-!> @param nt number of thickness values
-!> @param thick array of thickness values
-!> @param kn normal component of incident wave vector
-!> @param gzero index of zero beam (should always be the first one; legacy parameter)
-!> @param Lgh output array
-!
-!> @date 11/18/13  MDG 1.0 major rewrite from older ECP program; merged with ECPz
-!--------------------------------------------------------------------------
-recursive subroutine CalcLgh(nn,nt,thick,kn,gzero,Lgh)
-
-use local
-use io
-use files
-use diffraction
-use dynamical
-use constants
-
-IMPLICIT NONE
-
-integer(kind=sgl),INTENT(IN)        :: nn
-integer(kind=sgl),INTENT(IN)        :: nt
-real(kind=sgl),INTENT(IN)           :: thick(nt)
-real(kind=dbl),INTENT(IN)           :: kn
-integer(kind=sgl),INTENT(IN)        :: gzero
-complex(kind=dbl),INTENT(OUT)       :: Lgh(nn,nn,nt)
-
-integer                             :: i,j,it,ig,ih,IPIV(nn)
-complex(kind=dbl),allocatable       :: CGinv(:,:), Minp(:,:),tmp3(:,:)
-complex(kind=dbl)                   :: Ijk(nn,nn),q
-
-allocate(CGinv(nn,nn),Minp(nn,nn),tmp3(nn,nn))
-
-! compute the eigenvalues and eigenvectors
-! using the LAPACK CGEEV, CGETRF, and CGETRI routines
-! 
-! then get the eigenvalues and eigenvectors
- Minp = DynMat
- IPIV = 0
-
- call BWsolve(Minp,W,CG,CGinv,nn,IPIV)
-
-! then compute the integrated intensity matrix
- W = W/cmplx(2.0*kn,0.0)
-
-! first do the Lgh matrices, looping over the thickness
-do it=1,nt
-! recall that alpha(1:nn) = CGinv(1:nn,gzero)
-! first the Ijk matrix
- do i=1,nn
-  do j=1,nn
-    q = 2.0*cPi*thick(it)*cmplx(aimag(W(i))+aimag(W(j)),real(W(i))-real(W(j)))
-    Ijk(i,j) = conjg(CGinv(i,gzero)) * (1.0-exp(-q))/q * CGinv(j,gzero)
-  end do
- end do
-
-! then the summations for Lgh
- do ih=1,nn
-   do i=1,nn
-      tmp3(ih,i) = sum(Ijk(i,1:nn)*CG(ih,1:nn))
-   end do
- end do
- do ig=1,nn
-  do ih=1,nn
-     Lgh(ih,ig,it) = sum(conjg(CG(ig,1:nn))*tmp3(ih,1:nn))
-  end do
- end do
-end do ! thickness loop
-
-deallocate(CGinv,Minp,tmp3)
-
-end subroutine CalcLgh
-
-
-!--------------------------------------------------------------------------
-!
-! SUBROUTINE:CalcLghSM
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief integrate the scattering matrix wave function over the foil thickness
-!
-!> @param nn number of strong beams
-!> @param nt number of thickness values
-!> @param thick array of thickness values
-!> @param zintstep integration step size
-!> @param kn normal component of incident wave vector
-!> @param gzero index of zero beam (should always be the first one; legacy parameter)
-!> @param Lgh output array
-!
-!> @todo verify that the outer product is properly computed using the spread functions;
-!> it is possible that this expression may need to be transposed.
-!
-!> @date 11/18/13  MDG 1.0 major rewrite from older ECP program; merged with ECPz
-!> @date 03/03/14  MDG 2.0 version that works with the scattering matrix...
-!--------------------------------------------------------------------------
-recursive subroutine CalcLghSM(nn,nt,thick,zintstep,kn,gzero,Lgh)
-
-use local
-use io
-use files
-use diffraction
-use dynamical
-use constants
-use math
-
-IMPLICIT NONE
-
-integer(kind=sgl),INTENT(IN)        :: nn
-integer(kind=sgl),INTENT(IN)        :: nt
-real(kind=sgl),INTENT(IN)           :: thick(nt)
-real(kind=sgl),INTENT(IN)           :: zintstep
-real(kind=dbl),INTENT(IN)           :: kn
-integer(kind=sgl),INTENT(IN)        :: gzero
-complex(kind=dbl),INTENT(OUT)       :: Lgh(nn,nn,nt)
-
-integer(kind=irg)                   :: i, numt, tval
-complex(kind=dbl),allocatable       :: Minp(:,:),Azz(:,:),ampl(:),ampl2(:),Lghsum(:,:)
-integer(kind=irg),allocatable	      :: tvals(:)
-  
-  allocate(Minp(nn,nn),Azz(nn,nn),ampl(nn),ampl2(nn),tvals(nt),Lghsum(nn,nn))
-
-! get the scattering matrix (first multiply the Bloch dynamical matrix by i pi lambda, then exponentiate)
-  Minp = DynMat * dcmplx(0.D0,cPi * mLambda)
-  call MatrixExponential(Minp, Azz, dble(zintstep), 'Pade', nn)  
-
-! initialize the wave function vector and output arrays
-  ampl = dcmplx(0.D0,0.D0)
-  ampl(1) = dcmplx(1.0D0,0.D0)
-  Lgh = dcmplx(0.D0,0.D0)
-  Lghsum = dcmplx(0.D0,0.D0)
-
-! first get the sequential numbers of the requested thicknesses in units of zintstep
-  tvals = nint(thick/zintstep)
-  tval = 1
-  numt = nint(maxval(thick)/zintstep)
-
-! and integrate over the thickness, storing selected values
-! Note that the use of the spread routines may need to be verified (may need to be transposed) 
-  do i=1,numt
-    ampl2 = matmul(Azz,ampl)
-    if (i.eq.1) then 
-        Lghsum = spread(ampl2(1:nn),dim=2,ncopies=nn)*spread(conjg(ampl2(1:nn)),dim=1,ncopies=nn)
-    else
-        Lghsum = Lghsum + spread(ampl2(1:nn),dim=2,ncopies=nn)* spread(conjg(ampl2(1:nn)),dim=1,ncopies=nn)
-    end if
-    if (i.eq.tvals(tval)) then
-      Lgh(1:nn,1:nn,tval) = Lghsum
-      tval = tval+1
-    end if
-    ampl = ampl2
-  end do
-
-  deallocate(Minp,Azz,ampl,ampl2,tvals,Lghsum)
-
-end subroutine CalcLghSM
-
-
-
-
-
-!--------------------------------------------------------------------------
-!
-! SUBROUTINE:CalcLghSMscan
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief used to get the individual layer contributions (undocumented option)
-!
-!> @param nn number of strong beams
-!> @param nt number of thickness values
-!> @param thick array of thickness values
-!> @param zintstep integration step size
-!> @param kn normal component of incident wave vector
-!> @param gzero index of zero beam (should always be the first one; legacy parameter)
-!> @param Lgh output array
-!
-!> @todo verify that the outer product is properly computed using the spread functions;
-!> it is possible that this expression may need to be transposed.
-!
-!> @date 11/18/13  MDG 1.0 major rewrite from older ECP program; merged with ECPz
-!> @date 03/03/14  MDG 2.0 version that works with the scattering matrix...
-!--------------------------------------------------------------------------
-recursive subroutine CalcLghSMscan(nn,nt,thick,zintstep,kn,gzero,Lgh)
-
-use local
-use io
-use files
-use diffraction
-use dynamical
-use constants
-use math
-
-IMPLICIT NONE
-
-integer(kind=sgl),INTENT(IN)        :: nn
-integer(kind=sgl),INTENT(IN)        :: nt
-real(kind=sgl),INTENT(IN)           :: thick(nt)
-real(kind=sgl),INTENT(IN)           :: zintstep
-real(kind=dbl),INTENT(IN)           :: kn
-integer(kind=sgl),INTENT(IN)        :: gzero
-complex(kind=dbl),INTENT(OUT)       :: Lgh(nn,nn,nt)
-
-integer(kind=irg)                   :: i, numt, tval
-complex(kind=dbl),allocatable       :: Minp(:,:),Azz(:,:),ampl(:),ampl2(:),Lghsum(:,:)
-integer(kind=irg),allocatable	      :: tvals(:)
-  
-  allocate(Minp(nn,nn),Azz(nn,nn),ampl(nn),ampl2(nn),tvals(nt),Lghsum(nn,nn))
-
-! get the scattering matrix (first multiply the Bloch dynamical matrix by i pi lambda, then exponentiate)
-  Minp = DynMat * dcmplx(0.D0,cPi * mLambda)
-  call MatrixExponential(Minp, Azz, dble(zintstep), 'Pade', nn)  
-
-! initialize the wave function vector and output arrays
-  ampl = dcmplx(0.D0,0.D0)
-  ampl(1) = dcmplx(1.0D0,0.D0)
-  Lgh = dcmplx(0.D0,0.D0)
-  Lghsum = dcmplx(0.D0,0.D0)
-
-! first get the sequential numbers of the requested thicknesses in units of zintstep
-  tvals = nint(thick/zintstep)
-  tval = 1
-  numt = nint(maxval(thick)/zintstep)
-
-! and integrate over the thickness, storing selected values
-! Note that the use of the spread routines may need to be verified (may need to be transposed) 
-  do i=1,numt
-    ampl2 = matmul(Azz,ampl)
-        Lghsum = spread(ampl2(1:nn),dim=2,ncopies=nn)*spread(conjg(ampl2(1:nn)),dim=1,ncopies=nn)
-    if (i.eq.tvals(tval)) then
-      Lgh(1:nn,1:nn,tval) = Lghsum
-      tval = tval+1
-    end if
-    ampl = ampl2
-  end do
-
-  deallocate(Minp,Azz,ampl,ampl2,tvals,Lghsum)
-
-end subroutine CalcLghSMscan
-
 
 

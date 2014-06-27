@@ -56,21 +56,21 @@ use local
 public
 
 interface ReadValue
-	module procedure ReadValueIntShort
-	module procedure ReadValueIntLong
-	module procedure ReadValueRealSingle
-	module procedure ReadValueRealDouble
-	module procedure ReadValueString
-	module procedure ReadValueStringArray
+        module procedure ReadValueIntShort
+        module procedure ReadValueIntLong
+        module procedure ReadValueRealSingle
+        module procedure ReadValueRealDouble
+        module procedure ReadValueString
+        module procedure ReadValueStringArray
 end interface ReadValue
 
 interface WriteValue
-	module procedure WriteValueIntShort
-	module procedure WriteValueIntLong
-	module procedure WriteValueRealSingle
-	module procedure WriteValueRealDouble
-	module procedure WriteValueRealComplex
-	module procedure WriteValueString
+        module procedure WriteValueIntShort
+        module procedure WriteValueIntLong
+        module procedure WriteValueRealSingle
+        module procedure WriteValueRealDouble
+        module procedure WriteValueRealComplex
+        module procedure WriteValueString
 end interface WriteValue
 
 contains
@@ -101,11 +101,11 @@ contains
 !--------------------------------------------------------------------------
 subroutine Message(mess,frm,stdout)
 
-character(*),INTENT(IN)		:: mess		!< message string
-character(*),OPTIONAL,INTENT(IN)  	:: frm		!< optional formatting string
-integer(kind=irg),OPTIONAL,INTENT(IN)	:: stdout	!< optional output unit identifier
+character(*),INTENT(IN)         :: mess         !< message string
+character(*),OPTIONAL,INTENT(IN)        :: frm          !< optional formatting string
+integer(kind=irg),OPTIONAL,INTENT(IN)   :: stdout       !< optional output unit identifier
 
-integer(kind=irg)			:: std
+integer(kind=irg)                       :: std
 
 std = 6
 if (PRESENT(stdout)) std = stdout

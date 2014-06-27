@@ -560,6 +560,89 @@ nullify(rlw)
 end subroutine GetDynMat
 
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:CalcLghECP
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief compute the Bloch wave Lgh matrix for ECP mode
+!
+!> @param nn number of strong beams
+!> @param nt number of thickness values
+!> @param thick array of thickness values
+!> @param kn normal component of incident wave vector
+!> @param gzero index of zero beam (should always be the first one; legacy parameter)
+!> @param Lgh output array
+!
+!> @date 11/18/13  MDG 1.0 major rewrite from older ECP program; merged with ECPz
+!--------------------------------------------------------------------------
+recursive subroutine CalcLghECP(DMat,Lgh,nn,nt,thick,kn,gzero)
+
+use local
+use io
+use files
+use diffraction
+use constants
+
+IMPLICIT NONE
+
+complex(kind=dbl),INTENT(IN)        :: DMat(nn,nn)
+complex(kind=dbl),INTENT(OUT)       :: Lgh(nn,nn,nt)
+integer(kind=sgl),INTENT(IN)        :: nn
+integer(kind=sgl),INTENT(IN)        :: nt
+real(kind=sgl),INTENT(IN)           :: thick(nt)
+real(kind=dbl),INTENT(IN)           :: kn
+integer(kind=sgl),INTENT(IN)        :: gzero
+
+integer                             :: i,j,it,ig,ih,IPIV(nn)
+complex(kind=dbl),allocatable       :: CGinv(:,:), Minp(:,:),tmp3(:,:)
+complex(kind=dbl)                   :: Ijk(nn,nn),q
+complex(kind=dbl)                   :: CG(nn,nn), W(nn)
+
+
+allocate(CGinv(nn,nn),Minp(nn,nn),tmp3(nn,nn))
+
+! compute the eigenvalues and eigenvectors
+! using the LAPACK CGEEV, CGETRF, and CGETRI routines
+! 
+! then get the eigenvalues and eigenvectors
+ Minp = DMat
+ IPIV = 0
+
+ call BWsolve(Minp,W,CG,CGinv,nn,IPIV)
+
+! then compute the integrated intensity matrix
+ W = W/cmplx(2.0*kn,0.0)
+
+! first do the Lgh matrices, looping over the thickness
+do it=1,nt
+! recall that alpha(1:nn) = CGinv(1:nn,gzero)
+! first the Ijk matrix
+ do i=1,nn
+  do j=1,nn
+    q = 2.0*cPi*thick(it)*cmplx(aimag(W(i))+aimag(W(j)),real(W(i))-real(W(j)))
+    Ijk(i,j) = conjg(CGinv(i,gzero)) * (1.0-exp(-q))/q * CGinv(j,gzero)
+  end do
+ end do
+
+! then the summations for Lgh
+ do ih=1,nn
+   do i=1,nn
+      tmp3(ih,i) = sum(Ijk(i,1:nn)*CG(ih,1:nn))
+   end do
+ end do
+ do ig=1,nn
+  do ih=1,nn
+     Lgh(ih,ig,it) = sum(conjg(CG(ig,1:nn))*tmp3(ih,1:nn))
+  end do
+ end do
+end do ! thickness loop
+
+deallocate(CGinv,Minp,tmp3)
+
+end subroutine CalcLghECP
+
 
 
 

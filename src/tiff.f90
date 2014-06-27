@@ -41,32 +41,31 @@
 !> 
 !> Here is an example showing how to use the TIFF routines.\n
 !>
-!>program tiff\n
+!>program tiff
 !>
-!>use TIFF_global\n
-!>use TIFF_f90\n
-!>\n
-!>IMPLICIT NONE\n
-!>\n
-!>integer   :: i,j\n
-!>\n
-!>! declare TIFF variables in TIFF_global\n
-!> TIFF_nx = 295\n
-!> TIFF_ny = 150\n
-!> TIFF_filename = "test.tiff"\n
-!>! allocate memory for image\n
-!> allocate(TIFF_image(0:TIFF_nx-1,0:TIFF_ny-1))\n
-!>! fill the image with whatever data you have (between 0 and 255)\n
-!> do i=0,TIFF_nx-1\n
-!>  do j=0,TIFF_ny-1\n
-!>   TIFF_image(i,j) = mod(i*i+j*j,255) \n
-!>  end do\n
-!> end do\n
-!>! create the file\n
-!> call TIFF_Write_File\n
-!>\n
-!>end program\n
-!>\n
+!>use TIFF_f90
+!>
+!>IMPLICIT NONE
+!>
+!>integer   :: i,j
+!>
+!>! declare TIFF variables
+!> TIFF_nx = 295
+!> TIFF_ny = 150
+!> TIFF_filename = "test.tiff"
+!>! allocate memory for image
+!> allocate(TIFF_image(0:TIFF_nx-1,0:TIFF_ny-1))
+!>! fill the image with whatever data you have (between 0 and 255)
+!> do i=0,TIFF_nx-1
+!>  do j=0,TIFF_ny-1
+!>   TIFF_image(i,j) = mod(i*i+j*j,255)
+!>  end do
+!> end do
+!>! create the file
+!> call TIFF_Write_File
+!>
+!>end program
+!>
 !> The RecordLength parameter may be platform dependent;  you should
 !> check whether or not this package works;  if it does not work, then
 !> this is most likely due to an incorrect RecordLength parameter.  
@@ -87,14 +86,14 @@ IMPLICIT NONE
 PRIVATE  :: Rekord, Rec_No, L, TIFFRecordLength, TIFF_Write_Byte_Into_Buffer, TIFF_Write_Word, TIFF_Make_Tag
 
  character(len=256)                   :: Rekord
- integer(kind=irg)                      :: Rec_No=0, L=0
- integer(kind=irg),parameter     :: TIFFRecordLength = 256
+ integer(kind=irg)                    :: Rec_No=0, L=0
+ integer(kind=irg),parameter          :: TIFFRecordLength = 256
 
 PUBLIC :: TIFF_nx, TIFF_ny, TIFF_Image, TIFF_filename, TIFF_Write_File
 
- integer(kind=irg)                     :: TIFF_nx,TIFF_ny
- integer(kind=irg),allocatable   :: TIFF_Image(:,:)
- character(100)                         :: TIFF_filename
+ integer(kind=irg)                    :: TIFF_nx,TIFF_ny
+ integer(kind=irg),allocatable        :: TIFF_Image(:,:)
+ character(100)                       :: TIFF_filename
 
 contains
 
@@ -118,7 +117,7 @@ subroutine TIFF_Write_Byte_Into_Buffer(Bite)
 
 IMPLICIT NONE
 
-character(len=1),intent(IN)   :: Bite		!< byte variable
+character(len=1),intent(IN)   :: Bite           !< byte variable
 
 ! increment byte counter
  L=L+1
@@ -157,12 +156,12 @@ subroutine TIFF_Write_Word(Word,Length)
 
 IMPLICIT NONE
 
-integer(kind=irg),intent(IN)    	:: Word		!< 4-byte word
-integer(kind=irg),intent(IN)    	:: Length		!< length parameter
+integer(kind=irg),intent(IN)            :: Word         !< 4-byte word
+integer(kind=irg),intent(IN)            :: Length       !< length parameter
 
-integer(kind=irg) 			:: L_Word
-integer(kind=irg) 			:: j
-character(len=1)  			:: Ch
+integer(kind=irg)                       :: L_Word
+integer(kind=irg)                       :: j
+character(len=1)                        :: Ch
 
  L_Word = Word
  do j=1,Length
@@ -194,11 +193,11 @@ subroutine TIFF_Make_Tag(Numbre,Tag_ID, Data_Type,Cnt,Offset)
 
 IMPLICIT NONE
 
-integer(kind=irg),intent(IN)   :: Numbre		!< Tag number (only used for clarity)
-integer(kind=irg),intent(IN)   :: Tag_ID		!< Tag identifier
-integer(kind=irg),intent(IN)   :: Data_Type	!< Tag data type
-integer(kind=irg),intent(IN)   :: Cnt			!< counter
-integer(kind=irg),intent(IN)   :: Offset		!< Offset parameter
+integer(kind=irg),intent(IN)   :: Numbre        !< Tag number (only used for clarity)
+integer(kind=irg),intent(IN)   :: Tag_ID        !< Tag identifier
+integer(kind=irg),intent(IN)   :: Data_Type     !< Tag data type
+integer(kind=irg),intent(IN)   :: Cnt           !< counter
+integer(kind=irg),intent(IN)   :: Offset        !< Offset parameter
 
  call TIFF_Write_Word(Tag_ID,2)
  call TIFF_Write_Word(Data_Type,2)

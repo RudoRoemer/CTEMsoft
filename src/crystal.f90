@@ -111,7 +111,7 @@ subroutine ResetCell(cell)
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
+type(unitcell),pointer  :: cell
 
 ! initialize cell 
  cell%a = 0.0_dbl
@@ -184,7 +184,7 @@ use constants
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
+type(unitcell),pointer  :: cell
 
 !> auxiliary variables for geometric computation
 real(kind=dbl)     :: det,ca,cb,cg,sa,sb,sg,tg,pirad

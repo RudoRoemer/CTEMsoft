@@ -152,4 +152,28 @@ type EBSDNameListType
 end type EBSDNameListType
 
 
+! ECP structure; note that cell distortions are disabled for now
+type ECPNameListType
+        integer(kind=irg)       :: stdout
+        integer(kind=irg)       :: k(3)
+        integer(kind=irg)       :: fn(3)
+        integer(kind=irg)       :: numthick
+        integer(kind=irg)       :: npix
+        integer(kind=irg)       :: nthreads
+        real(kind=sgl)          :: voltage
+        real(kind=sgl)          :: dmin
+        real(kind=sgl)          :: ktmax
+        real(kind=sgl)          :: thetac
+        real(kind=sgl)          :: startthick
+        real(kind=sgl)          :: thickinc
+        real(kind=sgl)          :: zintstep
+!       real(kind=dbl)          :: abcdist(3)
+!       real(kind=dbl)          :: albegadist(3)
+!       logical                 :: distort
+        character(7)            :: compmode
+        character(fnlen)        :: outname
+        character(fnlen)        :: xtalname
+
+end type ECPNameListType
+
 end module NameListTypedefs

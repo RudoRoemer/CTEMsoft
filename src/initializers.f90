@@ -80,17 +80,12 @@ character(fnlen),INTENT(IN)                :: xtalname
 real(kind=sgl),INTENT(IN)                  :: dmin
 real(kind=sgl),INTENT(IN)                  :: voltage
 logical,INTENT(IN),OPTIONAL                :: verbose
+
 integer(kind=irg)                          :: istat, io_int(3), skip
 integer(kind=irg)                          :: imh, imk, iml, gg(3), ix, iy, iz
 real(kind=sgl)                             :: dhkl, io_real(3), ddt
 logical                                    :: loadingfile
 
-
-! make sure the cell variable exists
-! if (.not.associated(cell)) then
-!  allocate(cell,stat=istat)
-!  if (istat.ne.0) call FatalError('InitializeCell:',' unable to allocate cell pointer')
-! end if
 
 ! clear the cell variable (set everything to zero)
  call ResetCell(cell)
@@ -105,6 +100,7 @@ logical                                    :: loadingfile
  call CalcWaveLength(cell,rlp,dble(voltage),skip)
 
 ! generate all atom positions
+! if the cell is dostorted, then this is not exactly correct, but it should be close for small distortions
  call CalcPositions(cell,'v')
 
 ! compute the range of reflections for the lookup table and allocate the table
