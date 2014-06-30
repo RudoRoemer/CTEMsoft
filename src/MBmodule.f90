@@ -262,7 +262,7 @@ type(reflisttype),pointer               :: reflist
 integer(kind=irg),INTENT(IN)            :: nn
 integer(kind=irg),INTENT(IN)            :: numset
 complex(kind=dbl),INTENT(INOUT)         :: Sgh(nn,nn,numset)
-integer(kind=irg),INTENT(INOUT)         :: nat(100)
+integer(kind=irg),INTENT(INOUT)         :: nat(numset)
 
 integer(kind=irg)                       :: ip, ir, ic, kkk(3), ikk, n
 real(kind=sgl)                          :: Znsq, DBWF, kkl
@@ -272,11 +272,10 @@ type(reflisttype),pointer               :: rltmpa, rltmpb
 
   tpi = 2.D0 * cPi
 
-
 ! for each special position we need to compute its contribution to the Sgh array
   do ip=1,cell % ATOM_ntype
     call CalcOrbit(cell,ip,n,ctmp)
-    nat(ip) = n
+    nat(ip) = cell%numat(ip)
 ! get Zn-squared for this special position, and include the site occupation parameter as well
     Znsq = float(cell%ATOM_type(ip))**2 * cell%ATOM_pos(ip,4)
 ! loop over all contributing reflections
@@ -292,13 +291,14 @@ type(reflisttype),pointer               :: rltmpa, rltmpb
         kkl = 0.25 * CalcLength(cell,float(kkk),'r')**2
 ! Debye-Waller exponential times Z^2
         DBWF = Znsq * exp(-cell%ATOM_pos(ip,5)*kkl)
-! here is where we should insert the proper weight factor, Z^2 exp[-M_{h-g}]
+! here is where we insert the proper weight factor, Z^2 exp[-M_{h-g}]
 ! and also the detector geometry...   For now, we do nothing with the detector
 ! geometry; the Rossouw et al 1994 paper lists a factor A that does not depend
 ! on anything in particular, so we assume it is 1. 
         do ikk=1,n
 ! get the argument of the complex exponential
-          arg = tpi*sum(kkk(1:3)*ctmp(ikk,1:3))
+!         arg = tpi*sum(kkk(1:3)*ctmp(ikk,1:3))
+          arg = tpi*sum(kkk(1:3)*cell%apos(ip,ikk,1:3))
           carg = dcmplx(dcos(arg),dsin(arg))
 ! multiply with the prefactor and add
           Sgh(ir,ic,ip) = Sgh(ir,ic,ip) + carg * dcmplx(DBWF,0.D0)

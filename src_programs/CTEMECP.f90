@@ -40,6 +40,7 @@
 !> @date 08/09/10 MDG 2.0 corrected weight factors and g-vector ordering problem
 !> @date 11/18/13 MDG 3.0 major rewrite with new libraries 
 !> @date 06/27/14 MDG 4.0 removal of all globals; separation of namelist handling from computation
+!> @date 06/30/14 MDG 4.1 added OpenMP
 !--------------------------------------------------------------------------
 program CTEMECP
 
@@ -85,16 +86,16 @@ end program CTEMECP
 !> the final intensity computation is somewhat different.  We could in 
 !> principle also include the Kossel pattern computation in this program.
 !> This program now also includes the Bethe potential approximation, to 
-!> hopefully speed things up a little bit...  For now, the Kossel pattern
-!> calculation part has been commented out; needs some more work, but no 
-!> time available at the moment (end of 2013)...
+!> hopefully speed things up a little bit...  
 !
-!> @param nmlfile namelist file name
+!> @param ecpnl name list structure
+!> @param progname program name
 !
 !> @date 11/18/13  MDG 1.0 major rewrite from older ECP program
 !> @date 11/22/13  MDG 1.1 output modified for IDL interface
 !> @date 03/04/14  MDG 1.2 added scattering matrix mode
 !> @date 06/27/14  MDG 2.0 removal of globals, split of namelist and computation; OpenMP
+!> @date 06/30/14  Mdg 2.1 debug; found some inconsistent array (de)allocations
 !--------------------------------------------------------------------------
 subroutine ECpattern(ecpnl, progname)
 
@@ -127,13 +128,13 @@ integer(kind=irg)               :: nt, skip, dgn, pgnum, io_int(6), maxHOLZ, ik,
                                    nn, npx, npy, isym, numset, it, ijmax, jp, istat, iequiv(2,12), nequiv, NUMTHREADS, & 
                                    nns, nnw, nref, tots, totw
 real(kind=dbl)                  :: ctmp(192,3),arg
-integer                         :: i,j,ir,nat(100), n,ipx,ipy,gzero,ic,ip,ikk     ! counters
+integer                         :: i,j,ir, n,ipx,ipy,gzero,ic,ip,ikk
 real(kind=sgl)                  :: pre, tpi,Znsq, kkl, DBWF, frac
-real,allocatable                :: thick(:), sr(:,:,:) ! thickness array, results
+real,allocatable                :: thick(:), sr(:,:,:) 
 complex(kind=dbl),allocatable   :: Lgh(:,:,:),Sgh(:,:),Sghtmp(:,:,:)
 complex(kind=dbl)               :: czero
 real(kind=sgl),allocatable      :: karray(:,:)
-integer(kind=irg),allocatable   :: kij(:,:)
+integer(kind=irg),allocatable   :: kij(:,:), nat(:)
 complex(kind=dbl),allocatable   :: DynMat(:,:)
 logical                         :: verbose
 
@@ -156,39 +157,43 @@ type(reflisttype),pointer       :: reflist, firstw,rltmp
 
   allocate(cell)
 
+! load the crystal structure and compute the Fourier coefficient lookup table
   verbose = .TRUE.
   call Initialize_Cell(cell,Dyn,rlp,ecpnl%xtalname, ecpnl%dmin, ecpnl%voltage,verbose)
 
 ! determine the point group number
- j=0
- do i=1,32
-  if (SGPG(i).le.cell % SYM_SGnum) j=i
- end do
+  j=0
+  do i=1,32
+   if (SGPG(i).le.cell % SYM_SGnum) j=i
+  end do
 
 ! use the new routine to get the whole pattern 2D symmetry group, since that
 ! is the one that determines the independent beam directions.
- dgn = GetPatternSymmetry(cell,ecpnl%k,j,.TRUE.)
- pgnum = j
- isym = WPPG(dgn) ! WPPG lists the whole pattern point group numbers vs. diffraction group numbers
+  dgn = GetPatternSymmetry(cell,ecpnl%k,j,.TRUE.)
+  pgnum = j
+  isym = WPPG(dgn) ! WPPG lists the whole pattern point group numbers vs. diffraction group numbers
 
 ! determine the shortest reciprocal lattice points for this zone
- call ShortestG(cell,ecpnl%k,ga,gb,isym)
- io_int(1:3)=ga(1:3)
- io_int(4:6)=gb(1:3)
- call WriteValue(' Reciprocal lattice vectors : ', io_int, 6,"('(',3I3,') and (',3I3,')',/)")
+  call ShortestG(cell,ecpnl%k,ga,gb,isym)
+  io_int(1:3)=ga(1:3)
+  io_int(4:6)=gb(1:3)
+  call WriteValue(' Reciprocal lattice vectors : ', io_int, 6,"('(',3I3,') and (',3I3,')',/)")
 
 ! diffraction geometry
- bragg = CalcDiffAngle(cell,ga(1),ga(2),ga(3))*0.5
- if (ecpnl%ktmax.ne.0.0) then 
-   thetac = (ecpnl%ktmax * 2.0 * bragg)*1000.0
-   io_real(1) = thetac
- else
-   ktmax = ecpnl%thetac / (2000.0 * bragg)
-   io_real(1) = ecpnl%thetac
- end if
- call WriteValue(' Pattern convergence angle [mrad] = ',io_real,1,"(F8.3)")
- io_real(1) = bragg*1000.0
- call WriteValue(' Bragg angle of g_a [mrad] = ',io_real,1,"(F6.3)")
+  bragg = CalcDiffAngle(cell,ga(1),ga(2),ga(3))*0.5
+  if (ecpnl%ktmax.ne.0.0) then 
+    thetac = (ecpnl%ktmax * 2.0 * bragg)*1000.0
+    ktmax = ecpnl%ktmax
+    io_real(1) = thetac
+  else
+    ktmax = ecpnl%thetac / (2000.0 * bragg)
+!write (*,*) 'ktmax value = ',ktmax
+    thetac = ecpnl%thetac
+    io_real(1) = ecpnl%thetac
+  end if
+  call WriteValue(' Pattern convergence angle [mrad] = ',io_real,1,"(F8.3)")
+  io_real(1) = bragg*1000.0
+  call WriteValue(' Bragg angle of g_a [mrad] = ',io_real,1,"(F6.3)")
 
 ! the number of pixels across the disk is equal to 2*npix + 1
   npx = ecpnl%npix
@@ -203,26 +208,29 @@ type(reflisttype),pointer       :: reflist, firstw,rltmp
 ! set parameters for wave vector computation
   klaue = (/ 0.0, 0.0 /)
   ijmax = float(npx)**2   ! truncation value for beam directions
+
   call CalckvectorsSymmetry(khead,cell,TDPG,dble(ecpnl%k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,klaue)
   io_int(1)=numk
   call WriteValue('Starting computation for # beam directions = ', io_int, 1, "(I8)")
 
 ! force dynamical matrix routine to read new Bethe parameters from file
   call Set_Bethe_Parameters(BetheParameters,.TRUE.)
-write(*,*) 'Bethe Parameters : ',BetheParameters%c1,BetheParameters%c2
+!write(*,*) 'BEthe : ',BetheParameters%c1, BetheParameters%c2, BetheParameters%c3
 
 ! set the thickness array
   nt = ecpnl%numthick
   allocate(thick(nt))
   thick = ecpnl%startthick + ecpnl%thickinc * (/ (i-1,i=1,nt) /)
-
-  nat = 0
   
 !----------------------------MAIN COMPUTATIONAL LOOP-----------------------
   czero = cmplx(0.D0,0.D0)
   pre = cmplx(0.D0,1.D0) * cPi
-  numset = cell % ATOM_ntype  ! number of special positions in the unit cell
   tpi = 2.D0*cPi
+  numset = cell % ATOM_ntype  ! number of special positions in the unit cell
+  allocate(nat(numset))
+  nat = 0
+  fnat = 1.0/float(sum(cell%numat(1:numset)))
+!write (*,*) 'asymmetric unit cell # ',numset,fnat
 
 ! in preparation for the threaded portion of the program, we need to 
 ! copy the wave vectors into an array rather than a linked list
@@ -253,10 +261,7 @@ write(*,*) 'Bethe Parameters : ',BetheParameters%c1,BetheParameters%c2
 
 ! use OpenMP to run on multiple cores ... 
 !$OMP PARALLEL default(shared) PRIVATE(DynMat,ik,TID,kk,kn,ipx,ipy,iequiv,nequiv,fnat,ip,jp,reflist,firstw,nns,nnw,nref) &
-!$OMP& PRIVATE(Sgh, Lgh, SGHtmp)
-! set the foil normal 
-! Dyn%FN = float(ecpnl%fn)
-! call NormVec(cell, Dyn%FN, 'd')
+!$OMP& PRIVATE(Sgh, Lgh, SGHtmp, FN)
 
   NUMTHREADS = OMP_GET_NUM_THREADS()
   TID = OMP_GET_THREAD_NUM()
@@ -293,10 +298,10 @@ write(*,*) 'Bethe Parameters : ',BetheParameters%c1,BetheParameters%c2
 
         allocate(Sghtmp(nns,nns,numset),Lgh(nns,nns,nt),Sgh(nns,nns))
         Sgh = czero
+        Sghtmp = czero
         Lgh = czero
         nat = 0
         call CalcSgh(cell,reflist,nns,numset,Sghtmp,nat)
-        fnat = 1.0/float(sum(nat(1:numset)))
 
 ! sum Sghtmp over the sites
         Sgh = sum(Sghtmp,3)
@@ -304,35 +309,42 @@ write(*,*) 'Bethe Parameters : ',BetheParameters%c1,BetheParameters%c2
 ! solve the dynamical eigenvalue equation
         kn = karray(4,ik)
         call CalcLghECP(DynMat,Lgh,nns,nt,thick,dble(kn),gzero)
-        deallocate(DynMat)
+        deallocate(DynMat,Sghtmp)
 
 ! and store the resulting values
         ipx = kij(1,ik)
         ipy = kij(2,ik)
-        if (isym.ne.1) call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
 
 !$OMP CRITICAL
         if (isym.ne.1) then 
+          call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
+          iequiv(1,1:nequiv) = iequiv(1,1:nequiv) + npx + 1
+          iequiv(2,1:nequiv) = iequiv(2,1:nequiv) + npy + 1
           do ip=1,nequiv
            do jp=1,nt
             sr(iequiv(1,ip),iequiv(2,ip),jp) = sr(iequiv(1,ip),iequiv(2,ip),jp) + &
-                  real(sum(Lgh(1:nns,1:nns,jp)*Sgh(1:nns,1:nns)))*fnat
+                  real(sum(Lgh(1:nns,1:nns,jp)*Sgh(1:nns,1:nns)))
            end do
           end do
         else
            do jp=1,nt
-            sr(ipx,ipy,jp) = real(sum(Lgh(1:nns,1:nns,jp)*Sgh(1:nns,1:nns)))*fnat
+            sr(ipx+npx+1,ipy+npy+1,jp) = real(sum(Lgh(1:nns,1:nns,jp)*Sgh(1:nns,1:nns)))
            end do
         end if
         totw = totw + nnw
         tots = tots + nns
 !$OMP END CRITICAL
 
-        deallocate(Lgh, Sgh, Sghtmp) 
+! if (TID.eq.0) write (*,*) ik,sr(ipx,ipy,1:3)
+
+! if (sr(ipx,ipy,1).gt.1000.0) write (*,*) TID, ik, sr(ipx,ipy,1), fnat, maxval(cdabs(Lgh)), maxval(cdabs(Sgh))
+
+        deallocate(Lgh, Sgh) 
           
         if (mod(ik,2500).eq.0) then
           io_int(1) = ik
           call WriteValue('  completed beam direction ',io_int, 1, "(I8)")
+! write(*,*) minval(sr),maxval(sr)
         end if
 
         call Delete_gvectorlist(reflist)
@@ -341,6 +353,7 @@ write(*,*) 'Bethe Parameters : ',BetheParameters%c1,BetheParameters%c2
 
 !$OMP END PARALLEL
 
+ sr = sr*fnat
 
 ! store additional information for the IDL interface  
   open(unit=dataunit,file=trim(ecpnl%outname),status='unknown',action='write',form='unformatted')

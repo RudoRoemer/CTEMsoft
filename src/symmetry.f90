@@ -566,16 +566,16 @@ recursive subroutine CalcFamily(cell,ind,num,space,itmp)
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
-integer(kind=irg),INTENT(OUT)		:: num				!< number of equivalent entries generated
-integer(kind=irg),INTENT(IN)		:: ind(3)			!< input triplet
-character(1),INTENT(IN)			:: space			!< 'd' or 'r'
-integer(kind=irg),INTENT(OUT)		:: itmp(48,3)			!< array used for family computations etc
+type(unitcell),pointer  :: cell
+integer(kind=irg),INTENT(OUT)           :: num                          !< number of equivalent entries generated
+integer(kind=irg),INTENT(IN)            :: ind(3)                       !< input triplet
+character(1),INTENT(IN)                 :: space                        !< 'd' or 'r'
+integer(kind=irg),INTENT(OUT)           :: itmp(48,3)                   !< array used for family computations etc
 
-integer(kind=irg)			:: m,i,j			!< loop counters and such
-real(kind=sgl)				:: h,k,l,ih,ik,il,idiff		!< auxiliary variables
-logical					:: newpoint			!< is this a new point ?
-real,parameter				:: eps=0.0001_sgl		!< comparison threshold
+integer(kind=irg)                       :: m,i,j                        !< loop counters and such
+real(kind=sgl)                          :: h,k,l,ih,ik,il,idiff         !< auxiliary variables
+logical                                 :: newpoint                     !< is this a new point ?
+real,parameter                          :: eps=0.0001_sgl               !< comparison threshold
 
 ! first take the identity
  itmp = 0
@@ -641,15 +641,15 @@ recursive subroutine CalcOrbit(cell,m,n,ctmp)
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
-real(kind=dbl),INTENT(OUT)		:: ctmp(192,3)		!< output array with orbit coordinates
-integer(kind=irg),INTENT(OUT)		:: n			!< number of equivalent entries 
-integer(kind=irg),INTENT(IN)		:: m			!< index of input atom in asymmetric unit array cell%ATOM_pos
+type(unitcell),pointer                  :: cell
+real(kind=dbl),INTENT(OUT)              :: ctmp(192,3)          !< output array with orbit coordinates
+integer(kind=irg),INTENT(OUT)           :: n                    !< number of equivalent entries 
+integer(kind=irg),INTENT(IN)            :: m                    !< index of input atom in asymmetric unit array cell%ATOM_pos
 
-real(kind=dbl)				:: r(3),s(3),diff	!< auxiliary variables
-real(kind=dbl), parameter 		:: eps = 1.0D-4		!< comparison threshold
-integer(kind=irg)			:: i,j,k,mm		!< auxiliary variables
-logical					:: new			!< is this a new point ?
+real(kind=dbl)                          :: r(3),s(3),diff       !< auxiliary variables
+real(kind=dbl), parameter               :: eps = 1.0D-4         !< comparison threshold
+integer(kind=irg)                       :: i,j,k,mm             !< auxiliary variables
+logical                                 :: new                  !< is this a new point ?
 
 ! get the atom coordinates
 ! and store them in the temporary array
