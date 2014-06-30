@@ -67,7 +67,10 @@ absoft_run_env.sh
 
 # figures for manuals
 # /manuals/
-/manuals/figs/
+#/manuals/figs/
+*.tiff
+*.jpg
+*.ai
 
 # latex-generated files
 *.dvi
