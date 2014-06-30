@@ -65,8 +65,23 @@ absoft_run_env.sh
 # testbed folder
 /lib/testbed/
 
-# manuals
-/manuals/
+# figures for manuals
+# /manuals/
+/manuals/figs/
+
+# latex-generated files
+*.dvi
+*.bbl
+*.sty
+*.aux
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.run.xml
+*.synctex.gz
+*.toc
+*.pdf
 
 # oldsrc
 /oldsrc/

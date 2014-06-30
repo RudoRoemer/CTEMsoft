@@ -1,0 +1,9 @@
+       8
+ECProot::/some/folder/ECP ; last folder from which a file was read
+ecpformat::0 ; last image file format 
+ecpgrid::0 ; grid toggle
+patrot::0.0 ; pattern rotation angle
+xlocation:: 401.0 ; location of main window
+ylocation:: 168.0
+ECPxlocation::1114.0 ; location of ECP pattern window
+ECPylocation::  95.0

@@ -1,0 +1,16 @@
+At the time of writing of this manual, these programs have been successfully compiled on the Mac OS X platform using the commercial \textit{Absoft} compiler,
+as well as the public domain gfortran compiler.  There is no basic reason why this code should not work on Windows and Linux systems, and efforts are underway
+to make sure that the code will run on all platforms. It would be interesting to see some of this code
+implemented in a super computer setting, since many of the routines should be quite parallellizable.  Where possible, some of the computations
+are carried out using the OpenMP directives, so that multiple cores can be used.  This aspect of the code is still under further development,
+and we anticipate that GPUs will become useful as well, using the OpenCL approach.
+
+The \ctp\ package is entirely written in f90 and does not use any of the newer commands available in the 95 and 2013 versions.
+The source code is extensively commented, using regular comment lines, but also using DOxygen documentation generation commands.  Hence
+there exists an extensive on-line documentation of all variables, variable types, modules, subroutines, functions, etc. for the latest version 
+of the code.  For selected programs, more extensive manual pages are available.  If interested, please contact the author for further information.
+
+The visualization part of the code consists of a series of  IDL routines that are available as source code or in the form of a Virtual Machine application. 
+If you have an IDL license, then you can compile and run the IDL source code; alternatively, if you do not have a license,
+then you can use one of the VM apps to perform the same task.  Note that in the VM environment, you will not be able to alter/compile the 
+source code.

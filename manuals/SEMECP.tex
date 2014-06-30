@@ -1,0 +1,453 @@
+
+\documentclass[DIV=calc, paper=letter, fontsize=11pt]{scrartcl}	 % A4 paper and 11pt font size
+
+\usepackage[body={6.5in,9.0in},
+  top=1.0in, left=1.0in]{geometry}
+  
+\usepackage[english]{babel} % English language/hyphenation
+\usepackage[protrusion=true,expansion=true]{microtype} % Better typography
+\usepackage{amsmath,amsfonts,amsthm} % Math packages
+\usepackage[svgnames]{xcolor} % Enabling colors by their 'svgnames'
+\usepackage[hang, small,labelfont=bf,up,textfont=it,up]{caption} % Custom captions under/above floats in tables or figures
+\usepackage{booktabs} % Horizontal rules in tables
+\usepackage{fix-cm}	 % Custom font sizes - used for the initial letter in the document
+\usepackage{epsfig}
+\usepackage{sectsty} % Enables custom section titles
+\allsectionsfont{\usefont{OT1}{phv}{b}{n}} % Change the font of all section commands
+
+\usepackage{fancyhdr} % Needed to define custom headers/footers
+\pagestyle{fancy} % Enables the custom headers/footers
+\usepackage{lastpage} % Used to determine the number of pages in the document (for "Page X of Total")
+\usepackage{color}
+
+\usepackage{fancyvrb}% used to include files verbatim
+%\usepackage{chemsym}
+
+\usepackage{hyperref}
+\usepackage[squaren]{mySIunits}
+
+\usepackage[backend=bibtex,style=authoryear,maxnames=15]{biblatex}
+\renewbibmacro{in:}{}
+
+% Count total number of entries in each refsection
+\AtDataInput{%
+  \csnumgdef{entrycount:\therefsection}{%
+    \csuse{entrycount:\therefsection}+1}}
+
+% Print the labelnumber as the total number of entries in the
+% current refsection, minus the actual labelnumber, plus one
+\DeclareFieldFormat{labelnumber}{\mkbibdesc{#1}}    
+\newrobustcmd*{\mkbibdesc}[1]{%
+  \number\numexpr\csuse{entrycount:\therefsection}+1-#1\relax}
+
+
+\addbibresource[label=papers]{citations.bib}
+%\addbibresource[label=books]{mypubs.bib}
+%\addbibresource[label=edited]{mypubs.bib}
+%\addbibresource[label=chapters]{mypubs.bib}
+
+
+% Headers - all currently empty
+\lhead{}
+\chead{}
+\rhead{}
+
+% Footers
+\lfoot{\textsf{CTEMECP} manual, v2.0, \today}
+\cfoot{}
+\rfoot{\footnotesize Page \thepage\ of \pageref{LastPage}} % "Page 1 of 2"
+
+\renewcommand{\headrulewidth}{0.0pt} % No header rule
+\renewcommand{\footrulewidth}{0.4pt} % Thin footer rule
+
+\usepackage{lettrine} % Package to accentuate the first letter of the text
+\newcommand{\initial}[1]{ % Defines the command and style for the first letter
+\lettrine[lines=3,lhang=0.3,nindent=0em]{
+\color{DarkGoldenrod}
+{\textsf{#1}}}{}}
+
+\usepackage{titling} % Allows custom title configuration
+
+\newcommand{\HorRule}{\color{DarkGoldenrod} \rule{\linewidth}{1pt}} % Defines the gold horizontal rule around the title
+
+\pretitle{\vspace{-1.5in} \begin{center} \HorRule \fontsize{25}{25} \usefont{OT1}{phv}{b}{n} \color{DarkRed} \selectfont} % Horizontal rule before the title
+
+\title{Electron Channeling\\ Pattern Simulations} % Your article title
+
+\posttitle{\par\end{center}\vskip 0.5em} % Whitespace under the title
+
+\preauthor{\begin{center}\large \lineskip 0.5em \usefont{OT1}{phv}{b}{sl} \color{DarkRed}} % Author font configuration
+
+\author{\vspace*{-0.7in}} % Your name
+
+\postauthor{\footnotesize \usefont{OT1}{phv}{m}{sl} \color{Black} % Configuration for the institution name
+
+\par\end{center}\HorRule} % Horizontal rule after the title
+\date{Program Manual, v2.0, \today}
+
+\newcommand{\ctp}{\textsf{CTEMsoft-2014}}
+%
+\newcommand{\upg}[1]{\mathrm{i}U_{\mathbf{#1}}^{\prime}}
+\newcommand{\combo}[1]{U_{\mathbf{#1}}+\upg{#1}}
+\newcommand{\upgcombo}[2]{2k_{0}s_{\mathbf{#1}}+\upg{#2}}
+\newcommand{\ugh}[2]{U_{\mathbf{#1}-\mathbf{#2}}}
+\newcommand{\ughp}[2]{U_{\mathbf{#1}'-\mathbf{#2}}}
+\newcommand{\ughpp}[2]{U_{\mathbf{#1}-\mathbf{#2}'}}
+\newcommand{\kkg}[1]{k_{0}^{2}-(\mathbf{k}+\mathbf{#1})^{2}}
+\newcommand{\Cg}[1]{C_{\mathbf{#1}}}
+\newcommand{\Cgj}[2]{C_{\mathbf{#1}}^{(#2)}}
+\newcommand{\Cgjp}[2]{C_{\mathbf{#1}'}^{(#2)}}
+\newcommand{\Cgja}[2]{C_{\mathbf{#1}}^{(#2)\ast}}
+\newcommand{\button}[1]{\colorbox{green}{\textsf{#1}} button}
+
+
+\begin{document}
+\maketitle
+
+\begin{figure*}[h]
+\leavevmode\centering
+\epsffile{figs/SEMlogo}
+\end{figure*}
+
+\renewcommand{\contentsname}{Table of Contents}
+{\small\tableofcontents}
+
+\newpage
+\section{Introduction}
+This manual describes a set of two programs, 
+one written in Fortran-90,\footnote{f90 is a much richer language than the original fortran-f77, and is
+used for all programs in the \ctp\ package.} 
+the other in IDL,\footnote{The \textit{Interactive Data Language} is an interpreted scripting language with extensive graphics capabilities.} 
+that can be used for the simulation of zone axis electron channeling patterns (ECPs).  Such ECPs can be
+observed in a scanning electron microscope (SEM) when the incident beam is rocked about a single point in the sample surface and 
+the back-scatter electron (BSE) signal is displayed as a function of the beam rocking angle.  The main f90 program
+is called \textsf{CTEMECP} (note that all programs in the \ctp\ package start with the letters ``CTEM'').
+The output generated by this program can then be visualized by the IDL routine \textsf{ECPDisplay.pro}.  
+
+On the following pages we will try to accomplish four tasks:
+\begin{enumerate}
+	\item Explain briefly the underlying image formation theory and the numerical approach followed by the f90 program (section~\ref{sec:theory});
+	\item Document the input files for the f90 program (section~\ref{sec:f90ecp});
+	\item Document the IDL interface (section~\ref{sec:idl});
+	\item Explain the use of these programs by means of a few basic examples (section~\ref{sec:examples}).
+\end{enumerate}
+
+\input{common.tex}
+
+\newpage
+\section{Electron channeling patterns: the underlying theory\label{sec:theory}}
+The computation of an SEM-generated ECP can be carried out by means of a Bloch wave approach. The probability
+of a beam electron being back-scattered by an atom in the bulk of the sample depends on the probability that the electron
+comes sufficiently close to that atom.  Since a back-scatter event can take place across a range of depths in the sample, one 
+integrates over the thickness, within the Bloch wave formalism, the probability of scattering from each subset $\mathcal{S}$ of atomic sites within the 
+unit cell for a given incident beam direction $\mathbf{k}_0$; this results in \parencite{winkelmann2003a,winkelmann2008a}:
+\begin{equation}
+	\mathcal{P}(\mathbf{k}_0) = \sum_{\mathbf{g}} 
+    \sum_{\mathbf{h}} S_{\mathbf{g}\mathbf{h}}L_{\mathbf{g}\mathbf{h}},
+    \label{eq:prob}
+\end{equation}
+with
+\begin{subequations}
+\begin{align}
+    S_{\mathbf{g}\mathbf{h}} &\equiv \sum_{n}\sum_{i\in\mathcal{S}_n} Z^2_n\,e^{-M^{(n)}_{\mathbf{h}-\mathbf{g}}}\,e^{2\pi\mathrm{i} 
+    (\mathbf{h}-\mathbf{g})\cdot\mathbf{r}_{i}};\label{eq:defa}\\
+    L_{\mathbf{g}\mathbf{h}} &\equiv \sum_{j}\sum_{k} 
+    C^{(j)\ast}_{\mathbf{g}}\alpha^{(j)\ast}\mathcal{I}_{jk}\alpha^{(k)}
+    C^{(k)}_{\mathbf{h}}.\label{eq:defb}
+\end{align}
+\end{subequations}
+The first summation in (\ref{eq:defa}) runs over all the positions in the asymmetric unit of the unit cell; the second
+sum runs over all equivalent positions in each subset $\mathcal{S}_n$.
+The parameters $\alpha^{(j)}$ in (\ref{eq:defb}) are the Bloch wave excitation amplitudes (see \parencite{humphreys1979a,degraef2003b} for 
+details on the Bloch wave approach), $C_{\mathbf{g}}^{(j)}$ are the 
+Bloch wave coefficients, and the matrix $\mathcal{I}_{jk}$ is defined by the integral
+\begin{equation}
+	\mathcal{I}_{jk}\equiv \frac{1}{z_{0}}\int\limits_{0}^{z_{0}} 
+    e^{-2\pi(\alpha_{jk}+\mathrm{i}\beta_{jk})z}\,\mathrm{d}z,
+\end{equation}
+where $z_0$ is a pre-determined thickness.  The ECP will change a lot for small values of $z_0$ but tends to converge towards 
+a stable pattern for $z_0$ larger than a few tens of nanometers.  The program described in the next section can compute the ECP
+as a function of $z_0$.  Carrying out the integration we find:
+\begin{subequations}
+\begin{align}
+    \mathcal{I}_{jj} &= \frac{1-e^{-4\pi q^{(j)}z_{0}}}{4\pi 
+    q^{(j)}z_{0}};\label{eq:a2a}\\
+    \mathcal{I}_{jk} &= 
+    \frac{1-e^{-2\pi(\alpha_{jk}+\mathrm{i}\beta_{jk})z_{0}}} 
+    {2\pi(\alpha_{jk}+\mathrm{i}\beta_{jk})z_{0}}\qquad (j\ne k);
+    \label{eq:a2b}
+\end{align}
+\end{subequations}
+where
+\begin{subequations}
+\begin{align}
+    \alpha_{jk} &= q^{(j)}+q^{(k)};\\
+    \beta_{jk} &= \gamma^{(j)}-\gamma^{(k)}.
+\end{align}
+\end{subequations}
+The complex numbers $\lambda^{(j)}\equiv\gamma^{(j)}+\mathrm{i}q^{(j)}$ are the eigenvalues of the dynamical scattering matrix in the 
+presence of absorption.  The absorptive form factors of Weickenmeier and Kohl \parencite{weickenmeier1991a} can be used to estimate 
+both the normal and anomalous absorption lengths (i.e., the imaginary part of the electrostatic lattice potential).   The backscatter probability goes as the square
+of the atomic number, which accounts for the factor $Z_n^2$ in eq.~(\ref{eq:defa}). The thermal movements of 
+atoms are described by $M^{(n)}_{\mathbf{g}}\equiv B_{n}\vert\mathbf{g}\vert^2/4$, with $B_n$ the standard (room temperature)
+Debye-Waller factor for element $n$.  The thickness $z_0$ is usually taken as the Bethe parameter \parencite{reimer1985a}, which is typically a few tens of nanometers.  Alternatively,
+one can take the limit for $z_0\rightarrow\infty$, in which case the matrix $\mathcal{I}_{jk}$ becomes diagonal.
+
+The ECP problem can also be solved by means of the scattering matrix approach, which is described in more
+detail in the manual for the ECCI program.  In the present program, the user can select the computational 
+approach by means of a switch in the input file (see next section).
+
+In a more complete simulation, one would use a Monte Carlo approach to compute the actual number of electrons that leave
+the sample as BSEs after undergoing no other inelastic events inside the sample, since those are the electrons that make 
+up the ECP signal.  This requires some additional modeling that is currently (end of 2013) in the works.
+
+In terms of the \textsf{CTEMECP} program itself, the major program portions are:
+\begin{itemize}
+	\item read crystal structure and general parameter files;
+	\item determine list of contributing reflections and incident wave vector range;
+	\item for each incident beam direction, compute $\mathcal{P}(\mathbf{k}_0)$ for 
+	different thickness values.
+	\item store all computed patterns in a file that can be read by the IDL \textsf{ECPDisplay} program.
+\end{itemize}
+
+\section{The \protect\textsf{CTEMECP.f90} program\label{sec:f90ecp}}
+
+\subsection{Program overview\label{sec:f90overviewecp}}
+The \textsf{CTEMECP} program is a relatively basic program and is in its structure rather similar to the \textsf{CTEMlacbed} program.
+The only major difference lies in the computation of the thickness-integrated intensity rather than individual transmitted and 
+diffracted beam intensities.  The program input uses the namelist file approach described in the next section, and the output is a 
+binary file, for now with a special format.\footnote{At some point in the future, all output files from the \ctp\ programs will use
+the public domain HDF5 file format.}  
+
+The program reads the input and crystal structure files, determines which reflections will contribute to the ECP for the specified zone
+axis and angular range, and then performs
+a Bloch wave computation for each incident beam direction.  The resulting ECP intensities are stored as a function of the sample depth.
+The output file can be visualized using the \textsf{ECPDisplay} IDL interface.
+
+\subsection{Namelist input files\label{sec:f90inputecp}}
+The main (and only) input file for this program, \textsf{CTEMECP.nml}, is formatted as follows:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
+\VerbatimInput{../templatefolder/CTEMECP.template}
+Most of the parameters are straightforward.  The crystal structure file can be created with 
+the \textsf{CTEMmkxtal} program.  The foil normal should be taken equal to the incident beam direction; having non-parallel 
+directions has not been thoroughly tested.  The program allows for a distorted unit cell; set \textsf{distort} to \textsf{.TRUE.}
+and list all six new lattice parameters in the variables \textsf{abcdist} and \textsf{albegadist}, and then the computation will
+be carried out for the distorted cell.
+
+The \textsf{compmode} parameter has a default value of \textsf{`Blochwv'}, but can be set to \textsf{`ScatMat'} instead, to use the 
+scattering matrix approach rather than the Bloch wave approach.  Preliminary tests show that the scattering matrix and Bloch wave approaches 
+have approximately equal execution times.  When the scattering matrix approach is selected, one can also define the \textsf{zintstep}
+parameter, which defines the integration step size along the beam direction; the default value is $1.0$ \nano\meter, but the user 
+may want to select a smaller value (e.g. $0.5$) for more complex unit cells.  Note that the ratio of the output thickness value(s)
+to the integration step size must be an integer.  Smaller values of \textsf{zintstep} will lead to longer execution times compared to the
+Bloch wave approach, which is not affected by the integration step size.
+
+The beam convergence angle is determined by stating the maximum tangential wave vector component in units of the length of $\mathbf{g}_a$,
+which is the reciprocal lattice vector corresponding to the horizontal direction in the ECP.  At the start of the program, the unit
+cell information will be shown, followed by wave length and diffraction symmetry information; following this, there will be a line of 
+the form:
+\begin{verbatim}
+	Reciprocal lattice vectors : (  0 -1  1) and (  1  0 -1)
+\end{verbatim}
+The first vector listed is the vector $\mathbf{g}_a$. Note that this vector need not correspond to an allowed reflection; it is
+the shortest $\mathbf{g}$ vector in the zero order Laue zone, without taking into account any systematic absences due to lattice 
+centering or lattice symmetry.  The largest tangential component \textsf{ktmax} is defined in multiples of $\vert\mathbf{g}_a\vert$;
+so, setting \textsf{ktmax} equal to $5$ means that $\vert\mathbf{k}_{t,\text{max}}\vert=5\vert\mathbf{g}_a\vert$.  Since $\mathbf{k}_t=-\mathbf{g}/2$
+in order to have $\mathbf{g}$ in Bragg orientation, a value of of \textsf{ktmax}$=5$ means that $10\mathbf{g}_a$ will be in Bragg orientation
+for the largest beam tilt.
+
+The range of reciprocal space that will be considered by the program is determined by the parameter \textsf{dmin}.  The default value is
+equal to $0.025$ \nano\meter, which has proven to be a reasonable compromise between not including all the necessary HOLZ reflections (when
+\textsf{dmin} is taken too large) and a rapidly increasing computation time (if \textsf{dmin} is taken too small).  Note that this value is
+a little larger than what is typically used for TEM simulations, due to the much smaller Ewald sphere radius for typical SEM voltages.  This means
+that for SEM simulations, we do not need to go as far out from the origin as we do for TEM simulations.
+
+The size of the ECP is determined by the value of \textsf{npix}; the beam tilt range will be divided into \textsf{npix} equal intervals, including 
+the zone axis orientation, so that the output ECP has dimensions $(2$\textsf{npix}$+1)^2$.  For the current program version, the ECP will be 
+limited by a circular aperture; in a future version, this limitation will become optional.
+
+Finally, the output file will contain ECPs for a range of thickness values; these are the integration ranges $z_0$
+introduced in section~\ref{sec:theory}.  The thickness values are defined by setting the starting thickness \textsf{startthick} and
+the increment value \textsf{thickinc} (in \nano\meter), and the number of increments \textsf{numthick}.  Usually, the ECP converges 
+to a stable pattern for $z_0$ a few tens of nanometers, but that depends on the crystal structure and atomic numbers.
+
+
+\subsection{Bethe parameters namelist file\label{sec:f90BetheParameters}}
+The Bethe potential approximation used in this program can be adjusted by the
+user via the \textsf{BetheParameters.nml} namelist file, which must be present 
+in the folder in which the program is executed; if this file is not present, then the
+program will assume default values for all three parameters.  The values shown below
+are the current program defaults.
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
+\VerbatimInput{../templatefolder/BetheParametersSEM.template}
+The last parameter sets the excitation error cutoff level for double diffraction reflections.  The issue with
+such reflections is that they have a zero structure factor (and hence $U_{\mathbf{g}} = 0$), so that 
+the standard Bethe potential threshold approach can not be used at all.  The current implementation
+allows the user to set a threshold for the excitation error (in nm$^{-1}$) above which the double diffraction reflection
+will not contribute at all.  Recall that double diffraction reflections can only occur in so-called non-symmorphic 
+space groups, i.e., in space groups that have at least one screw axis or glide plane symbol in their space 
+group symbol; in other words, in the space group \textbf{Fm$\bar{\mathbf{3}}$m}, there are no glides or screws in
+the symbol, so double diffraction reflections are not possible for \textit{any} zone axis orientation.  For the space group \textbf{P6$_{\mathbf{3}}$/mmm},
+on the other hand, there is a $6_3$ screw axis in the space group symbol, therefore it is possible for certain
+zone axes to display double diffraction reflections.  The CBED programs automatically take these reflections into account, but the user must
+set the excitation error threshold value, or accept the program default.
+
+It is also important to note that the value of the \textsf{weakcutoff} parameter should always be less that
+that of the \textsf{cutoff} parameter if one wants to make use of the Bethe approximation.  Testing has shown
+that a \textsf{weakcutoff} value slightly larger than half the \textsf{cutoff} value produces reasonable 
+results.  To avoid using Bethe potentials, the two parameters should be put equal to each other, but then the 
+program will take potentially much longer to run.
+
+Finally, it is likely that the Bethe approximation criteria will be modified in the future to provide a more
+efficient algorithm.  In addition, second order perturbation corrections will be included, which should allow
+for an even smaller dynamical matrix in most cases.
+
+
+\section{The \protect\textsf{ECPDisplay.pro} program\label{sec:idl}}
+
+\subsection{Program overview\label{sec:idloverview}}
+The data file generated by the \textsf{CTEMECP} program consists of geometrical information and arrays of ECPs 
+as a function of thickness.  This file can be visualized using the IDL program
+\textsf{ECPDisplay.pro}, described in this section.
+
+The \textsf{ECPDisplay.pro} routine requires an IDL program license or can be executed using the Virtual Machine, without the need for a license. 
+If you do have a license, then make sure that the folder containing the routines is part of your IDL pathname,
+and that IDL is properly installed for the UNIX shell that you will be using (csh, bsh, etc...).
+To execute the program, first start an IDL session in a terminal window (using the /Appplications/Utilities/Terminal program), 
+start IDL, compile the \textsf{ECPDdisplay.pro} routine by typing:
+\begin{verbatim}
+	IDL> .r ECPDisplay <return>
+\end{verbatim}
+at the IDL prompt and hitting return, followed by typing 
+\begin{verbatim}
+	IDL> ECPDisplay <return>
+\end{verbatim}
+to start the display program.  The main program widget window will appear as well as a file selector window.  
+Details of all the windows are described in the following subsections.
+
+In addition to requiring an IDL license, the program expects the X-windows environment to be installed.  On the Mac, this corresponds
+to the \textsf{XQuartz} program which can be downloaded from the open source site \textsf{http://xquartz.macosforge.org/}.  This program
+must be installed in the system /Applications/Utilities folder and requires OS X 10.6 or later.
+
+Useful thing to know: if the \textsf{ECPDisplay.pro}  program hangs for some reason, you can reset your IDL session by typing
+\begin{verbatim}
+	IDL> .reset <return>
+\end{verbatim}
+This will destroy all program widgets and reset IDL to its original state.  If that does not work, then you may have to ``force quit'' the Terminal program
+using the standard Esc-Option-Command key stroke.
+
+There is also a Virtual Machine version of this program, which can be executed without an IDL license.
+
+\subsection{Main window\label{sec:idlmain}}
+This display program is really very simple, and only allos for the display of ECP patterns, and 
+the superposition of a grid on the pattern.
+The main window contains no user adjustable parameters, and only displays a few parameters from the computation.
+The main display widget when the program is started is shown in Fig.~\ref{fig:widget1}.  
+
+\begin{figure}[h]
+\leavevmode\centering
+\epsffile{figs/ECPwidget1}
+\caption{\label{fig:widget1}Main \textsf{ECPDisplay.pro} program widget.}
+\end{figure}
+
+The only user options are listed at the bottom of the widget: the \button{ECP File} and the \button{Quit}, the latter's function being 
+rather clear.  When the \button{ECP File} is selected, a file selection interface appears, and the user can select an ECP data file. 
+Several parameters will be read from the file, and their values displayed in the main widget.  Note that both the main widget and 
+the pattern display widget can be repositioned anywhere on the screen, and that the window locations will be stored in the preferences
+file described in the next section.  
+
+The pattern display widget is shown in Fig.~\ref{fig:widget2}.  The user selections are as follows:
+\begin{itemize}
+	\item \textbf{Integration Depth}: the \textsf{CTEMECP.f90} program generated a data file with ECPs for a number of different
+	integration depths $z_0$; the user can select any of these values and the corresponding pattern will appear in the graphics area.
+	Note that the ECP converges to a stable pattern after some integration depth.
+	\item \textbf{Coordinate Grid}: this toggle will display a square coordinate grid on top of the ECP.  The spacing between the 
+	grid lines is determined by the Bragg angle of the primary reflection $\mathbf{g}_a$ (see section~\ref{sec:f90inputecp}).  The grid
+	can be used to determine an incident beam direction for the \textsf{CTEMECCI.f90} program, which is described in a separate manual.
+	Note that the number of vertical or horizontal lines between the center line and one of the pattern edges is equal to the 
+	integer part of the parameter \textsf{ktmax} that is used in the main program's namelist file.
+	\item \textbf{Blur radius}: radius of a Gaussian blurring filter that can be applied to the ECP; a value of $0.0$ implies no
+	filter.  Useful radius range is $[0.0,10.0]$.  This filter can be used to blur the patterns so that they look a little more 
+	like the experimental ones.
+	\item \textbf{File Format}: check boxes to determine the file format to be used when the \button{Save}\ at the bottom of the widget
+	is selected.  Note that the default location for storage of the image files is the same folder in which the data file resides. 
+	\item \textbf{Selected Position}: when the user clicks anywhere on the ECP, these text fields will display the coordinates of the point 
+	that was selected.  The coordinates are measured with respect to the square coordinate grid described above.  This provides an easy
+	way to determine which Laue center coordinates should be used for the main input file of the \textsf{CTEMECCI} program, when this
+	program is used in single image mode.
+\end{itemize}
+
+\begin{figure}[h]
+\leavevmode\centering
+\epsfxsize=2.75in\epsffile{figs/ECPwidget2}
+\caption{\label{fig:widget2}ECP pattern display widget.}
+\end{figure}
+
+\subsection{Preferences file\label{sec:idlpref}}
+Upon the first execution of the \textsf{ECPDisplay.pro} routine, a preferences file will be created in the user's home folder.  
+The file is called \textsf{.ECPgui.prefs}; the starting period
+means that the file will not show up in a Finder window or on the UNIX command line when a simple \textsf{ls} command is issued.  This is a 
+regular editable text file consisting of name::value pairs, although there is no real
+need for the user to ever edit this file.  The first line shows the number of entries in the file, and then each entry is listed on a 
+separate line.  A commented version of the preferences file is as follows:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize,numbers=left}
+\VerbatimInput{ECPgui-commented.prefs}
+Note that the comments are not part of the actual preferences file.  All lines must be present in the file or the program will exit with an error message; the order 
+of the lines is not important, but the file will always be written in the same order.
+The values shown above are not default values, but represent a random snapshot of the program status after it has been used for a while.
+
+When the program starts, it will first internally initialize all variables to default values, and then read the preferences
+file, if it exists.  Then the widgets will be created using the preference values.  When the program is ended normally (by
+pressing the \button{QUIT}), all current values, including the widget locations, are written to the preferences
+file.
+
+\section{A worked example\label{sec:examples}}
+In this final section, we show a simple worked example to illustrate how to use the combination of f90 and IDL programs 
+to obtain simulated ECPs.  
+
+We'll use the GaP Zinc-Blende structure for this example.  This structure has space group $\mathbf{F\bar{4}3m}$ with lattice parameter
+$a=0.54505$ \nano\meter; Ga is located in the origin $(0,0,0)$, and P at $(1/4,1/4,1/4)$; both atoms have full occupancy $1.0$
+and Debye-Waller factor can be set to the default value of $0.004$ \nano\meter$^{-2}$.  This value produces decent results, but 
+if more accurate Debye-Waller factors for Ga and P are known, then those should be used instead.  The crystallographic parameters
+can be entered into a data file using the \textsf{CTEMmkxtal} program; it would make sense to name this file \textsf{GaP.xtal}.
+
+The input parameters for the ECP computation are shown here:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize,numbers=left}
+\VerbatimInput{ECPGaP100.nml}
+If multiple different runs are going to be carried out, then it would make sense to store this namelist in a 
+file with an appropriate name, say \textsf{ECPGa100.nml}.  Note that most of the parameters have their default values.  The
+zone axis \textsf{k} and the foil normal \textsf{fn} should be taken to be equal for the current program version.
+Remember that you can obtain a template namelist file by executing the \textsf{CTEMECP} program with the $-t$ option; 
+this will produce a \textsf{CTEMECP.template} file in the current folder, which can then be edited to set the correct
+parameters. Finally, before we run the program, we must verify that the Bethe potential parameters have been set to reasonable values:
+\textsf{weakcutoff}$= 60$, \textsf{cutoff}$= 120$, \textsf{sgcutoff}$=0.05$ nm$^{-1}$.
+
+Next, we can execute the program by entering
+\begin{verbatim}
+	../exe/CTEMECP ECPGa100.nml
+\end{verbatim}
+where we assume that the program is being run from a folder at the same level as the exe folder.  Several pieces of
+information will be printed on the screen, and then the program will update its progress every $5\%$ of the total number
+of incident beam directions to be considered; this number is determined by the \textsf{npix} parameter, and for 
+\textsf{npix}$=256$, we have a total of $205,861$ incident beam directions.
+On an older generation Mac Pro ($2\times 3.06$ GHz $6$-core intel Xeon) the main loop of the program took about $148$ minutes
+to complete, or about $23$ beam directions per second.  Reducing the Bethe cutoff parameters will decrease the computation time,
+at the expense of accuracy of the resulting patterns.
+
+Once the data file has been created, then it is a simple matter to use the IDL Virtual Machine application to 
+visualize the result.   The IDL app is located in the VMapps folder of the distribution; simply double clicking the \textsf{ECPDisplay}
+application will start up the Virtual Machine; click on the \textsf{Click to Continue} option in the IDL start up screen to 
+initialize the app; then follow the guidelines from section~\ref{sec:idl}.
+
+\begin{refsection}[papers]
+\renewbibmacro{in:}{}
+\nocite{degraef2003b,humphreys1979a,winkelmann2003a,winkelmann2008a,weickenmeier1991a,reimer1985a}%
+  \printbibliography[title={References}]
+\end{refsection}
+
+
+
+\end{document}
+
+
+

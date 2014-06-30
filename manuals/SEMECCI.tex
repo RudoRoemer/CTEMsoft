@@ -1,0 +1,600 @@
+
+\documentclass[DIV=calc, paper=letter, fontsize=11pt]{scrartcl}	 % A4 paper and 11pt font size
+
+\usepackage[body={6.5in,9.0in},
+  top=1.0in, left=1.0in]{geometry}
+  
+\usepackage[english]{babel} % English language/hyphenation
+\usepackage[protrusion=true,expansion=true]{microtype} % Better typography
+\usepackage{amsmath,amsfonts,amsthm} % Math packages
+\usepackage[svgnames]{xcolor} % Enabling colors by their 'svgnames'
+\usepackage[hang, small,labelfont=bf,up,textfont=it,up]{caption} % Custom captions under/above floats in tables or figures
+\usepackage{booktabs} % Horizontal rules in tables
+\usepackage{fix-cm}	 % Custom font sizes - used for the initial letter in the document
+\usepackage{epsfig}
+\usepackage{sectsty} % Enables custom section titles
+\allsectionsfont{\usefont{OT1}{phv}{b}{n}} % Change the font of all section commands
+
+\usepackage{fancyhdr} % Needed to define custom headers/footers
+\pagestyle{fancy} % Enables the custom headers/footers
+\usepackage{lastpage} % Used to determine the number of pages in the document (for "Page X of Total")
+\usepackage{color}
+
+\usepackage{fancyvrb}% used to include files verbatim
+%\usepackage{chemsym}
+
+\usepackage{hyperref}
+\usepackage[squaren]{mySIunits}
+
+\usepackage[backend=bibtex,style=authoryear,maxnames=15]{biblatex}
+\renewbibmacro{in:}{}
+
+% Count total number of entries in each refsection
+\AtDataInput{%
+  \csnumgdef{entrycount:\therefsection}{%
+    \csuse{entrycount:\therefsection}+1}}
+
+% Print the labelnumber as the total number of entries in the
+% current refsection, minus the actual labelnumber, plus one
+\DeclareFieldFormat{labelnumber}{\mkbibdesc{#1}}    
+\newrobustcmd*{\mkbibdesc}[1]{%
+  \number\numexpr\csuse{entrycount:\therefsection}+1-#1\relax}
+
+
+\addbibresource[label=papers]{citations.bib}
+%\addbibresource[label=books]{mypubs.bib}
+%\addbibresource[label=edited]{mypubs.bib}
+%\addbibresource[label=chapters]{mypubs.bib}
+
+
+% Headers - all currently empty
+\lhead{}
+\chead{}
+\rhead{}
+
+% Footers
+\lfoot{\textsf{CTEMECCI} manual, v1.0, \today}
+\cfoot{}
+\rfoot{\footnotesize Page \thepage\ of \pageref{LastPage}} % "Page 1 of 2"
+
+\renewcommand{\headrulewidth}{0.0pt} % No header rule
+\renewcommand{\footrulewidth}{0.4pt} % Thin footer rule
+
+\usepackage{lettrine} % Package to accentuate the first letter of the text
+\newcommand{\initial}[1]{ % Defines the command and style for the first letter
+\lettrine[lines=3,lhang=0.3,nindent=0em]{
+\color{DarkGoldenrod}
+{\textsf{#1}}}{}}
+
+\usepackage{titling} % Allows custom title configuration
+
+\newcommand{\HorRule}{\color{DarkGoldenrod} \rule{\linewidth}{1pt}} % Defines the gold horizontal rule around the title
+
+\pretitle{\vspace{-1.5in} \begin{center} \HorRule \fontsize{25}{25} \usefont{OT1}{phv}{b}{n} \color{DarkRed} \selectfont} % Horizontal rule before the title
+
+\title{Electron Channeling Contrast\\ Image (ECCI) Simulations} % Your article title
+
+\posttitle{\par\end{center}\vskip 0.5em} % Whitespace under the title
+
+\preauthor{\begin{center}\large \lineskip 0.5em \usefont{OT1}{phv}{b}{sl} \color{DarkRed}} % Author font configuration
+
+\author{\vspace*{-0.7in}} % Your name
+
+\postauthor{\footnotesize \usefont{OT1}{phv}{m}{sl} \color{Black} % Configuration for the institution name
+
+\par\end{center}\HorRule} % Horizontal rule after the title
+\date{Program Manual, v1.0, \today}
+
+\newcommand{\ctp}{\textsf{CTEMsoft-2013}}
+%
+\newcommand{\upg}[1]{\mathrm{i}U_{\mathbf{#1}}^{\prime}}
+\newcommand{\combo}[1]{U_{\mathbf{#1}}+\upg{#1}}
+\newcommand{\upgcombo}[2]{2k_{0}s_{\mathbf{#1}}+\upg{#2}}
+\newcommand{\ugh}[2]{U_{\mathbf{#1}-\mathbf{#2}}}
+\newcommand{\ughp}[2]{U_{\mathbf{#1}'-\mathbf{#2}}}
+\newcommand{\ughpp}[2]{U_{\mathbf{#1}-\mathbf{#2}'}}
+\newcommand{\kkg}[1]{k_{0}^{2}-(\mathbf{k}+\mathbf{#1})^{2}}
+\newcommand{\Cg}[1]{C_{\mathbf{#1}}}
+\newcommand{\Cgj}[2]{C_{\mathbf{#1}}^{(#2)}}
+\newcommand{\Cgjp}[2]{C_{\mathbf{#1}'}^{(#2)}}
+\newcommand{\Cgja}[2]{C_{\mathbf{#1}}^{(#2)\ast}}
+\newcommand{\button}[1]{\colorbox{green}{\textsf{#1}} button}
+
+
+\begin{document}
+\maketitle
+
+\begin{figure*}[h]
+\leavevmode\centering
+\epsffile{figs/SEMlogo}
+\end{figure*}
+
+\renewcommand{\contentsname}{Table of Contents}
+{\small\tableofcontents}
+
+\newpage
+\section{Introduction}
+This manual describes a set of two programs, 
+one written in Fortran-90,\footnote{f90 is a much richer language than the original fortran-f77, and is
+used for all programs in the \ctp\ package.} 
+the other in IDL,\footnote{The \textit{Interactive Data Language} is an interpreted scripting language with extensive graphics capabilities.} 
+that can be used for the simulation of near zone axis electron channeling contrast images (ECCIs).  Such images can be
+observed in a scanning electron microscope (SEM) when the incident beam is tilted to a diffraction condition, 
+and the back-scatter electron (BSE) signal is displayed as a function of the beam position.  The main f90 program
+is called \textsf{CTEMECCI} (note that all programs in the \ctp\ package start with the letters ``CTEM'').
+The output generated by this program can then be visualized by the IDL routine \textsf{ECCIDisplay.pro}.  
+
+On the following pages we will try to accomplish four tasks:
+\begin{enumerate}
+	\item Explain briefly the underlying image formation theory and the numerical approach followed by the f90 program (section~\ref{sec:theory});
+	\item Document the input files for the f90 program (section~\ref{sec:f90ecci});
+	\item Document the IDL interface (section~\ref{sec:idl});
+	\item Explain the use of these programs by means of a few basic examples (section~\ref{sec:examples}).
+\end{enumerate}
+
+\input{common.tex}
+
+\newpage
+\section{Electron channeling contrast images: the underlying theory\label{sec:theory}}
+The computation of an SEM-generated ECCI can be carried out by means of the scattering matrix approach, and is rather similar to 
+what is needed for zone axis or systematic row (S)TEM simage simulations.  In fact, the \textsf{CTEMECCI} program is directly 
+derived from the \textsf{CTEMZAdefect} program, and we refer to the manual for this program for detailed information on the 
+image formation theory in the presence of defects.  There are some differences in the ECCI case, notably that the electron wave length is a bit longer due 
+to the lower accelerating voltage.  Since the ECCI signal is caused by backscattered electrons (BSEs), a first order approach to 
+ECCI image simulations involves computation of the wave function as a function of depth inside the sample (a computation that is similar 
+to that used for (S)TEM images) and combine that with the depth integration approach used for the \textsf{CTEMECP} program.
+
+In the presence of a defect, we need to modify the expression for the probability of scattering from each subset $\mathcal{S}$ of atomic sites within the 
+unit cell for a given incident beam direction $\mathbf{k}_0$:
+\begin{equation}
+	\mathcal{P}(\mathbf{k}_0) = \sum_{\mathbf{g}} 
+    \sum_{\mathbf{h}} S_{\mathbf{g}\mathbf{h}}L_{\mathbf{g}\mathbf{h}},
+    \label{eq:prob}
+\end{equation}
+with
+\begin{subequations}
+\begin{align}
+    S_{\mathbf{g}\mathbf{h}} &\equiv \sum_{n}\sum_{i\in\mathcal{S}_n} Z^2_n\,\mathrm{e}^{-M^{(n)}_{\mathbf{h}-\mathbf{g}}}\,e^{2\pi\mathrm{i} 
+    (\mathbf{h}-\mathbf{g})\cdot\mathbf{r}_{i}};\label{eq:defa}\\
+    L_{\mathbf{g}\mathbf{h}} &\equiv \frac{1}{z_{0}}\sum_{j}\sum_{k}\int\limits_{0}^{z_{0}} \mathrm{d}z\, 
+    C^{(j)\ast}_{\mathbf{g}}(z)\alpha^{(j)\ast}(z) \mathrm{e}^{-2\pi(\alpha_{jk}(z)+\mathrm{i}\beta_{jk}(z))z} \alpha^{(k)}(z)
+    C^{(k)}_{\mathbf{h}}(z).\label{eq:defb}
+\end{align}
+\end{subequations}
+Note that all the Bloch wave parameters now have acquired a $z$-dependence that is caused by the fact that the defects in the 
+material will cause variations of the wave function along the incident beam direction.  This complicates matters, since now
+we have to carry out a Bloch wave computation at each depth (we'll discretize the integral and repeat the computation at regular
+depth increments).  
+
+Alternatively, we should be able to rewrite this expression in terms of the wave function expansion that is used for the 
+scattering matrix approach, which would then allow us to re-use the (S)TEM defect source code.  Either way should provide 
+the same result.  In the scattering matrix approach, the total electron wave function is expressed as a linear combination of
+plane waves, traveling in the directions allowed by the Bragg equation:
+\begin{equation}
+	\Psi(\mathbf{r}) = \sum_{\mathbf{g}} \psi_{\mathbf{g}}(\mathbf{r}) \mathrm{e}^{2\pi\mathrm{i}(\mathbf{k}_0+\mathbf{g})\cdot\mathbf{r}}
+\end{equation}
+The modulus squared of this expression provides the probability of finding an electron at position $\mathbf{r}$:
+\begin{equation}
+	\vert\Psi(\mathbf{r})\vert^2 = \sum_{\mathbf{g}} \sum_{\mathbf{h}} \psi^{\ast}_{\mathbf{g}}(\mathbf{r}) \psi_{\mathbf{h}}(\mathbf{r})
+	 \mathrm{e}^{2\pi\mathrm{i}(\mathbf{h}-\mathbf{g})\cdot\mathbf{r}}.
+\end{equation}
+Using the standard substitution
+\[
+	\psi_\mathbf{g}(\mathbf{r}) = S_{\mathbf{g}}(\mathbf{r}) \mathrm{e}^{\mathrm{i}\theta_{\mathbf{g}}}
+\]
+we obtain:
+\begin{equation}
+	\vert\Psi(\mathbf{r})\vert^2 = \sum_{\mathbf{g}} \sum_{\mathbf{h}} S^{\ast}_{\mathbf{g}}(\mathbf{r}) S_{\mathbf{h}}(\mathbf{r})
+	\mathrm{e}^{\mathrm{i}(\theta_{\mathbf{h}}-\theta_{\mathbf{g}})}
+	 \mathrm{e}^{2\pi\mathrm{i}(\mathbf{h}-\mathbf{g})\cdot\mathbf{r}}.
+\end{equation}
+Surpressing the position dependence of the integration column, and keeping only the depth dependence, we obtain
+for the thickness-integrated probability of BSE scattering for a given incident beam direction $\mathbf{k}_0$:
+\begin{equation}
+	\mathcal{P}(\mathbf{k}_0) = \frac{1}{z_0}\sum_{n}\sum_{i\in\mathcal{S}_n}\sum_{\mathbf{g}}\sum_{\mathbf{h}} \int\limits_{0}^{z_{0}} \mathrm{d}z\,
+	 Z^2_n\,\mathrm{e}^{-M^{(n)}_{\mathbf{h}-\mathbf{g}}}\,\mathrm{e}^{2\pi\mathrm{i} (\mathbf{h}-\mathbf{g})\cdot\mathbf{r}_{i}} 
+%	\mathrm{e}^{\mathrm{i}(\theta_{\mathbf{h}}-\theta_{\mathbf{g}})} 
+	S^{\ast}_{\mathbf{g}}(z) S_{\mathbf{h}}(z)
+    \label{eq:prob2}
+\end{equation}
+[Note that one of the phase factors has disappeared, due to the fact that it is explicitly taken into account in the 
+dynamical matrix computation; keeping it in the equation above would result in double-counting of the phase factor.]
+This can be rewritten in the same form as for the ECP computation:
+\begin{equation}
+	\mathcal{P}(\mathbf{k}_0) = \sum_{\mathbf{g}}\sum_{\mathbf{h}} S_{\mathbf{g}\mathbf{h}} L_{\mathbf{g}\mathbf{h}},
+    \label{eq:prob2}
+\end{equation}
+where the matrices are redefined as
+\begin{subequations}
+\begin{align}
+    S_{\mathbf{g}\mathbf{h}} &\equiv \sum_{n}\sum_{i\in\mathcal{S}_n} Z^2_n\,\mathrm{e}^{-M^{(n)}_{\mathbf{h}-\mathbf{g}}}\,\mathrm{e}^{2\pi\mathrm{i} 
+    (\mathbf{h}-\mathbf{g})\cdot\mathbf{r}_{i}};\label{eq:defnewa}\\
+    L_{\mathbf{g}\mathbf{h}} &\equiv \frac{1}{z_{0}}\int\limits_{0}^{z_{0}} \mathrm{d}z\,  S^{\ast}_{\mathbf{g}}(z) S_{\mathbf{h}}(z).\label{eq:defnewb}
+\end{align}
+\end{subequations}
+These equations are equivalent to the original Bloch wave equations in the presence of defects; they are implemented in the \textsf{CTEMECCI} program.
+The first matrix can be computed ahead of time for a given set of diffracted beams, whereas the second matrix must be recomputed for each image column.
+If we use Bethe potentials (not yet implemented in the current version of the program), then both matrices must be recomputed for each image pixel/beam
+orientation. The wave amplitudes $S_{\mathbf{g}}(z)$ follow from the scattering matrix approach in a way that is identical to that used in the (S)TEM simulations.
+
+In practical terms, the integration must be replaced by a summation of the form:
+\begin{equation}
+	L_{\mathbf{g}\mathbf{h}} \approx \frac{1}{N}\sum\limits_{i=1}^{N} S^{\ast}_{\mathbf{g}}(z_i) S_{\mathbf{h}}(z_i),
+\end{equation}
+which requires the computation of all scattered amplitudes for all values of $z_i$, followed by the summation.  The value of 
+$N$ is determined by the integration stepsize $\Delta z$, i.e., $N=z_0/\Delta z$.  The propagation of the electron wave
+inside the crystal is then incorporated by the scattering matrix at the correct depth, via the recursion:
+\[
+	\mathbf{S}(z_i) = \mathcal{S}_i\mathbf{S}(z_{i-1}).
+\]
+The overall integration depth should probably be determined from Monte Carlo simulations; for now, we can simply determine the appropriate 
+$z_0$ value by trial-and-error.
+
+In terms of the \textsf{CTEMECCI} program itself, the major program portions are:
+\begin{itemize}
+	\item read crystal structure and general parameter files;
+	\item determine list of contributing reflections and incident wave vector range;
+	\item determine the defect configuration and associated phase shift factors;
+	\item for each incident beam direction, compute $\mathcal{P}(\mathbf{k}_0)$, integrating over the thickness.
+	\item store all computed patterns in a file that can be read by the IDL \textsf{ECCIDisplay} program.
+\end{itemize}
+
+\section{The \protect\textsf{CTEMECCI.f90} program\label{sec:f90ecci}}
+
+\subsection{Program overview\label{sec:f90overviewecci}}
+The \textsf{CTEMECCI} program is a relatively basic program and is in its structure rather similar to the \textsf{CTEMZAdefect} program.
+The only major difference lies in the computation of the thickness-integrated intensity rather than individual transmitted and 
+diffracted beam intensities.  The program input uses the namelist file approach described in the next section, and the output is a 
+binary file, for now with a special format.\footnote{At some point in the future, all output files from the \ctp\ programs will use
+the public domain HDF5 file format.}  
+
+The program reads the input and crystal structure files,  a foil descriptor file, and one or more defect descriptor files; then an ECCI image is computed for 
+each of a range of incident beam directions.  The beam directions can be defined as a cone or as a linear trace, corresponding to the program modes
+``array'' and ``trace'', respectively.  The resulting ECCI images are stored in an output file that can be visualized using the \textsf{ECCIDisplay} IDL interface.
+
+\subsection{Namelist input files\label{sec:f90inputecp}}
+The main input file for this program, \textsf{CTEMECCI.nml}, is formatted as follows:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
+\VerbatimInput{../templatefolder/CTEMECCI.template}
+Most of the parameters are straightforward.  The crystal structure file can be created with 
+the \textsf{CTEMmkxtal} program.  The most important parameter is the \textsf{progmode} or program mode.  This
+parameter can take on one of two values ``array'' or ``trace''.  In ``array'' mode, the program will generate a series of 
+ECCI images for incident beam directions that are organized on a square grid in the ECP, distributed symmetrically with
+respect to the point defined by the parameter \textsf{lauec} or Laue Center.  If \textsf{lauec} is set to $(0,0)$, then the array
+of ECCI images will be symmetric with respect to the zone axis orientation, otherwise the pattern will be symmetric with 
+respect to the point identified by the \textsf{lauec} parameter.  The incident beam directions are distributed symmetrically inside the cone,
+the radius of which is defined by the parameter \textsf{ktmax} in units of $\vert\mathbf{g}_a\vert$ (refer to the manual for the 
+ECP program for more information).  The parameter \textsf{dkt} defines the stepsize of the incident beam grid in the same
+units; hence, the number of samples along the horizontal direction will be the integer nearest to \textsf{ktmax}$/$\textsf{dkt}.
+
+The second program mode, ``trace'', requires two coordinate pairs corresponding to the start and end points of a straight line,
+along with the number of steps along the line; the corresponding parameters are \textsf{lauec2} for the end point and \textsf{nktstep}
+for the number of steps.  
+
+The program also needs a description file for the foil (although the sample is really a bulk sample in this case); for a description 
+of this file, as well as all of the defect files, please refer to the manual for the \textsf{CTEMZAdefect} program.  The \textsf{CTEMECCI}
+program takes one additional type of defect descriptor file, namely for dislocations that penetrate the top surface.  Such dislocations
+are described by a displacement field first derived by E. Yoffe, hence all file names related to these defects have the letter Y in them.
+The input format for Yoffe dislocations is somewhat similar to the regular format, with a few important distinctions. An example namelist
+file is shown here:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
+\VerbatimInput{../templatefolder/Ydislocation.template}
+Note that the Yoffe-Shaibani-Hazzledine model for the displacement field of a surface penetrating dislocation is only valid 
+for materials that are close to elastically isotropic.  Hence the displacement field only depends on the Poisson ratio, which is
+one of the input parameters of the dislocation file (in the future, this parameter will be moved to the foil description file).
+The position of the dislocation is the point where the dislocation penetrates the sample surface, not the location at the foil
+center plane as is the case for the (S)TEM image simulation programs.  Note also that the \textsf{CTEMECCI} program will accept 
+regular dislocation files; these are useful for dislocations that are parallel to the surface, for instance misfit dislocations 
+at some distance from the top surface.  Stacking faults can also be defined, as described below.
+
+Experience has shown that the ECCI images are not very sensitive to reflections from the higher order Laue zones, so the minimum
+$d$-spacing parameter \textsf{dmin} can be set to a significantly larger value than in the \textsf{CTEMECP} program.  A value of 
+about $0.1$ is reasonable; in the current implementation, which does not use Bethe potentials, a smaller value will significantly 
+increase the computation times.
+
+The size of the ECCI images is determined by the value of \textsf{DF\_npix} and \textsf{DF\_npiy}, and individual image pixels have a size 
+of \textsf{DF\_L}$\times$\textsf{DF\_L} \nano\squaren\meter.  So a change in \textsf{DF\_L} is equivalent to zooming in or out of the image.
+However, make sure that you understand the way defects are defined, as described in the manual for the \textsf{CTEMZAdefect} program.
+
+The \textsf{summode} parameter has two possible values: ``diag'' and ``full''.  When set to ``diag'', the program uses only the diagonal 
+entries of the $L$ and $S$ matrices in the summation; for ``full'', all entries are used.  The ``diag' option causes a slightly faster
+program execution.  One can experiment with these options, but likely the ``full'' summation is more correct than only using the diagonal 
+entries.  For large integration depths, it might be sufficient to only use the diagonal entries, but this needs to verified further.
+
+Finally, for visualization purposes, the parameter \textsf{ECPname} must be present; it must point to an existing file generated by the 
+\textsf{CTEMECP} program for the same zone axis and accelerating voltage as used in the ECCI run.  The value of the \textsf{ktmax}
+parameter in the ECP run must be larger than that used for the ECCI run, so that the incident beam directions for the ECCI program 
+can be displayed on the EC pattern.
+
+\subsection{Stacking fault namelist files}
+For the ECCI program, stacking fault descriptor files are slightly different from the ones for the \textsf{CTEMZAdefect} program.
+A stacking fault is defined by means of a position parameter \textsf{(id,jd)} (fractional coordinates) as before, except that the 
+coordinates are located in the top surface of the foil instead of in the center plane.  The combination of the SF plane and the coordinates defines the trace of the 
+fault on the surface; the separation parameter then represents the distance between the points where the partials intersect the 
+surface, and the partials will be located symmetrically with respect to the point \textsf{(id,jd)}.  The syntax of the SF input file
+remains unchanged from that used by other programs, which means that stacking fault locations in the image will depend on which 
+program is used to compute the images (TEM vs.\ ECCI).  Note that stacking fault files must also have the \textsf{poisson} variable in
+them.  All partial dislocations are assumed to be Yoffe-type dislocations, hence they make use of the Poisson ratio only for the computation
+of the displacement field.
+
+
+\subsection{Bethe parameters namelist file\label{sec:f90BetheParameters}}
+The Bethe potential approximation used in this program can be adjusted by the
+user via the \textsf{BetheParameters.nml} namelist file, which must be present 
+in the folder in which the program is executed; if this file is not present, then the
+program will assume default values for all three parameters.  The values shown below
+are the current program defaults.
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
+\VerbatimInput{../templatefolder/BetheParameters.template}
+Note that the default value  is much too large for SEM-type runs and will result in very long program execution times.
+For ECCI images, \textsf{cutoff} should be set to $20$--$30$ or so; note that this is not the case for ECPs, so care 
+must be taken when executing these programs.
+
+\section{The \protect\textsf{ECCIDisplay.pro} program\label{sec:idl}}
+
+\subsection{Program overview\label{sec:idloverview}}
+The data file generated by the \textsf{CTEMECCI} program consists of geometrical information and an array of ECCI images.
+This file can be visualized using the IDL program \textsf{ECCIDisplay.pro}, described in this section.
+
+The \textsf{ECCIDisplay.pro} routine requires an IDL program license or can be executed using the Virtual Machine, without the need for a license. 
+If you do have a license, then make sure that the folder containing the routines is part of your IDL pathname,
+and that IDL is properly installed for the UNIX shell that you will be using (csh, bsh, etc...).
+To execute the program, first start an IDL session in a terminal window (using the /Appplications/Utilities/Terminal program), 
+start IDL, compile the \textsf{ECCIDdisplay.pro} routine by typing:
+\begin{verbatim}
+	IDL> .r ECCIDisplay <return>
+\end{verbatim}
+at the IDL prompt and hitting return, followed by typing 
+\begin{verbatim}
+	IDL> ECCIDisplay <return>
+\end{verbatim}
+to start the display program.  The main program widget window will appear as well as a file selector window.  
+Details of all the windows are described in the following subsections.
+
+In addition to requiring an IDL license, the program expects the X-windows environment to be installed.  On the Mac, this corresponds
+to the \textsf{XQuartz} program which can be downloaded from the open source site \textsf{http://xquartz.macosforge.org/}.  This program
+must be installed in the system /Applications/Utilities folder and requires OS X 10.6 or later.
+
+Useful thing to know: if the \textsf{ECCIDisplay.pro}  program hangs for some reason, you can reset your IDL session by typing
+\begin{verbatim}
+	IDL> .reset <return>
+\end{verbatim}
+This will destroy all program widgets and reset IDL to its original state.  If that does not work, then you may have to ``force quit'' the Terminal program
+using the standard Esc-Option-Command key stroke.
+
+There is also a Virtual Machine version of this program, which can be executed without an IDL license.
+
+\subsection{Main window\label{sec:idlmain}}
+This display program will load an ECCI data file as well as an ECP pattern, and several geometrical quantities.
+The main window contains no user adjustable parameters, and only displays a few parameters from the computation.
+The main display widget is shown in Fig.~\ref{fig:widget1}.  
+
+\begin{figure}[h]
+\leavevmode\centering
+\epsffile{figs/ECCIwidget1}
+\caption{\label{fig:widget1}Main \textsf{ECCIDisplay.pro} program widget.}
+\end{figure}
+
+The only user options are listed at the bottom of the widget: the \button{ECCI File} and the \button{Quit}, the latter's function being 
+rather clear.  When the \button{ECCI File} is selected, a file selection interface appears, and the user can select an ECCI data file. 
+Several parameters will be read from the file, and their values displayed in the main widget.  Note that  all widgets 
+can be repositioned anywhere on the screen, and that the window locations will be stored in the preferences file described in the next section.  
+
+Once a file has been loaded, the text fields will be updated, and a new widget appears, the ECP widget.  Depending on the setting of the 
+\textsf{progmode} and \textsf{lauec} parameters, his window will have a slightly different appearance; there are three different cases, 
+shown in Fig.~\ref{fig:widget2}.  From left to right, ``array'' mode with \textsf{lauec}$=(0,0)$, ``array'' mode with \textsf{lauec}$=(5,7)$,
+and ``trace'' mode with \textsf{lauec}$=(11,2)$ and \textsf{lauec2}$=(6.5,6.5)$.  Each green cross indicates an incident beam direction for
+which an ECCI image has been computed.  Clicking near a cross will cause a new widget to pop up (see Fig.~\ref{fig:widget3}), showing the corresponding ECCI image.
+
+The graphics window on the left will display the ECCI image corresponding to the selected beam direction.  The intensity can be scaled in two different
+ways: ``global'', which means that the minimum and maximum intensity of the entire computed set will be taken as black and white, respectively, and 
+``by image'', which scales the intensity to maximize the contrast in an individual image.
+
+When one clicks at any point inside the ECCI image, the corresponding ECP pattern will be displayed in the right window.  Note that this is 
+nearly always a low resolution image, with the same number of pixels as there are ECCI images in the data set.  The \button{Save} can be used to
+save either image to a file.  Below each image, the minimum and maximum intensity are displayed; these are on an arbitrary absolute scale.
+
+The averaging radius can be set to a non-zero value and then the image on the right will be the average ECCI image, averaged over a circle with 
+the set radius (in units of the spacing between the green crosses in the ECP pattern window).  The circle will appear in purple on the ECP pattern.
+
+\begin{figure}[h]
+\leavevmode\centering
+\epsfxsize=5in\epsffile{figs/ECCIwidget2}
+\caption{\label{fig:widget2}ECP pattern display widget for three different program parameter settings.}
+\end{figure}
+
+\begin{figure}[h]
+\leavevmode\centering
+\epsfxsize=3in\epsffile{figs/ECCIwidget3}
+\caption{\label{fig:widget3}ECCI image display widget.}
+\end{figure}
+
+In ``array'' mode, the third line in the ECCI Image Widget will show \textsf{Dimension of ECCI Mosaic} followed by a number.  This number
+represents the size (in pixels) of the mosaic image that can be created by combining all ECCI images in the data set into a single image,
+with each tile positioned at the correct location relative to the incident beam directions.  The number that is originally displayed in 
+this text field is the default size (no image scaling performed), but one can change this to any other desired number of pixels (note that
+the image scaling is performed by regridding the array of pixels; no smoothing is performed, and, obviously, no extra data is introduced 
+by interpolation).  In ``trace'' mode, the third line reads \textsf{Number of images in row}; the set of images along the trace will be 
+displayed in a mosaic with that many images in a row, and as many rows as needed.
+
+
+\subsection{Preferences file\label{sec:idlpref}}
+Upon the first execution of the \textsf{ECCIDisplay.pro} routine, a preferences file will be created in the user's home folder.  
+The file is called \textsf{.ECCIgui.prefs}; the starting period
+means that the file will not show up in a Finder window or on the UNIX command line when a simple \textsf{ls} command is issued.  This is a 
+regular editable text file consisting of name::value pairs, although there is no real
+need for the user to ever edit this file.  The first line shows the number of entries in the file, and then each entry is listed on a 
+separate line.  A commented version of the preferences file is as follows:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize,numbers=left}
+\VerbatimInput{ECCIgui-commented.prefs}
+Note that the comments are not part of the actual preferences file.  All lines must be present in the file or the program will exit with an error message; the order 
+of the lines is not important, but the file will always be written in the same order.
+The values shown above are not default values, but represent a random snapshot of the program status after it has been used for a while.
+
+When the program starts, it will first internally initialize all variables to default values, and then read the preferences
+file, if it exists.  Then the widgets will be created using the preference values.  When the program is ended normally (by
+pressing the \button{QUIT}), all current values, including the widget locations, are written to the preferences
+file.
+
+
+\newcommand{\dislo}[6]{$\frac{1}{6}[#1\,#2\,#3]\vert [#4\,#5\,#6]$}
+\newcommand{\dislop}[3]{$\frac{1}{2}[#1\,#2\,#3]$}
+\newcommand{\bo}{\bar{1}}
+\newcommand{\bt}{\bar{2}}
+
+\newpage
+\section{A few worked examples\label{sec:examples}}
+In this final section, we show two simple examples to illustrate how to use the combination of f90 and IDL programs 
+to obtain simulated ECCI images.  The examples consist of misfit and other dislocations in GaP, and a stacking fault pyramid in GaP.
+Note that these examples assume that the \textsf{CTEMECP} program has already been used to produce an ECP pattern file, using the 
+following input file: (see \textsf{SEMECP} manual for more information)
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\scriptsize,numbers=left}
+\VerbatimInput{../examples/ECCISimulations/ECP5.nml}
+
+We will use the GaP Zinc-Blende structure for this example.  This structure has space group $\mathbf{F\bar{4}3m}$ with lattice parameter
+$a=0.54505$ \nano\meter; Ga is located in the origin $(0,0,0)$, and P at $(1/4,1/4,1/4)$; both atoms have full occupancy $1.0$
+and Debye-Waller factor can be set to the default value of $0.004$ \nano\meter$^{-2}$.  This value produces decent results, but 
+if more accurate Debye-Waller factors for Ga and P are known, then those should be used instead.  The crystallographic parameters
+can be entered into a data file using the \textsf{CTEMmkxtal} program; it would make sense to name this file \textsf{GaP.xtal}.
+
+\subsection{Various dislocations in GaP}
+Consider a region of interest with dimensions $1\times 1$ $\mu$m$^2$, in which there are four isolated $60^{\circ}$ dislocations,
+four stacking faults (dissociated $60^{\circ}$ dislocations), and a 2D grid of $8$ $60^{\circ}$ misfit dislocations at a depth of $75$ nm,
+parallel to the surface.  All the defect descriptor files can be found in the \textsf{Examples/ECCISimulations} folder. 
+
+An ECCI image simulation is carried out using the general parameters described in \textsf{Ex5.1.nml}:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\scriptsize,numbers=left}
+\VerbatimInput{../examples/ECCISimulations/Ex5.1.nml}
+and in the foil description file \textsf{FOIL5.1.nml}:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize,numbers=left}
+\VerbatimInput{../examples/ECCISimulations/FOIL5.1.nml}
+
+Note that these input files result in a very long execution time, around $14$ hours on a $2\times 3.06$ GHz 6-core Intel Xeon Mac Pro,
+using $12$ threads.  This is due to the fact that the current implementation of the algorithm does not yet make use of the Bethe potential
+approximation; the program determines which $\mathbf{g}$-vectors to take into account for the exact zone axis orientation, and then uses
+those vectors for all other orientations as well, regardless of how strongly excited each reflection is.  In the next version of the program,
+this will be modified, so that for each incident beam orientation, only the relevant strong beams will be taken into account.
+For now, best thing to do is to start this program at the end of the day and the data file should be ready the next morning.  Remember to
+make sure that your computer does not go to sleep during that time!  Obviously, you can change the parameters in the input file if you
+want a shorter run time; for instance, you can put \textsf{dkt}$=1.0$ instead of $0.5$, which should reduce the execution time by a factor 
+of $4$ or so.  It also helps to select the Laue center to be away from the zone axis; this typically reduces the number of contributing beams.
+
+Next, we can execute the program by entering
+\begin{verbatim}
+	../exe/CTEMECCI Ex5.1.nml
+\end{verbatim}
+where we assume that the program is being run from a folder at the same level as the exe folder.  
+
+
+Once the data file has been created, then it is a simple matter to use the IDL Virtual Machine application to 
+visualize the result.   The IDL app is located in the VMapps folder of the distribution; simply double clicking the \textsf{ECCIDisplay}
+application will start up the Virtual Machine; click on the \textsf{Click to Continue} option in the IDL start up screen to 
+initialize the app; then follow the guidelines from section~\ref{sec:idl}.
+
+\begin{figure}[h]
+\leavevmode\centering
+\epsfxsize=6in\epsffile{figs/ECCIdislo}
+\caption{\label{fig:ECCIdislo}ECCI images of a set of dislocations near the $[001]$ zone axis orientation of GaP, $25$ kV, field of view is 
+$1$ $\mu$m on the side.  These images were taken for incident beam directions a) $(0,2)$, b) $(4,-6)$, and c) $(6,-4)$.}
+\end{figure}
+
+\newcommand{\disloc}[6]{$\frac{1}{2}[#1\,#2\,#3]\vert [#4\,#5\,#6]$}
+
+Fig.~\ref{fig:ECCIdislo} shows example images acquired at several grid positions.  The individual defects labeled in a) have the following
+characteristics (dislocations are represented by the symbol $\mathbf{b}\vert\mathbf{u}$, with $\mathbf{b}$ the burgers vector and $\mathbf{u}$
+the line direction):
+{\small \begin{enumerate}
+	\item \disloc{0}{1}{\bo}{1}{1}{0}
+	\item \disloc{0}{1}{1}{1}{1}{0}
+	\item \disloc{1}{0}{\bo}{1}{1}{0}
+	\item \disloc{1}{0}{1}{1}{1}{0}
+	\item \disloc{\bo}{0}{\bo}{\bo}{1}{0}
+	\item \disloc{\bo}{0}{1}{\bo}{1}{0}
+	\item \disloc{0}{1}{\bo}{\bo}{1}{0}
+	\item \disloc{0}{1}{1}{\bo}{1}{0}
+
+	\item \disloc{1}{0}{\bo}{0}{1}{\bo}
+	\item \disloc{0}{1}{\bo}{\bo}{0}{\bo}
+	\item \disloc{1}{0}{\bo}{0}{\bo}{\bo}
+	\item \disloc{0}{1}{\bo}{1}{0}{\bo}
+	
+	\item \dislo{1}{\bt}{\bo}{\bo}{0}{\bo}, \dislo{\bo}{\bo}{\bt}{0}{\bo}{\bo} on $(11\bo)$
+	\item \dislo{\bt}{\bo}{1}{0}{\bo}{\bo}, \dislo{\bo}{1}{2}{1}{0}{\bo} on $(\bo 1\bo)$
+	\item \dislo{\bo}{2}{\bo}{1}{0}{\bo}, \dislo{1}{1}{\bt}{0}{1}{\bo} on $(\bo\bo\bo)$
+	\item \dislo{2}{1}{1}{0}{1}{\bo}, \dislo{1}{\bo}{2}{\bo}{0}{\bo} on $(1\bo\bo)$
+	\end{enumerate}}
+Defects $1$--$8$ are misfit dislocations parallel to the sample surface (we are ignoring the cutoff geometry for the time being) at a 
+depth of $75$ \nano\meter. Defects $9$--$12$ penetrate the surface, as do the stacking faults $13$--$16$, which have surface penetrating 
+partials; in the list above, the leading partial is listed first.  Note that the line direction for surface penetrating dislocations 
+must be oriented into the sample.  Note how for some beam directions, the misfit dislocations show up as double contrast lines.  Images (b) and (c) 
+are taken at opposite sides of the $(1\bo 0)$ Kikuchi band, so they display a contrast reversal.
+
+
+\subsection{Stacking fault pyramid in GaP}
+
+We begin by defining a stacking fault pyramid that has its apex at the center of the image, and is characterized by the 
+parameters shown in the table below.  The stacking fault pyramid consists of four stacking faults on $\{111\}$ planes, oriented such
+that they form a pyramid with apex inside the foil, and the faults intersecting the surface in a square
+shape.  The image simulations have the $[100]$ direction oriented horizontally, and $[010]$ vertically.
+The stacking faults are numbered $1$ through $4$ in counter-clockwise fashion, starting in the upper 
+right quadrant of the image.  The table below shows the essential parameters of each stacking fault, 
+including the slip plane, the leading and trailing partial dislocation burgers vectors and line 
+directions in the notation $\mathbf{b}\vert\mathbf{u}$, and the Lomer-Cottrell stair-rod dislocations
+that form the line common to two consecutive stacking faults.  In the present case,  
+the trailing dislocation of stacking fault $i$ merges with the leading dislocation
+of fault $i+1$ to form the stair-rod edge dislocation. Other combinations of burgers vectors are possible.
+
+\renewcommand{\arraystretch}{1.5}
+\begin{table}[h]
+\centering\leavevmode
+\begin{tabular}{|c|c|l|l|l|l|}
+\hline
+SF\# & Plane & Perfect &Leading partial & Trailing partial & Lomer-Cottrell\\
+\hline
+\hline
+$1$ & $(1\,1\,\bar{1})$ & \dislop{0}{\bo}{\bo}              & \dislo{\bo}{\bo}{\bt}{1}{0}{1} & \dislo{1}{\bt}{\bo}{0}{1}{1} & \dislo{0}{\bo}{1}{0}{1}{1}\\
+$2$ & $(\bar{1}\,1\,\bar{1})$ & \dislop{\bo}{0}{1}          & \dislo{\bo}{1}{2}{0}{1}{1} & \dislo{\bt}{\bo}{1}{\bo}{0}{1} & \dislo{\bo}{0}{\bo}{\bo}{0}{1}\\
+$3$ & $(\bar{1}\,\bar{1}\,\bar{1})$ & \dislop{0}{1}{\bo}    & \dislo{1}{1}{\bt}{\bo}{0}{1} & \dislo{\bo}{2}{\bo}{0}{\bo}{1} & \dislo{0}{1}{1}{0}{\bo}{1}\\
+$4$ & $(1\,\bar{1}\,\bar{1})$ & \dislop{1}{0}{1}            & \dislo{1}{\bo}{2}{0}{\bo}{1} & \dislo{2}{1}{1}{1}{0}{1} & \dislo{1}{0}{\bo}{1}{0}{1}\\
+\hline
+\end{tabular}
+\end{table}
+
+The stacking faults are defined by namelist files similar to the following file:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize,numbers=left}
+\VerbatimInput{GaPSF1.nml}
+The position of the fault and the separation of the partials takes some experimenting to get right.  In the file above, the stacking fault mid points
+are located such that the apex of the pyramid is $100$ \nano\meter\ below the surface, resulting in a pyramid base of edge length $141.42$ \nano\meter,
+and mid point locations of $(\pm 50,\pm 50)$ \nano\meter.  Converting those to fractional cordinates for an image of edge length $256\times 256$ \nano\meter\
+leads to the values $(\pm 0.390625,\pm 0.390625)$.
+
+The input parameters for the ECCI computation are shown here (look for the files in the \textsf{Examples/ECCISimulations} folder):
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize,numbers=left}
+\VerbatimInput{../examples/ECCISimulations/Ex5.2.nml}
+Note that in this run, we compute the images across one of the Kikuchi bands, centered at location $(5,7)$.
+This run does not take as long as the one from the previous example; in fact, it only took about four minutes on the same platform.
+The resulting image mosaic is shown in Fig.~\ref{fig:ECCISF}.  Note how the image contrast changes drastically normal to the 
+Kikuchi band, but stays nearly constant along lines parallel to the band.  The contrast is also maximal, with maximum fringe spacing, 
+near the edge of the band.
+%
+\begin{figure}[h]
+\leavevmode\centering
+\epsfxsize=6in\epsffile{figs/ECCISF}
+\caption{\label{fig:ECCISF}ECCI image mosaic of stacking fault pyramid; images are $256\times 256$ \nano\squaren\meter, centered on the 
+position $(5,7)$, on a grid with step size $0.5$.}
+\end{figure}
+
+%
+%\newpage
+%\begin{refsection}[papers]
+%\renewbibmacro{in:}{}
+%\nocite{degraef2003b,humphreys1979a,winkelmann2003a,winkelmann2008a,weickenmeier1991a,reimer1985a}%
+%  \printbibliography[title={References}]
+%\end{refsection}
+
+
+
+\end{document}
+
+
+

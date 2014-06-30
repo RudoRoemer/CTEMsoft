@@ -1,0 +1,936 @@
+
+\documentclass[DIV=calc, paper=letter, fontsize=11pt]{scrartcl}	 % A4 paper and 11pt font size
+
+\usepackage[body={6.5in,9.0in},
+  top=1.0in, left=1.0in]{geometry}
+  
+\usepackage[english]{babel} % English language/hyphenation
+\usepackage[protrusion=true,expansion=true]{microtype} % Better typography
+\usepackage{amsmath,amsfonts,amsthm} % Math packages
+\usepackage[svgnames]{xcolor} % Enabling colors by their 'svgnames'
+\usepackage[hang, small,labelfont=bf,up,textfont=it,up]{caption} % Custom captions under/above floats in tables or figures
+\usepackage{booktabs} % Horizontal rules in tables
+\usepackage{fix-cm}	 % Custom font sizes - used for the initial letter in the document
+\usepackage{epsfig}
+\usepackage{sectsty} % Enables custom section titles
+\allsectionsfont{\usefont{OT1}{phv}{b}{n}} % Change the font of all section commands
+
+\usepackage{fancyhdr} % Needed to define custom headers/footers
+\pagestyle{fancy} % Enables the custom headers/footers
+\usepackage{lastpage} % Used to determine the number of pages in the document (for "Page X of Total")
+\usepackage{color}
+
+\usepackage{fancyvrb}% used to include files verbatim
+%\usepackage{chemsym}
+
+\usepackage{hyperref}
+
+\usepackage[backend=bibtex,style=numeric,sorting=ydnt,maxnames=15]{biblatex}
+\renewbibmacro{in:}{}
+
+% Count total number of entries in each refsection
+\AtDataInput{%
+  \csnumgdef{entrycount:\therefsection}{%
+    \csuse{entrycount:\therefsection}+1}}
+
+% Print the labelnumber as the total number of entries in the
+% current refsection, minus the actual labelnumber, plus one
+\DeclareFieldFormat{labelnumber}{\mkbibdesc{#1}}    
+\newrobustcmd*{\mkbibdesc}[1]{%
+  \number\numexpr\csuse{entrycount:\therefsection}+1-#1\relax}
+
+
+%\addbibresource[label=papers]{mypubs.bib}
+%\addbibresource[label=books]{mypubs.bib}
+%\addbibresource[label=edited]{mypubs.bib}
+%\addbibresource[label=chapters]{mypubs.bib}
+
+
+% Headers - all currently empty
+\lhead{}
+\chead{}
+\rhead{}
+
+% Footers
+\lfoot{\textsf{CTEMmbcbed}/\textsf{CTEMlacbed} manual, v1.0, \today}
+\cfoot{}
+\rfoot{\footnotesize Page \thepage\ of \pageref{LastPage}} % "Page 1 of 2"
+
+\renewcommand{\headrulewidth}{0.0pt} % No header rule
+\renewcommand{\footrulewidth}{0.4pt} % Thin footer rule
+
+\usepackage{lettrine} % Package to accentuate the first letter of the text
+\newcommand{\initial}[1]{ % Defines the command and style for the first letter
+\lettrine[lines=3,lhang=0.3,nindent=0em]{
+\color{DarkGoldenrod}
+{\textsf{#1}}}{}}
+
+\usepackage{titling} % Allows custom title configuration
+
+\newcommand{\HorRule}{\color{DarkGoldenrod} \rule{\linewidth}{1pt}} % Defines the gold horizontal rule around the title
+
+\pretitle{\vspace{-1.5in} \begin{center} \HorRule \fontsize{25}{25} \usefont{OT1}{phv}{b}{n} \color{DarkRed} \selectfont} % Horizontal rule before the title
+
+\title{Convergent Beam Electron\\ Diffraction Simulations} % Your article title
+
+\posttitle{\par\end{center}\vskip 0.5em} % Whitespace under the title
+
+\preauthor{\begin{center}\large \lineskip 0.5em \usefont{OT1}{phv}{b}{sl} \color{DarkRed}} % Author font configuration
+
+\author{\vspace*{-0.7in}} % Your name
+
+\postauthor{\footnotesize \usefont{OT1}{phv}{m}{sl} \color{Black} % Configuration for the institution name
+
+\par\end{center}\HorRule} % Horizontal rule after the title
+\date{Program Manual, v1.0, \today}
+
+\newcommand{\ctp}{\textsf{CTEMsoft-2013}}
+%
+\newcommand{\upg}[1]{\mathrm{i}U_{\mathbf{#1}}^{\prime}}
+\newcommand{\combo}[1]{U_{\mathbf{#1}}+\upg{#1}}
+\newcommand{\upgcombo}[2]{2k_{0}s_{\mathbf{#1}}+\upg{#2}}
+\newcommand{\ugh}[2]{U_{\mathbf{#1}-\mathbf{#2}}}
+\newcommand{\ughp}[2]{U_{\mathbf{#1}'-\mathbf{#2}}}
+\newcommand{\ughpp}[2]{U_{\mathbf{#1}-\mathbf{#2}'}}
+\newcommand{\kkg}[1]{k_{0}^{2}-(\mathbf{k}+\mathbf{#1})^{2}}
+\newcommand{\Cg}[1]{C_{\mathbf{#1}}}
+\newcommand{\Cgj}[2]{C_{\mathbf{#1}}^{(#2)}}
+\newcommand{\Cgjp}[2]{C_{\mathbf{#1}'}^{(#2)}}
+\newcommand{\Cgja}[2]{C_{\mathbf{#1}}^{(#2)\ast}}
+\newcommand{\button}[1]{\colorbox{green}{\textsf{#1}} button}
+
+
+\begin{document}
+\maketitle
+
+\begin{figure*}[h]
+\leavevmode\centering
+\epsffile{figs/CTEMlogo}
+\end{figure*}
+
+\renewcommand{\contentsname}{Table of Contents}
+{\small\tableofcontents}
+
+\newpage
+\section{Introduction}
+This manual describes a set of three programs, 
+two written in Fortran-90,\footnote{f90 is a much richer language than the original fortran-f77, and is
+used for all programs in the \ctp\ package.} 
+the other in IDL,\footnote{The \textit{Interactive Data Language} is an interpreted scripting language with extensive graphics capabilities.} 
+that can be used for the simulation of regular zone axis convergent beam electron diffraction patterns (CBED) as 
+well as large angle CBED (LACBED) patterns.  The main f90 programs
+are named \textsf{CTEMmbcbed} and \textsf{CTEMlacbed} (note that all programs in the \ctp\ package start with the letters ``CTEM'').
+The output generated by either program can then be visualized by the IDL routine \textsf{CBEDDisplay.pro}.  
+
+On the following pages we will try to accomplish four tasks:
+\begin{enumerate}
+	\item Explain briefly the underlying image formation theory and the numerical approach followed by the f90 programs (section~\ref{sec:theory});
+	\item Document the various input files for the f90 programs (sections~\ref{sec:f90lacbed} and \ref{sec:f90}));
+	\item Document the IDL interface (section~\ref{sec:idl});
+	\item Explain the use of these programs by means of a few basic examples (section~\ref{sec:examples}).
+\end{enumerate}
+
+\input{common.tex}
+
+\newpage
+\section{Convergent beam electron diffraction: the underlying theory\label{sec:theory}}
+The programs described in this manual implement a dynamical model for electron diffraction using the 
+Bloch wave approach.  In this section, we describe briefly the Bloch wave approach as well as the 
+use of Bethe potentials to reduce the size of the dynamical matrix.  The combination of these 
+two approaches is used in both of the f90 programs described in this manual.
+
+\subsection{The Bloch wave model}
+We start from the basic Schr{\"o}dinger equation for high energy electrons:
+\begin{equation}
+	\Delta\Psi+4\pi^2k_0^2\Psi=
+	-4\pi^2\left[U+\mathrm{i}U^{\prime}\right]\Psi,
+	\label{eq:start}
+\end{equation}
+where the first term represents the kinetic energy, the second term the total energy (corrected for 
+refraction), and the right hand side represents the interaction with the crystal lattice; $k_0$ represents
+the refraction corrected relativistic wave number, $U$ is the position-dependent electrostatic lattice 
+potential (scaled by $2me/h^2$), and $U'$ is the corresponding absorptive potential; the combination of the 
+two is often refered to as the ``optical potential.''  For all computations in the \ctp\ package, we make use 
+of the Weickenmeier \& Kohl atomic scattering factors and absorptive form factors.\footnote{A.~Weickenmeier and H.~Kohl,
+Computation of {A}bsorptive {F}orm {F}actors for {H}igh-{E}nergy {E}lectron {D}iffraction,{\em Acta Crystall.\ A}, 47:590--597, 1991.}
+
+The Bloch wave approach\footnote{For a basic introduction, see C.J. Humphreys,
+The {S}cattering of {F}ast {E}lectrons by {C}rystals, {\em Rep.\ Prog.\ Phys.}, 42:1825--1887, 1979.}
+starts from the assumption that the wave function inside the crystal
+is a superposition of states that have the periodicity of the lattice, but does not make any
+assumption about the allowed wave vectors inside the crystal.  The wave function is then 
+assumed to be of the form 
+\begin{equation}
+	\Psi(\mathbf{r})=\sum_j\alpha^{(j)}\sum_{\mathbf{g}}\Cgj{g}{j} 
+	\mathrm{e}^{2\pi \mathrm{i}(\mathbf{k}^{(j)} +\mathbf{g})\cdot\mathbf{r}}=
+        \sum_j\alpha^{(j)}C^{(j)}(\mathbf{r})\mathrm{e}^{2\pi \mathrm{i}
+        \mathbf{k}^{(j)}\cdot\mathbf{r}}
+	\label{eq:blochexpansion2}
+\end{equation}
+The coefficients
+$\Cgj{g}{j}$ are known as the \textit{Bloch wave coefficients}, 
+while the coefficients $\alpha^{(j)}$ are the \textit{excitation amplitudes}.
+Each of the functions $C^{(j)}(\mathbf{r})$ has the periodicity of the lattice.
+Using the high energy approximation one can show that the number of coefficients is
+equal to the number of scattered beams.  
+
+When absorption is taken into account, one can show that the problem is reduced
+to the determination of the eigenvalues and eigenvectors of the dynamical matrix below:
+\begin{equation}
+	\left(\begin{matrix}
+	\upg{0} & \combo{-g} & \ldots & \combo{-h}\\
+	\combo{g} & \upgcombo{g}{0} & \ldots & \combo{g-h}\\
+	\vdots  &  \vdots &  \ddots  &  \vdots\\
+	\combo{h} & \combo{h-g} & \ldots & \upgcombo{h}{0}
+	\end{matrix}\right)
+	\left(\begin{matrix}
+	\Cgj{0}{j}\\ \Cgj{g}{j}\\ \vdots\\ \Cgj{h}{j}
+	\end{matrix}\right)=2k_{n}\Gamma^{(j)}\left(\begin{matrix}
+	\Cgj{0}{j}\\ \Cgj{g}{j}\\ \vdots\\ \Cgj{h}{j}
+	\end{matrix}\right).\label{eq:blochmatrixabs}
+\end{equation}
+From a computational point of view, this is about the most difficult eigenvalue problem to solve, since 
+the matrix is non-symmetric and complex.  In the \ctp\ package, we make use of a standard routine (\textsf{zgeev}) from the LAPACK
+library to solve this problem.
+
+Once the eigenvectors and eigenvalues are known, we need to apply the boundary condition at the 
+entrance plane (typically that all amplitude is in the incident beam and none in the scattered beams at $z=0$).
+One can show that the Bloch wave excitation amplitudes $\alpha^{(j)}$ are given by the first column of the 
+inverse of the eigenvector matrix; we use the \textsf{zgetrf} and \textsf{zgetri} LAPACK routines to compute 
+this inverse matrix.
+
+Finally, the diffracted intensities are computed by substituting the eigenvectors, eigenvalues and excitation
+amplitudes in equation~(\ref{eq:blochexpansion2}) and taking the modulus squared for each of the diffracted beams.
+This computation is then repeated for each of the incident beam directions, and the results are collected in 
+diffraction disks and displayed as a CBED or LACBED pattern.
+
+So, the basic computation is not all that complicated.  What makes the \ctp\ programs complicated is the fact 
+that they have been written for general crystal symmetry, and also the fact that the basic computational step
+must also function for the computation of several other patterns (electron channeling pattern, electron Kossel pattern, EBSD, $\ldots$).
+Furthermore, the programs also allow for a tilted incident beam, and a host of other experimental conditions.
+One important complicating factor is the implementation of Bethe potentials (see next section), which  
+necessitates a significant amount of bookkeeping.
+
+\subsection{Bethe potentials to reduce the dynamical matrix size}
+The dynamical matrix can become quite large, in particular when the incident beam is close to a zone
+axis orientation.  The computation of eigenvalues and eigen vectors goes as $N^3$, where $N$ is the number
+of beams taken into account, so even a small reduction of $N$ can have a significant effect on the 
+computation time.  The standard approach is to split the scattered beams into two groups: strong
+beams, for which the computation is done explicitly, and weak beams, which are treated as a 
+perturbation on the strong beam dynamical matrix.
+
+If we represent the optical potential by $U$, then one can show that substitution of the 
+Bloch wave expression into the Schr{\"o}dinger equation, and application 
+of the high energy approximation, results in the following system of equations:  
+\[
+	2k_{0}s_{\mathbf{g}}\Cgj{g}{j} + \sum_{\mathbf{h}\neq
+	\mathbf{g}}\ugh{g}{h}\Cgj{h}{j}=2k_{n}\Gamma^{(j)}\Cgj{g}{j}.
+\]
+where $s_{\mathbf{g}}$ are the excitation errors, and $k_n$ is the normal 
+component of the incident wave vector.
+If the prefactor of the first term $(k_{0}\vert s_{\mathbf{g}}\vert)$
+is significantly larger than the prefactor of the second term
+$(\vert\ugh{g}{h}\vert)$, then the coupling of $\mathbf{g}$ to
+$\mathbf{h}$ will be weak.  Let us rewrite this eigenvalue equation as
+follows:
+\[
+\eta^{(j)}_{\mathbf{g}}\Cgj{g}{j} + \sum_{\mathbf{h}\neq
+	\mathbf{g}}\ugh{g}{h}\Cgj{h}{j}= 0,
+\text{ with }
+\eta^{(j)}_{\mathbf{g}}\equiv 2[k_{0}s_{\mathbf{g}} - k_{n}\Gamma^{(j)}].
+\]
+We will denote weak beams by primed reciprocal lattice vectors, e.g., 
+$\mathbf{g}'$. We will also assume that weak beams do not interact 
+with each other, only with strong beams.  After a bit of mathematics,
+one can show that to first order, the above system of equations can
+be replaced by a new, smaller system where the sum only covers the strong beams:
+\[
+\bar{\eta}^{(j)}_{\mathbf{g}}\Cgj{g}{j} + \sum_{\mathbf{h}\neq
+	\mathbf{g}}\bar{U}_{\mathbf{g}-\mathbf{h}}\Cgj{h}{j}= 0,
+\]
+The perturbed excitation errors and potential 
+coefficients can be written as:
+\begin{align*}
+    2k_0\bar{s}_{\mathbf{g}} &\equiv 2k_0s_{\mathbf{g}}- 
+    \sum_{\mathbf{h}'}\frac{\vert\ughpp{g}{h}\vert^{2}} 
+    {2k_0s_{\mathbf{h}'}};\\
+    \bar{U}_{\mathbf{g}-\mathbf{h}} &\equiv \ugh{g}{h}
+    -\sum_{\mathbf{h}'}\frac{\ughpp{g}{h}\ughp{h}{h}}
+    {2k_0s_{\mathbf{h}'}},
+\end{align*}
+We have replaced the excitation errors of the strong beams by effective
+excitation errors; the Fourier coefficients of the electrostatic
+lattice potential have also been modified to take the weaker beams
+into account.  The coefficients $\bar{U}_{\mathbf{g}-\mathbf{h}}$ are
+known as \textit{Bethe potentials} or \textit{dynamical potentials}. 
+This approximation was first introduced by Bethe in 1928 using first order
+perturbation theory.
+
+It is not unusual for the Bethe potential approximation to allow for a 
+reduction of the number of beams by a factor of $2$, thus speeding up
+the computation of the eigenvalues and eigenvectors by a factor of $8$.
+Once the Bloch wave coefficients of all the strong beams are known, then 
+the following equation can be used to determine the Bloch wave coefficients of the weaker 
+beams (and hence also their intensity):
+\begin{equation}
+    \Cgjp{g}{j} = -\frac{1}{\eta^{(j)}_{\mathbf{g}'}}
+    \sum_{\mathbf{h}}\ughp{g}{h}\Cgj{h}{j}.\label{eq:weakCgj}
+\end{equation}
+While the Bethe potential approach is conceptually not that difficult, it is clear that efficient implementation 
+of this approach in a framework that functions properly for arbitrary crystal symmetry
+requires a bit of sophistication in the algorithm.
+
+The Bethe potential criteria can be implemented in a number of different ways, but 
+require the definition of one or more threshold levels.  Currently,
+the program user has some control over the threshold between strong and weak beams. 
+As will be described in more detail in section~\ref{sec:f90BetheParameters}, there are two user-adjustable 
+threshold levels, called ``\textsf{cutoff}'' and ``\textsf{weakcutoff}''; if we represent
+them by $c_1$ and $c_2$, respectively, then the following relations hold for a beam 
+with potential coefficient $\vert U_{\mathbf{g}}\vert$ and excitation error $s_{\mathbf{g}}$:
+\begin{align*}
+	0 & \le  \vert s_{\mathbf{g}}\vert \le c_2\lambda\vert U_{\mathbf{g}}\vert\rightarrow \text{ $\mathbf{g}$ is a strong beam};\\
+	c_2\lambda\vert U_{\mathbf{g}}\vert &\le \vert s_{\mathbf{g}}\vert \le c_1\lambda\vert U_{\mathbf{g}}\vert\rightarrow \text{ $\mathbf{g}$ is a weak beam};\\
+	c_1\lambda\vert U_{\mathbf{g}}\vert &\le \vert s_{\mathbf{g}}\vert \rightarrow\text{ $\mathbf{g}$ can be ignored}.
+\end{align*}
+This is a simplistic criterion for distinguishing between weak and strong beams.  While the results of computations with this criterion
+are quite good (see section~\ref{sec:examples}), one could argue that a better criterion (but a bit more difficult to implement) 
+would be the following:  above it was stated that the coupling between two beams $\mathbf{g}$ and $\mathbf{h}$ is considered 
+to be weak, if $k_0\vert s_{\mathbf{g}}\vert \gg \vert U_{\mathbf{g}-\mathbf{h}}\vert$.  So, in order for a beam to be weak, this relation
+has to be satisfied for all beams $\mathbf{g}$.  Therefore, for each potentially weak beam, we need to compare the corresponding 
+potential coefficients for all the other beams to their respective excitation errors.  This alternative thresholding approach will undergo
+some testing before implementation (if it is deemed to produce better results in terms of computation time).  
+
+As a final comment in this section we might state that it is possible to extend the Bethe potential approximation to the next perturbation
+order; preliminary numerical tests have shown that this results in an additional computational gain, at the expense of more complicated
+code.  In the current version of the source code, the first order Bethe potential approximation is used.
+
+\subsection{Using crystal and diffraction point group symmetry}
+As described in the classic article by Buxton, Eades, Steeds, and Rackham (BESR),\footnote{
+``The symmetry of electron diffraction zone axis patterns,'' Phil.\ Trans.\ R. Soc, vol.\ 281, pp.\
+171-194 (1976).} the CBED diffraction process follows a rather strict series of symmetry rules.
+In the \ctp\ package, we have attempted to implement those rules as much as possible.  Effectively,
+this means that the CBED programs ``know'' both crystal and diffraction point group symmetry, and
+attempt to use it as much as possible.  For instance, the output of the \textsf{CTEMlacbed} program is a 
+large file with multiple diffraction disks in it, one disk for each of the independent families 
+of disks.  This is not as simple as it appears to be at first sight;  let us consider an example, 
+the $[112]$ zone axis pattern for copper.
+
+All the diffraction programs in the \ctp\ package orient the crystal lattice in a default orientation 
+for all diffraction patterns.  This orientation is determined from the zone axis direction by first 
+determining the shortest two reciprocal lattice vectors normal to the zone axis (regardless of whether or not they have a non-zero structure factor), and then selecting
+the shortest one of those to be along the horizontal direction in the diffraction pattern.  For the 
+$[112]$ zone axis, the shortest reciprocal lattice vectors are $\mathbf{g}_{1\bar{1}0}$ and 
+$\mathbf{g}_{11\bar{1}}$.  According to the diffraction group tables in BESR, the $[112]$ zone axis 
+in the point group $\mathbf{m\bar{3}m}$ has $\mathbf{2}_R\mathbf{mm}_R$ as its diffraction group (Table 4 in BESR, reproduced in
+section~\ref{sec:examples}).  As a 
+consequence, the Bright Field symmetry is $\mathbf{m}$, the Whole Pattern symmetry is $\mathbf{m}$, the special
+Dark Field symmetry is $\mathbf{m}$, and the general Dark Field symmetry is $\mathbf{1}$; note that these are
+all 2D point group symmetries, not 3D!  
+
+There are two important observations to be made for this example:  
+\begin{enumerate}
+	\item The standard orientation of the 2D crystallographic point group $\mathbf{m}$ has the mirror plane in the horizontal 
+	orientation when drawn on a stereographic projection (see Table 10.2.1 in the International Tables for Crystallography, Volume A).
+	This is the same orientation as the shortest reciprocal lattice vector $\mathbf{g}_{1\bar{1}0}$.  However, we know that this 
+	reciprocal lattice vector must be normal to a mirror plane, not parallel to it, so that we need to rotate the 2D point group
+	$\mathbf{m}$ by $90^{\circ}$ to bring it in the correct orientation relative to the projected zone axis pattern.  Such issues
+	arise for the 2D point groups $\mathbf{m}$, $\mathbf{31m}$ and $\mathbf{3m1}$; the CBED programs properly take 
+	these special cases into account.
+
+	\item Since the Whole Pattern (WP) symmetry for the $[112]$ zone axis in copper is $\mathbf{m}$, this means that,
+	from a diffraction group point of view, the reflections $\mathbf{g}_{11\bar{1}}$ and $\mathbf{g}_{\bar{1}\bar{1}1}$ are
+	no longer equivalent, since they do not belong to the same family with respect to the 2D symmetry group $\mathbf{m}$.
+	Hence, when the CBED programs determine families of equivalent reflections, this operation is performed with respect
+	to the 2D symmetry groups, not the 3D crystallographic point groups.  This should be kept in mind when analyzing the lists 
+	of reflections for each of the zero and higher order Laue zones.
+\end{enumerate}
+
+While the implementation of the diffraction group symmetry was extensively tested on a number of crystal structures and 
+zone axis directions, it is rather complicated from a programming point of view, so it is possible that errors remain; if an error is suspected, please contact the 
+author and report the crystal structure, accelerating voltage, zone axis, and beam convergence angle, as well as a brief description of the 
+error.  Make sure that you properly understand the diffraction groups and the use of the symmetry tables before complaining 
+about a potential error$\ldots$.
+
+
+
+\newpage
+\section{The \protect\textsf{CTEMlacbed.f90} program\label{sec:f90lacbed}}
+
+\subsection{Program overview\label{sec:f90overviewlacbed}}
+This is a general program for large angle CBED computations.  The main output of 
+this program is a file containing the complete diffraction disks for all relevant
+reflections, out to some large beam convergence angle.  The diffraction disks are stored
+individually, along with relevant information for each reflection.  This allows one to
+then interactively compute low resolution regular CBED patterns for a range of 
+microscope and sample tilt conditions (using the IDL visualization program).
+
+The program makes use of symmetry (diffraction groups) when appropriate to speed 
+things up a bit.  The main computation proceeds as follows:
+\begin{itemize}
+	\item read input parameters;
+	\item determine, for the given zone axis direction and beam convergence angle, 
+	which reflections could potentially contribute to the scattering process;
+	\item for those reflections, pre-compute all the potential Fourier coefficients,
+	as well as an array that contains one unique set of Miller indices (unique with respect to the 
+	Whole Pattern symmetry) for each 
+	contributing family of $\mathbf{g}_{hkl}$;
+	\item loop over all beam directions in the incident cone:
+	\begin{itemize}
+		\item determine the dynamical matrix, using the Bethe potential method (i.e.,
+		for all participating beams, split them into strong and weak beams);
+		\item solve the eigenvalue problem to obtain all intensities (for a range of 
+		sample thicknesses);
+		\item extract from the intensity array those values that correspond to the 
+		pre-selected set of unique planes $(hkl)$;
+	\end{itemize}
+	\item store all diffraction disks and associated data in a binary file for visualization in IDL.
+\end{itemize}
+This program can take a long time to run, depending on the complexity of the crystal structure,
+as well as on the beam convergence angle and requested disk size (see next section for parameter 
+definitions).  It would make sense to speed things up a bit by using OpenMP calls, but that has not yet
+been implemented (as of \today).
+
+The program will automatically determine which independent families of reflections need to be considered
+in the output.  This process (known internally as ``pruning the reflection list'') can be a bit time-consuming
+since it involves running through the list of potential reflections for each of the incident beam directions.
+The time it takes will increase with decreasing \textsf{dmin}, increasing convergence angle $\theta_c$, and increasing \textsf{npix} 
+(see section~\ref{sec:f90inputlacbed} for the definition of these input parameters).
+It is probably not easy to speed this up significantly, and it is unlikely that the pruning algorithm is a 
+candidate for parallel implementation without rewriting significant portions of the algorithm.\footnote{In other words,
+be patient, until I have a chance to come up with a better algorithm.}
+
+As part of the screen output, the program lists the diffraction group symmetries that are relevant 
+for the current crystals structure and zone axis orientation.  This is done by means of a complete 
+implementation of the relevant tables in BESR.  The relevant symmetries are:  Bright Field, Whole Pattern, and Special and General
+Dark Field.  The computed diffraction disks should display these symmetries (Whole Pattern only for the
+\textsf{CTEMmbcbed} program in zone axis orientation, not for \textsf{CTEMlacbed} which display the proper Bright Field
+and Special or General Dark Field symmetries for individual diffraction disks).
+
+It should be noted that the output file for this program can become very large.  For an \textsf{npix} parameter 
+of $512$ pixels (resulting in an image of size $1025\times 1025$), $10$ sample thickness values,
+and $162$ independent reflection families (it is quite easy to get this many, even for a small unit cell),
+the output file has a size of about $6.8$ Gb.  One can restrict the file size a little by specifying how  
+many HOLZ layers are used in the output; in its current implementation, the IDL display program will only 
+use up to three HOLZ layers in addition to the ZOLZ layer.  One can also reduce the input parameter \textsf{dmin} (see next section),
+which controls the smallest $d$-spacing taking into account in the dynamical matrix, but this does affect the accuracy 
+of the computation and may give rise to missing HOLZ lines.  Finally, one can vary the threshold parameters for the 
+Bethe potential approximation to some extent without significantly sacrificing the accuracy of the result.
+
+\subsection{Namelist input files\label{sec:f90inputlacbed}}
+The input file for this program, \textsf{CTEMlacbed.nml}, is formatted as follows:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
+\VerbatimInput{../templatefolder/CTEMlacbed.template}
+Most of these entries are self-explanatory.  The program will not run
+without a valid crystal structure file name (xtalname).  The output
+file can become very large; its size is proportional to the product 
+of (2npix+1)$^2$, numthick, and the total number of independent families
+that contribute to the diffraction process. This latter number depends 
+on the crystal structure (lower symmetry and/or larger unit cell will produce 
+more families for a given value of dmin), and also on the beam 
+convergence angle (the larger the angle, the larger the region of reciprocal 
+space that can produce scattered intensity).  It is not unusual for the 
+program to produce files that are several Gb large.  For representative 
+examples of the input file, see the examples in section~\ref{sec:examples}.
+
+\subsection{Bethe parameters namelist file\label{sec:f90BetheParameters}}
+The Bethe potential approximation used in this program can be adjusted by the
+user via the \textsf{BetheParameters.nml} namelist file, which must be present 
+in the folder in which the program is executed; if this file is not present, then the
+program will assume default values for all three parameters.  The values shown below
+are the current program defaults.
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
+\VerbatimInput{../templatefolder/BetheParameters.template}
+The last parameter sets the excitation error cutoff level for double diffraction reflections.  The issue with
+such reflections is that they have a zero structure factor (and hence $U_{\mathbf{g}} = 0$), so that 
+the standard Bethe potential threshold approach can not be used at all.  The current implementation
+allows the user to set a threshold for the excitation error (in nm$^{-1}$) above which the double diffraction reflection
+will not contribute at all.  Recall that double diffraction reflections can only occur in so-called non-symmorphic 
+space groups, i.e., in space groups that have at least one screw axis or glide plane symbol in their space 
+group symbol; in other words, in the space group \textbf{Fm$\bar{\mathbf{3}}$m}, there are no glides or screws in
+the symbol, so double diffraction reflections are not possible for \textit{any} zone axis orientation.  For the space group \textbf{P6$_{\mathbf{3}}$/mmm},
+on the other hand, there is a $6_3$ screw axis in the space group symbol, therefore it is possible for certain
+zone axes to display double diffraction reflections.  The CBED programs automatically take these reflections into account, but the user must
+set the excitation error threshold value, or accept the program default.
+
+It is also important to note that the value of the \textsf{weakcutoff} parameter should always be less that
+that of the \textsf{cutoff} parameter if one wants to make use of the Bethe approximation.  Testing has shown
+that a \textsf{weakcutoff} value slightly larger than half the \textsf{cutoff} value produces reasonable 
+results.  To avoid using Bethe potentials, the two parameters should be put equal to each other.
+
+\section{The \protect\textsf{CTEMmbcbed.f90} program\label{sec:f90}}
+
+\subsection{Program overview\label{sec:f90overview}}
+This program uses much of the same code as the LACBED program, but produces CBED patterns 
+instead of individual diffraction disk images.  The main thinking here is that one would 
+use the LACBED program to compute a much larger range of convergence angles than needed 
+for CBED, and then one can experiment in the IDL visualization program to determine what the best 
+microscope parameters would be to get a good CBED pattern (which will be a low resolution
+pattern based on the LACBED data).  Once the parameters are known, one can then run the 
+MBCBED program to obtain a higher resolution pattern.  For zone axis orientations, the 
+program will make full use of the diffraction symmetry to reduce the number of beam directions
+for which the computation has to be carried out.
+
+\subsection{CTEMmbcbed.nml\label{sec:f90input1}}
+The \textsf{CTEMmbcbed.nml} input file has the following entries:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
+\VerbatimInput{../templatefolder/CTEMmbcbed.template}
+Note that the camera length parameter \textsf{camlen} is simply a scale parameter
+for the CBED pattern, and does not reflect a real camera length.  The computation is
+always carried out so that for each pattern pixel inside the Bright Field disk, there 
+will be one single incident beam direction.  Hence, increasing the camera length will
+magnify the pattern, but will also increase the computation time.  Note that when 
+the camera length is reduced, the HOLZ lines will become visible in the pattern, and the 
+computation time will generally be relatively short.  The IDL visualization program can be used to generate 
+an input namelist file for the \textsf{CTEMmbcbed} program; see section~\ref{sec:examples} for simulation
+examples.
+
+\section{The \protect\textsf{CBEDDisplay.pro} program\label{sec:idl}}
+
+
+\subsection{Program overview\label{sec:idloverview}}
+The data files generated by the \textsf{CTEMmbcbed} and \textsf{CTEMlacbed} programs consist of geometrical information and arrays of diffraction 
+disks or CBED patterns.\footnote{In a later version of the \textsf{CTEMlacbed} program, it will be possible to store, for each incident beam direction, 
+the excitation amplitudes, Bloch wave coefficients, and eigenvalues of each participating reflection; 
+that data file will become quite large in size, easily multiple gigabytes.
+The main reason for storing this data is that it then becomes possible to interactively play with a series of detector parameters,
+in particular the convergence angle and the LACBED disk selection.  In the current version of the program, the data file contains
+pre-computed diffraction disks, and only limited parameter modifications are possible.}  These files can be visualized using the IDL program
+\textsf{CBEDDisplay.pro}, described in this section.
+
+The \textsf{CBEDDisplay.pro} routine requires an IDL program license or can be executed using the Virtual Machine, without the need for a license. 
+If you do have a license, then make sure that the folder containing the routines is part of your IDL pathname,
+and that IDL is properly installed for the UNIX shell that you will be using (csh, bsh, etc...).
+To execute the program, first start an IDL session in a terminal window (using the /Appplications/Utilities/Terminal program), 
+start IDL, compile the \textsf{CBEDdisplay.pro} routine by typing:
+\begin{verbatim}
+	IDL> .r CBEDDisplay <return>
+\end{verbatim}
+at the IDL prompt and hitting return, followed by typing 
+\begin{verbatim}
+	IDL> CBEDDisplay <return>
+\end{verbatim}
+to start the display program.  The main program widget window will appear as well as a file selector window.  
+Details of all the windows are described in the following subsections.
+
+In addition to requiring an IDL license, the program expects the X-windows environment to be installed.  On the Mac, this corresponds
+to the \textsf{XQuartz} program which can be downloaded from the open source site \textsf{http://xquartz.macosforge.org/}.  This program
+must be installed in the system /Applications/Utilities folder and requires OS X 10.6 or later.
+
+Useful thing to know: if the \textsf{CBEDDisplay.pro}  program hangs for some reason, you can reset your IDL session by typing
+\begin{verbatim}
+	IDL> .reset <return>
+\end{verbatim}
+This will destroy all program widgets and reset IDL to its original state.  If that does not work, then you may have to ``force quit'' the Terminal program
+using the standard Esc-Option-Command key stroke.
+
+
+\subsection{Main window\label{sec:idlmain}}
+The main window contains most of the parameters that can be set by the user.  When the program first starts, a program preferences file 
+will be read (see section~\ref{sec:idlpref}), and several internal parameters will be initialized to the values they had the last time the program
+was used.  The main display widget when the program is started is shown in Fig.~\ref{fig:widget1}.
+
+\begin{figure}[h]
+\leavevmode\centering
+\epsffile{figs/CBEDwidget1}
+\caption{\label{fig:widget1}Main \textsf{CBEDDisplay.pro} program widget.}
+\end{figure}
+
+The main window consists of a number of information blocks; starting from the top we have:
+\begin{itemize}
+	\item block 1: contains information about the data file that is currently loaded in memory: the file name and size, and the dimensions of the 
+	individual diffraction disks or CBED patterns in that file.  The black stripe is a file loading progress bar, since some files can take a while to load.
+	\item block 2: various pieces of information generated by the \textsf{CTEMlacbed} or \textsf{CTEMmbcbed} programs are displayed here: number 
+	of independent families of reflections in the data file (\textsf{CTEMlacbed} only); the beam convergence angle [mrad]; the electron wave length [pm];
+	the maximum HOLZ layer contained in the file (\textsf{CTEMlacbed} only); the foil normal indices; the number of $\mathbf{k}$ vectors considered 
+	in the incident illumination cone; the crystal structure input file; the zone axis indices; the Miller indices of the reciprocal lattice vector that is horizontal
+	and pointing towards the right in the CBED patterns; and the intensity cutoff value (\textsf{CTEMlacbed} only; diffraction disks that have a maximum
+	intensity below this cutoff value are not included in the data file).
+	\item block 3: this block contains all the symmetry information for the current data file: the crystal point group and corresponding Laue point group;
+	the zone axis diffraction group and corresponding projection diffraction group; the Whole Pattern (WP) and Bright Field (BF) 2D symmetry groups;
+	and the Special and General Dark Field 2D point groups.
+	\item block 4: below the trio of buttons described below, one finds the program information window, where various pieces of information will be 
+	displayed when the program options are being used.  One can save all this information to a file by setting the LogFile button at the bottom right
+	to \textsf{On}; this will generate a log file that contains the same information that appears in the information window.  The LogFile must be 
+	turned on \textit{before} starting any activities in the program, and can be turned off at any moment.  The log file will have the 
+	date and time as part of its file name, as in \textsf{CBEDDisplaySunOct20\_2013\_13:09:19.log}, and will be placed in the folder that the program is called from.
+\end{itemize}
+At the base of the widget there are three buttons:
+\begin{itemize}
+	\item \button{Quit}: this is obviously the main program termination button; clicking on this button will cause the program to write its
+	current preferences file, close all other open widgets, and finally close itself.
+	\item \button{Load LACBED File}: this option will bring up a file load dialogue window.  Use the navigation panels to locate a data file (generated
+	by the \textsf{CTEMlacbed} program) that 	you wish to open and then click the \button{Open} button.  Once the file has been loaded, all the 
+	fields in blocks $1$--$3$ will be filled with the proper values, and the \button{LACBED Window} and \button{CBED Window}  will be 
+	activated (between blocks 3 and 4).
+	\item \button{Load MBCBED File}: this option will bring up a file load dialogue window.  Use the navigation panels to locate a data file (generated
+	by the \textsf{CTEMmbcbed} program) that you wish to open and then click the \button{Open}.  Once the file has been loaded, all of the relevant
+	fields in blocks $1$--$3$ will be filled with the proper values, and the \button{MBCBED Window}  will be activated (between blocks 3 and 4).
+\end{itemize}
+
+
+
+
+\subsection{LACBED window\label{sec:idllacbed}}
+This widget can be used to display individual diffraction disks from the LACBED input file.  In this and the following three sections, the screen shots
+will be taken from the second example in section~\ref{sec:example2}.  After an input file has been loaded, both the \button{LACBED Window} and \button{CBED Window}
+will be highlighted.  Starting with the \button{LACBED Window}, clicking it will produce two new widgets, shown in Fig.~\ref{fig:widget2}, 
+which may be repositioned as needed. The LACBED Pattern
+Widget has two graphics windows with a size of $513\times 513$ pixels each.  Below each window are fields indicating the minimum and maximum intensity
+in each window; the Dark Field/Eades window has an additional field with the Miller indices of the reflection/family currently selected.  There are 
+no editable fields in this widget.  Note that scroll bars will appear in each of the draw areas if the size of the disk image is larger 
+than $513\times 513$.  
+
+
+\begin{figure}[t]
+\leavevmode\centering
+\epsffile{figs/CBEDwidget2}
+\caption{\label{fig:widget2}\textsf{LACBED} widget and the corrsponding draw widget.}
+\end{figure}
+
+The LACBED Widget contains a number of user adjustable fields and buttons; they are, from top to bottom:
+\begin{itemize}
+	\item \textsf{Dark Field Display Mode}: there are three options here: 
+	\begin{itemize}
+		\item \textsf{Single DF}: this option will produce a dark field disk from the selected reflection;
+		\item \textsf{Symmetrized DF}: if the selected reflection has a multiplicity larger than $1$, then 
+		the dark field window will display the superposition of all the family members, applying the Whole
+		Pattern symmetry to the Single DF image.
+		\item \textsf{Eades}: this mode produces a so called Eades pattern, in which all symmetrized DF images
+		within a given angular range (see below) are added together.
+	\end{itemize}
+	\item \textsf{Foil Thickness [nm]}: clicking on this button will produce a list of all available foil thicknesses; selecting 
+	one of them will then display that value and use if for visualizations.
+	\item \text{ZOLZ and HOLZ lists}: the list of ZOLZ reflections is shown first, with for each reflection the Miller 
+	indices of the representative family member, the scattering angle $2\theta$ in mrad, and the multiplicity of this 
+	reflection with respect to the 2D Whole Pattern symmetry group.  In the HOLZ boxes, similar lists are shown for the first 
+	and higher order Laue zones.  The current program limit is set to a maximum of $3$ HOLZ lists, but if the data file contains 
+	fewer (via the \textsf{maxHOLZ} entry) then only the ones present will be shown.  If a HOLZ layer does not have any
+	reflections in it, the list will still appear but will be empty.
+	\item \textsf{Eades angular range [mrad]}: There are two editable text fields in which the user can enter the inner and 
+	outer radii of the HAADF detector; note that the outer radius should be larger than the inner radius, so it should be set first.
+	\item \textsf{Disk rotation angle [CW, deg]}: if necessary, each of the disk patterns can be rotated by a clock-wise angle in
+	degrees; this can be useful when comparing simulated patterns with experimental ones.
+	\item \textsf{Intensity Scaling}: because to the large dynamic range of intensities in CBED patterns, it makes sense to allow the user
+	to set the intensity scaling mode to linear or logarithmic (base-10).  The text field at the end of this line contains an offset
+	factor that is added to each of the patterns before computation of the logarithm (to avoid taking the logarithm of zero). Note that 
+	the intensity scaling only affects the DF/Eades window, not the BF window.
+	\item \textsf{File Format}: patterns can be stored in one of three formats: JPEG, TIFF, or BMP.
+	\item \button{Go}: click this button to display a pair of BF/DF patterns for the values entered in the fields of this widget.
+	\item \button{Surprise Me}: clicking this button will display a color pattern created by randomly selecting a number of 
+	symmetrized DF patterns and adding them together (this may include the BF pattern).  Each time the button is clicked a different color pattern will appear;
+	sometimes such a pattern is really strikingly beautiful, in which case the \button{Save} button can be used to save it.
+	\item \button{Save}: clicking this button will bring up a file save dialogue box in which the user can enter the filename
+	without extension.  The image that will be saved is the one currently displayed, either a pair of BF/DF images stored as a 
+	single image, or a colorized pattern.
+	\item \button{Close}: close the two widgets.  The various parameters set in the widget will be retained in memory and 
+	will be the starting values the next time the LACBED Widget is started.
+\end{itemize}
+
+
+\subsection{CBED window\label{sec:idlcbed}}
+This widget allows the user to create a conventional CBED pattern based on the data in the LACBED data file.  If the \button{CBED Window} is clicked
+while the LACBED Window is still open, the latter will close and the new widget will appear.  Once again there are two windows, one a simple 
+graphics window with no adjustable fields, the other a control window; both are shown in Fig.~\ref{fig:widget3}.
+
+To understand the guidelines below, it is useful to recall the definition of the Laue center: \textit{the Laue Center is the projection
+of the center of the Ewald sphere onto the Zero Order Laue Zone (ZOLZ).}  It provides an easy way to define a beam tilt, since all
+that is needed are two coordinates in the ZOLZ; from those two coordinates, and knowledge of the length of the incident wave vector (which
+is the inverse of the electron wave length), one can reconstruct the complete wave vector.  In the \ctp\ package, the Laue Center coordinates
+are determined in units of what is internally called the $\mathbf{g}_a$ vector: this is the shortest reciprocal lattice vector that is normal
+to the zone axis.  It is always oriented along the horizontal axis of a diffraction pattern (regular or convergent beam), and may have a zero structure
+factor.
+
+In the CBED Widget, the following parameters can be set by the user:
+\begin{itemize}
+	\item \textsf{Camera Length [mm]}: sets the camera length used for display.  Note that the patterns are computed for a camera length
+	of $1000$ mm, and may appear pixelated for any other value in this field.  This widget is meant to be used to determine what the best
+	parameters would be to record a given CBED pattern. 
+	\item \textsf{Convergence Angle [mrad]}: beam convergence angle to be used for the CBED pattern (must be smaller than the LACBED beam convergence 
+	angle.  When a new value is entered in this field, the drawing in the smaller graphics window is updated (see below); we will refer to this
+	convergence angle as the \textit{local} convergence angle. 
+	\item \textsf{Laue Center x and y}: The displayed CBED pattern does not need to have the incident beam along the original zone axis orientation;
+	the beam can be tilted, which is equivalent to a sample tilt in the opposite direction.  
+	This position is updated on the drawing whenever the Laue Center coordinates are changed.  The coordinates are measured
+	in units of the length of the ``Horizontal g'' vector listed in the main program widget.
+	\item \textsf{Intensity Scaling}: this is identical to the version described in the previous section.
+	\item \textsf{Foil Thickness}: this is identical to the version described in the previous section.
+	\item \textsf{Move Mode}: When a pattern is display, and the user changes the Laue Center coordinates, then the program will immediately
+	display the new pattern (when \textsf{jump} is selected), or the pattern will gradually change (mimicking the sample being tilted) form the old
+	to the new location.  The number of steps to be taken can be set with the selector below the \textsf{track} button.
+
+\begin{figure}[t]
+\leavevmode\centering
+\epsfxsize=6.0in\epsffile{figs/CBEDwidget3}
+\caption{\label{fig:widget3}\textsf{CBED} widget and the corresponding draw widget (note the different scales, the draw widget has a $1025\times 1025$ drawing area).}
+\end{figure}
+
+	\item \textsf{graphics window}: this window displays five pieces of information:
+	\begin{itemize}
+		\item the largest circle (displayed in green) represents the diffraction disk size for the LACBED convergence angle; the size of this circle is 
+		constant and everything else is properly scaled with respect to it.
+		\item the second largest circle (in red) represents the range within which the Laue center can be varied. The radius of this circle changes
+		whenever the local convergence angle is changed, and is equal to the LACBED convergence angle minus the local convergence angle.  Any
+		attempts to place the Laue center outside the red circle will result in the Laue center being placed on the circle.  The reason for
+		this limit is that the LACBED data set does not have sufficient information to compute the complete CBED pattern for Laue center positions 
+		outside of the red circle; if reflections appear to have been truncated, then that is likely due to the fact that the Laue center was
+		located outside the red circle (can happen when the local convergence angle is changed)
+		\item the set of blue circles represents the individual diffraction disks in the LACBED ZOLZ data set, drawn in the correct relative 
+		positions and with radii scaled to the local convergence angle.
+		\item the white cross represents the position of the ``Horizontal g'' reflection that is used as a measuring unit for the Laue Center 
+		coordinates.  Note that it is possible for this location to not have a blue circle associated with it, if that particular reflection is 
+		forbidden by space group symmetry; whether it is present or not, the program uses the length of that vector as the internal measuring unit.
+		\item the small red cross and associated red circle represents the current location of the Laue Center;  this position can be changed by clicking anywhere 
+		inside the red circle (in which case the CBED pattern will be updated automatically) or by manually entering Laue center coordinates
+		and clicking the \button{Go}. 
+	\end{itemize}
+	\item \button{Go}: click this button to display a computed CBED pattern for the values entered in the fields of this widget.
+	\item \button{Create .nml file}: when the user clicks on this button, a file dialogue box will pop up, asking for 
+	a file name for a \textsf{CTEMmbcbed.nml}-type input file for the \textsf{CTEMmbcbed} program; the values in the file will be
+	those for the currently displayed CBED pattern.  When the program is executed using this namelist file, then the result will be 
+	a high resolution CBED pattern than can be viewed with the \textsf{MBCBED} widget described in the next section.  
+	\item \button{Close}: close the two widgets.  The various parameters set in the widget will be retained in memory and 
+	will be the starting values the next time the CBED Widget is started.
+\end{itemize}
+
+Note an important distinction between this CBED widget, and the MBCBED widget described in the next section: all patterns shown in the 
+CBED widget are extracted from the LACBED data set and displayed at the user defined camera length.  Since this camera length may 
+be larger than the value of $1000$ mm used to compute the disk positions in the \textsf{CTEMlacbed} program, the resulting pattern
+may appear to be strongly pixelated.  To compute a high resolution version of the corresponding pattern, one should use the \textsf{CTEMmbcbed} 
+program for pattern computation and the MBCBED widget for pattern display.
+
+
+\subsection{MBCBED window\label{sec:idlcbed}}
+When the \button{Load MBCBED File} is selected in the main widget, a file dialogue widget will open and prompt the user for a
+file name; when that file has been loaded, the \button{MBCBED Window} will become active.  Clicking on it will display
+two windows, one a control widget, the other a graphics window sized appropriately for the CBED patterns.  The main controls
+in the \textsf{MBCBED} widget have all been explained before, so there is no need to repeat them here.  Basically, the MBCBED
+widget can be used to display a single CBED pattern for a particular thickness, adjust the image contrast, and save the 
+resulting pattern to a jpeg, tiff, or bmp file.
+
+
+\subsection{Preferences file\label{sec:idlpref}}
+Upon the first execution of the \textsf{CBEDDisplay.pro} routine, a preferences file will be created in the user's home folder.  The file is called \textsf{.CBEDgui.prefs}; the starting period
+means that the file will not show up in a Finder window or on the UNIX command line when a simple \textsf{ls} command is issued.  This is a 
+regular editable text file consisting of name::value pairs.  The first line shows the number of entries in the file, and then each entry is listed on a 
+separate line.  A commented version of the preferences file is as follows:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize,numbers=left}
+\VerbatimInput{CBEDgui-commented.prefs}
+Note that the comments are not part of the actual preferences file.  All lines must be present in the file or the program will exit with an error message; the order 
+of the lines is not important, but the file will always be written in the same order.
+The values shown above are not default values, but represent a random snapshot of the program status after it has been used for a while.
+
+When the program starts, it will first internally initialize all variables to default values, and then read the preferences
+file, if it exists.  Then the widgets will be created using the preference values.  When the program is ended normally (by
+pressing the \button{QUIT}), all current values, including the widget locations, are written to the preferences
+file.
+
+
+
+\newpage
+\section{A few worked examples\label{sec:examples}}
+In this final section, we show a few simple worked examples that illustrate how to use the combination of f90 and IDL programs 
+to obtain simulated CBED images.  For all the examples, the input parameters in the \textsf{BetheParameters.nml} file 
+should be set to \textsf{weakcutoff}$= 100$, \textsf{cutoff}$= 200$, and \textsf{sgcutoff}$=0.05$ nm$^{-1}$; note that this 
+file must be located in the folder from which the programs are being executed (see comments below).
+
+\subsection{A thickness series of $\mathbf{[112]}$ Cu CBED patterns\label{sec:example1}}
+First of all, we create the crystal structure input file using the \textsf{CTEMmkxtal} program, or by directly editing a 
+text file, as described in the main \ctp\ package manual.  Then we edit the \textsf{CTEMmbcbed.nml} namelist file as follows (omitting the comment lines):
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize,numbers=left}
+\VerbatimInput{CTEMmbcbed-example1.template}
+It is a good idea to keep a copy of each input namelist file along with the generated data file;  for instance, you could create 
+a folder called \textsf{CTEMruntime} in your home directory, and inside it, an \textsf{nml} folder to keep all the namelist files
+together.  In addition, you could keep an \textsf{xtal} folder for crystal structure input files.  If the namelist file above is called
+\textsf{MBCBEDCu112.nml}, and is located in the \textsf{nml} folder, and you run the program from the main \textsf{CTEMruntime}
+folder, then the program call should be as follows:
+\begin{verbatim}
+	prompt> path/CTEMmbcbed nml/MBCBEDCu112.nml
+\end{verbatim}
+where ``prompt'' is the UNIX command line prompt, and ``path'' is the pathname to the \ctp\ \textsf{exe} executable folder.\footnote{If you
+add this folder to your general shell path variable, then the pathname can be omitted from the program call.}  It is also a good idea to 
+start the namelist file name with the characters that identify the program for which the file is intended.
+
+Note that the \textsf{outname} entry in the file above points to a file that may be on a different drive than your home directory.  It is
+good practice to keep the computation results in a separate location, one that is not included in your regular file back up.  Since the 
+output files can always be recreated by rerunning the program, there is no need to keep large data files on a file system that is included in
+the regular file system backup.
+
+Scanning through the above input file, we see that the computation will be carried out for the Cu crystal structure; program output will
+be sent to the terminal window; all planes with $d$-spacings larger than $0.02$ nm will be considered; the accelerating voltage 
+is $200$ kV; the camera length is $1000$ mm; beam direction and foil normal are parallel to $[112]$; the Laue center coordinates are
+set to zero, meaning that the computation will be carried out for the exact zone axis orientation; the output image will be $500\times 500$ pixels 
+large; the beam convergence angle is $5.0$ mrad; and there are $10$ output thicknesses, starting at $20$ nm with $20$ nm increments.
+Note that the magnitude of the camera length is meaningless; it is only the relative magnitude that counts, so if you perform two program runs,
+one with a camera length of $1000$ mm, the other with $600$ mm, the resulting patterns will be scaled properly with respect to each other.\footnote{An 
+older version of this program produced output that was properly scaled for real micrographs, on photographic negatives; in that case, the 
+magnitude of the camera length was properly calibrated with respect to the negative dimensions.  Nowadays, with CCD cameras and photo editing
+software, there is no longer a need for an absolute camera length scale.}
+
+When the program is executed with this input file, it will read the namelist file, followed by reading the crystal structure file, all the while
+printing program output to the terminal window.  The first part of the program analyzes the zone axis orientation in terms of diffraction 
+symmetry, and determines which reflections should be taken into account.  All relevant HOLZ layers will be considered automatically,
+only limited by the value of the \textsf{dmin} parameter.  For the given camera length, there are $10,913$ pixels inside the diffraction disk,
+which corresponds to the number of incident wave vectors to be considered.  The program also found $14,859$ potential reciprocal lattice points 
+contributing to the diffraction pattern; this is based on the value of \textsf{dmin}, which results in a total of $(2n+1)^3$ reciprocal lattice 
+points, which, for $n=19$ (derived from the lattice parameters and \textsf{dmin}) results in an initial total of  $59,319$ reciprocal lattice points.
+Of these points roughly one quarter are eliminated due to the systematic extinction rule for a face centered Bravais lattice, leaving a total
+of $14,859$ potential points.  For each incident beam direction the program then determines which of these contribute to the CBED pattern.
+
+After computation of all the necessary potential coefficients $U_{\mathbf{g}}$, the
+program will consider all incident beam directions, one at a time,\footnote{A later program version will employ OpenMP multi core capabilities.}
+and store the scattered intensities in the proper locations in the diffraction pattern array.  Since a given set of Bloch wave eigenvalues
+and eigenvectors can be used for a range of thicknesses, all requested thickness values are computed in one step.  The output of this
+program is a data file that can be read by the IDL \textsf{CBEDDisplay.pro} routine.  While this introduces an extra step in the process,
+it does have the advantage that the pattern intensities can be scaled interactively, on a logarithmic scale, to make sure that all relevant 
+CBED features are visible.  If the program were to produce tiff image files, for instance, then the user would need to specify ahead of time 
+how the intensities should be scaled into the range $[0\ldots 255]$; the program would need to be executed again if a different intensity 
+scaling were desired.  The data file stores the intensities as real numbers, so that the intensity scaling can be performed separately and
+interactively.  At the end of the run, the program displays the computation time as well as the average number of strong beams (about $50$ in this
+case) and weak beams (about $25$) for the complete run.  
+
+After the program run has completed (on a Mac Pro with $3.06$ GHz Intel Xeon processor using a single core, 
+the total program execution time, including writing the data file, was about five minutes for the 
+present input file), the output file can be opened in the IDL visualization program.  Use the \button{Load MBCBED File} to display 
+the file selection widget, and select the file you just created.  The \button{MBCBED Window}  will be activated, and all relevant data fields
+will be filled in.  Click the \button{MBCBED Window}  to create a new widget, with a series of display parameters at the top, and a graphics
+window that will display the CBED pattern.  Select the thickness you wish to display, as well as the intensity scaling mode (linear or 
+logarithmic). If the logarithmic mode is chosen, then you can set the offset parameter to adjust the contrast;  this parameter will be added 
+to the CBED pattern before the base-10 logarithm is computed and displayed.  Finally, you can save each individual pattern by clicking
+on the \button{Save} and entering a filename; three image file formats are available (jpeg, tiff, and bmp).
+The resulting output images can then be combined/edited with your favorite image processing program (Photoshop, GIMP, etc), to produce
+figures for reports or papers.  Fig.~\ref{fig:ex1} shows a combination of six CBED patterns for thicknesses $40$ through $140$ nm, with
+logarithmic scaling and an offset parameter of $10^{-4}$.
+
+\begin{figure}[h]
+\leavevmode\centering
+\epsffile{figs/ex1}
+\caption{\label{fig:ex1}Cu $[112]$ CBED patterns for the parameters stated in the text, and the indicated thickness values (in nm).  Intensities are 
+scaled logarithmically (base-10, with an offset of $10^{-4}$).}
+\end{figure}
+
+
+
+\subsection{A $\mathbf{[230]}$ Si LACBED pattern computation\label{sec:example2}}
+In this example we use the \textsf{CTEMlacbed} program to compute large angle CBED disks
+for the $[230]$ zone axis orientation of silicon, an orientation that is often used to look at 
+internal strains.  To run the program, we first need to create the namelist input file, which we 
+will name \textsf{LACBEDSi230.nml}:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize,numbers=left}
+\VerbatimInput{CTEMlacbed-example.template}
+Most of the parameters here are self-explanatory. The \textsf{maxHOLZ} parameter defines the maximum number of 
+HOLZ layers that will be present in the output file;  it does not mean that the computation itself is limited to $2$ HOLZ layers.
+The number of contributing HOLZ layers is determined from a combination of \textsf{dmin}, the zone axis orientation, and
+the Bethe potential parameters.  The beam convergence angle is typically set to a value that is significantly larger
+than that used for conventional CBED patterns, because the program keeps all diffraction disks
+separate (no disk overlap).  A value of $40$ to $60$ mrad has been found to produce reasonable results.  The \textsf{npix} parameter
+defines the number of pixels along the radius of the diffraction disk, not counting the center; hence the complete disk will be
+inscribed in a square of edge length L=2\textsf{npix}+1.  A value of \textsf{npix}$=256$ is a reasonable compromise between having
+sufficient resolution in the patterns, and keeping the computation time down.  The total number of incident beam directions for which
+the Bloch wave eigenvalue problem has to be solved is equal to the number of pixels inside the diffraction disk, which is just over 
+$205000$ for \textsf{npix}$=256$; program execution time increases as \textsf{npix}$^2$. 
+
+The program is then executed by the following command line:
+\begin{verbatim}
+	prompt> path/CTEMlacbed nml/LACBEDSi230.nml
+\end{verbatim}
+On the platform used for these examples, the total computation time amounted to about $27$ minutes.  This is an average time for small unit
+cells;  for larger cells, the computation time will go up quite a bit.  The output file in this case has a size of abbout $1.16$ Gb, and contains
+$116\times 10$ individual diffraction disks (the first number is the total number of independent families of planes in the file, the 
+second one the number of thickness values).
+
+To load the data file, we use the \button{Load LACBED File} in the IDL \textsf{CBEDDisplay.pro} program; after loading the file, 
+both the \button{LACBED Window} and \button{CBED Window} will be activated.  We begin with the LACBED visualization, so click on
+the \button{LACBED Window}, which will create two new windows, one a control widget, the other a graphics widget with two image areas,
+one for the BF disk, the other for the DF disk or the Eades pattern.  Make sure the Dark Field Display mode
+is set to Single DF, set the thickness to $120$ nm, select the $(00\bar{4})$ reflection family
+in the ZOLZ menu, use normal intensity scaling, and click on the \button{Go}.  This will display both the BF disk on the left,
+and the DF $(00\bar{4})$ disk on the right, as shown in Fig.~\ref{fig:ex2}.
+
+\begin{figure}[h]
+\leavevmode\centering
+\epsffile{figs/ex2}
+\caption{\label{fig:ex2}Si $[230]$ BF disk (left) and $(00\bar{4})$ DF disk (middle) for a thickness of $120$ nm.  On the right, symmetrized DF
+pattern is shown, after application of the Whole Pattern symmetry $\mathbf{m}$.}
+\end{figure}
+
+From the main window we see that the Whole Pattern symmetry is $\mathbf{m}$, and the mirror plane is clearly oriented vertically,
+based on the BF pattern.  Setting the Dark Field Display Mode to Symmetrized, and hitting the \button{Go}, applies the WP symmetry to
+the $(00\bar{4})$ dark field disk and generates the pattern shown on the right in Fig.~\ref{fig:ex2}.
+
+Next, set the Eades parameters to $50$ and $100$ mrad, respectively, select logarithmic intensity scaling with an offset of $10^{-4}$, 
+and hit the \button{Go}.  The DF image, shown in Fig.~\ref{fig:ex3} for a detector range $[50,100]$ mrad (left) and $[25,50]$ mrad (right),
+now displays the superposition of all symmetrized DF disks from all HOLZ layers (including ZOLZ) for which 
+the $2\theta$ angle lies inside the Eades parameter range.  In principle, one should be able to record this pattern experimentally 
+using a HAADF detector in combination with a conical scanning mode.  The nice thing about this DF image is that it clearly shows high
+contrast HOLZ lines, without the underlying dynamical diffraction fringes of the typical BF pattern.  Whether or not such patterns can
+be used for strain analysis remains to be seen.
+
+\begin{figure}[h]
+\leavevmode\centering
+\epsffile{figs/ex3}
+\caption{\label{fig:ex3}Si $[230]$ DF Eades patterns for detector ranges of $[50,100]$ mrad (left) and $[25,50]$ mrad (right).}
+\end{figure}
+
+Next, click to the \button{CBED Window} in the main widget, which will replace the LACBED widgets with two new windows, one with
+controls, the other a graphics window.  Set the camera length to $2000$ mm, the convergence angle to $7.5$ mrad, the Laue Center to $(0,0)$,
+use normal intensity scaling, select a thickness of $120$ nm and click the \button{Go}.  The resulting pattern will only show a BF disk
+with a few HOLZ lines across it.  Then set the intensity scaling more to logarithmic with an offset of $10^{-3}$, and additional 
+disks will appear, but now the HOLZ lines become more difficult to observe.
+
+
+\begin{figure}[h]
+\leavevmode\centering
+\epsffile{figs/ex4}
+\caption{\label{fig:ex4}Si $[230]$ zone axis pattern (a), and tilted pattern with the Laue center at position $(2,0)$, so that the 
+$(00\bar{4})$ reflection is in Bragg orientation; notice the symmetric fringe pattern across the disk.}
+\end{figure}
+
+Then set the camera length to $400$ mm and click the \button{Go}; now you can see a few reflections in two HOLZ rings, as shown in 
+Fig.~\ref{fig:ex4}(a).\footnote{Note that there is no pattern save button in this widget, because the patterns are typically displayed
+at a low angular resolution, resulting in pixelated disks.  To create a high resolution CBED pattern, see the following example.}
+Note how the white cross in the navigation window is located at one fourth the distance between the center disk and the center of the first disk along the horizontal
+direction.  We know that to bring $\mathbf{g}$ into Bragg orientation, we need to position the Laue center at $\mathbf{g}/2$, so
+to bring the $(00\bar{4})$ reflection into Bragg orientation, we need to set the Laue x-coordinate to $2$;  note how the 
+red cross in the navigation window is now exactly in the middle between the two disks, as required.  Hitting the \button{Go} then
+produces the pattern shown in Fig.~\ref{fig:ex4}(b).  When the Move Mode is set to Jump, then the new pattern will be shown
+immediately; when the Track mode is selected, along with a number from the pull down list (say $30$), then the pattern will gradually 
+change to the new beam orientation, as if the sample were being tilted.  In fact, you can click anywhere inside the navigation window, 
+and the Laue center will be changed to the corresponding location; clicking outside the large red circle is allowed, but the Laue 
+center will not move outside that circle, since the corresponding diffraction data is not available to the program.  Feel free to play
+around with this artificial sample tilt option.
+
+
+
+\begin{figure}[h]
+\leavevmode\centering
+\epsffile{figs/ex5.pdf}
+\caption{\label{fig:ex5}Si $[230]$ tilted pattern with the Laue center at position $(0,4)$; interpolated LACBED pattern in (a), full 
+resolution pattern in (b).}
+\end{figure}
+
+\subsection{Using a LACBED simulation to initialize a regular CBED computation\label{sec:example3}}
+As a final example we discuss how one can use the \textsf{LACBED} mode to initialize an MBCBED pattern computation.
+For the Si $[230]$ LACBED data set discussed before, set the camera length to $400$ mm, the convergence angle to $7.5$ mrad,
+the Laue center coordinates to $(0,4)$, and then hit both the \button{Go} and the \button{Create .nml file} (one after the other, obviously).
+The latter button will create a file called \textsf{CTEMmbcbed.nml} in the folder that the \textsf{LACBED} data set was loaded form.
+You should edit this file, which is an input file for the \textsf{CTEMmbcbed} program, with the correct parameters initialized to compute 
+a high resolution version of the diffraction pattern that is currently displayed in the CBED Pattern window; the only parameter that 
+will need to be modified in the output file name at the end of the namelist file, say to \textsf{Si230-output.data}.  Then execute the \textsf{CTEMmbcbed} program with 
+this namelist file as input; this should only take a few minutes, and then you can open this file with the \button{Load MBCBED File} on the main
+program widget.  Select the same thickness and intensity scaling (log, offset $10^{-3}$) and display the pattern, which should be a higher
+resolution version of the one interpolated from the LACBED data before; both patterns are shown in Fig.~\ref{fig:ex5}.
+This example shows that one can play around with the LACBED interface to set up the correct imaging parameters for the CBED pattern,
+and then compute a high resolution version of that pattern using the MBCBED program.
+
+{\color{blue}Note that the patterns in Fig.~\ref{fig:ex5} are not completely identical in terms of the HOLZ reflections; whether this 
+is a problem in the IDL CBEDDisplay.pro routine or in the CTEMmbcbed program remains to be sorted out.  Figure will be updated
+once the problem has been resolved.  }
+
+
+
+
+
+\end{document}
+
+
+
