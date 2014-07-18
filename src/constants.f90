@@ -47,6 +47,7 @@
 !> @date 03/19/13 MDG 3.0 added atomic weights 
 !> @date 01/10/14 MDG 4.0 new version
 !> @date 04/29/14 MDG 4.1 constants updated from NIST physical constants tables
+!> @date 07/06/14 MDG 4.2 added omegamax to Lambert constant type
 !--------------------------------------------------------------------------
 
 module constants
@@ -175,7 +176,8 @@ type LambertParametersType
 	real(kind=dbl)		:: pi8=0.392699081698724D0	! pi/8
 	real(kind=dbl)		:: prek=1.643456402972504D0	! R1 2^(1/4)/beta
 	real(kind=dbl)		:: r24=4.898979485566356D0	! sqrt(24)
-        real(kind=dbl)	        :: rvmax2=13131225398.930372238D0      ! square of max rodrigues vector length  
+	real(kind=dbl)		:: omegamax = 3.141592479056868D0	! max angle (radians)  for Rodrigues space, currently 179.99999¡
+        real(kind=dbl)	        :: rvmax2=131312254114241.4843750000D0      ! square of max rodrigues vector length (reset when omegamax changes)  
 	real(kind=dbl)		:: tfit(7)=(/ -0.5000096149170321D0, -0.02486606148871731D0, &
                                              -0.004549381779362819D0, 0.0005118668366387526D0, &
                                              -0.0016500827333575548D0, 0.0007593352203388718D0, &

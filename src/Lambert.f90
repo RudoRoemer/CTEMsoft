@@ -740,6 +740,7 @@ end function GetSextantDouble
 !> @param ierr error flag 0 = OK, 1 = 
 ! 
 !> @date 7/12/13    MDG 1.0 original
+!> @date 7/7/14  MDG 2.0 correction to cube edge length check
 !--------------------------------------------------------------------------
 recursive function Lambert3DCubeForwardSingle(xyzin,ierr) result(res)
 
@@ -753,7 +754,7 @@ real(kind=sgl)			:: XYZ(3), sXYZ(3), T1, T2, c, s, q, LamXYZ(3)
 integer(kind=irg)		:: p
 
 ierr = 0
-if (maxval(abs(xyzin)).gt.1.0) then
+if (maxval(abs(xyzin)).gt.0.5*LPs%ap) then
   res = (/ 0.0, 0.0, 0.0 /)
   ierr = 1
   return
@@ -831,6 +832,7 @@ end function Lambert3DCubeForwardSingle
 !> @param ierr error flag 0 = OK, 1 = outside of unit cube
 ! 
 !> @date 7/12/13    MDG 1.0 original
+!> @date 7/7/14  MDG 2.0 correction to cube edge length check
 !--------------------------------------------------------------------------
 recursive function Lambert3DCubeForwardDouble(xyzin,ierr) result(res)
 
@@ -844,7 +846,7 @@ real(kind=dbl)			:: XYZ(3), sXYZ(3), T1, T2, c, s, q, LamXYZ(3)
 integer(kind=irg)		:: p
 
 ierr = 0
-if (maxval(dabs(xyzin)).gt.1.0) then
+if (maxval(dabs(xyzin)).gt.0.5D0*LPs%ap) then
   res = (/ 0.D0, 0.D0, 0.D0 /)
   ierr = 1
   return
@@ -939,6 +941,7 @@ ierr = 0
 rs = sqrt(sum(xyz*xyz))
 if (rs.gt.LPs%R1) then 
   res = (/ 0.0,0.0,0.0 /) 
+  ierr = 1
   return
 end if
 
@@ -969,21 +972,27 @@ if (xyz2(1).ne.0.0)  sx = abs(xyz2(1))/xyz2(1)
 sy = 1.0
 if (xyz2(2).ne.0.0)  sy = abs(xyz2(2))/xyz2(2)
 
-if (abs(xyz2(2)).le.abs(xyz2(1))) then 
+if (qxy.ne.0.0) then 
+ if (abs(xyz2(2)).le.abs(xyz2(1))) then 
   q2xy = qxy + xyz2(1)*xyz2(1)
   sq2xy = sqrt(q2xy)
   q = (LPs%beta/LPs%r2/LPs%R1) * sqrt(q2xy*qxy/(q2xy-abs(xyz2(1))*sq2xy))
   ac = acos( (xyz2(2)*xyz2(2)+abs(xyz2(1))*sq2xy)/LPs%r2/qxy )
   T1inv = q * sx
   T2inv = q * sy * ac/LPs%pi12
-else 
+ else 
   qx2y = qxy + xyz2(2)*xyz2(2)
   sqx2y = sqrt(qx2y)
   q = (LPs%beta/LPs%r2/LPs%R1) * sqrt(qx2y*qxy/(qx2y-abs(xyz2(2))*sqx2y))
   ac = acos( (xyz2(1)*xyz2(1)+abs(xyz2(2))*sqx2y)/LPs%r2/qxy )
   T1inv = q * sx * ac/LPs%pi12
   T2inv = q * sy
+ end if
+else
+ T1inv = 0.0
+ T2inv = 0.0
 end if
+
 xyz1 = (/ T1inv, T2inv, xyz2(3) /)
 
 ! inverse M_1
@@ -1031,6 +1040,7 @@ ierr = 0
 rs = dsqrt(sum(xyz*xyz))
 if (rs.gt.LPs%R1) then 
   res = (/ 0.D0,0.D0,0.D0 /) 
+  ierr = 1
   return
 end if
 
@@ -1061,20 +1071,25 @@ if (xyz2(1).ne.0.D0)  sx = dabs(xyz2(1))/xyz2(1)
 sy = 1.D0
 if (xyz2(2).ne.0.D0)  sy = dabs(xyz2(2))/xyz2(2)
 
-if (dabs(xyz2(2)).le.dabs(xyz2(1))) then 
+if (qxy.ne.0.D0) then
+ if (dabs(xyz2(2)).le.dabs(xyz2(1))) then 
   q2xy = qxy + xyz2(1)*xyz2(1)
   sq2xy = dsqrt(q2xy)
   q = (LPs%beta/LPs%r2/LPs%R1) * dsqrt(q2xy*qxy/(q2xy-dabs(xyz2(1))*sq2xy))
   ac = dacos( (xyz2(2)*xyz2(2)+dabs(xyz2(1))*sq2xy)/LPs%r2/qxy )
   T1inv = q * sx
   T2inv = q * sy * ac/LPs%pi12
-else 
+ else 
   qx2y = qxy + xyz2(2)*xyz2(2)
   sqx2y = dsqrt(qx2y)
   q = (LPs%beta/LPs%r2/LPs%R1) * dsqrt(qx2y*qxy/(qx2y-dabs(xyz2(2))*sqx2y))
   ac = dacos( (xyz2(1)*xyz2(1)+dabs(xyz2(2))*sqx2y)/LPs%r2/qxy )
   T1inv = q * sx * ac/LPs%pi12
   T2inv = q * sy
+ end if
+else
+  T1inv = 0.D0
+  T2inv = 0.D0
 end if
 xyz1 = (/ T1inv, T2inv, xyz2(3) /)
 

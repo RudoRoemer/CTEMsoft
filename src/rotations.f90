@@ -42,14 +42,14 @@
 !> between any pair.  Needless to say, this needs extensive testing and debugging...
 !>
 !> Instead of converting all the time between representations, I've opted to 
-!> "waste" a little more memory and time and precompute all the representations.
+!> "waste" a little more memory and time and provide the option to precompute all the representations.
 !> This way all representations are available via a single data structure.
 !>
 !> Obviously, the individual conversion routines also exist and can be called either in
 !> single or in double precision (using a function interface for each call, so that only
 !> one function name is used).  The conversion routines use the following format for their
 !> call name:  ab2cd, where (ab and cd are two-characters strings selected from the following
-!> possiblities: [the number in parenthesis lists the number of entries that need to be provided] 
+!> possibilities: [the number in parenthesis lists the number of entries that need to be provided] 
 !>
 !> eu : euler angle representation (3)
 !> om : orientation matrix representation (3x3)
@@ -62,8 +62,15 @@
 !> hence, conversion from homochoric to euler angle is called as ho2eu(); the argument of 
 !> each routine must have the correct number of dimensions and entries.
 !> All 42 conversion routines exist.
-
-!> @date 8/04/13   MDG 1.0 original
+!>
+!> Some routines were modified in July 2014, to simplify the paths in case the direct conversion
+!> routine does not exist.  Given the complexity of the cubochoric transformations, all routines
+!> going to and from this representation will require at least one and sometimes two or three
+!> intermediate representations.  cu2eu and qu2cu currently represent the longest computation 
+!> paths with three intermediate steps each.
+!
+!> @date 08/04/13 MDG 1.0 original
+!> @date 07/08/14 MDG 2.0 modifications to several routines (mostly simplifications)
 !--------------------------------------------------------------------------
 module rotations
 
@@ -922,8 +929,11 @@ real(kind=sgl)			:: res(3)
 real(kind=sgl)			:: s, d
 
 s = atan(r(3))
-d = atan(r(2)/r(1))
-
+if (r(1).ne.0.0) then
+  d = atan(r(2)/r(1))
+else
+  d = s
+end if
 res = (/ s+d, 2.0*atan(r(1)*cos(s)/cos(d)), s-d /)
 
 end function ro2eu
@@ -954,7 +964,11 @@ real(kind=dbl)			:: res(3)
 real(kind=dbl)			:: s, d
 
 s = datan(r(3))
-d = datan(r(2)/r(1))
+if (r(1).ne.0.D0) then
+  d = datan(r(2)/r(1))
+else
+  d = s
+end if
 
 res = (/ s+d, 2.D0*datan(r(1)*dcos(s)/dcos(d)), s-d /)
 
@@ -1149,13 +1163,12 @@ real(kind=sgl)			:: res(4)	!< output axis-angle pair
 real(kind=sgl)			:: ta, angle
 
 ta = sqrt(sum(r**2))		! tan(omega/2)
-angle = 2.0*atan(ta)
-
-res = (/ r(1)/ta, r(2)/ta, r(3)/ta, angle /)
-
-! normalize the direction cosines
-ta = sqrt(sum(res(1:3)**2))
-res(1:3) = res(1:3)/ta
+if (ta.eq.0.0) then 
+  res = (/ 0.0, 0.0, 0.0, 0.0 /)
+else
+  angle = 2.0*atan(ta)
+  res = (/ r(1)/ta, r(2)/ta, r(3)/ta, angle /)
+end if
 
 end function ro2ax
 
@@ -1185,13 +1198,13 @@ real(kind=dbl)			:: res(4)	!< output axis-angle pair
 real(kind=dbl)			:: ta, angle
 
 ta = dsqrt(sum(r**2))		! tan(omega/2)
-angle = 2.D0*datan(ta)
+if (ta.eq.0.D0) then 
+  res = (/ 0.D0, 0.D0, 0.D0, 0.D0 /)
+else
+  angle = 2.D0*datan(ta)
+  res = (/ r(1)/ta, r(2)/ta, r(3)/ta, angle /)
+end if
 
-res = (/ r(1)/ta, r(2)/ta, r(3)/ta, angle /)
-
-! normalize the direction cosines
-ta = dsqrt(sum(res(1:3)**2))
-res(1:3) = res(1:3)/ta
 
 end function ro2ax_d
 
@@ -1214,23 +1227,27 @@ end function ro2ax_d
 function eu2ro(e) result(res)
 
 use local
+use constants
 
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)	:: e(3)		!< input Euler angles (radians)
 real(kind=sgl)			:: res(3)	!< output Rodrigues vector
 
-real(kind=sgl)			:: ee(3), sm, df, cs, t
+real(kind=sgl)			:: sm, df, cs, t
 
-ee = e*0.5
+sm = e(1)+e(3)
+if (sm.gt.LPs%omegamax) sm = LPs%omegamax
 
-sm = ee(1)+ee(3)
-df = ee(1)-ee(3)
-
-cs = cos(sm)
-t = tan(ee(2))
-
-res = (/ t * cos(df)/cs, t * sin(df)/cs, tan(sm) /)
+sm = sm*0.5
+if (e(2).eq.0.0) then 
+  res = (/ 0.0, 0.0, tan(sm) /)
+else
+  df = (e(1)-e(3))*0.5
+  cs = cos(sm)
+  t = tan(e(2)*0.5)
+  res = (/ t * cos(df)/cs, t * sin(df)/cs, tan(sm) /)
+end if
 
 end function eu2ro
 
@@ -1251,23 +1268,27 @@ end function eu2ro
 function eu2ro_d(e) result(res)
 
 use local
+use constants
 
 IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN)	:: e(3)		!< input Euler angles (radians)
 real(kind=dbl)			:: res(3)	!< output Rodrigues vector
 
-real(kind=dbl)			:: ee(3), sm, df, cs, t
+real(kind=dbl)			:: sm, df, cs, t
 
-ee = e*0.5D0
+sm = e(1)+e(3)
+if (sm.gt.LPs%omegamax) sm = LPs%omegamax
 
-sm = ee(1)+ee(3)
-df = ee(1)-ee(3)
-
-cs = dcos(sm)
-t = dtan(ee(2))
-
-res = (/ t * dcos(df)/cs, t * dsin(df)/cs, tan(sm) /)
+sm = sm*0.5D0
+if (e(2).eq.0.D0) then 
+  res = (/ 0.D0, 0.D0, dtan(sm) /)
+else
+  df = (e(1)-e(3))*0.5D0
+  cs = dcos(sm)
+  t = dtan(e(2)*0.5D0)
+  res = (/ t * dcos(df)/cs, t * dsin(df)/cs, tan(sm) /)
+end if
 
 end function eu2ro_d
 
@@ -1846,9 +1867,12 @@ end function eu2ho_d
 !
 !> @brief convert orientation matrix to axis angle
 !
+!> @details this assumes that the matrix represents a passive rotation.
+!
 !> @param om 3x3 orientation matrix (single precision)
 ! 
 !> @date 8/12/13   MDG 1.0 original
+!> @date 07/08/14 MDG 2.0 replaced by direct solution
 !--------------------------------------------------------------------------
 function om2ax(om) result (res)
 
@@ -1857,7 +1881,21 @@ use local
 real(kind=sgl), intent(in) 		:: om(3,3)
 real(kind=sgl)				:: res(4)
 
-res = eu2ax(om2eu(om))
+real(kind=sgl)				:: t, omega
+
+! first get the rotation angle
+t = 0.5*(om(1,1)+om(2,2)+om(3,3) - 1.0)
+if (t.gt.1.0) t = 1.0
+if (t.lt.-1.0) t = -1.0
+omega = acos(t)
+
+if (omega.eq.0.0) then
+  res = (/  0.0,0.0,0.0,0.0 /)
+else
+! then the direction cosines
+  t = 1.0 / sqrt( (om(2,3)-om(3,2))**2 + (om(3,1)-om(1,3))**2 + (om(1,2)-om(2,1))**2 )
+  res = (/ (om(2,3)-om(3,2))*t, (om(3,1)-om(1,3))*t, (om(1,2)-om(2,1))*t, omega /)
+end if
 
 end function om2ax
 
@@ -1872,6 +1910,7 @@ end function om2ax
 !> @param om 3x3 orientation matrix (double precision)
 ! 
 !> @date 8/12/13   MDG 1.0 original
+!> @date 07/08/14 MDG 2.0 replaced by direct solution
 !--------------------------------------------------------------------------
 function om2ax_d(om) result (res)
 
@@ -1880,7 +1919,21 @@ use local
 real(kind=dbl), intent(in) 		:: om(3,3)
 real(kind=dbl)				:: res(4)
 
-res = eu2ax_d(om2eu_d(om))
+real(kind=dbl)				:: t, omega
+
+! first get the rotation angle
+t = 0.5D0*(om(1,1)+om(2,2)+om(3,3) - 1.D0)
+if (t.gt.1.D0) t = 1.D0
+if (t.lt.-1.D0) t = -1.D0
+omega = dacos(t)
+
+if (omega.eq.0.D0) then
+  res = (/  0.D0,0.D0,0.D0,0.D0 /)
+else
+! then the direction cosines
+  t = 1.D0 / dsqrt( (om(2,3)-om(3,2))**2 + (om(3,1)-om(1,3))**2 + (om(1,2)-om(2,1))**2 )
+  res = (/ (om(2,3)-om(3,2))*t, (om(3,1)-om(1,3))*t, (om(1,2)-om(2,1))*t, omega /)
+end if
 
 end function om2ax_d
 
@@ -1941,6 +1994,7 @@ end function om2ro_d
 !> @param om 3x3 orientation matrix (single precision)
 ! 
 !> @date 8/12/13   MDG 1.0 original
+!> @date 07/08/14 MDG 2.0 simplification via ax (shorter path)
 !--------------------------------------------------------------------------
 function om2ho(om) result (res)
 
@@ -1949,7 +2003,7 @@ use local
 real(kind=sgl), intent(in) 		:: om(3,3)
 real(kind=sgl)				:: res(3)
 
-res = eu2ho(om2eu(om))
+res = ax2ho(om2ax(om))
 
 end function om2ho
 
@@ -1964,6 +2018,7 @@ end function om2ho
 !> @param om 3x3 orientation matrix (double precision)
 ! 
 !> @date 8/12/13   MDG 1.0 original
+!> @date 07/08/14 MDG 2.0 simplification via ax (shorter path)
 !--------------------------------------------------------------------------
 function om2ho_d(om) result (res)
 
@@ -1972,7 +2027,7 @@ use local
 real(kind=dbl), intent(in) 		:: om(3,3)
 real(kind=dbl)				:: res(3)
 
-res = eu2ho(om2eu(om))
+res = ax2ho(om2ax(om))
 
 end function om2ho_d
 
@@ -1987,6 +2042,7 @@ end function om2ho_d
 !> @param a axis angle pair (single precision)
 ! 
 !> @date 8/12/13   MDG 1.0 original
+!> @date 07/08/14 MDG 2.0 simplification via ro (shorter path)
 !--------------------------------------------------------------------------
 function ax2eu(a) result (res)
 
@@ -1995,7 +2051,7 @@ use local
 real(kind=sgl), intent(in) 		:: a(4)
 real(kind=sgl)				:: res(3)
 
-res = om2eu(ax2om(a))
+res = ro2eu(ax2ro(a))
 
 end function ax2eu
 
@@ -2010,6 +2066,7 @@ end function ax2eu
 !> @param a axis angle pair (double precision)
 ! 
 !> @date 8/12/13   MDG 1.0 original
+!> @date 07/08/14 MDG 2.0 simplification via ro (shorter path)
 !--------------------------------------------------------------------------
 function ax2eu_d(a) result (res)
 
@@ -2018,7 +2075,7 @@ use local
 real(kind=dbl), intent(in) 		:: a(4)
 real(kind=dbl)				:: res(3)
 
-res = om2eu_d(ax2om_d(a))
+res = ro2eu(ax2ro(a))
 
 end function ax2eu_d
 
@@ -2032,16 +2089,28 @@ end function ax2eu_d
 !
 !> @param a axis angle pair (single precision)
 ! 
-!> @date 8/12/13   MDG 1.0 original
+!> @date 8/12/13 MDG 1.0 original
+!> @date 7/6/14  MDG 2.0 simplified
 !--------------------------------------------------------------------------
 function ax2ro(a) result (res)
 
 use local 
+use constants
 
 real(kind=sgl), intent(in) 		:: a(4)
 real(kind=sgl)				:: res(3)
 
-res = om2ro(ax2om(a))
+real(kind=sgl)				:: t
+
+res(1:3) = a(1:3)
+
+! we need to deal with the 180 degree case
+if (a(4).gt.LPs%omegamax) then
+  t = tan( LPs%omegamax * 0.5)
+else
+  t = tan( a(4) * 0.5 )
+end if
+res = res * t
 
 end function ax2ro
 
@@ -2060,11 +2129,23 @@ end function ax2ro
 function ax2ro_d(a) result (res)
 
 use local 
+use constants
 
 real(kind=dbl), intent(in) 		:: a(4)
 real(kind=dbl)				:: res(3)
 
-res = om2ro_d(ax2om_d(a))
+real(kind=sgl)				:: t
+
+res(1:3) = a(1:3)
+
+! we need to deal with the 180 degree case
+if (a(4).gt.LPs%omegamax) then
+  t = dtan( LPs%omegamax * 0.5D0 )
+else
+  t = dtan( a(4) * 0.5D0 )
+end if
+res = res * t
+
 
 end function ax2ro_d
 
@@ -3132,7 +3213,7 @@ if (present(outtype)) then
 
   	case ('ro')
 	  ioreal(1:3) = o%rodrigues(1:3)
-  	  call WriteValue(trim(pret)//'Rodigues vector		: ', ioreal, 3, "(3(F8.4,' '))")
+  	  call WriteValue(trim(pret)//'Rodrigues vector		: ', ioreal, 3, "(3(F12.4,' '))")
 
   	case ('ho')
 	  ioreal(1:3) = o%homochoric(1:3)
@@ -3163,7 +3244,7 @@ else
   ioreal(4) = ioreal(4)*180.0/sngl(cPi)
   call WriteValue(trim(pret)//'Axis angle pair [n; angle]	: ', ioreal, 4, "(3(F8.4,' '),'; ',F8.4)")
   ioreal(1:3) = o%rodrigues(1:3)
-  call WriteValue(trim(pret)//'Rodigues vector		: ', ioreal, 3, "(3(F8.4,' '))")
+  call WriteValue(trim(pret)//'Rodrigues vector		: ', ioreal, 3, "(3(F12.4,' '))")
   ioreal(1:3) = o%homochoric(1:3)
   call WriteValue(trim(pret)//'Homochoric representation	: ', ioreal, 3, "(3(F8.4,' '))")
   ioreal(1:3) = o%cubochoric(1:3)
@@ -3171,11 +3252,11 @@ else
   ioreal(1:4) = o%quat
   call WriteValue(trim(pret)//'Quaternion			: ', ioreal, 4, "(4(F8.4,' '))")
   ioreal(1:3) = o%om(1,1:3)
-  call WriteValue('					  /', ioreal, 3, "(2(F8.4,' '),F8.4,' \')")
+  call WriteValue('				  /', ioreal, 3, "(2(F8.4,' '),F8.4,' \')")
   ioreal(1:3) = o%om(2,1:3)
   call WriteValue(trim(pret)//'Orientation Matrix		: |', ioreal, 3, "(2(F8.4,' '),F8.4,' |')")
   ioreal(1:3) = o%om(3,1:3)
-  call WriteValue('					  \', ioreal, 3, "(2(F8.4,' '),F8.4,' /')")
+  call WriteValue('				  \', ioreal, 3, "(2(F8.4,' '),F8.4,' /')")
 end if
 
 call Message(' ', frm = "(A/)")
@@ -3227,7 +3308,7 @@ if (present(outtype)) then
 
   	case ('ro')
 	  ioreal(1:3) = o%rodrigues(1:3)
-  	  call WriteValue(trim(pret)//'Rodigues vector		: ', ioreal, 3, "(3(F12.7,' '))")
+  	  call WriteValue(trim(pret)//'Rodrigues vector		: ', ioreal, 3, "(3(F16.7,' '))")
 
   	case ('ho')
 	  ioreal(1:3) = o%homochoric(1:3)
@@ -3258,7 +3339,7 @@ else
   ioreal(4) = ioreal(4)*180.D0/cPi
   call WriteValue(trim(pret)//'Axis angle pair [n; angle]	: ', ioreal, 4, "(3(F12.7,' '),'; ',F12.7)")
   ioreal(1:3) = o%rodrigues(1:3)
-  call WriteValue(trim(pret)//'Rodigues vector		: ', ioreal, 3, "(3(F12.7,' '))")
+  call WriteValue(trim(pret)//'Rodrigues vector		: ', ioreal, 3, "(3(F16.7,' '))")
   ioreal(1:3) = o%homochoric(1:3)
   call WriteValue(trim(pret)//'Homochoric representation	: ', ioreal, 3, "(3(F12.7,' '))")
   ioreal(1:3) = o%cubochoric(1:3)
@@ -3266,11 +3347,11 @@ else
   ioreal(1:4) = o%quat
   call WriteValue(trim(pret)//'Quaternion			: ', ioreal, 4, "(4(F12.7,' '))")
   ioreal(1:3) = o%om(1,1:3)
-  call WriteValue('					  /', ioreal, 3, "(2(F8.4,' '),F8.4,' \')")
+  call WriteValue('				  /', ioreal, 3, "(2(F8.4,' '),F8.4,' \')")
   ioreal(1:3) = o%om(2,1:3)
   call WriteValue(trim(pret)//'Orientation Matrix		: |', ioreal, 3, "(2(F8.4,' '),F8.4,' |')")
   ioreal(1:3) = o%om(3,1:3)
-  call WriteValue('					  \', ioreal, 3, "(2(F8.4,' '),F8.4,' /')")
+  call WriteValue('				  \', ioreal, 3, "(2(F8.4,' '),F8.4,' /')")
 end if
 
 call Message(' ', frm = "(A/)")

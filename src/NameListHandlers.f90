@@ -513,7 +513,92 @@ ecpnl%xtalname = xtalname
 
 end subroutine GetECPNameList
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:GetLACBEDNameList
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read namelist file and fill lacbednl structure (used by CTEMLACBED.f90)
+!
+!> @param nmlfile namelist file name
+!> @param lacbednl LACBED name list structure
+!
+!> @date 07/01/14  MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine GetLACBEDNameList(nmlfile, lacbednl)
 
+use error
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)             :: nmlfile
+type(LACBEDNameListType),INTENT(INOUT)  :: lacbednl
+
+integer(kind=irg)       :: stdout
+integer(kind=irg)       :: k(3)
+integer(kind=irg)       :: fn(3)
+integer(kind=irg)       :: maxHOLZ
+integer(kind=irg)       :: numthick
+integer(kind=irg)       :: npix
+integer(kind=irg)       :: nthreads
+real(kind=sgl)          :: voltage
+real(kind=sgl)          :: dmin
+real(kind=sgl)          :: convergence
+real(kind=sgl)          :: startthick
+real(kind=sgl)          :: thickinc
+real(kind=sgl)          :: minten
+character(fnlen)        :: xtalname
+character(fnlen)        :: outname
+
+namelist /inputlist/ stdout, xtalname, voltage, k, fn, dmin, convergence, minten, &
+                              nthreads, startthick, thickinc, numthick, outname, npix, maxHOLZ
+
+stdout = 6                      ! standard output
+k = (/ 0, 0, 1 /)               ! beam direction [direction indices]
+fn = (/ 0, 0, 1 /)              ! foil normal [direction indices]
+maxHOLZ = 2                     ! maximum HOLZ layer index to be used for the output file; note that his number
+                                ! does not affect the actual computations; it only determines which reflection 
+                                ! families will end up in the output file
+numthick = 10                   ! number of increments
+npix = 256                      ! output arrays will have size npix x npix
+nthreads = 1                    ! number of computational threads
+voltage = 200000.0              ! acceleration voltage [V]
+dmin = 0.025                    ! smallest d-spacing to include in dynamical matrix [nm]
+convergence = 25.0              ! beam convergence angle [mrad]
+startthick = 10.0               ! starting thickness [nm]
+thickinc = 10.0                 ! thickness increment
+minten = 1.0E-5                 ! minimum intensity in diffraction disk to make it into the output file
+xtalname = 'undefined'          ! initial value to check that the keyword is present in the nml file
+outname = 'lacbedout.data'      ! output filename
+
+! read the namelist file
+open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+read(UNIT=dataunit,NML=inputlist)
+close(UNIT=dataunit,STATUS='keep')
+
+! check for required entries
+if (trim(xtalname).eq.'undefined') then
+  call FatalError('CTEMLACBED:',' structure file name is undefined in '//nmlfile)
+end if
+
+lacbednl%stdout = stdout
+lacbednl%k = k
+lacbednl%fn = fn
+lacbednl%maxHOLZ = maxHOLZ
+lacbednl%numthick = numthick
+lacbednl%npix = npix
+lacbednl%nthreads = nthreads
+lacbednl%voltage = voltage
+lacbednl%dmin = dmin
+lacbednl%convergence = convergence
+lacbednl%startthick = startthick
+lacbednl%thickinc = thickinc
+lacbednl%minten = minten
+lacbednl%xtalname = xtalname
+lacbednl%outname = outname
+
+end subroutine GetLACBEDNameList
 
 
 end module NameListHandlers

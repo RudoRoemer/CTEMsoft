@@ -148,7 +148,6 @@ type EBSDNameListType
         character(fnlen)        :: Masterenergyfile
         character(fnlen)        :: MCprogname 
         character(fnlen)        :: MCxtalname
-  
 end type EBSDNameListType
 
 
@@ -173,7 +172,27 @@ type ECPNameListType
         character(7)            :: compmode
         character(fnlen)        :: outname
         character(fnlen)        :: xtalname
-
 end type ECPNameListType
+
+
+! LACBED structure
+type LACBEDNameListType
+        integer(kind=irg)       :: stdout
+        integer(kind=irg)       :: k(3)
+        integer(kind=irg)       :: fn(3)
+        integer(kind=irg)       :: maxHOLZ
+        integer(kind=irg)       :: numthick
+        integer(kind=irg)       :: npix
+        integer(kind=irg)       :: nthreads
+        real(kind=sgl)          :: voltage
+        real(kind=sgl)          :: dmin
+        real(kind=sgl)          :: convergence
+        real(kind=sgl)          :: startthick
+        real(kind=sgl)          :: thickinc
+        real(kind=sgl)          :: minten
+        character(fnlen)        :: xtalname
+        character(fnlen)        :: outname
+end type LACBEDNameListType
+
 
 end module NameListTypedefs
