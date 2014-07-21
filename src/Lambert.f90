@@ -1254,6 +1254,7 @@ end function GetPyramidDouble
 recursive function Lambert3DBallToQuaternionSingle(xyz, ierr) result(res)
 
 use quaternions
+use constants
 
 IMPLICIT NONE
 
@@ -1261,7 +1262,7 @@ real(kind=sgl),INTENT(IN)	:: xyz(3)
 integer(kind=irg),INTENT(INOUT):: ierr
 real(kind=sgl)			:: res(4)
 
-real(kind=sgl)			:: q, x(7), ft, t
+real(kind=sgl)			:: q, x(16), ft, t
 integer(kind=irg)		:: j
 
 ierr = 0
@@ -1277,11 +1278,12 @@ if (maxval(abs(xyz)).eq.0.0) then
   res = (/ 1.0,0.0,0.0,0.0 /)
 else
 ! get the value of t
-  x(1) = q**2
-  do j=2,7
+  x(1) = 1.0
+  x(2) = q**2
+  do j=3,16
     x(j) = x(j-1) * x(1)
   end do
-  t = 1.0 + sum( x * LPs%tfit )
+  t = sum( x * LPs%tfit )
 
 ! and get f(t)
   q = sqrt(1.0-t**2)
@@ -1309,6 +1311,7 @@ end function Lambert3DBallToQuaternionSingle
 recursive function Lambert3DBallToQuaternionDouble(xyz, ierr) result(res)
 
 use quaternions
+use constants
 
 IMPLICIT NONE
 
@@ -1316,7 +1319,7 @@ real(kind=dbl),INTENT(IN)	:: xyz(3)
 integer(kind=irg),INTENT(INOUT):: ierr
 real(kind=dbl)			:: res(4)
 
-real(kind=dbl)			:: q, x(7), ft, t
+real(kind=dbl)			:: q, x(16), ft, t
 integer(kind=irg)		:: j
 
 ierr = 0
@@ -1332,11 +1335,12 @@ if (maxval(dabs(xyz)).eq.0.D0) then
   res = (/ 1.D0,0.D0,0.D0,0.D0 /)
 else
 ! get the value of t
-  x(1) = q**2
-  do j=2,7
+  x(1) = 1.D0
+  x(2) = q**2
+  do j=3,16
     x(j) = x(j-1) * x(1)
   end do
-  t = 1.D0 + sum( x * LPs%tfit )
+  t = sum( x * LPs%tfit )
 
 ! and get f(t)
   q = dsqrt(1.D0-t**2)

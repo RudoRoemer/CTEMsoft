@@ -1046,12 +1046,15 @@ end function ax2ho_d
 !> @brief Homochoric to axis angle pair (single precision)
 !
 !> @param h homochoric coordinates (single precision)  
-! !
+! 
+!
 !> @date 8/04/13   MDG 1.0 original
+!> @date 07/21/14 MDG 1.1 double precision fit coefficients
 !--------------------------------------------------------------------------
 function ho2ax(h) result(res)
 
 use local
+use constants
 
 IMPLICIT NONE
 
@@ -1060,12 +1063,6 @@ real(kind=sgl)			:: res(4)
 
 integer(kind=irg)		:: i
 real(kind=sgl)			:: hn(3), hmag, s, hm
-
-! fit parameters determined with Mathematica
-real(kind=dbl),parameter	:: c(7) = (/ -0.5000096149170321D0, -0.02486606148871731D0, &
-              				-0.004549381779362819D0, 0.0005118668366387526D0, &
-              				-0.0016500827333575548D0, 0.0007593352203388718D0, &
-              				-0.0002040422502566876D0 /)
 
 ! normalize h and store the magnitude
 hmag = sum(h*h)
@@ -1076,13 +1073,13 @@ else
   hn = h/sqrt(hmag)
 
 ! convert the magnitude to the rotation angle
-  s = c(1) * hmag
-  do i=2,7
+  s = LPs%tfit(1) + LPs%tfit(2) * hmag
+  do i=3,16
     hm = hm*hmag
-    s = s + c(i) * hm
+    s = s + LPS%tfit(i) * hm
   end do
 
-  res = (/ hn(1), hn(2), hn(3), 2.0*acos(1.0+s) /)
+  res = (/ hn(1), hn(2), hn(3), 2.0*acos(s) /)
 end if
 
 end function ho2ax
@@ -1102,6 +1099,7 @@ end function ho2ax
 function ho2ax_d(h) result(res)
 
 use local
+use constants
 
 IMPLICIT NONE
 
@@ -1110,12 +1108,6 @@ real(kind=dbl)			:: res(4)
 
 integer(kind=irg)		:: i
 real(kind=dbl)			:: hn(3), hmag, s, hm
-
-! fit parameters determined with Mathematica
-real(kind=dbl),parameter	:: c(7) = (/ -0.5000096149170321D0, -0.02486606148871731D0, &
-              				-0.004549381779362819D0, 0.0005118668366387526D0, &
-              				-0.0016500827333575548D0, 0.0007593352203388718D0, &
-              				-0.0002040422502566876D0 /)
 
 ! normalize h and store the magnitude
 hmag = sum(h*h)
@@ -1126,13 +1118,13 @@ else
   hn = h/dsqrt(hmag)
 
 ! convert the magnitude to the rotation angle
-  s = c(1) * hmag
-  do i=2,7
+  s = LPs%tfit(1) + LPs%tfit(2) * hmag
+  do i=3,16
     hm = hm*hmag
-    s = s + c(i) * hm
+    s = s + LPS%tfit(i) * hm
   end do
 
-  res = (/ hn(1), hn(2), hn(3), 2.D0*dacos(1.D0+s) /)
+  res = (/ hn(1), hn(2), hn(3), 2.D0*dacos(s) /)
 end if
 
 end function ho2ax_d
