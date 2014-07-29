@@ -56,7 +56,7 @@ use io
 IMPLICIT NONE
 
 character(fnlen)                        :: nmldeffile, progname, progdesc
-type(ECPNameListType)                   :: ecpnl
+type(ECPMasterNameListType)                   :: ecpnl
 
 nmldeffile = 'CTEMECPmaster.nml'
 progname = 'CTEMECPmaster.f90'
@@ -66,7 +66,7 @@ progdesc = 'Master pattern generation for Electron channeling pattern'
 call Interpret_Program_Arguments(nmldeffile,2,(/ 0, 40 /), progname)
 
 ! deal with the namelist stuff
-call GetECPNameList(nmldeffile,ecpnl)
+call GetECPMasterNameList(nmldeffile,ecpnl)
 
 ! print some information
 call CTEMsoft(progname, progdesc)
@@ -74,7 +74,7 @@ call CTEMsoft(progname, progdesc)
 ! perform the zone axis computations
 call ECmasterpattern(ecpnl, progname)
 
-end program CTEMECP
+end program CTEMECPmaster
 
 !--------------------------------------------------------------------------
 !
@@ -124,45 +124,110 @@ IMPLICIT NONE
 type(ECPNameListType),INTENT(IN)        :: ecpnl
 character(fnlen),INTENT(IN)             :: progname
 
-character(3)                    :: method
-real(kind=sgl)                  :: galen, bragg, klaue(2), io_real(6), kstar(3), gperp(3), delta, thetac, &
-kk(3), ktmax, FN(3), kn, fnat
-integer(kind=irg)               :: nt, skip, dgn, pgnum, io_int(6), maxHOLZ, ik, numk, ga(3), gb(3), TID, &
-nn, npx, npy, isym, numset, it, ijmax, jp, istat, iequiv(2,12), nequiv, NUMTHREADS, &
-nns, nnw, nref, tots, totw
-real(kind=dbl)                  :: ctmp(192,3),arg
-integer                         :: i,j,ir, n,ipx,ipy,gzero,ic,ip,ikk
-real(kind=sgl)                  :: pre, tpi,Znsq, kkl, DBWF, frac
-real,allocatable                :: thick(:), sr(:,:,:)
-complex(kind=dbl),allocatable   :: Lgh(:,:,:),Sgh(:,:),Sghtmp(:,:,:)
-complex(kind=dbl)               :: czero
-real(kind=sgl),allocatable      :: karray(:,:)
-integer(kind=irg),allocatable   :: kij(:,:), nat(:)
-complex(kind=dbl),allocatable   :: DynMat(:,:)
-logical                         :: verbose
+!character(3)                    :: method
+!real(kind=sgl)                  :: galen, bragg, klaue(2), io_real(6), kstar(3), gperp(3), delta, thetac, &
+!kk(3), ktmax, FN(3), kn, fnat
+!integer(kind=irg)               :: nt, skip, dgn, pgnum, io_int(6), maxHOLZ, ik, numk, ga(3), gb(3), TID, &
+!nn, npx, npy, isym, numset, it, ijmax, jp, istat, iequiv(2,12), nequiv, NUMTHREADS, &
+!nns, nnw, nref, tots, totw
+integer(kind=irg)                :: numzbins, totnum_el, numsx, numsy ! read from energyfile
+real(kind=dbl)                   :: EkeV, Ehistmin, Ebinsize, depthmax, depthstep, sig, omega ! read from energyfile
+real(kind=dbl), allocatable      :: accum_z(:,:,:,:), accum_e(:,:,:,:)
+character(4)                     :: MCmode
+real(kind=dbl)                   :: io_real(6) ! auxiliary variables
+!real(kind=dbl)                  :: ctmp(192,3),arg
+!integer                         :: i,j,ir, n,ipx,ipy,gzero,ic,ip,ikk
+!real(kind=sgl)                  :: pre, tpi,Znsq, kkl, DBWF, frac
+!real,allocatable                :: thick(:), sr(:,:,:)
+!complex(kind=dbl),allocatable   :: Lgh(:,:,:),Sgh(:,:),Sghtmp(:,:,:)
+!complex(kind=dbl)               :: czero
+!real(kind=sgl),allocatable      :: karray(:,:)
+!integer(kind=irg),allocatable   :: kij(:,:), nat(:)
+!complex(kind=dbl),allocatable   :: DynMat(:,:)
+!logical                         :: verbose
 
 type(unitcell),pointer          :: cell
-type(gnode)                     :: rlp
-type(DynType)                   :: Dyn
+!type(gnode)                     :: rlp
+!type(DynType)                   :: Dyn
 type(kvectorlist),pointer       :: khead, ktmp
-type(symdata2D)                 :: TDPG
-type(BetheParameterType)        :: BetheParameters
-type(reflisttype),pointer       :: reflist, firstw,rltmp
+!type(symdata2D)                 :: TDPG
+!type(BetheParameterType)        :: BetheParameters
+!type(reflisttype),pointer       :: reflist, firstw,rltmp
 
 
 ! init some parameters
 gzero = 1
 frac = 0.05
 
-nullify(cell)
 nullify(khead)
 nullify(ktmp)
 
 allocate(cell)
 
+!=============================================
+!=============================================
+! ---------- read Monte Carlo output file and extract necessary parameters
+! first, we need to load the data from the MC program.
+call Message('opening '//trim(emnl%energyfile), frm = "(A)" )
+
+open(dataunit,file=trim(emnl%energyfile),status='unknown',form='unformatted')
+
+! lines from CTEMMC.f90... these are the things we need to read in...
+! write (dataunit) progname
+!! write the version number
+! write (dataunit) scversion
+!! then the name of the crystal data file
+! write (dataunit) xtalname
+!! energy information etc...
+! write (dataunit) numEbins, numzbins, numsx, numsy, num_el*NUMTHREADS, NUMTHREADS
+! write (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
+! write (dataunit) sig, omega
+! write (dataunit) MCmode
+!! and here are the actual results
+! write (dataunit) accum_e
+! write (dataunit) accum_z
+
+read (dataunit) oldprogname
+read (dataunit) MCscversion
+read (dataunit) xtalname
+
+read(dataunit) numzbins, numsx, numsy, totnum_el
+numsx = (numsx - 1)/2
+numsy = (numsy - 1)/2
+
+read (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
+io_real(1:5) = (/ EkeV, Ehistmin, Ebinsize, depthmax, depthstep /)
+call WriteValue(' EkeV, Ehistmin, Ebinsize, depthmax, depthstep ',io_real,5,"(4F10.5,',',F10.5)")
+
+read (dataunit) sig, omega
+read (dataunit) MCmode
+
+!@TODO Modify the MC program to include only accum_z array in energyfile
+allocate(accum_e(numEbins,-numsx:numsx,-nsumy:numsy),accum_z(numEbins,numzbins,-numsx/10:numsx/10,-numsy/10:numsy/10),stat=istat)
+read(dataunit) accum_e
+! actually, we do not yet need the accum_e array for ECP. This will be removed with an updated version of the MC code
+! but we need to skip it in this unformatted file so that we can read the accum_z array ...
+deallocate(accum_e)
+
+read(dataunit) accum_z    ! we only need this array for the depth integrations
+
+close(dataunit,status='keep')
+call Message(' -> completed reading '//trim(emnl%energyfile), frm = "(A)")
+
+!=============================================
+!=============================================
+
+
+!=============================================
+!=============================================
+! crystallography section
+
+nullify(cell)
+allocate(cell)
+
 ! load the crystal structure and compute the Fourier coefficient lookup table
 verbose = .TRUE.
-call Initialize_Cell(cell,Dyn,rlp,ecpnl%xtalname, ecpnl%dmin, ecpnl%voltage,verbose)
+call Initialize_Cell(cell,Dyn,rlp, xtalname, ecpnl%dmin, sngl(1000.0*EkeV),verbose)
 
 ! determine the point group number
 j=0

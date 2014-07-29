@@ -222,10 +222,96 @@ mcnl%stdout = stdout
 
 end subroutine GetMCNameList
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:GetMCCLNameList
+!
+!> @author Saransh Singh/Marc De Graef, Carnegie Mellon University
+!
+!> @brief read namelist file and fill mcnl structure (used by CTEMMCCL.f90)
+!
+!> @param nmlfile namelist file name
+!> @param mcnl Monte Carloname list structure
+!
+!> @date 06/18/14  MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine GetMCCLNameList(nmlfile, mcnl)
 
+use error
 
+IMPLICIT NONE
 
+character(fnlen),INTENT(IN)             :: nmlfile
+type(MCCLNameListType),INTENT(INOUT)      :: mcnl
 
+integer(kind=irg)       :: stdout
+integer(kind=irg)       :: numsx
+integer(kind=irg)       :: globalworkgrpsz
+integer(kind=irg)       :: num_el
+integer(kind=irg)       :: totnum_el
+real(kind=dbl)          :: sig
+real(kind=dbl)          :: omega
+real(kind=dbl)          :: EkeV
+real(kind=dbl)          :: Ehistmin
+real(kind=dbl)          :: Ebinsize
+real(kind=dbl)          :: depthmax
+real(kind=dbl)          :: depthstep
+character(4)            :: MCmode
+character(fnlen)        :: xtalname
+character(fnlen)        :: dataname
+character(fnlen)        :: primelist
+
+! define the IO namelist to facilitate passing variables to the program.
+namelist  / MCCLdata / stdout, xtalname, sig, numsx, num_el, globalworkgrpsz, EkeV, &
+dataname, primelist, totnum_el, Ehistmin, Ebinsize, depthmax, depthstep, omega, MCmode
+
+! set the input parameters to default values (except for xtalname, which must be present)
+stdout = 6
+numsx = 1501
+globalworkgrpsz = 100
+num_el = 10
+totnum_el = 100000
+sig = 70.D0
+omega = 0.D0
+EkeV = 30.D0
+Ehistmin = 5.D0
+Ebinsize = 0.5D0
+depthmax = 100.D0
+depthstep = 1.0D0
+MCmode = 'CSDA'
+xtalname = 'undefined'
+dataname = 'MCoutput.data'
+primelist = 'list.txt'
+
+! read the namelist file
+open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+read(UNIT=dataunit,NML=MCCLdata)
+close(UNIT=dataunit,STATUS='keep')
+
+! check for required entries
+if (trim(xtalname).eq.'undefined') then
+call FatalError('CTEMMC:',' structure file name is undefined in '//nmlfile)
+end if
+
+! if we get here, then all appears to be ok, and we need to fill in the mcnl fields
+mcnl%stdout = stdout
+mcnl%numsx = numsx
+mcnl%globalworkgrpsz = globalworkgrpsz
+mcnl%num_el = num_el
+mcnl%totnum_el = totnum_el
+mcnl%sig = sig
+mcnl%omega = omega
+mcnl%EkeV = EkeV
+mcnl%Ehistmin = Ehistmin
+mcnl%Ebinsize = Ebinsize
+mcnl%depthmax = depthmax
+mcnl%depthstep = depthstep
+mcnl%MCmode = MCmode
+mcnl%xtalname = xtalname
+mcnl%dataname = dataname
+mcnl%primelist = primelist
+
+end subroutine GetMCCLNameList
 
 !--------------------------------------------------------------------------
 !
@@ -290,6 +376,68 @@ emnl%outname = outname
 
 end subroutine GetEBSDMasterNameList
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:GetECPMasterNameList
+!
+!> @author Saransh Singh/Marc De Graef, Carnegie Mellon University
+!
+!> @brief read namelist file and fill mcnl structure (used by CTEMECPmaster.f90)
+!
+!> @param nmlfile namelist file name
+!> @param emnl ECP master name list structure
+!
+!> @date 06/19/14  MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine GetECPMasterNameList(nmlfile, emnl)
+
+use error
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                     :: nmlfile
+type(ECPMasterNameListType),INTENT(INOUT)      :: emnl
+
+integer(kind=irg)       :: stdout
+integer(kind=irg)       :: npx
+integer(kind=irg)       :: Esel
+integer(kind=irg)       :: nthreads
+real(kind=sgl)          :: dmin
+character(fnlen)        :: energyfile
+character(fnlen)        :: outname
+
+! define the IO namelist to facilitate passing variables to the program.
+namelist /ECPmastervars/ dmin,npx,nthreads,outname,energyfile,Esel
+
+! set the input parameters to default values (except for xtalname, which must be present)
+stdout = 6
+npx = 500                       ! Nx pixels (total = 2Nx+1)
+nthreads = 1
+Esel = -1                       ! selected energy value for single energy run
+dmin = 0.025                    ! smallest d-spacing to include in dynamical matrix [nm]
+energyfile = 'undefined'        ! default filename for z_0(E_e) data from CTEMMC Monte Carlo simulations
+outname = 'ECPmasterout.data'  ! default filename for final output
+
+! read the namelist file
+open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+read(UNIT=dataunit,NML=ECPmastervars)
+close(UNIT=dataunit,STATUS='keep')
+
+! check for required entries
+if (trim(energyfile).eq.'undefined') then
+call FatalError('CTEMECPmaster:',' energy file name is undefined in '//nmlfile)
+end if
+
+! if we get here, then all appears to be ok, and we need to fill in the emnl fields
+emnl%stdout = stdout
+emnl%npx = npx
+emnl%Esel = Esel
+emnl%nthreads = nthreads
+emnl%dmin = dmin
+emnl%energyfile = energyfile
+emnl%outname = outname
+
+end subroutine GetECPMasterNameList
 
 
 

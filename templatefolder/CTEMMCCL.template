@@ -1,4 +1,4 @@
-&MCdata
+&MCCLdata
 ! name of the crystal structure file
 xtalname = 'somestructure.xtal'
 ! sample tilt angle from horizontal [degrees]

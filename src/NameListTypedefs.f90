@@ -82,6 +82,26 @@ type MCNameListType
         character(fnlen)        :: dataname
 end type MCNameListType
 
+! namelist for the CTEMMCOpenCL program
+type MCCLNameListType
+        integer(kind=irg)       :: stdout
+        integer(kind=irg)       :: numsx
+        integer(kind=irg)       :: globalworkgrpsz
+        integer(kind=irg)       :: num_el
+        integer(kind=irg)       :: totnum_el
+        real(kind=dbl)          :: sig
+        real(kind=dbl)          :: omega
+        real(kind=dbl)          :: EkeV
+        real(kind=dbl)          :: Ehistmin
+        real(kind=dbl)          :: Ebinsize
+        real(kind=dbl)          :: depthmax
+        real(kind=dbl)          :: depthstep
+        character(4)            :: MCmode
+        character(fnlen)        :: xtalname
+        character(fnlen)        :: dataname
+        character(fnlen)        :: primelist
+end type MCCLNameListType
+
 ! namelist for the CTEMEBSDmaster program
 type EBSDMasterNameListType
         integer(kind=irg)       :: stdout
@@ -93,5 +113,15 @@ type EBSDMasterNameListType
         character(fnlen)        :: outname
 end type EBSDMasterNameListType
 
+! namelist for the CTEMECPmaster program
+type ECPMasterNameListType
+    integer(kind=irg)       :: stdout
+    integer(kind=irg)       :: npx
+    integer(kind=irg)       :: Esel
+    integer(kind=irg)       :: nthreads
+    real(kind=sgl)          :: dmin
+    character(fnlen)        :: energyfile
+    character(fnlen)        :: outname
+end type ECPMasterNameListType
 
 end module NameListTypedefs

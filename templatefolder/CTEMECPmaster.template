@@ -1,0 +1,11 @@
+&ECPmastervars
+! smallest d-spacing to take into account [nm]
+dmin = 0.05
+! number of pixels along x-direction of the square master pattern  (2*npx+1 = total number)
+npx = 500
+! name of output file (to be read by IDL visualization routine)
+outname = '/some/folder/somewhere/ECPmasterout.data'
+! name of the energy statistics file produced by CTEMMC program [note that
+! this file will also contain parameters such as the microscope accelerating voltage]
+energyfile = '/some/folder/somewhere/MCoutput.data'
+/
