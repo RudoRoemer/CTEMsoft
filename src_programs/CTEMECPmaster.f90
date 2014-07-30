@@ -133,7 +133,6 @@ character(fnlen),INTENT(IN)             :: progname
 integer(kind=irg)                :: numzbins, totnum_el, numsx, numsy ! read from energyfile
 real(kind=dbl)                   :: EkeV, Ehistmin, Ebinsize, depthmax, depthstep, sig, omega ! read from energyfile
 real(kind=dbl), allocatable      :: accum_z(:,:,:,:), accum_e(:,:,:,:)
-character(4)                     :: MCmode
 real(kind=dbl)                   :: io_real(6) ! auxiliary variables
 !real(kind=dbl)                  :: ctmp(192,3),arg
 !integer                         :: i,j,ir, n,ipx,ipy,gzero,ic,ip,ikk
@@ -153,7 +152,9 @@ type(kvectorlist),pointer       :: khead, ktmp
 !type(symdata2D)                 :: TDPG
 !type(BetheParameterType)        :: BetheParameters
 !type(reflisttype),pointer       :: reflist, firstw,rltmp
-
+character(fnlen)        :: oldprogname
+character(8)            :: MCscversion
+character(4)            :: MCmode
 
 ! init some parameters
 gzero = 1
