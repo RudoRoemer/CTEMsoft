@@ -1,21 +1,39 @@
 program rtest
  
 use local
+use constants
 use rotations
 use Lambert
 use typedefs
  
 IMPLICIT NONE
  
-real(kind=dbl)        :: ieu(3), oeu(3), iro(3), oro(3), iho(3), oho(3), icu(3), ocu(3)
+real(kind=dbl)        :: ieu(3), oeu(3), iro(4), oro(4), iho(3), oho(3), icu(3), ocu(3)
 real(kind=dbl)        :: iax(4), oax(4), iqu(4), oqu(4)
-real(kind=dbl)        :: iom(3,3), oom(3,3), diff, diffmax
-integer(kind=irg)     :: tcnt
+real(kind=dbl)        :: iom(3,3), oom(3,3), diff, diffmax, dtor
+real(kind=dbl),allocatable :: rots(:,:)
+integer(kind=irg)     :: tcnt, rcnt, i
 type(orientationtyped):: ot
  
+
+write (*,*) 'infty - infty = ',infty-infty
+
+dtor = cPi/180.D0
+open(unit=20,file='rotations.txt',status='old')
+read(20,"(I5)") rcnt
+write (*,*) 'Number of rotations in file = ',rcnt
+allocate(rots(3,rcnt))
+do i=1,rcnt
+  read(20,"(3F9.3)") rots(1:3,i)
+ write (*,*) rots(1:3,i)
+end do
+close(unit=20,status='keep')
+do i=1,rcnt
 ! create the orientation type for a given Euler triplet
- ieu = dble( (/  0.0000000000000, 1.5707963267949, 3.1415926535898/) )
+ ieu = rots(1:3,i) * dtor
  ot = init_orientation(ieu, 'eu')
+ write(*,*) '  '
+ write(*,*) '----------------------------------------------------'
  call print_orientation(ot)
  
 ! individual tests  x = Oinv [ O [x] ]
@@ -90,6 +108,9 @@ tcnt = tcnt+1
  
   iom = ot%om
   oom = qu2om(om2qu(iom))
+write(*,*) iom
+write(*,*) om2qu(iom)
+write(*,*) oom
   diff = maxval(abs(oom-iom))
   write (*,*) 'om2qu max difference = ', diff
   diffmax = maxval( (/ diffmax,diff /) )
@@ -665,6 +686,11 @@ tcnt = tcnt+1
  
   iom = ot%om
   oom = ax2om(qu2ax(om2qu(iom)))
+write (*,*) iom
+write (*,*) om2qu(iom)
+write (*,*) qu2ax(om2qu(iom))
+write (*,*) oom
+
   diff = maxval(abs(oom-iom))
   write (*,*) 'ax2om-qu2ax-om2qu max difference = ', diff
   diffmax = maxval( (/ diffmax,diff /) )
@@ -1824,4 +1850,5 @@ tcnt = tcnt+1
  
  write (*,*) ' Number of tests in this group : ', tcnt
  write (*,*) ' Maximum absolute difference   : ', diffmax
+end do
 end program rtest

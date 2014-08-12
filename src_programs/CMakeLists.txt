@@ -53,6 +53,7 @@ Create_exe_and_tll(CTEMdrawcell)
 Create_exe_and_tll(CTEMBethe)
 
 Create_exe_and_tll(structest)
+Create_exe_and_tll(rotationtest)
 
 
 #Create_exe_and_tll(CTEMBWshow)

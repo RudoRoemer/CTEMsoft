@@ -27,10 +27,10 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:CTEMlacbed.f90
+! CTEMsoft2013:CTEMLACBED.f90
 !--------------------------------------------------------------------------
 !
-! PROGRAM: CTEMlacbed 
+! PROGRAM: CTEMLACBED 
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -46,26 +46,38 @@
 !> @date 05/08/13 MDG 2.1 forked from mbcbed and adapted for large angle CBED patterns
 !> @date 05/14/13 MDG 2.2 replaced all IO by namelist file and added command line argument handling
 !> @date 09/04/13 MDG 2.3 all command line argument handling now via files.f90 routine
+!> @date 07/01/14 MDG 3.0 removal of all globals; separate handling of namelist; uppercased program name
 !--------------------------------------------------------------------------
-program CTEMlacbed
+program CTEMLACBED
 
 use local
 use files
+use NameListTypedefs
+use NameListHandlers
 use io
 
 IMPLICIT NONE
 
-character(fnlen)			:: nmldeffile
+character(fnlen)                        :: nmldeffile, progname, progdesc
+type(KosselNameListType)                :: lacbednl
+
+nmldeffile = 'CTEMLACBED.nml'
+progname = 'CTEMLACBED.f90'
+progdesc = 'Large angle convergent beam pattern simulation'
 
 ! deal with the command line arguments, if any
-nmldeffile = 'CTEMlacbed.nml'
-progname = 'CTEMlacbed.f90'
-call Interpret_Program_Arguments(nmldeffile,1,(/ 10 /) )
+call Interpret_Program_Arguments(nmldeffile,1,(/ 10 /), progname)
+
+! deal with the namelist stuff
+call GetLACBEDNameList(nmldeffile,lacbednl)
+
+! print some information
+call CTEMsoft(progname, progdesc)
 
 ! perform the zone axis computations
-call LACBEDpattern(nmldeffile)
+call LACBEDpattern(lacbednl, progname)
 
-end program CTEMlacbed
+end program CTEMLACBED
 
 !--------------------------------------------------------------------------
 !
@@ -86,13 +98,15 @@ end program CTEMlacbed
 !> @date 10/08/13  MDG 3.3 added maxHOLZ output limitation; disk offset computation
 !> @date 10/15/13  MDG 3.4 modified handling of Whole Pattern symmetry; add minten output limitation
 !> @date 10/16/13  MDG 3.5 added correct HOLZ coordinate handling
+!> @date 07/01/14  MDG 4.0 removal of globals and namelist handling
 !--------------------------------------------------------------------------
-subroutine LACBEDpattern(nmlfile)
+subroutine LACBEDpattern(lacbenl, progname)
 
 use local
+use typedefs
+use NameListTypedefs
 use constants
 use crystal
-use crystalvars
 use diffraction
 use gvectors
 use kvectors
@@ -100,7 +114,6 @@ use MBmodule
 use postscript, ONLY: GetIndex
 use symmetry
 use math
-use dynamical
 use io
 use error
 use files
@@ -108,125 +121,98 @@ use omp_lib
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)	:: nmlfile
+type(LACBEDNameListType),INTENT(IN)     :: lacbednl
+character(fnlen),INTENT(IN)             :: progname
 
-real(kind=sgl)      		:: ktmax, io_real(3), bragg, thetac, sc, minten, pxy(2), galen, &
-                       	   frac, dmin, convergence, voltage, startthick, thickinc, klaue(2), thetam 
-integer(kind=irg)   		:: ijmax,ga(3),gb(3),k(3),cnt,fn(3), PX, numthick, ss, icnt, pgnum, ih, nunique, famnum, &
-                      		   newcount,count_rate,count_max, io_int(6), i, j, isym, ir, skip, ghkl(3), &
-                      		   npx, npy, numt, numk, npix, ik, ip, jp, istat, dgn, nbeams, &
-                      		   ifamily, famhkl(3), inum, maxHOLZ, numksame
-character(3)			:: method
-character(fnlen)     		:: outname, xtalname
+real(kind=sgl)                  :: ktmax, io_real(3), bragg, thetac, sc, pxy(2), galen, &
+                                   frac,  klaue(2), thetam 
+integer(kind=irg)               :: ijmax,ga(3),gb(3),cnt, PX, numthick, ss, icnt, pgnum, ih, nunique, famnum, &
+                                   newcount,count_rate,count_max, io_int(6), i, j, isym, ir, skip, ghkl(3), &
+                                   npx, npy, numt, numk, npix, ik, ip, jp, istat, dgn, nbeams, &
+                                   ifamily, famhkl(3), inum, numksame
+character(3)                    :: method
+integer(kind=irg)               :: itmp(48,3)                   !< array used for family computations etc
 
-real(kind=sgl),allocatable    	:: diskoffset(:,:), disk(:,:,:,:), thick(:), familytwotheta(:), slice(:,:,:)
-integer(kind=irg),allocatable 	:: familymult(:), familyhkl(:,:), whichHOLZ(:), gequiv(:,:)
-real(kind=sgl),allocatable    	:: inten(:,:)
-real(kind=dbl)			:: s(3)
-logical,allocatable		:: ksame(:)
+real(kind=sgl),allocatable      :: diskoffset(:,:), disk(:,:,:,:), thick(:), familytwotheta(:), slice(:,:,:)
+integer(kind=irg),allocatable   :: familymult(:), familyhkl(:,:), whichHOLZ(:), gequiv(:,:)
+real(kind=sgl),allocatable      :: inten(:,:)
+real(kind=dbl)                  :: s(3)
+logical,allocatable             :: ksame(:)
+complex(kind=dbl),allocatable   :: DynMat(:,:)
 
 
-namelist /inputlist/ stdout, xtalname, voltage, k, fn, dmin, convergence, minten, &
-                              startthick, thickinc, numthick, outname, npix, maxHOLZ
+type(unitcell),pointer          :: cell
+type(gnode)                     :: rlp
+type(DynType)                   :: Dyn
+type(kvectorlist),pointer       :: khead, ktmp
+type(symdata2D)                 :: TDPG
+type(BetheParameterType)        :: BetheParameters
+type(reflisttype),pointer       :: reflist, firstw, rltmp, rltmpa, rltmpb
 
-! set the input parameters to default values (except for xtalname, which must be present)
-xtalname = 'undefined'		! initial value to check that the keyword is present in the nml file
-stdout = 6			! standard output
-voltage = 200000.0		! acceleration voltage [V]
-k = (/ 0, 0, 1 /)		! beam direction [direction indices]
-fn = (/ 0, 0, 1 /)		! foil normal [direction indices]
-dmin = 0.025			! smallest d-spacing to include in dynamical matrix [nm]
-convergence = 25.0		! beam convergence angle [mrad]
-startthick = 10.0		! starting thickness [nm]
-thickinc = 10.0			! thickness increment
-numthick = 10			! number of increments
-npix = 256			! output arrays will have size npix x npix
-minten = 1.0E-5			! minimum intensity in diffraction disk to make it into the output file
-maxHOLZ = 2			! maximum HOLZ layer index to be used for the output file; note that his number
-				! does not affect the actual computations; it only determines which reflection 
-				! families will end up in the output file
-outname = 'lacbedout.data'	! output filename
 
-camlen = 1000.0			! camera length [mm]   (this is not part of the namelist, but needed later)
+camlen = 1000.0                 ! camera length [mm]   (this is not part of the namelist, but needed later)
 
-! read the namelist file
-open(UNIT=dataunit,FILE=nmlfile,DELIM='apostrophe',STATUS='old')
-read(UNIT=dataunit,NML=inputlist)
-close(UNIT=dataunit,STATUS='keep')
+  nullify(cell)
+  nullify(khead)
+  nullify(ktmp)
 
-if (trim(xtalname).eq.'undefined') then
-  call FatalError('CTEMlacbed:',' structure file name is undefined in '//nmlfile)
-end if
+  allocate(cell)
 
-! print some information
- progname = 'CTEMlacbed.f90'
- progdesc = 'Large angle convergent beam pattern simulation'
- call CTEMsoft
+  verbose = .TRUE.
+  call Initialize_Cell(cell,Dyn,rlp,lacbednl%xtalname, lacbednl%dmin, lacbednl%voltage, verbose)
 
- mess = 'Input parameter list: '; call Message("(A)")
- write (stdout,NML=inputlist)
-
-! first get the crystal data and microscope voltage
- SG%SYM_reduce=.TRUE.
- call CrystalData(xtalname)
- skip = 3
- call CalcWaveLength(dble(voltage),skip)
-
-! generate all atom positions
- call CalcPositions('v')
- 
 ! set the foil normal 
- DynFN = float(fn)
+  Dyn%FN = float(lacbednl%fn)
  
 ! determine the point group number
- j=0
- do i=1,32
-  if (SGPG(i).le.cell % SYM_SGnum) j=i
- end do
+  j=0
+  do i=1,32
+   if (SGPG(i).le.cell % SYM_SGnum) j=i
+  end do
 
 ! use the new routine to get the whole pattern 2D symmetry group, since that
 ! is the one that determines the independent beam directions.
- dgn = GetPatternSymmetry(k,j,.TRUE.)
- pgnum = j
- isym = WPPG(dgn) ! WPPG lists the whole pattern point group numbers vs. diffraction group numbers
+  dgn = GetPatternSymmetry(lacbednl%k,j,.TRUE.)
+  pgnum = j
+  isym = WPPG(dgn) ! WPPG lists the whole pattern point group numbers vs. diffraction group numbers
 
 ! determine the shortest reciprocal lattice points for this zone
- call ShortestG(k,ga,gb,isym)
- io_int(1:3)=ga(1:3)
- io_int(4:6)=gb(1:3)
- call WriteValue(' Reciprocal lattice vectors : ', io_int, 6,"('(',3I3,') and (',3I3,')',/)")
+  call ShortestG(lacbednl%k,ga,gb,isym)
+  io_int(1:3)=ga(1:3)
+  io_int(4:6)=gb(1:3)
+  call WriteValue(' Reciprocal lattice vectors : ', io_int, 6,"('(',3I3,') and (',3I3,')',/)")
 
 ! for some of the 2D point groups, the standard orientation of the group according to ITC vol A
 ! may not be the orientation that we have here, so we need to determine by how much the 2D point
 ! group is rotated (CCW) with respect to the standard setting...
- call CheckPatternSymmetry(k,ga,isym,thetam)
+  call CheckPatternSymmetry(lacbednl%k,ga,isym,thetam)
 
 ! initialize the HOLZ geometry type
- call GetHOLZGeometry(float(ga),float(gb),k,fn) 
+  call GetHOLZGeometry(cell,float(ga),float(gb),lacbednl%k,lacbednl%fn) 
 
 ! construct the list of all possible reflections
- method = 'ALL'
- thetac = convergence/1000.0
- call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxHOLZ,thetac)
- galen = CalcLength(float(ga),'r')
+! method = 'ALL'
+! thetac = convergence/1000.0
+! call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxHOLZ,thetac)
+
+  galen = CalcLength(cell,float(ga),'r')
 
 ! determine range of incident beam directions
-  bragg = CalcDiffAngle(ga(1),ga(2),ga(3))*0.5
+  bragg = CalcDiffAngle(cell,ga(1),ga(2),ga(3))*0.5
   
 ! convert to ktmax along ga
   ktmax = 0.5*thetac/bragg
 
 ! the number of pixels across the disk is equal to 2*npix + 1
-  npx = npix
+  npx = lacbednl%npix
   npy = npx
   io_int(1) = 2.0*npx + 1
-  call WriteValue('Number of image pixels along diameter of central disk = ', io_int, 1, "(I4)")
-  mess=' '; call Message("(A/)")
+  call WriteValue('Number of image pixels along diameter of central disk = ', io_int, 1, "(I4/)")
   
 ! get number of thicknesses for which to compute the LACBED disk patterns
-  numt = numthick
+  numt = lacbednl%numthick
   allocate(thick(numt),stat=istat)
-  thick = startthick + thickinc* (/ (float(i),i=0,numt-1) /)
+  thick = lacbednl%startthick + lacbednl%thickinc* (/ (float(i),i=0,numt-1) /)
 
 ! set parameters for wave vector computation
   klaue = (/ 0.0, 0.0 /)
@@ -239,13 +225,17 @@ end if
 ! illumination cone without application of symmetry.  Instead, we'll get the speed up by 
 ! going to multiple cores later on.
   isym = 1
-  call CalckvectorsSymmetry(dble(k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,klaue,.FALSE.)
+  call CalckvectorsSymmetry(khead,cell,TDPG,dble(lacbednl%k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,klaue,.FALSE.)
 
 ! set scaling parameters
   PX = npix/2
 
 ! force dynamical matrix routine to read new Bethe parameters from file
-  call Set_Bethe_Parameters(.TRUE.)
+  call Set_Bethe_Parameters(BetheParameters,.TRUE.)
+
+! construct the list of all possible reflections ...
+  call Initialize_ReflectionList(cell, reflist, BetheParameters, float(lacbednl%fn), &
+                                 float(lacbednl%k), lacbednl%dmin, nref, verbose)
 
 ! up to this point, everything is nearly identical to the mbcbed program,
 ! except that we do not use a camera length explicitly.  Now we
@@ -289,14 +279,14 @@ end if
 ! to do all this requires knowledge of the subset of 3D symmetry operators that keeps 
 ! the incident beam direction invariant, so we determine this subset first.  This 
 ! code comes from the CalcStar routine, but we only need a portion of it.
-  allocate(ksame(SG%SYM_NUMpt))
+  allocate(ksame(cell%SG%SYM_NUMpt))
   ksame = .FALSE.
   numksame = 1
   ksame(1) = .TRUE.
   
 ! get all the symmetry operation IDs that leave the zone axis invariant (skip the identity operation)
-  do i=2,SG%SYM_NUMpt 
-    s = matmul(SG%SYM_direc(i,1:3,1:3),dble(k)) 
+  do i=2,cell%SG%SYM_NUMpt 
+    s = matmul(cell%SG%SYM_direc(i,1:3,1:3),dble(k)) 
     if (sum(abs(s-dble(k))).lt.1.0D-10) then 
       ksame(i) = .TRUE.
       numksame = numksame+1
@@ -325,14 +315,14 @@ end if
 ! determine for each hkl all the 2D equivalent ones and tag them as belonging to
 ! the same family in terms of 2D symmetry.  
   rltmpa => reflist%next
-  rltmpa%famnum = 1		! reflection at origin is always its own family
+  rltmpa%famnum = 1             ! reflection at origin is always its own family
   ifamily = 1
   rltmpa => rltmpa%next
 whileloop1: do while (associated(rltmpa))
 ! only look at points that haven't been tagged yet
    if (rltmpa%famnum.eq.0) then
-    ghkl = rltmpa%hkl		! get the reflection
-    call Calc2DFamily(ghkl,ksame,numksame,nunique)
+    ghkl = rltmpa%hkl           ! get the reflection
+    call Calc2DFamily(ghkl,ksame,numksame,nunique,itmp)
 ! we add this point to a new famnum value
     ifamily = ifamily + 1
     rltmpa%famnum = ifamily
@@ -345,14 +335,14 @@ whileloop1: do while (associated(rltmpa))
         rltmpb => rltmpa%next
 whileloop2: do while (associated(rltmpb))
 ! look for this reflection on the list
-	  if (sum(abs(itmp(i,1:3) - rltmpb%hkl(1:3))).eq.0) then  ! found it!
- 	   rltmpb%famnum = ifamily
-    	   rltmpb%famhkl = rltmpa%famhkl
-	   EXIT whileloop2
-	  end if
-	  if (.not.associated(rltmpb%next)) EXIT whileloop2
-	  rltmpb => rltmpb%next
-	end do whileloop2
+          if (sum(abs(itmp(i,1:3) - rltmpb%hkl(1:3))).eq.0) then  ! found it!
+           rltmpb%famnum = ifamily
+           rltmpb%famhkl = rltmpa%famhkl
+           EXIT whileloop2
+          end if
+          if (.not.associated(rltmpb%next)) EXIT whileloop2
+          rltmpb => rltmpb%next
+        end do whileloop2
       end do
     end if
    end if
@@ -368,7 +358,7 @@ whileloop2: do while (associated(rltmpb))
 ! redo the above loop, sort of, but now fill in the actual data
 ! we no longer need to keep the famnum entries in the linked list, so we
 ! can reset those to zero to keep track of points already visited.
-  ifamily = 1	! for the incident beam
+  ifamily = 1   ! for the incident beam
   familyhkl(1:3,ifamily) = (/ 0, 0, 0 /)
   familymult(ifamily) = 1
   diskoffset(1:2,ifamily) = (/ 0.0, 0.0 /)
@@ -385,7 +375,7 @@ outerloop2: do while (associated(rltmpa))
     familytwotheta(ifamily) = CalcDiffAngle(famhkl(1),famhkl(2),famhkl(3))*1000.0
     familymult(ifamily) = 1
 ! get the disk offset parameters
-    pxy = sc * GetHOLZcoordinates(float(famhkl), (/ 0.0, 0.0, 0.0 /), sngl(mLambda))
+    pxy = sc * GetHOLZcoordinates(cell,float(famhkl), (/ 0.0, 0.0, 0.0 /), sngl(mLambda))
     diskoffset(1:2,ifamily) = pxy
   
 ! and remove the equivalent reflections from the list
@@ -393,7 +383,7 @@ outerloop2: do while (associated(rltmpa))
 whileloop3: do while (associated(rltmpb))
       if (rltmpb%famnum.eq.famnum) then
          familymult(ifamily) = familymult(ifamily) + 1
-	 rltmpb%famnum = 0
+         rltmpb%famnum = 0
       end if
       if (.not.associated(rltmpb%next)) EXIT whileloop3
       rltmpb => rltmpb%next
@@ -428,47 +418,54 @@ whileloop3: do while (associated(rltmpb))
 ! loop over all beam orientations, selecting them from the linked list
 kvectorloop:  do ik = 1,numk
 
-	ip = -ktmp%i
- 	jp =  ktmp%j
+        ip = -ktmp%i
+        jp =  ktmp%j
+
+! determine strong and weak reflections
+        call Apply_BethePotentials(cell, reflist, firstw, BetheParameters, nref, nns, nnw)
+
+! generate the dynamical matrix
+        allocate(DynMat(nns,nns))
+        call GetDynMat(cell, reflist, firstw, rlp, DynMat, nns, nnw)
 
 ! compute the dynamical matrix using Bloch waves with Bethe potentials; note that the IgnoreFoilNormal flag
 ! has been set to .FALSE.; if it is set to .TRUE., the computation of the ZOLZ will still be mostly correct,
 ! but the excitation errors of the HOLZ reflections will be increasingly incorrect with HOLZ order.  This was
 ! useful during program testing but should probably be removed as an option altogether...
-	call Compute_DynMat('BLOCHBETHE', ktmp%k, ktmp%kt, .FALSE.)
+!       call Compute_DynMat('BLOCHBETHE', ktmp%k, ktmp%kt, .FALSE.)
 
 ! allocate the intensity array to include both strong beams and weak beams (in that order)
-	allocate(inten(numt,DynNbeams+BetheParameter%nnw))
-  	inten = 0.0
+        allocate(inten(numt,nns+nnw))
+        inten = 0.0
  
 ! solve the dynamical eigenvalue equation and return the intensities of ALL reflections,
 ! both strong and weak; the weak intensities should also be plotted at the correct locations....
 ! this uses a new version of the CalcBWint routine that implements both strong and weak beam intensities.
-   	call CalcBWint(DynNbeams,BetheParameter%nnw,numt,thick,inten)
+        call CalcBWint(nns,nnw,numt,thick,inten)
 
 ! we combine the reflistindex and weakreflistindex into a single list so that we can match 
 ! each diffracted intensity with the correct diffraction disk in the disks array.
-	BetheParameter%reflistindex = BetheParameter%reflistindex + BetheParameter%weakreflistindex
+        BetheParameter%reflistindex = BetheParameter%reflistindex + BetheParameter%weakreflistindex
 
 ! ok, we have all the intensities.  Next we need to copy the relevant intensities into the slots 
 ! of the disk array, one for each family.
-	rltmpa => reflist%next%next
-	inum = 1
+        rltmpa => reflist%next%next
+        inum = 1
         disk(ip,jp,1:numt,inum) = inten(1:numt,1)
-	do i=2,DynNbeamsLinked
-	  if (BetheParameter%reflistindex(i).ne.0) then ! is this a reflection on the current list
+        do i=2,DynNbeamsLinked
+          if (BetheParameter%reflistindex(i).ne.0) then ! is this a reflection on the current list
 ! it is, so we need to determine which of the families corresponds to it
-	    inum = -1
-	    do ir=2,ifamily
-	     ss = sum(abs(familyhkl(1:3,ir) - rltmpa%hkl(1:3)))
-	     if (ss.eq.0) inum = ir
-	    end do
-  	    if (inum.ne.-1) then	
+            inum = -1
+            do ir=2,ifamily
+             ss = sum(abs(familyhkl(1:3,ir) - rltmpa%hkl(1:3)))
+             if (ss.eq.0) inum = ir
+            end do
+            if (inum.ne.-1) then        
               disk(ip,jp,1:numt,inum) = inten(1:numt,BetheParameter%reflistindex(i))
-	    end if
-	  end if
-	  rltmpa => rltmpa%next
-	end do
+            end if
+          end if
+          rltmpa => rltmpa%next
+        end do
 
 ! and remove the intensity array
      deallocate(inten)

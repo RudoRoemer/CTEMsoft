@@ -167,7 +167,7 @@ integer(kind=irg)       :: istat
 
  verbose = .TRUE.
  dmin = 0.05
- call Initialize_Cell(cell,Dyn,rlp,mcnl%xtalname, dmin, sngl(mcnl%EkeV), verbose)
+ call Initialize_Cell(cell,Dyn,rlp,mcnl%xtalname, dmin, sngl(1000.0*mcnl%EkeV), verbose)
 
 ! then get the density, average atomic number and average atomic weight
  call CalcDensity(cell, dens, avZ, avA)

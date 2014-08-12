@@ -48,6 +48,7 @@
 !> @date    1/10/14 MDG 4.0 new version, many new entries in unitcell type
 !> @date    6/ 5/14 MDG 4.1 removed variable declaration for cell
 !> @date    6/ 9/14 MDG 4.2 added all defect type declarations
+!> @date    8/11/14 MDG 4.3 modified Rodrigues vector to 4 components
 !--------------------------------------------------------------------------
 module typedefs
 
@@ -808,25 +809,25 @@ end type foiltype
 
 ! the "orientation" type contains entries for all rotation and orientation representations
 type orientationtype
-  real(kind=sgl)	:: eulang(3)		! Bunge Euler angles in radians
-  real(kind=sgl)	:: om(3,3)		! 3x3 matrix
-  real(kind=sgl)	:: axang(4)		! axis-angle pair (angle in rad, component 4; axis in direction cosines)
-  real(kind=sgl)	:: rodrigues(3)		! Rodrigues vector
-  real(kind=sgl)	:: quat(4)		! quaternion representation (q(1) is scalar part, q(2:4) vector part)
-  real(kind=sgl)	:: homochoric(3)	! homochoric representation according to Frank's paper  
-  real(kind=sgl)	:: cubochoric(3)	! cubic grid representation (derived from homochoric)
+  real(kind=sgl)        :: eulang(3)            ! Bunge Euler angles in radians
+  real(kind=sgl)        :: om(3,3)              ! 3x3 matrix
+  real(kind=sgl)        :: axang(4)             ! axis-angle pair (angle in rad, component 4; axis in direction cosines)
+  real(kind=sgl)        :: rodrigues(4)         ! Rodrigues vector (stored as direction cosines and length, to allow for Infinity)
+  real(kind=sgl)        :: quat(4)              ! quaternion representation (q(1) is scalar part, q(2:4) vector part)
+  real(kind=sgl)        :: homochoric(3)        ! homochoric representation according to Frank's paper  
+  real(kind=sgl)        :: cubochoric(3)        ! cubic grid representation (derived from homochoric)
 end type orientationtype
 
 
 ! double precision version
 type orientationtyped
-  real(kind=dbl)	:: eulang(3)		! Bunge Euler angles in radians
-  real(kind=dbl)	:: om(3,3)		! 3x3 matrix
-  real(kind=dbl)	:: axang(4)		! axis-angle pair (angle in rad, component 4; axis in direction cosines)
-  real(kind=dbl)	:: rodrigues(3)		! Rodrigues vector
-  real(kind=dbl)	:: quat(4)		! quaternion representation (q(1) is scalar part, q(2:4) vector part)
-  real(kind=dbl)	:: homochoric(3)	! homochoric representation according to Frank's paper  
-  real(kind=dbl)	:: cubochoric(3)	! cubic grid representation (derived from homochoric)
+  real(kind=dbl)        :: eulang(3)            ! Bunge Euler angles in radians
+  real(kind=dbl)        :: om(3,3)              ! 3x3 matrix
+  real(kind=dbl)        :: axang(4)             ! axis-angle pair (angle in rad, component 4; axis in direction cosines)
+  real(kind=dbl)        :: rodrigues(4)         ! Rodrigues vector (stored as direction cosines and length, to allow for Infinity)
+  real(kind=dbl)        :: quat(4)              ! quaternion representation (q(1) is scalar part, q(2:4) vector part)
+  real(kind=dbl)        :: homochoric(3)        ! homochoric representation according to Frank's paper  
+  real(kind=dbl)        :: cubochoric(3)        ! cubic grid representation (derived from homochoric)
 end type orientationtyped
 
 

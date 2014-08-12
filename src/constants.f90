@@ -48,6 +48,8 @@
 !> @date 01/10/14 MDG 4.0 new version
 !> @date 04/29/14 MDG 4.1 constants updated from NIST physical constants tables
 !> @date 07/06/14 MDG 4.2 added omegamax to Lambert constant type
+!> @date 08/11/14 MDG 4.3 added infty for handling of +Infinity in rotations module
+!> @date 08/11/14 MDG 4.4 added epsijk option to package
 !--------------------------------------------------------------------------
 
 module constants
@@ -55,6 +57,34 @@ module constants
 use local
 
 IMPLICIT NONE
+
+! ****************************************************
+! ****************************************************
+! ****************************************************
+! used to change the sign of the permutation symbol from Adam Morawiec's book to
+! the convention used for the CTEMsoft package.  If you want to use Adam's convention,
+! both of these parameters should be set to +1; -1 will change the sign everywhere
+! for all representations that involve the unit vector.
+
+! uncomment these for the more logical way of doing things
+real(kind=sgl), parameter :: epsijk = -1.0
+real(kind=dbl), parameter :: epsijkd = -1.D0
+
+! uncomment these for the Morawiec version.
+!real(kind=sgl), parameter :: epsijk = 1.0
+!real(kind=dbl), parameter :: epsijkd = 1.D0
+! ****************************************************
+! ****************************************************
+! ****************************************************
+
+
+! the rotations.f90 routines need to have access to the value +Infinity
+! which is defined here (using the LaTeX name infty)
+INTEGER,private :: inf
+REAL,public :: infty
+EQUIVALENCE (inf,infty) !Stores two variable at the same address
+DATA inf/z'7f800000'/ !Hex for +Infinity
+
 
 ! various physical constants
 !> cPi		= pi [dimensionless]
@@ -74,7 +104,7 @@ real(kind=dbl), parameter :: cPi=3.141592653589793238D0, cLight = 299792458.D0, 
                              cPermea = 1.2566370614D-6, cPermit = 8.854187817D-12, &
                              cCharge = 1.602176565D-19, cRestmass = 9.10938291D-31, &
                              cMoment = 9.28476430D-24, cJ2eV = 1.602176565D-19, &
-			      cAvogadro = 6.02214129D23
+                              cAvogadro = 6.02214129D23
 
 !> element symbols (we'll do 1-98 for all parameter lists)
 character(2), parameter :: ATOM_sym(98)=(/' H','He','Li','Be',' B',' C',' N',' O',' F','Ne', &
@@ -125,59 +155,59 @@ character(3), parameter :: ATOM_color(98)=(/'blu','grn','blu','blu','red','bro',
                                             'blu','blu','grn','red','pnk','cyn','blu','grn'/)
 
 !> atomic weights for things like density computations (from NIST elemental data base)
-real(kind=sgl),parameter	:: ATOM_weights(98) = (/1.00794, 4.002602, 6.941, 9.012182, 10.811, &
-							12.0107, 14.0067, 15.9994, 18.9984032, 20.1797, &
-							22.98976928, 24.3050, 26.9815386, 28.0855, 30.973762, &
-							32.065, 35.453, 39.948, 39.0983, 40.078, &
-							44.955912, 47.867, 50.9415, 51.9961, 54.938045, &
-							55.845, 58.933195, 58.6934, 63.546, 65.38, &
-							69.723, 72.64, 74.92160, 78.96, 79.904, &
-							83.798, 85.4678, 87.62, 88.90585, 91.224, &
-							92.90638, 95.96, 98.9062, 101.07, 102.90550, &
-							106.42, 107.8682, 112.411, 114.818, 118.710, &
-							121.760, 127.60, 126.90447, 131.293, 132.9054519, &
-							137.327, 138.90547, 140.116, 140.90765, 144.242, &
-							145.0, 150.36, 151.964, 157.25, 158.92535, &
-							162.500, 164.93032, 167.259, 168.93421, 173.054, &
-							174.9668, 178.49, 180.94788, 183.84, 186.207, &
-							190.23, 192.217, 195.084, 196.966569, 200.59, &
-							204.3833, 207.2, 208.98040, 209.0, 210.0, &
-							222.0, 223.0, 226.0, 227.0, 232.03806, &
-							231.03588, 238.02891, 237.0, 244.0, 243.0, &
-							247.0, 251.0, 252.0 /)
+real(kind=sgl),parameter        :: ATOM_weights(98) = (/1.00794, 4.002602, 6.941, 9.012182, 10.811, &
+                                                        12.0107, 14.0067, 15.9994, 18.9984032, 20.1797, &
+                                                        22.98976928, 24.3050, 26.9815386, 28.0855, 30.973762, &
+                                                        32.065, 35.453, 39.948, 39.0983, 40.078, &
+                                                        44.955912, 47.867, 50.9415, 51.9961, 54.938045, &
+                                                        55.845, 58.933195, 58.6934, 63.546, 65.38, &
+                                                        69.723, 72.64, 74.92160, 78.96, 79.904, &
+                                                        83.798, 85.4678, 87.62, 88.90585, 91.224, &
+                                                        92.90638, 95.96, 98.9062, 101.07, 102.90550, &
+                                                        106.42, 107.8682, 112.411, 114.818, 118.710, &
+                                                        121.760, 127.60, 126.90447, 131.293, 132.9054519, &
+                                                        137.327, 138.90547, 140.116, 140.90765, 144.242, &
+                                                        145.0, 150.36, 151.964, 157.25, 158.92535, &
+                                                        162.500, 164.93032, 167.259, 168.93421, 173.054, &
+                                                        174.9668, 178.49, 180.94788, 183.84, 186.207, &
+                                                        190.23, 192.217, 195.084, 196.966569, 200.59, &
+                                                        204.3833, 207.2, 208.98040, 209.0, 210.0, &
+                                                        222.0, 223.0, 226.0, 227.0, 232.03806, &
+                                                        231.03588, 238.02891, 237.0, 244.0, 243.0, &
+                                                        247.0, 251.0, 252.0 /)
 
 
 ! these are a bunch of constants used for Lambert and related projections; they are all in double precision
 type LambertParametersType
-	real(kind=dbl)		:: Pi=3.141592653589793D0    	!  pi
-	real(kind=dbl)		:: iPi=0.318309886183791D0    	!  1/pi
-	real(kind=dbl)		:: sPi=1.772453850905516D0	!  sqrt(pi)
-	real(kind=dbl)		:: sPio2=1.253314137315500D0	!  sqrt(pi/2)
-	real(kind=dbl)		:: sPi2=0.886226925452758D0	!  sqrt(pi)/2
-	real(kind=dbl)		:: srt=0.866025403784439D0    	!  sqrt(3)/2
-	real(kind=dbl)		:: isrt=0.577350269189626D0    !  1/sqrt(3)
-	real(kind=dbl)		:: alpha=1.346773687088598D0   !  sqrt(pi)/3^(1/4)
-	real(kind=dbl)		:: rtt=1.732050807568877D0  	!  sqrt(3)
-	real(kind=dbl)		:: prea=0.525037567904332D0    !  3^(1/4)/sqrt(2pi)
-	real(kind=dbl)		:: preb=1.050075135808664D0   	!  3^(1/4)sqrt(2/pi)
-	real(kind=dbl)		:: prec=0.906899682117109D0    !  pi/2sqrt(3)
-	real(kind=dbl)		:: pred=2.094395102393195D0   	!  2pi/3
-	real(kind=dbl)		:: pree=0.759835685651593D0   	!  3^(-1/4)
-	real(kind=dbl)		:: pref=1.381976597885342D0	!  sqrt(6/pi)
+        real(kind=dbl)          :: Pi=3.141592653589793D0       !  pi
+        real(kind=dbl)          :: iPi=0.318309886183791D0      !  1/pi
+        real(kind=dbl)          :: sPi=1.772453850905516D0      !  sqrt(pi)
+        real(kind=dbl)          :: sPio2=1.253314137315500D0    !  sqrt(pi/2)
+        real(kind=dbl)          :: sPi2=0.886226925452758D0     !  sqrt(pi)/2
+        real(kind=dbl)          :: srt=0.866025403784439D0      !  sqrt(3)/2
+        real(kind=dbl)          :: isrt=0.577350269189626D0    !  1/sqrt(3)
+        real(kind=dbl)          :: alpha=1.346773687088598D0   !  sqrt(pi)/3^(1/4)
+        real(kind=dbl)          :: rtt=1.732050807568877D0      !  sqrt(3)
+        real(kind=dbl)          :: prea=0.525037567904332D0    !  3^(1/4)/sqrt(2pi)
+        real(kind=dbl)          :: preb=1.050075135808664D0     !  3^(1/4)sqrt(2/pi)
+        real(kind=dbl)          :: prec=0.906899682117109D0    !  pi/2sqrt(3)
+        real(kind=dbl)          :: pred=2.094395102393195D0     !  2pi/3
+        real(kind=dbl)          :: pree=0.759835685651593D0     !  3^(-1/4)
+        real(kind=dbl)          :: pref=1.381976597885342D0     !  sqrt(6/pi)
 ! the following constants are used for the cube to quaternion hemisphere mapping
-	real(kind=dbl)		:: a=1.925749019958253D0	! pi^(5/6)/6^(1/6)
-	real(kind=dbl)		:: ap=2.145029397111025D0	! pi^(2/3)
-	real(kind=dbl)		:: sc=0.897772786961286D0	! a/ap
-	real(kind=dbl)		:: beta=0.962874509979126D0	! pi^(5/6)/6^(1/6)/2
-	real(kind=dbl)		:: R1=1.330670039491469D0	! (3pi/4)^(1/3)
-	real(kind=dbl)		:: r2=1.414213562373095D0	! sqrt(2)
-	real(kind=dbl)		:: r22=0.707106781186547D0	! 1/sqrt(2)
-	real(kind=dbl)		:: pi12=0.261799387799149D0	! pi/12
-	real(kind=dbl)		:: pi8=0.392699081698724D0	! pi/8
-	real(kind=dbl)		:: prek=1.643456402972504D0	! R1 2^(1/4)/beta
-	real(kind=dbl)		:: r24=4.898979485566356D0	! sqrt(24)
-	real(kind=dbl)		:: omegamax = 3.141592479056868D0	! max angle (radians)  for Rodrigues space, currently 179.99999¡
-        real(kind=dbl)	        :: rvmax2=131312254114241.4843750000D0      ! square of max rodrigues vector length (reset when omegamax changes)  
+        real(kind=dbl)          :: a=1.925749019958253D0        ! pi^(5/6)/6^(1/6)
+        real(kind=dbl)          :: ap=2.145029397111025D0       ! pi^(2/3)
+        real(kind=dbl)          :: sc=0.897772786961286D0       ! a/ap
+        real(kind=dbl)          :: beta=0.962874509979126D0     ! pi^(5/6)/6^(1/6)/2
+        real(kind=dbl)          :: R1=1.330670039491469D0       ! (3pi/4)^(1/3)
+        real(kind=dbl)          :: r2=1.414213562373095D0       ! sqrt(2)
+        real(kind=dbl)          :: r22=0.707106781186547D0      ! 1/sqrt(2)
+        real(kind=dbl)          :: pi12=0.261799387799149D0     ! pi/12
+        real(kind=dbl)          :: pi8=0.392699081698724D0      ! pi/8
+        real(kind=dbl)          :: prek=1.643456402972504D0     ! R1 2^(1/4)/beta
+        real(kind=dbl)          :: r24=4.898979485566356D0      ! sqrt(24)
+        real(kind=dbl)          :: omegamax = 3.141592479056868D0       ! max angle (radians)  for Rodrigues space, currently 179.99999¡
+        real(kind=dbl)          :: rvmax2=131312254114241.4843750000D0      ! square of max rodrigues vector length (reset when omegamax changes)  
         real(kind=dbl)          :: tfit(16) = (/1.0000000000018852D0, -0.5000000002194847D0, & 
                                              -0.024999992127593126D0, - 0.003928701544781374D0, & 
                                              -0.0008152701535450438D0, - 0.0002009500426119712D0, & 

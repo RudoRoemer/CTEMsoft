@@ -37,6 +37,7 @@
 !> @brief create a crystal structure file (very simple program)
 !
 !> @date   11/23/13 MDG 1.0 original
+!> @date   08/10/14 MDG 1.1 added GenerateSymmetry call
 !--------------------------------------------------------------------------
 program CTEMmkxtal
 
@@ -61,6 +62,7 @@ character(fnlen)                :: progname, progdesc, fname
  cell%SYM_SGset=0
  call GetLatParm(cell)
  call GetSpaceGroup(cell)
+ call GenerateSymmetry(.TRUE.)
  call GetAsymPos(cell)
  call ReadValue('Enter output file name (*.xtal) ', fname)
  cell%fname = fname

@@ -72,28 +72,28 @@ IMPLICIT NONE
 ! mappings from 2D square grid to the Northern hemisphere of a 2D sphere
 public :: LambertSquareToSphere
 interface LambertSquareToSphere
-	module procedure Lambert2DSquareForwardSingle
-	module procedure Lambert2DSquareForwardDouble
+        module procedure Lambert2DSquareForwardSingle
+        module procedure Lambert2DSquareForwardDouble
 end interface
 
 public :: LambertSphereToSquare
 interface LambertSphereToSquare
-	module procedure Lambert2DSquareInverseSingle
-	module procedure Lambert2DSquareInverseDouble
+        module procedure Lambert2DSquareInverseSingle
+        module procedure Lambert2DSquareInverseDouble
 end interface
 
 
 ! mappings from 2D hexagonal grid to the Northern hemisphere of a 2D sphere
 public :: LambertHexToSphere
 interface LambertHexToSphere
-	module procedure Lambert2DHexForwardSingle
-	module procedure Lambert2DHexForwardDouble
+        module procedure Lambert2DHexForwardSingle
+        module procedure Lambert2DHexForwardDouble
 end interface
 
 public :: LambertSphereToHex
 interface LambertSphereToHex
-	module procedure Lambert2DHexInverseSingle
-	module procedure Lambert2DHexInverseDouble
+        module procedure Lambert2DHexInverseSingle
+        module procedure Lambert2DHexInverseDouble
 end interface
 
 
@@ -105,42 +105,42 @@ private :: GetSextantDouble
 ! mappings from the 3D cubic grid to the 3D spherical grid
 public :: LambertCubeToBall
 interface LambertCubeToBall
-	module procedure Lambert3DCubeForwardSingle
-	module procedure Lambert3DCubeForwardDouble
+        module procedure Lambert3DCubeForwardSingle
+        module procedure Lambert3DCubeForwardDouble
 end interface
 
 public :: LambertBallToCube
 interface LambertBallToCube
-	module procedure Lambert3DCubeInverseSingle
-	module procedure Lambert3DCubeInverseDouble
+        module procedure Lambert3DCubeInverseSingle
+        module procedure Lambert3DCubeInverseDouble
 end interface
 
 
 ! mappings from the 3D spherical grid to the unit quaternion sphere
 public :: LambertBallToQuaternion
 interface LambertBallToQuaternion
-	module procedure Lambert3DBallToQuaternionSingle
-	module procedure Lambert3DBallToQuaternionDouble
+        module procedure Lambert3DBallToQuaternionSingle
+        module procedure Lambert3DBallToQuaternionDouble
 end interface
 
 !public :: LambertQuaternionToBall
 !interface LambertQuaternionToBall
-!	module procedure Lambert3DBallToQuaternionSingleInverse
-!	module procedure Lambert3DBallToQuaternionDoubleInverse
+!       module procedure Lambert3DBallToQuaternionSingleInverse
+!       module procedure Lambert3DBallToQuaternionDoubleInverse
 !end interface
 
 
 ! mappings from the 3D cube grid to the unit quaternion sphere
 public :: LambertCubeToQuaternion
 interface LambertCubeToQuaternion
-	module procedure Lambert3DCubeToQuaternionSingle
-	module procedure Lambert3DCubeToQuaternionDouble
+        module procedure Lambert3DCubeToQuaternionSingle
+        module procedure Lambert3DCubeToQuaternionDouble
 end interface
 
 !public :: LambertQuaternionToCube
 !interface LambertQuaternionToCube
-!	module procedure Lambert3DCubeToQuaternionSingleInverse
-!	module procedure Lambert3DCubeToQuaternionDoubleInverse
+!       module procedure Lambert3DCubeToQuaternionSingleInverse
+!       module procedure Lambert3DCubeToQuaternionDoubleInverse
 !end interface
 !
 
@@ -152,27 +152,27 @@ private :: GetPyramidDouble
 ! here we also add the simple stereographic projection
 public :: StereoGraphicForward
 interface StereoGraphicForward
-	module procedure StereoGraphicForwardSingle
-	module procedure StereoGraphicForwardDouble
+        module procedure StereoGraphicForwardSingle
+        module procedure StereoGraphicForwardDouble
 end interface
 
 public :: StereoGraphicInverse
 interface StereoGraphicInverse
-	module procedure StereoGraphicInverseSingle
-	module procedure StereoGraphicInverseDouble
+        module procedure StereoGraphicInverseSingle
+        module procedure StereoGraphicInverseDouble
 end interface
 
 ! as well as the simple Lambert projection
 public :: LambertForward
 interface LambertForward
-	module procedure LambertForwardSingle
-	module procedure LambertForwardDouble
+        module procedure LambertForwardSingle
+        module procedure LambertForwardDouble
 end interface
 
 public :: LambertInverse
 interface LambertInverse
-	module procedure LambertInverseSingle
-	module procedure LambertInverseDouble
+        module procedure LambertInverseSingle
+        module procedure LambertInverseDouble
 end interface
 
 contains
@@ -194,14 +194,14 @@ recursive function Lambert2DSquareForwardSingle(xy,ierr) result(res)
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)		:: xy(2)
-integer(kind=irg),INTENT(INOUT)	:: ierr
-real(kind=sgl)				:: res(3), q, qq
+real(kind=sgl),INTENT(IN)               :: xy(2)
+integer(kind=irg),INTENT(INOUT) :: ierr
+real(kind=sgl)                          :: res(3), q, qq
 
 ierr = 0
 ! check to make sure that the input point lies inside the square of edge length 2 sqrt(pi/2)
 if (maxval(abs(xy)).gt.LPs%sPio2) then
-  res = (/ 0.0, 0.0, 0.0 /)		
+  res = (/ 0.0, 0.0, 0.0 /)             
   ierr = 1
 else
 ! Forward projection from square grid to Northern hemisphere.
@@ -244,9 +244,9 @@ recursive function Lambert2DSquareForwardDouble(xy,ierr) result(res)
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)		:: xy(2)
-integer(kind=irg),INTENT(INOUT)	:: ierr
-real(kind=dbl)				:: res(3), q, qq
+real(kind=dbl),INTENT(IN)               :: xy(2)
+integer(kind=irg),INTENT(INOUT) :: ierr
+real(kind=dbl)                          :: res(3), q, qq
 
 ierr = 0
 ! check to make sure that the input point lies inside the square of edge length 2 sqrt(pi)
@@ -294,10 +294,10 @@ recursive function Lambert2DSquareInverseSingle(xyz,ierr) result(res)
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)		:: xyz(3)
-integer(kind=irg),INTENT(INOUT)	:: ierr
-real(kind=sgl)				:: res(2), q
-real(kind=sgl),parameter		:: eps = 1.0E-6
+real(kind=sgl),INTENT(IN)               :: xyz(3)
+integer(kind=irg),INTENT(INOUT) :: ierr
+real(kind=sgl)                          :: res(2), q
+real(kind=sgl),parameter                :: eps = 1.0E-6
 
 ierr = 0
 ! check to make sure that the input point lies on the unit sphere
@@ -339,10 +339,10 @@ recursive function Lambert2DSquareInverseDouble(xyz,ierr) result(res)
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)		:: xyz(3)
-integer(kind=irg),INTENT(INOUT)	:: ierr
-real(kind=dbl)				:: res(2), q
-real(kind=dbl),parameter		:: eps = 1.0D-12
+real(kind=dbl),INTENT(IN)               :: xyz(3)
+integer(kind=irg),INTENT(INOUT) :: ierr
+real(kind=dbl)                          :: res(2), q
+real(kind=dbl),parameter                :: eps = 1.0D-12
 
 ierr = 0
 ! check to make sure that the input point lies on the unit sphere
@@ -394,11 +394,11 @@ recursive function Lambert2DHexForwardSingle(xy,ierr) result(res)
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: xy(2) 
+real(kind=sgl),INTENT(IN)       :: xy(2) 
 integer(kind=irg),INTENT(INOUT):: ierr
 
-real(kind=sgl)			:: res(3), q, XX, YY, xp, yp
-integer(kind=irg)		:: ks
+real(kind=sgl)                  :: res(3), q, XX, YY, xp, yp
+integer(kind=irg)               :: ks
 
  ierr = 0
   
@@ -410,18 +410,18 @@ integer(kind=irg)		:: ks
   
   select case (ks)
     case (0,3)
-  	XX = LPs%preb*xy(1)*cos(xy(2)*LPs%prec/xy(1))
-  	YY = LPs%preb*xy(1)*sin(xy(2)*LPs%prec/xy(1))
+        XX = LPs%preb*xy(1)*cos(xy(2)*LPs%prec/xy(1))
+        YY = LPs%preb*xy(1)*sin(xy(2)*LPs%prec/xy(1))
     case (1,4)
-  	xp = xy(1)+LPs%rtt*xy(2)
-  	yp = xy(1)*LPs%pred/xp
-  	XX = LPs%prea*xp*sin(yp)
-  	YY = LPs%prea*xp*cos(yp)
+        xp = xy(1)+LPs%rtt*xy(2)
+        yp = xy(1)*LPs%pred/xp
+        XX = LPs%prea*xp*sin(yp)
+        YY = LPs%prea*xp*cos(yp)
     case (2,5)
-  	xp = xy(1)-LPs%rtt*xy(2)
-  	yp = xy(1)*LPs%pred/xp
-  	XX = LPs%prea*xp*sin(yp)
-  	YY = -LPs%prea*xp*cos(yp)	  
+        xp = xy(1)-LPs%rtt*xy(2)
+        yp = xy(1)*LPs%pred/xp
+        XX = LPs%prea*xp*sin(yp)
+        YY = -LPs%prea*xp*cos(yp)         
   end select
   q = XX**2+YY**2
 ! does the point lie outside the hexagon ?
@@ -452,11 +452,11 @@ recursive function Lambert2DHexForwardDouble(xy,ierr) result(res)
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)	:: xy(2) 
+real(kind=dbl),INTENT(IN)       :: xy(2) 
 integer(kind=irg),INTENT(INOUT):: ierr
 
-real(kind=dbl)			:: res(3), q, XX, YY, xp, yp
-integer(kind=irg)		:: ks
+real(kind=dbl)                  :: res(3), q, XX, YY, xp, yp
+integer(kind=irg)               :: ks
 
   ierr = 0
 
@@ -468,18 +468,18 @@ integer(kind=irg)		:: ks
   
   select case (ks)
     case (0,3)
-  	XX = LPs%preb*xy(1)*dcos(xy(2)*LPs%prec/xy(1))
-  	YY = LPs%preb*xy(1)*dsin(xy(2)*LPs%prec/xy(1))
+        XX = LPs%preb*xy(1)*dcos(xy(2)*LPs%prec/xy(1))
+        YY = LPs%preb*xy(1)*dsin(xy(2)*LPs%prec/xy(1))
     case (1,4)
-  	xp = xy(1)+LPs%rtt*xy(2)
-  	yp = xy(1)*LPs%pred/xp
-  	XX = LPs%prea*xp*dsin(yp)
-  	YY = LPs%prea*xp*dcos(yp)
+        xp = xy(1)+LPs%rtt*xy(2)
+        yp = xy(1)*LPs%pred/xp
+        XX = LPs%prea*xp*dsin(yp)
+        YY = LPs%prea*xp*dcos(yp)
     case (2,5)
-  	xp = xy(1)-LPs%rtt*xy(2)
-  	yp = xy(1)*LPs%pred/xp
-  	XX = LPs%prea*xp*dsin(yp)
-  	YY = -LPs%prea*xp*dcos(yp)	  
+        xp = xy(1)-LPs%rtt*xy(2)
+        yp = xy(1)*LPs%pred/xp
+        XX = LPs%prea*xp*dsin(yp)
+        YY = -LPs%prea*xp*dcos(yp)        
   end select
   q = XX**2+YY**2
 ! does the point lie outside the hexagon ?
@@ -511,12 +511,12 @@ recursive function Lambert2DHexInverseSingle(xyz,ierr) result(res)
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: xyz(3) 
+real(kind=sgl),INTENT(IN)       :: xyz(3) 
 integer(kind=irg),INTENT(INOUT):: ierr
 
-real(kind=sgl)			:: res(2), q, qq, XX, YY, xxx, yyy
-integer(kind=irg)		:: ks
-real(kind=sgl),parameter	:: eps = 1.0E-7
+real(kind=sgl)                  :: res(2), q, qq, XX, YY, xxx, yyy
+integer(kind=irg)               :: ks
+real(kind=sgl),parameter        :: eps = 1.0E-7
 
 ierr = 0
 ! check to make sure that the input point lies on the unit sphere
@@ -539,18 +539,18 @@ else
   select case (ks)
     case (0,3)
         q = LPs%pree * (abs(XX)/XX) * sqrt(XX**2+YY**2)
-  	xxx = q * LPs%sPio2 
-  	yyy = q * LPs%pref * atan(YY/XX)
+        xxx = q * LPs%sPio2 
+        yyy = q * LPs%pref * atan(YY/XX)
     case (1,4)
-    	q = LPs%prea * (abs(XX)/XX) * sqrt(XX**2+YY**2)
-    	qq= atan((YY-LPs%rtt*XX)/(XX+LPs%rtt*YY))
-  	xxx = q * LPs%rtt *( LPs%Pi/6.0 - qq )
-  	yyy = q * ( 0.5*LPs%Pi + qq )
+        q = LPs%prea * (abs(XX)/XX) * sqrt(XX**2+YY**2)
+        qq= atan((YY-LPs%rtt*XX)/(XX+LPs%rtt*YY))
+        xxx = q * LPs%rtt *( LPs%Pi/6.0 - qq )
+        yyy = q * ( 0.5*LPs%Pi + qq )
     case (2,5)
-    	q = LPs%prea * (abs(XX)/XX) * sqrt(XX**2+YY**2)
-    	qq= atan((YY+LPs%rtt*XX)/(XX-LPs%rtt*YY))
-  	xxx = q * LPs%rtt *( LPs%Pi/6.0 + qq )
-  	yyy = q * ( -0.5*LPs%Pi + qq )
+        q = LPs%prea * (abs(XX)/XX) * sqrt(XX**2+YY**2)
+        qq= atan((YY+LPs%rtt*XX)/(XX-LPs%rtt*YY))
+        xxx = q * LPs%rtt *( LPs%Pi/6.0 + qq )
+        yyy = q * ( -0.5*LPs%Pi + qq )
   end select
   res = (/ xxx, yyy /)
  end if
@@ -576,12 +576,12 @@ recursive function Lambert2DHexInverseDouble(xyz,ierr) result(res)
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)	:: xyz(3) 
+real(kind=dbl),INTENT(IN)       :: xyz(3) 
 integer(kind=irg),INTENT(INOUT):: ierr
 
-real(kind=dbl)			:: res(2), q, qq, XX, YY, xxx, yyy
-integer(kind=irg)		:: ks
-real(kind=dbl),parameter	:: eps = 1.0E-12
+real(kind=dbl)                  :: res(2), q, qq, XX, YY, xxx, yyy
+integer(kind=irg)               :: ks
+real(kind=dbl),parameter        :: eps = 1.0E-12
 
 ierr = 0
 ! check to make sure that the input point lies on the unit sphere
@@ -604,18 +604,18 @@ else
   select case (ks)
     case (0,3)
         q = LPs%pree * (dabs(XX)/XX) * dsqrt(XX**2+YY**2)
-  	xxx = q * LPs%sPio2 
-  	yyy = q * LPs%pref * datan(YY/XX)
+        xxx = q * LPs%sPio2 
+        yyy = q * LPs%pref * datan(YY/XX)
     case (1,4)
-    	q = LPs%prea * (dabs(XX)/XX) * dsqrt(XX**2+YY**2)
-    	qq= datan((YY-LPs%rtt*XX)/(XX+LPs%rtt*YY))
-  	xxx = q * LPs%rtt *( LPs%Pi/6.D0 - qq )
-  	yyy = q * ( 0.5D0*LPs%Pi + qq )
+        q = LPs%prea * (dabs(XX)/XX) * dsqrt(XX**2+YY**2)
+        qq= datan((YY-LPs%rtt*XX)/(XX+LPs%rtt*YY))
+        xxx = q * LPs%rtt *( LPs%Pi/6.D0 - qq )
+        yyy = q * ( 0.5D0*LPs%Pi + qq )
     case (2,5)
-    	q = LPs%prea * (dabs(XX)/XX) * dsqrt(XX**2+YY**2)
-    	qq= datan((YY+LPs%rtt*XX)/(XX-LPs%rtt*YY))
-  	xxx = q * LPs%rtt *( LPs%Pi/6.D0 + qq )
-  	yyy = q * ( -0.5D0*LPs%Pi + qq )
+        q = LPs%prea * (dabs(XX)/XX) * dsqrt(XX**2+YY**2)
+        qq= datan((YY+LPs%rtt*XX)/(XX-LPs%rtt*YY))
+        xxx = q * LPs%rtt *( LPs%Pi/6.D0 + qq )
+        yyy = q * ( -0.5D0*LPs%Pi + qq )
   end select
     res = (/ xxx, yyy /)
 end if
@@ -639,12 +639,12 @@ recursive function GetSextantSingle(xy) result(res)
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: xy(2) 
-integer(kind=irg)		:: res
+real(kind=sgl),INTENT(IN)       :: xy(2) 
+integer(kind=irg)               :: res
 
-real(kind=sgl)			:: xx
+real(kind=sgl)                  :: xx
 
-xx = abs(xy(1)*LPs%isrt)    	! |x| / sqrt(3)
+xx = abs(xy(1)*LPs%isrt)        ! |x| / sqrt(3)
 
 if (xy(1).gt.0.0) then 
   if (abs(xy(2)).le.xx) then
@@ -686,12 +686,12 @@ recursive function GetSextantDouble(xy) result(res)
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)	:: xy(2) 
-integer(kind=irg)		:: res
+real(kind=dbl),INTENT(IN)       :: xy(2) 
+integer(kind=irg)               :: res
 
-real(kind=dbl)			:: xx
+real(kind=dbl)                  :: xx
 
-xx = dabs(xy(1)*LPs%isrt)    	! |x| / sqrt(3)
+xx = dabs(xy(1)*LPs%isrt)       ! |x| / sqrt(3)
 
 if (xy(1).gt.0.D0) then 
   if (dabs(xy(2)).le.xx) then
@@ -746,15 +746,15 @@ recursive function Lambert3DCubeForwardSingle(xyzin,ierr) result(res)
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: xyzin(3)
+real(kind=sgl),INTENT(IN)       :: xyzin(3)
 integer(kind=irg),INTENT(INOUT):: ierr
-real(kind=sgl)			:: res(3)
+real(kind=sgl)                  :: res(3)
 
-real(kind=sgl)			:: XYZ(3), sXYZ(3), T1, T2, c, s, q, LamXYZ(3)
-integer(kind=irg)		:: p
+real(kind=sgl)                  :: XYZ(3), sXYZ(3), T1, T2, c, s, q, LamXYZ(3)
+integer(kind=irg)               :: p
 
 ierr = 0
-if (maxval(abs(xyzin)).gt.0.5*LPs%ap) then
+if (maxval(abs(xyzin)).gt.LPs%ap/2) then
   res = (/ 0.0, 0.0, 0.0 /)
   ierr = 1
   return
@@ -838,15 +838,18 @@ recursive function Lambert3DCubeForwardDouble(xyzin,ierr) result(res)
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)	:: xyzin(3)
+real(kind=dbl),INTENT(IN)       :: xyzin(3)
 integer(kind=irg),INTENT(INOUT):: ierr
-real(kind=dbl)			:: res(3)
+real(kind=dbl)                  :: res(3)
 
-real(kind=dbl)			:: XYZ(3), sXYZ(3), T1, T2, c, s, q, LamXYZ(3)
-integer(kind=irg)		:: p
+real(kind=dbl)                  :: XYZ(3), sXYZ(3), T1, T2, c, s, q, LamXYZ(3), eps
+integer(kind=irg)               :: p
+
+eps = 1.0D-8
 
 ierr = 0
-if (maxval(dabs(xyzin)).gt.0.5D0*LPs%ap) then
+!if (maxval(dabs(xyzin)).gt.LPs%ap/2.D0) then
+if (maxval(dabs(xyzin)).gt.(LPs%ap/2.D0+eps)) then
   res = (/ 0.D0, 0.D0, 0.D0 /)
   ierr = 1
   return
@@ -922,19 +925,20 @@ end function Lambert3DCubeForwardDouble
 !> @param ierr error flag 0 = OK, 1 = 
 ! 
 !> @date 7/12/13    MDG 1.0 original
+!> @date 8/12/14    MDG 1.1 fixed acos() problem
 !--------------------------------------------------------------------------
 recursive function Lambert3DCubeInverseSingle(xyz,ierr) result(res)
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: xyz(3)
+real(kind=sgl),INTENT(IN)       :: xyz(3)
 integer(kind=irg),INTENT(INOUT):: ierr
-real(kind=sgl)			:: res(3)
+real(kind=sgl)                  :: res(3)
 
-real(kind=sgl)			:: rs, xyz3(3), xyz2(3), qxy, q2xy, sq2xy, q, ac, T1inv, T2inv, &
-				   xyz1(3), sx, sy, qx2y, sqx2y
-	
-integer(kind=irg)		:: p
+real(kind=sgl)                  :: rs, xyz3(3), xyz2(3), qxy, q2xy, sq2xy, q, ac, T1inv, T2inv, &
+                                   xyz1(3), sx, sy, qx2y, sqx2y, tt
+        
+integer(kind=irg)               :: p
 
 ierr = 0
 
@@ -977,14 +981,20 @@ if (qxy.ne.0.0) then
   q2xy = qxy + xyz2(1)*xyz2(1)
   sq2xy = sqrt(q2xy)
   q = (LPs%beta/LPs%r2/LPs%R1) * sqrt(q2xy*qxy/(q2xy-abs(xyz2(1))*sq2xy))
-  ac = acos( (xyz2(2)*xyz2(2)+abs(xyz2(1))*sq2xy)/LPs%r2/qxy )
+  tt = (xyz2(2)*xyz2(2)+abs(xyz2(1))*sq2xy)/LPs%r2/qxy 
+  if (tt.gt.1.0) tt = 1.0
+  if (tt.lt.-1.0) tt = -1.0
+  ac = acos(tt)
   T1inv = q * sx
   T2inv = q * sy * ac/LPs%pi12
  else 
   qx2y = qxy + xyz2(2)*xyz2(2)
   sqx2y = sqrt(qx2y)
   q = (LPs%beta/LPs%r2/LPs%R1) * sqrt(qx2y*qxy/(qx2y-abs(xyz2(2))*sqx2y))
-  ac = acos( (xyz2(1)*xyz2(1)+abs(xyz2(2))*sqx2y)/LPs%r2/qxy )
+  tt = (xyz2(1)*xyz2(1)+abs(xyz2(2))*sqx2y)/LPs%r2/qxy 
+  if (tt.gt.1.0) tt = 1.0
+  if (tt.lt.-1.0) tt = -1.0
+  ac = acos(tt)
   T1inv = q * sx * ac/LPs%pi12
   T2inv = q * sy
  end if
@@ -1022,18 +1032,19 @@ end function Lambert3DCubeInverseSingle
 !> @param ierr error flag 0 = OK, 1 = 
 ! 
 !> @date 7/12/13    MDG 1.0 original
+!> @date 8/12/14    MDG 1.1 fixed dacos() problem
 !--------------------------------------------------------------------------
 recursive function Lambert3DCubeInverseDouble(xyz,ierr) result(res)
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)	:: xyz(3)
+real(kind=dbl),INTENT(IN)       :: xyz(3)
 integer(kind=irg),INTENT(INOUT):: ierr
-real(kind=dbl)			:: res(3)
+real(kind=dbl)                  :: res(3)
 
-real(kind=dbl)			:: rs, xyz3(3), xyz2(3), qxy, q2xy, sq2xy, q, ac, T1inv, T2inv, &
-				   xyz1(3), sx, sy, qx2y, sqx2y
-integer(kind=irg)		:: p
+real(kind=dbl)                  :: rs, xyz3(3), xyz2(3), qxy, q2xy, sq2xy, q, ac, T1inv, T2inv, &
+                                   xyz1(3), sx, sy, qx2y, sqx2y, tt
+integer(kind=irg)               :: p
 
 ierr = 0
 
@@ -1076,14 +1087,20 @@ if (qxy.ne.0.D0) then
   q2xy = qxy + xyz2(1)*xyz2(1)
   sq2xy = dsqrt(q2xy)
   q = (LPs%beta/LPs%r2/LPs%R1) * dsqrt(q2xy*qxy/(q2xy-dabs(xyz2(1))*sq2xy))
-  ac = dacos( (xyz2(2)*xyz2(2)+dabs(xyz2(1))*sq2xy)/LPs%r2/qxy )
+  tt = (xyz2(2)*xyz2(2)+dabs(xyz2(1))*sq2xy)/LPs%r2/qxy 
+  if (tt.gt.1.D0) tt = 1.D0
+  if (tt.lt.-1.D0) tt = -1.D0
+  ac = dacos(tt)
   T1inv = q * sx
   T2inv = q * sy * ac/LPs%pi12
  else 
   qx2y = qxy + xyz2(2)*xyz2(2)
   sqx2y = dsqrt(qx2y)
   q = (LPs%beta/LPs%r2/LPs%R1) * dsqrt(qx2y*qxy/(qx2y-dabs(xyz2(2))*sqx2y))
-  ac = dacos( (xyz2(1)*xyz2(1)+dabs(xyz2(2))*sqx2y)/LPs%r2/qxy )
+  tt = (xyz2(1)*xyz2(1)+dabs(xyz2(2))*sqx2y)/LPs%r2/qxy 
+  if (tt.gt.1.D0) tt = 1.D0
+  if (tt.lt.-1.D0) tt = -1.D0
+  ac = dacos(tt)
   T1inv = q * sx * ac/LPs%pi12
   T2inv = q * sy
  end if
@@ -1125,45 +1142,45 @@ recursive function GetPyramidSingle(xyz) result(res)
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: xyz(3) 
-integer(kind=irg)		:: res, p
+real(kind=sgl),INTENT(IN)       :: xyz(3) 
+integer(kind=irg)               :: res, p
 
-logical				:: next
+logical                         :: next
 
 next = .TRUE.
 if ((abs(xyz(1)).le.xyz(3)).and.(abs(xyz(2)).le.xyz(3))) then
-  p = 1				! pyramid 1
+  p = 1                         ! pyramid 1
   next = .FALSE.
 end if  
 if (next) then 
  if ((abs(xyz(1)).le.-xyz(3)).and.(abs(xyz(2)).le.-xyz(3))) then
-  p = 2				! pyramid 2
+  p = 2                         ! pyramid 2
   next = .FALSE.
  end if   
 end if
 
 if (next) then
  if ((abs(xyz(3)).le.xyz(1)).and.(abs(xyz(2)).le.xyz(1))) then
-  p = 3				! pyramid 3
+  p = 3                         ! pyramid 3
   next = .FALSE.
  end if  
 end if
 if (next) then
  if ((abs(xyz(3)).le.-xyz(1)).and.(abs(xyz(2)).le.-xyz(1))) then
-  p = 4				! pyramid 4
+  p = 4                         ! pyramid 4
   next = .FALSE.
  end if  
 end if
 
 if (next) then
  if ((abs(xyz(1)).le.xyz(2)).and.(abs(xyz(3)).le.xyz(2))) then
-  p = 5				! pyramid 5
+  p = 5                         ! pyramid 5
   next = .FALSE.
  end if  
 end if
 if (next) then
  if ((abs(xyz(1)).le.-xyz(2)).and.(abs(xyz(3)).le.-xyz(2))) then
-  p = 6				! pyramid 6
+  p = 6                         ! pyramid 6
   next = .FALSE.
  end if  
 end if
@@ -1187,45 +1204,45 @@ recursive function GetPyramidDouble(xyz) result(res)
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)	:: xyz(3) 
-integer(kind=irg)		:: res, p
+real(kind=dbl),INTENT(IN)       :: xyz(3) 
+integer(kind=irg)               :: res, p
 
-logical				:: next
+logical                         :: next
 
 next = .TRUE.
 if ((dabs(xyz(1)).le.xyz(3)).and.(dabs(xyz(2)).le.xyz(3))) then
-  p = 1				! pyramid 1
+  p = 1                         ! pyramid 1
   next = .FALSE.
 end if  
 if (next) then
  if ((dabs(xyz(1)).le.-xyz(3)).and.(dabs(xyz(2)).le.-xyz(3))) then
-  p = 2				! pyramid 2
+  p = 2                         ! pyramid 2
   next = .FALSE.
  end if   
 end if
 
 if (next) then
  if ((dabs(xyz(3)).le.xyz(1)).and.(dabs(xyz(2)).le.xyz(1))) then
-  p = 3				! pyramid 3
+  p = 3                         ! pyramid 3
   next = .FALSE.
  end if 
 end if 
 if (next) then
  if ((dabs(xyz(3)).le.-xyz(1)).and.(dabs(xyz(2)).le.-xyz(1))) then
-  p = 4				! pyramid 4
+  p = 4                         ! pyramid 4
   next = .FALSE.
  end if  
 end if
 
 if (next) then
  if ((dabs(xyz(1)).le.xyz(2)).and.(dabs(xyz(3)).le.xyz(2))) then
-  p = 5				! pyramid 5
+  p = 5                         ! pyramid 5
   next = .FALSE.
  end if  
 end if
 if (next) then
  if ((dabs(xyz(1)).le.-xyz(2)).and.(dabs(xyz(3)).le.-xyz(2))) then
-  p = 6				! pyramid 6
+  p = 6                         ! pyramid 6
   next = .FALSE.
  end if  
 end if
@@ -1258,12 +1275,12 @@ use constants
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: xyz(3)
+real(kind=sgl),INTENT(IN)       :: xyz(3)
 integer(kind=irg),INTENT(INOUT):: ierr
-real(kind=sgl)			:: res(4)
+real(kind=sgl)                  :: res(4)
 
-real(kind=sgl)			:: q, x(16), ft, t
-integer(kind=irg)		:: j
+real(kind=sgl)                  :: q, x(16), ft, t
+integer(kind=irg)               :: j
 
 ierr = 0
 q = sqrt(sum(xyz**2))
@@ -1315,12 +1332,12 @@ use constants
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)	:: xyz(3)
+real(kind=dbl),INTENT(IN)       :: xyz(3)
 integer(kind=irg),INTENT(INOUT):: ierr
-real(kind=dbl)			:: res(4)
+real(kind=dbl)                  :: res(4)
 
-real(kind=dbl)			:: q, x(16), ft, t
-integer(kind=irg)		:: j
+real(kind=dbl)                  :: q, x(16), ft, t
+integer(kind=irg)               :: j
 
 ierr = 0
 q = dsqrt(sum(xyz**2))
@@ -1372,11 +1389,11 @@ use quaternions
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: xyz(3)
+real(kind=sgl),INTENT(IN)       :: xyz(3)
 integer(kind=irg),INTENT(INOUT):: ierr
-real(kind=sgl)			:: res(4)
+real(kind=sgl)                  :: res(4)
 
-real(kind=sgl)			:: q(3)
+real(kind=sgl)                  :: q(3)
 
 q = Lambert3DCubeForwardSingle(xyz,ierr)
 
@@ -1403,11 +1420,11 @@ use quaternions
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)	:: xyz(3)
+real(kind=dbl),INTENT(IN)       :: xyz(3)
 integer(kind=irg),INTENT(INOUT):: ierr
-real(kind=dbl)			:: res(4)
+real(kind=dbl)                  :: res(4)
 
-real(kind=dbl)			:: q(3)
+real(kind=dbl)                  :: q(3)
 
 q = Lambert3DCubeForwardDouble(xyz,ierr)
 
@@ -1439,12 +1456,12 @@ recursive function StereoGraphicForwardSingle(xyz, ierr, Radius) result(res)
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)		:: xyz(3)
-integer(kind=irg),INTENT(INOUT)	:: ierr
-real(kind=sgl),INTENT(IN),OPTIONAL	:: Radius
-real(kind=sgl)				:: res(2)
+real(kind=sgl),INTENT(IN)               :: xyz(3)
+integer(kind=irg),INTENT(INOUT) :: ierr
+real(kind=sgl),INTENT(IN),OPTIONAL      :: Radius
+real(kind=sgl)                          :: res(2)
 
-real(kind=sgl),parameter		:: eps = 1.E-7
+real(kind=sgl),parameter                :: eps = 1.E-7
 
 ! input point must be on unit sphere
 ierr = 0
@@ -1479,12 +1496,12 @@ recursive function StereoGraphicForwardDouble(xyz, ierr, Radius) result(res)
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)		:: xyz(3)
-integer(kind=irg),INTENT(INOUT)	:: ierr
-real(kind=dbl),INTENT(IN),OPTIONAL	:: Radius
-real(kind=dbl)				:: res(2)
+real(kind=dbl),INTENT(IN)               :: xyz(3)
+integer(kind=irg),INTENT(INOUT) :: ierr
+real(kind=dbl),INTENT(IN),OPTIONAL      :: Radius
+real(kind=dbl)                          :: res(2)
 
-real(kind=dbl),parameter		:: eps = 1.E-12
+real(kind=dbl),parameter                :: eps = 1.E-12
 
 ! input point must be on unit sphere
 ierr = 0
@@ -1519,12 +1536,12 @@ recursive function StereoGraphicInverseSingle(xy, ierr, Radius) result(res)
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)		:: xy(2)
-integer(kind=irg),INTENT(INOUT)	:: ierr
-real(kind=sgl),INTENT(IN)		:: Radius
-real(kind=sgl)				:: res(3)
+real(kind=sgl),INTENT(IN)               :: xy(2)
+integer(kind=irg),INTENT(INOUT) :: ierr
+real(kind=sgl),INTENT(IN)               :: Radius
+real(kind=sgl)                          :: res(3)
 
-real(kind=sgl)				:: q, qq
+real(kind=sgl)                          :: q, qq
 
 ierr = 0
 if (maxval(abs(xy)).eq.0.0) then
@@ -1560,12 +1577,12 @@ recursive function StereoGraphicInverseDouble(xy, ierr, Radius) result(res)
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)		:: xy(2)
-integer(kind=irg),INTENT(INOUT)	:: ierr
-real(kind=dbl),INTENT(IN)		:: Radius
-real(kind=dbl)				:: res(3)
+real(kind=dbl),INTENT(IN)               :: xy(2)
+integer(kind=irg),INTENT(INOUT) :: ierr
+real(kind=dbl),INTENT(IN)               :: Radius
+real(kind=dbl)                          :: res(3)
 
-real(kind=dbl)				:: q, qq
+real(kind=dbl)                          :: q, qq
 
 ierr = 0
 if (maxval(dabs(xy)).eq.0.D0) then
@@ -1607,12 +1624,12 @@ recursive function LambertForwardSingle(xyz, ierr, Radius) result(res)
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)		:: xyz(3)
-integer(kind=irg),INTENT(INOUT)	:: ierr
-real(kind=sgl),INTENT(IN),OPTIONAL	:: Radius
-real(kind=sgl)				:: res(2), q
+real(kind=sgl),INTENT(IN)               :: xyz(3)
+integer(kind=irg),INTENT(INOUT) :: ierr
+real(kind=sgl),INTENT(IN),OPTIONAL      :: Radius
+real(kind=sgl)                          :: res(2), q
 
-real(kind=sgl),parameter		:: eps = 1.E-7
+real(kind=sgl),parameter                :: eps = 1.E-7
 
 ! input point must be on sphere with radius Radius
 ierr = 0
@@ -1654,12 +1671,12 @@ recursive function LambertForwardDouble(xyz, ierr, Radius) result(res)
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)		:: xyz(3)
-integer(kind=irg),INTENT(INOUT)	:: ierr
-real(kind=dbl),INTENT(IN),OPTIONAL	:: Radius
-real(kind=dbl)				:: res(2), q
+real(kind=dbl),INTENT(IN)               :: xyz(3)
+integer(kind=irg),INTENT(INOUT) :: ierr
+real(kind=dbl),INTENT(IN),OPTIONAL      :: Radius
+real(kind=dbl)                          :: res(2), q
 
-real(kind=dbl),parameter		:: eps = 1.E-12
+real(kind=dbl),parameter                :: eps = 1.E-12
 
 ! input point must be on sphere with radius Radius
 ierr = 0
@@ -1703,10 +1720,10 @@ recursive function LambertInverseSingle(xy, ierr, Radius) result(res)
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)		:: xy(2)
-integer(kind=irg),INTENT(INOUT)	:: ierr
-real(kind=sgl),INTENT(IN),OPTIONAL	:: Radius
-real(kind=sgl)				:: res(3), q, tr
+real(kind=sgl),INTENT(IN)               :: xy(2)
+integer(kind=irg),INTENT(INOUT) :: ierr
+real(kind=sgl),INTENT(IN),OPTIONAL      :: Radius
+real(kind=sgl)                          :: res(3), q, tr
 
 ! input point must be inside circle with radius 2*Radius
 ierr = 0
@@ -1742,10 +1759,10 @@ recursive function LambertInverseDouble(xy, ierr, Radius) result(res)
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)		:: xy(2)
-integer(kind=irg),INTENT(INOUT)	:: ierr
-real(kind=dbl),INTENT(IN),OPTIONAL	:: Radius
-real(kind=dbl)				:: res(3), q, tr
+real(kind=dbl),INTENT(IN)               :: xy(2)
+integer(kind=irg),INTENT(INOUT) :: ierr
+real(kind=dbl),INTENT(IN),OPTIONAL      :: Radius
+real(kind=dbl)                          :: res(3), q, tr
 
 ! input point must be inside circle with radius 2*Radius
 ierr = 0

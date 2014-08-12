@@ -78,12 +78,12 @@ subroutine SYM_fillgen(cell,t,isgn)
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
-character(1),INTENT(IN)		:: t(4)	!< 4-character input string
-integer(kind=irg),INTENT(IN)		:: isgn	!< indicates forward or reverse translation
+type(unitcell),pointer  :: cell
+character(1),INTENT(IN)         :: t(4) !< 4-character input string
+integer(kind=irg),INTENT(IN)            :: isgn !< indicates forward or reverse translation
 
-integer(kind=irg)			:: j	!< auxiliary variable
-real(kind=dbl)				:: sgn	!< forward or reverse multiplier for translation components
+integer(kind=irg)                       :: j    !< auxiliary variable
+real(kind=dbl)                          :: sgn  !< forward or reverse multiplier for translation components
 
 ! forward or reverse translation ?
  sgn=dble(isgn)
@@ -155,14 +155,14 @@ use math
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
+type(unitcell),pointer  :: cell
 
-integer(kind=irg),parameter	:: QQ=48 			!< maximum number of point group symmetry elements
-integer(kind=irg)		:: i,k,l,iset			!< auxiliary variables
-real(kind=dbl)			:: SYM_d(4,4),SYM_e(4,4)	!< auxiliary 4x4 matrices
-real(kind=dbl), parameter	:: eps=0.0005_dbl		!< constant used to decide whether or not elements are equal 
-character(1)			:: t(4)				!< 4-character string etracted from generator string
-character(40)			:: genst			!< full generator string
+integer(kind=irg),parameter     :: QQ=48                        !< maximum number of point group symmetry elements
+integer(kind=irg)               :: i,k,l,iset                   !< auxiliary variables
+real(kind=dbl)                  :: SYM_d(4,4),SYM_e(4,4)        !< auxiliary 4x4 matrices
+real(kind=dbl), parameter       :: eps=0.0005_dbl               !< constant used to decide whether or not elements are equal 
+character(1)                    :: t(4)                         !< 4-character string etracted from generator string
+character(40)                   :: genst                        !< full generator string
 
 ! fill in the space group name 
  cell%SG%SYM_name = SYM_SGname(cell%SYM_SGnum)
@@ -277,12 +277,12 @@ subroutine matrixmult(cell, k1, k2)
    
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
+type(unitcell),pointer  :: cell
 
-integer(kind=irg),INTENT(IN)	:: k1				!< index of first 4x4 input matrix
-integer(kind=irg),INTENT(IN)	:: k2				!< index of second 4x4 input matrix
-integer(kind=irg)		:: i,j,k			!< loop counters
-real(kind=dbl),parameter	:: eps=0.0005_dbl		!< truncation constant
+integer(kind=irg),INTENT(IN)    :: k1                           !< index of first 4x4 input matrix
+integer(kind=irg),INTENT(IN)    :: k2                           !< index of second 4x4 input matrix
+integer(kind=irg)               :: i,j,k                        !< loop counters
+real(kind=dbl),parameter        :: eps=0.0005_dbl               !< truncation constant
 
  do i=1,4
   do j=1,4
@@ -336,11 +336,11 @@ logical function isitnew(cell,nsym)
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
+type(unitcell),pointer  :: cell
 
-integer(kind=irg),INTENT(IN)		:: nsym			!< index of matrix to be compared
-integer(kind=irg)			:: i,j,k,n		!< loop counters
-real(kind=dbl),parameter		:: eps=0.0005_dbl	!< comparison threshold
+integer(kind=irg),INTENT(IN)            :: nsym                 !< index of matrix to be compared
+integer(kind=irg)                       :: i,j,k,n              !< loop counters
+real(kind=dbl),parameter                :: eps=0.0005_dbl       !< comparison threshold
 
  k=0
  n=0
@@ -388,11 +388,11 @@ subroutine GenerateSymmetry(cell,dopg)
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
-logical,INTENT(IN)		:: dopg				!< logical to determine if point group matrices are to be computed as well
+type(unitcell),pointer  :: cell
+logical,INTENT(IN)              :: dopg                         !< logical to determine if point group matrices are to be computed as well
 
-integer(kind=irg)		:: i,j,k,nsym,k1,k2,l1,l2	!< loop counters (mostly)
-real(kind=dbl)			:: q,sm				!< auxiliary variables.
+integer(kind=irg)               :: i,j,k,nsym,k1,k2,l1,l2       !< loop counters (mostly)
+real(kind=dbl)                  :: q,sm                         !< auxiliary variables.
 
 ! create the space group generator matrices
  call MakeGenerators(cell)
@@ -496,17 +496,17 @@ subroutine Calc2DFamily(cell,ind,ksame,numksame,nunique,itmp)
         
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
-integer(kind=irg),INTENT(IN)		:: ind(3)			!< input triplet
-logical,INTENT(IN)			:: ksame(*)			!< list of symmetry operators
-integer(kind=irg),INTENT(IN)		:: numksame			!< number on the input list
-integer(kind=irg),INTENT(OUT)		:: nunique			!< number of equivalent entries generated
-integer(kind=irg),INTENT(OUT)		:: itmp(48,3)			!< array used for family computations etc
+type(unitcell),pointer  :: cell
+integer(kind=irg),INTENT(IN)            :: ind(3)                       !< input triplet
+logical,INTENT(IN)                      :: ksame(*)                     !< list of symmetry operators
+integer(kind=irg),INTENT(IN)            :: numksame                     !< number on the input list
+integer(kind=irg),INTENT(OUT)           :: nunique                      !< number of equivalent entries generated
+integer(kind=irg),INTENT(OUT)           :: itmp(48,3)                   !< array used for family computations etc
 
-integer(kind=irg)			:: m,i,j			!< loop counters and such
-real(kind=sgl)				:: h,k,l,ih,ik,il,idiff	!< auxiliary variables
-logical					:: newpoint			!< is this a new point ?
-real,parameter				:: eps=0.0001_sgl		!< comparison threshold
+integer(kind=irg)                       :: m,i,j                        !< loop counters and such
+real(kind=sgl)                          :: h,k,l,ih,ik,il,idiff !< auxiliary variables
+logical                                 :: newpoint                     !< is this a new point ?
+real,parameter                          :: eps=0.0001_sgl               !< comparison threshold
 
 ! first take the identity
  j=1
@@ -728,16 +728,16 @@ recursive subroutine CalcStar(cell,kk,n,stmp,space)
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
-real(kind=dbl),INTENT(OUT)		:: stmp(48,3)		!< output array with equivalent vectors
-real(kind=dbl),INTENT(IN)		:: kk(3)		!< input vector
-integer(kind=irg),INTENT(OUT)		:: n			!< number of entries in equivalent vector array
-character(1),INTENT(IN)		:: space		!< 'd' or 'r'
+type(unitcell),pointer  :: cell
+real(kind=dbl),INTENT(OUT)              :: stmp(48,3)           !< output array with equivalent vectors
+real(kind=dbl),INTENT(IN)               :: kk(3)                !< input vector
+integer(kind=irg),INTENT(OUT)           :: n                    !< number of entries in equivalent vector array
+character(1),INTENT(IN)         :: space                !< 'd' or 'r'
 
-integer(kind=irg)			:: i,j,k,mm		!< various loop counters and such
-real(kind=dbl)				:: r(3),s(3),diff	!< auxiliary variables
-real(kind=dbl),parameter 		:: eps=1.0D-4		!< comparison threshold
-logical					:: new			!< logical (is this a new one?)
+integer(kind=irg)                       :: i,j,k,mm             !< various loop counters and such
+real(kind=dbl)                          :: r(3),s(3),diff       !< auxiliary variables
+real(kind=dbl),parameter                :: eps=1.0D-4           !< comparison threshold
+logical                                 :: new                  !< logical (is this a new one?)
 
  n=1
  r=kk
@@ -808,13 +808,13 @@ use crystal
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
-character(1),INTENT(IN)   	:: switch			!< if switch='m', then multiple unit cells, otherwise single cell
+type(unitcell),pointer  :: cell
+character(1),INTENT(IN)         :: switch                       !< if switch='m', then multiple unit cells, otherwise single cell
 
-logical				:: inside			!< auxiliary logical
-integer(kind=irg) 		:: i,j,k,l,mm,icnt,celln(3),ncells,n,kk,ier, io_int(3)  !< various auxiliary variables
-real(kind=dbl)    		:: ctmp(192,3),ff(3),sh(3)	!< auxiliary variables	
-real(kind=sgl)    		:: r(3),g(3)			!< auxiliary variables	
+logical                         :: inside                       !< auxiliary logical
+integer(kind=irg)               :: i,j,k,l,mm,icnt,celln(3),ncells,n,kk,ier, io_int(3)  !< various auxiliary variables
+real(kind=dbl)                  :: ctmp(192,3),ff(3),sh(3)      !< auxiliary variables  
+real(kind=sgl)                  :: r(3),g(3)                    !< auxiliary variables	
 
 ! make sure all coordinates are reduced to the fundamental unit cell
  cell%SG%SYM_reduce=.TRUE.
@@ -919,10 +919,10 @@ use io
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
-integer(kind=irg),INTENT(OUT)  	:: iset				!< output setting
+type(unitcell),pointer  :: cell
+integer(kind=irg),INTENT(OUT)   :: iset                         !< output setting
 
-integer(kind=irg)      		:: i,isg, io_int(1)		!< auxiliary variables
+integer(kind=irg)               :: i,isg, io_int(1)             !< auxiliary variables
 
 ! There are 24 space groups with two origin choices.
 ! The symmetry of both sites is stored in the array
@@ -930,18 +930,18 @@ integer(kind=irg)      		:: i,isg, io_int(1)		!< auxiliary variables
 ! in tworig
 
 !> numbers of the space groups with two settings
-integer(kind=irg),parameter  		:: tworig(24)=(/48,50,59,68,70,85,86,88,125,126,129,130,133,134,137,138,&
+integer(kind=irg),parameter             :: tworig(24)=(/48,50,59,68,70,85,86,88,125,126,129,130,133,134,137,138,&
                                          141,142,201,203,222,224,227,228/)
 
 !> site symmetry list
-character(7),parameter 		:: sitesym(48) = (/ '222    ',' -1    ','222/n  ',' -1    ','mm2/n  ',' -1    ', &
-                                           		'222    ',' -1    ','222    ',' -1    ','-4     ',' -1    ', &
-                                           		'-4     ',' -1    ','-4     ',' -1    ','422    ','2/m    ', &
-                                           		'422/n  ',' -1    ','-4m2   ','2/m    ','-4/ncn ',' -1    ', &
-                                           		'-4121/c',' -1    ','-42m   ','2/m    ','-4m2/n ',' -1    ', &
-                                           		'-4cg   ','2/m    ','-4m2   ','2/m    ','-4c21  ',' -1    ', &
-                                           		'23     ',' -3    ','23     ',' -3    ','432    ',' -3    ', &
-                                           		'-43m   ','-3m    ','-43m   ','-3m    ','23     ',' -3    '/)
+character(7),parameter          :: sitesym(48) = (/ '222    ',' -1    ','222/n  ',' -1    ','mm2/n  ',' -1    ', &
+                                                    '222    ',' -1    ','222    ',' -1    ','-4     ',' -1    ', &
+                                                    '-4     ',' -1    ','-4     ',' -1    ','422    ','2/m    ', &
+                                                    '422/n  ',' -1    ','-4m2   ','2/m    ','-4/ncn ',' -1    ', &
+                                                    '-4121/c',' -1    ','-42m   ','2/m    ','-4m2/n ',' -1    ', &
+                                                    '-4cg   ','2/m    ','-4m2   ','2/m    ','-4c21  ',' -1    ', &
+                                                    '23     ',' -3    ','23     ',' -3    ','432    ',' -3    ', &
+                                                    '-43m   ','-3m    ','-43m   ','-3m    ','23     ',' -3    '/)
 
  isg = 0
  do i=1,24
@@ -1001,10 +1001,10 @@ use io
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
+type(unitcell),pointer  :: cell
 
-integer(kind=irg)  	:: sgmin,sgmax,i,j,TRIG(7), io_int(1)		!< auxiliary var	iables	
-logical           	:: skip						!< logical variable
+integer(kind=irg)       :: sgmin,sgmax,i,j,TRIG(7), io_int(1)           !< auxiliary variables  
+logical                 :: skip                                         !< logical variable
 
  TRIG = (/ 146,148,155,160,161,166,167 /)
  skip = .FALSE.
@@ -1374,11 +1374,11 @@ recursive logical function IsGAllowed(cell,g)
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
-integer(kind=irg),INTENT(IN)		:: g(3)		!< input reciprocal lattice vector
+type(unitcell),pointer  :: cell
+integer(kind=irg),INTENT(IN)            :: g(3)         !< input reciprocal lattice vector
 
-integer(kind=irg)			:: seo		!< auxiliary variable
-character(1)				:: lc		!< first letter of space group name
+integer(kind=irg)                       :: seo          !< auxiliary variable
+character(1)                            :: lc           !< first letter of space group name
 
 ! Determine whether or not this vector is
 ! actually allowed by the lattice centering
@@ -1422,7 +1422,7 @@ end function IsGAllowed
 !> @param cell unit cell pointer
 !> @param uvw input vector (zone axis)
 !> @param j index into inverse Laue group list
-!> @param isym keeps track of special cases	
+!> @param isym keeps track of special cases     
 !> @param ir  index of point group
 !
 !> @date  10/13/98 MDG 1.0 original
@@ -1436,14 +1436,14 @@ subroutine BFsymmetry(cell,uvw,j,isym,ir)
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
-integer(kind=irg),INTENT(IN)		:: uvw(3)	!< zone axis indices
-integer(kind=irg),INTENT(IN)		:: j		!< index into Laue group list
-integer(kind=irg),INTENT(OUT)		:: isym		!< keeps track of special cases
-integer(kind=irg),INTENT(OUT)		:: ir		!< index of point group
+type(unitcell),pointer  :: cell
+integer(kind=irg),INTENT(IN)            :: uvw(3)       !< zone axis indices
+integer(kind=irg),INTENT(IN)            :: j            !< index into Laue group list
+integer(kind=irg),INTENT(OUT)           :: isym         !< keeps track of special cases
+integer(kind=irg),INTENT(OUT)           :: ir           !< index of point group
 
-integer(kind=irg)			:: orderPG, Lauenum, ng		!< auxiliary variables
-real(kind=dbl)				:: kstar(48,3)				!< star variable
+integer(kind=irg)                       :: orderPG, Lauenum, ng         !< auxiliary variables
+real(kind=dbl)                          :: kstar(48,3)                          !< star variable
 
 
  orderPG = cell%SG%SYM_NUMpt
@@ -2196,7 +2196,7 @@ select case (pgn)
         TDPG%SYM_direc(9,1:2,1:2) = mG
         TDPG%SYM_direc(10,1:2,1:2) = -mG
         TDPG%SYM_direc(11,1:2,1:2) = mC
-        TDPG%SYM_direc(12,1:2,1:2) = -mC	
+        TDPG%SYM_direc(12,1:2,1:2) = -mC        
 !------------
   case (11) ! 31m
         TDPG%SYM_MATnum = 6
