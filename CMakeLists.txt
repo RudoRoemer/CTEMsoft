@@ -2,13 +2,18 @@
 
 cmake_minimum_required (VERSION 2.8.12)
 project (CTEMsoft C CXX Fortran)
-#enable_language (Fortran)
+
+if(${CMAKE_MAJOR_VERSION} STREQUAL "3")
+  # CMake 3.0 introduces VERSION variables for each Project. We do our own version numbering so we need to have
+  # cmake ignore that policy
+  cmake_policy(SET CMP0048 OLD)
+  # CMake 3.0 introduces some OS X RPath policies
+  cmake_policy(SET CMP0042 OLD)
+endif()
+
 
 include(CMakeParseArguments)
-#find_package(OpenMP_Fortran)
-
-   
-   
+  
 
 # ---------- Setup output Directories -------------------------
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
