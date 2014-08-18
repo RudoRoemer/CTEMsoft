@@ -114,7 +114,7 @@ real(kind=4)            :: density      ! density in g/cm^3
 real(kind=4)            :: at_wt        ! average atomic weight in g/mole
 logical                 :: verbose
 real(kind=sgl)          :: dens, avA, avZ, io_real(3), dmin ! used with CalcDensity routine
-real(kind=dbl) , parameter         :: etol = 1e-4, dtoR = 0.01745329251D0 !auxiliary variables
+real(kind=dbl) , parameter         :: dtoR = 0.01745329251D0 !auxiliary variables
 real(kind=4)          :: EkeV, sig, omega ! input values to the kernel. Can only be real kind=4 otherwise values are not properly passed
 integer(kind=irg)       :: totnum_el     ! total number of electrons to simulate
 integer(kind=4)       :: globalworkgrpsz, num_el, num_max, prime ! input values to the kernel
@@ -123,11 +123,11 @@ integer(kind=8)         :: globalsize(2), localsize(2) ! size of global and loca
 
 ! results from kernel stored here
 real(kind=4),allocatable :: Lamresx(:), Lamresy(:), depthres(:), energyres(:)
+
 ! final results stored here
 integer(kind=irg),allocatable :: accum_e(:,:,:), acc_e(:,:,:), accum_z(:,:,:,:), acc_z(:,:,:,:)
 integer(kind=irg)       :: idxy(2), iE, px, py, iz ! auxiliary variables
-real(kind=dbl)          :: cxyz(3), edis, bse ! auxiliary variables
-!integer(kind=irg)       :: val
+real(kind=sgl)          :: cxyz(3), edis, bse, xy(2) ! auxiliary variables
 
 ! OpenCL variables
 type(cl_platform_id)    :: platform
@@ -137,6 +137,7 @@ type(cl_command_queue)  :: command_queue
 type(cl_program)        :: prog
 type(cl_kernel)         :: kernel
 type(cl_mem)            :: LamX, LamY, depth, energy
+type(cl_event)          :: event
 
 character(len = 100)    :: info ! info about the GPU
 integer, parameter      :: iunit = 10
@@ -146,7 +147,7 @@ integer(kind=irg)       :: num, ierr, irec, io_int(1), val ! auxiliary variables
 numsy = mcnl%numsx
 nullify(cell)
 allocate(cell)
-!val = 0
+
 ! get the crystal strucutre from the *.xtal file
 verbose = .TRUE.
 dmin = 0.05
@@ -211,7 +212,7 @@ if(ierr /= CL_SUCCESS) stop "Cannot create command queue"
 
 ! read the source file
 open(unit = iunit, file = 'CTEMMC.cl', access='direct', status = 'old', action = 'read', iostat = ierr, recl = 1)
-if (ierr /= 0) stop 'Cannot open file CTEMMCOpenCL.cl'
+if (ierr /= 0) stop 'Cannot open file CTEMMC.cl'
 
 source = ''
 irec = 1
@@ -240,7 +241,7 @@ write(6,*) "Kernel Build Successful...."
 
 ! finally get the kernel and release the program
 kernel = clCreateKernel(prog, 'MC', ierr)
-!call clReleaseProgram(prog, ierr)
+call clReleaseProgram(prog, ierr)
 ! allocate device memory
 LamX = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
 if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
@@ -254,7 +255,8 @@ if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
 energy = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
 if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
 
-open(dataunit,file=trim(mcnl%dataname),status='unknown',form='unformatted')
+open(dataunit,file=trim(mcnl%dataname),status='unknown',Access='Append',form='unformatted')
+
 open(unit = iunit, file = mcnl%primelist)
 
 mainloop: do i = 1,totnum_el/num_max
@@ -299,9 +301,9 @@ mainloop: do i = 1,totnum_el/num_max
 
     call clSetKernelArg(kernel, 12, energy, ierr)
     if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
-
+!print*, EkeV, globalworkgrpsz, Ze, density, at_wt, num_max, prime, sig, omega
 ! execute the kernel
-    call clEnqueueNDRangeKernel(command_queue, kernel, globalsize, localsize, ierr)
+    call clEnqueueNDRangeKernel(command_queue, kernel, globalsize, localsize, event, ierr)
 
 ! wait for the commands to finish
     call clFinish(command_queue, ierr)
@@ -316,7 +318,8 @@ mainloop: do i = 1,totnum_el/num_max
 
         !if ((abs(Lamresx(j) + 10.0).le.etol) .and. (abs(Lamresy(j) + 10.0).le.etol) .and. &
          !   (abs(depthres(j) + 10.0).le.etol) .and. (abs(energyres(j)).le.etol)) then
-        if ((Lamresx(j) .ne. -10.0) .and. (Lamresy(j) .ne. -10.0) .and. (depthres(j) .ne. -10.0) .and. (energyres(j) .ne. 0.0)) then
+        if ((Lamresx(j) .ne. -10.0) .and. (Lamresy(j) .ne. -10.0) .and. (depthres(j) .ne. -10.0) .and. (energyres(j) .ne. 0.0)&
+        .and. (Lamresx(j) .ne. 0.0) .and. (Lamresy(j) .ne. 0.0) .and. (depthres(j) .ne. 0.0)) then
 ! and get the nearest pixel [ take into account reversal of coordinate frame (x,y) -> (y,-x) ]
             val = val + 1
             idxy = (/ nint(Lamresy(j)), nint(-Lamresx(j)) /)
@@ -327,8 +330,10 @@ mainloop: do i = 1,totnum_el/num_max
 
                     iE = nint((energyres(j)-mcnl%Ehistmin)/mcnl%Ebinsize)+1
 ! first add this electron to the correct exit distance vs. energy bin (coarser than the angular plot)
-                    cxyz = LambertSquareToSphere((/Lamresy(j), -Lamresx(j)/), ierr)
-                    edis = dabs(depthres(j)*1e9/cxyz(3))   ! distance from last scattering point to surface along trajectory
+                    xy = (/Lamresy(j), -Lamresx(j)/)
+                    cxyz = LambertInverse(xy, ierr, 7.0710678)
+                    cxyz = cxyz/sqrt(sum(cxyz**2))
+                    edis = abs(depthres(j)*1e7/cxyz(3))   ! distance from last scattering point to surface along trajectory
                     iz = nint(edis*0.1D0/mcnl%depthstep) +1
                     if ( (iz.gt.0).and.(iz.le.numzbins) ) then
 
@@ -344,34 +349,37 @@ mainloop: do i = 1,totnum_el/num_max
         end if
     end do subloop
 
-! and here we create the output file
-    call Message(' ',"(A)")
-! write the program identifier
-    write (dataunit) progname
-! write the version number
-    write (dataunit) scversion
-! then the name of the crystal data file
-    write (dataunit) mcnl%xtalname
-! energy information etc...
-    write (dataunit) numEbins, numzbins, mcnl%numsx, numsy, mcnl%totnum_el
-    write (dataunit) mcnl%EkeV, mcnl%Ehistmin, mcnl%Ebinsize, mcnl%depthmax, mcnl%depthstep
-    write (dataunit) mcnl%sig, mcnl%omega
-    write (dataunit) mcnl%MCmode
-! and here are the actual results
-    write (dataunit) accum_e
-    write (dataunit) accum_z
-    close (dataunit,status='keep')
+    if (mod(i,45).eq.0) then
+        io_int(1) = i*num_max
+        call WriteValue(' Total number of electrons generated = ',io_int, 1, "(I15)")
+        io_int(1) = sum(accum_e)
+        call WriteValue(' Number of electrons on detector       = ',io_int, 1, "(I15)")
+    end if
 
 end do mainloop
-close(dataunit)
+
+! and here we create the output file
+call Message(' ',"(A)")
+! write the program identifier
+write (dataunit) progname
+! write the version number
+write (dataunit) scversion
+! then the name of the crystal data file
+write (dataunit) mcnl%xtalname
+! energy information etc...
+write (dataunit) numEbins, numzbins, mcnl%numsx, numsy, mcnl%totnum_el
+write (dataunit) mcnl%EkeV, mcnl%Ehistmin, mcnl%Ebinsize, mcnl%depthmax, mcnl%depthstep
+write (dataunit) mcnl%sig, mcnl%omega
+write (dataunit) mcnl%MCmode
+! and here are the actual results
+write (dataunit) accum_e
+write (dataunit) accum_z
+
+close(dataunit,status='keep')
 close(iunit)
-io_int(1) = totnum_el
-!print *,energyres
-call WriteValue(' Total number of electrons generated = ',io_int, 1, "(I15)")
-io_int(1) = sum(accum_e)
-call WriteValue(' Number of electrons on detector       = ',io_int, 1, "(I15)")
+
 bse = real(val)/real(totnum_el)
-print *, 'Back scattered yield = ',bse
+print*, "Backscatter yield          = ",bse
 !=====================
 ! RELEASE EVERYTHING
 !=====================

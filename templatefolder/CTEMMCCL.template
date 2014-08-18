@@ -1,20 +1,20 @@
 &MCCLdata
 ! name of the crystal structure file
-xtalname = 'somestructure.xtal'
+xtalname = 'somextal.xtal'
 ! sample tilt angle from horizontal [degrees]
-sig = 70.0
+sig = 0.0
 ! sample tilt angle around RD axis [degrees]
-omega = 0.0
+omega = 70.0
 ! number of pixels along x-direction of square projection [odd number!]
 numsx = 1501
-! seed for Monte Carlo random number generator [should be a prime number]
+! list of prime numbers to be used as seeds. The list should have at least totnum_el/(globalworkgrpsz* globalworkgrpsz*num_el) entries 
 primelist = 'list.txt'
 ! number of incident electrons per thread
 num_el = 10
-! number of OpenMP threads
-globalworkgrpsz = 100
+! number of work items
+globalworkgrpsz = 150
 ! total number of incident electrons
-totnum_el = 100000
+totnum_el = 105000000
 ! incident beam energy [keV]
 EkeV = 30.D0
 ! minimum energy to consider [keV]
@@ -26,6 +26,6 @@ depthmax = 100.D0
 ! depth step size [nm]
 depthstep = 1.0D0
 ! output data file name
-dataname = '/some/folder/somewhere/MCoutput.data'
+dataname = 'MCoutput.data'
 /
 

@@ -118,10 +118,15 @@ type ECPMasterNameListType
     integer(kind=irg)       :: stdout
     integer(kind=irg)       :: npx
     integer(kind=irg)       :: Esel
-    integer(kind=irg)       :: nthreads
+    real(kind=irg)          :: fn(3)
+    real(kind=sgl)          :: startthick
     real(kind=sgl)          :: dmin
+    real(kind=sgl)          :: abcdist(3)
+    real(kind=sgl)          :: albegadist(3)
+    character(fnlen)        :: compmode
     character(fnlen)        :: energyfile
     character(fnlen)        :: outname
+    logical                 :: distort
 end type ECPMasterNameListType
 
 end module NameListTypedefs

@@ -1,5 +1,5 @@
 ! ###################################################################
-! Copyright (c) 2013-2014, Marc De Graef/Carnegie Mellon University
+! Copyright (c) 2013-2014, Marc De Graef/Saransh Singh/Carnegie Mellon University
 ! All rights reserved.
 !
 ! Redistribution and use in source and binary forms, with or without modification, are
@@ -84,7 +84,7 @@ end program CTEMECPmaster
 !
 !> @brief compute a master electron channeling pattern
 !
-!> @note This is really very similar to a LACBED and EBSDmaster computation, except that
+!> @note This is really very similar EBSDmaster computation, except that
 !> the final intensity computation is somewhat different.  We could in
 !> principle also include the Kossel pattern computation in this program.
 !> This program now also includes the Bethe potential approximation, to
@@ -121,57 +121,65 @@ use MBModule
 
 IMPLICIT NONE
 
-type(ECPNameListType),INTENT(IN)        :: ecpnl
-character(fnlen),INTENT(IN)             :: progname
+type(ECPMasterNameListType),INTENT(IN)        :: ecpnl
+character(fnlen),INTENT(IN)                   :: progname
 
-!character(3)                    :: method
-!real(kind=sgl)                  :: galen, bragg, klaue(2), io_real(6), kstar(3), gperp(3), delta, thetac, &
-!kk(3), ktmax, FN(3), kn, fnat
-!integer(kind=irg)               :: nt, skip, dgn, pgnum, io_int(6), maxHOLZ, ik, numk, ga(3), gb(3), TID, &
-!nn, npx, npy, isym, numset, it, ijmax, jp, istat, iequiv(2,12), nequiv, NUMTHREADS, &
-!nns, nnw, nref, tots, totw
-integer(kind=irg)                :: numzbins, totnum_el, numsx, numsy ! read from energyfile
-real(kind=dbl)                   :: EkeV, Ehistmin, Ebinsize, depthmax, depthstep, sig, omega ! read from energyfile
-real(kind=dbl), allocatable      :: accum_z(:,:,:,:), accum_e(:,:,:,:)
-real(kind=dbl)                   :: io_real(6) ! auxiliary variables
-!real(kind=dbl)                  :: ctmp(192,3),arg
-!integer                         :: i,j,ir, n,ipx,ipy,gzero,ic,ip,ikk
-!real(kind=sgl)                  :: pre, tpi,Znsq, kkl, DBWF, frac
-!real,allocatable                :: thick(:), sr(:,:,:)
-!complex(kind=dbl),allocatable   :: Lgh(:,:,:),Sgh(:,:),Sghtmp(:,:,:)
-!complex(kind=dbl)               :: czero
-!real(kind=sgl),allocatable      :: karray(:,:)
-!integer(kind=irg),allocatable   :: kij(:,:), nat(:)
-!complex(kind=dbl),allocatable   :: DynMat(:,:)
-!logical                         :: verbose
+real(kind=dbl)          :: frac
+integer(kind=irg)       :: gzero, istat
 
-type(unitcell),pointer          :: cell
-!type(gnode)                     :: rlp
-!type(DynType)                   :: Dyn
-type(kvectorlist),pointer       :: khead, ktmp
-!type(symdata2D)                 :: TDPG
-!type(BetheParameterType)        :: BetheParameters
-!type(reflisttype),pointer       :: reflist, firstw,rltmp
+integer(kind=irg)       :: numEbins, numzbins, nx, ny, totnum_el ! reading from MC file
+real(kind=dbl)          :: EkeV, Ehistmin, Ebinsize, depthmax, depthstep, sig, omega  ! reading from MC file
+integer(kind=irg), allocatable :: accum_e(:,:,:), accum_z(:,:,:,:) ! reading from MC file
+
+integer(kind=irg)       :: io_int_sgl(1), io_int(6) ! integer output variable
+real(kind=dbl)          :: io_real(5) ! real output variable
+
+integer(kind=irg)       :: i, j, isym, pgnum ! variables for point group and Laue group
+integer(kind=irg),parameter     :: LaueTest(11) = (/ 149, 151, 153, 156, 158, 160, 161, 164, 165, 166, 167 /)  ! space groups with 2 or mirror at 30 degrees
+integer(kind=irg)       :: npyhex, ijmax, numk, skip ! parameters for calckvectors and calcwavelength subroutine
+
+integer(kind=irg)       :: ga(3), gb(3) ! shortest reciprocal lattice vector for zone axis
+real(kind=sgl), allocatable :: thick(:), sr(:,:), lambdaZ(:)
+real(kind=dbl)          :: intthick
+complex(kind=dbl),allocatable   :: Lgh(:,:),Sgh(:,:),Sghtmp(:,:,:)
+complex(kind=dbl),allocatable   :: DynMat(:,:)
+complex(kind=dbl)       :: czero
+
+integer(kind=irg)       :: nt, nns, nnw, tots, totw ! thickness array and BetheParameters strong and weak beams
+real(kind=sgl)          :: FN(3), kk(3), fnat, kn
+integer(kind=irg)       :: numset, nref, ipx, ipy, iequiv(2,12), nequiv, ip, jp, izz, IE, iz, one
+integer(kind=irg),allocatable   :: kij(:,:), nat(:)
+
+
 character(fnlen)        :: oldprogname
+character(fnlen)        :: xtalname
 character(8)            :: MCscversion
 character(4)            :: MCmode
 
-! init some parameters
+logical                 :: verbose, usehex, switchmirror
+
+type(unitcell), pointer         :: cell
+type(gnode)                     :: rlp
+type(DynType)                   :: Dyn
+type(kvectorlist), pointer      :: khead, ktmp ! linked list for incident wave vectors
+type(BetheParameterType)        :: BetheParameters
+type(reflisttype),pointer       :: reflist, firstw,rltmp
+
+
 gzero = 1
 frac = 0.05
-
-nullify(khead)
-nullify(ktmp)
+!dataunit = 10
 
 allocate(cell)
 
-!=============================================
-!=============================================
-! ---------- read Monte Carlo output file and extract necessary parameters
+!=============================================================
+!read Monte Carlo output file and extract necessary parameters
 ! first, we need to load the data from the MC program.
-call Message('opening '//trim(emnl%energyfile), frm = "(A)" )
+!=============================================================
 
-open(dataunit,file=trim(emnl%energyfile),status='unknown',form='unformatted')
+call Message('opening '//trim(ecpnl%energyfile), frm = "(A)" )
+
+open(dataunit,file=trim(ecpnl%energyfile),status='unknown',form='unformatted')
 
 ! lines from CTEMMC.f90... these are the things we need to read in...
 ! write (dataunit) progname
@@ -180,7 +188,7 @@ open(dataunit,file=trim(emnl%energyfile),status='unknown',form='unformatted')
 !! then the name of the crystal data file
 ! write (dataunit) xtalname
 !! energy information etc...
-! write (dataunit) numEbins, numzbins, numsx, numsy, num_el*NUMTHREADS, NUMTHREADS
+! write (dataunit) numEbins, numzbins, numsx, numsy, , totnum_el
 ! write (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
 ! write (dataunit) sig, omega
 ! write (dataunit) MCmode
@@ -192,9 +200,9 @@ read (dataunit) oldprogname
 read (dataunit) MCscversion
 read (dataunit) xtalname
 
-read(dataunit) numzbins, numsx, numsy, totnum_el
-numsx = (numsx - 1)/2
-numsy = (numsy - 1)/2
+read(dataunit) numEbins, numzbins, nx, ny, totnum_el
+nx = (nx - 1)/2
+ny = (ny - 1)/2
 
 read (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
 io_real(1:5) = (/ EkeV, Ehistmin, Ebinsize, depthmax, depthstep /)
@@ -203,25 +211,19 @@ call WriteValue(' EkeV, Ehistmin, Ebinsize, depthmax, depthstep ',io_real,5,"(4F
 read (dataunit) sig, omega
 read (dataunit) MCmode
 
-!@TODO Modify the MC program to include only accum_z array in energyfile
-allocate(accum_e(numEbins,-numsx:numsx,-nsumy:numsy),accum_z(numEbins,numzbins,-numsx/10:numsx/10,-numsy/10:numsy/10),stat=istat)
+allocate(accum_e(numEbins,-nx:nx,-nx:nx),accum_z(numEbins,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
+
 read(dataunit) accum_e
 ! actually, we do not yet need the accum_e array for ECP. This will be removed with an updated version of the MC code
 ! but we need to skip it in this unformatted file so that we can read the accum_z array ...
-deallocate(accum_e)
+!deallocate(accum_e)
 
 read(dataunit) accum_z    ! we only need this array for the depth integrations
-
 close(dataunit,status='keep')
-call Message(' -> completed reading '//trim(emnl%energyfile), frm = "(A)")
-
+call Message(' -> completed reading '//trim(ecpnl%energyfile), frm = "(A)")
 !=============================================
+! completed reading monte carlo file
 !=============================================
-
-
-!=============================================
-!=============================================
-! crystallography section
 
 nullify(cell)
 allocate(cell)
@@ -230,110 +232,68 @@ allocate(cell)
 verbose = .TRUE.
 call Initialize_Cell(cell,Dyn,rlp, xtalname, ecpnl%dmin, sngl(1000.0*EkeV),verbose)
 
-! determine the point group number
+! determine the point group and Laue group number
 j=0
 do i=1,32
-if (SGPG(i).le.cell % SYM_SGnum) j=i
+if (SGPG(i).le.cell%SYM_SGnum) j=i
 end do
-
-! use the new routine to get the whole pattern 2D symmetry group, since that
-! is the one that determines the independent beam directions.
-dgn = GetPatternSymmetry(cell,ecpnl%k,j,.TRUE.)
+isym = j
 pgnum = j
-isym = WPPG(dgn) ! WPPG lists the whole pattern point group numbers vs. diffraction group numbers
 
-! determine the shortest reciprocal lattice points for this zone
-call ShortestG(cell,ecpnl%k,ga,gb,isym)
-io_int(1:3)=ga(1:3)
-io_int(4:6)=gb(1:3)
-call WriteValue(' Reciprocal lattice vectors : ', io_int, 6,"('(',3I3,') and (',3I3,')',/)")
+isym = PGLaueinv(isym)
 
-! diffraction geometry
-bragg = CalcDiffAngle(cell,ga(1),ga(2),ga(3))*0.5
-if (ecpnl%ktmax.ne.0.0) then
-thetac = (ecpnl%ktmax * 2.0 * bragg)*1000.0
-ktmax = ecpnl%ktmax
-io_real(1) = thetac
-else
-ktmax = ecpnl%thetac / (2000.0 * bragg)
-!write (*,*) 'ktmax value = ',ktmax
-thetac = ecpnl%thetac
-io_real(1) = ecpnl%thetac
+! If the Laue group is # 7, then we need to determine the orientation of the mirror plane.
+! The second orientation of the mirror plane is represented by "Laue group" # 12 in this program.
+switchmirror = .FALSE.
+if (isym.eq.7) then
+    do i=1,11
+        if (cell%SYM_SGnum.eq.LaueTest(i)) switchmirror = .TRUE.
+    end do
 end if
-call WriteValue(' Pattern convergence angle [mrad] = ',io_real,1,"(F8.3)")
-io_real(1) = bragg*1000.0
-call WriteValue(' Bragg angle of g_a [mrad] = ',io_real,1,"(F6.3)")
 
-! the number of pixels across the disk is equal to 2*npix + 1
-npx = ecpnl%npix
-npy = npx
-io_int(1) = 2.0*npx + 1
-call WriteValue('Number of image pixels along diameter of central disk = ', io_int, 1, "(I4/)")
+if (switchmirror) then
+    isym = 12
+    call Message(' Switching computational wedge to second setting for this space group', frm = "(A)")
+end if
 
-! for now, the solution to the symmetry problem is to do the computation for the entire
-! illumination cone without application of symmetry.  Instead, we'll get the speed up by
-! going to multiple cores later on.
-isym = 1
-! set parameters for wave vector computation
-klaue = (/ 0.0, 0.0 /)
-ijmax = float(npx)**2   ! truncation value for beam directions
+write (*,*) ' Laue group # ',isym, PGTHD(j)
 
-call CalckvectorsSymmetry(khead,cell,TDPG,dble(ecpnl%k),dble(ga),dble(ktmax),npx,npy,numk,isym,ijmax,klaue)
-io_int(1)=numk
-call WriteValue('Starting computation for # beam directions = ', io_int, 1, "(I8)")
+! if this point group is trigonal or hexagonal, we need to switch usehex to .TRUE. so that
+! the program will use the hexagonal sampling method
+usehex = .FALSE.
+if (((isym.ge.6).and.(isym.le.9)).or.(isym.eq.12)) usehex = .TRUE.
 
+if(usehex)  npyhex = nint(2.0*float(ecpnl%npx)/sqrt(3.0))
+ijmax = float(ecpnl%npx)**2   ! truncation value for beam directions
+
+
+!=============================================
+! generating list of incident wave vectors
+!=============================================
+
+! determine all independent incident beam directions (use a linked list starting at khead)
+! numk is the total number of k-vectors to be included in this computation;
+nullify(khead)
+if (usehex) then
+call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 1.D0, 0.D0, 0.D0 /),0.D0,ecpnl%npx,npyhex,numk, &
+isym,ijmax,'RoscaLambert',usehex)
+else
+! Calckvectors(k,ga,ktmax,npx,npy,numk,isym,ijmax,mapmode,usehex)
+call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 1.D0, 0.D0, 0.D0 /),0.D0,ecpnl%npx,ecpnl%npx,numk, &
+isym,ijmax,'RoscaLambert',usehex)
+end if
+io_int_sgl(1)=numk
+
+call WriteValue('# independent beam directions to be considered = ', io_int_sgl, 1, "(I8)")
+
+ktmp => khead
+czero = cmplx(0.D0, 0.D0)
 ! force dynamical matrix routine to read new Bethe parameters from file
 call Set_Bethe_Parameters(BetheParameters,.TRUE.)
-!write(*,*) 'BEthe : ',BetheParameters%c1, BetheParameters%c2, BetheParameters%c3
 
-! set the thickness array
-nt = ecpnl%numthick
+nt = nint((depthmax - ecpnl%startthick)/depthstep)
 allocate(thick(nt))
-thick = ecpnl%startthick + ecpnl%thickinc * (/ (i-1,i=1,nt) /)
-
-!----------------------------MAIN COMPUTATIONAL LOOP-----------------------
-czero = cmplx(0.D0,0.D0)
-pre = cmplx(0.D0,1.D0) * cPi
-tpi = 2.D0*cPi
-numset = cell % ATOM_ntype  ! number of special positions in the unit cell
-allocate(nat(numset))
-nat = 0
-fnat = 1.0/float(sum(cell%numat(1:numset)))
-!write (*,*) 'asymmetric unit cell # ',numset,fnat
-
-! in preparation for the threaded portion of the program, we need to
-! copy the wave vectors into an array rather than a linked list
-allocate(karray(4,numk), kij(2,numk),stat=istat)
-! point to the first beam direction
-ktmp => khead
-! and loop through the list, keeping k, kn, and i,j
-karray(1:3,1) = sngl(ktmp%k(1:3))
-karray(4,1) = sngl(ktmp%kn)
-kij(1:2,1) = (/ ktmp%i, ktmp%j /)
-do ik=2,numk
-ktmp => ktmp%next
-karray(1:3,ik) = sngl(ktmp%k(1:3))
-karray(4,ik) = sngl(ktmp%kn)
-kij(1:2,ik) = (/ ktmp%i, ktmp%j /)
-end do
-! and remove the linked list
-call Delete_kvectorlist(khead)
-
-! allocate space for the results
-allocate(sr(2*npx+1,2*npy+1,nt))
-sr = 0.0
-
-! set the number of OpenMP threads
-call OMP_SET_NUM_THREADS(ecpnl%nthreads)
-io_int(1) = ecpnl%nthreads
-call WriteValue(' Attempting to set number of threads to ',io_int, 1, frm = "(I4)")
-
-! use OpenMP to run on multiple cores ...
-!$OMP PARALLEL default(shared) PRIVATE(DynMat,ik,TID,kk,kn,ipx,ipy,iequiv,nequiv,fnat,ip,jp,reflist,firstw,nns,nnw,nref) &
-!$OMP& PRIVATE(Sgh, Lgh, SGHtmp, FN)
-
-NUMTHREADS = OMP_GET_NUM_THREADS()
-TID = OMP_GET_THREAD_NUM()
+thick = ecpnl%startthick + depthstep * (/ (i-1,i=1,nt) /)
 
 nullify(reflist)
 nullify(firstw)
@@ -343,157 +303,133 @@ nnw = 0
 tots = 0
 totw = 0
 
-!$OMP DO SCHEDULE(DYNAMIC,100)
+numset = cell % ATOM_ntype  ! number of special positions in the unit cell
+izz = numzbins
+allocate(lambdaZ(1:izz),stat=istat)
+allocate(nat(numset))
+allocate(kij(2,numk))
 
-!  work through the beam direction list
-beamloop: do ik=1,numk
+do iz=1,izz
+lambdaZ(iz) = float(sum(accum_z(:,iz,:,:)))/totnum_el
+end do
 
-! generate the reflectionlist
-kk(1:3) = karray(1:3,ik)
-FN = kk
-call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, kk, ecpnl%dmin, nref)
+kij(1:2,1) = (/ ktmp%i, ktmp%j /)
+do i = 2,numk
+    ktmp => ktmp%next
+    kij(1:2,i) = (/ ktmp%i, ktmp%j /)
+end do
+
+ktmp => khead
+
+nat = 0
+fnat = 1.0/float(sum(cell%numat(1:numset)))
+intthick = dble(depthmax)
+
+
+open(unit=dataunit,file=trim(ecpnl%outname),status='unknown',action='write',access='append',form = 'unformatted')
+! write the program identifier
+write (dataunit) progname
+! write the version number
+write (dataunit) scversion
+! then the name of the crystal data file
+write (dataunit) xtalname
+! then the name of the corresponding Monte Carlo data file
+write (dataunit) ecpnl%energyfile
+! energy information and array size
+if (ecpnl%Esel.eq.-1) then
+    write (dataunit) ecpnl%npx,ecpnl%npx,numset
+    write (dataunit) EkeV
+else
+    one = 1
+    write (dataunit) ecpnl%npx,ecpnl%npx,one,numset
+end if
+! atom type array for asymmetric unit
+write (dataunit) cell%ATOM_type(1:numset)
+! is this a regular (square) or hexagonal projection ?
+if (usehex) then
+    write (dataunit) 'hexago'
+else
+    write (dataunit) 'square'
+end if
+
+
+beamloop: do i = 1, numk
+    allocate(sr(2*ecpnl%npx+1,2*ecpnl%npx+1))
+    sr = 0.0
+    kk = ktmp%k(1:3)
+    FN = ecpnl%fn
+
+    call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, kk, ecpnl%dmin, nref)
 
 ! determine strong and weak reflections
-call Apply_BethePotentials(cell, reflist, firstw, BetheParameters, nref, nns, nnw)
+    call Apply_BethePotentials(cell, reflist, firstw, BetheParameters, nref, nns, nnw)
 
-! generate the dynamical matrix
-allocate(DynMat(nns,nns))
-call GetDynMat(cell, reflist, firstw, rlp, DynMat, nns, nnw)
+    allocate(DynMat(nns,nns))
+
+    call GetDynMat(cell, reflist, firstw, rlp, DynMat, nns, nnw)
 
 ! then we need to initialize the Sgh and Lgh arrays
-if (allocated(Sgh)) deallocate(Sgh)
-if (allocated(Lgh)) deallocate(Lgh)
-if (allocated(Sghtmp)) deallocate(Sghtmp)
+    if (allocated(Sgh)) deallocate(Sgh)
+    if (allocated(Lgh)) deallocate(Lgh)
+    if (allocated(Sghtmp)) deallocate(Sghtmp)
 
-allocate(Sghtmp(nns,nns,numset),Lgh(nns,nns,nt),Sgh(nns,nns))
-Sgh = czero
-Sghtmp = czero
-Lgh = czero
-nat = 0
-call CalcSgh(cell,reflist,nns,numset,Sghtmp,nat)
+    allocate(Sghtmp(nns,nns,numset),Lgh(nns,nns),Sgh(nns,nns))
 
+    Sgh = czero
+    Lgh = czero
+    Sghtmp = czero
+    nat = 0
+
+    call CalcSgh(cell,reflist,nns,numset,Sghtmp,nat)
 ! sum Sghtmp over the sites
-Sgh = sum(Sghtmp,3)
+    Sgh = sum(Sghtmp,3)
+
 
 ! solve the dynamical eigenvalue equation
-kn = karray(4,ik)
-call CalcLghECP(DynMat,Lgh,nns,nt,thick,dble(kn),gzero)
-deallocate(DynMat,Sghtmp)
+    kn = ktmp%kn
+
+    call CalcLgh(DynMat,Lgh,intthick,dble(kn),nns,gzero,depthstep,lambdaZ,izz)
+    deallocate(DynMat,Sghtmp)
 
 ! and store the resulting values
-ipx = kij(1,ik)
-ipy = kij(2,ik)
+    ipx = kij(1,i)
+    ipy = kij(2,i)
+    if (isym.ne.1) then
+        call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
 
-!$OMP CRITICAL
-if (isym.ne.1) then
-call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
-iequiv(1,1:nequiv) = iequiv(1,1:nequiv) + npx + 1
-iequiv(2,1:nequiv) = iequiv(2,1:nequiv) + npy + 1
-do ip=1,nequiv
-do jp=1,nt
-sr(iequiv(1,ip),iequiv(2,ip),jp) = sr(iequiv(1,ip),iequiv(2,ip),jp) + &
-real(sum(Lgh(1:nns,1:nns,jp)*Sgh(1:nns,1:nns)))
-end do
-end do
-else
-do jp=1,nt
-sr(ipx+npx+1,ipy+npy+1,jp) = real(sum(Lgh(1:nns,1:nns,jp)*Sgh(1:nns,1:nns)))
-end do
-end if
-totw = totw + nnw
-tots = tots + nns
-!$OMP END CRITICAL
+        iequiv(1,1:nequiv) = iequiv(1,1:nequiv) + ecpnl%npx + 1
+        iequiv(2,1:nequiv) = iequiv(2,1:nequiv) + ecpnl%npx + 1
+        do ip=1,nequiv
+            sr(iequiv(1,ip),iequiv(2,ip)) = real(sum(Lgh(1:nns,1:nns)*Sgh(1:nns,1:nns)))
+        end do
+    else
+        sr(ipx+ecpnl%npx+1,ipy+ecpnl%npx+1) = real(sum(Lgh(1:nns,1:nns)*Sgh(1:nns,1:nns)))
+    end if
 
-! if (TID.eq.0) write (*,*) ik,sr(ipx,ipy,1:3)
+    totw = totw + nnw
+    tots = tots + nns
+    deallocate(Lgh, Sgh)
 
-! if (sr(ipx,ipy,1).gt.1000.0) write (*,*) TID, ik, sr(ipx,ipy,1), fnat, maxval(cdabs(Lgh)), maxval(cdabs(Sgh))
-
-deallocate(Lgh, Sgh)
-
-if (mod(ik,2500).eq.0) then
-io_int(1) = ik
-call WriteValue('  completed beam direction ',io_int, 1, "(I8)")
+    if (mod(i,2500).eq.0) then
+        io_int(1) = i
+        call WriteValue('  completed beam direction ',io_int, 1, "(I8)")
 ! write(*,*) minval(sr),maxval(sr)
-end if
+    end if
 
-call Delete_gvectorlist(reflist)
+    call Delete_gvectorlist(reflist)
+    write(dataunit) ktmp%k
+! and finally the results array
+    write (dataunit) sr
+
+    ktmp => ktmp%next
+    deallocate(sr)
 
 end do beamloop
 
-!$OMP END PARALLEL
-
-sr = sr*fnat
-
-! store additional information for the IDL interface
-open(unit=dataunit,file=trim(ecpnl%outname),status='unknown',action='write',form='unformatted')
-! write the program identifier
-write (dataunit) trim(progname)
-! write the version number
-write (dataunit) scversion
-! first write the array dimensions
-write (dataunit) 2*ecpnl%npix+1,2*ecpnl%npix+1,nt
-! then the name of the crystal data file
-write (dataunit) ecpnl%xtalname
-! altered lattice parameters; also combine compmode in this parameter
-!  Bloch waves, no distortion: 0
-!  Bloch waves, distortion:    1
-!  ScatMat, no distortion      2
-!  ScatMat, distortion         3
-! if (distort) then
-!   if (compmode.eq.'Blochwv') then
-write (dataunit) 1
-!   else
-!     write (dataunit) 3
-!   end if
-! else
-!   if (compmode.eq.'Blochwv') then
-!     write (dataunit) 0
-!   else
-!     write (dataunit) 2
-!   end if
-! end if
-! new lattice parameters and angles
-write (dataunit) (/ cell%a, cell%b, cell%c /)  ! abcdist
-write (dataunit) (/ cell%alpha, cell%beta, cell%gamma /) ! albegadist
-! the accelerating voltage [V]
-write (dataunit) ecpnl%voltage
-! convergence angle [mrad]
-write (dataunit) thetac
-! max kt value in units of ga
-write (dataunit) ktmax
-! the zone axis indices
-write (dataunit) ecpnl%k
-! the foil normal indices
-write (dataunit) ecpnl%fn
-! number of k-values in disk
-write (dataunit) numk
-! dmin value
-write (dataunit) ecpnl%dmin
-! horizontal reciprocal lattice vector
-write (dataunit) ga
-! length horizontal reciprocal lattice vector (need for proper Laue center coordinate scaling)
-write (dataunit) galen
-! we need to store the gperp vectors
-delta = 2.0*ktmax*galen/float(2*ecpnl%npix+1)        ! grid step size in nm-1
-call TransSpace(cell,float(ecpnl%k),kstar,'d','r')        ! transform incident direction to reciprocal space
-call CalcCross(cell,float(ga),kstar,gperp,'r','r',0)! compute g_perp = ga x k
-call NormVec(cell,gperp,'r')                        ! normalize g_perp
-write (dataunit) delta
-write (dataunit) gperp
-! eight integers with the labels of various symmetry groups
-write (dataunit) (/ pgnum, PGLaue(pgnum), dgn, PDG(dgn), BFPG(dgn), WPPG(dgn), DFGN(dgn), DFSP(dgn) /)
-! thickness data
-write (dataunit) ecpnl%startthick, ecpnl%thickinc
-! and the actual data array
-write (dataunit) sr
 close(unit=dataunit,status='keep')
 
-call Message('Data stored in output file '//trim(ecpnl%outname), frm = "(/A/)")
+if (ecpnl%Esel.ne.-1) then
+    call Message('Final data stored in file '//trim(ecpnl%outname), frm = "(A/)")
+end if
 
-tots = nint(float(tots)/float(numk))
-totw = nint(float(totw)/float(numk))
-
-io_int(1:2) = (/ tots, totw /)
-call WriteValue(' Average # strong, weak beams = ',io_int, 2, "(I5,',',I5/)")
-
-end subroutine ECpattern
+end subroutine ECmasterpattern

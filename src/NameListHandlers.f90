@@ -389,32 +389,46 @@ end subroutine GetEBSDMasterNameList
 !
 !> @date 06/19/14  MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine GetECPMasterNameList(nmlfile, emnl)
+subroutine GetECPMasterNameList(nmlfile, ecpnl)
 
 use error
 
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                     :: nmlfile
-type(ECPMasterNameListType),INTENT(INOUT)      :: emnl
+type(ECPMasterNameListType),INTENT(INOUT)      :: ecpnl
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: npx
 integer(kind=irg)       :: Esel
-integer(kind=irg)       :: nthreads
+integer(kind=irg)       :: numthick
+real(kind=irg)          :: startthick
+real(kind=irg)          :: fn(3)
 real(kind=sgl)          :: dmin
+real(kind=sgl)          :: zintstep
+real(kind=sgl)          :: abcdist(3)
+real(kind=sgl)          :: albegadist(3)
+real(kind=sgl)          :: thickinc
+character(fnlen)        :: compmode
 character(fnlen)        :: energyfile
 character(fnlen)        :: outname
+logical                 :: distort
 
 ! define the IO namelist to facilitate passing variables to the program.
-namelist /ECPmastervars/ dmin,npx,nthreads,outname,energyfile,Esel
+namelist /ECPmastervars/ stdout, startthick, dmin, fn, abcdist, albegadist, compmode, &
+    distort, outname, energyfile, Esel, npx
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 stdout = 6
-npx = 500                       ! Nx pixels (total = 2Nx+1)
-nthreads = 1
+startthick = 2.0
+fn = (/0.0, 0.0, 1.0/)
 Esel = -1                       ! selected energy value for single energy run
 dmin = 0.025                    ! smallest d-spacing to include in dynamical matrix [nm]
+npx = 256
+abcdist = (/0.4, 0.4, 0.4/)
+albegadist = (/90.0, 90.0, 90.0/)
+compmode = 'Blochwv'
+distort = .FALSE.
 energyfile = 'undefined'        ! default filename for z_0(E_e) data from CTEMMC Monte Carlo simulations
 outname = 'ECPmasterout.data'  ! default filename for final output
 
@@ -429,13 +443,18 @@ call FatalError('CTEMECPmaster:',' energy file name is undefined in '//nmlfile)
 end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the emnl fields
-emnl%stdout = stdout
-emnl%npx = npx
-emnl%Esel = Esel
-emnl%nthreads = nthreads
-emnl%dmin = dmin
-emnl%energyfile = energyfile
-emnl%outname = outname
+ecpnl%stdout = stdout
+ecpnl%Esel = Esel
+ecpnl%npx = npx
+ecpnl%startthick = startthick
+ecpnl%fn = fn
+ecpnl%abcdist = abcdist
+ecpnl%albegadist = albegadist
+ecpnl%dmin = dmin
+ecpnl%compmode = compmode
+ecpnl%distort = distort
+ecpnl%energyfile = energyfile
+ecpnl%outname = outname
 
 end subroutine GetECPMasterNameList
 

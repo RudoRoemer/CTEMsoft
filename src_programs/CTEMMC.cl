@@ -59,7 +59,7 @@
 #define RAND_MAX  2147483647.0f
 #define PI        3.14159f
 
-float *LambertSphereToSquare(float xyz[3]);
+float *LambertSphereToPlane(float xyz[3]);
 int rand_r(unsigned int);
 //--------------------------------------------------------------------------
 //
@@ -102,7 +102,7 @@ int rand_r (unsigned int seed)
 
 //--------------------------------------------------------------------------
 //
-// FUNCTION: LambertSphereToSquare
+// FUNCTION: LambertSphereToPlane
 //
 //> @author Saransh Singh, Carnegie Mellon University
 //
@@ -113,7 +113,7 @@ int rand_r (unsigned int seed)
 //--------------------------------------------------------------------------
 
 
-float *LambertSphereToSquare(float xyz[3]){
+float *LambertSphereToPlane(float xyz[3]){
     float eps = 1e-4f;
     float q, LPssPi2;
     LPssPi2 = 0.886226925452758f;
@@ -262,7 +262,7 @@ __kernel void MC(__global float* Lamx, __global float* Lamy, const float E, cons
                 dir_cos[0] = c0.x;
                 dir_cos[1] = c0.y;
                 dir_cos[2] = c0.z;
-                res = LambertSphereToSquare(dir_cos);
+                res = LambertSphereToPlane(dir_cos);
                 Lamx[num*id + i] = res[0];
                 Lamy[num*id + i] = res[1];
                 depth[num*id + i] = escape_depth;
