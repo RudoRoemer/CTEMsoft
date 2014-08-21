@@ -130,8 +130,8 @@ IMPLICIT NONE
 ! only this routine is public; all the others are done via overloaded operators
 public :: quaternion_print
 interface quaternion_print
-	module procedure quaternion_print
-	module procedure quaternion_print_d
+        module procedure quaternion_print
+        module procedure quaternion_print_d
  end interface
 
 ! quaternion multiplication (single and double precision)
@@ -181,8 +181,8 @@ interface quat_angle
 ! quaternion rotation of a unit vector  q v q-1
 public :: quat_rotate_vector
 interface quat_rotate_vector
-	module procedure quat_rotate_vector
-	module procedure quat_rotate_vector_d
+        module procedure quat_rotate_vector
+        module procedure quat_rotate_vector_d
 end interface
 
 
@@ -203,11 +203,11 @@ contains
 !> @date 3/15/12   MDG 1.0 original
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
-subroutine quaternion_print(q)
+recursive subroutine quaternion_print(q)
 
 use io
 
-    real(kind=sgl), intent(in) 	:: q(4)		!< input quaternion (single precision)
+    real(kind=sgl), intent(in)  :: q(4)         !< input quaternion (single precision)
 
     call WriteValue('', q, 4, "('(',4f12.6,')')")
 
@@ -226,11 +226,11 @@ end subroutine quaternion_print
 !> @date 3/15/12   MDG 1.0 original
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
-subroutine quaternion_print_d(q)
+recursive subroutine quaternion_print_d(q)
 
 use io
 
-    real(kind=dbl), intent(in) 	:: q(4)		!< input quaternion (double precision)
+    real(kind=dbl), intent(in)  :: q(4)         !< input quaternion (double precision)
 
     call WriteValue('', q, 4, "('(',4f15.9,')')")
 
@@ -250,10 +250,10 @@ end subroutine quaternion_print_d
 !> @date 3/15/12   MDG 1.0 original
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
-function quat_mult(x,y) result (res)
+recursive function quat_mult(x,y) result (res)
 
-    real(kind=sgl), intent(in) 		:: x(4), y(4)		!< input quaternions
-    real(kind=sgl) 				:: res(4)
+    real(kind=sgl), intent(in)          :: x(4), y(4)           !< input quaternions
+    real(kind=sgl)                      :: res(4)
 
     res = (/ x(1)*y(1) - x(2)*y(2) - x(3)*y(3) - x(4)*y(4), &
              x(1)*y(2) + x(2)*y(1) + x(3)*y(4) - x(4)*y(3), &
@@ -276,10 +276,10 @@ end function quat_mult
 !> @date 3/15/12   MDG 1.0 original
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
-function quat_mult_d(x,y) result (res)
+recursive function quat_mult_d(x,y) result (res)
 
-    real(kind=dbl), intent(in) 		:: x(4), y(4)		!< input quaternions
-    real(kind=dbl) 				:: res(4)
+    real(kind=dbl), intent(in)          :: x(4), y(4)           !< input quaternions
+    real(kind=dbl)                      :: res(4)
 
     res = (/ x(1)*y(1) - x(2)*y(2) - x(3)*y(3) - x(4)*y(4), &
              x(1)*y(2) + x(2)*y(1) + x(3)*y(4) - x(4)*y(3), &
@@ -301,10 +301,10 @@ end function quat_mult_d
 !> @date 3/15/12   MDG 1.0 original
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
-function quat_conjg(x) result (res)
+recursive function quat_conjg(x) result (res)
 
-    real(kind=sgl), intent(in) 		:: x(4)		!< input quaternion
-    real(kind=sgl) 				:: res(4)
+    real(kind=sgl), intent(in)          :: x(4)         !< input quaternion
+    real(kind=sgl)                      :: res(4)
 
     res = (/ x(1), -x(2), -x(3), -x(4) /)
 
@@ -323,10 +323,10 @@ end function quat_conjg
 !> @date 3/15/12   MDG 1.0 original
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
-function quat_conjg_d(x) result (res)
+recursive function quat_conjg_d(x) result (res)
 
-    real(kind=dbl), intent(in) 		:: x(4)		!< input quaternion
-    real(kind=dbl) 				:: res(4)
+    real(kind=dbl), intent(in)          :: x(4)         !< input quaternion
+    real(kind=dbl)                      :: res(4)
 
     res = (/ x(1), -x(2), -x(3), -x(4) /)
 
@@ -346,10 +346,10 @@ end function quat_conjg_d
 !> @date 3/15/12   MDG 1.0 original
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
-function quat_norm(x) result (res)
+recursive function quat_norm(x) result (res)
 
-   real(kind=sgl), intent(in) 		:: x(4)		!< input quaternion
-   real(kind=sgl) 			:: res
+   real(kind=sgl), intent(in)           :: x(4)         !< input quaternion
+   real(kind=sgl)                       :: res
 
     res =  sqrt( sum(x*x) )
 
@@ -368,10 +368,10 @@ end function quat_norm
 !> @date 3/15/12   MDG 1.0 original
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
-function quat_norm_d(x) result (res)
+recursive function quat_norm_d(x) result (res)
 
-    real(kind=dbl), intent(in) 	:: x(4)		!< input quaternion
-    real(kind=dbl) 			:: res
+    real(kind=dbl), intent(in)  :: x(4)         !< input quaternion
+    real(kind=dbl)              :: res
 
     res =  dsqrt( sum(x*x) )
 
@@ -391,10 +391,10 @@ end function quat_norm_d
 !> @date 3/15/12   MDG 1.0 original
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
-function quat_div(x,y) result (res)
+recursive function quat_div(x,y) result (res)
 
-    real(kind=sgl), intent(in) 		:: x(4),y(4)		!< input quaternions
-    real(kind=sgl) 				:: res(4), p(4), q
+    real(kind=sgl), intent(in)          :: x(4),y(4)            !< input quaternions
+    real(kind=sgl)                      :: res(4), p(4), q
 
     q = quat_norm(y)
     p = quat_conjg(y)/(q*q)
@@ -416,10 +416,10 @@ end function quat_div
 !> @date 3/15/12   MDG 1.0 original
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
-function quat_div_d(x,y) result (res)
+recursive function quat_div_d(x,y) result (res)
 
-    real(kind=dbl), intent(in) 		:: x(4),y(4)		!< input quaternions
-    real(kind=dbl) 				:: res(4), p(4), q
+    real(kind=dbl), intent(in)          :: x(4),y(4)            !< input quaternions
+    real(kind=dbl)                      :: res(4), p(4), q
 
     q = quat_norm_d(y)
     p = quat_conjg_d(y)/(q*q)
@@ -441,10 +441,10 @@ end function quat_div_d
 !> @date 3/15/12   MDG 1.0 original
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
-function quat_innerproduct(x,y) result (res)
+recursive function quat_innerproduct(x,y) result (res)
 
-    real(kind=sgl), intent(in) 		:: x(4),y(4)		!< input quaternions
-    real(kind=sgl) 				:: res
+    real(kind=sgl), intent(in)          :: x(4),y(4)            !< input quaternions
+    real(kind=sgl)                      :: res
 
     res = sum(x * y)
 
@@ -464,10 +464,10 @@ end function quat_innerproduct
 !> @date 3/15/12   MDG 1.0 original
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
-function quat_innerproduct_d(x,y) result (res)
+recursive function quat_innerproduct_d(x,y) result (res)
 
-    real(kind=dbl), intent(in) 		:: x(4),y(4)		!< input quaternions
-    real(kind=dbl) 				:: res
+    real(kind=dbl), intent(in)          :: x(4),y(4)            !< input quaternions
+    real(kind=dbl)                      :: res
 
     res = sum(x * y) 
 
@@ -487,10 +487,10 @@ end function quat_innerproduct_d
 !> @date 3/15/12   MDG 1.0 original
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------!
-function quat_angle(x,y) result (res)
+recursive function quat_angle(x,y) result (res)
 
-    real(kind=sgl), intent(in) 			:: x(4),y(4)		!< input quaternions
-    real(kind=sgl) 					:: res, q
+    real(kind=sgl), intent(in)                  :: x(4),y(4)            !< input quaternions
+    real(kind=sgl)                              :: res, q
 
     q = quat_innerproduct(x,y)
     res = acos( 2.0_sgl*q*q - 1.0_sgl )
@@ -511,10 +511,10 @@ end function quat_angle
 !> @date 3/15/12   MDG 1.0 original
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------!
-function quat_angle_d(x,y) result (res)
+recursive function quat_angle_d(x,y) result (res)
 
-    real(kind=dbl), intent(in) 		:: x(4),y(4)		!< input quaternions
-    real(kind=dbl) 				:: res, q
+    real(kind=dbl), intent(in)          :: x(4),y(4)            !< input quaternions
+    real(kind=dbl)                      :: res, q
 
     q = quat_innerproduct_d(x,y)
     res = dacos( 2.0_dbl*q*q - 1.0_dbl )
@@ -537,10 +537,10 @@ end function quat_angle_d
 !--------------------------------------------------------------------------!
 recursive function quat_rotate_vector(q,v) result (res)
 
-    real(kind=sgl),intent(in) 			:: q(4)		!< input quaternion
-    real(kind=sgl),intent(in)			:: v(3)		!< input vector (must be normalized)
-    real(kind=sgl)				:: qv(4), rqv(4)
-    real(kind=sgl) 				:: res(3)
+    real(kind=sgl),intent(in)                   :: q(4)         !< input quaternion
+    real(kind=sgl),intent(in)                   :: v(3)         !< input vector (must be normalized)
+    real(kind=sgl)                              :: qv(4), rqv(4)
+    real(kind=sgl)                              :: res(3)
 
     qv = (/ 0.0, v(1), v(2), v(3) /)   
     rqv = quat_mult(q,quat_mult(qv,quat_conjg(q) ) )
@@ -564,10 +564,10 @@ end function quat_rotate_vector
 !--------------------------------------------------------------------------!
 recursive function quat_rotate_vector_d(q,v) result (res)
 
-    real(kind=dbl), intent(in) 		:: q(4)		!< input quaternion
-    real(kind=dbl),intent(in)			:: v(3)		!< input vector (must be normalized)
-    real(kind=dbl)				:: qv(4), rqv(4)
-    real(kind=dbl) 				:: res(3)
+    real(kind=dbl), intent(in)          :: q(4)         !< input quaternion
+    real(kind=dbl),intent(in)                   :: v(3)         !< input vector (must be normalized)
+    real(kind=dbl)                              :: qv(4), rqv(4)
+    real(kind=dbl)                              :: res(3)
 
     qv = (/ 0.D0, v(1), v(2), v(3) /)   
     rqv = quat_mult_d(q,quat_mult_d(qv,quat_conjg_d(q) ) )
