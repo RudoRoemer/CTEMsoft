@@ -62,7 +62,7 @@ character(fnlen)                :: progname, progdesc, fname
  cell%SYM_SGset=0
  call GetLatParm(cell)
  call GetSpaceGroup(cell)
- call GenerateSymmetry(.TRUE.)
+ call GenerateSymmetry(cell,.TRUE.)
  call GetAsymPos(cell)
  call ReadValue('Enter output file name (*.xtal) ', fname)
  cell%fname = fname

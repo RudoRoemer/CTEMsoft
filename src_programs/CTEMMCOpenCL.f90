@@ -265,7 +265,6 @@ if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
 energy = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
 if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
 
-open(dataunit,file=trim(mcnl%dataname),status='unknown',Access='Append',form='unformatted')
 
 open(unit = iunit, file = mcnl%primelist)
 
@@ -363,7 +362,7 @@ mainloop: do i = 1,totnum_el/num_max
         end if
     end do subloop
 
-    if (mod(i,45).eq.0) then
+    if (mod(i,50).eq.0) then
         io_int(1) = i*num_max
         call WriteValue(' Total number of electrons generated = ',io_int, 1, "(I15)")
         io_int(1) = sum(accum_e)
@@ -372,6 +371,9 @@ mainloop: do i = 1,totnum_el/num_max
 
 end do mainloop
 
+call Message('writing data to file '//trim(mcnl%dataname))
+
+open(dataunit,file=trim(mcnl%dataname),status='unknown',form='unformatted')
 ! and here we create the output file
 call Message(' ',"(A)")
 ! write the program identifier
