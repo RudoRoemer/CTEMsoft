@@ -474,14 +474,14 @@ end subroutine GetECPMasterNameList
 !
 !> @date 06/19/14  SS 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine GetECPNameList(nmlfile,ecpnl)
+subroutine GetECPpatternNameList(nmlfile,ecpnl)
 
 use error
 
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                     :: nmlfile
-type(ECPNameListType),INTENT(INOUT)             :: ecpnl
+type(ECPpatternNameListType),INTENT(INOUT)             :: ecpnl
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: npix
@@ -519,6 +519,6 @@ ecpnl%k = k
 ecpnl%masterfile = masterfile
 ecpnl%outname = outname
 
-end subroutine GetECPNameList
+end subroutine GetECPpatternNameList
 
 end module NameListHandlers

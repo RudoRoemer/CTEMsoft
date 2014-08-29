@@ -131,13 +131,13 @@ type ECPMasterNameListType
 end type ECPMasterNameListType
 
 !namelist for the CTEMECP program
-type ECPNameListType
+type ECPpatternNameListType
     integer(kind=irg)       :: stdout
     integer(kind=irg)       :: npix
     real(kind=sgl)          :: thetac
     real(kind=sgl)          :: k(3)
     character(fnlen)        :: masterfile
     character(fnlen)        :: outname
-end type ECPNameListType
+end type ECPpatternNameListType
 
 end module NameListTypedefs
