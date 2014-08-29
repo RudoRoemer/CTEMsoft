@@ -428,5 +428,3 @@ type(reflisttype),pointer       :: reflist, firstw,rltmp
   call WriteValue(' Average # strong, weak beams = ',io_int, 2, "(I5,',',I5/)")
 
 end subroutine ECpattern
-
-

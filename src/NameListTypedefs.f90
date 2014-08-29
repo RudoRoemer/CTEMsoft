@@ -82,6 +82,27 @@ type MCNameListType
         character(fnlen)        :: dataname
 end type MCNameListType
 
+! namelist for the CTEMMCOpenCL program
+type MCCLNameListType
+        integer(kind=irg)       :: stdout
+        integer(kind=irg)       :: numsx
+        integer(kind=irg)       :: globalworkgrpsz
+        integer(kind=irg)       :: num_el
+        integer(kind=irg)       :: totnum_el
+        real(kind=dbl)          :: sig
+        real(kind=dbl)          :: omega
+        real(kind=dbl)          :: EkeV
+        real(kind=dbl)          :: Ehistmin
+        real(kind=dbl)          :: Ebinsize
+        real(kind=dbl)          :: depthmax
+        real(kind=dbl)          :: depthstep
+        character(4)            :: MCmode
+        character(fnlen)        :: xtalname
+        character(fnlen)        :: dataname
+        character(fnlen)        :: primelist
+        character(fnlen)        :: mode
+end type MCCLNameListType
+
 ! namelist for the CTEMEBSDmaster program
 type EBSDMasterNameListType
         integer(kind=irg)       :: stdout
@@ -194,5 +215,30 @@ type LACBEDNameListType
         character(fnlen)        :: outname
 end type LACBEDNameListType
 
+! namelist for the CTEMECPmaster program
+type ECPMasterNameListType
+    integer(kind=irg)       :: stdout
+    integer(kind=irg)       :: npx
+    integer(kind=irg)       :: Esel
+    real(kind=sgl)          :: fn(3)
+    real(kind=sgl)          :: startthick
+    real(kind=sgl)          :: dmin
+    real(kind=sgl)          :: abcdist(3)
+    real(kind=sgl)          :: albegadist(3)
+    character(fnlen)        :: compmode
+    character(fnlen)        :: energyfile
+    character(fnlen)        :: outname
+    logical                 :: distort
+end type ECPMasterNameListType
+
+!namelist for the CTEMECP program
+type ECPpatternNameListType
+    integer(kind=irg)       :: stdout
+    integer(kind=irg)       :: npix
+    real(kind=sgl)          :: thetac
+    real(kind=sgl)          :: k(3)
+    character(fnlen)        :: masterfile
+    character(fnlen)        :: outname
+end type ECPpatternNameListType
 
 end module NameListTypedefs

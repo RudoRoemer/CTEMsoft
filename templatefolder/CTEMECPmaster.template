@@ -1,0 +1,27 @@
+&ECPmastervars
+! computational mode 'Blochwv' for Bloch wave, 'ScatMat' for scattering matrix
+compmode = 'Blochwv'  ! 'ScatMat'
+! output device (6=screen, >10 is fort.## file)
+stdout = 6
+! no. of pixels in the X and Y direction
+npx = 1024
+! smallest d-spacing to take into account [nm]
+dmin = 0.05
+! foil normal
+fn = 0,0,1
+! Data storage options
+Esel = -1
+! starting thickness [nm]
+startthick = 2.0
+! should a distorted unit cell be used ? (.FALSE. or .TRUE.)
+distort = .FALSE.
+! distorted lattice parameters [nm]
+abcdist = 0.4, 0.4, 0.4
+! distorted lattice angles [degrees]
+albegadist = 90.0, 90.0, 90.0
+! name of output file (to be read by IDL visualization routine)
+outname = 'ECPmasterout.data'
+! name of the energy statistics file produced by CTEMMC program [note that
+! this file will also contain parameters such as the microscope accelerating voltage]
+energyfile = 'MCoutput.data'
+/
