@@ -100,6 +100,7 @@ type MCCLNameListType
         character(fnlen)        :: xtalname
         character(fnlen)        :: dataname
         character(fnlen)        :: primelist
+        character(fnlen)        :: mode
 end type MCCLNameListType
 
 ! namelist for the CTEMEBSDmaster program
@@ -118,7 +119,7 @@ type ECPMasterNameListType
     integer(kind=irg)       :: stdout
     integer(kind=irg)       :: npx
     integer(kind=irg)       :: Esel
-    real(kind=irg)          :: fn(3)
+    real(kind=sgl)          :: fn(3)
     real(kind=sgl)          :: startthick
     real(kind=sgl)          :: dmin
     real(kind=sgl)          :: abcdist(3)
@@ -128,5 +129,15 @@ type ECPMasterNameListType
     character(fnlen)        :: outname
     logical                 :: distort
 end type ECPMasterNameListType
+
+!namelist for the CTEMECP program
+type ECPNameListType
+    integer(kind=irg)       :: stdout
+    integer(kind=irg)       :: npix
+    real(kind=sgl)          :: thetac
+    real(kind=sgl)          :: k(3)
+    character(fnlen)        :: masterfile
+    character(fnlen)        :: outname
+end type ECPNameListType
 
 end module NameListTypedefs

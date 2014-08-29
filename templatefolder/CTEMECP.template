@@ -1,41 +1,18 @@
-&ECPlist
+&ECPvars
 ! The line above must not be changed
 !
 ! The values below are the default values for this program
 !
-! crystal structure filename
-xtalname = 'undefined'
-! computational mode 'Blochwv' for Bloch wave, 'ScatMat' for scattering matrix
-compmode = 'Blochwv'  ! 'ScatMat'
-! integration step size (only used for ScatMat mode), typically 1,0 or 0.5 nm
-! make sure zintstep properly divides into the thickness values !
-zintstep = 1.0
 ! output device (6=screen, >10 is fort.## file)
 stdout = 6
-! smallest d-spacing to take into account [nm]
-dmin = 0.025
-! microscope accelerating voltage [V]
-voltage = 30000.
-! incident beam direction 
-k = 0,0,1
-! foil normal
-fn = 0,0,1
-! should a distorted unit cell be used ? (.FALSE. or .TRUE.)
-distort = .FALSE.
-! distorted lattice parameters [nm]
-abcdist = 0.4, 0.4, 0.4
-! distorted lattice angles [degrees]
-albegadist = 90.0, 90.0, 90.0
-! beam convergence angle in terms of the ratio kt/|g_a| (i.e., kt_max)
-ktmax = 5.0
+! beam convergence angle i.e. half angle of cone in degrees
+thetac = 15.0
 ! output patterns will be (2*npix+1)^2 in size
 npix = 256
-! number of thicknesses
-numthick = 10
-! starting thickness [nm]
-startthick = 2.0
-! thickness increment [nm]
-thickinc = 2.0
+! central beam direction 
+k = 1,1,0
+! master pattern filename
+masterfile = 'ECPmasteroutSi.data'
 ! output file name (can be a full pathname)
-outname = 'ecp.data'
+outname = 'ecpSi.data'
 /

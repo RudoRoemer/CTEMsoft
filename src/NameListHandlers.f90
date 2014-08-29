@@ -260,10 +260,11 @@ character(4)            :: MCmode
 character(fnlen)        :: xtalname
 character(fnlen)        :: dataname
 character(fnlen)        :: primelist
+character(fnlen)        :: mode
 
 ! define the IO namelist to facilitate passing variables to the program.
 namelist  / MCCLdata / stdout, xtalname, sig, numsx, num_el, globalworkgrpsz, EkeV, &
-dataname, primelist, totnum_el, Ehistmin, Ebinsize, depthmax, depthstep, omega, MCmode
+dataname, primelist, totnum_el, Ehistmin, Ebinsize, depthmax, depthstep, omega, MCmode, mode
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 stdout = 6
@@ -282,6 +283,7 @@ MCmode = 'CSDA'
 xtalname = 'undefined'
 dataname = 'MCoutput.data'
 primelist = 'list.txt'
+mode = 'full'
 
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
@@ -310,6 +312,7 @@ mcnl%MCmode = MCmode
 mcnl%xtalname = xtalname
 mcnl%dataname = dataname
 mcnl%primelist = primelist
+mcnl%mode = mode
 
 end subroutine GetMCCLNameList
 
@@ -387,7 +390,7 @@ end subroutine GetEBSDMasterNameList
 !> @param nmlfile namelist file name
 !> @param emnl ECP master name list structure
 !
-!> @date 06/19/14  MDG 1.0 new routine
+!> @date 06/19/14  SS 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine GetECPMasterNameList(nmlfile, ecpnl)
 
@@ -458,6 +461,64 @@ ecpnl%outname = outname
 
 end subroutine GetECPMasterNameList
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:GetECPNameList
+!
+!> @author Saransh Singh, Carnegie Mellon University
+!
+!> @brief read namelist file and fill mcnl structure (used by CTEMECP.f90)
+!
+!> @param nmlfile namelist file name
+!> @param emnl ECP name list structure
+!
+!> @date 06/19/14  SS 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine GetECPNameList(nmlfile,ecpnl)
 
+use error
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                     :: nmlfile
+type(ECPNameListType),INTENT(INOUT)             :: ecpnl
+
+integer(kind=irg)       :: stdout
+integer(kind=irg)       :: npix
+real(kind=sgl)          :: thetac
+real(kind=sgl)          :: k(3)
+character(fnlen)        :: masterfile
+character(fnlen)        :: outname
+
+! define the IO namelist to facilitate passing variables to the program.
+namelist /ECPvars/ stdout, npix, masterfile, outname, thetac, k
+
+! set the input parameters to default values (except for xtalname, which must be present)
+stdout = 6
+npix = 256
+thetac = 5.0
+k = (/0.0,0.0,1.0/)
+masterfile = 'undefined'        ! default filename for master data from CTEMECPmaster
+outname = 'ECP.data'  ! default filename for final output
+
+! read the namelist file
+open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+read(UNIT=dataunit,NML=ECPvars)
+close(UNIT=dataunit,STATUS='keep')
+
+! check for required entries
+if (trim(masterfile).eq.'undefined') then
+call FatalError('CTEMECP:',' master file name is undefined in '//nmlfile)
+end if
+
+! if we get here, then all appears to be ok, and we need to fill in the emnl fields
+ecpnl%stdout = stdout
+ecpnl%npix = npix
+ecpnl%thetac = thetac
+ecpnl%k = k
+ecpnl%masterfile = masterfile
+ecpnl%outname = outname
+
+end subroutine GetECPNameList
 
 end module NameListHandlers

@@ -117,10 +117,10 @@ real(kind=sgl)          :: dens, avA, avZ, io_real(3), dmin ! used with CalcDens
 real(kind=dbl) , parameter         :: dtoR = 0.01745329251D0 !auxiliary variables
 real(kind=4)          :: EkeV, sig, omega ! input values to the kernel. Can only be real kind=4 otherwise values are not properly passed
 integer(kind=irg)       :: totnum_el     ! total number of electrons to simulate
-integer(kind=4)       :: globalworkgrpsz, num_el, num_max, prime ! input values to the kernel
+integer(kind=4)       :: globalworkgrpsz, num_el, num_max, prime, steps ! input values to the kernel
 integer(kind=8)       size_in_bytes ! size of arrays passed to kernel. Only accepts kind=8 integers by clCreateBuffer etc., so donot change
 integer(kind=8)         :: globalsize(2), localsize(2) ! size of global and local work groups. Again only kind=8 is accepted by clEnqueueNDRangeKernel
-
+character(4)            :: mode
 ! results from kernel stored here
 real(kind=4),allocatable :: Lamresx(:), Lamresy(:), depthres(:), energyres(:)
 
@@ -160,6 +160,16 @@ Ze = dble(avZ)
 at_wt = dble(avA)
 io_real(1:3) = (/ dens, avZ, avA /)
 call WriteValue('Density, avZ, avA = ',io_real,3,"(2f10.5,',',f10.5)")
+mode = mcnl%mode
+
+if (mode .eq. 'full') then
+    steps = 1000
+else if (mode .eq. 'bse1') then
+    steps = 1
+else
+    stop 'Unknown mode specified in namelist file'
+end if
+
 
 EkeV = mcnl%EkeV
 sig = mcnl%sig*dtoR
@@ -301,6 +311,10 @@ mainloop: do i = 1,totnum_el/num_max
 
     call clSetKernelArg(kernel, 12, energy, ierr)
     if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+
+    call clSetKernelArg(kernel, 13, steps, ierr)
+    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+
 !print*, EkeV, globalworkgrpsz, Ze, density, at_wt, num_max, prime, sig, omega
 ! execute the kernel
     call clEnqueueNDRangeKernel(command_queue, kernel, globalsize, localsize, event, ierr)

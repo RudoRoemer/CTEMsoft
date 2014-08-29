@@ -829,6 +829,9 @@ type orientationtyped
   real(kind=dbl)	:: cubochoric(3)	! cubic grid representation (derived from homochoric)
 end type orientationtyped
 
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
 
 
 end module typedefs

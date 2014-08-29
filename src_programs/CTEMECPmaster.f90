@@ -30,7 +30,7 @@
 ! CTEMsoft2013:CTEMECPmaster.f90
 !--------------------------------------------------------------------------
 !
-! PROGRAM: CTEMECP
+! PROGRAM: CTEMECPmaster
 !
 !> @author Marc De Graef/ Saransh Singh, Carnegie Mellon University
 !
@@ -147,21 +147,24 @@ complex(kind=dbl)       :: czero
 
 integer(kind=irg)       :: nt, nns, nnw, tots, totw ! thickness array and BetheParameters strong and weak beams
 real(kind=sgl)          :: FN(3), kk(3), fnat, kn
-integer(kind=irg)       :: numset, nref, ipx, ipy, iequiv(2,12), nequiv, ip, jp, izz, IE, iz, one
+integer(kind=irg)       :: numset, nref, ipx, ipy, iequiv(2,12), nequiv, ip, jp, izz, IE, iz, one,ierr
 integer(kind=irg),allocatable   :: kij(:,:), nat(:)
-
+real(kind=dbl)          :: res(2)
 
 character(fnlen)        :: oldprogname
 character(fnlen)        :: xtalname
 character(8)            :: MCscversion
 character(4)            :: MCmode
+character(6)            :: projtype
 
 logical                 :: verbose, usehex, switchmirror
 
 type(unitcell), pointer         :: cell
 type(gnode)                     :: rlp
 type(DynType)                   :: Dyn
-type(kvectorlist), pointer      :: khead, ktmp ! linked list for incident wave vectors
+type(kvectorlist), pointer      :: khead, ktmp ! linked list for incident wave vectors for master list
+type(kvectorlist), pointer      :: kheadcone,ktmpcone ! linked list for incident wave vectors for individual pattern
+real(kind=dbl),allocatable      :: ecpattern(:,:)
 type(BetheParameterType)        :: BetheParameters
 type(reflisttype),pointer       :: reflist, firstw,rltmp
 
@@ -181,10 +184,10 @@ call Message('opening '//trim(ecpnl%energyfile), frm = "(A)" )
 
 open(dataunit,file=trim(ecpnl%energyfile),status='unknown',form='unformatted')
 
-! lines from CTEMMC.f90... these are the things we need to read in...
+! lines from CTEMMCCL.f90... these are the things we need to read in...
 ! write (dataunit) progname
 !! write the version number
-! write (dataunit) scversion
+! write (dataunit) MCscversion
 !! then the name of the crystal data file
 ! write (dataunit) xtalname
 !! energy information etc...
@@ -275,11 +278,11 @@ ijmax = float(ecpnl%npx)**2   ! truncation value for beam directions
 ! numk is the total number of k-vectors to be included in this computation;
 nullify(khead)
 if (usehex) then
-call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 1.D0, 0.D0, 0.D0 /),0.D0,ecpnl%npx,npyhex,numk, &
+call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,ecpnl%npx,npyhex,numk, &
 isym,ijmax,'RoscaLambert',usehex)
 else
 ! Calckvectors(k,ga,ktmax,npx,npy,numk,isym,ijmax,mapmode,usehex)
-call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 1.D0, 0.D0, 0.D0 /),0.D0,ecpnl%npx,ecpnl%npx,numk, &
+call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,ecpnl%npx,ecpnl%npx,numk, &
 isym,ijmax,'RoscaLambert',usehex)
 end if
 io_int_sgl(1)=numk
@@ -306,18 +309,21 @@ totw = 0
 numset = cell % ATOM_ntype  ! number of special positions in the unit cell
 izz = numzbins
 allocate(lambdaZ(1:izz),stat=istat)
-allocate(nat(numset))
-allocate(kij(2,numk))
+allocate(nat(numset),stat=istat)
+allocate(kij(2,numk),stat=istat)
 
 do iz=1,izz
-lambdaZ(iz) = float(sum(accum_z(:,iz,:,:)))/totnum_el
+    lambdaZ(iz) = float(sum(accum_z(:,iz,:,:)))/float(sum(accum_z(:,:,:,:)))
 end do
 
 kij(1:2,1) = (/ ktmp%i, ktmp%j /)
+
 do i = 2,numk
     ktmp => ktmp%next
     kij(1:2,i) = (/ ktmp%i, ktmp%j /)
 end do
+
+open(unit=11,file="test.txt",action="write")
 
 ktmp => khead
 
@@ -326,7 +332,7 @@ fnat = 1.0/float(sum(cell%numat(1:numset)))
 intthick = dble(depthmax)
 
 
-open(unit=dataunit,file=trim(ecpnl%outname),status='unknown',action='write',access='append',form = 'unformatted')
+open(unit=dataunit,file=trim(ecpnl%outname),status='unknown',action='write',form = 'unformatted')
 ! write the program identifier
 write (dataunit) progname
 ! write the version number
@@ -336,26 +342,24 @@ write (dataunit) xtalname
 ! then the name of the corresponding Monte Carlo data file
 write (dataunit) ecpnl%energyfile
 ! energy information and array size
-if (ecpnl%Esel.eq.-1) then
-    write (dataunit) ecpnl%npx,ecpnl%npx,numset
-    write (dataunit) EkeV
-else
-    one = 1
-    write (dataunit) ecpnl%npx,ecpnl%npx,one,numset
-end if
+write (dataunit) ecpnl%npx,ecpnl%npx,numset
+write (dataunit) EkeV
+write (dataunit) ecpnl%dmin
 ! atom type array for asymmetric unit
 write (dataunit) cell%ATOM_type(1:numset)
 ! is this a regular (square) or hexagonal projection ?
-if (usehex) then
-    write (dataunit) 'hexago'
-else
-    write (dataunit) 'square'
-end if
+!if (usehex) then
+ !   projtype = 'hexago'
+ !  write (dataunit) projtype
+!else
+ !   projtype = 'square'
+ !   write (dataunit) projtype
+!end if
 
+allocate(sr(2*ecpnl%npx+1,2*ecpnl%npx+1),stat=istat)
+sr = 0.0
 
 beamloop: do i = 1, numk
-    allocate(sr(2*ecpnl%npx+1,2*ecpnl%npx+1))
-    sr = 0.0
     kk = ktmp%k(1:3)
     FN = ecpnl%fn
 
@@ -392,20 +396,24 @@ beamloop: do i = 1, numk
     deallocate(DynMat,Sghtmp)
 
 ! and store the resulting values
+
+!print*, iequiv(1,:)
+
+!print*, nequiv, isym
+!print*, iequiv(1,:)
     ipx = kij(1,i)
     ipy = kij(2,i)
     if (isym.ne.1) then
         call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
-
         iequiv(1,1:nequiv) = iequiv(1,1:nequiv) + ecpnl%npx + 1
         iequiv(2,1:nequiv) = iequiv(2,1:nequiv) + ecpnl%npx + 1
         do ip=1,nequiv
-            sr(iequiv(1,ip),iequiv(2,ip)) = real(sum(Lgh(1:nns,1:nns)*Sgh(1:nns,1:nns)))
+            sr(iequiv(1,ip),iequiv(2,ip)) = real(sum(Lgh(1:nns,1:nns)*Sgh(1:nns,1:nns)))/float(sum(nat))
         end do
     else
-        sr(ipx+ecpnl%npx+1,ipy+ecpnl%npx+1) = real(sum(Lgh(1:nns,1:nns)*Sgh(1:nns,1:nns)))
+        sr(ipx+ecpnl%npx+1,ipy+ecpnl%npx+1) = real(sum(Lgh(1:nns,1:nns)*Sgh(1:nns,1:nns)))/float(sum(nat))
     end if
-
+!print*, sr
     totw = totw + nnw
     tots = tots + nns
     deallocate(Lgh, Sgh)
@@ -417,19 +425,26 @@ beamloop: do i = 1, numk
     end if
 
     call Delete_gvectorlist(reflist)
-    write(dataunit) ktmp%k
+    !write(dataunit) ktmp%k
 ! and finally the results array
-    write (dataunit) sr
+    !write (dataunit) sr
 
     ktmp => ktmp%next
-    deallocate(sr)
 
 end do beamloop
 
-close(unit=dataunit,status='keep')
 
-if (ecpnl%Esel.ne.-1) then
-    call Message('Final data stored in file '//trim(ecpnl%outname), frm = "(A/)")
-end if
+do i=1,2*ecpnl%npx+1
+   do j=1,2*ecpnl%npx+1
+        write(11, '(F9.6)', advance='no') sr(i,j)
+    end do
+    write(11, *) ''  ! this gives you the line break
+end do
+
+write (dataunit) sr
+!deallocate(sr)
+
+close(unit=dataunit,status='keep')
+close(unit=11,status='keep')
 
 end subroutine ECmasterpattern

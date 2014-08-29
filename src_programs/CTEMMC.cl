@@ -160,7 +160,7 @@ float *LambertSphereToPlane(float xyz[3]){
 //> @date 05/14/14    SS 1.0 original
 //--------------------------------------------------------------------------
 
-__kernel void MC(__global float* Lamx, __global float* Lamy, const float E, const int count, const float z, const float rho, const float A, const int num_max, const int prime, const float sig, const float omega, __global float* depth, __global float* energy)
+__kernel void MC(__global float* Lamx, __global float* Lamy, const float E, const int count, const float z, const float rho, const float A, const int num_max, const int prime, const float sig, const float omega, __global float* depth, __global float* energy, const int steps)
 {
     int tx, ty;
     tx = get_global_id(0);
@@ -219,7 +219,7 @@ __kernel void MC(__global float* Lamx, __global float* Lamy, const float E, cons
         
         counter2 = 0;   // This counter is used to figure out if the electron has left the sample or not. Again, this is because of the lock step nature. All steps have to be executed on each thread irrespective of the fact that the electron may have actually left the sample
         
-        while (counter1 < 1000){
+        while (counter1 < steps){
 // inline code rather than function call
 // Taken from book Monte Carlo simulation for Electron Microscopy and Microanalysis, David C. Joy
 
