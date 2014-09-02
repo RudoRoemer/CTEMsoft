@@ -253,7 +253,9 @@ __kernel void MC(__global float* Lamx, __global float* Lamy, const float E, cons
                 dsqi = 1/dsq;
                 c_new = (float4)(sin(phi)*(c0.x*c0.z*cos(psi) - c0.y*sin(psi))*dsqi + c0.x*cos(phi), sin(phi) * (c0.y * c0.z * cos(psi) + c0.x * sin(psi)) * dsqi + c0.y * cos(phi), -sin(phi) * cos(psi) * dsq + c0.z * cos(phi), 0.0f);
             }
-            escape_depth = r_new.z;
+            if (fabs(c_new.z) > 1.0E-5f){
+                escape_depth = r_new.z/c_new.z;
+            }
             r_new = (float4)(r0.x + step*c_new.x, r0.y + step*c_new.y, r0.z + step*c_new.z, 0.0f);
             r0 = r_new;
             c0 = c_new;

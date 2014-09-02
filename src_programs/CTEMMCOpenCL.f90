@@ -127,7 +127,7 @@ real(kind=4),allocatable :: Lamresx(:), Lamresy(:), depthres(:), energyres(:)
 ! final results stored here
 integer(kind=irg),allocatable :: accum_e(:,:,:), acc_e(:,:,:), accum_z(:,:,:,:), acc_z(:,:,:,:)
 integer(kind=irg)       :: idxy(2), iE, px, py, iz ! auxiliary variables
-real(kind=sgl)          :: cxyz(3), edis, bse, xy(2) ! auxiliary variables
+real(kind=sgl)          :: cxyz(3), edis, bse, xy(2),delta ! auxiliary variables
 
 ! OpenCL variables
 type(cl_platform_id)    :: platform
@@ -152,7 +152,7 @@ allocate(cell)
 verbose = .TRUE.
 dmin = 0.05
 val = 0
-call Initialize_Cell(cell,Dyn,rlp,mcnl%xtalname, dmin, sngl(mcnl%EkeV), verbose)
+call Initialize_Cell(cell,Dyn,rlp,mcnl%xtalname, dmin, sngl(1000.D0*mcnl%EkeV), verbose)
 ! then calculate density, average atomic number and average atomic weight
 call CalcDensity(cell, dens, avZ, avA)
 density = dble(dens)
@@ -232,7 +232,7 @@ if (ierr /= 0) exit
 if(irec == source_length) stop 'Error: CL source file is too big'
 irec = irec + 1
 end do
-close(unit = iunit)
+close(unit=iunit)
 
 ! create the program
 prog = clCreateProgramWithSource(context, source, ierr)
@@ -269,7 +269,10 @@ open(dataunit,file=trim(mcnl%dataname),status='unknown',Access='Append',form='un
 
 open(unit = iunit, file = mcnl%primelist)
 
-mainloop: do i = 1,totnum_el/num_max
+!open(unit=13,file='lamxy.txt',access='append',action='write')
+
+
+mainloop: do i = 1,(totnum_el/num_max+1)
 
     read(iunit,*) prime
 ! set the kernel arguments
@@ -330,13 +333,13 @@ mainloop: do i = 1,totnum_el/num_max
 
     subloop: do j = 1, num_max
 
-        !if ((abs(Lamresx(j) + 10.0).le.etol) .and. (abs(Lamresy(j) + 10.0).le.etol) .and. &
-         !   (abs(depthres(j) + 10.0).le.etol) .and. (abs(energyres(j)).le.etol)) then
-        if ((Lamresx(j) .ne. -10.0) .and. (Lamresy(j) .ne. -10.0) .and. (depthres(j) .ne. -10.0) .and. (energyres(j) .ne. 0.0)&
+        if ((Lamresx(j) .ne. -10.0) .and. (Lamresy(j) .ne. -10.0) .and. (depthres(j) .ne. -10.0) .and. (energyres(j) .ne. 0.0) &
         .and. (Lamresx(j) .ne. 0.0) .and. (Lamresy(j) .ne. 0.0) .and. (depthres(j) .ne. 0.0)) then
 ! and get the nearest pixel [ take into account reversal of coordinate frame (x,y) -> (y,-x) ]
+!write(13,'(5F12.6)',advance='no') Lamresx(j),Lamresy(j)
+!write(13,*) ''
+
             val = val + 1
-            idxy = (/ nint(Lamresy(j)), nint(-Lamresx(j)) /)
             if (maxval(abs(idxy)).le.nx) then
 ! If Ec larger than Emin, then we should count this electron
                 if (energyres(j).gt.mcnl%Ehistmin) then
@@ -344,10 +347,10 @@ mainloop: do i = 1,totnum_el/num_max
 
                     iE = nint((energyres(j)-mcnl%Ehistmin)/mcnl%Ebinsize)+1
 ! first add this electron to the correct exit distance vs. energy bin (coarser than the angular plot)
+                    idxy = (/ nint(Lamresy(j)), nint(-Lamresx(j)) /)
+
                     xy = (/Lamresy(j), -Lamresx(j)/)
-                    cxyz = LambertInverse(xy, ierr, 7.0710678)
-                    cxyz = cxyz/sqrt(sum(cxyz**2))
-                    edis = abs(depthres(j)*1e7/cxyz(3))   ! distance from last scattering point to surface along trajectory
+                    edis = abs(depthres(j)*1e7)   ! distance from last scattering point to surface along trajectory
                     iz = nint(edis*0.1D0/mcnl%depthstep) +1
                     if ( (iz.gt.0).and.(iz.le.numzbins) ) then
 
@@ -372,6 +375,10 @@ mainloop: do i = 1,totnum_el/num_max
 
 end do mainloop
 
+i = totnum_el/num_max
+
+totnum_el = (i+1)*num_max
+
 ! and here we create the output file
 call Message(' ',"(A)")
 ! write the program identifier
@@ -391,9 +398,10 @@ write (dataunit) accum_z
 
 close(dataunit,status='keep')
 close(iunit)
-
+!close(13)
 bse = real(val)/real(totnum_el)
 print*, "Backscatter yield          = ",bse
+print*, "Total number of incident electrons = ",totnum_el
 !=====================
 ! RELEASE EVERYTHING
 !=====================
