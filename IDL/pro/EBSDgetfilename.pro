@@ -78,6 +78,7 @@ common EBSD_data_common, EBSDdata
 	dpos = strpos(res,'.',/reverse_search)
 	plen = strlen(res)
 	EBSDdata.mcpathname = strmid(res,0,spos)
+	EBSDdata.EBSDroot = EBSDdata.mcpathname
 	EBSDdata.mcfilename = strmid(res,spos+1)
 	EBSDdata.suffix = strmid(res,dpos+1)
 	EBSDdata.EBSDMCroot = EBSDdata.mcpathname
@@ -115,6 +116,7 @@ common EBSD_data_common, EBSDdata
 	dpos = strpos(res,'.',/reverse_search)
 	plen = strlen(res)
 	EBSDdata.pathname = strmid(res,0,spos)
+	EBSDdata.EBSDroot = EBSDdata.mcpathname
 	EBSDdata.mpfilename = strmid(res,spos+1)
 	EBSDdata.suffix = strmid(res,dpos+1)
 	EBSDdata.EBSDroot = EBSDdata.pathname

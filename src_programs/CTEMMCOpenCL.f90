@@ -84,6 +84,7 @@ use typedefs
 use NameListTypedefs
 use initializers
 use crystal
+use constants
 use symmetry
 use error
 use io
@@ -128,10 +129,13 @@ real(kind=4),allocatable :: Lamresx(:), Lamresy(:), depthres(:), energyres(:)
 integer(kind=irg),allocatable :: accum_e(:,:,:), acc_e(:,:,:), accum_z(:,:,:,:), acc_z(:,:,:,:)
 integer(kind=irg)       :: idxy(2), iE, px, py, iz ! auxiliary variables
 real(kind=sgl)          :: cxyz(3), edis, bse, xy(2) ! auxiliary variables
+real(kind=8)            :: delta
+
 
 ! OpenCL variables
-type(cl_platform_id)    :: platform
-type(cl_device_id)      :: device
+type(cl_platform_id),allocatable    :: platform(:)
+type(cl_device_id),allocatable      :: device(:)
+
 type(cl_context)        :: context
 type(cl_command_queue)  :: command_queue
 type(cl_program)        :: prog
@@ -143,7 +147,10 @@ character(len = 100)    :: info ! info about the GPU
 integer, parameter      :: iunit = 10
 integer, parameter              :: source_length = 10000000
 character(len = source_length)  :: source
-integer(kind=irg)       :: num, ierr, irec, io_int(1), val ! auxiliary variables
+integer                 :: iplat, idev, dnum, numd, num, ierr
+integer(kind=irg)       :: irec, io_int(1), val ! auxiliary variables
+
+
 numsy = mcnl%numsx
 nullify(cell)
 allocate(cell)
@@ -152,7 +159,7 @@ allocate(cell)
 verbose = .TRUE.
 dmin = 0.05
 val = 0
-call Initialize_Cell(cell,Dyn,rlp,mcnl%xtalname, dmin, sngl(mcnl%EkeV), verbose)
+call Initialize_Cell(cell,Dyn,rlp,mcnl%xtalname, dmin, sngl(1000.D0*mcnl%EkeV), verbose)
 ! then calculate density, average atomic number and average atomic weight
 call CalcDensity(cell, dens, avZ, avA)
 density = dble(dens)
@@ -193,35 +200,58 @@ allocate(Lamresx(num_max), Lamresy(num_max), depthres(num_max), energyres(num_ma
 
 size_in_bytes = num_max*sizeof(EkeV)
 
+delta = dble(nx)/LPs%sPio2
+
 !=====================
 ! INITIALIZATION
 !=====================
 
 ! get the platform ID
-call clGetPlatformIDs(platform, num, ierr)
+call clGetPlatformIDs(num, ierr)
 if(ierr /= CL_SUCCESS) stop "Cannot get CL platform."
+allocate(platform(1:num))
+call clGetPlatformIDs(platform, num, ierr)
+write (*,*) 'number of platforms = ',num
+iplat = 1
+call clGetPlatformInfo(platform(iplat), CL_PLATFORM_VENDOR, info, ierr)
+write(*, '(2a)')   'Vendor                      : ', trim(info)
+call clGetPlatformInfo(platform(iplat), CL_PLATFORM_NAME, info, ierr)
+write(*, '(2a)')   'Name                        : ', trim(info)
+call clGetPlatformInfo(platform(iplat), CL_PLATFORM_VERSION, info, ierr)
+write(*, '(2a)')   'Version                     : ', trim(info)
 
 ! get the device ID
-call clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, device, num, ierr)
+call clGetDeviceIDs(platform(1), CL_DEVICE_TYPE_ALL, numd, ierr)
+write (*,*) 'number of devices = ',numd
 if(ierr /= CL_SUCCESS) stop "Cannot get CL device."
+allocate(device(1:numd))
+call clGetDeviceIDs(platform(1), CL_DEVICE_TYPE_ALL, device, numd, ierr)
 
-! get the device name and print it
-call clGetDeviceInfo(device, CL_DEVICE_NAME, info, ierr)
-write(6,*) "CL device: ", info
+! get the device(i) name and print it
+do idev=1,numd 
+ call clGetDeviceInfo(device(idev), CL_DEVICE_NAME, info, ierr)
+ write(6,*) "CL device ",idev,":", info
+end do
+
+dnum = 3
 
 ! create the context and the command queue
-context = clCreateContext(platform, device, ierr)
+context = clCreateContext(platform(1), device(dnum), ierr)
 if(ierr /= CL_SUCCESS) stop "Cannot create context"
-command_queue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, ierr)
+command_queue = clCreateCommandQueue(context, device(dnum), CL_QUEUE_PROFILING_ENABLE, ierr)
 if(ierr /= CL_SUCCESS) stop "Cannot create command queue"
-
 
 !=====================
 ! BUILD THE KERNEL
 !=====================
 
 ! read the source file
-open(unit = iunit, file = 'CTEMMC.cl', access='direct', status = 'old', action = 'read', iostat = ierr, recl = 1)
+call getenv("CTEMsoft2013opencl",openclpathname)
+
+write (*,*) 'OpenCL pathname = >',trim(openclpathname),'<'
+
+open(unit = iunit, file = trim(openclpathname)//'/CTEMMC.cl', access='direct', &
+        status = 'old', action = 'read', iostat = ierr, recl = 1)
 if (ierr /= 0) stop 'Cannot open file CTEMMC.cl'
 
 source = ''
@@ -232,7 +262,7 @@ if (ierr /= 0) exit
 if(irec == source_length) stop 'Error: CL source file is too big'
 irec = irec + 1
 end do
-close(unit = iunit)
+close(unit=iunit)
 
 ! create the program
 prog = clCreateProgramWithSource(context, source, ierr)
@@ -242,7 +272,7 @@ if(ierr /= CL_SUCCESS) stop 'Error: cannot create program from source.'
 call clBuildProgram(prog, '-cl-no-signed-zeros', ierr)
 
 ! get the compilation log
-call clGetProgramBuildInfo(prog, device, CL_PROGRAM_BUILD_LOG, source, irec)
+call clGetProgramBuildInfo(prog, device(dnum), CL_PROGRAM_BUILD_LOG, source, irec)
 if(len(trim(source)) > 0) print*, trim(source)
 
 if(ierr /= CL_SUCCESS) stop 'Error: program build failed.'
@@ -265,10 +295,12 @@ if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
 energy = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
 if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
 
-
 open(unit = iunit, file = mcnl%primelist)
 
-mainloop: do i = 1,totnum_el/num_max
+!open(unit=13,file='lamxy.txt',action='write')
+
+
+mainloop: do i = 1,(totnum_el/num_max+1)
 
     read(iunit,*) prime
 ! set the kernel arguments
@@ -293,7 +325,7 @@ mainloop: do i = 1,totnum_el/num_max
     call clSetKernelArg(kernel, 6, at_wt, ierr)
     if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-    call clSetKernelArg(kernel, 7, num_max, ierr)
+    call clSetKernelArg(kernel, 7, num_el, ierr)
     if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
     call clSetKernelArg(kernel, 8, prime, ierr)
@@ -326,16 +358,17 @@ mainloop: do i = 1,totnum_el/num_max
     call clEnqueueReadBuffer(command_queue, LamY, cl_bool(.true.), 0_8, size_in_bytes, Lamresy(1), ierr)
     call clEnqueueReadBuffer(command_queue, depth, cl_bool(.true.), 0_8, size_in_bytes, depthres(1), ierr)
     call clEnqueueReadBuffer(command_queue, energy, cl_bool(.true.), 0_8, size_in_bytes, energyres(1), ierr)
-
     subloop: do j = 1, num_max
 
-        !if ((abs(Lamresx(j) + 10.0).le.etol) .and. (abs(Lamresy(j) + 10.0).le.etol) .and. &
-         !   (abs(depthres(j) + 10.0).le.etol) .and. (abs(energyres(j)).le.etol)) then
-        if ((Lamresx(j) .ne. -10.0) .and. (Lamresy(j) .ne. -10.0) .and. (depthres(j) .ne. -10.0) .and. (energyres(j) .ne. 0.0)&
+        if ((Lamresx(j) .ne. -10.0) .and. (Lamresy(j) .ne. -10.0) .and. (depthres(j) .ne. -10.0) .and. (energyres(j) .ne. 0.0) &
         .and. (Lamresx(j) .ne. 0.0) .and. (Lamresy(j) .ne. 0.0) .and. (depthres(j) .ne. 0.0)) then
 ! and get the nearest pixel [ take into account reversal of coordinate frame (x,y) -> (y,-x) ]
+
             val = val + 1
-            idxy = (/ nint(Lamresy(j)), nint(-Lamresx(j)) /)
+            idxy = (/ nint(delta*Lamresy(j)), nint(-delta*Lamresx(j)) /)
+!write(13,'(I5,I5)',advance='no') idxy(1),idxy(2)!Lamresx(j),Lamresy(j)
+!write(13,*) ''
+
             if (maxval(abs(idxy)).le.nx) then
 ! If Ec larger than Emin, then we should count this electron
                 if (energyres(j).gt.mcnl%Ehistmin) then
@@ -343,11 +376,8 @@ mainloop: do i = 1,totnum_el/num_max
 
                     iE = nint((energyres(j)-mcnl%Ehistmin)/mcnl%Ebinsize)+1
 ! first add this electron to the correct exit distance vs. energy bin (coarser than the angular plot)
-                    xy = (/Lamresy(j), -Lamresx(j)/)
-                    cxyz = LambertInverse(xy, ierr, 7.0710678)
-                    cxyz = cxyz/sqrt(sum(cxyz**2))
-                    edis = abs(depthres(j)*1e7/cxyz(3))   ! distance from last scattering point to surface along trajectory
-                    iz = nint(edis*0.1D0/mcnl%depthstep) +1
+                    edis = abs(depthres(j)*1e7)  ! distance from last scattering point to surface along trajectory
+                    iz = nint(edis/mcnl%depthstep) +1
                     if ( (iz.gt.0).and.(iz.le.numzbins) ) then
 
                         px = nint(idxy(1)/10.0)
@@ -371,9 +401,12 @@ mainloop: do i = 1,totnum_el/num_max
 
 end do mainloop
 
-call Message('writing data to file '//trim(mcnl%dataname))
+i = totnum_el/num_max
+
+totnum_el = (i+1)*num_max
 
 open(dataunit,file=trim(mcnl%dataname),status='unknown',form='unformatted')
+
 ! and here we create the output file
 call Message(' ',"(A)")
 ! write the program identifier
@@ -383,7 +416,7 @@ write (dataunit) scversion
 ! then the name of the crystal data file
 write (dataunit) mcnl%xtalname
 ! energy information etc...
-write (dataunit) numEbins, numzbins, mcnl%numsx, numsy, mcnl%totnum_el
+write (dataunit) numEbins, numzbins, mcnl%numsx, numsy, totnum_el
 write (dataunit) mcnl%EkeV, mcnl%Ehistmin, mcnl%Ebinsize, mcnl%depthmax, mcnl%depthstep
 write (dataunit) mcnl%sig, mcnl%omega
 write (dataunit) mcnl%MCmode
@@ -393,9 +426,11 @@ write (dataunit) accum_z
 
 close(dataunit,status='keep')
 close(iunit)
-
+close(13)
 bse = real(val)/real(totnum_el)
 print*, "Backscatter yield          = ",bse
+print*, "Total number of incident electrons = ",totnum_el
+print*,maxval(accum_e)
 !=====================
 ! RELEASE EVERYTHING
 !=====================

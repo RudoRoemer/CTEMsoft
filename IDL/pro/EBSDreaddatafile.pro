@@ -175,7 +175,8 @@ if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
   WIDGET_CONTROL, SET_VALUE=EBSDdata.xtalname, EBSDwidget_s.xtalname
 
 ; six integers parameters (last one is not needed)
-  dims = lonarr(6)
+; dims = lonarr(6)
+  dims = lonarr(5)
   readu,1,dims
   EBSDdata.mcenergynumbin = dims[0]
   EBSDdata.mcdepthnumbins = dims[1]

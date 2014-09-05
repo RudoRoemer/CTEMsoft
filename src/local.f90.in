@@ -113,6 +113,7 @@ module local
 ! This should be reworked via CMake commands
   character(fnlen)                      :: templatepathname   !='~/.CTEMsoft2013/templatefolder'
   character(fnlen)                      :: resourcepathname   !='~/.CTEMsoft2013/resources'
+  character(fnlen)                      :: openclpathname   !='~/.CTEMsoft2013/opencl'
   character(17)                         :: templatecodefilename = 'templatecodes.txt'
 
 contains

@@ -21,6 +21,9 @@ IDL/**/*.sav
 # executables
 /exe/
 
+# fortrancl folder
+/fortrancl/
+
 # ORR folder
 /ORR/
 
