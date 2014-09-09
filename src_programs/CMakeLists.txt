@@ -36,6 +36,7 @@ Create_exe_and_tll(CTEMECPpattern)
 Create_exe_and_tll(CTEMECPmaster)
 Create_exe_and_tll(CTEMECCI) #read_stacking_fault_data has wrong number of args passed to it
 Create_exe_and_tll(CTEMKossel)
+Create_exe_and_tll(CTEMKosselMaster)
 Create_exe_and_tll(CTEMMC)  #MP
 Create_exe_and_tll(CTEMEBSD)
 Create_exe_and_tll(CTEMEBSDmaster)
@@ -53,6 +54,7 @@ Create_exe_and_tll(CTEMxtalinfo)
 Create_exe_and_tll(CTEMzap)
 Create_exe_and_tll(CTEMdrawcell)
 Create_exe_and_tll(CTEMBethe)
+Create_exe_and_tll(CTEMPED)
 
 Create_exe_and_tll(structest)
 Create_exe_and_tll(rotationtest)
@@ -72,6 +74,5 @@ Create_exe_and_tll(rotationtest)
 #Create_exe_and_tll(CTEMholz)
 ##Create_exe_and_tll(CTEMlens) #can't open rksuite
 ##Create_exe_and_tll(CTEMoverlap) #doesn't look like dbdiffB has been initialized anywhere
-#Create_exe_and_tll(CTEMped)
 #Create_exe_and_tll(CTEMvr)
 ##Create_exe_and_tll(CTEMvrfft)  #need fft? 

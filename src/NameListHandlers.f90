@@ -131,6 +131,77 @@ knl%xtalname = xtalname
 knl%outname = outname
 
 end subroutine GetKosselNameList
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:GetKosselMasterNameList
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read namelist file and fill knl structure (used by CTEMKosselmaster.f90)
+!
+!> @param nmlfile namelist file name
+!> @param knl Kossel name list structure
+!
+!> @date 09/09/14  MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine GetKosselMasterNameList(nmlfile, knl)
+
+use error
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)             :: nmlfile
+type(KosselMasterNameListType),INTENT(INOUT)  :: knl
+
+integer(kind=irg)       :: stdout
+integer(kind=irg)       :: numthick
+integer(kind=irg)       :: npix
+integer(kind=irg)       :: nthreads
+real(kind=sgl)          :: voltage
+real(kind=sgl)          :: dmin
+real(kind=sgl)          :: startthick
+real(kind=sgl)          :: thickinc
+character(fnlen)        :: xtalname
+character(fnlen)        :: outname
+
+namelist /Kosselmasterlist/ stdout, xtalname, voltage, dmin,  nthreads, &
+                              startthick, thickinc, numthick, outname, npix
+
+! set the input parameters to default values (except for xtalname, which must be present)
+stdout = 6                      ! standard output
+numthick = 10                   ! number of increments
+npix = 256                      ! output arrays will have size npix x npix
+nthreads = 4                    ! default number of threads for OpenMP
+voltage = 200000.0              ! acceleration voltage [V]
+dmin = 0.025                    ! smallest d-spacing to include in dynamical matrix [nm]
+startthick = 10.0               ! starting thickness [nm]
+thickinc = 10.0                 ! thickness increment
+xtalname = 'undefined'          ! initial value to check that the keyword is present in the nml file
+outname = 'Kosselout.data'      ! output filename
+
+! read the namelist file
+ open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+ read(UNIT=dataunit,NML=Kosselmasterlist)
+ close(UNIT=dataunit,STATUS='keep')
+
+! check for required entries
+ if (trim(xtalname).eq.'undefined') then
+  call FatalError('CTEMKosselMaster:',' structure file name is undefined in '//nmlfile)
+ end if
+
+! if we get here, then all appears to be ok, and we need to fill in the knl fields
+knl%stdout = stdout
+knl%numthick = numthick
+knl%npix = npix
+knl%nthreads = nthreads
+knl%voltage = voltage
+knl%dmin = dmin
+knl%startthick = startthick
+knl%thickinc = thickinc
+knl%xtalname = xtalname
+knl%outname = outname
+
+end subroutine GetKosselMasterNameList
 
 
 !--------------------------------------------------------------------------
@@ -803,7 +874,7 @@ character(fnlen)        :: outname
 ! define the IO namelist to facilitate passing variables to the program.
 namelist /ECPvars/ stdout, npix, masterfile, outname, thetac, k
 
-! set the input parameters to default values (except for xtalname, which must be present)
+! set the input parameters to default values (except for masterfile, which must be present)
 stdout = 6
 npix = 256
 thetac = 5.0
@@ -830,5 +901,98 @@ ecpnl%masterfile = masterfile
 ecpnl%outname = outname
 
 end subroutine GetECPpatternNameList
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:GetPEDNameList
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read namelist file and fill pednl structure (used by CTEMPED.f90)
+!
+!> @param nmlfile namelist file name
+!> @param pednl PED name list structure
+!
+!> @date 07/09/14 MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine GetPEDNameList(nmlfile,pednl)
+
+use error
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                     :: nmlfile
+type(PEDNameListType),INTENT(INOUT)             :: pednl
+
+integer(kind=irg)       :: stdout
+integer(kind=irg)       :: k(3)
+integer(kind=irg)       :: fn(3)
+integer(kind=irg)       :: precsample
+integer(kind=irg)       :: precazimuthal
+integer(kind=irg)       :: npix
+real(kind=sgl)          :: voltage
+real(kind=sgl)          :: dmin
+real(kind=sgl)          :: precangle
+real(kind=sgl)          :: prechalfwidth
+real(kind=sgl)          :: thickness
+real(kind=sgl)          :: camlen
+character(5)            :: filemode
+character(fnlen)        :: xtalname
+character(fnlen)        :: outname
+
+! define the IO namelist to facilitate passing variables to the program.
+namelist /inputlist/ stdout, xtalname, voltage, k, fn, dmin, precangle, prechalfwidth, precsample, precazimuthal, &
+                              thickness,  outname, npix, camlen, filemode
+
+! set the input parameters to default values (except for xtalname, which must be present)
+xtalname = 'undefined'          ! initial value to check that the keyword is present in the nml file
+stdout = 6                      ! standard output
+voltage = 200000.0              ! acceleration voltage [V]
+k = (/ 0, 0, 1 /)               ! beam direction [direction indices]
+fn = (/ 0, 0, 1 /)              ! foil normal [direction indices]
+dmin = 0.025                    ! smallest d-spacing to include in dynamical matrix [nm]
+precangle = 10.472              ! beam precession angle [mrad]; default = 0.6 degrees
+prechalfwidth = 0.25            ! beam half width in the tilt direction [mrad]
+precsample = 10                 ! number of samples (concentric circles) in beam half width (total = 2*precsample + 1)
+precazimuthal = 360             ! number of azimuthal samples for each precession circle
+thickness = 10.0                ! sample thickness [nm]
+filemode = 'total'              ! 'total' mode or 'eachp'
+npix = 256                      ! output arrays will have size npix x npix
+outname = 'pedout.data'         ! output filename
+camlen = 1000.0                 ! camera length [mm]
+
+
+! read the namelist file
+open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+read(UNIT=dataunit,NML=inputlist)
+close(UNIT=dataunit,STATUS='keep')
+
+! check for required entries
+if (trim(xtalname).eq.'undefined') then
+call FatalError('CTEMPED:',' crystal structure file name is undefined in '//nmlfile)
+end if
+
+! if we get here, then all appears to be ok, and we need to fill in the pednl fields
+pednl%xtalname = xtalname
+pednl%stdout = stdout
+pednl%voltage = voltage
+pednl%k = k
+pednl%fn = fn
+pednl%dmin = dmin
+pednl%precangle = precangle
+pednl%prechalfwidth = prechalfwidth
+pednl%precsample = precsample
+pednl%precazimuthal = precazimuthal
+pednl%thickness = thickness
+pednl%filemode = filemode
+pednl%npix = npix
+pednl%outname = outname
+pednl%camlen = camlen
+
+end subroutine GetPEDNameList
+
+
+
+
 
 end module NameListHandlers

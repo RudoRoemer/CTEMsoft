@@ -7,6 +7,7 @@
 011CTEMmbcbed.template
 012CTEMKossel.template
 013CTEMped.template
+013CTEMKosselmaster.template
 020CTEMMC.template
 021CTEMEBSDmaster.template
 022CTEMEBSD.template

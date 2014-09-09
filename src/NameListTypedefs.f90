@@ -63,6 +63,20 @@ type KosselNameListType
         character(fnlen)        :: outname
 end type KosselNameListType
 
+! namelist for the CTEMKosselmaster program
+type KosselMasterNameListType
+        integer(kind=irg)       :: stdout
+        integer(kind=irg)       :: numthick
+        integer(kind=irg)       :: npix
+        integer(kind=irg)       :: nthreads
+        real(kind=sgl)          :: voltage
+        real(kind=sgl)          :: dmin
+        real(kind=sgl)          :: startthick
+        real(kind=sgl)          :: thickinc
+        character(fnlen)        :: xtalname
+        character(fnlen)        :: outname
+end type KosselMasterNameListType
+
 ! namelist for the CTEMMC program
 type MCNameListType
         integer(kind=irg)       :: stdout
@@ -240,5 +254,24 @@ type ECPpatternNameListType
     character(fnlen)        :: masterfile
     character(fnlen)        :: outname
 end type ECPpatternNameListType
+
+!namelist for the CTEMPED program
+type PEDNameListType
+    integer(kind=irg)       :: stdout
+    integer(kind=irg)       :: k(3)
+    integer(kind=irg)       :: fn(3)
+    integer(kind=irg)       :: precsample
+    integer(kind=irg)       :: precazimuthal
+    integer(kind=irg)       :: npix
+    real(kind=sgl)          :: voltage
+    real(kind=sgl)          :: dmin
+    real(kind=sgl)          :: precangle
+    real(kind=sgl)          :: prechalfwidth
+    real(kind=sgl)          :: thickness
+    real(kind=sgl)          :: camlen
+    character(5)            :: filemode
+    character(fnlen)        :: xtalname
+    character(fnlen)        :: outname
+end type PEDNameListType
 
 end module NameListTypedefs

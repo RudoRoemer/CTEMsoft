@@ -131,8 +131,8 @@ makefiles to use the more flexible CMake environment; to compile the \ctp\ you m
 
 \newpage
 \section{Things to do before running any of the programs\label{sec:todo}}
-The programs require that two environment variables be set: \textsf{CTEMsoft2013templates} and
-\textsf{CTEMsoft2013resources}.  Depending on the UNIX shell that one is using, they must be set in
+The programs require that three environment variables be set: \textsf{CTEMsoft2013templates},
+\textsf{CTEMsoft2013resources} and \textsf{CTEMsoft2013opencl}.  Depending on the UNIX shell that one is using, they must be set in
 the appropriate shell start-up files.
 
 \begin{itemize}
@@ -140,11 +140,13 @@ the appropriate shell start-up files.
 \begin{verbatim}
   setenv CTEMsoft2013templates /some/absolute/path/CTEMsoft/templatefolder
   setenv CTEMsoft2013resources /some/absolute/path/CTEMsoft/resources
+  setenv CTEMsoft2013opencl /som/absolute/path/CTEMsoft/opencl
 \end{verbatim}
 \item \textit{bash}: edit the \textsf{.bash\_profile} file in your home folder and add the following lines:
 \begin{verbatim}
   CTEMsoft2013templates=/some/absolute/path/CTEMsoft/templatefolder
   CTEMsoft2013resources=/some/absolute/path/CTEMsoft/resources
+  CTEMsoft2013opencl=/some/absolute/path/CTEMsoft/opencl
   export CTEMsoft2013templates CTEMsoft2013resources
 \end{verbatim}
 \end{itemize}
