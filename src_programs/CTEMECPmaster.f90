@@ -238,7 +238,7 @@ call Initialize_Cell(cell,Dyn,rlp, xtalname, ecpnl%dmin, sngl(1000.0*EkeV),verbo
 ! determine the point group and Laue group number
 j=0
 do i=1,32
-if (SGPG(i).le.cell%SYM_SGnum) j=i
+    if (SGPG(i).le.cell%SYM_SGnum) j=i
 end do
 isym = j
 pgnum = j
@@ -436,7 +436,7 @@ end do beamloop
 
 do i=1,2*ecpnl%npx+1
    do j=1,2*ecpnl%npx+1
-        write(11, '(F9.6)', advance='no') sr(i,j)
+        write(11, '(F15.6)', advance='no') sr(i,j)
     end do
     write(11, *) ''  ! this gives you the line break
 end do

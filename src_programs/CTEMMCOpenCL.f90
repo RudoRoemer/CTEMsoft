@@ -84,6 +84,7 @@ use typedefs
 use NameListTypedefs
 use initializers
 use crystal
+use constants
 use symmetry
 use error
 use io
@@ -106,18 +107,18 @@ integer(kind=irg)       :: numsy        ! number of Lambert map points along y
 integer(kind=irg)       :: numEbins     ! number of energy bins
 integer(kind=irg)       :: numzbins     ! number of depth bins
 integer(kind=irg)       :: nx           ! no. of pixels
-integer(kind=irg)       :: i,j, istat
+integer(kind=irg)       :: i,j,ip,istat
 integer,parameter       :: k12 = selected_int_kind(15)
 
 real(kind=4)            :: Ze           ! average atomic number
 real(kind=4)            :: density      ! density in g/cm^3
 real(kind=4)            :: at_wt        ! average atomic weight in g/mole
 logical                 :: verbose
-real(kind=sgl)          :: dens, avA, avZ, io_real(3), dmin ! used with CalcDensity routine
-real(kind=dbl) , parameter         :: dtoR = 0.01745329251D0 !auxiliary variables
+real(kind=4)          :: dens, avA, avZ, io_real(3), dmin ! used with CalcDensity routine
+real(kind=8) , parameter         :: dtoR = 0.01745329251D0 !auxiliary variables
 real(kind=4)          :: EkeV, sig, omega ! input values to the kernel. Can only be real kind=4 otherwise values are not properly passed
-integer(kind=irg)       :: totnum_el     ! total number of electrons to simulate
-integer(kind=4)       :: globalworkgrpsz, num_el, num_max, prime, steps ! input values to the kernel
+integer(kind=4)       :: totnum_el     ! total number of electrons to simulate
+integer(kind=4)       :: globalworkgrpsz, num_el, num_max, steps, prime ! input values to the kernel
 integer(kind=8)       size_in_bytes ! size of arrays passed to kernel. Only accepts kind=8 integers by clCreateBuffer etc., so donot change
 integer(kind=8)         :: globalsize(2), localsize(2) ! size of global and local work groups. Again only kind=8 is accepted by clEnqueueNDRangeKernel
 character(4)            :: mode
@@ -125,9 +126,11 @@ character(4)            :: mode
 real(kind=4),allocatable :: Lamresx(:), Lamresy(:), depthres(:), energyres(:)
 
 ! final results stored here
-integer(kind=irg),allocatable :: accum_e(:,:,:), acc_e(:,:,:), accum_z(:,:,:,:), acc_z(:,:,:,:)
-integer(kind=irg)       :: idxy(2), iE, px, py, iz ! auxiliary variables
-real(kind=sgl)          :: cxyz(3), edis, bse, xy(2),delta ! auxiliary variables
+integer(kind=4),allocatable :: accum_e(:,:,:), acc_e(:,:,:), accum_z(:,:,:,:), acc_z(:,:,:,:)
+integer(kind=4)         :: idxy(2), iE, px, py, iz ! auxiliary variables
+real(kind=4)            :: cxyz(3), edis, bse, xy(2) ! auxiliary variables
+real(kind=8)            :: delta,rand
+
 
 ! OpenCL variables
 type(cl_platform_id)    :: platform
@@ -143,7 +146,7 @@ character(len = 100)    :: info ! info about the GPU
 integer, parameter      :: iunit = 10
 integer, parameter              :: source_length = 10000000
 character(len = source_length)  :: source
-integer(kind=irg)       :: num, ierr, irec, io_int(1), val ! auxiliary variables
+integer(kind=4)       :: num, ierr, irec, io_int(1), val ! auxiliary variables
 numsy = mcnl%numsx
 nullify(cell)
 allocate(cell)
@@ -192,6 +195,8 @@ allocate(acc_e(numEbins,-nx:nx,-nx:nx),acc_z(numEbins,numzbins,-nx/10:nx/10,-nx/
 allocate(Lamresx(num_max), Lamresy(num_max), depthres(num_max), energyres(num_max), stat=istat)
 
 size_in_bytes = num_max*sizeof(EkeV)
+
+delta = dble(nx)/LPs%sPio2
 
 !=====================
 ! INITIALIZATION
@@ -253,28 +258,36 @@ write(6,*) "Kernel Build Successful...."
 kernel = clCreateKernel(prog, 'MC', ierr)
 call clReleaseProgram(prog, ierr)
 ! allocate device memory
-LamX = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
-
-LamY = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
-
-depth = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
-
-energy = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
-
-open(dataunit,file=trim(mcnl%dataname),status='unknown',Access='Append',form='unformatted')
 
 open(unit = iunit, file = mcnl%primelist)
 
-!open(unit=13,file='lamxy.txt',access='append',action='write')
+open(unit=13,file='lamxy.txt',action='write')
 
+call init_random_seed()
 
 mainloop: do i = 1,(totnum_el/num_max+1)
 
+    call RANDOM_NUMBER(rand)
+    rand = rand*125000
+    do ip = 1,nint(rand)
+        read(iunit,*) prime
+    end do
+
     read(iunit,*) prime
+    rewind(iunit)
+! create device memory buffers
+    LamX = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
+    if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+
+    LamY = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
+    if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+
+    depth = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
+    if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+
+    energy = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
+    if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+
 ! set the kernel arguments
     call clSetKernelArg(kernel, 0, LamX, ierr)
     if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
@@ -297,7 +310,7 @@ mainloop: do i = 1,(totnum_el/num_max+1)
     call clSetKernelArg(kernel, 6, at_wt, ierr)
     if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-    call clSetKernelArg(kernel, 7, num_max, ierr)
+    call clSetKernelArg(kernel, 7, num_el, ierr)
     if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
     call clSetKernelArg(kernel, 8, prime, ierr)
@@ -330,16 +343,18 @@ mainloop: do i = 1,(totnum_el/num_max+1)
     call clEnqueueReadBuffer(command_queue, LamY, cl_bool(.true.), 0_8, size_in_bytes, Lamresy(1), ierr)
     call clEnqueueReadBuffer(command_queue, depth, cl_bool(.true.), 0_8, size_in_bytes, depthres(1), ierr)
     call clEnqueueReadBuffer(command_queue, energy, cl_bool(.true.), 0_8, size_in_bytes, energyres(1), ierr)
-
+!write(*,*) maxval(Lamresx)
     subloop: do j = 1, num_max
 
-        if ((Lamresx(j) .ne. -10.0) .and. (Lamresy(j) .ne. -10.0) .and. (depthres(j) .ne. -10.0) .and. (energyres(j) .ne. 0.0) &
-        .and. (Lamresx(j) .ne. 0.0) .and. (Lamresy(j) .ne. 0.0) .and. (depthres(j) .ne. 0.0)) then
+        if ((Lamresx(j) .ne. -10.0) .and. (Lamresy(j) .ne. -10.0) .and. (depthres(j) .ne. -10.0) .and. (energyres(j) .ne. 0.0)) then !&
+        !.and. (Lamresx(j) .ne. 0.0) .and. (Lamresy(j) .ne. 0.0) .and. (depthres(j) .ne. 0.0)) then
 ! and get the nearest pixel [ take into account reversal of coordinate frame (x,y) -> (y,-x) ]
-!write(13,'(5F12.6)',advance='no') Lamresx(j),Lamresy(j)
-!write(13,*) ''
 
             val = val + 1
+            idxy = (/ nint(delta*Lamresy(j)), nint(-delta*Lamresx(j)) /)
+write(13,'(5F12.6)',advance='no') Lamresx(j),Lamresy(j)
+write(13,*) ''
+
             if (maxval(abs(idxy)).le.nx) then
 ! If Ec larger than Emin, then we should count this electron
                 if (energyres(j).gt.mcnl%Ehistmin) then
@@ -347,11 +362,8 @@ mainloop: do i = 1,(totnum_el/num_max+1)
 
                     iE = nint((energyres(j)-mcnl%Ehistmin)/mcnl%Ebinsize)+1
 ! first add this electron to the correct exit distance vs. energy bin (coarser than the angular plot)
-                    idxy = (/ nint(Lamresy(j)), nint(-Lamresx(j)) /)
-
-                    xy = (/Lamresy(j), -Lamresx(j)/)
-                    edis = abs(depthres(j)*1e7)   ! distance from last scattering point to surface along trajectory
-                    iz = nint(edis*0.1D0/mcnl%depthstep) +1
+                    edis = abs(depthres(j)*1e7)  ! distance from last scattering point to surface along trajectory
+                    iz = nint(edis/mcnl%depthstep) +1
                     if ( (iz.gt.0).and.(iz.le.numzbins) ) then
 
                         px = nint(idxy(1)/10.0)
@@ -366,18 +378,24 @@ mainloop: do i = 1,(totnum_el/num_max+1)
         end if
     end do subloop
 
-    if (mod(i,45).eq.0) then
+    if (mod(i,50).eq.0) then
         io_int(1) = i*num_max
         call WriteValue(' Total number of electrons generated = ',io_int, 1, "(I15)")
         io_int(1) = sum(accum_e)
         call WriteValue(' Number of electrons on detector       = ',io_int, 1, "(I15)")
     end if
+    call clReleaseMemObject(LamX, ierr)
+    call clReleaseMemObject(LamY, ierr)
+    call clReleaseMemObject(depth, ierr)
+    call clReleaseMemObject(energy, ierr)
 
 end do mainloop
 
 i = totnum_el/num_max
 
 totnum_el = (i+1)*num_max
+
+open(dataunit,file=trim(mcnl%dataname),status='unknown',form='unformatted')
 
 ! and here we create the output file
 call Message(' ',"(A)")
@@ -388,7 +406,7 @@ write (dataunit) scversion
 ! then the name of the crystal data file
 write (dataunit) mcnl%xtalname
 ! energy information etc...
-write (dataunit) numEbins, numzbins, mcnl%numsx, numsy, mcnl%totnum_el
+write (dataunit) numEbins, numzbins, mcnl%numsx, numsy, totnum_el
 write (dataunit) mcnl%EkeV, mcnl%Ehistmin, mcnl%Ebinsize, mcnl%depthmax, mcnl%depthstep
 write (dataunit) mcnl%sig, mcnl%omega
 write (dataunit) mcnl%MCmode
@@ -398,7 +416,7 @@ write (dataunit) accum_z
 
 close(dataunit,status='keep')
 close(iunit)
-!close(13)
+close(13)
 bse = real(val)/real(totnum_el)
 print*, "Backscatter yield          = ",bse
 print*, "Total number of incident electrons = ",totnum_el
@@ -409,10 +427,70 @@ print*, "Total number of incident electrons = ",totnum_el
 call clReleaseKernel(kernel, ierr)
 call clReleaseCommandQueue(command_queue, ierr)
 call clReleaseContext(context, ierr)
-call clReleaseMemObject(LamX, ierr)
-call clReleaseMemObject(LamY, ierr)
-call clReleaseMemObject(depth, ierr)
-call clReleaseMemObject(energy, ierr)
 
 
 end subroutine DoMCsimulation
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:init_random_seed
+!
+!> @author From GNU Fortran website
+!
+!> @brief generate random number seed
+!
+!--------------------------------------------------------------------------
+subroutine init_random_seed()
+use iso_fortran_env, only: int64
+implicit none
+integer, allocatable :: seed(:)
+integer :: i, n, un, istat, dt(8), pid
+integer(int64) :: t
+
+call random_seed(size = n)
+allocate(seed(n))
+! First try if the OS provides a random number generator
+open(newunit=un, file="/dev/urandom", access="stream", &
+form="unformatted", action="read", status="old", iostat=istat)
+if (istat == 0) then
+    read(un) seed
+    close(un)
+else
+! Fallback to XOR:ing the current time and pid. The PID is
+! useful in case one launches multiple instances of the same
+! program in parallel.
+    call system_clock(t)
+    if (t == 0) then
+        call date_and_time(values=dt)
+        t = (dt(1) - 1970) * 365_int64 * 24 * 60 * 60 * 1000 &
+            + dt(2) * 31_int64 * 24 * 60 * 60 * 1000 &
+            + dt(3) * 24_int64 * 60 * 60 * 1000 &
+            + dt(5) * 60 * 60 * 1000 &
+            + dt(6) * 60 * 1000 + dt(7) * 1000 &
+            + dt(8)
+    end if
+    pid = getpid()
+    t = ieor(t, int(pid, kind(t)))
+    do i = 1, n
+        seed(i) = lcg(t)
+    end do
+end if
+
+call random_seed(put=seed)
+
+contains
+! This simple PRNG might not be good enough for real work, but is
+! sufficient for seeding a better PRNG.
+function lcg(s)
+
+integer :: lcg
+integer(int64) :: s
+if (s == 0) then
+    s = 104729
+else
+    s = mod(s, 4294967296_int64)
+end if
+s = mod(s * 279470273_int64, 4294967291_int64)
+lcg = int(mod(s, int(huge(0), int64)), kind(0))
+end function lcg
+end subroutine init_random_seed

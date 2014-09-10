@@ -1007,7 +1007,7 @@ use Lambert
 
 IMPLICIT NONE
 
-type(kvectorlist),pointer               :: khead
+type(kvectorlist),pointer               :: khead,ktail
 type(unitcell),pointer                  :: cell
 real(kind=sgl),INTENT(IN)               :: k(3)         !< initial wave vector
 real(kind=sgl),INTENT(IN)               :: thetac        !< half angle of cone of incident beam directions in degrees
@@ -1020,15 +1020,16 @@ integer(kind=irg)                       :: i,j,imin,imax,jmin,jmax,ijmax,istat
 real(kind=sgl)                          :: kk(3),gperpa(3),gperpb(3)
 real(kind=sgl)                          :: kcart(3)
 real(kind=sgl)                          :: rotmat(3,3)
-type(kvectorlist),pointer               :: ktail
 
 ! first, if khead already exists, delete it
-if (associated(khead)) then                    ! deallocate the entire linked list
-call Delete_kvectorlist(khead)
-end if
+! this is where the SIGSEV errors are coming from
+!if (associated(khead)) then                    ! deallocate the entire linked list
+ !   call Delete_kvectorlist(khead)
+!end if
 
+numk = 0
 kk = (/0.0,0.0,1.0/)
-kk = kk/mlambda
+!kk = kk/mlambda
 call TransSpace(cell,k,kcart,'d','c')       		! transform crystal direction to cartesian space
 call NormVec(cell,kcart,'c')                       	! normalize incidence vector in cartesian coordinates
 
