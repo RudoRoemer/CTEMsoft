@@ -119,15 +119,15 @@ real(kind=8) , parameter         :: dtoR = 0.01745329251D0 !auxiliary variables
 real(kind=4)          :: EkeV, sig, omega ! input values to the kernel. Can only be real kind=4 otherwise values are not properly passed
 integer(kind=4)       :: totnum_el     ! total number of electrons to simulate
 integer(kind=4)       :: globalworkgrpsz, num_el, num_max, steps, prime ! input values to the kernel
-integer(kind=8)       size_in_bytes ! size of arrays passed to kernel. Only accepts kind=8 integers by clCreateBuffer etc., so donot change
+integer(kind=8)       size_in_bytes,size_in_bytes_seeds ! size of arrays passed to kernel. Only accepts kind=8 integers by clCreateBuffer etc., so donot change
 integer(kind=8)         :: globalsize(2), localsize(2) ! size of global and local work groups. Again only kind=8 is accepted by clEnqueueNDRangeKernel
 character(4)            :: mode
 ! results from kernel stored here
 real(kind=4),allocatable :: Lamresx(:), Lamresy(:), depthres(:), energyres(:)
 
 ! final results stored here
-integer(kind=4),allocatable :: accum_e(:,:,:), acc_e(:,:,:), accum_z(:,:,:,:), acc_z(:,:,:,:)
-integer(kind=4)         :: idxy(2), iE, px, py, iz ! auxiliary variables
+integer(kind=4),allocatable :: accum_e(:,:,:), acc_e(:,:,:), accum_z(:,:,:,:), acc_z(:,:,:,:), rnseeds(:),init_seeds(:)
+integer(kind=4)         :: idxy(2), iE, px, py, iz, nseeds ! auxiliary variables
 real(kind=4)            :: cxyz(3), edis, bse, xy(2) ! auxiliary variables
 real(kind=8)            :: delta,rand
 
@@ -139,7 +139,7 @@ type(cl_context)        :: context
 type(cl_command_queue)  :: command_queue
 type(cl_program)        :: prog
 type(cl_kernel)         :: kernel
-type(cl_mem)            :: LamX, LamY, depth, energy
+type(cl_mem)            :: LamX, LamY, depth, energy,seeds
 type(cl_event)          :: event
 
 character(len = 100)    :: info ! info about the GPU
@@ -166,7 +166,7 @@ call WriteValue('Density, avZ, avA = ',io_real,3,"(2f10.5,',',f10.5)")
 mode = mcnl%mode
 
 if (mode .eq. 'full') then
-    steps = 1000
+    steps = 500
 else if (mode .eq. 'bse1') then
     steps = 1
 else
@@ -195,6 +195,7 @@ allocate(acc_e(numEbins,-nx:nx,-nx:nx),acc_z(numEbins,numzbins,-nx/10:nx/10,-nx/
 allocate(Lamresx(num_max), Lamresy(num_max), depthres(num_max), energyres(num_max), stat=istat)
 
 size_in_bytes = num_max*sizeof(EkeV)
+size_in_bytes_seeds = globalworkgrpsz*globalworkgrpsz*sizeof(EkeV)
 
 delta = dble(nx)/LPs%sPio2
 
@@ -259,34 +260,46 @@ kernel = clCreateKernel(prog, 'MC', ierr)
 call clReleaseProgram(prog, ierr)
 ! allocate device memory
 
-open(unit = iunit, file = mcnl%primelist)
+open(unit = iunit, file = mcnl%primelist, form='unformatted', status='old')
+read(iunit) nseeds
+allocate(rnseeds(nseeds))
+read(iunit) rnseeds
+close(unit=iunit,status='keep')
 
-open(unit=13,file='lamxy.txt',action='write')
+if (globalworkgrpsz**2 .gt. nseeds) call FatalError('CTEMMCOpenCL:','insufficient prime numbers')
 
-call init_random_seed()
+! create device memory buffers
+LamX = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
+if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+
+LamY = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
+if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+
+depth = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
+if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+
+energy = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
+if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+
+seeds = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes, ierr)
+if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+
+allocate(init_seeds(globalworkgrpsz*globalworkgrpsz),stat=istat)
+
+do i = 1,globalworkgrpsz
+    do j = 1,globalworkgrpsz
+        init_seeds((i-1)*globalworkgrpsz+j) = rnseeds((i-1)*globalworkgrpsz+j)
+    end do
+end do
+
+
+!open(unit=13,file='lamxy.txt',action='write')
+
+!call init_random_seed()
 
 mainloop: do i = 1,(totnum_el/num_max+1)
 
-    call RANDOM_NUMBER(rand)
-    rand = rand*125000
-    do ip = 1,nint(rand)
-        read(iunit,*) prime
-    end do
-
-    read(iunit,*) prime
-    rewind(iunit)
-! create device memory buffers
-    LamX = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
-
-    LamY = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
-
-    depth = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
-
-    energy = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+call clEnqueueWriteBuffer(command_queue, seeds, cl_bool(.true.), 0_8, size_in_bytes_seeds, init_seeds(1), ierr)
 
 ! set the kernel arguments
     call clSetKernelArg(kernel, 0, LamX, ierr)
@@ -313,7 +326,7 @@ mainloop: do i = 1,(totnum_el/num_max+1)
     call clSetKernelArg(kernel, 7, num_el, ierr)
     if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-    call clSetKernelArg(kernel, 8, prime, ierr)
+    call clSetKernelArg(kernel, 8, seeds, ierr)
     if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
     call clSetKernelArg(kernel, 9, sig, ierr)
@@ -343,17 +356,19 @@ mainloop: do i = 1,(totnum_el/num_max+1)
     call clEnqueueReadBuffer(command_queue, LamY, cl_bool(.true.), 0_8, size_in_bytes, Lamresy(1), ierr)
     call clEnqueueReadBuffer(command_queue, depth, cl_bool(.true.), 0_8, size_in_bytes, depthres(1), ierr)
     call clEnqueueReadBuffer(command_queue, energy, cl_bool(.true.), 0_8, size_in_bytes, energyres(1), ierr)
-!write(*,*) maxval(Lamresx)
+    call clEnqueueReadBuffer(command_queue, seeds, cl_bool(.true.), 0_8, size_in_bytes_seeds, init_seeds(1), ierr)
+write(*,*)init_seeds
     subloop: do j = 1, num_max
 
-        if ((Lamresx(j) .ne. -10.0) .and. (Lamresy(j) .ne. -10.0) .and. (depthres(j) .ne. -10.0) .and. (energyres(j) .ne. 0.0)) then !&
-        !.and. (Lamresx(j) .ne. 0.0) .and. (Lamresy(j) .ne. 0.0) .and. (depthres(j) .ne. 0.0)) then
+        if ((Lamresx(j) .ne. -10.0) .and. (Lamresy(j) .ne. -10.0) &
+        .and. (depthres(j) .ne. 10.0) .and. (energyres(j) .ne. 0.0)) then !&
+        ! .and. (Lamresx(j) .ne. 0.0) .and. (Lamresy(j) .ne. 0.0) .and. (depthres(j) .ne. 0.0)) then
 ! and get the nearest pixel [ take into account reversal of coordinate frame (x,y) -> (y,-x) ]
 
             val = val + 1
             idxy = (/ nint(delta*Lamresy(j)), nint(-delta*Lamresx(j)) /)
-write(13,'(5F12.6)',advance='no') Lamresx(j),Lamresy(j)
-write(13,*) ''
+!write(13,'(5F12.6)',advance='no') Lamresx(j),Lamresy(j)
+!write(13,*) ''
 
             if (maxval(abs(idxy)).le.nx) then
 ! If Ec larger than Emin, then we should count this electron
@@ -384,10 +399,6 @@ write(13,*) ''
         io_int(1) = sum(accum_e)
         call WriteValue(' Number of electrons on detector       = ',io_int, 1, "(I15)")
     end if
-    call clReleaseMemObject(LamX, ierr)
-    call clReleaseMemObject(LamY, ierr)
-    call clReleaseMemObject(depth, ierr)
-    call clReleaseMemObject(energy, ierr)
 
 end do mainloop
 
@@ -415,8 +426,8 @@ write (dataunit) accum_e
 write (dataunit) accum_z
 
 close(dataunit,status='keep')
-close(iunit)
-close(13)
+
+!close(13)
 bse = real(val)/real(totnum_el)
 print*, "Backscatter yield          = ",bse
 print*, "Total number of incident electrons = ",totnum_el
@@ -427,70 +438,11 @@ print*, "Total number of incident electrons = ",totnum_el
 call clReleaseKernel(kernel, ierr)
 call clReleaseCommandQueue(command_queue, ierr)
 call clReleaseContext(context, ierr)
+call clReleaseMemObject(LamX, ierr)
+call clReleaseMemObject(LamY, ierr)
+call clReleaseMemObject(depth, ierr)
+call clReleaseMemObject(energy, ierr)
 
 
 end subroutine DoMCsimulation
 
-!--------------------------------------------------------------------------
-!
-! SUBROUTINE:init_random_seed
-!
-!> @author From GNU Fortran website
-!
-!> @brief generate random number seed
-!
-!--------------------------------------------------------------------------
-subroutine init_random_seed()
-use iso_fortran_env, only: int64
-implicit none
-integer, allocatable :: seed(:)
-integer :: i, n, un, istat, dt(8), pid
-integer(int64) :: t
-
-call random_seed(size = n)
-allocate(seed(n))
-! First try if the OS provides a random number generator
-open(newunit=un, file="/dev/urandom", access="stream", &
-form="unformatted", action="read", status="old", iostat=istat)
-if (istat == 0) then
-    read(un) seed
-    close(un)
-else
-! Fallback to XOR:ing the current time and pid. The PID is
-! useful in case one launches multiple instances of the same
-! program in parallel.
-    call system_clock(t)
-    if (t == 0) then
-        call date_and_time(values=dt)
-        t = (dt(1) - 1970) * 365_int64 * 24 * 60 * 60 * 1000 &
-            + dt(2) * 31_int64 * 24 * 60 * 60 * 1000 &
-            + dt(3) * 24_int64 * 60 * 60 * 1000 &
-            + dt(5) * 60 * 60 * 1000 &
-            + dt(6) * 60 * 1000 + dt(7) * 1000 &
-            + dt(8)
-    end if
-    pid = getpid()
-    t = ieor(t, int(pid, kind(t)))
-    do i = 1, n
-        seed(i) = lcg(t)
-    end do
-end if
-
-call random_seed(put=seed)
-
-contains
-! This simple PRNG might not be good enough for real work, but is
-! sufficient for seeding a better PRNG.
-function lcg(s)
-
-integer :: lcg
-integer(int64) :: s
-if (s == 0) then
-    s = 104729
-else
-    s = mod(s, 4294967296_int64)
-end if
-s = mod(s * 279470273_int64, 4294967291_int64)
-lcg = int(mod(s, int(huge(0), int64)), kind(0))
-end function lcg
-end subroutine init_random_seed

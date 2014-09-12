@@ -144,9 +144,9 @@ character(3)                            :: grid
 type(kvectorlist),pointer               :: ktail, ktmp
 
 ! first, if khead already exists, delete it
- if (associated(khead)) then                    ! deallocate the entire linked list
-    call Delete_kvectorlist(khead)
- end if   
+ !if (associated(khead)) then                    ! deallocate the entire linked list
+ !   call Delete_kvectorlist(khead)
+ !end if
  
 ! do we know this mapmode ?
 if ( .not.( (mapmode.eq.'Conical').or.(mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical').or. &
@@ -1033,17 +1033,35 @@ kk = (/0.0,0.0,1.0/)
 call TransSpace(cell,k,kcart,'d','c')       		! transform crystal direction to cartesian space
 call NormVec(cell,kcart,'c')                       	! normalize incidence vector in cartesian coordinates
 
-gperpa = (/-kcart(2),kcart(1),0.0/)
-gperpa = gperpa/sqrt(sum(gperpa**2))
+if (kcart(3) .eq. 0.0) then
+    gperpa = (/-kcart(2),kcart(1),0.0/)
+    gperpa = gperpa/sqrt(sum(gperpa**2))
 
-gperpb = (/kcart(2)*gperpa(3)-kcart(3)*gperpa(2),&
-            kcart(3)*gperpa(1)-kcart(1)*gperpa(3),&
-            kcart(1)*gperpa(2)-kcart(2)*gperpa(1)/)
-gperpb = gperpb/sqrt(sum(gperpb**2))
+    gperpb = (/kcart(2)*gperpa(3)-kcart(3)*gperpa(2),&
+                kcart(3)*gperpa(1)-kcart(1)*gperpa(3),&
+                kcart(1)*gperpa(2)-kcart(2)*gperpa(1)/)
+    gperpb = gperpb/sqrt(sum(gperpb**2))
 
-rotmat(:,1) = gperpa
-rotmat(:,2) = gperpb
-rotmat(:,3) = k
+    rotmat(:,1) = gperpa
+    rotmat(:,2) = gperpb
+    rotmat(:,3) = k
+
+else
+
+    gperpa = (/-kcart(3),0.0,kcart(1)/)
+    gperpa = gperpa/sqrt(sum(gperpa**2))
+
+    gperpb = (/kcart(2)*gperpa(3)-kcart(3)*gperpa(2),&
+    kcart(3)*gperpa(1)-kcart(1)*gperpa(3),&
+    kcart(1)*gperpa(2)-kcart(2)*gperpa(1)/)
+    gperpb = gperpb/sqrt(sum(gperpb**2))
+
+    rotmat(:,1) = gperpa
+    rotmat(:,2) = gperpb
+    rotmat(:,3) = k
+
+
+end if
 
 imin = -npx
 imax = npx
