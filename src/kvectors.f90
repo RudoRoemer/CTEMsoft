@@ -1021,11 +1021,9 @@ real(kind=sgl)                          :: kk(3),gperpa(3),gperpb(3)
 real(kind=sgl)                          :: kcart(3)
 real(kind=sgl)                          :: rotmat(3,3)
 
-! first, if khead already exists, delete it
-! this is where the SIGSEV errors are coming from
-!if (associated(khead)) then                    ! deallocate the entire linked list
- !   call Delete_kvectorlist(khead)
-!end if
+if (associated(khead)) then                    ! deallocate the entire linked list
+    call Delete_kvectorlist(khead)
+end if
 
 numk = 0
 kk = (/0.0,0.0,1.0/)
