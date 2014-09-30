@@ -1009,7 +1009,7 @@ IMPLICIT NONE
 
 type(kvectorlist),pointer               :: khead,ktail
 type(unitcell),pointer                  :: cell
-real(kind=sgl),INTENT(IN)               :: k(3)         !< initial wave vector
+real(kind=sgl),INTENT(INOUT)               :: k(3)         !< initial wave vector
 real(kind=sgl),INTENT(IN)               :: thetac        !< half angle of cone of incident beam directions in degrees
 integer(kind=irg),INTENT(IN)            :: npx          !< number of kvectors along x
 integer(kind=irg),INTENT(IN)            :: npy          !< number of kvectors along y
@@ -1017,7 +1017,7 @@ integer(kind=irg),INTENT(OUT)           :: numk         !< total number of kvect
 real(kind=dbl),parameter                :: DtoR = 0.01745329251D0
 real(kind=sgl)                          :: delta,thetacr,ktmax
 integer(kind=irg)                       :: i,j,imin,imax,jmin,jmax,ijmax,istat
-real(kind=sgl)                          :: kk(3),gperpa(3),gperpb(3)
+real(kind=sgl)                          :: kk(3),gperpa(3),gperpb(3),kcent(3)
 real(kind=sgl)                          :: kcart(3)
 real(kind=sgl)                          :: rotmat(3,3)
 
@@ -1026,6 +1026,8 @@ if (associated(khead)) then                    ! deallocate the entire linked li
 end if
 
 numk = 0
+call NormVec(cell,k,'r')                            ! normalize k in reciprocal space
+
 kk = (/0.0,0.0,1.0/)
 !kk = kk/mlambda
 call TransSpace(cell,k,kcart,'d','c')       		! transform crystal direction to cartesian space
@@ -1046,7 +1048,7 @@ if (kcart(3) .eq. 0.0) then
 
 else
 
-    gperpa = (/-kcart(3),0.0,kcart(1)/)
+    gperpa = (/0.0,-kcart(3),kcart(2)/)
     gperpa = gperpa/sqrt(sum(gperpa**2))
 
     gperpb = (/kcart(2)*gperpa(3)-kcart(3)*gperpa(2),&
@@ -1081,9 +1083,11 @@ numk = 1                          			! keep track of number of k-vectors so far
 ktail%i = 0                             		! i-index of beam
 ktail%j = 0                             		! j-index of beam
 ktail%kt = (/0.0,0.0,0.0/)				! no tangential component for central beam direction
-ktail%k = kk
+ktail%k = matmul(rotmat,kk)
+call NormVec(cell,ktail%k,'c')
+kcent = ktail%k
+!print*,ktail%k
 ktail%kn = sqrt(sum(kk**2))!CalcDot(cell,ktail%k,kcart,'c')			! normal component
-
 thetacr = DtoR*thetac
 
 ktmax = tan(thetacr)*sqrt(sum(kk**2))
@@ -1102,9 +1106,9 @@ do i = imin,imax
                 ktail%j = j
                 ktail%kt = (/delta*i,delta*j,0.0/)
                 ktail%k = ktail%kt + kk
-                ktail%kn = sqrt(sum(kk**2))
                 ktail%kt = matmul(rotmat,ktail%kt)
                 ktail%k = matmul(rotmat,ktail%k)
+                call NormVec(cell,ktail%k,'c')
             end if
         end if
     end do

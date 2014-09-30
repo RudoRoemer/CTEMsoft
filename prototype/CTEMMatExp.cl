@@ -38,6 +38,8 @@
 //
 //> @date 09/23/14  SS  1.0 Original
 //--------------------------------------------------------------------------
+float2 cmplxmult(float2,float2);
+
 float2 cmplxmult(float2 a, float2 b){
     float2 res;
     res.x = a.x*b.x - a.y*b.y;
@@ -73,7 +75,7 @@ __kernel void MatExp(__global float2* cl_expA,__global float2* cl_A,__global flo
     }
     cl_AA[ty*nn+tx] = value;
     
-    barrier(CLK_GLOBAL_MEM_FENCE);
+    //barrier(CLK_GLOBAL_MEM_FENCE);
     
     value = (float2)(0.0f,0.0f);
 
@@ -84,13 +86,13 @@ __kernel void MatExp(__global float2* cl_expA,__global float2* cl_A,__global flo
     
     cl_AAA[ty*nn+tx] = value;
     
-    barrier(CLK_GLOBAL_MEM_FENCE);
+    //barrier(CLK_GLOBAL_MEM_FENCE);
 
     cl_T1[ty*nn + tx] = cl_AAA[ty*nn + tx] -cl_coeff[1]*cl_AA[ty*nn + tx] + cl_coeff[2]*cl_A[ty*nn + tx] - cl_coeff[3];
     cl_T2[ty*nn + tx] = cl_AAA[ty*nn + tx] -cl_coeff[4]*cl_AA[ty*nn + tx] + cl_coeff[5]*cl_A[ty*nn + tx] - cl_coeff[6];
     cl_T3[ty*nn + tx] = cl_AAA[ty*nn + tx] -cl_coeff[7]*cl_AA[ty*nn + tx] + cl_coeff[8]*cl_A[ty*nn + tx] - cl_coeff[9];
     
-    barrier(CLK_GLOBAL_MEM_FENCE);
+    //barrier(CLK_GLOBAL_MEM_FENCE);
 
     value = (float2)(0.0f,0.0f);
     
@@ -101,7 +103,7 @@ __kernel void MatExp(__global float2* cl_expA,__global float2* cl_A,__global flo
     
     cl_AA[ty*nn+tx] = value;
     
-    barrier(CLK_GLOBAL_MEM_FENCE);
+    //barrier(CLK_GLOBAL_MEM_FENCE);
     
     value = (float2)(0.0f,0.0f);
 
@@ -128,12 +130,12 @@ __kernel void MatExp(__global float2* cl_expA,__global float2* cl_A,__global flo
 //> @date 09/09/14  SS  1.0 Original
 //--------------------------------------------------------------------------
 
-__kernel void MatExpImg(__global float2* cl_expA,__global float2* cl_A,__global float2* cl_AA,__global float2* cl_AAA,const int nn,__global float2* cl_coeff,__global float2* cl_T1,__global float2* cl_T2,__global float2* cl_T3,__global float2* cl_T1T2,__global float2* cl_T1T2T3,__global float2* cl_sqr,const int ns)
+__kernel void MatExpImg(__global float2* cl_expA,__global float2* cl_A,__global float2* cl_AA,__global float2* cl_AAA,const int nn,__global float2* cl_coeff,__global float2* cl_T1,__global float2* cl_T2,__global float2* cl_T3,__global float2* cl_T1T2,__global float2* cl_T1T2T3,__global float2* cl_sqr,const int ns,const int threadcnt)
 {
     int tx,ty,id;
     tx = get_global_id(0);
     ty = get_global_id(1);
-    id = 50*ty + tx;
+    id = threadcnt*ty + tx;
     
     //float2 Aloc[nn][nn];
     //for (int i = 0; i < nn; i++){
@@ -147,8 +149,7 @@ __kernel void MatExpImg(__global float2* cl_expA,__global float2* cl_A,__global 
     for (int i = 0; i < nn; i++){
         for (int j = 0; j < nn; j++){
             for (int k = 0; k < nn; k++){
-                sum.x += cl_A[id*nn*nn + i*nn + k].x*cl_A[id*nn*nn + k*nn + j].x - cl_A[id*nn*nn + i*nn + k].y*cl_A[id*nn*nn + k*nn + j].y;
-                sum.y += cl_A[id*nn*nn + i*nn + k].y*cl_A[id*nn*nn + k*nn + j].x + cl_A[id*nn*nn + i*nn + k].x*cl_A[id*nn*nn + k*nn + j].y;
+                sum += cmplxmult(cl_A[id*nn*nn + i*nn + k],cl_A[id*nn*nn + k*nn + j]);
             }
             cl_AA[id*nn*nn + i*nn + j] = sum;
             sum = (float2)(0.0f,0.0f);
@@ -167,8 +168,7 @@ __kernel void MatExpImg(__global float2* cl_expA,__global float2* cl_A,__global 
     for (int i = 0; i < nn; i++){
         for (int j = 0; j < nn; j++){
             for (int k = 0; k < nn; k++){
-                sum.x += cl_AA[id*nn*nn + i*nn + k].x*cl_A[id*nn*nn + k*nn + j].x - cl_AA[id*nn*nn + i*nn + k].y*cl_A[id*nn*nn + k*nn + j].y;
-                sum.y += cl_AA[id*nn*nn + i*nn + k].y*cl_A[id*nn*nn + k*nn + j].x + cl_AA[id*nn*nn + i*nn + k].x*cl_A[id*nn*nn + k*nn + j].y;
+                sum += cmplxmult(cl_AA[id*nn*nn + i*nn + k],cl_A[id*nn*nn + k*nn + j]);
             }
             cl_AAA[id*nn*nn + i*nn + j] = sum;
             sum = (float2)(0.0f,0.0f);
@@ -182,17 +182,35 @@ __kernel void MatExpImg(__global float2* cl_expA,__global float2* cl_A,__global 
     //    }
     // }
     
-    
+    float2 tmp1,tmp2;
     for (int i = 0; i < nn; i++){
         for (int j = 0; j < nn; j++){
-            cl_T1[id*nn*nn + i*nn + j].x = cl_AAA[id*nn*nn + i*nn + j].x - cl_coeff[1].x*cl_AA[id*nn*nn + i*nn + j].x + cl_coeff[1].y*cl_AA[id*nn*nn + i*nn + j].y + cl_coeff[2].x*cl_AA[id*nn*nn + i*nn + j].x - cl_coeff[2].y*cl_AA[id*nn*nn + i*nn + j].y - cl_coeff[3].x;
-            cl_T1[id*nn*nn + i*nn + j].y = cl_AAA[id*nn*nn + i*nn + j].y - cl_coeff[1].y*cl_AA[id*nn*nn + i*nn + j].x - cl_coeff[1].x*cl_AA[id*nn*nn + i*nn + j].y + cl_coeff[2].y*cl_AA[id*nn*nn + i*nn + j].x + cl_coeff[2].x*cl_AA[id*nn*nn + i*nn + j].y - cl_coeff[3].y;
+            if(i == j){
+                tmp1 = cmplxmult(cl_coeff[0],cl_AA[id*nn*nn + i*nn + j]);
+                tmp2 = cmplxmult(cl_coeff[1],cl_A[id*nn*nn + i*nn + j]);
+                cl_T1[id*nn*nn + i*nn + j] = cl_AAA[id*nn*nn + i*nn + j] - tmp1 + tmp2 - cl_coeff[2];
             
-            cl_T2[id*nn*nn + i*nn + j].x = cl_AAA[id*nn*nn + i*nn + j].x - cl_coeff[4].x*cl_AA[id*nn*nn + i*nn + j].x + cl_coeff[4].y*cl_AA[id*nn*nn + i*nn + j].y + cl_coeff[5].x*cl_AA[id*nn*nn + i*nn + j].x - cl_coeff[5].y*cl_AA[id*nn*nn + i*nn + j].y - cl_coeff[6].x;
-            cl_T2[id*nn*nn + i*nn + j].y = cl_AAA[id*nn*nn + i*nn + j].y - cl_coeff[4].y*cl_AA[id*nn*nn + i*nn + j].x - cl_coeff[4].x*cl_AA[id*nn*nn + i*nn + j].y + cl_coeff[5].y*cl_AA[id*nn*nn + i*nn + j].x + cl_coeff[5].x*cl_AA[id*nn*nn + i*nn + j].y - cl_coeff[6].y;
+                tmp1 = cmplxmult(cl_coeff[3],cl_AA[id*nn*nn + i*nn + j]);
+                tmp2 = cmplxmult(cl_coeff[4],cl_A[id*nn*nn + i*nn + j]);
+                cl_T2[id*nn*nn + i*nn + j] = cl_AAA[id*nn*nn + i*nn + j] - tmp1 + tmp2 - cl_coeff[5];
             
-            cl_T3[id*nn*nn + i*nn + j].x = cl_AAA[id*nn*nn + i*nn + j].x - cl_coeff[7].x*cl_AA[id*nn*nn + i*nn + j].x + cl_coeff[7].y*cl_AA[id*nn*nn + i*nn + j].y + cl_coeff[8].x*cl_AA[id*nn*nn + i*nn + j].x - cl_coeff[8].y*cl_AA[id*nn*nn + i*nn + j].y - cl_coeff[9].x;
-            cl_T3[id*nn*nn + i*nn + j].y = cl_AAA[id*nn*nn + i*nn + j].y - cl_coeff[7].y*cl_AA[id*nn*nn + i*nn + j].x - cl_coeff[7].x*cl_AA[id*nn*nn + i*nn + j].y + cl_coeff[8].y*cl_AA[id*nn*nn + i*nn + j].x + cl_coeff[8].x*cl_AA[id*nn*nn + i*nn + j].y - cl_coeff[9].y;
+                tmp1 = cmplxmult(cl_coeff[6],cl_AA[id*nn*nn + i*nn + j]);
+                tmp2 = cmplxmult(cl_coeff[7],cl_A[id*nn*nn + i*nn + j]);
+                cl_T3[id*nn*nn + i*nn + j] = cl_AAA[id*nn*nn + i*nn + j] - tmp1 + tmp2 - cl_coeff[8];
+            }
+            else {
+                tmp1 = cmplxmult(cl_coeff[0],cl_AA[id*nn*nn + i*nn + j]);
+                tmp2 = cmplxmult(cl_coeff[1],cl_A[id*nn*nn + i*nn + j]);
+                cl_T1[id*nn*nn + i*nn + j] = cl_AAA[id*nn*nn + i*nn + j] - tmp1 + tmp2;
+                
+                tmp1 = cmplxmult(cl_coeff[3],cl_AA[id*nn*nn + i*nn + j]);
+                tmp2 = cmplxmult(cl_coeff[4],cl_A[id*nn*nn + i*nn + j]);
+                cl_T2[id*nn*nn + i*nn + j] = cl_AAA[id*nn*nn + i*nn + j] - tmp1 + tmp2;
+                
+                tmp1 = cmplxmult(cl_coeff[6],cl_AA[id*nn*nn + i*nn + j]);
+                tmp2 = cmplxmult(cl_coeff[7],cl_A[id*nn*nn + i*nn + j]);
+                cl_T3[id*nn*nn + i*nn + j] = cl_AAA[id*nn*nn + i*nn + j] - tmp1 + tmp2;
+            }
         }
     }
 
@@ -201,8 +219,7 @@ __kernel void MatExpImg(__global float2* cl_expA,__global float2* cl_A,__global 
     for (int i = 0; i < nn; i++){
         for (int j = 0; j < nn; j++){
             for (int k = 0; k < nn; k++){
-                sum.x += cl_T2[id*nn*nn + i*nn + k].x*cl_T3[id*nn*nn + k*nn + j].x - cl_T2[id*nn*nn + i*nn + k].y*cl_T3[id*nn*nn + k*nn + j].y;
-                sum.y += cl_T2[id*nn*nn + i*nn + k].y*cl_T3[id*nn*nn + k*nn + j].x + cl_T2[id*nn*nn + i*nn + k].x*cl_T3[id*nn*nn + k*nn + j].y;
+                sum += cmplxmult(cl_T1[id*nn*nn + i*nn + k],cl_T2[id*nn*nn + k*nn + j]);
             }
             cl_T1T2[id*nn*nn + i*nn + j] = sum;
             sum = (float2)(0.0f,0.0f);
@@ -211,13 +228,12 @@ __kernel void MatExpImg(__global float2* cl_expA,__global float2* cl_A,__global 
 
     sum = (float2)(0.0f,0.0f);
     for (int i = 0; i < nn; i++){
-        for (int j = 0; j < nn; j++){
-            for (int k = 0; k < nn; k++){
-                sum.x += cl_T1[id*nn*nn + i*nn + k].x*cl_A[id*nn*nn + k*nn + j].x - cl_T1[id*nn*nn + i*nn + k].y*cl_A[id*nn*nn + k*nn + j].y;
-                sum.y += cl_T1[id*nn*nn + i*nn + k].y*cl_A[id*nn*nn + k*nn + j].x + cl_T1[id*nn*nn + i*nn + k].x*cl_A[id*nn*nn + k*nn + j].y;
+        for (int j =0; j < nn; j++){
+            for (int k = 0; k < nn ; k++){
+                sum += cmplxmult(cl_T1T2[id*nn*nn + i*nn + k],cl_T3[id*nn*nn + k*nn + j]);
             }
-            sum *= 362880;
-            cl_T1T2T3[id*nn*nn + i*nn + j] = sum;
+            sum /= 362880.0f;
+            cl_AA[id*nn*nn + i*nn + j] = sum;
             sum = (float2)(0.0f,0.0f);
         }
     }
@@ -228,22 +244,21 @@ __kernel void MatExpImg(__global float2* cl_expA,__global float2* cl_A,__global 
         for (int i = 0; i < nn; i++){
             for (int j = 0; j < nn; j++){
                 for (int k = 0; k < nn; k++){
-                    sum.x += cl_T1T2T3[id*nn*nn + i*nn + k].x*cl_T1T2T3[id*nn*nn + k*nn + j].x - cl_T1T2T3[id*nn*nn + i*nn + k].y*cl_T1T2T3[id*nn*nn + k*nn + j].y;
-                    sum.y += cl_T1T2T3[id*nn*nn + i*nn + k].y*cl_T1T2T3[id*nn*nn + k*nn + j].x + cl_T1T2T3[id*nn*nn + i*nn + k].x*cl_T1T2T3[id*nn*nn + k*nn + j].y;
+                    sum += cmplxmult(cl_AA[id*nn*nn + i*nn + k],cl_AA[id*nn*nn + k*nn + j]);
                 }
-                cl_sqr[id*nn*nn + i*nn + j] = sum;
+                cl_AAA[id*nn*nn + i*nn + j] = sum;
                 sum = (float2)(0.0f,0.0f);
             }
         }
         for (int i = 0; i < nn; i++){
             for (int j = 0; j < nn; j++){
-                cl_T1T2T3[id*nn*nn + i*nn + j] = cl_sqr[id*nn*nn + i*nn + j];
+                cl_AA[id*nn*nn + i*nn + j] = cl_AAA[id*nn*nn + i*nn + j];
             }
         }
     }
     for (int i = 0; i < nn; i++){
         for (int j = 0; j < nn; j++){
-            cl_expA[id*nn*nn + i*nn + j] = cl_sqr[id*nn*nn + i*nn + j];
+            cl_expA[id*nn*nn + i*nn + j] = cl_AA[id*nn*nn + i*nn + j];
         }
     }
 }

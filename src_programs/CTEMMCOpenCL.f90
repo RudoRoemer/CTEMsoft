@@ -107,7 +107,7 @@ integer(kind=irg)       :: numsy        ! number of Lambert map points along y
 integer(kind=irg)       :: numEbins     ! number of energy bins
 integer(kind=irg)       :: numzbins     ! number of depth bins
 integer(kind=irg)       :: nx           ! no. of pixels
-integer(kind=irg)       :: i,j,ip,istat
+integer(kind=irg)       :: i,j,k,l,ip,istat
 integer,parameter       :: k12 = selected_int_kind(15)
 
 real(kind=4)            :: Ze           ! average atomic number
@@ -126,7 +126,7 @@ character(4)            :: mode
 real(kind=4),allocatable :: Lamresx(:), Lamresy(:), depthres(:), energyres(:)
 
 ! final results stored here
-integer(kind=4),allocatable :: accum_e(:,:,:), acc_e(:,:,:), accum_z(:,:,:,:), acc_z(:,:,:,:), rnseeds(:),init_seeds(:)
+integer(kind=4),allocatable :: accum_e(:,:,:), accum_z(:,:,:,:), rnseeds(:), init_seeds(:)
 integer(kind=4)         :: idxy(2), iE, px, py, iz, nseeds ! auxiliary variables
 real(kind=4)            :: cxyz(3), edis, bse, xy(2) ! auxiliary variables
 real(kind=8)            :: delta,rand
@@ -146,7 +146,7 @@ character(len = 100)    :: info ! info about the GPU
 integer, parameter      :: iunit = 10
 integer, parameter              :: source_length = 10000000
 character(len = source_length)  :: source
-integer(kind=4)       :: num, ierr, irec, io_int(1), val ! auxiliary variables
+integer(kind=4)       :: num, ierr, irec, io_int(1), val,val1 ! auxiliary variables
 numsy = mcnl%numsx
 nullify(cell)
 allocate(cell)
@@ -155,6 +155,7 @@ allocate(cell)
 verbose = .TRUE.
 dmin = 0.05
 val = 0
+val1 = 0
 call Initialize_Cell(cell,Dyn,rlp,mcnl%xtalname, dmin, sngl(1000.D0*mcnl%EkeV), verbose)
 ! then calculate density, average atomic number and average atomic weight
 call CalcDensity(cell, dens, avZ, avA)
@@ -166,7 +167,7 @@ call WriteValue('Density, avZ, avA = ',io_real,3,"(2f10.5,',',f10.5)")
 mode = mcnl%mode
 
 if (mode .eq. 'full') then
-    steps = 500
+    steps = 600
 else if (mode .eq. 'bse1') then
     steps = 1
 else
@@ -189,13 +190,16 @@ numEbins =  int((mcnl%EkeV-mcnl%Ehistmin)/mcnl%Ebinsize)+1
 numzbins =  int(mcnl%depthmax/mcnl%depthstep)+1
 nx = (mcnl%numsx-1)/2
 allocate(accum_e(numEbins,-nx:nx,-nx:nx),accum_z(numEbins,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
-
-allocate(acc_e(numEbins,-nx:nx,-nx:nx),acc_z(numEbins,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
+accum_e = 0
+accum_z = 0
 
 allocate(Lamresx(num_max), Lamresy(num_max), depthres(num_max), energyres(num_max), stat=istat)
-
+Lamresx = 0.0
+Lamresy = 0.0
+depthres = 0.0
+energyres = 0.0
 size_in_bytes = num_max*sizeof(EkeV)
-size_in_bytes_seeds = globalworkgrpsz*globalworkgrpsz*sizeof(EkeV)
+size_in_bytes_seeds = 4*globalworkgrpsz*globalworkgrpsz*sizeof(EkeV)
 
 delta = dble(nx)/LPs%sPio2
 
@@ -268,6 +272,20 @@ close(unit=iunit,status='keep')
 
 if (globalworkgrpsz**2 .gt. nseeds) call FatalError('CTEMMCOpenCL:','insufficient prime numbers')
 
+
+
+allocate(init_seeds(4*globalworkgrpsz*globalworkgrpsz),stat=istat)
+init_seeds = 0
+do i = 1,globalworkgrpsz
+    do j = 1,globalworkgrpsz
+        do k = 1,4
+            init_seeds(4*((i-1)*globalworkgrpsz+j)+k) = rnseeds(4*((i-1)*globalworkgrpsz+j)+k)
+        end do
+    end do
+end do
+!print*,init_seeds
+
+open(unit=13,file='lamxy.txt',action='write')
 ! create device memory buffers
 LamX = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
 if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
@@ -284,22 +302,10 @@ if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
 seeds = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes, ierr)
 if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
 
-allocate(init_seeds(globalworkgrpsz*globalworkgrpsz),stat=istat)
-
-do i = 1,globalworkgrpsz
-    do j = 1,globalworkgrpsz
-        init_seeds((i-1)*globalworkgrpsz+j) = rnseeds((i-1)*globalworkgrpsz+j)
-    end do
-end do
-
-
-!open(unit=13,file='lamxy.txt',action='write')
-
 !call init_random_seed()
+call clEnqueueWriteBuffer(command_queue, seeds, cl_bool(.true.), 0_8, size_in_bytes_seeds, init_seeds(1), ierr)
 
 mainloop: do i = 1,(totnum_el/num_max+1)
-
-call clEnqueueWriteBuffer(command_queue, seeds, cl_bool(.true.), 0_8, size_in_bytes_seeds, init_seeds(1), ierr)
 
 ! set the kernel arguments
     call clSetKernelArg(kernel, 0, LamX, ierr)
@@ -356,28 +362,31 @@ call clEnqueueWriteBuffer(command_queue, seeds, cl_bool(.true.), 0_8, size_in_by
     call clEnqueueReadBuffer(command_queue, LamY, cl_bool(.true.), 0_8, size_in_bytes, Lamresy(1), ierr)
     call clEnqueueReadBuffer(command_queue, depth, cl_bool(.true.), 0_8, size_in_bytes, depthres(1), ierr)
     call clEnqueueReadBuffer(command_queue, energy, cl_bool(.true.), 0_8, size_in_bytes, energyres(1), ierr)
-    call clEnqueueReadBuffer(command_queue, seeds, cl_bool(.true.), 0_8, size_in_bytes_seeds, init_seeds(1), ierr)
-write(*,*)init_seeds
+!    call clEnqueueReadBuffer(command_queue, seeds, cl_bool(.true.), 0_8, size_in_bytes_seeds, init_seeds(1), ierr)
+
     subloop: do j = 1, num_max
 
         if ((Lamresx(j) .ne. -10.0) .and. (Lamresy(j) .ne. -10.0) &
-        .and. (depthres(j) .ne. 10.0) .and. (energyres(j) .ne. 0.0)) then !&
-        ! .and. (Lamresx(j) .ne. 0.0) .and. (Lamresy(j) .ne. 0.0) .and. (depthres(j) .ne. 0.0)) then
+        .and. (depthres(j) .ne. 10.0) .and. (energyres(j) .ne. 0.0) &
+        .and. .not.isnan(Lamresx(j)) .and. .not.isnan(Lamresy(j))) then
+        !& .and. (Lamresx(j) .ne. 0.0) .and. (Lamresy(j) .ne. 0.0) .and. (depthres(j) .ne. 0.0)) then
 ! and get the nearest pixel [ take into account reversal of coordinate frame (x,y) -> (y,-x) ]
+            if ((nint(delta*Lamresy(j)) .eq. 0.0) .and. (nint(-delta*Lamresx(j)) .eq. 0.0)) then
+                val1 = val1 + 1
+                !print*,Lamresx(j),Lamresy(j)
+            end if
 
             val = val + 1
             idxy = (/ nint(delta*Lamresy(j)), nint(-delta*Lamresx(j)) /)
-!write(13,'(5F12.6)',advance='no') Lamresx(j),Lamresy(j)
-!write(13,*) ''
 
             if (maxval(abs(idxy)).le.nx) then
 ! If Ec larger than Emin, then we should count this electron
                 if (energyres(j).gt.mcnl%Ehistmin) then
-                    !print *, energyres(j), depthres(j)*1e9, Lamresx(j), Lamresy(j)
+!print *, energyres(j), depthres(j)*1e9, Lamresx(j), Lamresy(j)
 
                     iE = nint((energyres(j)-mcnl%Ehistmin)/mcnl%Ebinsize)+1
 ! first add this electron to the correct exit distance vs. energy bin (coarser than the angular plot)
-                    edis = abs(depthres(j)*1e7)  ! distance from last scattering point to surface along trajectory
+                    edis = abs(depthres(j))  ! distance from last scattering point to surface along trajectory
                     iz = nint(edis/mcnl%depthstep) +1
                     if ( (iz.gt.0).and.(iz.le.numzbins) ) then
 
@@ -399,6 +408,7 @@ write(*,*)init_seeds
         io_int(1) = sum(accum_e)
         call WriteValue(' Number of electrons on detector       = ',io_int, 1, "(I15)")
     end if
+
 
 end do mainloop
 
@@ -426,11 +436,23 @@ write (dataunit) accum_e
 write (dataunit) accum_z
 
 close(dataunit,status='keep')
+!do l = 1,numEbins
+!        do j = 1,nint(nx/10.0)
+!            do k = 1,nint(nx/10.0)
+!                write(13,'(I8,I8,I8,I8)',advance='no') l,j,k,accum_e(l,j,k)
+!                write(13,*) ''
+!            end do
+!        end do
+!end do
 
-!close(13)
+close(13)
+
 bse = real(val)/real(totnum_el)
 print*, "Backscatter yield          = ",bse
 print*, "Total number of incident electrons = ",totnum_el
+print*, "Number of electrons on detector = ",sum(accum_e)
+print*, "Maximum electron in depth and energy bin resp. = ",maxval(accum_z),maxval(accum_e)
+!print*,sum(accum_e(:,0,0)),maxval(sum(accum_e,1))
 !=====================
 ! RELEASE EVERYTHING
 !=====================
@@ -442,6 +464,7 @@ call clReleaseMemObject(LamX, ierr)
 call clReleaseMemObject(LamY, ierr)
 call clReleaseMemObject(depth, ierr)
 call clReleaseMemObject(energy, ierr)
+call clReleaseMemObject(seeds, ierr)
 
 
 end subroutine DoMCsimulation

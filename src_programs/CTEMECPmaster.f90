@@ -361,7 +361,7 @@ sr = 0.0
 
 beamloop: do i = 1, numk
     kk = ktmp%k(1:3)
-    FN = ecpnl%fn
+    FN = kk
 
     call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, kk, ecpnl%dmin, nref)
 

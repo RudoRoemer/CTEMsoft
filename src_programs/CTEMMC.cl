@@ -53,11 +53,22 @@
 #define PI        3.14159f
 
 struct LambertStruct{
-    float res[2];
+    float x;
+    float y;
+};
+
+
+
+struct lfsrret{
+    int z1;
+    int z2;
+    int z3;
+    int z4;
+    int rand;
 };
 
 struct LambertStruct LambertSphereToPlane(float xyz[3]);
-int rand_r(unsigned int);
+struct lfsrret lfsr113_Bits(int,int,int,int);
 //--------------------------------------------------------------------------
 //
 // FUNCTION: rand_r
@@ -71,30 +82,25 @@ int rand_r(unsigned int);
 //> @positive integer seed
 //> @date 05/14/14    SS 1.0 original
 //--------------------------------------------------------------------------
-
-
-int rand_r (unsigned int seed)
+struct lfsrret lfsr113_Bits (int z11,int z22,int z33,int z44)
 {
-    unsigned int next = seed;
-    int result;
-    
-    next *= 1103515245;
-    next += 12345;
-    result = (unsigned int) (next / 65536) % 2048;
-    
-    next *= 1103515245;
-    next += 12345;
-    result <<= 10;
-    result ^= (unsigned int) (next / 65536) % 1024;
-    
-    next *= 1103515245;
-    next += 12345;
-    result <<= 10;
-    result ^= (unsigned int) (next / 65536) % 1024;
-    
-    seed = next;
-    
-    return result;
+    struct lfsrret ret;
+    int z1 = z11, z2 = z22, z3 = z33, z4 = z44;
+    int b;
+    b  = ((z1 << 6) ^ z1) >> 13;
+    z1 = ((z1 & 4294967294U) << 18) ^ b;
+    b  = ((z2 << 2) ^ z2) >> 27;
+    z2 = ((z2 & 4294967288U) << 2) ^ b;
+    b  = ((z3 << 13) ^ z3) >> 21;
+    z3 = ((z3 & 4294967280U) << 7) ^ b;
+    b  = ((z4 << 3) ^ z4) >> 12;
+    z4 = ((z4 & 4294967168U) << 13) ^ b;
+    ret.z1 = z1;
+    ret.z2 = z2;
+    ret.z3 = z3;
+    ret.z4 = z4;
+    ret.rand = (z1 ^ z2 ^ z3 ^ z4);
+    return ret;
 }
 
 //--------------------------------------------------------------------------
@@ -109,35 +115,33 @@ int rand_r (unsigned int seed)
 //> @date 05/14/14    SS 1.0 original
 //--------------------------------------------------------------------------
 
-
-struct LambertStruct LambertSphereToPlane(float xyz[3]){
-    float eps = 1e-4f;
+struct LambertStruct LambertSphereToPlane(float normxyz[3]){
     float q, LPssPi2;
     LPssPi2 = 0.886226925452758f;
     struct LambertStruct ret;
-    if (fabs(1.0f-(xyz[0]*xyz[0] + xyz[1]*xyz[1] + xyz[2]*xyz[2])) > eps){
-        ret.res[0] = 0.0f;
-        ret.res[1] = 0.0f;
+    float xyz[3];
+    float mag = sqrt(normxyz[0]*normxyz[0] + normxyz[1]*normxyz[1] + normxyz[2]*normxyz[2]);
+    xyz[0] = normxyz[0]/mag;
+    xyz[1] = normxyz[1]/mag;
+    xyz[2] = normxyz[2]/mag;
+    if(fabs(xyz[2]) == 1.0f){
+        ret.x = 0.0f;
+        ret.y = 0.0f;
     }
-    
     else {
-        if(fabs(xyz[2]) == 1.0f){
-            ret.res[0] = 0.0f;
-            ret.res[1] = 0.0f;
+        if (fabs(xyz[1]) <= fabs(xyz[0]) && (xyz[0] != 0.0f)){
+            q = (fabs(xyz[0])/xyz[0]) * sqrt(2.0f*(1.0f + xyz[2]));
+            ret.x = q * LPssPi2;
+            ret.y = q * atan(xyz[1]/xyz[0])/LPssPi2;
         }
-        else {
-            if (fabs(xyz[1]) <= fabs(xyz[0])){
-                q = fabs(xyz[0])/xyz[0] * sqrt(2.0f*(1.0f + xyz[2]));
-                ret.res[0] = q * LPssPi2;
-                ret.res[1] = q * atan(xyz[1]/xyz[0])/LPssPi2;
+        else{
+            if (xyz[1] != 0.0f){
+                q = (fabs(xyz[1])/xyz[1]) * sqrt(2.0f*(1.0f + xyz[2]));
+                ret.x = q * atan(xyz[0]/xyz[1])/LPssPi2;
+                ret.y = q * LPssPi2;
             }
-            else{
-                q = fabs(xyz[1])/xyz[1] * sqrt(2.0f*(1.0f + xyz[2]));
-                ret.res[0] = q * atan(xyz[0]/xyz[1])/LPssPi2;
-                ret.res[1] = q * LPssPi2;
-            }
-            
         }
+        
     }
     return ret;
     
@@ -157,7 +161,7 @@ struct LambertStruct LambertSphereToPlane(float xyz[3]){
 //> @date 05/14/14    SS 1.0 original
 //--------------------------------------------------------------------------
 
-__kernel void MC(__global float* Lamx, __global float* Lamy, const float E, const int count, const float z, const float rho, const float A, const int num_el, const int prime, const float sig, const float omega, __global float* depth, __global float* energy, const int steps)
+__kernel void MC(__global float* Lamx, __global float* Lamy, const float E, const int count, const float z, const float rho, const float A, const int num_el, __global int* seeds, const float sig, const float omega, __global float* depth, __global float* energy, const int steps)
 {
     int tx, ty;
     tx = get_global_id(0);
@@ -165,13 +169,13 @@ __kernel void MC(__global float* Lamx, __global float* Lamy, const float E, cons
     float dir_cos[3];
     struct LambertStruct ret;
     
-    int seed = count*ty + tx + prime;
 	int id = count*ty + tx;
+    //int seed = seeds[id];
     float rand;
-	int rand_seed;
+    int z11,z22,z33,z44;
+    struct lfsrret retrnd;
     
     int counter1, counter2;
-    
     float4 c_new, r_new;
     float E_new, alpha, de_ds, phi, psi, mfp,sig_eNA,step, dsq, dsqi, absc0z;
     
@@ -186,18 +190,27 @@ __kernel void MC(__global float* Lamx, __global float* Lamy, const float E, cons
 // Setting all values to -10. Any value other than -10 will denote a backscattered electron with the x and y component of the Lambert Projection
 
 	for (int i = 0; i < num_el; ++i){
-		Lamx[num_el*id + i] = -10;
-		Lamy[num_el*id + i] = -10;
-        depth[num_el*id + i] = -10;
-        energy[num_el*id + i] = 0;
+		Lamx[num_el*id + i] = -10.0f;
+		Lamy[num_el*id + i] = -10.0f;
+        depth[num_el*id + i] = 10.0f;
+        energy[num_el*id + i] = 0.0f;
 	}
 
     
     
     for (int i = 0; i < num_el; ++i){
-        rand_seed = rand_r(seed);
-        seed = rand_seed;
-        rand = rand_seed/RAND_MAX; //some random no. generator in gpu
+        //rand_seed = rando();
+        //seed = rand_seed;
+        z11 = seeds[4*id];
+        z22 = seeds[4*id + 1];
+        z33 = seeds[4*id + 2];
+        z44 = seeds[4*id + 3];
+        retrnd = lfsr113_Bits(z11,z22,z33,z44);
+        seeds[4*id] = retrnd.z1;
+        seeds[4*id + 1] = retrnd.z2;
+        seeds[4*id + 2] = retrnd.z3;
+        seeds[4*id + 3] = retrnd.z4;
+        rand = fabs(retrnd.rand/RAND_MAX); //some random no. generator in gpu
         r0 = (float4)(0.0f, 0.0f, 0.0f, 0.0f);
         c0 = (float4)(cos(omega)*sin(sig), sin(omega)*sin(sig), cos(sig), 0.0f);
         E_new = E;
@@ -207,7 +220,7 @@ __kernel void MC(__global float* Lamx, __global float* Lamy, const float E, cons
         sig_eNA = (5.21f * 602.3f)*((z*z)/(E_new*E_new))*((4.0f*PI)/(alpha*(1+alpha)))*((E_new + 511.0f)*(E_new + 511.0f)/((E_new + 1024.0f)*(E_new + 1024.0f)));
         mfp = A/(rho*sig_eNA);
         step = -mfp * log(rand);
-        r_new = r0 + step*c_new;
+        r_new = r0 + step*c_new*1.0e7f;
         //r_new = (float4)(r0.x + step*c_new.x, r0.y + step*c_new.y, r0.z + step*c_new.z, 0.0f);
         r0 = r_new;
         counter1 = 0;   // This is used as a counter for the number of monte carlo steps to carry out for each electron. This is due to the lock step nature of the GPU code. We have arbitly set this to a 1000, though this is material dependent
@@ -221,36 +234,66 @@ __kernel void MC(__global float* Lamx, __global float* Lamy, const float E, cons
             alpha = (3.4E-3f)*powr(z,0.67f)/E_new;
             sig_eNA = (5.21f * 602.3f)*((z*z)/(E_new*E_new))*((4*PI)/(alpha*(1+alpha)))*((E_new + 511.0f)*(E_new + 511.0f)/((E_new + 1024.0f)*(E_new + 1024.0f)));
             mfp = A/(rho*sig_eNA);
-            rand_seed = rand_r(seed);
-            seed = rand_seed;
-            rand = rand_seed/RAND_MAX; //some random no. generator in gpu
+            //seeds[4*id] = retrnd.z1;
+            //seeds[4*id + 1] = retrnd.z2;
+            //seeds[4*id + 2] = retrnd.z3;
+            //seeds[4*id + 3] = retrnd.z4;
+            z11 = seeds[4*id];
+            z22 = seeds[4*id + 1];
+            z33 = seeds[4*id + 2];
+            z44 = seeds[4*id + 3];
+            retrnd = lfsr113_Bits(z11,z22,z33,z44);
+            seeds[4*id] = retrnd.z1;
+            seeds[4*id + 1] = retrnd.z2;
+            seeds[4*id + 2] = retrnd.z3;
+            seeds[4*id + 3] = retrnd.z4;
+            rand = fabs(retrnd.rand/RAND_MAX); //some random no. generator in gpu
             step = -mfp * log(rand);
 // This is the Continuous Slowing Down approximation that we want to get rid of
 
-            de_ds = -78500.0f*(z/(A*E_new)) * log((1.66f*(E_new + 0.85f*J))/J);
-            rand_seed = rand_r(seed);
-            seed = rand_seed;
-            rand = rand_seed/RAND_MAX;
+            de_ds = -78500.0f*(z/(A*E_new)) * log(1.166f*E_new/J + 0.9911f);
+            
+            z11 = seeds[4*id];
+            z22 = seeds[4*id + 1];
+            z33 = seeds[4*id + 2];
+            z44 = seeds[4*id + 3];
+            retrnd = lfsr113_Bits(z11,z22,z33,z44);
+            seeds[4*id] = retrnd.z1;
+            seeds[4*id + 1] = retrnd.z2;
+            seeds[4*id + 2] = retrnd.z3;
+            seeds[4*id + 3] = retrnd.z4;
+            rand = fabs(retrnd.rand/RAND_MAX);
+            //if (fabs(1 - ((2*alpha*rand)/(1 + alpha - rand))) < 1.0f){
             phi = acos(1 - ((2*alpha*rand)/(1 + alpha - rand)));
-            rand_seed = rand_r(seed);
-            seed = rand_seed;
-            rand = rand_seed/RAND_MAX;
+            //}
+
+            z11 = seeds[4*id];
+            z22 = seeds[4*id + 1];
+            z33 = seeds[4*id + 2];
+            z44 = seeds[4*id + 3];
+            retrnd = lfsr113_Bits(z11,z22,z33,z44);
+            seeds[4*id] = retrnd.z1;
+            seeds[4*id + 1] = retrnd.z2;
+            seeds[4*id + 2] = retrnd.z3;
+            seeds[4*id + 3] = retrnd.z4;
+            rand = fabs(retrnd.rand/RAND_MAX);
             psi = 2*PI*rand;
             
+            
 // new direction cosines of the electrons after scattering event
-            if ((c0.z >= 0.999f) || (c0.z <= -0.999f) ){
+            if ((c0.z >= 0.99999f) || (c0.z <= -0.99999f) ){
                 absc0z = fabs(c0.z);
                 c_new = (float4)(sin(phi) * cos(psi), sin(phi) * sin(psi), (c0.z/absc0z)*cos(phi), 0.0f);
             }
             else {
                 dsq = sqrt(1.0f-c0.z*c0.z);
                 dsqi = 1.0f/dsq;
-                c_new = (float4)(sin(phi)*(c0.x*c0.z*cos(psi) - c0.y*sin(psi))*dsqi + c0.x*cos(phi), sin(phi) * (c0.y * c0.z * cos(psi) + c0.x * sin(psi)) * dsqi + c0.y * cos(phi), -sin(phi) * cos(psi) * dsq + c0.z * cos(phi), 0.0f);
+                c_new = (float4)(sin(phi)*(c0.x*c0.z*cos(psi) - c0.y*sin(psi))*dsqi + c0.x*cos(phi), sin(phi) * (c0.y * c0.z * cos(psi) + c0.x * sin(psi)) * dsqi + c0.y * cos(phi), -sin(phi) * cos(psi) * dsq + c0.z * cos(phi),0.0f);
             }
             if (fabs(c_new.z) > 1.0E-5f){
                 escape_depth = r_new.z/c_new.z;
             }
-            r_new = r0 + step*c_new;
+            r_new = r0 + step*c_new*1.0e7f;
             //r_new = (float4)(r0.x + step*c_new.x, r0.y + step*c_new.y, r0.z + step*c_new.z, 0.0f);
             r0 = r_new;
             c0 = c_new;
@@ -259,9 +302,11 @@ __kernel void MC(__global float* Lamx, __global float* Lamy, const float E, cons
                 dir_cos[0] = c0.x;
                 dir_cos[1] = c0.y;
                 dir_cos[2] = c0.z;
-                ret = LambertSphereToPlane(dir_cos);
-                Lamx[num_el*id + i] = ret.res[0];
-                Lamy[num_el*id + i] = ret.res[1];
+                if(dir_cos[0] != 0.0f && dir_cos[1] != 0.0f &&dir_cos[2] != 0.0f){
+                    ret = LambertSphereToPlane(dir_cos);
+                }
+                Lamx[num_el*id + i] = ret.x;
+                Lamy[num_el*id + i] = ret.y;
                 depth[num_el*id + i] = escape_depth;
                 energy[num_el*id + i] = E_new;
                 counter2 = 1;
@@ -270,6 +315,7 @@ __kernel void MC(__global float* Lamx, __global float* Lamy, const float E, cons
             counter1++ ;
         }
         
-        
     }
+
+
 }

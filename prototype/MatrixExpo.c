@@ -21,14 +21,24 @@
 #include <OpenCL/opencl.h>
 #include <time.h>
 
+
+cl_float2 cmplxmult(cl_float2 a, cl_float2 b){
+    cl_float2 res;
+    res.s[0] = a.s[0]*b.s[0] - a.s[1]*b.s[1];
+    res.s[1] = a.s[0]*b.s[1] + a.s[1]*b.s[0];
+    
+    return res;
+}
+
+
 int main(int argc, char** argv){
     int err;                            // error code returned from api calls
     int ns = 1;
     unsigned int count = NUM;
-    unsigned int threadcnt = 50;
+    unsigned int threadcnt = 64;
     cl_ulong time_start, time_end;
     double total_time = 0;
-
+    cl_float2 coeff[9],cvals[9],tmp;
     cl_float2 *A;
     cl_float2 *expAres;            // original data set given to device
     A = malloc(sizeof(cl_float2)*count*count* threadcnt * threadcnt);
@@ -48,8 +58,63 @@ int main(int argc, char** argv){
     cl_mem cl_A;
     cl_mem cl_AA;
     cl_mem cl_AAA;
-    cl_mem cl_T1,cl_T2,cl_T3,cl_T1T2,cl_T1T2T3,cl_sqr;
-    cl_mem cl_coeff;
+    cl_mem cl_T1,cl_T2,cl_T3,cl_T1T2,cl_T1T2T3,cl_sqr,cl_coeff;
+    
+    cvals[0].s[0] = -3.3335514852690488032942739163345055;
+    cvals[0].s[1] = 0.0;
+    
+    cvals[1].s[0] = -3.0386480729366970892124687564926859;
+    cvals[1].s[1] = -1.5868011957588383288038677051222921;
+    
+    cvals[2].s[0] = -3.0386480729366970892124687564926859;
+    cvals[2].s[1] = 1.5868011957588383288038677051222921;
+    
+    cvals[3].s[0] = -2.1108398003026547374987047865183922;
+    cvals[3].s[1] = -3.0899109287255009227777015426228801;
+    
+    cvals[4].s[0] = -2.1108398003026547374987047865183922;
+    cvals[4].s[1] = 3.0899109287255009227777015426228801;
+    
+    cvals[5].s[0] = -0.38106984566311299903129424501333242;
+    cvals[5].s[1] = -4.3846445331453979503692027283066828;
+    
+    cvals[6].s[0] = -0.38106984566311299903129424501333242;
+    cvals[6].s[1] = 4.3846445331453979503692027283066828;
+    
+    cvals[7].s[0] = 2.6973334615369892273896047461916633;
+    cvals[7].s[1] = -5.1841620626494141778340870727109629;
+    
+    cvals[8].s[0] = 2.6973334615369892273896047461916633;
+    cvals[8].s[1] = 5.1841620626494141778340870727109629;
+    
+    
+    coeff[0].s[0] = cvals[0].s[0]+cvals[1].s[0]+cvals[2].s[0];
+    coeff[0].s[1] = cvals[0].s[1]+cvals[1].s[1]+cvals[2].s[1];
+
+    coeff[1].s[0] = cmplxmult(cvals[0],cvals[1]).s[0] + cmplxmult(cvals[1],cvals[2]).s[0] + cmplxmult(cvals[0],cvals[2]).s[0];
+    coeff[1].s[1] = cmplxmult(cvals[0],cvals[1]).s[1] + cmplxmult(cvals[1],cvals[2]).s[1] + cmplxmult(cvals[0],cvals[2]).s[1];
+    
+    tmp = cmplxmult(cvals[1],cvals[2]);
+    coeff[2] = cmplxmult(cvals[0],tmp);
+    
+    
+    coeff[3].s[0] = cvals[3].s[0]+cvals[4].s[0]+cvals[5].s[0];
+    coeff[3].s[1] = cvals[3].s[1]+cvals[4].s[1]+cvals[5].s[1];
+    
+    coeff[4].s[0] = cmplxmult(cvals[3],cvals[4]).s[0] + cmplxmult(cvals[4],cvals[5]).s[0] + cmplxmult(cvals[3],cvals[5]).s[0];
+    coeff[4].s[1] = cmplxmult(cvals[3],cvals[4]).s[1] + cmplxmult(cvals[4],cvals[5]).s[1] + cmplxmult(cvals[3],cvals[5]).s[1];
+
+    tmp = cmplxmult(cvals[4],cvals[5]);
+    coeff[5] = cmplxmult(cvals[3],tmp);
+    
+    coeff[6].s[0] = cvals[6].s[0]+cvals[7].s[0]+cvals[8].s[0];
+    coeff[6].s[1] = cvals[6].s[1]+cvals[7].s[1]+cvals[8].s[1];
+    
+    coeff[7].s[0] = cmplxmult(cvals[6],cvals[7]).s[0] + cmplxmult(cvals[7],cvals[8]).s[0] + cmplxmult(cvals[6],cvals[8]).s[0];
+    coeff[7].s[1] = cmplxmult(cvals[6],cvals[7]).s[1] + cmplxmult(cvals[7],cvals[8]).s[1] + cmplxmult(cvals[6],cvals[8]).s[1];
+
+    tmp = cmplxmult(cvals[7],cvals[8]);
+    coeff[8] = cmplxmult(cvals[6],tmp);
     
     FILE *fp;
 	const char fileName[] = "CTEMMatExp.cl";
@@ -68,11 +133,13 @@ int main(int argc, char** argv){
 
     int nt;
     for(int i = 0; i < count*count* threadcnt * threadcnt; i++){                 // first input value
-        A[i].s[0] = 5.0;//(rand() / (float)RAND_MAX)*0.01;
-        A[i].s[1] = 12.0;//(rand() / (float)RAND_MAX)*0.01;
+        A[i].s[0] = 1.0;//(rand() / (float)RAND_MAX)*0.01;
+        A[i].s[1] = 1.0;//(rand() / (float)RAND_MAX)*0.01;
     }
-    ns = ceil(log(13.0)/log(2.0)) + 1;
+    //ns = 1;
+    ns = 7;
     float fact = pow(2.0,ns);
+
     for(int i = 0; i < count*count* threadcnt * threadcnt; i++){                 // first input value
         A[i].s[0] /= fact;//(rand() / (float)RAND_MAX)*0.01;
         A[i].s[1] /= fact;//(rand() / (float)RAND_MAX)*0.01;
@@ -159,6 +226,13 @@ int main(int argc, char** argv){
         printf("Error: Failed to write to source array!\n");
         exit(1);
     }
+    
+    err = clEnqueueWriteBuffer(commands, cl_coeff, CL_TRUE, 0, sizeof(cl_float2)*9, coeff, 0, NULL, NULL);
+    if (err != CL_SUCCESS)
+    {
+        printf("Error: Failed to write to source array!\n");
+        exit(1);
+    }
     //err = clEnqueueReadBuffer( commands, cl_A, CL_TRUE, 0, sizeof(cl_float2) * count * count * threadcnt * threadcnt, expAres, 0, NULL, NULL );
     //if (err != CL_SUCCESS)
     // {
@@ -185,6 +259,7 @@ int main(int argc, char** argv){
     err  |= clSetKernelArg(kernel, 10, sizeof(cl_mem), (void *)&cl_T1T2T3);
     err  |= clSetKernelArg(kernel, 11, sizeof(cl_mem), (void *)&cl_sqr);
     err  |= clSetKernelArg(kernel, 12, sizeof(unsigned int), (void *)&ns);
+    err  |= clSetKernelArg(kernel, 13, sizeof(unsigned int), (void *)&threadcnt);
 
 
     if (err != CL_SUCCESS)
@@ -195,8 +270,8 @@ int main(int argc, char** argv){
 
     global[0] = threadcnt;
     global[1] = threadcnt;
-    local[0] = 1;
-    local[1] = 1;
+    local[0] = 8;
+    local[1] = 8;
 
     err = clEnqueueNDRangeKernel(commands, kernel, 2, NULL, global, local, 0, NULL, &event);
     if (err)
@@ -211,7 +286,9 @@ int main(int argc, char** argv){
     clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(time_start), &time_start, NULL);
     clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(time_end), &time_end, NULL);
     total_time = time_end - time_start;
-    printf("%f sec for GPU using cl profiler\n",total_time*1E-9 );
+    
+
+    //printf("%f sec for GPU using cl profiler\n",total_time*1E-9 );
     
     err = clEnqueueReadBuffer( commands, cl_expA, CL_TRUE, 0, sizeof(cl_float2) * count * count * threadcnt * threadcnt, expAres, 0, NULL, NULL );
     if (err != CL_SUCCESS)
@@ -219,10 +296,17 @@ int main(int argc, char** argv){
         printf("Error: Failed to read output array! %d\n", err);
         exit(1);
     }
-    
+    int val = 0;
     for(int i = 0; i < count*count*threadcnt*threadcnt; i++){
-            //printf("%f\t%f\n",expAres[i].s[0],expAres[i].s[1]);
+        //printf("%0.10f\t%0.10f\n",expAres[i].s[0],expAres[i].s[1]);
+        if ((expAres[i].s[0] == 0.0) || (expAres[i].s[1] == 0.0)) {
+            val++;
+        }
     }
+    if (val > 0) {
+        printf("Something wrong");
+    }
+    
 
     clReleaseMemObject(cl_expA);
     clReleaseMemObject(cl_A);
