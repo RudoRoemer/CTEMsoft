@@ -219,6 +219,9 @@ call clGetPlatformInfo(platform(iplat), CL_PLATFORM_NAME, info, ierr)
 write(*, '(2a)')   'Name                        : ', trim(info)
 call clGetPlatformInfo(platform(iplat), CL_PLATFORM_VERSION, info, ierr)
 write(*, '(2a)')   'Version                     : ', trim(info)
+call clGetPlatformInfo(platform(iplat), CL_PLATFORM_EXTENSIONS, info, ierr)
+write(*, '(2a)')   'Platform extensions         : ', trim(info)
+
 
 ! get the device ID
 call clGetDeviceIDs(platform(1), CL_DEVICE_TYPE_ALL, numd, ierr)
@@ -233,7 +236,11 @@ do idev=1,numd
  write(6,*) "CL device ",idev,":", info
 end do
 
-dnum = 3
+dnum = 1
+if (dnum.eq.1) then
+  globalworkgrpsz = 1
+  write (*,*) 'Setting device to CPU'
+end if
 
 ! create the context and the command queue
 context = clCreateContext(platform(1), device(dnum), ierr)
@@ -248,7 +255,12 @@ if(ierr /= CL_SUCCESS) stop "Cannot create command queue"
 ! read the source file
 call getenv("CTEMsoft2013opencl",openclpathname)
 
-write (*,*) 'OpenCL pathname = >',trim(openclpathname),'<'
+if (trim(openclpathname).eq.'') then
+  call Message('-------------------------------------------------------------------------------------',"(/A)")
+  call Message('Add CTEMsoft2013opencl definition to your shell start up file (.cshrc, .bashrc, etc.)')
+  call Message('-------------------------------------------------------------------------------------',"(A)")
+  call FatalError('CTEMMCOpenCL',' CTEMsoft2013opencl environment variable undefined')
+end if
 
 open(unit = iunit, file = trim(openclpathname)//'/CTEMMC.cl', access='direct', &
         status = 'old', action = 'read', iostat = ierr, recl = 1)
@@ -297,12 +309,10 @@ if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
 
 open(unit = iunit, file = mcnl%primelist)
 
-!open(unit=13,file='lamxy.txt',action='write')
-
-
 mainloop: do i = 1,(totnum_el/num_max+1)
 
     read(iunit,*) prime
+
 ! set the kernel arguments
     call clSetKernelArg(kernel, 0, LamX, ierr)
     if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'

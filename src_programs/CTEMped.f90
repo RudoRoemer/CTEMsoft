@@ -27,10 +27,10 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:CTEMped.f90
+! CTEMsoft2013:CTEMPED.f90
 !--------------------------------------------------------------------------
 !
-! PROGRAM: CTEMped 
+! PROGRAM: CTEMPED 
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -44,26 +44,40 @@
 !> @date 05/08/13 MDG 2.1 forked from mbcbed and adapted for large angle CBED patterns
 !> @date 05/14/13 MDG 2.2 replaced all IO by namelist file and added command line argument handling
 !> @date 09/04/13 MDG 2.3 all command line argument handling now via files.f90 routine
+!> @date 03/05/14 MDG 3.0 new version to deal with precession electron diffraction
+!> @date 09/07/14 MDG 4.0 removal of all global variables; new TypeDef and NamelistHandler; OpenMP version
 !--------------------------------------------------------------------------
-program CTEMped
+program CTEMPED
+
 
 use local
+use NameListTypedefs
+use NameListHandlers
 use files
 use io
 
 IMPLICIT NONE
 
-character(fnlen)			:: nmldeffile
+character(fnlen)                        :: nmldeffile, progname, progdesc
+type(EBSDMasterNameListType)            :: pednl
 
-! deal with the command line arguments, if any
 nmldeffile = 'CTEMped.nml'
 progname = 'CTEMped.f90'
-call Interpret_Program_Arguments(nmldeffile,1,(/ 13 /) )
+progdesc = 'Precession Electron Diffraction Pattern Simulation'
 
-! perform the zone axis computations
-call PEDpattern(nmldeffile)
+! deal with the command line arguments, if any
+call Interpret_Program_Arguments(nmldeffile,1,(/ 13 /), progname)
 
-end program CTEMped
+! deal with the namelist stuff
+call GetPEDNameList(nmldeffile,pednl)
+
+! print some information
+call CTEMsoft(progname, progdesc)
+
+! generate a set of master EBSD patterns
+ call PEDPattern(pednl,progname)
+
+end program CTEMPED
 
 !--------------------------------------------------------------------------
 !
@@ -75,14 +89,17 @@ end program CTEMped
 !
 !> @param nmlfile namelist file name
 !
-!> @date 03/05/14  MDG 1.0 original, based on CTEMlacbed program
+!> @date 03/05/14 MDG 1.0 original, based on CTEMlacbed program
+!> @date 09/07/14 MDG 2.0 complete rewrite using new CTEMSoftLib library
 !--------------------------------------------------------------------------
-subroutine PEDpattern(nmlfile)
+subroutine PEDpattern(pednl,progname)
 
 use local
+use typedefs
+use NameListTypedefs
+use initializers
 use constants
 use crystal
-use crystalvars
 use diffraction
 use gvectors
 use kvectors
@@ -90,7 +107,6 @@ use MBmodule
 use postscript, ONLY: GetIndex
 use symmetry
 use math
-use dynamical
 use io
 use error
 use files
@@ -98,70 +114,45 @@ use omp_lib
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)	:: nmlfile
+type(PEDNameListType),INTENT(IN)        :: pednl
+character(fnlen),INTENT(IN)             :: progname
 
-real(kind=sgl)      		:: ktmax, io_real(3), bragg, thetac, sc, minten, pxy(2), galen, prechalfwidth, DM(2,2), DD, X(2), &
-                       	   frac, dmin, precangle, voltage, startthick, thickness, thick(1), klaue(2), thetam 
-integer(kind=irg)   		:: ijmax,ga(3),gb(3),k(3),cnt,fn(3), PX, numthick, ss, icnt, pgnum, ih, nunique, famnum, &
-                      		   newcount,count_rate,count_max, io_int(6), i, j, isym, ir, skip, ghkl(3), &
-                      		   npx, npy, numt, numk, npix, ik, ip, jp, istat, dgn, nbeams, refcnt, &
-                      		   ifamily, famhkl(3), inum, maxHOLZ, numksame, precazimuthal, precsample
-character(3)			:: method
-character(fnlen)     		:: outname, xtalname
-character(5)                   :: filemode
+real(kind=sgl)                  :: ktmax, io_real(3), bragg, thetac, sc, minten, pxy(2), galen, DM(2,2), DD, X(2), &
+                                   frac, startthick, thick(1), klaue(2), thetam 
+integer(kind=irg)               :: ijmax,ga(3),gb(3),cnt, PX, numthick, ss, icnt, pgnum, ih, nunique, famnum, &
+                                   newcount,count_rate,count_max, io_int(6), i, j, isym, ir, skip, ghkl(3), &
+                                   npx, npy, numt, numk, ik, ip, jp, istat, dgn, nbeams, refcnt, &
+                                   ifamily, famhkl(3), inum, maxHOLZ, numksame
+character(3)                    :: method
 
-real(kind=sgl),allocatable    	::  disk(:,:)
-integer(kind=irg),allocatable 	:: familymult(:), familyhkl(:,:), whichHOLZ(:), gequiv(:,:)
-real(kind=sgl),allocatable    	:: inten(:,:)
-real(kind=dbl)			:: s(3)
-logical,allocatable		:: ksame(:)
+real(kind=sgl),allocatable      ::  disk(:,:)
+integer(kind=irg),allocatable   :: familymult(:), familyhkl(:,:), whichHOLZ(:), gequiv(:,:)
+real(kind=sgl),allocatable      :: inten(:,:)
+real(kind=dbl)                  :: s(3)
+logical,allocatable             :: ksame(:)
+
+type(unitcell),pointer          :: cell
+type(DynType),save              :: Dyn
+type(gnode),save                :: rlp
+!type(reflisttype),pointer       :: reflist,firstw, rltmp
+!type(BetheParameterType)        :: BetheParameters
+!type(kvectorlist),pointer       :: khead, ktmp
+!real(kind=sgl),allocatable      :: karray(:,:)
+!integer(kind=irg),allocatable   :: kij(:,:)
+!complex(kind=dbl),allocatable   :: DynMat(:,:)
 
 
-namelist /inputlist/ stdout, xtalname, voltage, k, fn, dmin, precangle, prechalfwidth, precsample, precazimuthal, &
-                              thickness,  outname, npix, camlen, filemode
+!=============================================
+!=============================================
+! crystallography section
+nullify(cell)
+allocate(cell)
 
-! set the input parameters to default values (except for xtalname, which must be present)
-xtalname = 'undefined'		! initial value to check that the keyword is present in the nml file
-stdout = 6			! standard output
-voltage = 200000.0		! acceleration voltage [V]
-k = (/ 0, 0, 1 /)		! beam direction [direction indices]
-fn = (/ 0, 0, 1 /)		! foil normal [direction indices]
-dmin = 0.025			! smallest d-spacing to include in dynamical matrix [nm]
-precangle = 10.472		! beam precession angle [mrad]; default = 0.6 degrees
-prechalfwidth = 0.25		! beam half width in the tilt direction [mrad]
-precsample = 10		        ! number of samples (concentric circles) in beam half width (total = 2*precsample + 1)
-precazimuthal = 360		! number of azimuthal samples for each precession circle
-thickness = 10.0		! sample thickness [nm]
-filemode = 'total'            ! 'total' mode or 'eachp'
-npix = 256			! output arrays will have size npix x npix
-outname = 'pedout.data'	! output filename
-camlen = 1000.0			! camera length [mm]
+verbose = .TRUE.
+call Initialize_Cell(cell,Dyn,rlp,pednl%xtalname, pednl%dmin, pednl%voltage, verbose)
 
-! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
-read(UNIT=dataunit,NML=inputlist)
-close(UNIT=dataunit,STATUS='keep')
-
-if (trim(xtalname).eq.'undefined') then
-  call FatalError('CTEMped:',' structure file name is undefined in '//nmlfile)
-end if
-
-! print some information
- progname = 'CTEMped.f90'
- progdesc = 'Zone axis precession electron diffraction pattern simulation'
- call CTEMsoft
-
-! first get the crystal data and microscope voltage
- SG%SYM_reduce=.TRUE.
- call CrystalData(xtalname)
- skip = 3
- call CalcWaveLength(dble(voltage),skip)
-
-! generate all atom positions
- call CalcPositions('v')
- 
 ! set the foil normal 
- DynFN = float(fn)
+ Dyn%FN = float(pednl%fn)
  numt = 1
  thick(1) = thickness
  
@@ -178,7 +169,7 @@ end if
  isym = WPPG(dgn) ! WPPG lists the whole pattern point group numbers vs. diffraction group numbers
 
 ! determine the shortest reciprocal lattice points for this zone
- call ShortestG(k,ga,gb,isym)
+ call ShortestG(pednl%k,ga,gb,isym)
  io_int(1:3)=ga(1:3)
  io_int(4:6)=gb(1:3)
  call WriteValue(' Reciprocal lattice vectors : ', io_int, 6,"('(',3I3,') and (',3I3,')',/)")
@@ -186,15 +177,23 @@ end if
 ! construct the list of all possible reflections
  method = 'ALL'
  thetac = precangle/1000.0
- call Compute_ReflectionList(dmin,k,ga,gb,method,.FALSE.,maxHOLZ,thetac)
+ call Compute_ReflectionList(dmin,pednl%k,ga,gb,method,.FALSE.,maxHOLZ,thetac)
  galen = CalcLength(float(ga),'r')
+!=============================================
+!=============================================
 
+!=============================================
+!=============================================
 ! determine the list of contributing wave vectors
-  call CalckvectorsPrecession(dble(k),dble(ga),precangle,prechalfwidth,precsample,precazimuthal,numk)
+  call CalckvectorsPrecession(dble(pednl%k),dble(ga),pednl%precangle,pednl%prechalfwidth,pednl%precsample,pednl%precazimuthal,numk)
+!=============================================
+!=============================================
 
 ! force dynamical matrix routine to read new Bethe parameters from file
-  call Set_Bethe_Parameters(.TRUE.)
+!  call Set_Bethe_Parameters(.TRUE.)
 
+!=============================================
+!=============================================
 ! up to this point, everything is nearly identical to the mbcbed program,
 ! except that we do not use a camera length explicitly.  Now we
 ! need to do things a little differently.  First of all, we need a master 
@@ -230,7 +229,7 @@ end if
 ! go through the linked reflection list and set all intensities to zero; we'll use the 
 ! xg entry in the rltmpa linked list to accumulate the intensities
 
-if (filemode.eq.'total') then
+if (pednl%filemode.eq.'total') then
   rltmpa => reflist%next
   do i=1,DynNbeamsLinked
     rltmpa%xg = 0.D0
@@ -248,25 +247,25 @@ end if
 ! write the version number
   write (dataunit) scversion
 ! then the name of the crystal data file
-  write (dataunit) xtalname
+  write (dataunit) pednl%xtalname
 ! the accelerating voltage [V]
-  write (dataunit) voltage
+  write (dataunit) pednl%voltage
 ! precangle angle [mrad]
-  write (dataunit) precangle
+  write (dataunit) pednl%precangle
 ! prechalfwidth angle [mrad]
-  write (dataunit) prechalfwidth
+  write (dataunit) pednl%prechalfwidth
 ! precsample
-  write (dataunit) precsample
+  write (dataunit) pednl%precsample
 ! precazimuthal
-  write (dataunit) precazimuthal
+  write (dataunit) pednl%precazimuthal
 ! the zone axis indices
-  write (dataunit) k
+  write (dataunit) pednl%k
 ! the foil normal indices
-  write (dataunit) fn
+  write (dataunit) pednl%fn
 ! number of k-values in disk
   write (dataunit) numk
 ! dmin value
-  write (dataunit) dmin
+  write (dataunit) pednl%dmin
 ! horizontal reciprocal lattice vector
   write (dataunit) ga  
 ! second reciprocal lattice vector
@@ -278,7 +277,7 @@ end if
 ! angle between these two vectors (in radians)
   write (dataunit) CalcAngle(float(ga),float(gb),'r')
 ! thickness data
-  write (dataunit) thickness
+  write (dataunit) pednl%thickness
   
 
   
@@ -302,31 +301,31 @@ kvectorloop:  do ik = 1,numk
 ! has been set to .FALSE.; if it is set to .TRUE., the computation of the ZOLZ will still be mostly correct,
 ! but the excitation errors of the HOLZ reflections will be increasingly incorrect with HOLZ order.  This was
 ! useful during program testing but should probably be removed as an option altogether...
-	call Compute_DynMat('BLOCHBETHE', ktmp%k, ktmp%kt, .FALSE.)
+        call Compute_DynMat('BLOCHBETHE', ktmp%k, ktmp%kt, .FALSE.)
 
 ! allocate the intensity array to include both strong beams and weak beams (in that order)
-	allocate(inten(numt,DynNbeams+BetheParameter%nnw))
-  	inten = 0.0
+        allocate(inten(numt,DynNbeams+BetheParameter%nnw))
+        inten = 0.0
  
 ! solve the dynamical eigenvalue equation and return the intensities of ALL reflections,
 ! both strong and weak; the weak intensities should also be plotted at the correct locations....
 ! this uses a new version of the CalcBWint routine that implements both strong and weak beam intensities.
-   	call CalcBWint(DynNbeams,BetheParameter%nnw,numt,thick,inten)
+        call CalcBWint(DynNbeams,BetheParameter%nnw,numt,thick,inten)
 
 ! we combine the reflistindex and weakreflistindex into a single list so that we can match 
 ! each diffracted intensity with the correct diffraction disk in the disks array.
-	BetheParameter%reflistindex = BetheParameter%reflistindex + BetheParameter%weakreflistindex
+        BetheParameter%reflistindex = BetheParameter%reflistindex + BetheParameter%weakreflistindex
 
 ! ok, we have all the intensities.  Next we need to copy the relevant intensities into the 
 ! xg field of the rltmpa linked list; we simply add the intensities together
 ! of the disk array, one for each family.
-	rltmpa => reflist%next
-	do i=1,DynNbeamsLinked
-	  if (BetheParameter%reflistindex(i).ne.0) then ! is this a reflection on the current list
-	    rltmpa%xg = rltmpa%xg + inten(1,BetheParameter%reflistindex(i))
-	  end if
-	  rltmpa => rltmpa%next
-	end do
+        rltmpa => reflist%next
+        do i=1,DynNbeamsLinked
+          if (BetheParameter%reflistindex(i).ne.0) then ! is this a reflection on the current list
+            rltmpa%xg = rltmpa%xg + inten(1,BetheParameter%reflistindex(i))
+          end if
+          rltmpa => rltmpa%next
+        end do
 
 ! and remove the intensity array
      deallocate(inten)
@@ -462,33 +461,33 @@ use kvectors
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)		:: k(3)		!< initial wave vector
-real(kind=dbl),INTENT(IN)		:: ga(3)	!< "horizontal" reciprocal lattice vector
-real(kind=sgl),INTENT(IN)		:: precangle	!< precession angle in [mrad]
-real(kind=sgl),INTENT(IN)		:: prechalfwidth	!< halfwidth of tilted beam [mrad]
-integer(kind=irg),INTENT(IN)		:: precsample		!< number of kvectors along beam tilt
-integer(kind=irg),INTENT(IN)		:: precazimuthal	!< number of kvectors along circumference
-integer(kind=irg),INTENT(OUT)		:: numk		!< total number of kvectors in linked list
+real(kind=dbl),INTENT(IN)               :: k(3)         !< initial wave vector
+real(kind=dbl),INTENT(IN)               :: ga(3)        !< "horizontal" reciprocal lattice vector
+real(kind=sgl),INTENT(IN)               :: precangle    !< precession angle in [mrad]
+real(kind=sgl),INTENT(IN)               :: prechalfwidth        !< halfwidth of tilted beam [mrad]
+integer(kind=irg),INTENT(IN)            :: precsample           !< number of kvectors along beam tilt
+integer(kind=irg),INTENT(IN)            :: precazimuthal        !< number of kvectors along circumference
+integer(kind=irg),INTENT(OUT)           :: numk         !< total number of kvectors in linked list
 
-integer(kind=irg)       		:: istat,i,j, iequiv(2,12), nequiv, jj, nx, ny, il, ith
-real(kind=dbl)				:: gp, dgp, glen, gan(3), gperp(3), kstar(3), dth
-real(kind=dbl),allocatable		:: gw(:), ct(:), st(:), th(:)
-logical					:: hexgrid = .FALSE.
-real(kind=sgl)				:: kt(3),kr(3)
-real(kind=sgl)				:: ktlen
+integer(kind=irg)                       :: istat,i,j, iequiv(2,12), nequiv, jj, nx, ny, il, ith
+real(kind=dbl)                          :: gp, dgp, glen, gan(3), gperp(3), kstar(3), dth
+real(kind=dbl),allocatable              :: gw(:), ct(:), st(:), th(:)
+logical                                 :: hexgrid = .FALSE.
+real(kind=sgl)                          :: kt(3),kr(3)
+real(kind=sgl)                          :: ktlen
 
 write (*,*) precangle, prechalfwidth, precsample, precazimuthal, mLambda
 
 ! compute geometrical factors 
- glen = CalcLength(ga,'r')              		! length of ga
- gan = ga/glen                                 	! normalized ga
- gp = 2.0*sin(precangle/1000.0)/mLambda		! precession angle converted to reciprocal length gp in units of glen
+ glen = CalcLength(ga,'r')                              ! length of ga
+ gan = ga/glen                                  ! normalized ga
+ gp = 2.0*sin(precangle/1000.0)/mLambda         ! precession angle converted to reciprocal length gp in units of glen
  dgp = 0.0
  if (precsample.gt.0) then
-   dgp = 2.0*sin(0.001*(precangle-prechalfwidth))/mLambda/glen/float(precsample)	! half width step size converted to reciprocal length dgp in units of glen
+   dgp = 2.0*sin(0.001*(precangle-prechalfwidth))/mLambda/glen/float(precsample)        ! half width step size converted to reciprocal length dgp in units of glen
  end if
- allocate(gw(2*precsample+1))				! sampling radii
- gw = gp + dgp * (/ (i,i=-precsample,precsample) /)	! sampling radii
+ allocate(gw(2*precsample+1))                           ! sampling radii
+ gw = gp + dgp * (/ (i,i=-precsample,precsample) /)     ! sampling radii
 
 ! pre-compute cosines and sines
  allocate(ct(precazimuthal),st(precazimuthal), th(precazimuthal))
@@ -497,37 +496,37 @@ write (*,*) precangle, prechalfwidth, precsample, precazimuthal, mLambda
  ct = cos(th)
  st = sin(th)
  
- call TransSpace(k,kstar,'d','r')       		! transform incident direction to reciprocal space
- call CalcCross(ga,kstar,gperp,'r','r',0)      	! compute g_perp = ga x k
- call NormVec(gperp,'r')                       	! normalize g_perp
- call NormVec(kstar,'r')                       	! normalize reciprocal beam vector
+ call TransSpace(k,kstar,'d','r')                       ! transform incident direction to reciprocal space
+ call CalcCross(ga,kstar,gperp,'r','r',0)       ! compute g_perp = ga x k
+ call NormVec(gperp,'r')                        ! normalize g_perp
+ call NormVec(kstar,'r')                        ! normalize reciprocal beam vector
 
 ! allocate the head and tail of the linked list
- allocate(khead,stat=istat)   				! allocate new value
+ allocate(khead,stat=istat)                             ! allocate new value
  if (istat.ne.0) call FatalError('CalckvectorsPrecession','unable to allocate khead pointer')
- ktail => khead                      			! tail points to new value
- nullify(ktail%next)                			! nullify next in new value
- numk = 0                          			! keep track of number of k-vectors so far
+ ktail => khead                                         ! tail points to new value
+ nullify(ktail%next)                                    ! nullify next in new value
+ numk = 0                                               ! keep track of number of k-vectors so far
 
  
 ! next loop around each of the precession circles
- do il = 1,2*precsample+1  				! number of concentric circles
-  do ith = 1,precazimuthal  				! number of points along each circle
+ do il = 1,2*precsample+1                               ! number of concentric circles
+  do ith = 1,precazimuthal                              ! number of points along each circle
 ! make a new one in the list, except for the first one
    if (numk.ne.0) then
-     allocate(ktail%next,stat=istat)  			! allocate new value
+     allocate(ktail%next,stat=istat)                    ! allocate new value
      if (istat.ne.0) call FatalError('Add_knode:',' unable to allocate pointer')
-     ktail => ktail%next               		! tail points to new value
-     nullify(ktail%next)              			! nullify next in new value
+     ktail => ktail%next                        ! tail points to new value
+     nullify(ktail%next)                                ! nullify next in new value
    end if
 ! and populate the fields   
-   kt = - gw(il)*ct(ith)*gan - gw(il)*st(ith)*gperp  	! tangential component of k
-   ktail%kt = kt                    			! store tangential component of k
-   ktlen = CalcLength(kt,'r')**2      			! squared length of tangential component
+   kt = - gw(il)*ct(ith)*gan - gw(il)*st(ith)*gperp     ! tangential component of k
+   ktail%kt = kt                                        ! store tangential component of k
+   ktlen = CalcLength(kt,'r')**2                        ! squared length of tangential component
 
-   kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar 	! complete wave vector
-   ktail%k = kr                     			! store in pointer list
-   ktail%kn = CalcDot(ktail%k,kstar,'r')    		! normal component of k
+   kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar         ! complete wave vector
+   ktail%k = kr                                         ! store in pointer list
+   ktail%kn = CalcDot(ktail%k,kstar,'r')                ! normal component of k
    numk = numk + 1
   end do
  end do

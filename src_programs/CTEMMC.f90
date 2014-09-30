@@ -58,6 +58,7 @@
 !> @date 09/25/13  MDG 3.1 modified output file format
 !> @date 03/17/14  MDG 3.2 modified output file format for IDL GUI
 !> @date 06/19/14  MDG 4.0 converted to remove all globals and split namelist handling from computation
+!> @date 09/24/14  MDG 4.1 test version to compare with Saransh's OpenCL code
 !--------------------------------------------------------------------------
 program CTEMMC
 
@@ -282,7 +283,7 @@ contains
 recursive subroutine  single_run(varpas,rngt,accum_e,accum_z,nx,numEbins,numzbins)
 
 use local
-use rng
+!use rng
 use Lambert
 
 ! all geometrical parameters for the scintillator setup
@@ -303,7 +304,7 @@ real(kind=dbl)          :: depthstep    ! stepsize for depth-energy accumulator 
 ! Monte Carlo related parameters
 real(kind=dbl)          :: EkeV, Ec                     ! electron energy in keV
 real(kind=dbl)          :: scaled = 1.0D8               ! cm to Angstrom scalefactor
-real(kind=dbl)          :: min_energy = 1.D0            ! in keV
+real(kind=dbl)          :: min_energy = 0.D0            ! in keV
 real(kind=dbl)          :: presig = 1.5273987D19        ! = 1/( 5.21D-21 * (4*cPi) )
 real(kind=dbl)          :: xyz(3), xyzn(3)              ! electron coordinates
 real(kind=dbl)          :: cxyz(3), cxstart, czstart    ! direction cosines
@@ -323,6 +324,7 @@ integer(kind=k12)       :: num_el               ! total number of electrons to t
 integer(kind=k12)       :: el                   ! electron counter
 integer(kind=irg)       :: traj                 ! trajectory counter
 integer(kind=irg)       :: ierr                 ! Lambert projection error status flag
+integer(kind=irg)       :: iran                 ! random number counter
 
 ! material parameters
 real(kind=dbl)          :: Ze                   ! average atomic number
@@ -336,9 +338,21 @@ integer(kind=irg)               :: TID
 
 ! parallel random number variable 
 type(rng_t), intent(inout)      :: rngt
+real(kind=dbl)                  :: rn(1501)
 real(kind=dbl)                  :: rr   ! random number
 
 real(kind=dbl), parameter :: cDtoR = 0.017453293D0
+
+  write (*,*) 'entered single_run routine'
+
+! in this test program, we'll only follow one electron for 500 steps; to do so,
+! we'll need 1501 random numbers from the RandomSeeds.data file, which we read here:
+open(unit=20,file='randomuniform.txt',status='old',form='formatted')
+do i=1,1501
+  read(20,"(F14.12)") rn(i)
+  write (*,*) rn(i)
+end do
+close(unit=20,status='keep')
 
 
 ! get the current thread number
@@ -348,7 +362,7 @@ real(kind=dbl), parameter :: cDtoR = 0.017453293D0
  sig = varpas(1)
  numsx = int(varpas(2),kind=irg)
  numsy = int(varpas(3),kind=irg) 
- num_el = int(varpas(4),kind=k12)
+ num_el = 1 ! int(varpas(4),kind=k12)
  EkeV = varpas(5)
  Ze = varpas(6) 
  density = varpas(7) 
@@ -360,6 +374,8 @@ real(kind=dbl), parameter :: cDtoR = 0.017453293D0
  omega = varpas(13)
 
  Emin = Ehistmin - Ebinsize/2.D0
+
+ Emin = 0.D0
    
 ! prefactors for mean free path and other computations
  pre =  at_wt/cAvogadro/density
@@ -369,7 +385,7 @@ real(kind=dbl), parameter :: cDtoR = 0.017453293D0
  predEds = -78500.0D0 * density * Ze / at_wt 
 
 ! initialize max number of scattering events along a single trajectory
- num = 5000
+ num = 500
  tpi = 2.D0 * cPi
  tano = tan(omega * cDtoR)
 
@@ -380,6 +396,12 @@ real(kind=dbl), parameter :: cDtoR = 0.017453293D0
  cxstart = dcos( (90.D0-sig) * cDtoR)
  czstart = -dsin( (90.D0-sig) * cDtoR)
  
+! random number counter
+ iran = 1
+
+open(unit=dataunit,file='singlerun.txt',status='unknown',form='formatted')
+open(unit=dataunit2,file='singlerun2.txt',status='unknown',form='formatted')
+
 ! and here is the main loop
  mainloop: do el = 1,num_el
 
@@ -401,13 +423,17 @@ real(kind=dbl), parameter :: cDtoR = 0.017453293D0
     step = Ec*(Ec+1024.D0)/Ze/(Ec+511.D0)               ! step is used here as a dummy variable
     sige =  presig * step * step * alpha * (1.D0+alpha)
     lambda = pre * sige
-    rr = rng_uniform(rngt)
+    rr = rn(iran)
+    iran = iran+1
     step = - lambda * log(rr)
  
     cxyz = (/ cxstart, 0.D0, czstart /)         ! direction cosines for beam on tilted sample
  
 ! advance the coordinates 
     xyz = xyz + step * scaled * cxyz
+
+  write (dataunit,"(I6,':',F10.4,',',5(F12.4,','),F12.4)") iran-2, Ec, cxyz(1:3), xyz(1:3)
+  write (dataunit2,"(I6,':',E12.4,',',E12.4,',',E12.4,',',E12.4)") iran-2, alpha, step*scaled, sige, lambda*scaled 
 
   traj = 0
   trajloop: do while (traj.lt.num)
@@ -420,12 +446,14 @@ real(kind=dbl), parameter :: cDtoR = 0.017453293D0
     if (Ec.lt.min_energy) EXIT trajloop
     
 !  Find the angle the electron is deflected through by the scattering event.
-    rr = rng_uniform(rngt)
+    rr = rn(iran)  ! rng_uniform(rngt)
+    iran = iran+1
     cphi = 1.D0-2.D0*alpha*rr/(1.D0+alpha-rr)
     sphi = dsin(dacos(cphi)) !  dsqrt(1.D0-cphi*cphi)
 
 ! Find the azimuthal scattering angle psi
-    rr = rng_uniform(rngt)
+    rr = rn(iran) ! rng_uniform(rngt)
+    iran = iran+1
     psi = tpi * rr
     spsi = dsin(psi)
     cpsi = dcos(psi)
@@ -453,7 +481,8 @@ real(kind=dbl), parameter :: cDtoR = 0.017453293D0
     sige =  presig * step * step * alpha * (1.D0+alpha)
     lambda = pre * sige
 
-    rr = rng_uniform(rngt)
+    rr = rn(iran) ! rng_uniform(rngt)
+    iran = iran+1
     step = - lambda * log(rr)
 
 ! apply the step to the next location    
@@ -499,9 +528,15 @@ real(kind=dbl), parameter :: cDtoR = 0.017453293D0
    xyz = xyzn
    traj = traj + 1
   
+   write (dataunit,"(I6,':',F10.4,',',5(F12.4,','),F12.4)") traj, Ec, cxyz(1:3), xyz(1:3)
+   write (dataunit2,"(I6,':',E12.4,',',E12.4,',',E12.4,',',E12.4)") traj, alpha, step*scaled, sige, lambda*scaled 
+
   end do trajloop
 
 end do mainloop
+
+close(unit=dataunit,status='keep')
+close(unit=dataunit2,status='keep')
 
 
 end subroutine single_run

@@ -50,6 +50,7 @@
 !> @date 07/06/14 MDG 4.2 added omegamax to Lambert constant type
 !> @date 08/11/14 MDG 4.3 added infty for handling of +Infinity in rotations module
 !> @date 08/11/14 MDG 4.4 added epsijk option to package
+!> @date 09/30/14 MDG 4.5 added some additional comments about epsijk
 !--------------------------------------------------------------------------
 
 module constants
@@ -66,17 +67,24 @@ IMPLICIT NONE
 ! both of these parameters should be set to +1; -1 will change the sign everywhere
 ! for all representations that involve the unit vector.
 
-! uncomment these for the more logical way of doing things
+! uncomment these for an alternative way of doing things
 real(kind=sgl), parameter :: epsijk = -1.0
 real(kind=dbl), parameter :: epsijkd = -1.D0
 
 ! uncomment these for the Morawiec version.
 !real(kind=sgl), parameter :: epsijk = 1.0
 !real(kind=dbl), parameter :: epsijkd = 1.D0
-! ****************************************************
-! ****************************************************
-! ****************************************************
 
+! In the first case, epsijk=-1, the rotation 120@[111] will result in 
+! an axis angle pair of [111], 2pi/3.  In the second case, the axis-angle 
+! pair will be -[111], 2pi/3.  In all cases, the rotations are interpreted
+! in the passive sense.  The case epsijk=+1 corresponds to the mathematically 
+! consistent case, using the standard definition for the quaternion product; in
+! the other case, epsijk=-1, one must redefine the quaternion product in order
+! to produce consistent results.  This takes a lengthy explanation ...  
+! ****************************************************
+! ****************************************************
+! ****************************************************
 
 ! the rotations.f90 routines need to have access to the value +Infinity
 ! which is defined here (using the LaTeX name infty)
