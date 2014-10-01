@@ -10,12 +10,25 @@ IMPLICIT NONE
  
 real(kind=dbl)        :: ieu(3), oeu(3), iro(4), oro(4), iho(3), oho(3), icu(3), ocu(3)
 real(kind=dbl)        :: iax(4), oax(4), iqu(4), oqu(4), ivec(3), ovec(3)
-real(kind=dbl)        :: iom(3,3), oom(3,3), omm(3,3), diff, diffmax, dtor, aux
+real(kind=dbl)        :: iom(3,3), oom(3,3), omm(3,3), diff, diffmax, dtor, aux, omega
 real(kind=dbl),allocatable :: rots(:,:)
 integer(kind=irg)     :: tcnt, rcnt, i
 type(orientationtyped):: ot
 logical               :: verbose
  
+
+ieu = (/ 1.D0, 1.D0, 0.D0 /)
+omega = 0.5D0
+ot = genrot(ieu,omega)
+call print_orientation(ot)
+
+stop
+
+
+
+
+
+
 ivec = (/ 1.D0, 1.D0, 0.D0 /)
 verbose =  .FALSE.
 dtor = cPi/180.D0

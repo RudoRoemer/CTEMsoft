@@ -113,6 +113,15 @@ absoft_run_env.sh
 # .mod’s and .o’s
 *.mod
 *.o
+/IDL/README.txt
+/IDL/pro/change
+/IDL/pro/fort.21
+/manuals/*.bib
+/manuals/*.out
+/resources/*.pro
+/src/AmyPlay.f90
+/src/local.f90
+/src/PatrickPlay.f90
 
 
 #ignoring cmake and other build systems

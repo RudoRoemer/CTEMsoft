@@ -1,0 +1,969 @@
+
+\documentclass[DIV=calc, paper=letter, fontsize=11pt]{scrartcl}	 % A4 paper and 11pt font size
+
+\usepackage[body={6.5in,9.0in},
+  top=1.0in, left=1.0in]{geometry}
+  
+\usepackage[english]{babel} % English language/hyphenation
+\usepackage[protrusion=true,expansion=true]{microtype} % Better typography
+\usepackage{amsmath,amsfonts,amsthm} % Math packages
+\usepackage[svgnames]{xcolor} % Enabling colors by their 'svgnames'
+\usepackage[hang, small,labelfont=bf,up,textfont=it,up]{caption} % Custom captions under/above floats in tables or figures
+\usepackage{booktabs} % Horizontal rules in tables
+\usepackage{fix-cm}	 % Custom font sizes - used for the initial letter in the document
+\usepackage{epsfig}
+\usepackage{sectsty} % Enables custom section titles
+\allsectionsfont{\usefont{OT1}{phv}{b}{n}} % Change the font of all section commands
+
+\usepackage{fancyhdr} % Needed to define custom headers/footers
+\pagestyle{fancy} % Enables the custom headers/footers
+\usepackage{lastpage} % Used to determine the number of pages in the document (for "Page X of Total")
+\usepackage{color}
+
+\usepackage{fancyvrb}% used to include files verbatim
+%\usepackage{chemsym}
+
+\usepackage{hyperref}
+
+\usepackage[backend=bibtex,style=numeric,sorting=ydnt,maxnames=15]{biblatex}
+\renewbibmacro{in:}{}
+
+% Count total number of entries in each refsection
+\AtDataInput{%
+  \csnumgdef{entrycount:\therefsection}{%
+    \csuse{entrycount:\therefsection}+1}}
+
+% Print the labelnumber as the total number of entries in the
+% current refsection, minus the actual labelnumber, plus one
+\DeclareFieldFormat{labelnumber}{\mkbibdesc{#1}}    
+\newrobustcmd*{\mkbibdesc}[1]{%
+  \number\numexpr\csuse{entrycount:\therefsection}+1-#1\relax}
+
+
+%\addbibresource[label=papers]{mypubs.bib}
+%\addbibresource[label=books]{mypubs.bib}
+%\addbibresource[label=edited]{mypubs.bib}
+%\addbibresource[label=chapters]{mypubs.bib}
+
+
+% Headers - all currently empty
+\lhead{}
+\chead{}
+\rhead{}
+
+% Footers
+\lfoot{\textsf{CTEMMC, CTEMEBSDmaster, and CTEMEBSD} manual, v2.0, \today}
+\cfoot{}
+\rfoot{\footnotesize Page \thepage\ of \pageref{LastPage}} % "Page 1 of 2"
+
+\renewcommand{\headrulewidth}{0.0pt} % No header rule
+\renewcommand{\footrulewidth}{0.4pt} % Thin footer rule
+
+\usepackage{lettrine} % Package to accentuate the first letter of the text
+\newcommand{\initial}[1]{ % Defines the command and style for the first letter
+\lettrine[lines=3,lhang=0.3,nindent=0em]{
+\color{DarkGoldenrod}
+{\textsf{#1}}}{}}
+
+\usepackage{titling} % Allows custom title configuration
+
+\newcommand{\HorRule}{\color{DarkGoldenrod} \rule{\linewidth}{1pt}} % Defines the gold horizontal rule around the title
+
+\pretitle{\vspace{-1.5in} \begin{center} \HorRule \fontsize{25}{25} \usefont{OT1}{phv}{b}{n} \color{DarkRed} \selectfont} % Horizontal rule before the title
+
+\title{Electron Back-Scatter Diffraction Pattern Simulations} % Your article title
+
+\posttitle{\par\end{center}\vskip 0.5em} % Whitespace under the title
+
+\preauthor{\begin{center}\large \lineskip 0.5em \usefont{OT1}{phv}{b}{sl} \color{DarkRed}} % Author font configuration
+
+\author{\vspace*{-0.7in}} % Your name
+
+\postauthor{\footnotesize \usefont{OT1}{phv}{m}{sl} \color{Black} % Configuration for the institution name
+
+\par\end{center}\HorRule} % Horizontal rule after the title
+\date{Program Manual, v2.0, \today\protect\footnote{This set of programs was developed with financial support from two agencies. 
+The Office of Naval Research sponsored the development of the f90 source code for computation of EBSD patterns in research 
+grant N00014-12-1-0075.  The IDL visualization interface, and the complete version 2.0 and beyond were developed with financial 
+support from an AFOSR/MURI grant FA9550-12-1-0458.}}
+
+\newcommand{\ctp}{\textsf{CTEMsoft-2013}}
+%
+\newcommand{\upg}[1]{\mathrm{i}U_{\mathbf{#1}}^{\prime}}
+\newcommand{\combo}[1]{U_{\mathbf{#1}}+\upg{#1}}
+\newcommand{\upgcombo}[2]{2k_{0}s_{\mathbf{#1}}+\upg{#2}}
+\newcommand{\ugh}[2]{U_{\mathbf{#1}-\mathbf{#2}}}
+\newcommand{\ughp}[2]{U_{\mathbf{#1}'-\mathbf{#2}}}
+\newcommand{\ughpp}[2]{U_{\mathbf{#1}-\mathbf{#2}'}}
+\newcommand{\kkg}[1]{k_{0}^{2}-(\mathbf{k}+\mathbf{#1})^{2}}
+\newcommand{\Cg}[1]{C_{\mathbf{#1}}}
+\newcommand{\Cgj}[2]{C_{\mathbf{#1}}^{(#2)}}
+\newcommand{\Cgjp}[2]{C_{\mathbf{#1}'}^{(#2)}}
+\newcommand{\Cgja}[2]{C_{\mathbf{#1}}^{(#2)\ast}}
+\newcommand{\button}[1]{\colorbox{green}{\textsf{#1}} button}
+
+
+\begin{document}
+\maketitle
+
+\begin{figure*}[h]
+\leavevmode\centering
+\epsffile{figs/SEMONRlogo}
+\end{figure*}
+
+\renewcommand{\contentsname}{Table of Contents}
+{\small\tableofcontents}
+
+\newpage
+\section{Introduction}
+This manual describes a series of four programs, 
+three written in Fortran-90,\footnote{f90 is a much richer language than the original fortran-f77, and is
+used for all programs in the \ctp\ package.} 
+the other in IDL,\footnote{The \textit{Interactive Data Language} is an interpreted scripting language with extensive graphics capabilities.} 
+that can be used for the simulation of electron back-scatter diffraction (EBSD) patterns (EBSPs).  The main f90 programs
+are named \textsf{CTEMMC} (note that all programs in the \ctp\ package start with the letters ``CTEM''), \textsf{CTEMEBSDmaster},
+and \textsf{CTEMEBSD}.
+The output generated by these programs can then be visualized by the IDL routine \textsf{EBSDDisplay.pro}.  
+
+On the following pages we will try to accomplish four tasks:
+\begin{enumerate}
+	\item Explain briefly the underlying pattern formation theory and the numerical approach followed by the f90 programs (section~\ref{sec:theory});
+	\item Document the input files for the three f90 programs (sections~\ref{sec:f90MC}, \ref{sec:f90EBSDmaster}, and \ref{sec:f90EBSD});
+	\item Document the IDL interface (section~\ref{sec:idl});
+	\item Explain the use of these programs by means of a few basic examples (section~\ref{sec:examples}).
+\end{enumerate}
+
+\input{common.tex}
+
+
+\newpage
+\section{Version 2.0 features}
+In version 2.x, we have made the following changes:
+\begin{itemize}
+	\item \textsf{CTEMMC} now uses an OpenCL kernel routine to perform the Monte Carlo simulation on a GPU, if one is available.  This results in significant acceleration compared to the single CPU or multi-core CPU routines from version 1.0.  Speed up factors of between $200\times$ and $300\times$ have been measured with respect to the single CPU code.
+	\item \textsf{CTEMEBSDmaster} has been rewritten using the scattering matrix approach instead of the more traditional Bloch wave approach.  As a result, the bulk of the computation can once again be shifted onto a GPU; the GPU computes the exponential of the dynamical matrix using the modified/optimized Taylor expansion approach created by C. Koch and co-workers.
+	\item \textsf{CTEMEBSD}, for now, remains unchanged, except for the symmetry handling which now includes full support for the hexagonal Lambert grid.
+	\item \textsf{EBSDDisplay.pro}: this IDL program remains unchanged for the most, but will be replaced in the future with a \textsf{wx}-Python interface.
+\end{itemize}
+
+\newpage
+\section{Electron back-scatter diffraction patterns: the underlying theory\label{sec:theory}}
+As described in detail in a recent paper,\footnote{P.G. Callahan and M. De Graef, \textit{Dynamical Electron Backscatter Diffraction Patterns. Part I: Pattern Simulations}
+Microsc.\ Microanal.\ \textbf{19}, 1255--1265, 2013.} there are three steps to the computation of a realistic (dynamical) EBSP:
+\begin{itemize}
+	\item Monte Carlo simulation of the energy, depth, and directional distributions of back-scattered electrons;
+	\item Dynamical simulation of the EBSD master pattern (covering all possible directions);
+	\item Simulation of an EBSP for a given detector geometry and sample (grain) orientation.
+\end{itemize}
+
+Before we describe the details of these three steps, we need to introduce a mapping and interpolation technique that is used extensively in all
+three programs as well as in the visualization program: \textit{modified Lambert projections}.  We also need to discuss the 
+symmetry of the scattering problem in terms of the Laue symmetry groups. For projections from hexagonal or trigonal symmetries, we 
+also need to introduce a special version of barycentric coordinates.
+
+\subsection{Modified Lambert Projections \label{sec:Lambert}}
+The BSEs that leave a sample that is illuminated by a high energy electron beam typically travel in all possible directions in the hemisphere
+on the vacuum side of the sample.  If we wish to compute and accurately represent this spatial distribution, we must define a sampling grid 
+on the sphere surface for which all bins have very nearly the same shape and area, i.e., a uniform distribution of sampling points 
+on the hemisphere surface.  This is not an easy problem, and there is quite a bit of literature on spherical sampling grids.  In addition 
+to selecting an efficient sampling scheme, we must also make sure that the scheme is compatible with crystallographic symmetries; if a crystal
+has hexagonal symmetry, then we should only compute quantities for a $60^{\circ}$ wedge of orientations, and copy them into the other symmetrically
+equivalent wedges.  Such a copy action will require interpolations if the numerical grid is based on a square sampling, since it is not possible
+to accurately represent six-fold symmetry on a square grid.  
+
+To accommodate all possible crystal symmetries, we have opted for a mapping scheme between a square grid and a hemisphere derived by D.\ 
+Ro\c{s}ca.\footnote{Daniela Ro\c{s}ca, \textit{New uniform grids on the sphere}, Astronomy \& Astrophysics, \textbf{520}, 
+id.\ A63 (DOI: 10.1051/0004-6361/201015278).}
+To also accommodate hexagonal symmetry, we have derived a new mapping scheme that was published recently.\footnote{D. Ro\c{s}ca and M. De Graef, 
+\textit{Area-preserving projections from hexagonal and triangular domains to the sphere and applications to electron back-scatter diffraction pattern simulations}, 
+Modeling and Simulations in Materials Science and Engineering, \textbf{21}, 055021 (2013).}  In this section we briefly discuss both mappings, as well 
+as their implementation, taking into account the Laue crystal symmetries.
+
+The main goal of the modified Lambert mappings is to create a bi-directional mapping that preserves the area between either a square grid or a hexagonal
+grid in the plane, and uniform grids on the surface of a sphere.  
+We start from a square grid with semi edge length $L=\sqrt{\pi/2}$ and grid coordinates $(a,b)$.  This point is mapped onto a point $(x,y,z)$ 
+in the Northern hemisphere (i.e., with $z\ge 0$) of a sphere with unit radius by the following relations:
+\begin{equation}
+	(x,y,z) = \left\{\begin{array}{lcl}
+	\left(\frac{2a}{\pi}\sqrt{\pi-a^2}\cos\frac{b\pi}{4a},\frac{2a}{\pi}\sqrt{\pi-a^2}\sin\frac{b\pi}{4a},1-\frac{2a^2}{\pi}\right) & \quad & 0 < \vert b\vert \le\vert a\vert\le L;\\
+	\left(\frac{2b}{\pi}\sqrt{\pi-b^2}\sin\frac{a\pi}{4b},\frac{2b}{\pi}\sqrt{\pi-b^2}\cos\frac{a\pi}{4b},1-\frac{2b^2}{\pi}\right) & \quad & 0 < \vert a\vert \le\vert b\vert\le L.
+	\end{array}\right.
+\end{equation}
+The inverse relation is given by:
+\begin{equation}
+	(a,b) = \left\{\begin{array}{lcl}
+	\text{sign}(x) \sqrt{2(1-z)}\left(\frac{\sqrt{\pi}}{2},\frac{2}{\sqrt{\pi}}\arctan\frac{y}{x}\right) & \quad & 0\le\vert y\vert\le\vert x\vert;\\
+	\text{sign}(y) \sqrt{2(1-z)}\left(\frac{2}{\sqrt{\pi}}\arctan\frac{x}{y},\frac{\sqrt{\pi}}{2}\right) & \quad & 0<\vert x\vert\le\vert y\vert.
+	\end{array}\right.
+\end{equation}
+These mappings are readily implemented and provide a bi-directional transformation between a 2-D square grid and a uniform grid on the surface of a sphere.
+The triplets $(x,y,z)$ can be regarded as direction cosines (since $x^2+y^2+z^2=1$), so that we can represent a uniform sampling of beam directions by
+a sampling on a square grid.  An additional advantage of the uniform character of the mapping is that we can replace interpolation on the 
+surface of a sphere by simple bi-linear interpolation on a square grid, which is easily implemented numerically.
+For numerical purposes, we will subdivide the square of edge length $2L=\sqrt{2\pi}$ into $(2N+1)\times (2N+1)$ grid points with a step size
+$\Delta a=\Delta b=\sqrt{\pi/2}/N$; note that the point $(a,b)=(0,0)$ maps onto the North pole $(0,0,1)$.  The origin of the square grid lies
+at the center of the square; an arbitrary grid point then has coordinates $(i\Delta a, j\Delta b)$, with $-N\le i,j \le +N$ ($i,j\in\mathbb{Z}$).  Points along 
+the outer perimeter of the square are mapped onto the equatorial circle of the Northern hemisphere.
+
+For the hexagonal grid, we consider the sextants $I_k$, $k=0,\ldots, 5$, which are defined
+as follows (see Figure \ref{fig:hextest}): 
+\begin{eqnarray}
+    I_0 &=& \left\{ (x,y)\in \mathbb{R}^2, 0\le x,\ -x/\sqrt{3}\le y\le x/\sqrt{3}\right\},\\
+    I_1 &=& \left\{ (x,y)\in \mathbb{R}^2, 0\le x,\  x/\sqrt{3}\le y \right\},\\
+    I_2 &=& \left\{ (x,y)\in \mathbb{R}^2, x\le 0,-x/\sqrt{3}\le y \right\},\\
+    I_3 &=& \left\{ (x,y)\in \mathbb{R}^2, x\le 0,\ x/\sqrt{3}\le y\le -x\sqrt{3}\right\},\\
+    I_4 &=& \left\{ (x,y)\in \mathbb{R}^2, x\le 0,\ y\le x/\sqrt{3} \right\},\\
+    I_5 &=& \left\{ (x,y)\in \mathbb{R}^2, 0\le x,\ y\le -x/\sqrt{3} \right\}.
+\end{eqnarray}
+For $(x,y)\in H_a \cap I_k$ (where $H_a$ is the hexagon) one has $x\leq \alpha $ if $k=0,1,5$
+and $x\geq -\alpha$ if $k=2,3,4$, where $\alpha=a\sqrt 3/2.$
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=5in]{figs/hextest}
+\caption{(a) Subdivision of the hexagon into sextants; the circle has the same area as the hexagon; (b) 
+shows a uniform grid in the hexagon, and (c) shows the same grid after equal-area mapping onto the circle.} \label{fig:hextest}
+\end{figure}
+
+The point $(x,y)\neq(0,0)$ in the circle is mapped into $(X,Y)_H$ in the hexagon with coordinates given by
+\begin{itemize}
+\item For $(x,y)\in I_0 \cup I_3$,
+\begin{equation}\label{a03}
+ (X,Y)_H=3^{\frac 14}{\sqrt{\frac 2\pi}}\, x \left(
+\cos\frac{y\pi}{2\sqrt{3}x},\sin\frac{y\pi}{2\sqrt{3}x}\right);
+\end{equation}
+\item For $(x,y)\in I_1 \cup I_4$,
+\begin{equation}\label{a14}
+ (X,Y)_H = \frac{3^{\frac 14}}{\sqrt{2\pi}} (x+\sqrt 3y) \left(
+\sin\frac{2\pi x}{3(x+\sqrt{3}y)},\ \cos\frac{2\pi
+x}{3(x+\sqrt{3}y)}\right);
+\end{equation}
+\item For $(x,y)\in I_2 \cup I_5$,
+\begin{equation}\label{a25}
+ (X,Y)_H = \frac{3^{\frac 14}}{\sqrt{2\pi}} (x-\sqrt 3y) \left(
+\sin\frac{2\pi x}{3(x-\sqrt{3}y)},-\cos\frac{2\pi
+x}{3(x-\sqrt{3}y)}\right).
+\end{equation}
+\end{itemize}
+For the origin we define $\mathcal T_H(0,0)=(0,0)$.  The inverse transformation is given by:
+\begin{itemize}
+\item For $(X,Y)\in I_0\cup I_3$
+\begin{equation}\label{f03}
+ (x,y)=3^{-\frac 14}\sqrt {X^2+Y^2}\,\mbox{sign}(X)\left(
+\sqrt{\frac \pi 2},\,\sqrt{\frac 6\pi} \arctan \frac YX \right);
+\end{equation}
+\item For $(X,Y)\in I_1\cup I_4$,
+\begin{equation}\label{f14}
+ (x,y)=\frac{3^\frac 14\sqrt {X^2+Y^2}}{\sqrt
+{2\pi}}\,\mbox{sign}(X)\left(
+\sqrt3\Big(\frac \pi 6-\arctan \frac{Y-\sqrt 3 X}{X+\sqrt 3 Y}\,\Big),
+\frac \pi 2+\arctan \frac{Y-\sqrt 3 X}{X+\sqrt 3 Y} \right);
+\end{equation}
+\item For $(X,Y)\in I_2\cup I_5$,
+\begin{equation}\label{f25}
+ (x,y)=\frac{3^\frac 14\sqrt {X^2+Y^2}}{\sqrt
+{2\pi}}\,\mbox{sign}(X)\left(
+\sqrt3\Big(\frac \pi 6+\arctan \frac{Y+\sqrt 3 X}{X-\sqrt 3 Y}\,\Big),
+-\frac \pi 2+\arctan \frac{Y+\sqrt 3 X}{X-\sqrt 3Y} \right).
+\end{equation}
+\end{itemize}
+The coordinates in the circle can then be transported onto the Northern unit hemisphere by the 
+following inverse Lambert projection:
+\begin{equation}
+ (\widetilde{x},\widetilde{y},\widetilde{z}) =
+\left(\frac{x}{2}\sqrt{4-(x^2+y^2)} ,\frac{y}{2}\sqrt{4-(x^2+y^2)}, 1-\frac{1}{2}(x^2+y^2)\right).\label{eq:lama}
+\end{equation}
+This relation assumes that the radius of the circle is defined as $R=\sqrt{2}$.
+The Lambert projection from the hemisphere to the circle is then given by:
+\begin{equation}
+    (x,y) = \sqrt{\frac{2}{1+\widetilde{z}}} \left(\widetilde{x},\widetilde{y} \right);\label{eq:lamb}
+\end{equation}
+For all these relations to work together, we must also have $a=2\sqrt \pi 3^{-3/4}$ for the hexagon edge
+length, and therefore $\alpha=3^{1/4}\sqrt{\pi}$ (see Fig.~\ref{fig:hextest}).  This completes the discussion 
+of the equal area projections used in the EBSD software.
+
+\subsection{Laue Symmetry \label{sec:Laue}}
+
+There are $11$ Laue point group symmetries, and each of them will require a dedicated sampling scheme, using the approach described above.
+Fig.~\ref{fig:Laue-hemispheres} shows the nine unique asymmetric units for the $11$ Laue groups; six of them will be sampled on a square grid 
+(orange units), the other $3$ on a hexagonal grid.  The symbols labeling each stereographic circle represent the Laue point group,
+followed by the point group order.  
+
+\begin{figure}[t]
+\centering\leavevmode
+\epsffile{figs/Laue-hemispheres}
+\caption{\label{fig:Laue-hemispheres}Asymmetric units for the $11$ Laue groups, drawn on stereographic projections.}
+\end{figure}
+
+The real space direction $\mathbf{a}_1$ is parellel to the $X$ axis of the sampling grid, and the reciprocal $\mathbf{a}_3^{\ast}$ direction
+is normal to the sampling grid.  All other directions are then uniquely fixed.  The square grid has its own planar symmetry group $4mm$,
+which is compatible with all of the Laue groups on the top two rows.  If we consider the Laue group $m\bar{3}$, then 
+we will run into a problem with the implementation of the three-fold rotation axis.  The points that are equivalent with the simulated points
+inside the shaded area will not, in general, fall on grid points.  Because of this, we must perform the EBSD simulations for all grid points
+corresponding to an octant of the projection sphere for all Laue symmetries of $mmm$, $4/m$ and $m\bar{3}$, resulting in a symmetry speed-up by a factor $4$.  For Laue groups 
+$4/mmm$ and $m\bar{3}m$, we use the $45^{\circ}$ wedge shape, resulting in a speed-up by a factor of $8$.  For the triclinic and monoclinic cases we use the entire hemisphere
+or half a hemisphere, respectively.
+For the hexagonal sampling grid, the proper choices are obvious from the drawing, and make use of the hexagonal modified Lambert mapping described
+in the previous section.
+
+\subsection{Barycentric Coordinates \label{sec:barycentric}}
+For the hexagonal and trigonal Laue symmetries, the \textsf{CTEMEBSDmaster} program samples the electron beam directions on 
+a hexagonal grid, so that the symmetry elements can be implemented properly.  Subsequently, this grid is transformed to a standard
+square grid for further processing in the \textsf{CTEMEBSD} program.  The transformation is performed using barycentric coordinates\footnote{See, for
+instance, \textit{http://en.wikipedia.org/wiki/Barycentric\_coordinate\_system} or \textit{http://mathworld.wolfram.com/ BarycentricCoordinates.html} for details.}
+for the interpolation.  Referring to the hexagonal and square grids in Fig.~\ref{fig:bary}, 
+the interpolated intensity $I_p(h)$ in a point that lies a 
+distance $h$ above the base $1$--$2$ of a triangle with top $3$ is given by:
+\[
+	I_p(h) = (I_1+I_2)\lambda+(1-2\lambda) I_3\quad\text{with}\quad \lambda=\frac{1}{2} - \frac{h}{\delta\sqrt{3}},
+\]
+where $\delta$ is the step size along the horizontal direction.  The hexagonal grid points $(i,j)$ then 
+lie on cartesian positions with coordinates $(x,y)=(i_h\delta-j_h\delta/2,j_h\delta\sqrt{3}/2)$.  With the exception of 
+the grid points with $j_h=0$, the value of $h$ is always non-zero.  It is not too difficult to distinguish between
+triangles with apex $3$ pointing upward or downward.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=4in]{figs/bary}
+\caption{Correspondence between hexagonal and square sampling grids used for barycentric interpolation.} \label{fig:bary}
+\end{figure}
+
+Summarizing, the master pattern for structures with hexagonal or trigonal symmetry is computed by sampling incident beam directions
+on a hexagonal grid (limited to the corresponding asymmetric unit); these grid points correspond to incident beam directions according 
+to the modified Lambert mapping introduced in section~\ref{sec:Lambert}.  Once all EBSD intensities have been computed, the symmetry
+elements are applied, and the hexagonal grid is interpolated onto a standard square grid using the barycentric approach described above.
+From then on, there is no further need for a distinction between hexagonal/trigonal and other symmetries (i.e., only the master pattern
+computation in \textsf{CTEMEBSDmaster} needs to distinguish between the different Laue symmetries).
+
+{\color{blue}Note that at the time of writing of this manual, the hexagonal/trigonal case is not yet completely implemented; this is ongoing work
+and the source files will be updated when the modifications are completed.}
+
+\newpage
+\subsection{Monte Carlo Simulations \label{sec:MC}}
+The current implementation of the Monte Carlo code makes use of the Continuous Slowing Down Approximation (CSDA),
+which assumes that the incident electron loses energy at a constant rate as it travels inside the sample.  This is obviously a
+rather coarse approximation, since core losses, outer shell excitations, plasmons, phonons, etc are not taken into account
+explicitly, but replaced by a constant energy loss rate.  From a modeling point of view, on the other hand, it is relatively easy
+to implement, so we have selected this as a first approximate approach over a more involved Monte Carlo model that has been
+under development as well.  
+
+In the Monte Carlo approach, we consider each beam electron separately and follow it on a stochastic trajectory 
+through the sample.  The electron travels a random distance scaled by the mean free path length, and then undergoes a 
+scattering event which changes the direction cosines of the trajectory; this process is repeated until either the electron has
+lost more than a preset amount of energy, or the electron leaves the sample, at which point the direction cosines, energy,
+and depth of the last scattering event are noted.  From this information, the program then generates two different data sets:
+\begin{itemize}
+	\item the spatial distribution of electrons, represented on a modified Lambert projection, for each of a series of 
+	energy bins;
+	\item and the depth distribution vs.\ energy and orientation.
+\end{itemize}
+This data is then used by the Master EBSD simulation program to determine the depth integration limits and the probability 
+that an electron with a given energy was backscattered at a given depth (note that the depth is the effective distance traveled 
+inside the sample after the last scattering event).  For more details on the Monte Carlo approach we refer the interested reader to
+the literature.\footnote{Heinrich, K.H.J., Newbury, D.E. \& Yakowitz, H. (Eds.) (1975).
+\textit{Use of Monte Carlo Calculations in Electron Probe Microanalysis and Scanning Electron Microscopy} Gaithersburg, MD: National Bureau of Standards;
+Joy, D.C. (1995). \textit{Monte Carlo Modeling for Electron Microscopy and Microanalysis} New York: Oxford University Press.}
+
+In version 2.x, the core of this Monte Carlo simulation is performed on a GPU platform, if one is available, using an OpenCL kernel.  The kernel source code 
+must be available in the proper folder, which must be defined by means of an environment variable.
+
+\subsection{Master EBSD Pattern Simulations \label{sec:Master}}
+For the master pattern we employ the Bloch wave approach combined with a depth integration.  The probability 
+of back-scattered electrons originating from the sample along a specific direction must be integrated over the depth
+along that direction, which involves an integral over depth.  In our approach, this integral is replaced by a summation
+over the depth bins generated in the \textsf{CTEMMC} program.  
+
+The probability of scattering from each subset $\mathcal{S}$ of atomic sites within the 
+unit cell for a given incident beam direction $\mathbf{k}_0$ and an exit energy $E$ can be written as:
+\begin{equation}
+\mathcal{P}(\mathbf{k}_0, E) = \sum_{\mathbf{g}}\sum_{\mathbf{h}} S_{\mathbf{g}\mathbf{h}}L_{\mathbf{g}\mathbf{h}}(E),
+    \label{eq:prob}
+\end{equation}
+with
+\begin{subequations}
+\begin{align}
+    S_{\mathbf{g}\mathbf{h}} &\equiv \sum_{n}\sum_{i\in\mathcal{S}_n} Z^2_n\,e^{-M^{(n)}_{\mathbf{h}-\mathbf{g}}}\,e^{2\pi\mathrm{i} 
+    (\mathbf{h}-\mathbf{g})\cdot\mathbf{r}_{i}};\label{eq:defa}\\
+    L_{\mathbf{g}\mathbf{h}}(E) &\equiv \sum_{j}\sum_{k} 
+    C^{(j)\ast}_{\mathbf{g}}\alpha^{(j)\ast}\mathcal{I}_{jk}(E)\alpha^{(k)}
+    C^{(k)}_{\mathbf{h}}.\label{eq:defb}
+\end{align}
+\end{subequations}
+The first summation in (\ref{eq:defa}) runs over all the positions in the asymmetric unit of the unit cell; the second
+sum runs over all equivalent positions in each subset $\mathcal{S}_n$.
+The parameters $\alpha^{(j)}$ in (\ref{eq:defb}) are the Bloch wave excitation amplitudes for 
+details on the Bloch wave approach), $C_{\mathbf{g}}^{(j)}$ are the 
+Bloch wave coefficients, and the matrix $\mathcal{I}_{jk}$ is defined by the integral
+\begin{equation}
+	\mathcal{I}_{jk}(E)\equiv \frac{1}{z(E)}\int\limits_{0}^{z(E)} 
+    \lambda(E,z) e^{-2\pi(\alpha_{jk}+\mathrm{i}\beta_{jk})z}\,\mathrm{d}z,
+\end{equation}
+where $z(E)$ and $\lambda(E,z)$ are, respectively, the integration depth and the depth- and 
+energy-dependent scattering probability derived from the Monte Carlo program output,
+and
+\begin{subequations}
+\begin{align}
+    \alpha_{jk} &= q^{(j)}+q^{(k)};\\
+    \beta_{jk} &= \gamma^{(j)}-\gamma^{(k)}.
+\end{align}
+\end{subequations}
+The complex numbers $\lambda^{(j)}\equiv\gamma^{(j)}+\mathrm{i}q^{(j)}$ are the eigenvalues of the dynamical scattering matrix in the 
+presence of absorption.  The integration is performed numerically by simply summing the result for a discrete series of depths.
+The resulting data is stored as a modified Lambert projection grid (see previous sections).  
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=3in]{figs/geometry}
+\caption{Typical geometry of sample and scintillator for an EBSD experiment.} \label{fig:geometry}
+\end{figure}
+
+In version 2.x, we replaced the Bloch wave approach by an equivalent scattering matrix approach, so that we can use the GPU platform
+to compute the necessary matrix exponentials.  The Bloch wave approach requires an OpenCL version of the Lapack routines
+which we have not been able to get to work thus far.  The derivation proceeds as follows.
+
+Application of the scattering matrix approach to the EBSD modality requires a different ``Ansatz'' for the wave 
+function $\Psi(\mathbf{r})$; we write:
+\begin{equation}
+	\Psi(\mathbf{r}) = \sum_{\mathbf{g}} \psi_{\mathbf{g}}(\mathbf{r}) 
+	\mathrm{e}^{2\pi\mathrm{i}(\mathbf{k}_0+\mathbf{g})\cdot\mathbf{r}};\label{eq:planewaves}
+\end{equation}
+this expression implicitly assumes that the scattered electron can only travel along the directions predicted by the 
+Bragg equation, $\mathbf{k}'=\mathbf{k}_0+\mathbf{g}$.  After substitution in the perfect crystal Schr\"odinger equation,
+application of the high energy approximation, and the substitution:
+\begin{equation}
+	\psi_\mathbf{g}(\mathbf{r}) = S_{\mathbf{g}}(\mathbf{r}) \mathrm{e}^{\mathrm{i}\theta_{\mathbf{g}}},\label{eq:psig}
+\end{equation}
+where $\theta_{\mathbf{g}}$ is the phase of the Fourier coefficient $U_{\mathbf{g}}$, we obtain the following system of 
+coupled first order differential equations:
+\begin{equation}
+    \frac{\mathrm{d} S_{\mathbf{g}}(z)}{\mathrm{d}z} =
+    2\pi\mathrm{i}s_{\mathbf{g}}S_{\mathbf{g}}(z) + \mathrm{i}\pi {\sum_{\mathbf{g}'}}
+    \frac{1}
+    {q_{\mathbf{g}-\mathbf{g}'}}S_{\mathbf{g}'}(z),\label{eq:defectequation}
+\end{equation}
+where
+\begin{equation}
+	\frac{1}{q_{\mathbf{g}}} \equiv \frac{1}{\xi_{\mathbf{g}}} + \mathrm{i}
+	\frac{\mathrm{e}^{\mathrm{i} (\theta^{\prime}_{\mathbf{g}}-\theta_{\mathbf{g}})}}{\xi^{\prime}_{\mathbf{g}}};
+	\label{eq:defineq}
+\end{equation}
+the extinction distance $\xi_{\mathbf{g}}$ and anomalous absorption length $\xi'_{\mathbf{g}}$ are defined as:
+\begin{equation}
+	\frac{1}{\xi_{\mathbf{g}}}\equiv \frac{\vert U_{\mathbf{g}}\vert}{\vert\mathbf{k}_0+\mathbf{g}\vert\cos\alpha};\qquad
+	\frac{1}{\xi'_{\mathbf{g}}}\equiv \frac{\vert U'_{\mathbf{g}}\vert}{\vert\mathbf{k}_0+\mathbf{g}\vert\cos\alpha};
+\end{equation}
+$U_{\mathbf{g}} = (2me/h^2) V_{\mathbf{g}} $, $\alpha$ is the angle between the beam direction and $\mathbf{k}_0+\mathbf{g}$, and $\mathbf{k}_0$ is 
+the incident wave vector corrected for refraction.  The absorption potential Fourier coefficients are represented by $U'_{\mathbf{g}} = (2me/h^2) V'_{\mathbf{g}}$.
+
+This set of equations can be represented in matrix form as:
+\begin{equation}
+	\frac{\mathrm{d}\mathbf{S}(z)}{\mathrm{d}z} = \mathrm{i}\mathcal{A}(\mathbf{r})\mathbf{S}(z),\label{eq:matrix}
+\end{equation}
+where the structure matrix $\mathcal{A}$ contains the excitation errors and the normal absorption coefficient $1/q_{\mathbf{0}}$ 
+along its diagonal, and the interaction parameters $1/q_{\mathbf{g}}$ on the off-diagonal positions:
+\begin{align*}
+    \mathcal{A}_{\mathbf{g},\mathbf{g}} & = 2\pi s_{\mathbf{g}} + \frac{\pi}{q_{\mathbf{0}}};\\
+    \mathcal{A}_{\mathbf{g},\mathbf{g}'} & = \frac{\pi}{q_{\mathbf{g}-\mathbf{g}'}}.
+\end{align*}
+The formal solution for a crystal of thickness $\epsilon$ is then given by:
+\begin{equation}
+	\mathbf{S}(\epsilon) = e^{\mathrm{i}\mathcal{A}\epsilon}\mathbf{S}(0) = \mathcal{S}(\epsilon)\mathbf{S}(0);
+\end{equation}
+the matrix exponential $\mathcal{S}(z)$ is commonly known as the \textit{scattering matrix}, and can be computed numerically
+by means of the Pad\'e approximation \cite{moler2003a}.
+
+Substitution of eq.~(\ref{eq:planewaves}) into the BSE yield equation results in the following expression 
+for the BSE yield:
+\begin{equation}
+	\mathcal{P}(\mathbf{k}_0) = \frac{1}{z_0}\sum_{n}\sum_{i\in\mathcal{S}_n}\sum_{\mathbf{g}}\sum_{\mathbf{h}} \int\limits_{0}^{z_{0}} \mathrm{d}z\,
+	 Z^2_n\,\mathrm{e}^{-M^{(n)}_{\mathbf{h}-\mathbf{g}}}\,\mathrm{e}^{2\pi\mathrm{i} (\mathbf{h}-\mathbf{g})\cdot\mathbf{r}_{i}} 
+%	\mathrm{e}^{\mathrm{i}(\theta_{\mathbf{h}}-\theta_{\mathbf{g}})} 
+	S^{\ast}_{\mathbf{g}}(z) S_{\mathbf{h}}(z).
+    \label{eq:prob2}
+\end{equation}
+This expression can be simplified as for the Boch wave case to read:
+\begin{equation}
+	\mathcal{P}(\mathbf{k}_0) = \sum_{\mathbf{g}}\sum_{\mathbf{h}} S_{\mathbf{g}\mathbf{h}} L^{S}_{\mathbf{g}\mathbf{h}},
+    \label{eq:prob2}
+\end{equation}
+where the matrices are defined as
+\begin{subequations}
+\begin{align}
+    S_{\mathbf{g}\mathbf{h}} &\equiv \sum_{n}\sum_{i\in\mathcal{S}_n} Z^2_n\,\mathrm{e}^{-M^{(n)}_{\mathbf{h}-\mathbf{g}}}\,\mathrm{e}^{2\pi\mathrm{i} 
+    (\mathbf{h}-\mathbf{g})\cdot\mathbf{r}_{i}};\label{eq:defnewa}\\
+    L^{S}_{\mathbf{g}\mathbf{h}} &\equiv \frac{1}
+    {z_{0}}\int\limits_{0}^{z_{0}} \mathrm{d}z\,  S^{\ast}_{\mathbf{g}}(z) S_{\mathbf{h}}(z).
+    \label{eq:defnewb}
+\end{align}
+\end{subequations}
+The superscript $S$ in $L^{S}_{\mathbf{g}\mathbf{h}}$ refers to the scattering matrix approach.  Note that the matrix 
+$S_{\mathbf{g}\mathbf{h}}$ is identical to that for the Bloch wave approach in the previous section (eq.~(\ref{eq:defa})).  
+As in the Bloch wave case, we must replace the integral above by an energy-dependent depth-weighted integration, as follows:
+\begin{equation}
+	L^{S}_{\mathbf{g}\mathbf{h}}(E) \equiv  \frac{1}{z(E)}\int\limits_{0}^{z(E)} \mathrm{d}z\,  
+    \lambda(E,z) S^{\ast}_{\mathbf{g}}(z) S_{\mathbf{h}}(z).
+\end{equation}
+The entire computation of the matrix $L$ can be performed on the GPU, resulting in a tremendous acceleration compared to the 
+multi-core CPU version.  Each OpenCL work-item performs an entire matrix computation, with the limitation that all 
+matrices must have the same size (same number of beams); this requires a rather comprehensive rewrite of the fortran-90 
+code in the main \textsf{CTEMEBSDmaster} program.
+
+
+\subsection{Final EBSD Pattern Simulations \label{sec:EBSP}}
+Consider the geometry in Fig.~\ref{fig:geometry}, which shows the sample-scintillator configuration 
+for a typical EBSD experiment.  The diffraction geometry is fully determined if we can express the direction cosines of the line connecting
+an arbitrary point on the scintillator screen to the interaction point $P$ on the sample surface, expressed with 
+respect to the $(RD,TD,ND)$  triad.  We measure the scintillator coordinates with the $x_s$ axis in the direction 
+opposite to TD, and the $y_s$ axis pointing up towards the objective lens.   The $z_s$ axis is then 
+normal to the screen and forms a second right-handed unit triad.  These coordinates are measured with 
+respect to the center of the screen and can be positive or negative (except for $z_s$ which is always positive).
+In the scintillator reference frame, a single point on the screen has coordinates $(x_s,y_s,0)$ and the 
+point $Q$ has coordinates $(0,0,\lambda)$.  The interaction point $P$ has coordinates $(x_{pc},y_{pc},L)$.
+For simplicity, we will measure all coordinates in units of micrometers ($\mu$m).
+
+The arbitrary point $(x_s,y_s,0)$ on the scintillator screen corresponds to a set of three direction cosines 
+with respect to the sample reference frame.   The angle between ND and the scintillator normal is $\alpha=\frac{\pi}{2}-\sigma+\theta_c$.
+If the pattern center were located on the ND axis, by rotating the detector assembly by a clockwise angle $\alpha$ around
+the TD direction, then its $(RD,TD,ND)$ coordinates (keeping track of the definition of this reference frame) 
+would be $(y_{pc}-y_s,x_{pc}-x_s,L)$.  After counterclockwise rotation to the actual camera orientation we 
+find for the screen coordinates in the sample reference frame:
+\[
+	\mathbf{r}_g = \left[ (y_{pc}-y_s)\cos\alpha+L\sin\alpha, x_{pc}-x_s, -(y_{pc}-y_ss)\sin\alpha+L\cos\alpha\right].
+\]
+The length of this vector is simply:
+\[
+	\vert \mathbf{r}_g\vert \equiv \rho_s = \sqrt{L^2+(y_{pc}-y_s)^2 + (x_{pc}-x_s)^2}
+\]
+so that the direction cosines of a screen pixel $(x_s,y_s,0)$ in the (RD,TD,ND) reference frame are given by:
+\begin{equation}
+	\hat{\mathbf{r}}_g(x_s,y_s) = \frac{\mathbf{r}_g}{\rho_s}.\label{eq:dc}
+\end{equation}
+For a given crystallographic grain orientation, it is straightforward to convert these
+direction cosines to an electron channeling direction (all rotations are implemented by means of quaternion arithmetic in our
+implementation).  This transformed direction is then further converted
+to coordinates $(X,Y)$ on the square grid of the master EBSD pattern, which is 
+used as a look-up table (with appropriate  bi-linear interpolation) for the EBSD intensity at the scintillator
+position $(x_s,y_s,0)$.   Repeating this for all scintillator pixels then provides the complete EBSD signal for a given grain orientation.
+
+We represent the energy-dependent master EBSD pattern by the symbol $\mathcal{M}(\kappa,X,Y)$,  where the first component labels the energy bins, 
+and $(X,Y)$ indicates the position on the square sampling grid.   The energy histogram from the Monte Carlo simulation is represented by the symbol
+$\mathcal{E}(\kappa,i,j)$, where $(i,j)$ references the scintillator pixel $(x_s,y_s)=(i,j)\delta$.  The number of BSE electrons incident on that pixel can then be written as
+a weighted sum over all $n_E$ energy bins:
+\begin{equation}
+	I_{\text{BSE}}(i,j) = \eta\sum_{\kappa=1}^{n_E} s(\kappa)\mathcal{E}(\kappa,i,j) \mathcal{M}\left(\kappa,X(x_s,y_s,\tilde{q}),Y(x_s,y_s,\tilde{q})\right),\label{eq:intensity}
+\end{equation}
+where $\tilde{q}$ is a unit quaternion that represents the grain orientation (derived from a triplet of Euler angles), and the coordinates 
+$(X,Y)$ are computed from $(x_s,y_s)$ and $\tilde{q}$ by the sequential application of equation~(\ref{eq:dc}), the quaternion rotation of the resulting
+direction cosines, and the inverse Lambert projection equations.  The prefactor $\eta$ in (\ref{eq:intensity}) is defined as:
+\begin{equation}
+	\eta = \frac{n_A I_0 \Delta t}{N_{MC}}
+\end{equation}
+where $I_0$ is the incident probe current in Amperes, $\Delta t$ the dwell time in seconds, $N_{MC}$ is the total number of incident electrons
+used for the Monte Carlo simulation, and $n_A=6.241\times 10^{18}$ electrons per Coulomb.  The resulting units for $I_{\text{BSE}}$ are then number of  
+electrons incident on the scintillator.  The factor $s(\kappa)$ represents the energy conversion efficiency of the scintillator and is currently set equal to unity
+for all energies.
+
+This is not the final EBSD pattern as acquired by the CCD camera.  One must still take into account the point spread function of the 
+optics that projects the photons onto the CCD chip, Poisson noise, as well as any binning and contrast/brightness scaling that can 
+be applied to the pattern. These final steps are currently only available in a preliminary form via the IDL visualization interface.
+
+
+\section{The \protect\textsf{CTEMMC.f90} program\label{sec:f90MC}}
+The Monte Carlo program must be executed first, and takes the following name list as input:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
+\VerbatimInput{../templatefolder/CTEMMC.template}
+The program uses OpenMP coding to carry out the simulations on multiple cores.  The input parameters
+include the crystal file name (to compute the theoretical density and average atomic number), the sample
+tilt angle with respect to the horizontal direction, a potential tilt around the \textsf{RD} axis, the number of pixels
+along the modified Lambert projection edge (should be ``a multiple of $10$ plus one''), the number of incident electrons per computational thread along
+with the number of threads, the incident beam energy, the minimum energy to be considered, and the energy interval,
+as well as the maximum penetration depth and depth step size to be considered.  The data is then stored in a 
+binary file (will be replaced by HDF-5 formatted output in the next version of the program).  It is noteworthy that 
+a GPU-based version of this program is currently being developed.   It should be noted that the execution time of the 
+following program, \textsf{CTEMEBSDmaster}, is partially determined by how many depth steps are selected in the
+Monte Carlo computation; the more depth steps, the longer the dynamical simulation will take.
+
+Since each OpenMP thread carries out the computation for the same number of incident electrons, the \textsf{CTEMMC} program takes 
+about the  same time for a single thread as for multiple threads.  The output file contains a number of program parameters
+that need to be passed on to the next program, as well as two large arrays that contain the electron distribution in the hemisphere on
+the vacuum side of the sample surface, formatted as a modified Lambert projection.  Each energy bin has an individual Lambert 
+projection.  The second large output array represents the distribution of electron exit depth as a function of energy bin and
+orientation, but sampled on a smaller Lambert projection (with one-tenth the number of points along each axis).  This second output
+array is used in the \textsf{CTEMEBSDmaster} program, whereas the first one is primarily used by the \textsf{CTEMEBSD} program
+and the IDL display program.
+
+
+\section{The \protect\textsf{CTEMEBSDmaster.f90} program\label{sec:f90EBSDmaster}}
+The second program performs the computation of the EBSD master pattern on the
+square or hexagonal modified Lambert projection, with all output on a square modified Lambert projection.
+The input name list file is formatted as follows:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
+\VerbatimInput{../templatefolder/CTEMEBSDmaster.template}
+This short input file only requires the definition of the smallest $d$-spacing to be taken into account 
+in the dynamical simulation, the number of pixels along the output Lambert projection, the name of the 
+output file from the \textsf{CTEMMC} program, and the name of an output file.  The data file from
+the Monte Carlo program already contains a lot of other information, so there is no need to duplicate 
+this here.  This does imply that the Monte Carlo program must be completed before the 
+master pattern can be computed.
+
+This program can take a very long time to run; the current version runs on a single core but a multi-threaded version 
+is being developed.  For each energy bin, a complete EBSD master pattern is computed, using the appropriate asymmetric unit according to
+the crystal symmetry.  The output file contains a stack of modified Lambert projections, one for each energy bin, along with 
+some other parameters.  The size of the Lambert projections does not need to be the same as the size of the Monte Carlo
+Lambert projections.  The projections can be visualized using the IDL program.  Note that for complex crystal structures,
+with multiple atom sites in the asymmetric unit, the program will store the master patterns separately for each entry in the asymmetric unit.
+This means that one can, in principle, study the effect of elemental substitutions on EBSD patterns.
+
+\section{The \protect\textsf{CTEMEBSD.f90} program\label{sec:f90EBSD}}
+The final program takes as input a series of detector characteristics as well as orientations, and uses the output from both \textsf{CTEMMC} and
+\textsf{CTEMEBSDmaster} to compute one or more actual EBSD patterns.  The easiest way to execute this program is 
+via the IDL interface, but command line execution is also possible.  The input name list file contains the following entries:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
+\VerbatimInput{../templatefolder/CTEMEBSD.template}
+
+The program reads the name list file, then Monte Carlo output and master patterns;  then the detector geometry is used to
+compute the energy distribution with respect to the scintillator.  This is then used along with the master pattern and the 
+orientation information to compute the final EBSD patterns.  Note that these patterns may contain Poisson noise; this can
+be turned on/off using the PoissonNoise switch in the name list file.  The output file contains all EBSPs in full resolution,
+and can be read with the IDL visualization program; at that point, the camera point spread function can be included, as well
+as binning and brightness/contrast scaling. See the next section for details.
+
+Note that this program can also be used to create so-called EBSD dictionaries.  This is a much more advanced functionality 
+that we will not fully detail in this manual, since it is still under development.
+
+\newpage
+\section{The IDL \protect\textsf{EBSDDisplay.pro} program\label{sec:idl}}
+The \textsf{EBSDDisplay.pro} program is a complex interface that provides the user with the ability to handle the 
+output from all three fortran-90 programs, \textsf{CTEMMC}, \textsf{CTEMEBSDmaster}, and \textsf{CTEMEBSD}.  The main
+user window is shown in Fig.~\ref{fig:EBSDmain}, and consists of the following regions:
+\begin{itemize}
+	\item Left pane: Monte Carlo run parameters for a given input file (file can be selected using the \button{Load MC file}\ at the lower right
+	of the main window).  These are simply displayed as information and can not be changed by the user.
+	\item Right pane: The top half displays a few parameters for an EBSD master pattern file (which can be loaded with the \button{Load master file}).
+	\item Information window: this shows program messages about file loading, changed parameters, etc.
+	\item Button row: allows the user to load either an MC file or an EBSD master file (which will also automatically load the 
+	corresponding MC file).  The \button{Define detector}\ will be described in more detail below.  The user also has the option to 
+	create a log-file that will display all the entries shown also in the information window.
+\end{itemize}
+
+\begin{figure}[t]
+\leavevmode\centering
+\epsfxsize=6in\epsffile{figs/EBSDmain.eps}
+\caption{\label{fig:EBSDmain}Main user interface for the EBSD suite of programs.}
+\end{figure}
+
+\subsection{Monte Carlo visualization interface\label{sec:idlMC}}
+In each of the two panes of the main program widget, there is a \button{Display}, which brings up a graphical interface.  If the user has loaded a Monte Carlo data file, 
+then the display window will look similar to the one shown in Fig.~\ref{fig:MCdisplay}.  There are two items on the top menu line, and a few additional widgets both 
+above and below the graphics display.  Here are all the options:
+\begin{itemize}
+	\item \textsf{Projection Mode} menu:  this menu has three items, \textsf{Lambert [square]}, \textsf{Lambert [circle]}, and \textsf{Stereographic P.}, corresponding to the 
+	Lambert projection explained in section~\ref{sec:Lambert}, the regular equal-area Lambert projection, and the equal-angle stereographic projection, respectively.  The data in the Monte Carlo
+	file is stored in the square Lambert projection format.
+	\item \textsf{Display Mode} menu: there are three entries in this menu, \textsf{Individual Energy Bin}, \textsf{Simple Energy Sum}, and \textsf{Simple Energy Sum RGB}.
+	\begin{itemize}
+		\item \textsf{Individual Energy Bin}: in this display mode, the graphics window will show the spatial distribution of BSEs for a single energy value.  The energy
+		can be selected using the slides above the graphics window.  Note that the label above the slider indicates the sequential number of the energy in the 
+		data file, not the actual energy which is shown in the small text box to the right once the slider is released.\footnote{This is not an optimal arrangement and 
+		it will be changed in the next version.}
+		\item \textsf{Simple Energy Sum}: in this mode, the slider bar is grayed out, and the graphics window will show the sum pattern over all energy values.  
+		\item \textsf{Simple Energy Sum RGB}: this is similar to the previous mode, except that a color code (from Green to Blue to Red) 
+		is used to indicate the various energy levels.
+	\end{itemize}
+\end{itemize}
+Note that all three \textsf{Display Mode}s work for either of the \textsf{Projection Modes}; in a later version of the program, stereographic projection mode and 
+3D sphere mode will be added to the \textsf{Projection Mode} menu.  The pattern that is displayed in the graphics window can be saved by pressing the 
+\button{Save}; the file format must be set first using the File Format selector (jpeg, tiff, or bmp).  The minimum and maximum value of the displayed array
+are also shown below the image region.
+
+
+
+\begin{figure}[t]
+\leavevmode\centering
+\epsfxsize=3in\epsffile{figs/EBSDMC.eps}
+\caption{\label{fig:MCdisplay}Monte Carlo interface.}
+\end{figure}
+
+\newpage
+\subsection{Monte Carlo and Master Pattern visualization interface\label{sec:idlMCMP}}
+When the user selects the \button{Display}\ in the Master Pattern pane, a similar widget will appear, but this time there 
+will be two graphics windows, one for the Monte Carlo results (left) and one for the master pattern (right), as shown in 
+Fig.~\ref{fig:MCMPdisplay}.  Each of the graphics areas has a separate set of min/max indicators as well as a \button{Save}.
+Note that this widget has an additional pull-down menu next to the energy slider; initially, this menu will display the selection
+\textsf{SUM all sites}.  For a crystal structure with more than one atom in the asymmetric unit, the pull-down menu will
+display a list of all atoms along with the square of the atomic number (recall that the back-scattering cross section varies
+approximately as the square of the atomic number).  When the user selects one of the atoms from the asymmetric unit, 
+the graphics window on the right will display only the contribution from those sites (the one in the asymmetric unit
+and all equivalent positions).  The \textsf{SUM all sites} option displays the sum over all atomic sites in the unit cell.
+Separating the BSE contributions by element (asymmetric unit site) is useful, because it reveals which pattern is the dominant one.  
+This will obviously depend on the atomic number for each site; for crystal structures with low elemental contrast\footnote{We refer
+to the difference between the atomic numbers as ``elemental contrast;''  in BaTiO$_3$, for instance, we have $Z^2_{\text{Ba}}=3,136$,
+$Z^2_{\text{Ti}}=484$, and $Z^2_{\text{O}}=3\times 64=192$, so that the EBSD pattern is dominated by the contributions from Ba.  In CaTiO$_3$, on the
+other hand, we have $Z^2_{\text{Ca}}=400$, so the contrast between Ca and Ti is low, and the pattern will have contributions from
+both elements.  In both cases, the O contribution would be rather small.}, the net master pattern may have approximately equal contributions 
+from two or more elements.  For structures with high elemental contrast, usually one element (the one with the largest atomic number) will
+dominate the EBSD pattern.
+
+\begin{figure}[t]
+\leavevmode\centering
+\epsfxsize=6in\epsffile{figs/EBSDMCMP.eps}
+\caption{\label{fig:MCMPdisplay}Monte Carlo and Master Pattern interface.}
+\end{figure}
+
+\newpage
+\subsection{Detector interface\label{sec:idldetector}}
+Clicking on the \button{Define detector}\ in the main program widget generates a new widget with several groups of user-definable parameters, as
+shown in Fig.~\ref{fig:detector}.
+On the left, the user can define the detector geometry (scintillator-sample distance, detector tilt, scintillator pixel size, number of pixels, and pattern
+center location), the incident beam current, and the beam dwell time.  The Euler angle convention can also be set to TSL or HKL.  The energy range 
+over which the EBSD patterns should be integrated can be set by means of the Min and Max droplists.  Finally, the output file name must be selected by 
+pressing the \button{Set Output File Name}.
+
+\begin{figure}[t]
+\leavevmode\centering
+\epsfxsize=4in\epsffile{figs/EBSDdetector.eps}
+\caption{\label{fig:detector}Detector interface.}
+\end{figure}
+
+\begin{figure}[t]
+\leavevmode\centering
+\epsfxsize=3in\epsffile{figs/EBSDEBSP.eps}
+\caption{\label{fig:EBSP}EBSP display interface (single pattern mode).}
+\end{figure}
+
+On the right side of the interface there are several boxes:
+\begin{itemize}
+	\item \textsf{Pattern Mode}: the display program has three display modes for EBSD patterns: \textit{Single Pattern}, \textit{Angle File},
+	and \textit{Dictionary}.  They are explained in the following bullets.
+	\item \textsf{Single Patterns Parameters}: After the user sets the output file name, the \button{Display Pattern} in this section 
+	becomes active.  The user can set an Euler angle triplet for which the EBSP should be displayed (using all the detector and microscope
+	parameters set in other parts of the interface).  Clicking on the \button{Display Pattern} will then bring up another interface that 
+	displays the actual EBSP (Fig.~\ref{fig:EBSP}).  In addition to the Euler angles, the user can also specify an axis-angle pair which will
+	be applied to the crystal orientation \textit{in addition to (and following) the Euler angles};  leaving the Euler angle set to $0.0$ allows for application 
+	of only the axis-angle pair.
+	\item \textsf{Angle File Parameters}: In this mode, the user selects an existing angle file (format described below); once the file has been 
+	selected, the display will list the angle type (Euler or quaternion) and the number of angles in the file.  The \button{Go} next to the 
+	title of this region will then be highlighted.  Clicking on this button will execute the \textsf{CTEMEBSD} program using all the parameters 
+	that are currently set, and an EBSP will be computed for each entry in the angle file.  Once the computation is complete, an interface similar
+	to that for the individual pattern will pop up (see Fig.~\ref{fig:EBSP2}); the main difference is that in this interface, there is no possibility of modifying the 
+	imaging parameters; the program will use the parameters determined by the user in the \textit{Single Pattern} mode.  The display interface
+	does offer the possibility of stepping through the entries in the angle file and displaying individual EBSPs along with their Euler angle
+	triplets or quaternions.  There is also an option to generate separate output files for individual patterns or for the whole set.  
+	\item \textsf{Dictionary Parameters}: this option is still under development and is disabled in the current Release of the \ctp.  In the next version,
+	this option will allow the user to first generate a uniform sampling of the Rodrigues Fundamental Zone for the current crystal symmetry, and then
+	generate a dictionary file with an EBSP for each sampling point.  % Such files can become very large, depending on the crystal symmetry.
+\end{itemize}
+
+
+\begin{figure}[t]
+\leavevmode\centering
+\epsfxsize=3in\epsffile{figs/EBSDEBSP2.eps}
+\caption{\label{fig:EBSP2}EBSP display interface (angle file mode).}
+\end{figure}
+
+The format for the angle file is a simple text file, structured as follows:
+\begin{verbatim}
+	eu
+	15
+	34.5 25.9 183.0
+	22.9 65.3 112.0
+	...
+\end{verbatim}
+On the first line we have a two-character angle type identifier ('eu' for Euler angles, 'qu' for quaternions); the second line 
+lists the number of angle entries in the file, and each subsequent line lists either the three Euler angles (in degrees, without commas)
+or the four quaternion components.
+
+A future version of the display program will make it possible for the user to refine detector and microscope parameters, given a number of experimental
+patterns and orientations.  In addition, the next version will include the ability to apply a detector point spread function.  We'll also add
+an option to save the parameters for a particular microscope setup, to allow for easy switching between instrument parameters.
+
+
+\section{A worked example\label{sec:examples}}
+In this final section, we describe a simple example of an EBSD pattern simulation for pure aluminum.  We begin by using the 
+\textsf{CTEMmkxtal} program to enter the following data:
+\begin{verbatim}
+	crystal system ---> 1
+	a [nm] = 0.405
+	Enter space group number : 225
+	Atomic number : 13
+	Fractional coordinates etc. : 0.0, 0.0, 0.0, 1.0, 0.00746
+	Another atom ? (y/n)  n
+	Enter output file name : Al.xtal
+\end{verbatim}
+The room temperature Debye-Waller factor above comes from a paper by Peng et al.\footnote{L.-M. Peng, G. Ren, S.L. Dudarev, and M.J. Whelan,
+``Debye-Waller factors and absorptive scattering factors of elemental crystals,'' Acta Cryst. (1996) A52, 456-470.}
+
+The EBSD pattern simulation then consists of three consecutive program runs, described in the following subsections.
+
+\subsection{Monte Carlo simulation}
+In the \textsf{Examples/EBSDPatterns} folder you will find the following namelist file (CTEMMCexample.nml):
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
+\VerbatimInput{../Examples/EBSDPatterns/CTEMMCexample.nml}
+Important note: make sure that the output file name includes the complete (absolute) path!!!
+ 
+This will produce an output file with energy statistics for the range $[10,25]$ keV in $0.5$ keV steps
+on an $801\times 801$ square Lambert grid.  The program can be executed by the following command line
+(assuming the program runs in the example folder):
+\begin{verbatim}
+	../../exe/CTEMMC CTEMMCexample.nml
+\end{verbatim}
+After about 40 minutes,\footnote{iMac 3.4 GHz Intel Core i7} 
+this run produced a file \textsf{Al\_MCoutput.data} of size $161,728,920$ bytes, along with the following output:
+\begin{verbatim}
+ Program name : CTEMMC.f90
+ Monte Carlo Electron Trajectory Simulation for EBSD+Lambert
+
+May 28 2014   8:46:47.535 AM
+
+  File Al.xtal open for input
+
+-->Crystal Structure Information<--
+   a [nm]             :   0.40500
+   b [nm]             :   0.40500
+   c [nm]             :   0.40500
+   alpha [deg]        :  90.00000
+   beta  [deg]        :  90.00000
+   gamma [deg]        :  90.00000
+   Volume [nm^3]      :   0.06643013
+   Space group #      :  225
+   Space group symbol :  F m 3 m
+   Generator String   : 16aODDaDODbOOOcOOOdOOOeOOO0
+   Structure is centrosymmetric
+
+   Number of asymmetric atom positions    1
+   General position / atomic number / multiplicity :    1/13/  4 (Al)
+   Equivalent positions  (x y z  occ  DWF)
+          >     0.00000,  0.00000,  0.00000,  1.00000,  0.00746
+          >     0.00000,  0.50000,  0.50000,  1.00000,  0.00746
+          >     0.50000,  0.00000,  0.50000,  1.00000,  0.00746
+          >     0.50000,  0.50000,  0.00000,  1.00000,  0.00746
+
+ Mean inner potential [V]  17.77
+ Wavelength corrected for refraction
+ Relativistic correction factor [gamma] 1.048924
+ Relativistic Accelerating Potential [V]     25629.32
+ Electron Wavelength [nm]   0.76608E-02
+ Interaction constant [V nm]^(-1)   0.16784E-01
+ Density, avZ, avA =    2.69781  13.00000,  26.98154
+ setting number of threads to   4
+  Completed electron #   1000000 ; bse hits =   466324
+  Completed electron #   2000000 ; bse hits =   931979
+  ...
+  Completed electron #   24000000 ; bse hits =   11175556
+  Completed electron #   25000000 ; bse hits =   11641955
+  
+  All threads complete; saving data to file Al_MCoutput.data
+  Total number of electrons generated =   100000000
+  Number of electrons on detector       =     46574757
+\end{verbatim}
+The last lines of output indicate that the overall BSE yield is $46.6\%$; this is not the 
+yield on the detector, but the total yield in the Northern hemisphere with respect to the 
+sample surface (i.e., all BSEs are counted, regardless of the direction in which they
+escape the surface).
+
+\subsection{EBSD master pattern simulation}
+The next step is the computation of the EBSD master pattern, using the \textsf{CTEMEBSDmaster} program. 
+The example input file \textsf{CTEMEBSDMexample.nml} contains the following entries:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
+\VerbatimInput{../Examples/EBSDPatterns/CTEMEBSDMexample.nml}
+Important note: make sure that the input and output file names include the complete (absolute) path!!!
+
+One should also set the Bethe potential parameters; in this case, since the computation is not very long anyway, 
+we set both cutoff parameters equal to each other in the \textsf{BetheParameters.nml} file:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
+\VerbatimInput{../Examples/EBSDPatterns/BetheParameters.nml}
+The program is executed as follows:
+\begin{verbatim}
+	../../exe/CTEMEBSDmaster CTEMEBSDMexample.nml
+\end{verbatim}
+and, after about $100$ minutes, produces a file \textsf{Al\_EBSDmaster.data} of size $79,559,150$ bytes.  A partial program output
+is as follows:
+\begin{verbatim}
+ Program name : CTEMEBSDmaster.f90
+ EBSD Energy-dependent Master Pattern Simulation
+
+May 28 2014   9:40:29.585 AM
+
+opening Al_MCoutput.data
+  NumEbins, numzbins, nsx, nsy, num_el, MCnthreads           31         101         400         400   100000000,           0
+  EkeV, Ehistmin, Ebinsize, depthmax, depthstep   25.00000  10.00000   0.50000 100.00000,   1.00000
+ -> completed reading Al_MCoutput.data
+  File Al.xtal open for input
+
+-->Crystal Structure Information<--
+   a [nm]             :   0.40500
+   b [nm]             :   0.40500
+   c [nm]             :   0.40500
+   alpha [deg]        :  90.00000
+   beta  [deg]        :  90.00000
+   gamma [deg]        :  90.00000
+   Volume [nm^3]      :   0.06643013
+   Space group #      :  225
+   Space group symbol :  F m -3 m
+   Generator String   : 16aODDaDODbOOOcOOOdOOOeOOO0
+   Structure is centrosymmetric
+
+   Number of asymmetric atom positions    1
+   General position / atomic number / multiplicity :    1/13/  4 (Al)
+   Equivalent positions  (x y z  occ  DWF)
+          >     0.00000,  0.00000,  0.00000,  1.00000,  0.00746
+          >     0.00000,  0.50000,  0.50000,  1.00000,  0.00746
+          >     0.50000,  0.00000,  0.50000,  1.00000,  0.00746
+          >     0.50000,  0.50000,  0.00000,  1.00000,  0.00746
+
+  Laue group #   11  m-3m
+Read Bethe parameters from BetheParameters.nml
+ &BETHELIST
+ WEAKCUTOFF =   40.0000,
+ CUTOFF =   40.0000,
+ SGCUTOFF =   5.000000E-02,
+ /
+
+Starting computation for energy bin    31 ; energy [keV] =  25.00
+
+ Mean inner potential [V]  17.77
+ Wavelength corrected for refraction
+ Relativistic correction factor [gamma] 1.048924
+ Relativistic Accelerating Potential [V]     25629.32
+ Electron Wavelength [nm]   0.76608E-02
+ Interaction constant [V nm]^(-1)   0.16784E-01
+  Range of reflections along a*, b* and c* =    9  9  9
+  Normal absorption length =    155.647
+  Length of the master list of reflections :      537
+ # independent beam directions to be considered =    80601
+ completed beam direction   2500
+ completed beam direction   5000
+  ... many lines removed ...
+ completed beam direction   77500
+ completed beam direction   80000
+Final data stored in file Al_EBSDmaster.data
+\end{verbatim}
+Note that this program computes a master pattern for each energy bin produced by the Monte Carlo program; in the
+present case, there are $31$ energy bins, so the program executes the full dynamical computation that many times.
+Output is stored on the square Lambert projection, and can be read by the \textsf{CTEMEBSD} program as well
+as the IDL visualization interface \textsf{EBSDDisplay.pro}.
+
+\subsection{EBSD pattern simulation}
+When the Monte Carlo and master pattern files have been created, then one can start up the 
+\textsf{EBSDDisplay} visualization program, or, if all imaging parameters are known, one can
+run the \textsf{CTEMEBSD} program directly with a namelist file.
+
+We leave it up to the reader to experiment with the namelist file approach.  For the IDL visualization interface, 
+start up the program, then click on the \button{Load master file} to load both the master file and the Monte Carlo
+file; using the \button{Display} one can then examine both the electron distribution vs.\ energy and the master
+patterns.  Use the \button{Define detector} to bring up the detector interface; select \textsf{single pattern} mode
+and fill in the detector parameters.  Select an output file, then enter an Euler angle triplet, click on the
+\button{Display pattern} and you will see the corresponding EBSP.  Set the intensity scaling to gamma, and 
+use the slider to select an appropriate pattern contrast.
+
+To get a feel for how the various detector parameters affect the EBSP, you should try changing the parameters 
+one by one.  For instance, decreasing either the beam current or the dwell time, the patterns will become more
+noisy.  Note that these patterns do not include the point spread function of the detector; that option will become 
+available in the next release of the software.
+
+
+
+\end{document}
+
+
+

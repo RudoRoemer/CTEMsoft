@@ -100,7 +100,7 @@
 !> @date 08/20/14 MDG 3.3 completed extensive testing of epsijk<0 mode; all tests passed for the first time !
 !> @date 08/21/14 MDG 3.4 minor correction in om2ax to get things to work for epsijk>0 mode; all tests passed!
 !> @date 09/30/14 MDG 3.5 added routines to make rotation definitions easier
-!> @date 09/30/14 MDG 3.6 added strict range checking routines for all representations 
+!> @date 09/30/14 MDG 3.6 added strict range checking routines for all representations (tested on 10/1/14)
 !--------------------------------------------------------------------------
 module rotations
 
