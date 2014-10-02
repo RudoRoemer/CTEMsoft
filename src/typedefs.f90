@@ -834,5 +834,13 @@ end type orientationtyped
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
 
+! type definition for linked list of Rodrigues-Frank vectors (used in so3.module)
+type FZpointd
+        real(kind=dbl)          :: rod(4)        ! Rodrigues-Frank vector [nx, ny, nz, tan(omega/2) ]
+        type(FZpointd),pointer	:: next	         ! link to next point
+end type FZpointd
+
+
+
 
 end module typedefs

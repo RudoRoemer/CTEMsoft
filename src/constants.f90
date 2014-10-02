@@ -51,6 +51,7 @@
 !> @date 08/11/14 MDG 4.3 added infty for handling of +Infinity in rotations module
 !> @date 08/11/14 MDG 4.4 added epsijk option to package
 !> @date 09/30/14 MDG 4.5 added some additional comments about epsijk
+!> @date 10/02/14 MDG 4.6 removed omegamax again, since we now have properly dealt with 180 degree rotations
 !--------------------------------------------------------------------------
 
 module constants
@@ -90,7 +91,7 @@ real(kind=dbl), parameter :: epsijkd = 1.D0
 ! which is defined here (using the LaTeX name infty)
 INTEGER,private :: inf
 REAL,public :: infty
-EQUIVALENCE (inf,infty) !Stores two variable at the same address
+EQUIVALENCE (inf,infty) ! stores two variable at the same address
 DATA inf/z'7f800000'/ !Hex for +Infinity
 
 
@@ -214,8 +215,6 @@ type LambertParametersType
         real(kind=dbl)          :: pi8=0.392699081698724D0      ! pi/8
         real(kind=dbl)          :: prek=1.643456402972504D0     ! R1 2^(1/4)/beta
         real(kind=dbl)          :: r24=4.898979485566356D0      ! sqrt(24)
-        real(kind=dbl)          :: omegamax = 3.141592479056868D0       ! max angle (radians)  for Rodrigues space, currently 179.99999¡
-        real(kind=dbl)          :: rvmax2=131312254114241.4843750000D0      ! square of max rodrigues vector length (reset when omegamax changes)  
         real(kind=dbl)          :: tfit(16) = (/1.0000000000018852D0, -0.5000000002194847D0, & 
                                              -0.024999992127593126D0, - 0.003928701544781374D0, & 
                                              -0.0008152701535450438D0, - 0.0002009500426119712D0, & 
@@ -225,9 +224,34 @@ type LambertParametersType
                                              +0.000059719705868660826D0, - 0.00001980756723965647D0, & 
                                              +0.000003953714684212874D0, - 0.00000036555001439719544D0 /)
 	real(kind=dbl)              :: BP(6)= (/ 0.D0, 1.D0, 0.577350269189626D0, 0.414213562373095D0, 0.D0,  &
-                                              0.267949192431123D0 /)       ! used for Fundamental Zone determination
+                                              0.267949192431123D0 /)       ! used for Fundamental Zone determination in so3 module
 end type LambertParametersType
 
 type(LambertParametersType)        :: LPs
+
+
+! The following two arrays are used to determine the FZtype (FZtarray) and primary rotation axis order (FZoarray)
+! for each of the 32 crystallographic point group symmetries (in the order of the International Tables)
+!
+! 1 (C1), -1 (Ci), [triclinic]
+! 2 (C2), m (Cs), 2/m (C2h), [monoclinic]
+! 222 (D2), mm2 (C2v), mmm (D2h), [orthorhombic]
+! 4 (C4), -4 (S4), 4/m (C4h), 422 (D4), 4mm (C4v), -42m (D2d), 4/mmm (D4h), [tetragonal]
+! 3 (C3), -3 (C3i), 32 (D3), 3m (C3v), -3m (D3d), [trigonal]
+! 6 (C6), -6 (C3h), 6/m (C6h), 622 (D6), 6mm (C6v), -6m2 (D3h), 6/mmm (D6h), [hexagonal]
+! 23 (T), m3 (Th), 432 (O), -43m (Td), m-3m (Oh) [cubic]
+!
+! FZtype
+! 0        no symmetry at all
+! 1        cyclic symmetry
+! 2        dihedral symmetry
+! 3        tetrahedral symmetry
+! 4        octahedral symmetry
+!
+! these parameters are used in the so3 module
+!
+integer(kind=irg),parameter	:: FZtarray(32) = (/ 0,0,1,1,1,2,2,2,1,1,1,2,2,2,2,1,1,2,2,2,1,1,1,2,2,2,2,3,3,4,3,4 /)
+integer(kind=irg),parameter	:: FZoarray(32) = (/ 0,0,2,2,2,2,2,2,4,4,4,4,4,4,4,3,3,3,3,3,6,6,6,6,6,6,6,0,0,0,0,0 /)
+
 
 end module
