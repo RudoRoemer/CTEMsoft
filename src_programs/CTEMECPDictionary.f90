@@ -39,7 +39,7 @@
 !> @date 08/26/14 SS 1.0 f90
 !--------------------------------------------------------------------------
 
-program CTEMECP
+program CTEMECPDictionary
 
 use local
 use typedefs
@@ -47,6 +47,7 @@ use NameListTypedefs
 use NameListHandlers
 use files
 use io
+use so3
 
 IMPLICIT NONE
 
@@ -69,7 +70,7 @@ call CTEMsoft(progname, progdesc)
 ! perform the zone axis computations
 call ECpattern(ecpnl, progname)
 
-end program CTEMECP
+end program CTEMECPDictionary
 
 !--------------------------------------------------------------------------
 !
@@ -87,17 +88,17 @@ use local
 use typedefs
 use NameListTypedefs
 use crystal
-use constants
 use symmetry
 use Lambert
 use initializers
 use constants
-use gvectors
 use kvectors
 use error
 use io
 use files
-use diffraction
+use omp_lib
+use so3
+use rotations
 
 IMPLICIT NONE
 
@@ -109,25 +110,27 @@ character(fnlen)                        :: xtalname
 character(5)                            :: oldscversion
 character(fnlen)                        :: energyfile
 
-integer(kind=irg)                       :: npx,npy,numset,istat,val
+integer(kind=irg)                       :: npx,npy,numset,istat
 integer(kind=irg),allocatable           :: ATOM_type(:)
 real(kind=dbl)                          :: EkeV
-real(kind=sgl)                          :: dmin
+real(kind=sgl)                          :: dmin,kk(3)
 real(kind=sgl),allocatable              :: sr(:,:)
 
 type(unitcell), pointer                 :: cell
 type(gnode)                             :: rlp
 type(DynType)                           :: Dyn
-logical                                 :: verbose
+logical                                 :: verbose,usehex,switchmirror
 
-type(kvectorlist),pointer               :: khead,ktmp
-integer(kind=irg)                       :: numk,nix,niy,i,j,ierr,ipx,ipy
+type(kvectorlist),pointer               :: khead,ktmp,kheadmain,ktmpmain
+integer(kind=irg)                       :: numk,numkmain,nix,niy,i,j,k,&
+                                           ierr,ipx,ipy,ijmax,npyhex,nsteps
+integer(kind=irg),parameter     :: LaueTest(11) = (/ 149, 151, 153, 156, 158, 160, 161, 164, 165, 166, 167 /)  ! space groups with 2 or mirror at 30 degrees
+
 real(kind=dbl)                          :: scl,x,dx,dy,dxm,dym
 real(kind=dbl)                          :: dc(3),ixy(2)
-real(kind=sgl)                          :: rotmat(3,3)
 integer(kind=irg),allocatable           :: kij(:,:)
 real(kind=sgl),allocatable              :: ecp(:,:)
-real(kind=dbl)                          :: time_start,time_end
+integer(kind=sgl)                       :: pgnum,isym,io_int_sgl(1)
 
 
 !=================================================================
@@ -178,6 +181,7 @@ call Message(' -> completed reading '//trim(ecpnl%masterfile), frm = "(A)")
 ! completed reading master pattern file
 ! proceed to crystallography section
 !=============================================
+
 nullify(cell)
 allocate(cell)
 
@@ -185,75 +189,147 @@ allocate(cell)
 verbose = .FALSE.
 call Initialize_Cell(cell,Dyn,rlp,xtalname,dmin,sngl(1000.0*EkeV),verbose)
 
-nullify(khead)
-!allocate(khead)
-nullify(ktmp)
-numk = 0
-rotmat(1,:) = (/1.0,0.0,0.0/)
-rotmat(2,:) = (/0.0,1.0,0.0/)
-rotmat(3,:) = (/0.0,0.0,1.0/)
-
-
-call CalckvectorsECP(khead,cell,rotmat,ecpnl%thetac,ecpnl%npix,ecpnl%npix,numk) !Here lies the problem
-allocate(kij(2,numk),stat=istat)
-
-ktmp => khead
-!kij(1:2,1) = (/ ktmp%i, ktmp%j /)
-i = 1
-do while(associated(ktmp%next))
-    kij(1:2,i) = (/ ktmp%i, ktmp%j /)
-    ktmp => ktmp%next
-    i = i + 1
+! determine the point group and Laue group number
+j=0
+do i=1,32
+    if (SGPG(i).le.cell%SYM_SGnum) j=i
 end do
+
+isym = j
+pgnum = j
+
+isym = PGLaueinv(isym)
+
+! If the Laue group is # 7, then we need to determine the orientation of the mirror plane.
+! The second orientation of the mirror plane is represented by "Laue group" # 12 in this program.
+switchmirror = .FALSE.
+if (isym.eq.7) then
+    do i=1,11
+        if (cell%SYM_SGnum.eq.LaueTest(i)) switchmirror = .TRUE.
+    end do
+end if
+
+if (switchmirror) then
+isym = 12
+call Message(' Switching computational wedge to second setting for this space group', frm = "(A)")
+end if
+
+write (*,*) ' Laue group # ',isym, PGTHD(j)
+
+! if this point group is trigonal or hexagonal, we need to switch usehex to .TRUE. so that
+! the program will use the hexagonal sampling method
+usehex = .FALSE.
+if (((isym.ge.6).and.(isym.le.9)).or.(isym.eq.12)) usehex = .TRUE.
+
+if(usehex)  npyhex = nint(2.0*float(512)/sqrt(3.0))
+ijmax = float(512)**2   ! truncation value for beam directions
+
+nullify(kheadmain)
+nullify(ktmpmain)
+
+!call Calckvectors(kheadmain,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,512,512,numkmain, &
+!isym,ijmax,'RoscaLambert',usehex)
+nsteps = 50
+
+call SampleRFZ(nsteps,pgnum)
+FZtmp => FZlist
+io_int_sgl(1)=FZcnt
+
+call WriteValue('# independent crystal orientations to be considered = ', io_int_sgl, 1, "(I8)")
+
+open(unit=dataunit,file=trim(ecpnl%outname),status='unknown',action='write',form = 'unformatted')
+write (dataunit) progname
+! write the version number
+write (dataunit) scversion
+! then the name of the crystal data file
+write (dataunit) xtalname
+
+j = 1
+beamloop: do while(associated(FZtmp%next))
+    rotmat = ro2om(FZlist%rod)
+    nullify(khead)
+    nullify(ktmp)
+
+    numk = 0
+    call CalckvectorsECP(khead,cell,rotmat,ecpnl%thetac,ecpnl%npix,ecpnl%npix,numk) !Here lies the problem
+    allocate(kij(2,numk),stat=istat)
+
+    ktmp => khead
+!kij(1:2,1) = (/ ktmp%i, ktmp%j /)
+
+    do k = 2,numk
+        kij(1:2,k) = (/ ktmp%i, ktmp%j /)
+        ktmp => ktmp%next
+    end do
+
 
 ! determine the scale factor for the Lambert interpolation; the square has
 ! an edge length of 2 x sqrt(pi/2)
-scl = float(npx)/LPs%sPio2
+    scl = float(npx)/LPs%sPio2
 
-allocate(ecp(-ecpnl%npix:ecpnl%npix,-ecpnl%npix:ecpnl%npix),stat=istat)
-ecp = 0.0
-ktmp => khead
-i = 1
-!imageloop: do i = 1,numk
-imageloop: do while(associated(ktmp%next))
-    dc = ktmp%k(1:3)
+    allocate(ecp(-ecpnl%npix:ecpnl%npix,-ecpnl%npix:ecpnl%npix),stat=istat)
+    ecp = 0.0
+
+    ktmp => khead
+    i = 1
+    imageloop: do while(associated(ktmp%next))
+        dc = ktmp%k(1:3)
+        dc = dc/sqrt(sum(dc**2))
 ! make sure the third one is positive; if not, switch all
-    if (dc(3) .lt. 0.0) dc = -dc
+        if (dc(3) .lt. 0.0) dc = -dc
 ! convert these direction cosines to coordinates in the Rosca-Lambert projection
-    ixy = scl * LambertSphereToSquare( dc, istat )
-    x = ixy(1)
-    ixy(1) = ixy(2)
-    ixy(2) = -x
+        ixy = scl * LambertSphereToSquare( dc, istat )
+        x = ixy(1)
+        ixy(1) = ixy(2)
+        ixy(2) = -x
 ! four-point interpolation (bi-quadratic)
-    nix = nint(ixy(1))
-    niy = nint(ixy(2))
+        nix = nint(ixy(1))
+        niy = nint(ixy(2))
 !print*,nix,niy
-    dx = ixy(1)-nix
-    dy = ixy(2)-niy
-    dxm = 1.0-dx
-    dym = 1.0-dy
+        dx = ixy(1)-nix
+        dy = ixy(2)-niy
+        dxm = 1.0-dx
+        dym = 1.0-dy
 ! interpolate the intensity
-    ipx = kij(1,i)
-    ipy = kij(2,i)
-    ecp(ipx,ipy) =  sr(nix,niy) * dxm * dym + &
-                    sr(nix+1,niy) * dx * dym + &
-                    sr(nix,niy+1) * dxm * dy + &
-                    sr(nix+1,niy+1) * dx * dy
-    ktmp => ktmp%next
-    i = i + 1
-end do imageloop
+        ipx = kij(1,i)
+        ipy = kij(2,i)
+!print*,nix,niy
+!print*,"success..."
+
+        ecp(ipx,ipy) =  sr(nix,niy) * dxm * dym + &
+                        sr(nix+1,niy) * dx * dym + &
+                        sr(nix,niy+1) * dxm * dy + &
+                        sr(nix+1,niy+1) * dx * dy
+
+        ktmp => ktmp%next
+        i = i + 1
+    end do imageloop
+    if (mod(j,2500).eq.0) then
+    io_int_sgl(1) = j
+    call WriteValue('  completed pattern # ',io_int_sgl, 1, "(I8)")
+! write(*,*) minval(sr),maxval(sr)
+end if
+! write the results
+    write (dataunit) ecp
+    FZtmp => FZtmp%next%next
+    j = j + 1
+end do beamloop
+close(unit=dataunit,status='keep')
+
 nullify(ktmp)
+nullify(ktmpmain)
 call Delete_kvectorlist(khead)
-!print*,val
-open(unit=12,file="test.txt",action="write")
+call Delete_kvectorlist(kheadmain)
 
-do i= -ecpnl%npix,ecpnl%npix
-    do j= -ecpnl%npix,ecpnl%npix
-        write(12, '(F15.6)', advance='no') ecp(i,j)
-    end do
-    write(12, *) ''  ! this gives you the line break
-end do
+!open(unit=12,file="test.txt",action="write")
 
-close(unit=12,status='keep')
+!do i= -ecpnl%npix,ecpnl%npix
+!    do j= -ecpnl%npix,ecpnl%npix
+!        write(12, '(F15.6)', advance='no') ecp(i,j)
+!    end do
+!    write(12, *) ''  ! this gives you the line break
+!end do
+
+!close(unit=12,status='keep')
 
 end subroutine ECpattern
