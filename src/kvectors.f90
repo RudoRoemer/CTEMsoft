@@ -995,7 +995,7 @@ end subroutine Delete_kvectorlist
 !
 !> @date   08/25/14 SS 1.0 original
 !--------------------------------------------------------------------------
-subroutine CalckvectorsECP(khead,cell,k,thetac,npx,npy,numk)
+subroutine CalckvectorsECP(khead,cell,rotmat,thetac,npx,npy,numk)
 
 use io
 use local
@@ -1007,43 +1007,30 @@ use Lambert
 
 IMPLICIT NONE
 
-type(kvectorlist),pointer               :: khead
+type(kvectorlist),pointer               :: khead,ktail
 type(unitcell),pointer                  :: cell
-real(kind=sgl),INTENT(IN)               :: k(3)         !< initial wave vector
+real(kind=sgl),INTENT(IN)               :: rotmat(3,3)         !< initial wave vector
 real(kind=sgl),INTENT(IN)               :: thetac        !< half angle of cone of incident beam directions in degrees
 integer(kind=irg),INTENT(IN)            :: npx          !< number of kvectors along x
 integer(kind=irg),INTENT(IN)            :: npy          !< number of kvectors along y
-integer(kind=irg),INTENT(OUT)           :: numk         !< total number of kvectors in linked list
+integer(kind=irg),INTENT(OUT)           :: numk
 real(kind=dbl),parameter                :: DtoR = 0.01745329251D0
 real(kind=sgl)                          :: delta,thetacr,ktmax
 integer(kind=irg)                       :: i,j,imin,imax,jmin,jmax,ijmax,istat
-real(kind=sgl)                          :: kk(3),gperpa(3),gperpb(3)
-real(kind=sgl)                          :: kcart(3)
-real(kind=sgl)                          :: rotmat(3,3)
-type(kvectorlist),pointer               :: ktail
+real(kind=sgl)                          :: kk(3)
+real(kind=sgl)                          :: k(3)
 
-! first, if khead already exists, delete it
 if (associated(khead)) then                    ! deallocate the entire linked list
 call Delete_kvectorlist(khead)
 end if
 
-kk = (/0.0,0.0,1.0/)
-kk = kk/mlambda
-call TransSpace(cell,k,kcart,'d','c')       		! transform crystal direction to cartesian space
-call NormVec(cell,kcart,'c')                       	! normalize incidence vector in cartesian coordinates
+k = (/0.0,0.0,1.0/)
+k = k/mLambda
+thetacr = DtoR*thetac
+call TransSpace(cell,k,kk,'r','c')
 
-gperpa = (/-kcart(2),kcart(1),0.0/)
-gperpa = gperpa/sqrt(sum(gperpa**2))
-
-gperpb = (/kcart(2)*gperpa(3)-kcart(3)*gperpa(2),&
-            kcart(3)*gperpa(1)-kcart(1)*gperpa(3),&
-            kcart(1)*gperpa(2)-kcart(2)*gperpa(1)/)
-gperpb = gperpb/sqrt(sum(gperpb**2))
-
-rotmat(:,1) = gperpa
-rotmat(:,2) = gperpb
-rotmat(:,3) = k
-
+ktmax = tan(thetacr)*sqrt(sum(kk**2))
+delta = 2.0*ktmax/(2.0*float(npx)+1.0)
 imin = -npx
 imax = npx
 jmin = -npy
@@ -1055,40 +1042,32 @@ ijmax = npx**2
 allocate(khead,stat=istat)   				! allocate new value
 if (istat.ne.0) call FatalError('Calckvectors','unable to allocate khead pointer')
 
-nullify(ktail)
-
 ktail => khead                      			! tail points to new value
 nullify(ktail%next)                			! nullify next in new value
-
-numk = 1                          			! keep track of number of k-vectors so far
+numk = 0
 ktail%i = 0                             		! i-index of beam
 ktail%j = 0                             		! j-index of beam
 ktail%kt = (/0.0,0.0,0.0/)				! no tangential component for central beam direction
-ktail%k = kk
+ktail%k = matmul(rotmat,kk)
+!kcent = ktail%k
+!print*,ktail%k
 ktail%kn = sqrt(sum(kk**2))!CalcDot(cell,ktail%k,kcart,'c')			! normal component
-
-thetacr = DtoR*thetac
-
-ktmax = tan(thetacr)*sqrt(sum(kk**2))
-
-delta = 2.0*ktmax/(2.0*float(npx)+1.0)
+call NormVec(cell,ktail%k,'c')
 
 do i = imin,imax
     do j = jmin,jmax
-        if (.not. ((i.eq.0).and.(j.eq.0))) then
-            if ((i**2 + j**2) .le. ijmax) then
-                allocate(ktail%next)
-                ktail => ktail%next
-                nullify(ktail%next)
-                numk = numk + 1
-                ktail%i = i
-                ktail%j = j
-                ktail%kt = (/delta*i,delta*j,0.0/)
-                ktail%k = ktail%kt + kk
-                ktail%kn = sqrt(sum(kk**2))
-                ktail%kt = matmul(rotmat,ktail%kt)
-                ktail%k = matmul(rotmat,ktail%k)
-            end if
+        if ((i**2 + j**2) .le. ijmax) then
+            allocate(ktail%next)
+            ktail => ktail%next
+            nullify(ktail%next)
+            numk = numk + 1
+            ktail%i = i
+            ktail%j = j
+            ktail%kt = (/delta*i,delta*j,0.0/)
+            ktail%k = ktail%kt + kk
+            ktail%kt = matmul(rotmat,ktail%kt)
+            ktail%k = matmul(rotmat,ktail%k)
+            call NormVec(cell,ktail%k,'c')
         end if
     end do
 end do
