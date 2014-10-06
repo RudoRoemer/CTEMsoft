@@ -144,9 +144,9 @@ character(3)                            :: grid
 type(kvectorlist),pointer               :: ktail, ktmp
 
 ! first, if khead already exists, delete it
- if (associated(khead)) then                    ! deallocate the entire linked list
-    call Delete_kvectorlist(khead)
- end if   
+ !if (associated(khead)) then                    ! deallocate the entire linked list
+ !   call Delete_kvectorlist(khead)
+ !end if
  
 ! do we know this mapmode ?
 if ( .not.( (mapmode.eq.'Conical').or.(mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical').or. &
@@ -1021,14 +1021,13 @@ real(kind=sgl)                          :: kk(3)
 real(kind=sgl)                          :: k(3)
 
 if (associated(khead)) then                    ! deallocate the entire linked list
-call Delete_kvectorlist(khead)
+    call Delete_kvectorlist(khead)
 end if
 
 k = (/0.0,0.0,1.0/)
 k = k/mLambda
 thetacr = DtoR*thetac
 call TransSpace(cell,k,kk,'r','c')
-
 ktmax = tan(thetacr)*sqrt(sum(kk**2))
 delta = 2.0*ktmax/(2.0*float(npx)+1.0)
 imin = -npx
