@@ -513,6 +513,7 @@ end subroutine SafeCloseFile
 ! 
 !> @date   06/26/13 MDG 1.0 first attempt
 !> @date   06/08/14 MDG 2.0 added stdout argument
+!> @date   10/06/14 MDG 2.1 corrected off-by-one error in templatelist
 !--------------------------------------------------------------------------
 subroutine CopyTemplateFiles(nt,templatelist,stdout)
 
@@ -548,14 +549,16 @@ do
  if (ios.ne.0) then 
   exit
  end if
- templates(j) = trim(line)
+ templates(j+1) = trim(line)
 end do
 CLOSE(UNIT=dataunit, STATUS='keep')
 
+! write (*,*) 'templatelist = ',templatelist(1:nt)
+
 do i=1,nt
- input_name = trim(templatepathname)//'/'//trim(templates(templatelist(i)))
+ input_name = trim(templatepathname)//'/'//trim(templates(templatelist(i)+1))
 ! write (*,*) i,'->',trim(input_name),'<-'
- output_name = templates(templatelist(i))
+ output_name = templates(templatelist(i)+1)
  OPEN(UNIT=dataunit,FILE=trim(input_name), STATUS='old', FORM='formatted',ACCESS='sequential')
  OPEN(UNIT=dataunit2,FILE=trim(output_name), STATUS='replace', FORM='formatted',ACCESS='sequential')
  do
@@ -567,7 +570,7 @@ do i=1,nt
   end do
  CLOSE(UNIT=dataunit, STATUS='keep')
  CLOSE(UNIT=dataunit2, STATUS='keep')
- call Message('  -> created template file '//trim(templates(templatelist(i))), frm = "(A)", stdout = std)
+ call Message('  -> created template file '//trim(templates(templatelist(i)+1)), frm = "(A)", stdout = std)
 end do
  
 

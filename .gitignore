@@ -122,7 +122,8 @@ absoft_run_env.sh
 /src/AmyPlay.f90
 /src/local.f90
 /src/PatrickPlay.f90
-
+/src_programs/*.c
+/src_programs/go*
 
 #ignoring cmake and other build systems
 CMakeLists.txt.user
