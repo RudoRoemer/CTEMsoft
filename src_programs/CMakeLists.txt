@@ -3,7 +3,7 @@ project(Apps)
 
 macro (Create_exe_and_tll INPUT)
 	ADD_EXECUTABLE(${INPUT} ${Apps_SOURCE_DIR}/${INPUT}.f90)
- TARGET_LINK_LIBRARIES(${INPUT} CTEMSoftLib gomp)
+ 	TARGET_LINK_LIBRARIES(${INPUT} CTEMSoftLib gomp)
 	
 	
 	set(install_dir "bin")
@@ -13,18 +13,16 @@ macro (Create_exe_and_tll INPUT)
 		set(lib_install_dir "")
 	endif()
 
-		INSTALL(TARGETS ${INPUT}
-			COMPONENT Applications
-			RUNTIME DESTINATION ${install_dir}
-			LIBRARY DESTINATION ${lib_install_dir}
-			ARCHIVE DESTINATION ${lib_install_dir}
-			BUNDLE DESTINATION "."
-		)
+	INSTALL(TARGETS ${INPUT}
+		COMPONENT Applications
+		RUNTIME DESTINATION ${install_dir}
+		LIBRARY DESTINATION ${lib_install_dir}
+		ARCHIVE DESTINATION ${lib_install_dir}
+		BUNDLE DESTINATION "."
+	)
 
 
 endmacro (Create_exe_and_tll)
-#add_executable(CTEMEBSDmaster ${Apps_SOURCE_DIR}/CTEMEBSDmaster.f90)
-#TARGET_LINK_LIBRARIES(CTEMEBSDmaster CTEMSoftLib)
 
 
 Create_exe_and_tll(CTEMlacbed)
@@ -58,6 +56,39 @@ Create_exe_and_tll(CTEMPED)
 
 Create_exe_and_tll(structest)
 Create_exe_and_tll(rotationtest)
+
+
+
+ # On mac systems, we likely have to link against the vecLib framework
+if(APPLE)
+  find_library(LAPACK_LIB Accelerate)
+ # include_directories(" -FvecLib")
+else()
+	message(FATAL_ERROR "This platform needs to have CMake code inserted to find the BLAS/LAPACK Libraries.")
+endif(APPLE)
+
+
+find_package( OpenCL REQUIRED )
+
+include_directories( ${OPENCL_INCLUDE_DIRS} )
+
+if( OPENCL_HAS_CPP_BINDINGS )
+  message( "OpenCL has CPP bindings. Full include is: " ${OPENCL_INCLUDE_DIRS} )
+else( OPENCL_HAS_CPP_BINDINGS )
+  message( "No OpenCL CPP bindings found" )
+endif( OPENCL_HAS_CPP_BINDINGS )
+
+find_package(FortranCL REQUIRED)
+if( NOT FORTRANCL_FOUND)
+  message(STATUS "FortranCL is REQUIRED for this project.")
+  message(STATUS "FortranCL source repository is at http://code.google.com/p/fortrancl/downloads/list")
+  message(FATAL_ERROR "Please Download, Build and install. After install export the environment variable FORTRANCL_INSTALL to point to the installation location.")
+endif()
+
+include_directories(${FORTRANCL_INCLUDE_DIR})
+
+ADD_EXECUTABLE(CTEMMCOpenCL CTEMMCOpenCL.f90)
+TARGET_LINK_LIBRARIES(CTEMMCOpenCL ${OPENCL_LIBRARIES} ${LAPACK_LIB} ${FORTRANCL_LIBRARIES} CTEMSoftLib)
 
 
 #Create_exe_and_tll(CTEMBWshow)
