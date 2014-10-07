@@ -232,7 +232,6 @@ if(ierr /= CL_SUCCESS) stop "Cannot create command queue"
 
 ! read the source file
 call getenv("CTEMsoft2013opencl",openclpathname)
-write (*,*) '->',openclpathname,'<-'
 open(unit = iunit, file = trim(openclpathname)//'/CTEMMC.cl', access='direct', status = 'old', &
         action = 'read', iostat = ierr, recl = 1)
 if (ierr /= 0) stop 'Cannot open file CTEMMC.cl'
