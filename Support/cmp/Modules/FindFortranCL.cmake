@@ -15,6 +15,7 @@ IF (FORTRANCL_INCLUDE_DIR)
 ENDIF (FORTRANCL_INCLUDE_DIR)
 
 FIND_PATH(FORTRANCL_INCLUDE_DIR cl.mod
+  /opt/include
   /usr/local/include
   /usr/include
   $ENV{FORTRANCL_INSTALL}/include
