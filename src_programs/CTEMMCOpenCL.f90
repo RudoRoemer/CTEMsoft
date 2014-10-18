@@ -37,14 +37,14 @@ use io
 IMPLICIT NONE
 
 character(fnlen)                        :: nmldeffile, progname, progdesc
-type(MCCLNameListType)                    :: mcnl
+type(MCCLNameListType)                  :: mcnl
 
-nmldeffile = 'CTEMMCCL.nml'
-progname = 'CTEMMC.f90'
+nmldeffile = 'CTEMMCOpenCL.nml'
+progname = 'CTEMMCOpenCL.f90'
 progdesc = 'Monte Carlo backscattered electron simulation'
 
 ! deal with the command line arguments, if any
-call Interpret_Program_Arguments(nmldeffile,1,(/ 20 /), progname)
+call Interpret_Program_Arguments(nmldeffile,1,(/ 42 /), progname)
 
 ! deal with the namelist stuff
 call GetMCCLNameList(nmldeffile,mcnl)
@@ -53,9 +53,44 @@ call GetMCCLNameList(nmldeffile,mcnl)
 call CTEMsoft(progname, progdesc)
 
 ! perform a Monte Carlo simulation
+write (*,*) 'namelist contents : ',mcnl
+
+write (*,*) 'calling DoMCSimulation'
+call DoMC(mcnl, progname)
+write (*,*) 'returned from DoMC'
+
 call DoMCsimulation(mcnl, progname)
 
 end program CTEMMCOpenCL
+
+
+
+
+subroutine DoMC(mcnl, progname)
+
+use local
+use typedefs
+use NameListTypedefs
+use initializers
+use crystal
+use constants
+use symmetry
+use error
+use io
+use files
+use diffraction, only:CalcWaveLength
+use Lambert
+use cl
+
+IMPLICIT NONE
+
+type(MCCLNameListType),INTENT(IN)       :: mcnl
+character(fnlen),INTENT(IN)             :: progname
+
+write (*,*) 'inside DoMC'
+
+end subroutine
+
 
 !--------------------------------------------------------------------------
 !
@@ -95,7 +130,7 @@ use cl
 
 IMPLICIT NONE
 
-type(MCCLNameListType),INTENT(IN)         :: mcnl
+type(MCCLNameListType),INTENT(IN)       :: mcnl
 character(fnlen),INTENT(IN)             :: progname
 
 
@@ -114,16 +149,16 @@ real(kind=4)            :: Ze           ! average atomic number
 real(kind=4)            :: density      ! density in g/cm^3
 real(kind=4)            :: at_wt        ! average atomic weight in g/mole
 logical                 :: verbose
-real(kind=4)          :: dens, avA, avZ, io_real(3), dmin ! used with CalcDensity routine
-real(kind=8) , parameter         :: dtoR = 0.01745329251D0 !auxiliary variables
-real(kind=4)          :: EkeV, sig, omega ! input values to the kernel. Can only be real kind=4 otherwise values are not properly passed
-integer(kind=4)       :: totnum_el     ! total number of electrons to simulate
-integer(kind=4)       :: globalworkgrpsz, num_el, num_max, steps, prime ! input values to the kernel
-integer(kind=8)       size_in_bytes,size_in_bytes_seeds ! size of arrays passed to kernel. Only accepts kind=8 integers by clCreateBuffer etc., so donot change
+real(kind=4)            :: dens, avA, avZ, io_real(3), dmin ! used with CalcDensity routine
+real(kind=8) , parameter:: dtoR = 0.01745329251D0 !auxiliary variables
+real(kind=4)            :: EkeV, sig, omega ! input values to the kernel. Can only be real kind=4 otherwise values are not properly passed
+integer(kind=4)         :: totnum_el     ! total number of electrons to simulate
+integer(kind=4)         :: globalworkgrpsz, num_el, num_max, steps, prime ! input values to the kernel
+integer(kind=8)         :: size_in_bytes,size_in_bytes_seeds ! size of arrays passed to kernel. Only accepts kind=8 integers by clCreateBuffer etc., so donot change
 integer(kind=8)         :: globalsize(2), localsize(2) ! size of global and local work groups. Again only kind=8 is accepted by clEnqueueNDRangeKernel
 character(4)            :: mode
 ! results from kernel stored here
-real(kind=4),allocatable :: Lamresx(:), Lamresy(:), depthres(:), energyres(:)
+real(kind=4),allocatable:: Lamresx(:), Lamresy(:), depthres(:), energyres(:)
 
 ! final results stored here
 integer(kind=4),allocatable :: accum_e(:,:,:), accum_z(:,:,:,:), rnseeds(:), init_seeds(:)
@@ -144,12 +179,19 @@ type(cl_event)          :: event
 
 character(len = 100)    :: info ! info about the GPU
 integer, parameter      :: iunit = 10
-integer, parameter              :: source_length = 10000000
+integer, parameter      :: source_length = 10000000
 character(len = source_length)  :: source
-integer(kind=4)       :: num, ierr, irec, io_int(1), val,val1 ! auxiliary variables
+integer(kind=4)         :: num, ierr, irec, io_int(1), val,val1 ! auxiliary variables
+
+write (*,*) 'Entering routine'
+
+! STOP
+
 numsy = mcnl%numsx
 nullify(cell)
 allocate(cell)
+
+write (*,*) mcnl
 
 ! get the crystal strucutre from the *.xtal file
 verbose = .TRUE.
