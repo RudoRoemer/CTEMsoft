@@ -102,7 +102,9 @@ type BetheParameterType
 	integer(kind=sgl),allocatable	:: weakreflistindex(:)		! used to map weak reflections onto the original reflist
 end type BetheParameterType
 
-type(BetheParameterType)	:: BetheParameter
+! absence of SAVE caused compilation error with gfortran 4.4.7
+! added SAVE to resolve issue #1 on 10/18/14
+type(BetheParameterType),SAVE	:: BetheParameter
 
 ! finally, create allocatable arrays with the same fields as the rlp list
 ! these may be needed for multithreaded applications, since linked lists

@@ -310,7 +310,9 @@ end if
   call Message("(A)")
   call Prune_ReflectionList(numk,nbeams)
   io_int(1) = nbeams
-  call WriteValue('Number of contributing beams  : ', io_int, 1, '(I)')
+! format command '(I)' caused runtime error
+! fixed on 10/18/14 in response to issue #2
+  call WriteValue('Number of contributing beams  : ', io_int, 1, '(I5)')
   nn = nbeams
 
 ! print the list for debugging purposes...
