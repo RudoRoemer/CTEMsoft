@@ -1112,7 +1112,9 @@ use symmetry
 IMPLICIT NONE
 
 integer(kind=irg),INTENT(IN)		:: nn
-complex(kind=dbl),INTENT(INOUT)	:: Sgh(nn,nn)
+! corrected on 10/22/14 in response to issue #3 raised by jfikar
+! Sgh array changed to one dimensional vector instead of 2D array
+complex(kind=dbl),INTENT(INOUT)	:: Sgh(nn)
 integer(kind=irg),INTENT(INOUT)	:: nat(100)
 
 integer(kind=irg)			:: ip, ir, ic, kkk(3), ikk, n, numset
@@ -1124,7 +1126,10 @@ real(kind=dbl)                        :: ctmp(192,3),arg, tpi
   Sgh = dcmplx(0.D0,0.D0)
   numset = cell % ATOM_ntype  ! number of special positions in the unit cell
 
-! for each special position we need to compute its contribution to the Sgh array
+! comment: this can likely be further simplified and we'll take a closer look at this for 
+! the next release.
+
+! for each special position we need to compute its contribution to the Sgh vector
   do ip=1,numset
     call CalcOrbit(ip,n,ctmp)
     nat(ip) = n
@@ -1132,33 +1137,51 @@ real(kind=dbl)                        :: ctmp(192,3),arg, tpi
     Znsq = float(cell%ATOM_type(ip))**2 * cell%ATOM_pos(ip,4)
 ! loop over all contributing reflections
 ! ir is the row index
-    rltmpa => reflist%next    ! point to the front of the list
-    do ir=1,nn
-! ic is the column index
-      rltmpb => reflist%next    ! point to the front of the list
-      do ic=1,nn
-        kkk = rltmpb%hkl - rltmpa%hkl
-! We'll assume isotropic Debye-Waller factors for now ...
-! That means we need the square of the length of s=  kk^2/4
-        kkl = 0.25 * CalcLength(float(kkk),'r')**2
+! we don't need to actually go through this list, so the lines are commented out
+!   rltmpa => reflist%next    ! point to the front of the list
+!   do ir=1,nn  ! we only need a single summation loop since Sgh is a column vector
 ! Debye-Waller exponential times Z^2
-        DBWF = Znsq * exp(-cell%ATOM_pos(ip,5)*kkl)
-! here is where we should insert the proper weight factor, Z^2 exp[-M_{h-g}]
-! and also the detector geometry...   For now, we do nothing with the detector
-! geometry; the Rossouw et al 1994 paper lists a factor A that does not depend
-! on anything in particular, so we assume it is 1. 
-        do ikk=1,n
-! get the argument of the complex exponential
-          arg = tpi*sum(kkk(1:3)*ctmp(ikk,1:3))
-          carg = dcmplx(dcos(arg),dsin(arg))
-! multiply with the prefactor and add
-          Sgh(ir,ic) = Sgh(ir,ic) + carg * dcmplx(DBWF,0.D0)
-        end do
-        rltmpb => rltmpb%next  ! move to next column-entry
-      end do
-     rltmpa => rltmpa%next  ! move to next row-entry
-   end do  
+     Sgh = Sgh + dcmplx(n * Znsq, 0.D0) 
+!    rltmpa => rltmpa%next  ! move to next row-entry
+!   end do  
   end do
+  
+! this is the older code which I'm leaving here commented [10/22/14]
+!! for each special position we need to compute its contribution to the Sgh array
+!  do ip=1,numset
+!    call CalcOrbit(ip,n,ctmp)
+!    nat(ip) = n
+!! get Zn-squared for this special position, and include the site occupation parameter as well
+!    Znsq = float(cell%ATOM_type(ip))**2 * cell%ATOM_pos(ip,4)
+!! loop over all contributing reflections
+!! ir is the row index
+!    rltmpa => reflist%next    ! point to the front of the list
+!    do ir=1,nn
+!! ic is the column index
+!      rltmpb => reflist%next    ! point to the front of the list
+!      do ic=1,nn
+!        kkk = rltmpb%hkl - rltmpa%hkl
+!! We'll assume isotropic Debye-Waller factors for now ...
+!! That means we need the square of the length of s=  kk^2/4
+!        kkl = 0.25 * CalcLength(float(kkk),'r')**2
+!! Debye-Waller exponential times Z^2
+!        DBWF = Znsq * exp(-cell%ATOM_pos(ip,5)*kkl)
+!! here is where we should insert the proper weight factor, Z^2 exp[-M_{h-g}]
+!! and also the detector geometry...   For now, we do nothing with the detector
+!! geometry; the Rossouw et al 1994 paper lists a factor A that does not depend
+!! on anything in particular, so we assume it is 1. 
+!        do ikk=1,n
+!! get the argument of the complex exponential
+!          arg = tpi*sum(kkk(1:3)*ctmp(ikk,1:3))
+!          carg = dcmplx(dcos(arg),dsin(arg))
+!! multiply with the prefactor and add
+!          Sgh(ir,ic) = Sgh(ir,ic) + carg * dcmplx(DBWF,0.D0)
+!        end do
+!        rltmpb => rltmpb%next  ! move to next column-entry
+!      end do
+!     rltmpa => rltmpa%next  ! move to next row-entry
+!   end do  
+!  end do
   
 end subroutine CalcSgh
 
