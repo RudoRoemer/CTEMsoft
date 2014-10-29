@@ -46,6 +46,7 @@ set(install_dir "bin")
 #-----------------------------------------------------------------------------------------
 # List all the executables here that only have a SINGLE source file
 set(TOOLS
+  CTEMlacbed
   CTEMmbcbed
   CTEMSRdefect #MP 
   CTEMZAdefect 
