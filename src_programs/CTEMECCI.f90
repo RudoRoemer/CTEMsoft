@@ -45,24 +45,46 @@
 !> @date  12/03/13 MDG  4.0 new start 
 !> @date  12/08/13 MDG  4.1 added trace (line scan) mode
 !> @date  02/10/14 MDG  4.2 added apbs
+!> @date  11/04/14 MDG  5.0 rewrite without globals; new namelist handling
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!-----------THIS PROGRAM IS NOW BROKEN AND NEEDS TO BE REWRITTEN !!!! -----
+!--------------------------------------------------------------------------
+!--------------------------11/04/14, MDG-----------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
 program CTEMECCI
 
 use local
 use files
+use NameListTypedefs
+use NameListHandlers
 use io
 
 IMPLICIT NONE
 
-character(fnlen)			:: nmldeffile
+character(fnlen)                        :: nmldeffile, progname, progdesc
+type(ECCINameListType)                :: eccinl
 
-! deal with the command line arguments, if any
 nmldeffile = 'CTEMECCI.nml'
 progname = 'CTEMECCI.f90'
-call Interpret_Program_Arguments(nmldeffile,8,(/ 0, 3, 41, 200, 201, 202, 203, 204 /) )
+progdesc = 'Dynamical ECCI defect image simulation'
 
-! initialize all user-defined variables
-call ComputeECCI(nmldeffile)
+! deal with the command line arguments, if any
+call Interpret_Program_Arguments(nmldeffile,8,(/ 0, 3, 41, 200, 201, 202, 203, 204 /), progname)
+
+! deal with the namelist stuff
+call GetECCINameList(nmldeffile,eccinl)
+
+! print some information
+call CTEMsoft(progname, progdesc)
+
+! and call the main routine
+call ComputeECCI(eccinl,progname)
 
 end program CTEMECCI
 
@@ -89,21 +111,23 @@ end program CTEMECCI
 !> @date 02/24/14  MDG 3.3 removal of double-counted phase factor
 !> @date 03/05/14  MDG 3.4 correction of integration to double integration for Lgh array
 !> @date 03/12/14  MDG 3.5 conversion of Sgh and Lgh arrays to diagonal only
+!> @date 10/04/14  MDG 4.0 no globals conversion
 !--------------------------------------------------------------------------
-subroutine ComputeECCI(nmlfile)
+subroutine ComputeECCI(eccinl,progname)
 
 use local
+use typedefs
+use NameListTypedefs
+use initializers
 use error
-use crystalvars 
 use crystal
-use symmetryvars
 use symmetry
 use postscript
 use constants
 use diffraction
-use dynamical
-use kvectors
+use MBmodule
 use gvectors
+use kvectors
 use files
 use io
 use math
@@ -121,24 +145,19 @@ use STEMmodule
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)		:: nmlfile
+type(ECCINameListType),INTENT(IN)       :: eccinl
+character(fnlen),INTENT(IN)		:: progname
 
-integer(kind=irg)    		        :: nn,i,j,k,npix,npiy,ii,jj,numvoids,numdisl, numset, &
-					numYdisl,numsf,numinc,numapb,dinfo,t_interval,nat(100), &
+integer(kind=irg)    		        :: nn,i,j,k,npix,npiy,ii,jj, numset, t_interval,nat(100), &
 					DF_nums_new,DF_npix_new,DF_npiy_new, numstart,numstop, isg, TID, &
-					NTHR, isym, ir, ga(3), gb(3),kk(3),ic,g,numd,ix,iy,nkt,nbeams, ik, ig, &
-					numk,ixp,iyp,SETNTHR, io_int(6), skip, gg(3), iSTEM, nktstep
-!                                  OMP_GET_THREAD_NUM,OMP_GET_NUM_THREADS
+					NTHR, isym, ir, ga(3), gb(3)),ic,g,numd,ix,iy,nkt,nbeams, ik, ig, &
+					numk,ixp,iyp, io_int(6), skip, gg(3), iSTEM
+
 integer(kind=irg),parameter 		:: numdd=360 ! 180
-real(kind=sgl)         		:: thick, X(2), dmin, dkt, bragg, thetac, kstar(3), gperp(3), &
-					lauec(2),lauec2(2),gdotR,DF_gf(3), tpi, &
-					DM(2,2), DD, c(3), gx(3), gy(3), &
-					gac(3), gbc(3),zmax, ktmax, io_real(2), voltage, ijmax
-real(kind=dbl)                        :: arg, glen
-character(fnlen)      			:: dataname,sgname,voidname,dislname(3*maxdefects),sfname(maxdefects),ECPname, &
-					incname,dispfile,xtalname,foilnmlfile, STEMnmlfile,dislYname(3*maxdefects), apbname
-character(4)            		:: dispmode, summode
-character(5)                          :: progmode
+real(kind=sgl)         		        :: thick, X(2), bragg, thetac, kstar(3), gperp(3), &
+					gdotR,DF_gf(3), tpi, DM(2,2), DD, c(3), gx(3), gy(3), &
+					gac(3), gbc(3),zmax, io_real(2), ijmax
+real(kind=dbl)                          :: arg, glen
 complex(kind=dbl),allocatable    	:: DHWM(:,:),DHWMvoid(:,:),DDD(:,:),Sarray(:,:,:,:)
 complex(kind=dbl),allocatable    	:: amp(:),amp2(:),Azz(:,:)
 complex(kind=dbl)                	:: czero,cone
@@ -146,118 +165,52 @@ complex(kind=dbl)                	:: para(0:numdd),dx,dy,dxm,dym, xgp
 real(kind=sgl),allocatable       	:: sgarray(:,:)
 real(kind=sgl),allocatable    		:: disparray(:,:,:,:),imatvals(:,:), ECCIimages(:,:)
 integer(kind=sgl),allocatable    	:: expval(:,:,:)
-complex(kind=dbl),allocatable         :: Lgh(:),Sgh(:) ! Lgh(:,:),Sgh(:,:)
-logical	                               :: ECCI, NANCHK
+complex(kind=dbl),allocatable           :: Lgh(:),Sgh(:) ! Lgh(:,:),Sgh(:,:)
+logical	                                :: ECCI, NANCHK, verbose
 
-namelist / ECCIlist / DF_L, DF_npix, DF_npiy, DF_slice, dmin, sgname, numvoids, incname, stdout, &
-                                voidname, numdisl, dislname, numYdisl, dislYname, numsf, sfname, dinfo, &
-				 t_interval,progmode, dispfile, ktmax, dkt, ECPname, summode, lauec, lauec2, &
-				 dispmode,SETNTHR,xtalname,voltage,kk, lauec, nktstep, &
-				 dataname, foilnmlfile, STEMnmlfile, apbname
+type(unitcell),pointer                  :: cell
+type(gnode)                             :: rlp
+type(DynType)                           :: Dyn
+type(kvectorlist),pointer               :: khead, ktmp
+type(symdata2D)                         :: TDPG
+type(BetheParameterType)                :: BetheParameters
+type(reflisttype),pointer               :: reflist, firstw,rltmp
 
-ECCI = .TRUE.
+ ECCI = .TRUE.
 
 ! first we define the default values
-czero=dcmplx(0.D0,0.D0)
-cone=dcmplx(1.D0,0.D0)
-tpi = 2.0*sngl(cPi)
-
-! parameters specific to this run
- xtalname = 'undefined'		! initial value; MUST be present in nml file for program to execute
- voltage = 20000.0			! accelerating voltage
- kk = (/ 0, 0, 1 /)			! incident wave vector in crystal components (omitting wave length)
- lauec = (/ 0.0,0.0 /)			! Laue center coordinates (used for single image mode, start point in trace modea)
- lauec2 = (/ 0.0,0.0 /)		! Laue center 2 coordinates (used for trace mode, end point)
- nktstep = 10                         ! number of steps in line scan mode
- dmin = 0.04			        ! smallest d-spacing to include in dynamical matrix [nm]
- ktmax = 5.0
- dkt = 0.5
- progmode = 'array'                   ! 'array' for array of images, 'trace' for line scan
- summode = 'diag'                     ! 'full' for complete summation, 'diag' for diagonal only
-
-! CTEM or STEM ?
- progmode = 'CTEM'  		        ! default illumination mode (can be 'CTEM' or 'STEM')
- STEMnmlfile = 'STEM_rundata.nml'	! name of the STEM rundata namelist file
- foilnmlfile = 'FOIL_rundata.nml'	! name of the foil rundata namelist file
- ECPname = 'undefined'                ! name of the corresponding ECP file (must exist!)
- 
-! column approximation parameters and image parameters 
- DF_L = 1.0             		! edge length of column in nanometers
- DF_npix = 256       			! number of image pixels along x
- DF_npiy = 256       			! number of image pixels along y 
- DF_slice = 1.0       			! slice thickness in nanometers
-
- dinfo = 0               		! switch to make makedislocation verbose
- sgname = 'nofile'   			! if this variable is different from 'nofile', then an external sg array is read (to be implemented)
-
-! defect parameters
- numdisl = 0           	! number of dislocation files
- numYdisl = 0           	! number of Yoffe dislocation files
- numsf = 0             	! number of stacking fault files
- numinc = 0           		! number of inclusions
- numvoids = 0       		! number of voids
- voidname = 'none' 		! filename for void data
- dislname = ''         	! filenames for dislocation data
- dislYname = ''         	! filenames for Yoffe dislocation data
- sfname = ''            	! filenames for stacking fault data
- incname = 'none'   		! filename for inclusion data
- apbname = 'none'              ! filename for (circular) apbs
- dispfile = 'none'     	! name of the displacement field output file (will be created if different from none)
- dispmode = 'not'  		! should a diplacement file be written ('new') or read ('old') or neither ('not')?
-
-! output parameters
- dataname = 'ECCIdefect.data'	! default outputfile name
+ czero=dcmplx(0.D0,0.D0)
+ cone=dcmplx(1.D0,0.D0)
+ tpi = 2.0*sngl(cPi)
+ dinfo = 0              ! switch to make makedislocation verbose
  t_interval = 10       	! default timing interval (output every t_interval image columns)
- 
-! then we read the actual rundata namelist, which may override some or all of these defaults  
- OPEN(UNIT=dataunit,FILE=trim(nmlfile),DELIM='APOSTROPHE')
- READ(UNIT=dataunit,NML=ECCIlist)
- CLOSE(UNIT=dataunit)
-  
-! make sure the xtalname variable has been properly defined
-if (trim(xtalname).eq.'undefined') then
-  call FatalError('CTEMECCI:',' structure file name is undefined in '//nmlfile)
-end if
-
-! make sure the ECPname variable has been properly defined
-if (trim(ECPname).eq.'undefined') then
-  call FatalError('CTEMECCI:',' ECP pattern file name is undefined in '//nmlfile)
-end if
-
-! we got this far, so display the standard program info
- progname = 'CTEMECCI.f90'
- progdesc = 'Dynamical zone axis ECCI defect image simulation'
- call CTEMsoft
- 
  numd = numdd
  
-! first get the crystal data and microscope voltage
- SG%SYM_reduce=.TRUE.
- call CrystalData(xtalname)
 
-! Weickenmeier-Kohl scattering parameters with absorption form factors
- skip = 3	
- call CalcWaveLength(dble(voltage),skip)
+ nullify(cell)
+ nullify(khead)
+ nullify(ktmp)
 
- ! generate all atom positions
- call CalcPositions('v')
+ allocate(cell)
+
+ verbose = .TRUE.
+ call Initialize_Cell(cell,Dyn,rlp,eccinl%xtalname, eccinl%dmin, eccinl%voltage, verbose)
 
 ! determine the point group number and get the ZAP 2-D symmetry  NEEDS TO BE MODIFIED WITH NEW ROUTINES
  j=0
  do i=1,32
   if (SGPG(i).le.cell%SYM_SGnum) j=i
  end do
- call BFsymmetry(kk,j,isym,ir)
+ call BFsymmetry(eccinl%k,j,isym,ir)
   
 ! determine and display the shortest reciprocal lattice vectors for this zone
- call ShortestG(kk,ga,gb,isym)
- io_int(1:3) = kk(1:3)
+ call ShortestG(cell,eccinl%k,ga,gb,isym)
+ io_int(1:3) = eccinl%k(1:3)
  call WriteValue('', io_int, 3,  "(//,' ','[',3I2,'] has Bright Field symmetry ',$)")
  mess = PGTWD(isym)
  call Message("(A,$)")
  io_int(1) = ir
  call WriteValue(' order = ', io_int, 1, "(I4/)")
- mess = 'Reciprocal lattice vectors : '; 
  io_int(1:3) = ga(1:3)
  io_int(4:6) = gb(1:3)
  call WriteValue(' Reciprocal lattice vectors : ', io_int, 6, "('(',3I3,') and (',3I3,')',/)")
@@ -268,30 +221,32 @@ end if
  call TransSpace(DF_gf,DF_gc,'r','c')         ! convert to Cartesian reference frame
 
 ! we'll need to compute the list of wavevectors at this point
-  nkt = nint( ktmax / dkt)
+  nkt = nint( eccinl%ktmax / eccinl%dkt )
   ijmax = nkt**2
   bragg = CalcDiffAngle(ga(1),ga(2),ga(3)) * 0.5
-  if (ktmax.eq.0.0) then
+  if (eccinl%ktmax.eq.0.0) then
     thetac = bragg
   else
-    thetac = (ktmax * 2.0 * bragg) * 0.5
+    thetac = (eccinl%ktmax * 2.0 * bragg) * 0.5
   end if
+
 ! here we figure out how many beams there are
   if (progmode.eq.'array') then 
 !    call Calckvectors(dble(kk),dble(ga),dble(ktmax),nkt,nkt,numk,isym,ijmax,'Conical')   
-    call Calckvectorcone(kk,ga,lauec(1),lauec(2),ktmax,nkt,numk)
+    call Calckvectorcone(eccinl%k,ga,eccinl%lauec(1),eccinl%lauec(2),eccinl%ktmax,nkt,numk)
     io_int(1)=numk 
     call WriteValue('Total number of independent incident beam directions inside cone = ', io_int, 1,"(I8)")
   end if
   if (progmode.eq.'trace') then  
 ! single image mode, potentially with a narrow range of incident beam directions
-    call Calckvectortrace(kk,ga,lauec(1),lauec(2),lauec2(1),lauec2(2),1.0,nktstep,numk)
+    call Calckvectortrace(eccinl%k,ga,eccinl%lauec(1),eccinl%lauec(2),eccinl%lauec2(1),eccinl%lauec2(2),1.0,eccinl%nktstep,numk)
     io_int(1)=numk 
     call WriteValue('Total number of independent incident beam directions along trace = ', io_int, 1,"(I8)")
   end if
 
 ! and determine the overall reflection list
-  call Compute_ReflectionList(dmin,kk,ga,gb,'ALL',.FALSE.,0,thetac)
+  call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, eccinl%k, eccinl%dmin, nref, verbose)
+
 
 ! for now, we do not consider weak beams at all
   if (BetheParameter%cutoff.eq.0.0) call Set_Bethe_Parameters
@@ -301,14 +256,14 @@ end if
 ! [yes, we're using the same file as for the systematic row case]
 ! this includes material property data, in this case the elastic moduli,
 ! and the foil normal, which we will need in the next step
-  call read_foil_data(foilnmlfile,DF_npix,DF_npiy,DF_L,dinfo)
+  call read_foil_data(eccinl%foilnmlfile,eccinl%DF_npix,eccinl%DF_npiy,eccinl%DF_L,dinfo)
   DynFN = foil%F
   
 ! then we need to prune the reflection list to have only reflections that will actually occur in the 
 ! computation
   mess = ' Pruning reflection list (this takes a while ...) '
   call Message("(A)")
-  call Prune_ReflectionList(numk,nbeams)
+  call Prune_ReflectionList(cell,khead,reflist,Dyn,BetheParameter,numk,nbeams)
   io_int(1) = nbeams
   call WriteValue('Number of contributing beams  : ', io_int, 1, '(I)')
   nn = nbeams

@@ -992,6 +992,153 @@ pednl%camlen = camlen
 end subroutine GetPEDNameList
 
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:GetECCINameList
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read namelist file and fill eccinl structure (used by CTEMECCI.f90)
+!
+!> @param nmlfile namelist file name
+!> @param eccinl ECCI name list structure
+!
+!> @date 10/04/14 MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine GetECCINameList(nmlfile,eccinl)
+
+use error
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                     :: nmlfile
+type(ECCINameListType),INTENT(INOUT)            :: eccinl
+
+integer(kind=irg)       :: stdout
+integer(kind=irg)       :: nthreads
+integer(kind=irg)       :: k(3)
+integer(kind=irg)       :: nktstep
+integer(kind=irg)       :: DF_npix
+integer(kind=irg)       :: DF_npiy
+integer(kind=irg)       :: numYdisl
+integer(kind=irg)       :: numdisl
+integer(kind=irg)       :: numsf
+real(kind=sgl)          :: voltage
+real(kind=sgl)          :: dkt
+real(kind=sgl)          :: ktmax
+real(kind=sgl)          :: lauec(2)
+real(kind=sgl)          :: lauec2(2)
+real(kind=sgl)          :: dmin
+real(kind=sgl)          :: DF_L
+real(kind=sgl)          :: DF_slice
+character(4)            :: dispmode
+character(4)            :: summode
+character(5)            :: progmode
+character(fnlen)        :: xtalname
+character(fnlen)        :: foilnmlfile
+character(fnlen)        :: dispfile
+character(fnlen)        :: dataname
+character(fnlen)        :: ECPname
+character(fnlen)        :: dislYname(3*maxdefects)
+character(fnlen)        :: dislname(3*maxdefects)
+character(fnlen)        :: sfname(maxdefects)
+character(fnlen)        :: sgame
+character(fnlen)        :: apbname
+character(fnlen)        :: incname
+character(fnlen)        :: voidname
+
+
+! define the IO namelist to facilitate passing variables to the program.
+namelist / ECCIlist / DF_L, DF_npix, DF_npiy, DF_slice, dmin, sgname, incname, stdout, &
+                      voidname, numdisl, dislname, numYdisl, dislYname, numsf, sfname, &
+		      progmode, dispfile, ktmax, dkt, ECPname, summode, lauec, lauec2, &
+	   	      dispmode, nthreads, xtalname, voltage, k, nktstep, &
+	   	      dataname, foilnmlfile, apbname
+
+! set the input parameters to default values (except for xtalname, which must be present)
+stdout = 6
+nthreads = 1
+k = (/ 0,0,1 /)
+nktstep = 20
+DF_npix = 256
+DF_npiy = 256
+numYdisl = 0
+numdisl = 0
+numsf = 0
+voltage = 30000.
+dkt = 0.1
+ktmax = 5.0
+lauec = (/ 0.0, 0.0 /)
+lauec2 = (/ 0.0, 0.0 /)
+dmin = 0.1
+DF_L = 1.0
+DF_slice = 1.0
+dispmode = 'not'
+summode = 'diag'
+progmode = 'array'
+xtalname = 'undefined'
+foilnmlfile = 'FOIL_rundata.nml'
+dispfile = 'displacements.data'
+dataname = 'ECCIout.data'
+ECPname = 'undefined'
+dislYname = (/ ('',i=1,3*maxdefects) /)
+dislname = (/ ('',i=1,3*maxdefects) /)
+sfname = (/ ('',i=1,maxdefects) /)
+sgname = 'nofile'
+apbname = 'none'
+incname = 'none'   
+voidname = 'none'
+
+! read the namelist file
+open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+read(UNIT=dataunit,NML=ECCIlist)
+close(UNIT=dataunit,STATUS='keep')
+
+! check for required entries
+if (trim(xtalname).eq.'undefined') then
+  call FatalError('CTEMECCI:',' crystal structure file name is undefined in '//nmlfile)
+end if
+
+! make sure the ECPname variable has been properly defined
+if (trim(ECPname).eq.'undefined') then
+  call FatalError('CTEMECCI:',' ECP pattern file name is undefined in '//nmlfile)
+end if
+
+! if we get here, then all appears to be ok, and we need to fill in the emnl fields
+eccinl%stdout = stdout
+eccinl%nthreads = nthreads
+eccinl%k = k
+eccinl%nktstep = nktstep
+eccinl%DF_npix = DF_npix
+eccinl%DF_npiy = DF_npiy
+eccinl%numYdisl = numYdisl
+eccinl%numdisl = numdisl
+eccinl%numsf = numsf
+eccinl%voltage = voltage
+eccinl%dkt = dkt
+eccinl%ktmax = ktmax
+eccinl%lauec = lauec
+eccinl%lauec2 = lauec2
+eccinl%dmin = dmin
+eccinl%DF_L = DF_L
+eccinl%DF_slice = DF_slice
+eccinl%dispmode = dispmode
+eccinl%summode = summode
+eccinl%progmode = progmode
+eccinl%xtalname = xtalname
+eccinl%foilnmlfile = foilnmlfile
+eccinl%dispfile = dispfile
+eccinl%dataname = dataname
+eccinl%ECPname = ECPname
+eccinl%dislYname = dislYname
+eccinl%dislname = dislname
+eccinl%sfname = sfname
+eccinl%sgname = sgname
+eccinl%apbname = apbname
+eccinl%incname = incname
+eccinl%voidname = voidname
+
+end subroutine GetECCINameList
 
 
 
