@@ -41,7 +41,7 @@
 !> @date 11/18/13 MDG 3.0 major rewrite with new libraries
 !> @date 06/27/14 MDG 4.0 removal of all globals; separation of namelist handling from computation
 !> @date 06/30/14 MDG 4.1 added OpenMP
-!> @DATE 07/23/14 SS  4.2 rewrite master pattern
+!> @date 07/23/14 SS  4.2 rewrite master pattern
 !--------------------------------------------------------------------------
 
 program CTEMECPmaster
