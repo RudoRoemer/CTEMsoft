@@ -1017,7 +1017,7 @@ integer(kind=irg),INTENT(OUT)           :: numk
 real(kind=dbl),parameter                :: DtoR = 0.01745329251D0
 real(kind=sgl)                          :: delta,thetacr,ktmax
 integer(kind=irg)                       :: i,j,imin,imax,jmin,jmax,ijmax,istat
-real(kind=sgl)                          :: kk(3)
+real(kind=sgl)                          :: kk(3),krec(3)
 real(kind=sgl)                          :: k(3)
 
 if (associated(khead)) then                    ! deallocate the entire linked list
@@ -1055,7 +1055,7 @@ call NormVec(cell,ktail%k,'c')
 
 do i = imin,imax
     do j = jmin,jmax
-        if ((i**2 + j**2) .le. ijmax) then
+        !if ((i**2 + j**2) .le. ijmax) then
             allocate(ktail%next)
             ktail => ktail%next
             nullify(ktail%next)
@@ -1066,8 +1066,14 @@ do i = imin,imax
             ktail%k = ktail%kt + kk
             ktail%kt = matmul(rotmat,ktail%kt)
             ktail%k = matmul(rotmat,ktail%k)
+            k = ktail%k
+            call TransSpace(cell,k,krec,'c','r')
+            ktail%k = krec
             call NormVec(cell,ktail%k,'c')
-        end if
+            k = ktail%kt
+            call TransSpace(cell,k,krec,'c','r')
+            ktail%kt = krec
+        !end if
     end do
 end do
 

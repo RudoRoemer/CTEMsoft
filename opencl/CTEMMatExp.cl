@@ -87,11 +87,16 @@ __kernel void MatExp(__global float2* cl_expA,__global float2* cl_A,__global flo
     cl_AAA[ty*nn+tx] = value;
     
     //barrier(CLK_GLOBAL_MEM_FENCE);
-
+    if (tx == ty){
     cl_T1[ty*nn + tx] = cl_AAA[ty*nn + tx] -cl_coeff[1]*cl_AA[ty*nn + tx] + cl_coeff[2]*cl_A[ty*nn + tx] - cl_coeff[3];
     cl_T2[ty*nn + tx] = cl_AAA[ty*nn + tx] -cl_coeff[4]*cl_AA[ty*nn + tx] + cl_coeff[5]*cl_A[ty*nn + tx] - cl_coeff[6];
     cl_T3[ty*nn + tx] = cl_AAA[ty*nn + tx] -cl_coeff[7]*cl_AA[ty*nn + tx] + cl_coeff[8]*cl_A[ty*nn + tx] - cl_coeff[9];
-    
+    }
+    else {
+        cl_T1[ty*nn + tx] = cl_AAA[ty*nn + tx] -cl_coeff[1]*cl_AA[ty*nn + tx] + cl_coeff[2]*cl_A[ty*nn + tx];
+        cl_T2[ty*nn + tx] = cl_AAA[ty*nn + tx] -cl_coeff[4]*cl_AA[ty*nn + tx] + cl_coeff[5]*cl_A[ty*nn + tx];
+        cl_T3[ty*nn + tx] = cl_AAA[ty*nn + tx] -cl_coeff[7]*cl_AA[ty*nn + tx] + cl_coeff[8]*cl_A[ty*nn + tx];
+    }
     //barrier(CLK_GLOBAL_MEM_FENCE);
 
     value = (float2)(0.0f,0.0f);
@@ -130,13 +135,15 @@ __kernel void MatExp(__global float2* cl_expA,__global float2* cl_A,__global flo
 //> @date 09/09/14  SS  1.0 Original
 //--------------------------------------------------------------------------
 
-__kernel void MatExpImg(__global float2* cl_expA,__global float2* cl_A,__global float2* cl_AA,__global float2* cl_AAA,const int nn,__global float2* cl_coeff,__global float2* cl_T1,__global float2* cl_T2,__global float2* cl_T3,__global float2* cl_T1T2,__global float2* cl_T1T2T3,__global float2* cl_sqr,const int ns,const int threadcnt)
+__kernel void MatExpImg(__global float2* cl_expA,__global float2* cl_A,__global float2* cl_AA,__global float2* cl_AAA,__global float2* cl_coeff,__global float2* cl_T1,__global float2* cl_T2,__global float2* cl_T3,__global float2* cl_T1T2,__global int* cl_ns,__global int* cl_matsz)
 {
-    int tx,ty,id;
+    int tx,ty,threadcnt,id;
     tx = get_global_id(0);
     ty = get_global_id(1);
+    threadcnt = get_global_size(0);
     id = threadcnt*ty + tx;
-    
+    int nn = cl_matsz[id];
+    int ns = cl_ns[id];
     //float2 Aloc[nn][nn];
     //for (int i = 0; i < nn; i++){
     //    for (int j = 0; i < nn; j++){
