@@ -69,7 +69,8 @@ common EBSD_data_common, EBSDdata
     readu,1,progname
     progname = strtrim(string(progname))
     close,1
-    if (progname eq 'CTEMMC.f90') then begin
+print,progname
+    if ((progname eq 'CTEMMC.f90') or (progname eq 'CTEMMCOpenCL.f90')) then begin
 	validfile = 1
   	finfo = file_info(res)
 	EBSDdata.mcfilesize = finfo.size

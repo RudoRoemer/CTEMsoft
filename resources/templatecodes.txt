@@ -14,6 +14,7 @@
 030CTEMGAMMA.template
 040CTEMECP.template
 041CTEMECCI.template
+042CTEMMCOpenCL.template
 050CTEMoverlap.template
 060CTEMsampleRFZ.template
 200dislocation.template

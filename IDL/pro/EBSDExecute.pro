@@ -146,7 +146,8 @@ end
   endif
 
 ; and finally run the CTEMEBSD program
-  cmd = EBSDdata.f90exepath+'CTEMEBSD '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
+  ;cmd = EBSDdata.f90exepath+'CTEMEBSD '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
+  cmd = '/Users/mdg/Files/OSU/Software/CTEMsoft2013/Build/Bin/CTEMEBSD '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
   spawn,cmd, cmdoutput, cmderroutput
 
   Core_Print,'CTEMEBSD program reported the following output '

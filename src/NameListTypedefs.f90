@@ -274,4 +274,45 @@ type PEDNameListType
     character(fnlen)        :: outname
 end type PEDNameListType
 
+! namelist for the CTEMECCI program
+type ECCINameListType
+    integer(kind=irg)       :: stdout
+    integer(kind=irg)       :: nthreads
+    integer(kind=irg)       :: k(3)
+    integer(kind=irg)       :: nktstep
+    integer(kind=irg)       :: DF_npix
+    integer(kind=irg)       :: DF_npiy
+    integer(kind=irg)       :: numYdisl
+    integer(kind=irg)       :: numdisl
+    integer(kind=irg)       :: numsf
+    real(kind=sgl)          :: voltage
+    real(kind=sgl)          :: dkt
+    real(kind=sgl)          :: ktmax
+    real(kind=sgl)          :: lauec(2)
+    real(kind=sgl)          :: lauec2(2)
+    real(kind=sgl)          :: dmin
+    real(kind=sgl)          :: DF_L
+    real(kind=sgl)          :: DF_slice
+    character(4)            :: dispmode
+    character(4)            :: summode
+    character(5)            :: progmode
+    character(fnlen)        :: xtalname
+    character(fnlen)        :: foilnmlfile
+    character(fnlen)        :: dispfile
+    character(fnlen)        :: dataname
+    character(fnlen)        :: ECPname
+    character(fnlen)        :: dislYname(3*maxdefects)
+    character(fnlen)        :: dislname(3*maxdefects)
+    character(fnlen)        :: sfname(maxdefects)
+    character(fnlen)        :: sgname
+    character(fnlen)        :: apbname
+    character(fnlen)        :: incname
+    character(fnlen)        :: voidname
+end type ECCINameListType
+
+
+
+
+
+
 end module NameListTypedefs

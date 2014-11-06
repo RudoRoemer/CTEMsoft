@@ -266,6 +266,7 @@ type(reflisttype),pointer                       :: rltail
 
 ! now compute |sg|/|U_g|/lambda for the other allowed reflections; if this parameter is less than
 ! the threshhold, rBethe_i, then add the reflection to the list of potential reflections
+! note that this uses the older form of the Bethe Potential truncation parameters for now
 ixl: do ix=-imh,imh
 iyl:  do iy=-imk,imk
 izl:   do iz=-iml,iml
