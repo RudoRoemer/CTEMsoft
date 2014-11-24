@@ -167,6 +167,10 @@ if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
 ; display the file size in Mb 
   WIDGET_CONTROL, SET_VALUE=string(float(EBSDdata.mcfilesize)/1024./1024.,FORMAT="(F8.2)")+' Mb', EBSDwidget_s.mcfilesize
 
+; version identifier 3_x_x is single structure file
+; version identifier 3_y_y is two-layer file
+
+ if (EBSDdata.scversion eq '3_x_x') then begin ; scversion = 3_x_x
 ; structure file name
   xtalname = bytarr(132)
   readu,1,xtalname
@@ -183,7 +187,6 @@ if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
   EBSDdata.mcimx = (dims[2]-1L)/2L
   EBSDdata.mcimy = (dims[3]-1L)/2L
   EBSDdata.mctotale = dims[4]
-
 
   WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(I5)"), EBSDwidget_s.mcenergynumbin
   WIDGET_CONTROL, SET_VALUE=string(dims[1],format="(I5)"), EBSDwidget_s.mcdepthnumbins
@@ -244,6 +247,98 @@ if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
 
 ; and close the file
   close,1
+
+end else begin  ; scversion = 3_y_y
+
+; structure file name
+  xtalname = bytarr(132)
+  xtalname2 = bytarr(132)
+  readu,1,xtalname
+  readu,1,xtalname2
+  EBSDdata.xtalname = strtrim(string(xtalname))
+  EBSDdata.xtalname2 = strtrim(string(xtalname2))
+    Core_Print,'Xtalname = ->'+EBSDdata.xtalname+'<-'
+    Core_Print,'Xtalname2 = ->'+EBSDdata.xtalname2+'<-'
+  WIDGET_CONTROL, SET_VALUE=EBSDdata.xtalname, EBSDwidget_s.xtalname+'/'+EBSDwidget_s.xtalname2
+
+; dimensions
+  dims = lonarr(4)
+  mctotale = 0LL
+  readu,1,dims,mctotale
+  EBSDdata.mcenergynumbin = dims[0]
+  EBSDdata.mcdepthnumbins = dims[1]
+  EBSDdata.mcimx = (dims[2]-1L)/2L
+  EBSDdata.mcimy = (dims[3]-1L)/2L
+  EBSDdata.mctotale = mctotale
+
+
+  WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(I5)"), EBSDwidget_s.mcenergynumbin
+  WIDGET_CONTROL, SET_VALUE=string(dims[1],format="(I5)"), EBSDwidget_s.mcdepthnumbins
+  WIDGET_CONTROL, SET_VALUE=string(dims[2],format="(I5)"), EBSDwidget_s.mcimx
+  WIDGET_CONTROL, SET_VALUE=string(dims[3],format="(I5)"), EBSDwidget_s.mcimy
+  WIDGET_CONTROL, SET_VALUE=string(mctotale,format="(I12)"), EBSDwidget_s.mctotale
+
+; 5 more parameters, all doubles
+  dims = dblarr(5)
+  readu,1,dims
+  EBSDdata.mcenergymax = dims[0]
+  EBSDdata.mcenergymin = dims[1]
+  EBSDdata.mcenergybinsize = dims[2]
+  EBSDdata.mcdepthmax = dims[3]
+  EBSDdata.mcdepthstep = dims[4]
+
+  EBSDdata.voltage = EBSDdata.mcenergymax
+
+  WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(F7.2)"), EBSDwidget_s.mcenergymax
+  WIDGET_CONTROL, SET_VALUE=string(dims[1],format="(F7.2)"), EBSDwidget_s.mcenergymin
+  WIDGET_CONTROL, SET_VALUE=string(dims[2],format="(F7.2)"), EBSDwidget_s.mcenergybinsize
+  WIDGET_CONTROL, SET_VALUE=string(dims[3],format="(F7.2)"), EBSDwidget_s.mcdepthmax
+  WIDGET_CONTROL, SET_VALUE=string(dims[4],format="(F7.2)"), EBSDwidget_s.mcdepthstep
+  WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(F7.2)"), EBSDwidget_s.voltage
+
+; sample tilt angles
+  dims = dblarr(2)
+  readu,1,dims
+  EBSDdata.mcvangle = dims[0]
+  EBSDdata.mchangle = dims[1]
+
+  WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(F7.2)"), EBSDwidget_s.mcvangle
+  WIDGET_CONTROL, SET_VALUE=string(dims[1],format="(F7.2)"), EBSDwidget_s.mchangle
+
+; film thickness
+  ft = 0.0
+  readu,1,ft
+  EBSDdata.mcfilmthickness = ft
+  WIDGET_CONTROL, SET_VALUE=string(ft,format="(F7.2)"), EBSDwidget_s.mcfilmthickness
+
+; Monte Carlo mode  'CSDA' or 'Discrete losses'
+  mcm = bytarr(4)
+  readu,1,mcm
+  mcm = strtrim(string(mcm))
+  if (mcm eq 'CSDA') then EBSDdata.mcmode = 'CSDA' else EBSDdata.mcmode = 'DLOS'
+  WIDGET_CONTROL, SET_VALUE=EBSDdata.mcmode, EBSDwidget_s.mcmode
+
+
+; and finally, we read the actual data arrays accum_e and accum_z
+  accum_e = lonarr(EBSDdata.mcenergynumbin, 2*EBSDdata.mcimx+1,2*EBSDdata.mcimy+1)
+  accum_z = lonarr(EBSDdata.mcenergynumbin, EBSDdata.mcdepthnumbins, 2*EBSDdata.mcimx/10+1,2*EBSDdata.mcimy/10+1)
+  readu,1,accum_e
+  readu,1,accum_z
+
+; total number of BSE electrons
+  EBSDdata.mcbse = total(accum_e)
+  WIDGET_CONTROL, SET_VALUE=string(EBSDdata.mcbse,format="(I12)"), EBSDwidget_s.mcbse
+
+
+  sz = size(accum_e,/dimensions)
+    Core_Print,' Size of accum_e data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)")+' x'+string(sz[2],format="(I5)")
+  sz = size(accum_z,/dimensions)
+    Core_Print,' Size of accum_z data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") +' x'+string(sz[3],format="(I5)")
+
+; and close the file
+  close,1
+end ; scversion if then else
+
 
 ; and initialize the coordinate arrays for the Lambert transformation
   Core_LambertS2C,reform(accum_e[0,*,*]),/mc
