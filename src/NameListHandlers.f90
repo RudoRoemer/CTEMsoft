@@ -667,6 +667,7 @@ end subroutine GetEBSDNameList
 !> @param knl Kossel name list structure
 !
 !> @date 06/13/14  MDG 1.0 new routine
+!> @date 11/25/14  MDG 2.0 added parameters for film on substrate mode
 !--------------------------------------------------------------------------
 subroutine GetECPNameList(nmlfile, ecpnl)
 
@@ -683,6 +684,10 @@ integer(kind=irg)       :: fn(3)
 integer(kind=irg)       :: numthick
 integer(kind=irg)       :: npix
 integer(kind=irg)       :: nthreads
+integer(kind=irg)       :: gF(3)
+integer(kind=irg)       :: gS(3)
+integer(kind=irg)       :: tF(3)
+integer(kind=irg)       :: tS(3)
 real(kind=sgl)          :: voltage
 real(kind=sgl)          :: dmin
 real(kind=sgl)          :: ktmax
@@ -690,21 +695,24 @@ real(kind=sgl)          :: thetac
 real(kind=sgl)          :: startthick
 real(kind=sgl)          :: thickinc
 real(kind=sgl)          :: zintstep
-!real(kind=dbl)          :: abcdist(3)
-!real(kind=dbl)          :: albegadist(3)
-!logical                 :: distort
+real(kind=sgl)          :: filmthickness
 character(7)            :: compmode
 character(fnlen)        :: outname
 character(fnlen)        :: xtalname
+character(fnlen)        :: xtalname2
 
 ! namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, distort, abcdist, albegadist, ktmax, &
-namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, ktmax, &
+namelist /ECPlist/ stdout, xtalname, xtalname2, voltage, k, fn, gF, gS, tF, tS, dmin, ktmax, filmthickness, &
                    startthick, thickinc, nthreads, numthick, npix, outname, thetac, compmode, zintstep
 
 ! default values
 stdout = 6                              ! standard output
 k = (/ 0, 0, 1 /)                       ! beam direction [direction indices]
 fn = (/ 0, 0, 1 /)                      ! foil normal [direction indices]
+gF = (/ 0, 0, 0 /)                      ! plane normal in film
+gS = (/ 0, 0, 0 /)                      ! plane normal in substrate
+tF = (/ 0, 0, 0 /)                      ! direction in film
+tS = (/ 0, 0, 0 /)                      ! direction in substrate
 numthick = 10                           ! number of increments
 npix = 256                              ! output arrays will have size npix x npix
 nthreads = 1                            ! number of OpenMP threads
@@ -715,12 +723,11 @@ thetac = 0.0                            ! beam convergence in mrad (either ktmax
 startthick = 2.0                        ! starting thickness [nm]
 thickinc = 2.0                          ! thickness increment
 zintstep = 1.0                          ! integration step size for ScatMat mode
-!abcdist = (/ -1.D0,-1.0D0,-1.0D0/)      ! distorted a, b, c [nm]
-!albegadist = (/ 90.D0, 90.D0, 90.D0 /)  ! distorted angles [degrees]
-!distort = .FALSE.                       ! distort the input unit cell ?  
+filmthickness = 0.0                     ! 0.0 if there is no film
 compmode = 'Blochwv'                    ! 'Blochwv' or 'ScatMat' solution mode (Bloch is default)
 outname = 'ecp.data'                    ! output filename
 xtalname = 'undefined'                  ! initial value to check that the keyword is present in the nml file
+xtalname2 = 'undefined'                 ! initial value for substrate structure name
 
 ! read the namelist file
  open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
@@ -735,6 +742,10 @@ xtalname = 'undefined'                  ! initial value to check that the keywor
 ecpnl%stdout = stdout
 ecpnl%k = k
 ecpnl%fn = fn
+ecpnl%gF = gF
+ecpnl%gS = gS
+ecpnl%tF = tF
+ecpnl%tS = tS
 ecpnl%numthick = numthick
 ecpnl%npix = npix
 ecpnl%nthreads = nthreads
@@ -745,12 +756,11 @@ ecpnl%thetac = thetac
 ecpnl%startthick = startthick
 ecpnl%thickinc = thickinc
 ecpnl%zintstep = zintstep
-!ecpnl%abcdist = abcdist
-!ecpnl%albegadist = albegadist
-!ecpnl%distort = distort
+ecpnl%filmthickness = filmthickness
 ecpnl%compmode = compmode
 ecpnl%outname = outname
 ecpnl%xtalname = xtalname
+ecpnl%xtalname2 = xtalname2
 
 end subroutine GetECPNameList
 
@@ -1014,6 +1024,8 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                     :: nmlfile
 type(ECCINameListType),INTENT(INOUT)            :: eccinl
 
+integer(kind=irg)                               :: i
+
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: nthreads
 integer(kind=irg)       :: k(3)
@@ -1042,7 +1054,7 @@ character(fnlen)        :: ECPname
 character(fnlen)        :: dislYname(3*maxdefects)
 character(fnlen)        :: dislname(3*maxdefects)
 character(fnlen)        :: sfname(maxdefects)
-character(fnlen)        :: sgame
+character(fnlen)        :: sgname
 character(fnlen)        :: apbname
 character(fnlen)        :: incname
 character(fnlen)        :: voidname

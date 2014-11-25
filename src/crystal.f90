@@ -1919,6 +1919,46 @@ integer(kind=irg)			:: N
 end function GetHOLZcoordinates
  
  
+!--------------------------------------------------------------------------
+! 
+! FUNCTION:Convert_kgs_to_Substrate
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief convert a film wave vector into substrate coordinates
+!
+!> @param cell film unit cell pointer
+!> @param cellS substrate unit cell pointer
+!> @param kg wave vector components in film
+!> @param TTinv coordinate transformation matrix
+!> @param lambdaS electron wavelength in substrate, corrected for refraction
+! 
+!> @date 11/25/14 MDG 1.0 original
+!--------------------------------------------------------------------------
+function Convert_kgs_to_Substrate(cell, cellS, kg, TTinv, lambdaS) result(kgS)
+
+use local
+use typedefs
+
+IMPLICIT NONE
+
+type(unitcell),pointer,INTENT(IN)       :: cell, cellS
+real(kind=sgl),INTENT(IN)               :: kg(3)
+real(kind=sgl),INTENT(IN)               :: TTinv(3,3)
+real(kind=dbl),INTENT(IN)               :: lambdaS
+real(kind=sgl)                          :: kgS(3)
+
+real(kind=sgl)                          :: p(3), r(3)
+
+call TransSpace(cell,kg,p,'r','d')
+p = matmul(TTinv,p)
+call TransSpace(cellS,p,r,'d','r')
+call NormVec(cellS,r,'r')
+kgS = r/lambdaS
+
+end function Convert_kgs_to_Substrate
+
+
 
 
 end module crystal

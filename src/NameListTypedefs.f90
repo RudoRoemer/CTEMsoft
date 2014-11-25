@@ -194,6 +194,10 @@ type ECPNameListType
         integer(kind=irg)       :: numthick
         integer(kind=irg)       :: npix
         integer(kind=irg)       :: nthreads
+        integer(kind=irg)       :: gF(3)
+        integer(kind=irg)       :: gS(3)
+        integer(kind=irg)       :: tF(3)
+        integer(kind=irg)       :: tS(3)
         real(kind=sgl)          :: voltage
         real(kind=sgl)          :: dmin
         real(kind=sgl)          :: ktmax
@@ -201,12 +205,14 @@ type ECPNameListType
         real(kind=sgl)          :: startthick
         real(kind=sgl)          :: thickinc
         real(kind=sgl)          :: zintstep
+        real(kind=sgl)          :: filmthickness
 !       real(kind=dbl)          :: abcdist(3)
 !       real(kind=dbl)          :: albegadist(3)
 !       logical                 :: distort
         character(7)            :: compmode
         character(fnlen)        :: outname
         character(fnlen)        :: xtalname
+        character(fnlen)        :: xtalname2
 end type ECPNameListType
 
 

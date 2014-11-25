@@ -181,6 +181,7 @@ end subroutine EBSDreadangles
 !> @param accum_e energy histogram (square Lambert projection)
 !
 !> @date 06/24/14  MDG 1.0 original
+!> @date 11/18/14  MDG 1.1 removed enl%MCnthreads from file read
 !--------------------------------------------------------------------------
 subroutine EBSDreadMCfile(enl,acc,verbose)
 
@@ -222,7 +223,7 @@ open(dataunit,file=trim(enl%energyfile),status='unknown',form='unformatted')
 ! then the name of the crystal data file
  read (dataunit) enl%MCxtalname
 ! energy information etc...
- read(dataunit) enl%numEbins, enl%numzbins, enl%nsx, enl%nsy, enl%num_el, enl%MCnthreads
+ read(dataunit) enl%numEbins, enl%numzbins, enl%nsx, enl%nsy, enl%num_el ! , enl%MCnthreads
  enl%nsx = (enl%nsx - 1)/2
  enl%nsy = (enl%nsy - 1)/2
 ! more energy information
