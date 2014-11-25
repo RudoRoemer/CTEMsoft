@@ -143,6 +143,7 @@ EBSDwidget_s = {widgetstruct, $
 	mcmode: long(0), $			; Monte Carlo mode
 	mcloadfile: long(0), $                  ; load file button
 	mcdisplay: long(0), $                   ; MC display button
+        mcfilmthickness: long(0), $             ; film thickness for two-layer structures
 	   
 	; Master Pattern widget ids
 	mpfilename: long(0), $			; file name for master pattern
@@ -250,7 +251,7 @@ EBSDdata = {EBSDdatastruct, $
 	mcdepthnumbins: long(0), $		; number of depth bins
 	mcimx: long(0), $			; number of pixels along x in modified Lambert map
 	mcimy: long(0), $			; same along y
-	mctotale: long(0), $			; total number of electrons hitting the sample
+	mctotale: long64(0), $			; total number of electrons hitting the sample
 	mcbse: long(0), $			; total number of BSE electrons
 	mcvangle: float(0.0), $			; vertical sample tilt angle (around TD)
 	mchangle: float(0.0), $			; horizontal sample tilt angle (around RD)
@@ -260,6 +261,7 @@ EBSDdata = {EBSDdatastruct, $
 	mcscversion: '', $ 			; source code version number
 	mcdataedims: lon64arr(3), $		; dimensions of accum_e
 	mcdatazdims: lon64arr(4), $		; dimensions of accum_z
+        mcfilmthickness: float(0.0), $          ; film thickness for two-layer structures
 
 	; then Master Pattern parameters
 	mpfilename: '', $ 			; master pattern file name
@@ -272,6 +274,7 @@ EBSDdata = {EBSDdatastruct, $
 	mpenergynumbin: long(0), $		; number of energy bins (may be different from MC file)
 	mpgridmode: '', $			; 'hex' or 'squ' for Lambert grid type
 	xtalname: '', $				; crystal structure filename
+	xtalname2: '', $			; crystal structure 2 filename
 	mpprogname: '', $ 			; Master Pattern program name
 	mpscversion: '', $ 			; source code version number
 	mpdatadims: lon64arr(3), $		; dimensions of raw data array
@@ -484,6 +487,8 @@ file1 = WIDGET_BASE(block11, /ROW, /ALIGN_LEFT)
 EBSDwidget_s.mcvangle = Core_WText(file1,'Sample tilt angles (v, h)', fontstrlarge, 200, 25, 20, 1, string(EBSDdata.mcvangle,FORMAT="(F7.2)")) 
 EBSDwidget_s.mchangle = Core_WText(file1,', ', fontstrlarge, 25, 25, 20, 1, string(EBSDdata.mchangle,FORMAT="(F7.2)")) 
 
+file1 = WIDGET_BASE(block11, /ROW, /BASE_ALIGN_BOTTOM, /ALIGN_LEFT)
+EBSDwidget_s.mcfilmthickness = Core_WText(file1,'Film Thickness [nm]', fontstrlarge, 200, 25, 30, 1, string(EBSDdata.mcfilmthickness,FORMAT="(F7.2)")) 
 ;------------------------------------------------------------
 ;------------------------------------------------------------
 
@@ -524,7 +529,7 @@ EBSDwidget_s.mpgridmode = Core_WText(file1,'Lambert grid', fontstrlarge, 200, 25
 
 ;---------- crystal structure file name
 file1 = WIDGET_BASE(block21, /ROW, /ALIGN_LEFT)
-EBSDwidget_s.xtalname = Core_WText(file1,'Structure file', fontstrlarge, 200, 25, 20, 1, EBSDdata.xtalname)
+EBSDwidget_s.xtalname = Core_WText(file1,'Structure file', fontstrlarge, 200, 25, 60, 1, EBSDdata.xtalname)
 
 
 ;------------------------------------------------------------

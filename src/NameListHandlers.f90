@@ -813,6 +813,10 @@ namelist /ECPlist/ stdout, xtalname, xtalname2, voltage, k, fn, dmin, ktmax, fil
                    startthick, thickinc, nthreads, numthick, npix, outname, thetac, compmode, zintstep, &
                    gF, gS, tF, tS, energyfile
 
+! namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, distort, abcdist, albegadist, ktmax, &
+namelist /ECPlist/ stdout, xtalname, xtalname2, voltage, k, fn, gF, gS, tF, tS, dmin, ktmax, filmthickness, &
+                   startthick, thickinc, nthreads, numthick, npix, outname, thetac, compmode, zintstep
+
 ! default values
 stdout = 6                              ! standard output
 k = (/ 0, 0, 1 /)                       ! beam direction [direction indices]
@@ -837,6 +841,7 @@ outname = 'ecp.data'                    ! output filename
 xtalname = 'undefined'                  ! initial value to check that the keyword is present in the nml file
 xtalname2 = 'undefined'                 ! initial value for substrate structure name
 energyfile = 'undefined'
+
 ! read the namelist file
  open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
  read(UNIT=dataunit,NML=ECPlist)
@@ -1132,6 +1137,8 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                     :: nmlfile
 type(ECCINameListType),INTENT(INOUT)            :: eccinl
+
+integer(kind=irg)                               :: i
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: nthreads,i

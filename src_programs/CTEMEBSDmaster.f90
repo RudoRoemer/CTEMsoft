@@ -213,13 +213,13 @@ read (dataunit) oldprogname
 read (dataunit) MCscversion
 read (dataunit) xtalname
 
-read(dataunit) numEbins, numzbins, nsx, nsy, num_el, MCnthreads
+read(dataunit) numEbins, numzbins, nsx, nsy, num_el ! , MCnthreads
 nsx = (nsx - 1)/2
 nsy = (nsy - 1)/2
 
 ! MCnthreads = 8
-io_int(1:6) = (/ numEbins, numzbins, nsx, nsy, num_el, MCnthreads /)
-call WriteValue(' NumEbins, numzbins, nsx, nsy, num_el, MCnthreads ',io_int,6,"(5I8,',',I8)")
+io_int(1:5) = (/ numEbins, numzbins, nsx, nsy, num_el /)
+call WriteValue(' NumEbins, numzbins, nsx, nsy, num_el',io_int,5,"(4I8,',',I8)")
 etotal = num_el 
 
 read (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
