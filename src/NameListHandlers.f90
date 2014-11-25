@@ -767,7 +767,7 @@ end subroutine GetEBSDNameList
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill knl structure (used by CTEMKossel.f90)
+!> @brief read namelist file and fill knl structure (used by CTEMECP.f90)
 !
 !> @param nmlfile namelist file name
 !> @param knl Kossel name list structure
@@ -812,10 +812,6 @@ character(fnlen)        :: energyfile
 namelist /ECPlist/ stdout, xtalname, xtalname2, voltage, k, fn, dmin, ktmax, filmthickness, &
                    startthick, thickinc, nthreads, numthick, npix, outname, thetac, compmode, zintstep, &
                    gF, gS, tF, tS, energyfile
-
-! namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, distort, abcdist, albegadist, ktmax, &
-namelist /ECPlist/ stdout, xtalname, xtalname2, voltage, k, fn, gF, gS, tF, tS, dmin, ktmax, filmthickness, &
-                   startthick, thickinc, nthreads, numthick, npix, outname, thetac, compmode, zintstep
 
 ! default values
 stdout = 6                              ! standard output
@@ -1141,7 +1137,7 @@ type(ECCINameListType),INTENT(INOUT)            :: eccinl
 integer(kind=irg)                               :: i
 
 integer(kind=irg)       :: stdout
-integer(kind=irg)       :: nthreads,i
+integer(kind=irg)       :: nthreads
 integer(kind=irg)       :: k(3)
 integer(kind=irg)       :: nktstep
 integer(kind=irg)       :: DF_npix
