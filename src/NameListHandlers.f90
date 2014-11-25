@@ -304,7 +304,7 @@ end subroutine GetMCNameList
 !> @param nmlfile namelist file name
 !> @param mcnl Monte Carloname list structure
 !
-!> @date 06/18/14  MDG 1.0 new routine
+!> @date 06/18/14  SS 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine GetMCCLNameList(nmlfile, mcnl)
 
@@ -386,6 +386,112 @@ mcnl%primelist = primelist
 mcnl%mode = mode
 
 end subroutine GetMCCLNameList
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:GetMCCLMultiLayerNameList
+!
+!> @author Saransh Singh/Marc De Graef, Carnegie Mellon University
+!
+!> @brief read namelist file and fill mcnl structure (used by CTEMMCCL.f90)
+!
+!> @param nmlfile namelist file name
+!> @param mcnl Monte Carloname list structure
+!
+!> @date 06/18/14  SS 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine GetMCCLMultiLayerNameList(nmlfile, mcnl)
+
+use error
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)             :: nmlfile
+type(MCCLMultiLayerNameListType),INTENT(INOUT)      :: mcnl
+
+integer(kind=irg)       :: stdout
+integer(kind=irg)       :: numsx
+integer(kind=irg)       :: globalworkgrpsz
+integer(kind=irg)       :: num_el
+integer(kind=irg)       :: totnum_el
+real(kind=dbl)          :: sig
+real(kind=dbl)          :: omega
+real(kind=dbl)          :: EkeV
+real(kind=dbl)          :: Ehistmin
+real(kind=dbl)          :: Ebinsize
+real(kind=dbl)          :: depthmax
+real(kind=dbl)          :: depthstep
+real(kind=dbl)          :: filmthickness
+real(kind=dbl)          :: filmstep
+character(4)            :: MCmode
+character(fnlen)        :: xtalname_film
+character(fnlen)        :: xtalname_subs
+character(fnlen)        :: dataname
+character(fnlen)        :: primelist
+character(fnlen)        :: mode
+
+! define the IO namelist to facilitate passing variables to the program.
+namelist  / MCCLdata / stdout, sig, numsx, num_el, globalworkgrpsz, EkeV, &
+        dataname, primelist, totnum_el, Ehistmin, Ebinsize, depthmax, &
+        depthstep, omega, MCmode, mode, xtalname_film, xtalname_subs, &
+        filmthickness, filmstep
+
+
+! set the input parameters to default values (except for xtalname, which must be present)
+stdout = 6
+numsx = 1501
+globalworkgrpsz = 100
+num_el = 10
+totnum_el = 100000
+sig = 70.D0
+omega = 0.D0
+EkeV = 30.D0
+Ehistmin = 5.D0
+Ebinsize = 0.5D0
+depthmax = 100.D0
+depthstep = 1.0D0
+MCmode = 'CSDA'
+xtalname_film = 'undefined'
+xtalname_subs = 'undefined'
+dataname = 'MCoutput.data'
+primelist = 'RandomSeeds.data'
+mode = 'full'
+filmthickness = 20.D0
+filmstep = 2.D0
+
+! read the namelist file
+open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+read(UNIT=dataunit,NML=MCCLdata)
+close(UNIT=dataunit,STATUS='keep')
+
+! check for required entries
+if ((trim(xtalname_film).eq.'undefined') .or. (trim(xtalname_subs).eq.'undefined')) then
+call FatalError('CTEMMC:',' structure file name is undefined in '//nmlfile)
+end if
+
+! if we get here, then all appears to be ok, and we need to fill in the mcnl fields
+mcnl%stdout = stdout
+mcnl%numsx = numsx
+mcnl%globalworkgrpsz = globalworkgrpsz
+mcnl%num_el = num_el
+mcnl%totnum_el = totnum_el
+mcnl%sig = sig
+mcnl%omega = omega
+mcnl%EkeV = EkeV
+mcnl%Ehistmin = Ehistmin
+mcnl%Ebinsize = Ebinsize
+mcnl%depthmax = depthmax
+mcnl%depthstep = depthstep
+mcnl%MCmode = MCmode
+mcnl%xtalname_film = xtalname_film
+mcnl%xtalname_subs = xtalname_subs
+mcnl%dataname = dataname
+mcnl%primelist = primelist
+mcnl%mode = mode
+mcnl%filmthickness = filmthickness
+mcnl%filmstep = filmstep
+
+end subroutine GetMCCLMultiLayerNameList
 
 !--------------------------------------------------------------------------
 !
@@ -667,6 +773,7 @@ end subroutine GetEBSDNameList
 !> @param knl Kossel name list structure
 !
 !> @date 06/13/14  MDG 1.0 new routine
+!> @date 11/25/14  MDG 2.0 added parameters for film on substrate mode
 !--------------------------------------------------------------------------
 subroutine GetECPNameList(nmlfile, ecpnl)
 
@@ -683,6 +790,10 @@ integer(kind=irg)       :: fn(3)
 integer(kind=irg)       :: numthick
 integer(kind=irg)       :: npix
 integer(kind=irg)       :: nthreads
+integer(kind=irg)       :: gF(3)
+integer(kind=irg)       :: gS(3)
+integer(kind=irg)       :: tF(3)
+integer(kind=irg)       :: tS(3)
 real(kind=sgl)          :: voltage
 real(kind=sgl)          :: dmin
 real(kind=sgl)          :: ktmax
@@ -690,21 +801,26 @@ real(kind=sgl)          :: thetac
 real(kind=sgl)          :: startthick
 real(kind=sgl)          :: thickinc
 real(kind=sgl)          :: zintstep
-!real(kind=dbl)          :: abcdist(3)
-!real(kind=dbl)          :: albegadist(3)
-!logical                 :: distort
+real(kind=sgl)          :: filmthickness
 character(7)            :: compmode
 character(fnlen)        :: outname
 character(fnlen)        :: xtalname
+character(fnlen)        :: xtalname2
+character(fnlen)        :: energyfile
 
 ! namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, distort, abcdist, albegadist, ktmax, &
-namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, ktmax, &
-                   startthick, thickinc, nthreads, numthick, npix, outname, thetac, compmode, zintstep
+namelist /ECPlist/ stdout, xtalname, xtalname2, voltage, k, fn, dmin, ktmax, filmthickness, &
+                   startthick, thickinc, nthreads, numthick, npix, outname, thetac, compmode, zintstep, &
+                   gF, gS, tF, tS, energyfile
 
 ! default values
 stdout = 6                              ! standard output
 k = (/ 0, 0, 1 /)                       ! beam direction [direction indices]
 fn = (/ 0, 0, 1 /)                      ! foil normal [direction indices]
+gF = (/ 0, 0, 0 /)                      ! plane normal in film
+gS = (/ 0, 0, 0 /)                      ! plane normal in substrate
+tF = (/ 0, 0, 0 /)                      ! direction in film
+tS = (/ 0, 0, 0 /)                      ! direction in substrate
 numthick = 10                           ! number of increments
 npix = 256                              ! output arrays will have size npix x npix
 nthreads = 1                            ! number of OpenMP threads
@@ -715,13 +831,12 @@ thetac = 0.0                            ! beam convergence in mrad (either ktmax
 startthick = 2.0                        ! starting thickness [nm]
 thickinc = 2.0                          ! thickness increment
 zintstep = 1.0                          ! integration step size for ScatMat mode
-!abcdist = (/ -1.D0,-1.0D0,-1.0D0/)      ! distorted a, b, c [nm]
-!albegadist = (/ 90.D0, 90.D0, 90.D0 /)  ! distorted angles [degrees]
-!distort = .FALSE.                       ! distort the input unit cell ?  
+filmthickness = 0.0                     ! 0.0 if there is no film
 compmode = 'Blochwv'                    ! 'Blochwv' or 'ScatMat' solution mode (Bloch is default)
 outname = 'ecp.data'                    ! output filename
 xtalname = 'undefined'                  ! initial value to check that the keyword is present in the nml file
-
+xtalname2 = 'undefined'                 ! initial value for substrate structure name
+energyfile = 'undefined'
 ! read the namelist file
  open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
  read(UNIT=dataunit,NML=ECPlist)
@@ -735,6 +850,10 @@ xtalname = 'undefined'                  ! initial value to check that the keywor
 ecpnl%stdout = stdout
 ecpnl%k = k
 ecpnl%fn = fn
+ecpnl%gF = gF
+ecpnl%gS = gS
+ecpnl%tF = tF
+ecpnl%tS = tS
 ecpnl%numthick = numthick
 ecpnl%npix = npix
 ecpnl%nthreads = nthreads
@@ -745,12 +864,12 @@ ecpnl%thetac = thetac
 ecpnl%startthick = startthick
 ecpnl%thickinc = thickinc
 ecpnl%zintstep = zintstep
-!ecpnl%abcdist = abcdist
-!ecpnl%albegadist = albegadist
-!ecpnl%distort = distort
+ecpnl%filmthickness = filmthickness
 ecpnl%compmode = compmode
 ecpnl%outname = outname
 ecpnl%xtalname = xtalname
+ecpnl%xtalname2 = xtalname2
+ecpnl%energyfile = energyfile
 
 end subroutine GetECPNameList
 
@@ -844,11 +963,11 @@ end subroutine GetLACBEDNameList
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE:GetECPNameList
+! SUBROUTINE:GetECPpatternNameList
 !
 !> @author Saransh Singh, Carnegie Mellon University
 !
-!> @brief read namelist file and fill mcnl structure (used by CTEMECP.f90)
+!> @brief read namelist file and fill mcnl structure (used by CTEMECPpattern.f90)
 !
 !> @param nmlfile namelist file name
 !> @param emnl ECP name list structure
@@ -1015,7 +1134,7 @@ character(fnlen),INTENT(IN)                     :: nmlfile
 type(ECCINameListType),INTENT(INOUT)            :: eccinl
 
 integer(kind=irg)       :: stdout
-integer(kind=irg)       :: nthreads
+integer(kind=irg)       :: nthreads,i
 integer(kind=irg)       :: k(3)
 integer(kind=irg)       :: nktstep
 integer(kind=irg)       :: DF_npix
@@ -1042,7 +1161,7 @@ character(fnlen)        :: ECPname
 character(fnlen)        :: dislYname(3*maxdefects)
 character(fnlen)        :: dislname(3*maxdefects)
 character(fnlen)        :: sfname(maxdefects)
-character(fnlen)        :: sgame
+character(fnlen)        :: sgname
 character(fnlen)        :: apbname
 character(fnlen)        :: incname
 character(fnlen)        :: voidname

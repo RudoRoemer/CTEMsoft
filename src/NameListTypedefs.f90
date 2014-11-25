@@ -117,6 +117,31 @@ type MCCLNameListType
         character(fnlen)        :: mode
 end type MCCLNameListType
 
+! namelist for the MCCLMultiLayer program
+
+type MCCLMultiLayerNameListType
+    integer(kind=irg)       :: stdout
+    integer(kind=irg)       :: numsx
+    integer(kind=irg)       :: globalworkgrpsz
+    integer(kind=irg)       :: num_el
+    integer(kind=irg)       :: totnum_el
+    real(kind=dbl)          :: sig
+    real(kind=dbl)          :: omega
+    real(kind=dbl)          :: EkeV
+    real(kind=dbl)          :: Ehistmin
+    real(kind=dbl)          :: Ebinsize
+    real(kind=dbl)          :: depthmax
+    real(kind=dbl)          :: depthstep
+    real(kind=dbl)          :: filmthickness
+    real(kind=dbl)          :: filmstep
+    character(4)            :: MCmode
+    character(fnlen)        :: xtalname_film
+    character(fnlen)        :: xtalname_subs
+    character(fnlen)        :: dataname
+    character(fnlen)        :: primelist
+    character(fnlen)        :: mode
+end type MCCLMultiLayerNameListType
+
 ! namelist for the CTEMEBSDmaster program
 type EBSDMasterNameListType
         integer(kind=irg)       :: stdout
@@ -194,6 +219,10 @@ type ECPNameListType
         integer(kind=irg)       :: numthick
         integer(kind=irg)       :: npix
         integer(kind=irg)       :: nthreads
+        integer(kind=irg)       :: gF(3)
+        integer(kind=irg)       :: gS(3)
+        integer(kind=irg)       :: tF(3)
+        integer(kind=irg)       :: tS(3)
         real(kind=sgl)          :: voltage
         real(kind=sgl)          :: dmin
         real(kind=sgl)          :: ktmax
@@ -201,12 +230,15 @@ type ECPNameListType
         real(kind=sgl)          :: startthick
         real(kind=sgl)          :: thickinc
         real(kind=sgl)          :: zintstep
+        real(kind=sgl)          :: filmthickness
 !       real(kind=dbl)          :: abcdist(3)
 !       real(kind=dbl)          :: albegadist(3)
 !       logical                 :: distort
         character(7)            :: compmode
         character(fnlen)        :: outname
         character(fnlen)        :: xtalname
+        character(fnlen)        :: xtalname2
+        character(fnlen)        :: energyfile
 end type ECPNameListType
 
 
