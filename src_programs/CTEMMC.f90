@@ -243,7 +243,7 @@ integer(kind=irg)       :: istat
 ! then the name of the crystal data file
  write (dataunit) mcnl%xtalname
 ! energy information etc...
- write (dataunit) numEbins, numzbins, mcnl%numsx, numsy, mcnl%num_el*NUMTHREADS, NUMTHREADS
+ write (dataunit) numEbins, numzbins, mcnl%numsx, numsy, mcnl%num_el*NUMTHREADS ! , NUMTHREADS
  write (dataunit) mcnl%EkeV, mcnl%Ehistmin, mcnl%Ebinsize, mcnl%depthmax, mcnl%depthstep
  write (dataunit) mcnl%sig, mcnl%omega
  write (dataunit) mcnl%MCmode

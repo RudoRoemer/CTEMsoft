@@ -488,7 +488,7 @@ call WriteValue('disparray bounds: ', io_real, 2, "(2(F10.5,' '))")
 !      glen = CalcLength(dble(gg),'r')
 !      lpg = ll + gg                ! Laue + g
 !      gplen = CalcLength(lpg,'r')
-!      kpg = 2000.0*asin(0.50*sngl(mLambda)*gplen)    ! 2theta in mrad
+!      kpg = 2000.0*asin(0.50*sngl(cell%mLambda)*gplen)    ! 2theta in mrad
       sgarray(ig,ik) = Calcsg(float(gg),sngl(ktmp%k),DynFN)
  ! and we move to the next reflection in the list
       rltmpa => rltmpa%next
@@ -861,7 +861,7 @@ if (ktstep.eq.0) then
    
 !   write (*,*) 0, 0, kt, ktlen
    
-   kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
+   kr = kt + sqrt(1.0/cell%mLambda**2 - ktlen)*kstar ! complete wave vector
    ktail%k = kr                            ! store in pointer list
    ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
  end if
@@ -891,7 +891,7 @@ else
 
 !   write (*,*) ic, jc, kt, ktlen
 
-   kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
+   kr = kt + sqrt(1.0/cell%mLambda**2 - ktlen)*kstar ! complete wave vector
    ktail%k = kr                            ! store in pointer list
    ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
  else
@@ -923,7 +923,7 @@ else
  
 !   write (*,*) i, j, kt, ktlen
 
-     kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
+     kr = kt + sqrt(1.0/cell%mLambda**2 - ktlen)*kstar ! complete wave vector
       ktail%k = kr                     ! store in pointer list
       ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
      end if
@@ -1009,7 +1009,7 @@ real                                :: kr(3),glen,delta,kstar(3),kt(3),gan(3),gp
 !   write (*,*) j, kt
    ktail%kt = kt                           ! store tangential component of k
    ktlen = glen**2*(ktx**2+kty**2)         ! squared length of tangential component
-   kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
+   kr = kt + sqrt(1.0/cell%mLambda**2 - ktlen)*kstar ! complete wave vector
    ktail%k = kr                            ! store in pointer list
    ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
  end if
@@ -1030,7 +1030,7 @@ real                                :: kr(3),glen,delta,kstar(3),kt(3),gan(3),gp
 !   write (*,*) j, kt
       ktail%kt = kt                    ! store tangential component of k
       ktlen = delta**2*(ktail%i**2+ktail%j**2)         ! squared length of tangential component
-      kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
+      kr = kt + sqrt(1.0/cell%mLambda**2 - ktlen)*kstar ! complete wave vector
       ktail%k = kr                     ! store in pointer list
       ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
  end do

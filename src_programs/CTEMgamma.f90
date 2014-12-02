@@ -283,7 +283,7 @@ end if
  ktail%kt = kt                    			! store tangential component of k
  ktlen = CalcLength(kt,'r')**2      			! squared length of tangential component
 
- kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar 	! complete wave vector
+ kr = kt + sqrt(1.0/cell%mLambda**2 - ktlen)*kstar 	! complete wave vector
  ktail%k = kr                     			! store in pointer list
  ktail%kn = CalcDot(ktail%k,kstar,'r')    		! normal component of k
 
@@ -682,7 +682,7 @@ BetheParameter%weakreflistindex = 0
 !  cutoff lambda |Ug| > |sg|  -> strong reflection
 !
       sgp = abs(rltmpa%sg) 
-      lUg = abs(rltmpa%Ucg) * mLambda ! PGC cabs -> abs
+      lUg = abs(rltmpa%Ucg) * cell%mLambda ! PGC cabs -> abs
       cut1 = BetheParameter%cutoff * lUg
       cut2 = BetheParameter%weakcutoff * lUg
 
@@ -1039,7 +1039,7 @@ rltmpa => reflist
 !  cutoff lambda |Ug| > |sg|  -> strong reflection
 !
       sgp = abs(rltmpa%sg) 
-      lUg = abs(rltmpa%Ucg) * mLambda ! PGC cabs -> abs
+      lUg = abs(rltmpa%Ucg) * cell%mLambda ! PGC cabs -> abs
       cut1 = BetheParameter%cutoff * lUg
 
       if (sgp.le.cut1) then  ! count this beam

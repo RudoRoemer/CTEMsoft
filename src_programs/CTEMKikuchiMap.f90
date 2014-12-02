@@ -68,7 +68,7 @@ end module kikmapvars
 program kikuchi
 
 use local
-use crystalvars
+use typedefs
 use crystal
 use symmetryvars
 use symmetry
@@ -76,10 +76,11 @@ use graphics
 use files
 use postscript
 use io
-use diffraction
 use kikmapvars
 
 IMPLICIT NONE
+
+real(kind=sgl)          :: camlen
 
  progname = 'kikmap.f90'
  progdesc = 'Kikuchi map simulations'
@@ -101,7 +102,7 @@ IMPLICIT NONE
  call PS_openfile
  PS%pspage = 0
 ! generate a set of HOLZ patterns
- call KikmapPage
+ call KikmapPage(camlen)
 ! close Postscript file
  call PS_closefile
 end program
@@ -118,9 +119,10 @@ end program
 !
 !  modified by  rev reason
 !  -------- --- --- -----------
-!   2/25/02 MDG 1.0 original
+!> @date 02/25/02 MDG 1.0 original
+!> @date 12/02/14 MDG 2.0 removed global variables
 ! ###################################################################
-subroutine KikmapPage
+subroutine KikmapPage(camlen)
 
 use local
 use postscript
@@ -136,6 +138,8 @@ use dynamical
 use kikmapvars
 
 IMPLICIT NONE
+
+real(kind=sgl),INTENT(IN)       :: camlen
 
 logical                         :: again, first, newzone, nexttop
 real(kind=sgl)                  :: negative(2),twopi,ggl,gg(3),igl,RR,thr, &
@@ -153,8 +157,8 @@ character(1)                    :: z
  twopi = 2.0*cPi
  Imax = 0.0
 ! camera length
- laL = sngl(mLambda) * camlen
- mess = 'wavelength [nm] = '; oi_real(1) = sngl(mLambda); call WriteReal(1,"(F10.6)")
+ laL = sngl(cell%mLambda) * camlen
+ mess = 'wavelength [nm] = '; oi_real(1) = sngl(cell%mLambda); call WriteReal(1,"(F10.6)")
  mess = ' L         [mm] = '; oi_real(1) = camlen; call WriteReal(1,"(f10.2)")
  mess = 'camera length lambda*L [mm nm] = '; oi_real(1) = laL; call WriteReal(1,"(f10.5)")
 ! what portion of reciprocal space is to be covered 
@@ -208,7 +212,7 @@ character(1)                    :: z
     end if
 ! plot origin of reciprocal space 
     call PS_filledcircle(PX,PY,0.03,0.0)
-    call Calcmap
+    call Calcmap(camlen)
 
 ! once that is done, we can determine the intensities to be drawn and 
 ! draw all reflections and lines.
@@ -231,7 +235,7 @@ end subroutine
 !  -------
 !  01/25/02 MDG 1.0 original
 ! ###################################################################
-subroutine Calcmap
+subroutine Calcmap(camlen)
 
 use local
 use io
@@ -246,6 +250,8 @@ use constants
 use kikmapvars
 
 IMPLICIT NONE
+
+real(kind=sgl),INTENT(IN)       :: camlen
 
 integer(kind=irg)                :: inmhkl(3),hc,i,j,nref,istat,inm,hh,kk,ll,ind(3),ih,ik,il,imin,hhh
 real(kind=sgl)                   :: gg(3),Ig,x,alp,beta,theta,D,gpx,gpy,hlx(2),hly(2),phi,glen,gtoc(2,2),pxy(2), &

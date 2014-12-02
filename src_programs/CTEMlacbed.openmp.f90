@@ -225,7 +225,7 @@ call Compute_ReflectionList(dmin,k,ga,gb,method,ConvertList,maxholz)
   allocate(disk(numt,npix,npix))
   disk=0.0
 
-  sc = mLambda*camlen*RR
+  sc = cell%mLambda*camlen*RR
   scmax = 1.5*300.0 + npx
   PX = npix/2
 
@@ -431,7 +431,7 @@ reflectionloop: do ig=2,DynNbeamsLinked
 ! the standard stereographic triangle, so cos(alpha) = 1 in eqn. 5.11 of CTEM
         kpg = kk+gg                		! k0 + g (vectors)
         gplen = CalcLength(kpg,'r')  	! |k0+g|
-        Reflist_sg(ig) = (1.0/mLambda**2 - gplen**2)*0.5/gplen
+        Reflist_sg(ig) = (1.0/cell%mLambda**2 - gplen**2)*0.5/gplen
      else
 	Reflist_sg(ig) = Calcsg(gg,sngl(kk),DynFN)
      end if
@@ -538,9 +538,9 @@ reflectionloop: do ig=2,DynNbeamsLinked
                       weaksum = weaksum +  ughp * uhph *cmplx(1.D0/BPweaksg(iw),0.0,dbl)
                  end do
 ! and correct the dynamical matrix element to become a Bethe potential coefficient
-                 DynMat(ir,ic) = DynMat(ir,ic) - cmplx(0.5D0*mLambda,0.0D0,dbl)*weaksum
+                 DynMat(ir,ic) = DynMat(ir,ic) - cmplx(0.5D0*cell%mLambda,0.0D0,dbl)*weaksum
                else  ! it is a diagonal entry, so we need the excitation error and the absorption length
-                 DynMat(ir,ir) = cmplx(2.D0*BPstrongsg(ir)/mLambda,DynUpz,dbl)
+                 DynMat(ir,ir) = cmplx(2.D0*BPstrongsg(ir)/cell%mLambda,DynUpz,dbl)
                end if
           end do
         end do

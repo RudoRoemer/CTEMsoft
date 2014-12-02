@@ -246,7 +246,7 @@ if (progmode.ne.'CTEM') then
   beamdiv = 0.0
   kt = 0.0
   call read_STEM_data(STEMnmlfile,'ZA',nn,ga,kt,numk,beamdiv)          ! first we need the beam divergence angle from this file ...
-  ktmax = 2.0*sin(beamdiv/2000.)/mLambda/CalcLength(float(ga),'r')     ! ktmax in units of |ga|
+  ktmax = 2.0*sin(beamdiv/2000.)/cell%mLambda/CalcLength(float(ga),'r')     ! ktmax in units of |ga|
 ! this next line needs to be verified !!!
   ijmax = float(STEM%numberofsvalues)**2
   call Calckvectors(dble(kk),dble(ga),dble(ktmax),STEM%numberofsvalues,STEM%numberofsvalues,numk,isym,ijmax,'Conical')    ! here we figure out how many beams there are
@@ -362,12 +362,12 @@ if (progmode.eq.'CTEM') then
     ll = lauec(1)*ga + lauec(2)*gb   ! Laue center vector
     lpg = ll + rltmpa%hkl                ! Laue + g
     gplen = CalcLength(lpg,'r')
-    LC3 = sqrt(1.0-mLambda**2*(CalcLength(ll,'r')**2))   ! to ensure proper normalization of wave vector
+    LC3 = sqrt(1.0-cell%mLambda**2*(CalcLength(ll,'r')**2))   ! to ensure proper normalization of wave vector
     if (gplen.eq.0.0) then
-           exer = -mLambda*CalcDot(float(rltmpa%hkl),ll+lpg,'r')/2.0*LC3*cos(CalcAngle(dble(kk),foil%F,'d'))	 
+           exer = -cell%mLambda*CalcDot(float(rltmpa%hkl),ll+lpg,'r')/2.0*LC3*cos(CalcAngle(dble(kk),foil%F,'d'))	 
     else
-	   sgdenom = 2.0*LC3*cos(CalcAngle(dble(kk),foil%F,'d'))-2.0*mLambda*gplen*cos(CalcAngle(lpg,FNr,'r'))
-           exer = -(mLambda*CalcDot(float(rltmpa%hkl),ll+lpg,'r')-2.0*LC3*CalcDot(g3,lpg,'r'))/sgdenom
+	   sgdenom = 2.0*LC3*cos(CalcAngle(dble(kk),foil%F,'d'))-2.0*cell%mLambda*gplen*cos(CalcAngle(lpg,FNr,'r'))
+           exer = -(cell%mLambda*CalcDot(float(rltmpa%hkl),ll+lpg,'r')-2.0*LC3*CalcDot(g3,lpg,'r'))/sgdenom
     end if
     rltmpa%sg = exer
     DHWMz(ir,ir) = cmplx(0.0,2.D0*cPi*exer,dbl)
@@ -589,7 +589,7 @@ nCL = STEM%numCL     ! set the number of camera length values
   write (dataunit) kk				               ! incident wave vector
   write (dataunit) CalcDiffAngle(ga(1),ga(2),ga(3))*0.5	! Bragg angle for the first reflection (whether allowed or not)
   write (dataunit) STEM%numberofsvalues			! number of pixels along disk radius
-  write (dataunit) sngl(mLambda)				! wave length
+  write (dataunit) sngl(cell%mLambda)				! wave length
   write (dataunit) beamdiv					! beam divergence
   write (dataunit) DF_L				        ! pixel size
 	

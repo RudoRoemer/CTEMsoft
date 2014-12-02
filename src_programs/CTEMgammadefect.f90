@@ -719,7 +719,7 @@ BetheParameter%weakreflistindex = 0
 !  cutoff lambda |Ug| > |sg|  -> strong reflection
 !
       sgp = abs(rltmpa%sg) 
-      lUg = abs(rltmpa%Ucg) * mLambda ! PGC cabs -> abs
+      lUg = abs(rltmpa%Ucg) * cell%mLambda ! PGC cabs -> abs
       cut1 = BetheParameter%cutoff * lUg
       cut2 = BetheParameter%weakcutoff * lUg
 
@@ -1074,7 +1074,7 @@ rltmpa => reflist
 !  cutoff lambda |Ug| > |sg|  -> strong reflection
 !
       sgp = abs(rltmpa%sg) 
-      lUg = abs(rltmpa%Ucg) * mLambda
+      lUg = abs(rltmpa%Ucg) * cell%mLambda
       cut1 = BetheParameter%cutoff * lUg
 
       if (sgp.le.cut1) then  ! count this beam

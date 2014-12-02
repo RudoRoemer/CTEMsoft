@@ -472,7 +472,7 @@ real(kind=sgl)                      :: dthick
   allocate(Minp(nn,nn),Azz(nn,nn),ampl(nn),ampl2(nn))
 
   dthick = thick(2)-thick(1)
-  Minp = DynMat * dcmplx(0.D0,cPi * mLambda)
+  Minp = DynMat * dcmplx(0.D0,cPi * cell%mLambda)
   call MatrixExponential(Minp, Azz, dble(dthick), 'Pade', nn)  
 
   ampl = dcmplx(0.D0,0.D0)

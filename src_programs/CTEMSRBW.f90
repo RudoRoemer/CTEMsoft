@@ -142,7 +142,7 @@ complex(kind=dbl),allocatable 	:: CGinv(:,:),Mcp(:,:)
  pre = 2.0*sngl(cRestmass*cCharge/cPlanck**2)*1.0E-18
 
 ! scaling factor for excitation error (2*k_0)
- pre2 = 2.0/sngl(mLambda)
+ pre2 = 2.0/sngl(cell%mLambda)
 
 ! min and max of systematic row
  nmin = -ira
@@ -188,8 +188,8 @@ complex(kind=dbl),allocatable 	:: CGinv(:,:),Mcp(:,:)
  call WriteValue(' beam tilt step size = ', io_real, 1, "(F8.4)")
  kk = CalcLength(k,'r')
  gg = CalcLength(float(g),'r')
- k =  k/sngl(mLambda)/kk
- kz = 1.0/mLambda
+ k =  k/sngl(cell%mLambda)/kk
+ kz = 1.0/cell%mLambda
 
 ! open the unformatted output file
  open (unit=15,form='unformatted',status ='unknown')
@@ -209,7 +209,7 @@ complex(kind=dbl),allocatable 	:: CGinv(:,:),Mcp(:,:)
 ! rescale the wavevector and foil normal
   kt = k + dkt*(float(ik-ns/2))*g
   kk = CalcLength(kt,'r')
-  kt = kt/sngl(mLambda)/kk
+  kt = kt/sngl(cell%mLambda)/kk
 
 ! then complete the diagonal of the M matrix
 ! i is the row index

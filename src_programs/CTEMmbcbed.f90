@@ -53,7 +53,7 @@ use io
 
 IMPLICIT NONE
 
-character(fnlen)			:: nmldeffile
+character(fnlen)                        :: nmldeffile
 
 ! deal with the command line arguments, if any
 nmldeffile = 'CTEMmbcbed.nml'
@@ -82,6 +82,7 @@ end program
 !> @date 05/14/13  MDG 2.1 replaced IO by namelist file
 !> @date 09/25/13  MDG 2.2 minor program cleanup
 !> @date 10/18/13  MDG 3.0 major modifications to bring program in line with CTEMlacbed program
+!> @date 12/02/14  MDG 3.1 removed camlen as a global variable
 !--------------------------------------------------------------------------
 subroutine MBCBEDcomputation(nmlfile)
 
@@ -104,40 +105,40 @@ use files
 
 IMPLICIT NONE
 
-real(kind=sgl)      			:: ktmax, io_real(3), voltage, convergence, galen, &
-                       		bragg,RR, gg(3), thetac, startthick, thickinc, &
-                       		sc, scmax, PX, frac, dmin, klaue(2), pxy(2)
-integer(kind=irg)   			:: ijmax,ga(3),gb(3),k(3),cnt, skip, numthick, istat, dgn, badpoints, &
-                       		newcount,count_rate,count_max, io_int(6), ii, i, j, isym, ir, fn(3), pgnum, &
-                       		npx, npy, numt, numk, npix, ik, ip, jp, maxholz, iequiv(2,12), nequiv, it
-character(3)				:: method
-character(fnlen)     			:: outname, nmlfile, xtalname
+real(kind=sgl)                :: ktmax, io_real(3), voltage, convergence, galen, camlen, &
+                                 bragg,RR, gg(3), thetac, startthick, thickinc, &
+                                 sc, scmax, PX, frac, dmin, klaue(2), pxy(2)
+integer(kind=irg)             :: ijmax,ga(3),gb(3),k(3),cnt, skip, numthick, istat, dgn, badpoints, &
+                                 newcount,count_rate,count_max, io_int(6), ii, i, j, isym, ir, fn(3), pgnum, &
+                                 npx, npy, numt, numk, npix, ik, ip, jp, maxholz, iequiv(2,12), nequiv, it
+character(3)                  :: method
+character(fnlen)              :: outname, nmlfile, xtalname
 
 
-real(kind=sgl),parameter     	:: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/),yoff(0:5)=(/6.0,6.0,3.0,3.0,0.0,0.0/)
-real(kind=sgl),allocatable    	:: disk(:,:,:), thick(:), slice(:,:)
-integer(kind=irg),allocatable 	:: diskoffset(:,:)
-real(kind=sgl),allocatable    	:: inten(:,:)
-logical				:: usesym=.TRUE., bp
+real(kind=sgl),parameter        :: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/),yoff(0:5)=(/6.0,6.0,3.0,3.0,0.0,0.0/)
+real(kind=sgl),allocatable      :: disk(:,:,:), thick(:), slice(:,:)
+integer(kind=irg),allocatable   :: diskoffset(:,:)
+real(kind=sgl),allocatable      :: inten(:,:)
+logical                         :: usesym=.TRUE., bp
 
 namelist /MBCBEDlist/ stdout,xtalname, voltage, camlen, k, fn, npix, dmin, convergence, & 
                      startthick, thickinc, numthick, outname, klaue
 
 ! set the input parameters to default values (except for xtalname, which must be present)
-xtalname = 'undefined'		! initial value to check that the keyword is present in the nml file
-stdout = 6			! standard output ID
-voltage = 200000.0		! acceleration voltage [V]
-camlen = 1000.0			! camera length [mm]
-k = (/ 0, 0, 1 /)		! beam direction [direction indices]
-fn = (/ 0, 0, 1 /)		! foil normal [direction indices]
-klaue = (/ 0.0, 0.0 /)		! fractional coordinates of Laue circle center
-npix = 1000			! size of the (square) computed CBED pattern
-dmin = 0.02			! smallest d-spacing to include in dynamical matrix [nm]
-convergence = 5.0		! beam convergence angle [mrad]
-startthick = 10.0		! starting thickness [nm]
-thickinc = 10.0			! thickness increment
-numthick = 10			! number of increments
-outname = 'mbcbedout.data'	! out put filename
+xtalname = 'undefined'          ! initial value to check that the keyword is present in the nml file
+stdout = 6                      ! standard output ID
+voltage = 200000.0              ! acceleration voltage [V]
+camlen = 1000.0                 ! camera length [mm]
+k = (/ 0, 0, 1 /)               ! beam direction [direction indices]
+fn = (/ 0, 0, 1 /)              ! foil normal [direction indices]
+klaue = (/ 0.0, 0.0 /)          ! fractional coordinates of Laue circle center
+npix = 1000                     ! size of the (square) computed CBED pattern
+dmin = 0.02                     ! smallest d-spacing to include in dynamical matrix [nm]
+convergence = 5.0               ! beam convergence angle [mrad]
+startthick = 10.0               ! starting thickness [nm]
+thickinc = 10.0                 ! thickness increment
+numthick = 10                   ! number of increments
+outname = 'mbcbedout.data'      ! out put filename
 
 ! read the namelist file
 open(UNIT=dataunit,FILE=nmlfile,DELIM='apostrophe',STATUS='old')
@@ -235,7 +236,7 @@ end if
   allocate(disk(numt,npix,npix))
   disk=0.0
 
-  sc = mLambda*camlen*RR
+  sc = cell%mLambda*camlen*RR
   PX = npix/2
   scmax = PX + npx
 
@@ -266,7 +267,7 @@ end if
   do i=1,DynNbeamsLinked
     gg(1:3)=rltmpa%hkl
 
-    pxy =  sc * GetHOLZcoordinates(gg, (/ 0.0, 0.0, 0.0 /), sngl(mLambda))
+    pxy =  sc * GetHOLZcoordinates(gg, (/ 0.0, 0.0, 0.0 /), sngl(cell%mLambda))
 
 !    call TransSpace(gg,c,'r','c')
 !    qx= CalcDot(c,gx,'c')*sc
@@ -346,7 +347,7 @@ BetheParameter%reflistindex = BetheParameter%reflistindex + BetheParameter%weakr
         if (((ip.ge.1).and.(ip.le.npix)).and.((jp.ge.1).and.(jp.le.npix))) then
          if ( (BetheParameter%reflistindex(i).eq.1) ) then
           disk(1:numt,ip,jp) = disk(1:numt,ip,jp) + inten(1:numt,BetheParameter%reflistindex(i))
- 	 else
+         else
 ! this is a placeholder; it is not technically correct to do this, but the result looks quite reasonable
 ! it works fine when there is no overlap between diffraction disks, but when there is, then the result will
 ! be incorrect.  This should be noted in the manual. 
@@ -401,7 +402,7 @@ BetheParameter%reflistindex = BetheParameter%reflistindex + BetheParameter%weakr
 ! write the version number
   write (dataunit) scversion
 ! first write the array dimensions
-  write (dataunit) npix,npix,numt,0 	! fourth index is not used
+  write (dataunit) npix,npix,numt,0     ! fourth index is not used
 ! then the name of the crystal data file
   write (dataunit) xtalname
 ! the accelerating voltage [V]
@@ -423,11 +424,11 @@ BetheParameter%reflistindex = BetheParameter%reflistindex + BetheParameter%weakr
 ! maximum HOLZ layer in the output file
   write (dataunit) maxholz
 ! intensity cutoff
-  write (dataunit) 0.0		! not used
+  write (dataunit) 0.0          ! not used
 ! eight integers with the labels of various symmetry groups
   write (dataunit) (/ pgnum, PGLaue(pgnum), dgn, PDG(dgn), BFPG(dgn), WPPG(dgn), DFGN(dgn), DFSP(dgn) /)
 ! write the 2D point group rotation angle
-  write (dataunit) 0.0		! not used
+  write (dataunit) 0.0          ! not used
 ! thickness data
   write (dataunit) startthick, thickinc
 ! finally we add the CBED patterns

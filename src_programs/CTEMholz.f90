@@ -50,16 +50,16 @@ use local
 IMPLICIT NONE
 
 type holzreflection
-  integer(kind=irg)             		:: hkl(3),n1,n2,N
-  logical                       		:: draw,dbdiff
-  real(kind=sgl)                		:: hlphi,hlx(2),hly(2),sg,Ig,pxy(2)
-  type(holzreflection),pointer        		:: next
+  integer(kind=irg)                             :: hkl(3),n1,n2,N
+  logical                                       :: draw,dbdiff
+  real(kind=sgl)                                :: hlphi,hlx(2),hly(2),sg,Ig,pxy(2)
+  type(holzreflection),pointer                  :: next
 end type holzreflection
 
-type(holzreflection),pointer    		:: top,temp,bot
-real(kind=sgl)                  		:: g1(3),g2(3),g3(3),H,FNg(3),FNr(3),gshort(3),gp(3),LC1,LC2,thickness,rectangle(2), &
-                                   		   PX,PY,thetac,laL,Gmax,Imax,gtoc(2,2),glen,phi,CBEDrad,CBEDsc
-integer(kind=irg)               		:: uvw(3),FN(3)
+type(holzreflection),pointer                    :: top,temp,bot
+real(kind=sgl)                                  :: g1(3),g2(3),g3(3),H,FNg(3),FNr(3),gshort(3),gp(3),LC1,LC2,thickness,rectangle(2), &
+                                                   PX,PY,thetac,laL,Gmax,Imax,gtoc(2,2),glen,phi,CBEDrad,CBEDsc
+integer(kind=irg)                               :: uvw(3),FN(3)
 
 end module HOLZvars
 
@@ -80,7 +80,7 @@ use HOLZvars
 
 IMPLICIT NONE
 
-real(kind=sgl)			:: io_real(1)
+real(kind=sgl)                  :: io_real(1), camlen
 
  progname = 'CTEMholz.f90'
  progdesc = 'Kinematical HOLZ pattern and HOLZ line simulations'
@@ -103,7 +103,7 @@ real(kind=sgl)			:: io_real(1)
  PS%pspage = 0
 
 ! generate a set of HOLZ patterns
- call HOLZPage
+ call HOLZPage(camlen)
 
 ! close Postscript file
  call PS_closefile
@@ -121,8 +121,9 @@ end program
 ! 
 !> @date 1/16/02   MDG 1.0 original
 !> @date 04/08/13 MDG 2.0 rewrite
+!> @date 12/02/14 MDG 3.0 removed camlen as global variable
 !--------------------------------------------------------------------------
-subroutine HOLZPage
+subroutine HOLZPage(camlen)
 
 use local
 use postscript
@@ -139,16 +140,18 @@ use HOLZvars
 
 IMPLICIT NONE
 
-type (unitcell)                 	:: savecell
+real(kind=sgl),INTENT(IN)               :: camlen
 
-logical                         	:: again, first, newzone, nexttop
-real(kind=sgl)                  	:: negative(2),twopi,thr, oi_real(9), &
-                                   	  RHOLZmax,RHOLZ(20),xo,yo,sc,pos(2),dy
-real(kind=sgl),parameter        	:: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/), &
-                                   	   yoff(0:5)=(/6.0,6.0,3.0,3.0,0.0,0.0/), &
-                                   	   eps = 1.0E-3
-integer(kind=irg)               	:: g1i(3),g2i(3),i,numHOLZ, io_int(1)
-real(kind=sgl),parameter        	:: le=3.25,he=2.9375
+type (unitcell)                         :: savecell
+
+logical                                 :: again, first, newzone, nexttop
+real(kind=sgl)                          :: negative(2),twopi,thr, oi_real(9), &
+                                          RHOLZmax,RHOLZ(20),xo,yo,sc,pos(2),dy
+real(kind=sgl),parameter                :: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/), &
+                                           yoff(0:5)=(/6.0,6.0,3.0,3.0,0.0,0.0/), &
+                                           eps = 1.0E-3
+integer(kind=irg)                       :: g1i(3),g2i(3),i,numHOLZ, io_int(1)
+real(kind=sgl),parameter                :: le=3.25,he=2.9375
 
 ! dimensions of a TEM negative in inches:  3.9375 x 3.1875
  negative = (/ 3.9375, 3.1875 /)
@@ -159,8 +162,8 @@ real(kind=sgl),parameter        	:: le=3.25,he=2.9375
  Imax = 0.0
 
 ! camera length
- laL = sngl(mLambda) * camlen
- oi_real(1) = sngl(mLambda)
+ laL = sngl(cell%mLambda) * camlen
+ oi_real(1) = sngl(cell%mLambda)
  call WriteValue(' wavelength [nm] = ', oi_real, 1, "(F10.6)")
  oi_real(1) = camlen
  call WriteValue(' L         [mm] = ', oi_real, 1, "(f10.2)")
@@ -269,7 +272,7 @@ real(kind=sgl),parameter        	:: le=3.25,he=2.9375
     i=1
     numHOLZ = 0
     do while(i.lt.20)
-     RHOLZ(i) = sqrt(2.0*H*float(i)/mLambda - (float(i)*H)**2)    
+     RHOLZ(i) = sqrt(2.0*H*float(i)/cell%mLambda - (float(i)*H)**2)    
      if (RHOLZ(i).lt.RHOLZmax) numHOLZ = numHOLZ+1
      i=i+1
     end do
@@ -515,9 +518,9 @@ use HOLZvars
 
 IMPLICIT NONE
 
-real(kind=sgl)               			:: gmin,gam11,gam12,gam22
-integer(kind=irg),parameter  		:: inm = 8
-integer(kind=irg)            			:: ih,ik,il,NN, oi_int(1)
+real(kind=sgl)                                  :: gmin,gam11,gam12,gam22
+integer(kind=irg),parameter             :: inm = 8
+integer(kind=irg)                               :: ih,ik,il,NN, oi_int(1)
 
 ! look for the shortest reflection satisfying hu+kv+lw = 1
 ! This could be replaced by code from Jackson's paper (1987),
@@ -588,12 +591,12 @@ use HOLZvars
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(IN)	:: N 
+integer(kind=irg),INTENT(IN)    :: N 
 
-integer(kind=irg)                	:: inmhkl(2),i,j,nref,istat, oi_int(1)
-real(kind=sgl)                   	:: correction,gg(3),Ig,smax,gxy(2),pxy(2),exer,sgdenom,x,tgm,qx,qy,y,det,LC3, &
-                                    	ll(3),lpg(3),gplen
-logical                          	:: a,dbdiff
+integer(kind=irg)                       :: inmhkl(2),i,j,nref,istat, oi_int(1)
+real(kind=sgl)                          :: correction,gg(3),Ig,smax,gxy(2),pxy(2),exer,sgdenom,x,tgm,qx,qy,y,det,LC3, &
+                                        ll(3),lpg(3),gplen
+logical                                 :: a,dbdiff
 
  mess = 'Computing HOLZ reflection data'; call Message("(/A)")
 
@@ -633,14 +636,14 @@ end if
          ll = LC1*g1 + LC2*g2
          lpg = ll + gg
          gplen = CalcLength(lpg,'r')
-         LC3 = sqrt(1.0-mLambda**2*CalcLength(ll,'r')**2)
-	 if (gplen.eq.0.0) then
-           exer = -mLambda*CalcDot(gg,2.0*ll+gg,'r')/(2.0*LC3*cos(CalcAngle(float(uvw),float(FN),'d'))	 )
-	 else
-	   sgdenom = 2.0*LC3*cos(CalcAngle(float(uvw),float(FN),'d'))- &
-	           2.0*mLambda*gplen*cos(CalcAngle(lpg,FNr,'r'))
-           exer = -(mLambda*CalcDot(gg,2.0*ll+gg,'r')-2.0*LC3*gplen*cos(CalcAngle(g3,lpg,'r')))/sgdenom
-	 end if
+         LC3 = sqrt(1.0-cell%mLambda**2*CalcLength(ll,'r')**2)
+         if (gplen.eq.0.0) then
+           exer = -cell%mLambda*CalcDot(gg,2.0*ll+gg,'r')/(2.0*LC3*cos(CalcAngle(float(uvw),float(FN),'d'))   )
+         else
+           sgdenom = 2.0*LC3*cos(CalcAngle(float(uvw),float(FN),'d'))- &
+                   2.0*cell%mLambda*gplen*cos(CalcAngle(lpg,FNr,'r'))
+           exer = -(cell%mLambda*CalcDot(gg,2.0*ll+gg,'r')-2.0*LC3*gplen*cos(CalcAngle(g3,lpg,'r')))/sgdenom
+         end if
        else
          exer = 10000.0
        end if
@@ -653,20 +656,20 @@ end if
 
 ! yes, it does.  get the scaled intensity using the sinc function
         Ig = rlp%Vmod**2
-	if (Ig.lt.1.0e-16) then 
-	  dbdiff = .TRUE.
-	else
-	  dbdiff = .FALSE.
-	end if
+        if (Ig.lt.1.0e-16) then 
+          dbdiff = .TRUE.
+        else
+          dbdiff = .FALSE.
+        end if
         if (abs(exer).ge.1.0e-5) then
-	 Ig = Ig * (sin(cPi*exer*thickness)/(cPi*exer*thickness))**2
+         Ig = Ig * (sin(cPi*exer*thickness)/(cPi*exer*thickness))**2
         end if 
 
 ! store maximum intensity
         if (Ig.gt.Imax) Imax = Ig
 
 ! next, determine the drawing coordinates, first in terms of g1 and g2
-        correction = 1.0/(1.0-mLambda*H*(float(N)+exer*FNg(3)))
+        correction = 1.0/(1.0-cell%mLambda*H*(float(N)+exer*FNg(3)))
         gxy = (/ (i+N*gp(1)+exer*FNg(1)), (j+N*gp(2)+exer*FNg(2))  /) * correction
 
 ! convert to Cartesian drawing coordinates
@@ -675,10 +678,10 @@ end if
 ! and add the point to the linked list 
         allocate(bot%next,stat=istat)
         if (istat.ne.0) then
-	  call PlotHOLZ
-	  call PS_closefile
-	  call FatalError('CalcHOLZ: ',' unable to allocate memory for linked list')
-	end if
+          call PlotHOLZ
+          call PS_closefile
+          call FatalError('CalcHOLZ: ',' unable to allocate memory for linked list')
+        end if
         bot => bot%next
         nullify(bot%next)
         bot%hkl = gg
@@ -688,35 +691,35 @@ end if
         bot%sg  = exer
         bot%Ig  = Ig
         bot%pxy = pxy
-	bot%dbdiff = dbdiff
-	nref = nref+1
+        bot%dbdiff = dbdiff
+        nref = nref+1
 
 ! would this point contribute to the HOLZ line drawing in the central disk ?
-        phi = asin(mLambda*glen*0.5) - asin(N*H/glen)
+        phi = asin(cell%mLambda*glen*0.5) - asin(N*H/glen)
         bot%draw = .FALSE.
-	if (abs(phi).le.thetac) then
+        if (abs(phi).le.thetac) then
          x = phi/thetac  *  CBEDrad
-	 if (pxy(1).ne.0.0) then
-  	   tgm = pxy(2)/pxy(1)
-	   y = atan2(pxy(2),pxy(1))
-	   qx = x*cos(y)
-	   qy = x*sin(y)
-	   det = 1.0-(1.0+tgm**2)*(1.0-(tgm*CBEDrad*CBEDsc/(qx+tgm*qy))**2)
-	   if (det.gt.0.0) then  ! there is an intersection for this line so it should be drawn
-	     bot%draw = .TRUE.
-	     bot%hlx(1) = (qx+tgm*qy)*(1.0-sqrt(det))/(1.0+tgm**2)
-	     bot%hly(1) = qy-(bot%hlx(1)-qx)/tgm
-	     bot%hlx(2) = (qx+tgm*qy)*(1.0+sqrt(det))/(1.0+tgm**2)
-	     bot%hly(2) = qy-(bot%hlx(2)-qx)/tgm
-	   end if
-	 else  ! parallel to the y-axis (easy to deal with)
-	     bot%draw = .TRUE.
-	     bot%hlx(1) = qx
-	     bot%hly(1) = sqrt((CBEDrad*CBEDsc)**2-qx**2)
-	     bot%hlx(2) = qx
-	     bot%hly(2) = -bot%hly(1)	   
-	 end if
-	end if
+         if (pxy(1).ne.0.0) then
+           tgm = pxy(2)/pxy(1)
+           y = atan2(pxy(2),pxy(1))
+           qx = x*cos(y)
+           qy = x*sin(y)
+           det = 1.0-(1.0+tgm**2)*(1.0-(tgm*CBEDrad*CBEDsc/(qx+tgm*qy))**2)
+           if (det.gt.0.0) then  ! there is an intersection for this line so it should be drawn
+             bot%draw = .TRUE.
+             bot%hlx(1) = (qx+tgm*qy)*(1.0-sqrt(det))/(1.0+tgm**2)
+             bot%hly(1) = qy-(bot%hlx(1)-qx)/tgm
+             bot%hlx(2) = (qx+tgm*qy)*(1.0+sqrt(det))/(1.0+tgm**2)
+             bot%hly(2) = qy-(bot%hlx(2)-qx)/tgm
+           end if
+         else  ! parallel to the y-axis (easy to deal with)
+             bot%draw = .TRUE.
+             bot%hlx(1) = qx
+             bot%hly(1) = sqrt((CBEDrad*CBEDsc)**2-qx**2)
+             bot%hlx(2) = qx
+             bot%hly(2) = -bot%hly(1)      
+         end if
+        end if
 
        end if
     end if
@@ -757,7 +760,7 @@ IMPLICIT NONE
 
 
 real(kind=sgl)                   :: correction,gg(3),gxy(2),pxy(2),exer,sgdenom,x,tgm,qx,qy, &
-                                    	     y,det,LC3,ll(3),lpg(3),gplen
+                                             y,det,LC3,ll(3),lpg(3),gplen
 
 
  mess = 'Computing HOLZ reflection data'; call Message("(/A/)")
@@ -771,45 +774,45 @@ real(kind=sgl)                   :: correction,gg(3),gxy(2),pxy(2),exer,sgdenom,
        ll = LC1*g1 + LC2*g2
        lpg = ll + gg
        gplen = CalcLength(lpg,'r')
-       LC3 = sqrt(1.0-mLambda**2*CalcLength(ll,'r')**2)
+       LC3 = sqrt(1.0-cell%mLambda**2*CalcLength(ll,'r')**2)
        if (gplen.eq.0.0) then
-         exer = -mLambda*CalcDot(gg,2.0*ll+gg,'r')/2.0*LC3*cos(CalcAngle(float(uvw),float(FN),'d'))	 
+         exer = -cell%mLambda*CalcDot(gg,2.0*ll+gg,'r')/2.0*LC3*cos(CalcAngle(float(uvw),float(FN),'d'))      
        else
          sgdenom = 2.0*LC3*cos(CalcAngle(float(uvw),float(FN),'d'))- &
-	         2.0*mLambda*gplen*cos(CalcAngle(lpg,FNr,'r'))
-         exer = -(mLambda*CalcDot(gg,2.0*ll+gg,'r')-2.0*LC3*gplen*cos(CalcAngle(g3,lpg,'r')))/sgdenom
+                 2.0*cell%mLambda*gplen*cos(CalcAngle(lpg,FNr,'r'))
+         exer = -(cell%mLambda*CalcDot(gg,2.0*ll+gg,'r')-2.0*LC3*gplen*cos(CalcAngle(g3,lpg,'r')))/sgdenom
        end if
 
 ! next, determine the drawing coordinates, first in terms of g1 and g2
-       correction = 1.0/(1.0-mLambda*H*(float(temp%N)+exer*FNg(3)))
+       correction = 1.0/(1.0-cell%mLambda*H*(float(temp%N)+exer*FNg(3)))
        gxy = (/ (temp%n1+temp%N*gp(1)+exer*FNg(1)), (temp%n2+temp%N*gp(2)+exer*FNg(2))  /) * correction
 
 ! convert to Cartesian drawing coordinates
        pxy = matmul(gtoc,gxy)
-       phi = asin(mLambda*glen*0.5) - asin(temp%N*H/glen)
+       phi = asin(cell%mLambda*glen*0.5) - asin(temp%N*H/glen)
        temp % draw = .FALSE.
        if (abs(phi).le.thetac) then
         x = phi/thetac  *  CBEDrad
         if (pxy(1).ne.0.0) then
          tgm = pxy(2)/pxy(1)
-	 y = atan2(pxy(2),pxy(1))
-	 qx = x*cos(y)
+         y = atan2(pxy(2),pxy(1))
+         qx = x*cos(y)
          qy = x*sin(y)
-	 det = 1.0-(1.0+tgm**2)*(1.0-(tgm*CBEDrad*CBEDsc/(qx+tgm*qy))**2)
-	 if (det.gt.0.0) then  ! there is an intersection for this line so it should be drawn
-	  temp%draw = .TRUE.
+         det = 1.0-(1.0+tgm**2)*(1.0-(tgm*CBEDrad*CBEDsc/(qx+tgm*qy))**2)
+         if (det.gt.0.0) then  ! there is an intersection for this line so it should be drawn
+          temp%draw = .TRUE.
           temp%hlx(1) = (qx+tgm*qy)*(1.0-sqrt(det))/(1.0+tgm**2)
-	  temp%hly(1) = qy-(temp%hlx(1)-qx)/tgm
-	  temp%hlx(2) = (qx+tgm*qy)*(1.0+sqrt(det))/(1.0+tgm**2)
-	  temp%hly(2) = qy-(temp%hlx(2)-qx)/tgm
+          temp%hly(1) = qy-(temp%hlx(1)-qx)/tgm
+          temp%hlx(2) = (qx+tgm*qy)*(1.0+sqrt(det))/(1.0+tgm**2)
+          temp%hly(2) = qy-(temp%hlx(2)-qx)/tgm
          end if
-	else  ! parallel to the y-axis (easy to deal with)
-	  temp%draw = .TRUE.
-	  temp%hlx(1) = qx
-	  temp%hly(1) = sqrt((CBEDrad*CBEDsc)**2-qx**2)
-	  temp%hlx(2) = qx
-	  temp%hly(2) = -temp%hly(1)	   
-	end if
+        else  ! parallel to the y-axis (easy to deal with)
+          temp%draw = .TRUE.
+          temp%hlx(1) = qx
+          temp%hly(1) = sqrt((CBEDrad*CBEDsc)**2-qx**2)
+          temp%hlx(2) = qx
+          temp%hly(2) = -temp%hly(1)       
+        end if
        end if
 
 ! move to the next reflection
@@ -892,11 +895,11 @@ use HOLZvars
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: dy
+real(kind=sgl),INTENT(IN)       :: dy
 
-real(kind=sgl)         			:: V,V2,qx,qy,CB
-character(12)          			:: txt
-integer(kind=irg)  			:: i,nref
+real(kind=sgl)                          :: V,V2,qx,qy,CB
+character(12)                           :: txt
+integer(kind=irg)                       :: i,nref
 
  mess = 'Plotting HOLZ lines and labels'; call Message("(/A/)")
 

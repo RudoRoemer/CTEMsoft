@@ -150,7 +150,7 @@ type(BetheParameterType)        :: BetheParameters
 type(reflisttype),pointer       :: reflist, firstw, rltmp, rltmpa, rltmpb
 
 
-camlen = 1000.0                 ! camera length [mm]   (this is not part of the namelist, but needed later)
+! camlen = 1000.0                 ! camera length [mm]   (this is not part of the namelist, but needed later)
 
   nullify(cell)
   nullify(khead)
@@ -256,7 +256,7 @@ camlen = 1000.0                 ! camera length [mm]   (this is not part of the 
 ! of a representative family member.
 
 ! set the scale parameter for a default camera length of 1000 mm.
-  sc = mLambda * 1000.0 * 300.0 / 25.4  ! the absolute value does not matter and is derived from legacy Postscript code
+  sc = cell%mLambda * 1000.0 * 300.0 / 25.4  ! the absolute value does not matter and is derived from legacy Postscript code
 ! The original code used 300 dpi (hence 300/25.4) which was convenient for Postscript output; in the current case, we
 ! do not actually use the true value, but in the IDL visualization program, we scale the user defined camera length by
 ! 1000.0, and use this ratio to scale the diskoffset coordinates.  So, there's no absolute length scale, only a relative scale.
@@ -375,7 +375,7 @@ outerloop2: do while (associated(rltmpa))
     familytwotheta(ifamily) = CalcDiffAngle(famhkl(1),famhkl(2),famhkl(3))*1000.0
     familymult(ifamily) = 1
 ! get the disk offset parameters
-    pxy = sc * GetHOLZcoordinates(cell,float(famhkl), (/ 0.0, 0.0, 0.0 /), sngl(mLambda))
+    pxy = sc * GetHOLZcoordinates(cell,float(famhkl), (/ 0.0, 0.0, 0.0 /), sngl(cell%mLambda))
     diskoffset(1:2,ifamily) = pxy
   
 ! and remove the equivalent reflections from the list

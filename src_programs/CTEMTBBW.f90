@@ -133,7 +133,7 @@ integer(kind=irg)         		:: ind(3),ivec(3),ik,izero, IPIV(2), io_int(2),i,j,n
  pre = 2.0*sngl(cRestmass*cCharge/cPlanck**2)*1.0E-18
 
 ! scaling factor for excitation error (2*k_0)
- pre2 = 2.0/sngl(mLambda)
+ pre2 = 2.0/sngl(cell%mLambda)
 
 ! normal aborption potential Uprime_0
  ind = [0,0,0]
@@ -157,7 +157,7 @@ integer(kind=irg)         		:: ind(3),ivec(3),ik,izero, IPIV(2), io_int(2),i,j,n
     ivec = ind - (j-1)*int(g)
 ! use Weickenmeier-Kohl scattering parameters and form factors
     call CalcUcg(ivec)
-    M(i,j) = -cPi*cmplx(-aimag(rlp%qg),real(rlp%qg))*cmplx(0.0,1.0/cPi/mLambda)
+    M(i,j) = -cPi*cmplx(-aimag(rlp%qg),real(rlp%qg))*cmplx(0.0,1.0/cPi/cell%mLambda)
    end if
   end do
  end do
@@ -172,8 +172,8 @@ integer(kind=irg)         		:: ind(3),ivec(3),ik,izero, IPIV(2), io_int(2),i,j,n
  find = float(g)
  kk = CalcLength(k,'r')
  gg = CalcLength(find,'r')
- k = k/sngl(mLambda)/kk
- kz = 1.0/mLambda
+ k = k/sngl(cell%mLambda)/kk
+ kz = 1.0/cell%mLambda
 
 ! open the unformatted output file
  open (unit=15,file=oname,form='unformatted',status ='unknown')
@@ -197,7 +197,7 @@ integer(kind=irg)         		:: ind(3),ivec(3),ik,izero, IPIV(2), io_int(2),i,j,n
 ! rescale the wavevector and foil normal
   kt = k + dkt*(float(ik-ns/2)-0.5)*g
   kk = CalcLength(kt,'r')
-  kt = kt/sngl(mLambda)/kk
+  kt = kt/sngl(cell%mLambda)/kk
 
 ! then complete the diagonal of the M matrix
 ! i is the row index

@@ -763,11 +763,11 @@ end subroutine GetEBSDNameList
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE:GetKosselNameList
+! SUBROUTINE:GetECPNameList
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill knl structure (used by CTEMECP.f90)
+!> @brief read namelist file and fill ecpnl structure (used by CTEMECP.f90)
 !
 !> @param nmlfile namelist file name
 !> @param knl Kossel name list structure
@@ -1050,6 +1050,7 @@ integer(kind=irg)       :: fn(3)
 integer(kind=irg)       :: precsample
 integer(kind=irg)       :: precazimuthal
 integer(kind=irg)       :: npix
+integer(kind=irg)       :: nthreads
 real(kind=sgl)          :: voltage
 real(kind=sgl)          :: dmin
 real(kind=sgl)          :: precangle
@@ -1062,7 +1063,7 @@ character(fnlen)        :: outname
 
 ! define the IO namelist to facilitate passing variables to the program.
 namelist /inputlist/ stdout, xtalname, voltage, k, fn, dmin, precangle, prechalfwidth, precsample, precazimuthal, &
-                              thickness,  outname, npix, camlen, filemode
+                              thickness,  outname, npix, camlen, filemode, nthreads
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 xtalname = 'undefined'          ! initial value to check that the keyword is present in the nml file
@@ -1073,6 +1074,7 @@ fn = (/ 0, 0, 1 /)              ! foil normal [direction indices]
 dmin = 0.025                    ! smallest d-spacing to include in dynamical matrix [nm]
 precangle = 10.472              ! beam precession angle [mrad]; default = 0.6 degrees
 prechalfwidth = 0.25            ! beam half width in the tilt direction [mrad]
+nthreads = 1                    ! number of OpenMP threads to start
 precsample = 10                 ! number of samples (concentric circles) in beam half width (total = 2*precsample + 1)
 precazimuthal = 360             ! number of azimuthal samples for each precession circle
 thickness = 10.0                ! sample thickness [nm]
@@ -1106,6 +1108,7 @@ pednl%precazimuthal = precazimuthal
 pednl%thickness = thickness
 pednl%filemode = filemode
 pednl%npix = npix
+pednl%nthreads = nthreads
 pednl%outname = outname
 pednl%camlen = camlen
 

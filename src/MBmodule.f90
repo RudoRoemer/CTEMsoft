@@ -85,20 +85,20 @@ use constants
 
 IMPLICIT NONE
 
-type(DynType),INTENT(INOUT)    :: Dyn
-type(unitcell),pointer	        :: cell
-type(kvectorlist),pointer	:: ktmp
+type(DynType),INTENT(INOUT)     :: Dyn
+type(unitcell),pointer          :: cell
+type(kvectorlist),pointer       :: ktmp
 type(BetheParameterType),INTENT(IN) :: BetheParameter
-integer(kind=irg),INTENT(IN)	:: nn			!< number of strong beams
-integer(kind=irg),INTENT(IN)	:: nw			!< number of weak beams
-integer(kind=irg),INTENT(IN)	:: nt			!< number of thickness values
-real(kind=sgl),INTENT(IN)	:: thick(nt)		!< thickness array
-real(kind=sgl),INTENT(INOUT)	:: inten(nt,nn+nw)	!< output intensities (both strong and weak)
+integer(kind=irg),INTENT(IN)    :: nn                   !< number of strong beams
+integer(kind=irg),INTENT(IN)    :: nw                   !< number of weak beams
+integer(kind=irg),INTENT(IN)    :: nt                   !< number of thickness values
+real(kind=sgl),INTENT(IN)       :: thick(nt)            !< thickness array
+real(kind=sgl),INTENT(INOUT)    :: inten(nt,nn+nw)      !< output intensities (both strong and weak)
 
-integer(kind=irg)		:: i,j,IPIV(nn), ll(3), jp
-complex(kind=dbl)		:: CGinv(nn,nn), Minp(nn,nn),diag(nn),Wloc(nn), lCG(nn,nn), lW(nn), &
-				   lalpha(nn), delta(nn,nn), weak(nw,nn), Ucross(nw,nn), tmp(nw,nn), c
-real(kind=sgl) 			:: th
+integer(kind=irg)               :: i,j,IPIV(nn), ll(3), jp
+complex(kind=dbl)               :: CGinv(nn,nn), Minp(nn,nn),diag(nn),Wloc(nn), lCG(nn,nn), lW(nn), &
+                                   lalpha(nn), delta(nn,nn), weak(nw,nn), Ucross(nw,nn), tmp(nw,nn), c
+real(kind=sgl)                  :: th
 
 ! compute the eigenvalues and eigenvectors
  Minp = Dyn%DynMat
@@ -120,7 +120,7 @@ real(kind=sgl) 			:: th
  do j=1,nn   ! strong beam loop
    do jp=1,nw  ! weak beam loop
 ! prefactor value
-     c = cmplx(2.D0*BetheParameter%weaksg(jp)/mLambda) - 2.D0*ktmp%kn*Wloc(j)
+     c = cmplx(2.D0*BetheParameter%weaksg(jp)/cell%mLambda) - 2.D0*ktmp%kn*Wloc(j)
      weak(jp,j) = cmplx(-1.D0,0.D0)/c
 ! cross potential coefficient
      ll(1:3) = BetheParameter%weakhkl(1:3,jp) - BetheParameter%stronghkl(1:3,j)
@@ -150,6 +150,84 @@ real(kind=sgl) 			:: th
  end do
    
 end subroutine CalcBWint
+
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: CalcPEDint
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief compute the scattered intensities for the Precession Electron Diffraction mode
+!
+!> @param DynMat dynamical matrix
+!> @param cell unit cell pointer
+!> @param kn  normal component
+!> @param nn number of strong beams
+!> @param nt number of thickness values
+!> @param thick thickness array
+!> @param inten output intensity list
+!
+!> @date  10/13/98 MDG 1.0 original
+!> @date   7/04/01 MDG 2.0 f90
+!> @date  04/29/13 MDG 3.0 inclusion of Bethe weak beams
+!> @date  06/10/14 MDG 4.0 added Dyn, cell, ktmp, and BetheParameter arguments
+!> @date  11/28/14 MDG 4.1 forked from CalcBWint
+!--------------------------------------------------------------------------
+subroutine CalcPEDint(DynMat,cell,kn,nn,nt,thick,inten)
+
+use io
+use diffraction
+use kvectors
+use gvectors
+use constants
+
+IMPLICIT NONE
+
+complex(kind=dbl),INTENT(IN)    :: DynMat(nn,nn)
+type(unitcell),pointer          :: cell
+real(kind=sgl),INTENT(IN)       :: kn
+integer(kind=irg),INTENT(IN)    :: nn                   !< number of strong beams
+integer(kind=irg),INTENT(IN)    :: nt                   !< number of thickness values
+real(kind=sgl),INTENT(IN)       :: thick(nt)            !< thickness array
+real(kind=sgl),INTENT(INOUT)    :: inten(nt,nn)         !< output intensities (both strong and weak)
+
+integer(kind=irg)               :: i,j,IPIV(nn), ll(3), jp
+complex(kind=dbl)               :: CGinv(nn,nn), Minp(nn,nn),diag(nn),Wloc(nn), lCG(nn,nn), lW(nn), &
+                                   lalpha(nn), delta(nn,nn), s, c
+real(kind=sgl)                  :: th
+
+! compute the eigenvalues and eigenvectors
+ Minp = DynMat
+ IPIV = 0
+ call BWsolve(Minp,Wloc,lCG,CGinv,nn,IPIV)
+
+! the alpha coefficients are in the first column of the inverse matrix
+ lW = cPi*Wloc/cmplx(kn,0.0)
+ lalpha(1:nn) = CGinv(1:nn,1)
+
+! make sure the alpha excitation coefficients are normalized 
+! s = sum(cdabs(lalpha(1:nn))**2)
+! if (s.ne.1.D0) then
+!  s = dcmplx(1.D0/dsqrt(s),0.D0)
+!  lalpha = lalpha*s
+! endif 
+
+! compute the strong beam intensities, stored in the first nn slots of inten 
+ do i=1,nt
+  th = thick(i)
+  diag(1:nn)=exp(-th*imag(lW(1:nn)))*cmplx(cos(th*real(lW(1:nn))),sin(th*real(lW(1:nn))))*lalpha(1:nn)
+! the delta array is common to the strong and weak beam intensity computation, so we compute it first
+  do j=1,nn
+   delta(j,1:nn) = lCG(j,1:nn)*diag(1:nn)
+  end do
+! strong beams
+  do j=1,nn
+   inten(i,j) = cdabs(sum(delta(j,1:nn)))**2
+  end do 
+ end do
+   
+end subroutine CalcPEDint
 
 
 
@@ -526,7 +604,7 @@ nullify(rlw)
               end do
 !        ! and correct the dynamical matrix element to become a Bethe potential coefficient
               ll = rlr%hkl - rlc%hkl
-              DynMat(ir,ic) = cell%LUT(ll(1),ll(2),ll(3))  - cmplx(0.5D0*mLambda,0.0D0,dbl)*weaksum
+              DynMat(ir,ic) = cell%LUT(ll(1),ll(2),ll(3))  - cmplx(0.5D0*cell%mLambda,0.0D0,dbl)*weaksum
              else
               ll = rlr%hkl - rlc%hkl
               DynMat(ir,ic) = cell%LUT(ll(1),ll(2),ll(3))
@@ -543,10 +621,10 @@ nullify(rlw)
                 weaksgsum = weaksgsum +  cdabs(ughp)**2/rlw%sg
                 rlw => rlw%nextw
               end do
-              weaksgsum = weaksgsum * mLambda/2.D0
-              DynMat(ir,ir) = cmplx(2.D0*rlr%sg/mLambda-weaksgsum,Upz,dbl)
+              weaksgsum = weaksgsum * cell%mLambda/2.D0
+              DynMat(ir,ir) = cmplx(2.D0*rlr%sg/cell%mLambda-weaksgsum,Upz,dbl)
             else
-              DynMat(ir,ir) = cmplx(2.D0*rlr%sg/mLambda,Upz,dbl)
+              DynMat(ir,ir) = cmplx(2.D0*rlr%sg/cell%mLambda,Upz,dbl)
             end if           
         
            end if       

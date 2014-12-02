@@ -169,7 +169,7 @@ type(reflisttype),pointer       :: reflist, firstw, rltmp, reflistS, firstwS, rl
   allocate(cell)
   verbose = .TRUE.
   call Initialize_Cell(cell,Dyn,rlp,ecpnl%xtalname, ecpnl%dmin, ecpnl%voltage,verbose)
-  lambdaF = mLambda
+  lambdaF = cell%mLambda
 
 ! determine the point group number
   j=0
@@ -196,8 +196,8 @@ type(reflisttype),pointer       :: reflist, firstw, rltmp, reflistS, firstwS, rl
 ! load the substrate crystal structure and compute the Fourier coefficient lookup table
   allocate(cellS)
   call Initialize_Cell(cellS,DynS,rlpS,ecpnl%xtalname2, ecpnl%dmin, ecpnl%voltage, verbose)
-  lambdaS = mLambda
-  mLambda = lambdaF
+  lambdaS = cell%mLambda
+  cell%mLambda = lambdaF
 
 ! ======================================
 ! ======================================
@@ -348,7 +348,7 @@ type(reflisttype),pointer       :: reflist, firstw, rltmp, reflistS, firstwS, rl
 
 ! generate the reflectionlist
         kk(1:3) = karray(1:3,ik)
-        mLambda = lambdaF
+        cell%mLambda = lambdaF
 !       FN = kk
         call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, kk, ecpnl%dmin, nref)
 
@@ -412,7 +412,7 @@ type(reflisttype),pointer       :: reflist, firstw, rltmp, reflistS, firstwS, rl
 ! the strong Film beams only, and for each one we'll compare the modulus of the amplitude to a threshold
 ! value to see if we should take it into account or not.  
         rltmpS => reflist%next  ! point to the first strong beam
-        mLambda = lambdaS
+        cell%mLambda = lambdaS
         filmbeamloop: do ikf=1,nns
           bamp = cabs(amps(ikf))
           if (bamp.gt.amplitudethreshold) then  ! we do need to consider this incident beam

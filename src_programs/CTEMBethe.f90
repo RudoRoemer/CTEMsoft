@@ -134,7 +134,7 @@ do ii=0,0
   Dyn%FN = (/ sin(float(ii)*0.02), 0.0, cos(float(ii)*0.02) /) 
   k = Dyn%FN
   call NormVec(cell,k,'r')
-  k = k/sngl(mLambda)
+  k = k/sngl(cell%mLambda)
   write (*,*) 'wave vector = ',k
   
 ! this needs to be modified
@@ -361,7 +361,7 @@ if (nw.ne.0) then
           do
             if (.not.associated(rlw)) EXIT
 ! prefactor value
-            c = cmplx(2.D0*rlw%sg/mLambda) - 2.D0*kn*Wloc(j)
+            c = cmplx(2.D0*rlw%sg/cell%mLambda) - 2.D0*kn*Wloc(j)
             weak(jp,j) = cmplx(-1.D0,0.D0)/c
 ! cross potential coefficient
             ll(1:3) = rlw%hkl - rlr%hkl

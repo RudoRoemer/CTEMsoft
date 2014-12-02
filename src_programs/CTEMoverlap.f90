@@ -493,7 +493,7 @@ end if
  ktail => khead                      			! tail points to new value
  nullify(ktail%next)                			! nullify next in new value
  numk = 1                          			! keep track of number of k-vectors so far
- ktail%k = kstar/mLambda				! divide by wavelength
+ ktail%k = kstar/cell%mLambda				! divide by wavelength
 
 
 ! ok, we have the double transmitted beam; next we need all the other
@@ -507,7 +507,7 @@ end if
     numk = numk + 1                 		! keep track of number of k-vectors so far
     kc(1:3) = k0pg(1:3,i)
     call NormVec(kc,'r')
-    ktail%k(1:3) = kc/mLambda
+    ktail%k(1:3) = kc/cell%mLambda
 !  end if
  end do
 
@@ -688,7 +688,7 @@ rltmpa => reflistA
 !  cutoff lambda |Ug| > |sg|  -> strong reflection
 !
       sgp = abs(rltmpa%sg) 
-      lUg = cdabs(rltmpa%Ucg) * mLambda !MNS from cabs to cdabs for gfortran
+      lUg = cdabs(rltmpa%Ucg) * cell%mLambda !MNS from cabs to cdabs for gfortran
       cut1 = BetheParameter%cutoff * lUg
 
       if (sgp.le.cut1) then  ! count this beam
@@ -857,7 +857,7 @@ rltmpa => reflist%next
 !  cutoff lambda |Ug| > |sg|  -> strong reflection
 !
       sgp = abs(rltmpa%sg) 
-      lUg = cdabs(rltmpa%Ucg) * mLambda ! MNS from cabs to cdabs for gfortran
+      lUg = cdabs(rltmpa%Ucg) * cell%mLambda ! MNS from cabs to cdabs for gfortran
       cut1 = BetheParameter%cutoff * lUg
 
       if (sgp.le.cut1) then  ! count this beam

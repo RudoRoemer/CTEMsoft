@@ -398,7 +398,8 @@ energyloop: do iE=numEbins,1,-1
 
 ! set the accelerating voltage
    skip = 3
-   call CalcWaveLength(cell, rlp, dble(EkeVs(iE)*1000.0),skip)
+   cell%voltage = dble(EkeVs(iE)*1000.0)
+   call CalcWaveLength(cell, rlp, skip)
 
 !=============================================
 ! ---------- create the incident beam directions list

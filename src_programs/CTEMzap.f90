@@ -40,6 +40,7 @@
 !> @date 12/11/98 MDG 1.0 original
 !> @date 04/08/13 MDG 2.0 rewrite
 !> @date 04/13/14 MDG 3.0 removed all globals
+!> @date 12/02/14 MDG 3.1 added camlen as argument to DiffPage
 !--------------------------------------------------------------------------
 program CTEMzap
 
@@ -55,7 +56,7 @@ use diffraction
 
 IMPLICIT NONE
 
-real(kind=sgl)                  :: io_real(1)
+real(kind=sgl)                  :: io_real(1), camlen
 character(fnlen)                :: progname, progdesc
 integer(kind=irg)               :: imanum
 type(unitcell),pointer          :: cell
@@ -87,7 +88,7 @@ logical                         :: loadingfile
  call PS_openfile(PS, progdesc, imanum)
 
 ! generate a set of zone axis patterns
- call DiffPage(PS, cell, rlp)
+ call DiffPage(PS, cell, rlp, camlen)
 
 ! close Postscript file
  call PS_closefile(PS)

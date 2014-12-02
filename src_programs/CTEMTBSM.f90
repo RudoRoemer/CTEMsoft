@@ -56,8 +56,8 @@ use postscript
 
 IMPLICIT NONE
 
-integer(kind=irg)     	:: g(3)
-real(kind=sgl)        		:: wmax,io_real(1)
+integer(kind=irg)       :: g(3)
+real(kind=sgl)                  :: wmax,io_real(1)
 
  progname = 'CTEMTBSM.f90'
  progdesc = 'Two-beam computations: comparing scattering matrix and analytical'
@@ -113,15 +113,16 @@ use constants
 use postscript
 use dynamical
 
-integer(kind=irg),INTENT(IN)	:: g(3)
-real(kind=sgl),INTENT(IN)	:: wmax
-real(kind=sgl),INTENT(IN)	:: tmax
+integer(kind=irg),INTENT(IN)    :: g(3)
+real(kind=sgl),INTENT(IN)       :: wmax
+real(kind=sgl),INTENT(IN)       :: tmax
 
-integer(kind=irg),parameter	:: ns=512, nt=512
-integer(kind=irg)      	:: ind(3),io_int(1)
-real(kind=sgl)         	:: bg,xg,xgp,xgpz, &
-                          	   Ar(2,2), Ai(2,2), sg, dz, dsg, p(2),q(2), &
-                          	   BF(512,512,2),DF(512,512,2),It,Is,io_real(1)
+integer(kind=irg),parameter     :: ns=512, nt=512
+integer(kind=irg)       :: ind(3),io_int(1)
+real(kind=sgl)          :: bg,xg,xgp,xgpz, &
+                                   Ar(2,2), Ai(2,2), sg, dz, dsg, p(2),q(2), &
+                                   BF(512,512,2),DF(512,512,2),It,Is,io_real(1)
+real(kind=dbl),allocatable      :: phir(:,:),phii(:,:),SMr(:,:,:),SMi(:,:,:)
 
 ! normal aborption factor
  ind = [0,0,0]
@@ -260,7 +261,7 @@ T0 = SECNDS(0.0)
   call PS_text(0.5,0.4,'Maximum thickness [nm]')
   call PS_textvar(2.5,0.4,' ',tmax)
 
- imanum = 0	! must be defined, otherwise program might end in segmentation fault
+ imanum = 0     ! must be defined, otherwise program might end in segmentation fault
 ! Bright Field image
   allocate(imaint(512,512))
   imaint(1:ns,1:nt)=int(255.0*BF(1:ns,1:nt,1))

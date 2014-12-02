@@ -329,7 +329,6 @@ do i = 1,globalworkgrpsz
 end do
 !print*,init_seeds
 
-open(unit=13,file='lamxy.txt',action='write')
 ! create device memory buffers
 LamX = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
 if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
@@ -480,16 +479,6 @@ write (dataunit) accum_e
 write (dataunit) accum_z
 
 close(dataunit,status='keep')
-!do l = 1,numEbins
-!        do j = 1,nint(nx/10.0)
-!            do k = 1,nint(nx/10.0)
-!                write(13,'(I8,I8,I8,I8)',advance='no') l,j,k,accum_e(l,j,k)
-!                write(13,*) ''
-!            end do
-!        end do
-!end do
-
-close(13)
 
 bse = real(val)/real(totnum_el)
 print*, "Backscatter yield          = ",bse

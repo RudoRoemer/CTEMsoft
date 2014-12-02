@@ -55,7 +55,7 @@ use postscript
 
 IMPLICIT NONE
 
-real(kind=sgl)		:: io_real(1)
+real(kind=sgl)          :: io_real(1), camlen
 
  progname = 'CTEMSRCBED.f90'
  progdesc = 'Systematic row convergent beam pattern using scattering matrix'
@@ -79,7 +79,7 @@ real(kind=sgl)		:: io_real(1)
  imanum = 0
 
 ! generate a set of systematic row CBED patterns
- call SRCBEDPage
+ call SRCBEDPage(camlen)
 
 ! close Postscript file
  call PS_closefile
@@ -99,7 +99,7 @@ end program CTEMSRCBED
 !> @date  6/7/01   MDG 1.0 original
 !> @date 4/18/13 MDG 2.0 rewrite
 !--------------------------------------------------------------------------
-subroutine SRCBEDPage
+subroutine SRCBEDPage(camlen)
 
 use local
 use constants
@@ -114,25 +114,27 @@ use dynamical
 
 IMPLICIT NONE
 
-real(kind=sgl)                			:: laL,kt,z0,alp,thc,thb,omega_c,omega_min,omega_max,hkl(3),ind(3), &
-                       					  dom,glen,xgpz, io_real(1),sc,omega,exer,sl,nsl,thr,zmax,att,gc,gci
-integer(kind=irg)             		:: g(3),ira,dpcnt,ppi,io_int(1),nn,izero,npix,i,j,numi,n,l,ll,np2,nps,&
-							  is,iq,npx,npy,ipos,istart,istop,rowmax,imo,k
-character(1)        				:: ans,c
-complex(kind=sgl)   			:: czero
-logical             					:: overlap,np
-real(kind=sgl),allocatable    		:: row(:,:)
-real(kind=sgl),parameter      		:: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/),yoff(0:5)=(/6.0,6.0,3.0,3.0,0.0,0.0/)
-complex(kind=sgl),allocatable 	:: SMz(:,:,:),disk(:,:,:),p(:),Sphiz(:,:)
-complex(kind=sgl),allocatable 	:: q(:,:),qin(:,:),qout(:,:),r(:,:)
+real(kind=sgl),INTENT(IN)               :: camlen
+
+real(kind=sgl)                          :: laL,kt,z0,alp,thc,thb,omega_c,omega_min,omega_max,hkl(3),ind(3), &
+                                           dom,glen,xgpz, io_real(1),sc,omega,exer,sl,nsl,thr,zmax,att,gc,gci
+integer(kind=irg)                       :: g(3),ira,dpcnt,ppi,io_int(1),nn,izero,npix,i,j,numi,n,l,ll,np2,nps,&
+                                           is,iq,npx,npy,ipos,istart,istop,rowmax,imo,k
+character(1)                            :: ans,c
+complex(kind=sgl)                       :: czero
+logical                                 :: overlap,np
+real(kind=sgl),allocatable              :: row(:,:)
+real(kind=sgl),parameter                :: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/),yoff(0:5)=(/6.0,6.0,3.0,3.0,0.0,0.0/)
+complex(kind=sgl),allocatable           :: SMz(:,:,:),disk(:,:,:),p(:),Sphiz(:,:)
+complex(kind=sgl),allocatable           :: q(:,:),qin(:,:),qout(:,:),r(:,:)
 
 ! normal aborption factor
  call CalcUcg((/0,0,0/))
  xgpz= aimag(rlp%qg)
 
 ! camera length
- laL = sngl(mLambda) * camlen
- io_real(1) = sngl(mLambda)
+ laL = sngl(cell%mLambda) * camlen
+ io_real(1) = sngl(cell%mLambda)
  call WriteValue(' wavelength [nm] = ', io_real, 1, "(F10.6)")
  io_real(1) = camlen
  call WriteValue('  L         [mm] = ', io_real, 1, "(f10.2)")
@@ -178,7 +180,7 @@ complex(kind=sgl),allocatable 	:: q(:,:),qin(:,:),qout(:,:),r(:,:)
   omega_max = omega_c + thc
 
 ! determine the number of pixels for this particular diffraction disk
-  gc = thc/mLambda     ! radius of disk in nm^-1
+  gc = thc/cell%mLambda     ! radius of disk in nm^-1
 
 ! scale bar (sc is the conversion factor from nm-1 to inches)
   sc = laL/25.4
@@ -232,7 +234,7 @@ write (*,*) 'disk radius = ',gci
    do i=1,nn
     n = -ira+i-1
 ! exer = excitation error
-    exer = -n*glen*cos(omega)-(1.0-sqrt(1.0-(n*mLambda*glen*sin(omega))**2))/mLambda
+    exer = -n*glen*cos(omega)-(1.0-sqrt(1.0-(n*cell%mLambda*glen*sin(omega))**2))/cell%mLambda
     DHWMz(i,i)=2.0*cPi*cmplx(0.0,exer)
    end do
 
@@ -468,20 +470,20 @@ use error
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)	:: xo
-real(kind=sgl),INTENT(IN)	:: yo
-real(kind=sgl),INTENT(IN)	:: row(ns,nt)
-integer(kind=irg),INTENT(IN)	:: g(3)
-logical,INTENT(IN)			:: np
-integer(kind=irg),INTENT(IN)	:: ns
-integer(kind=irg),INTENT(IN)	:: nt
-real(kind=sgl),INTENT(IN)	:: laL
-real(kind=sgl),INTENT(IN)	:: thick
+real(kind=sgl),INTENT(IN)       :: xo
+real(kind=sgl),INTENT(IN)       :: yo
+real(kind=sgl),INTENT(IN)       :: row(ns,nt)
+integer(kind=irg),INTENT(IN)    :: g(3)
+logical,INTENT(IN)                      :: np
+integer(kind=irg),INTENT(IN)    :: ns
+integer(kind=irg),INTENT(IN)    :: nt
+real(kind=sgl),INTENT(IN)       :: laL
+real(kind=sgl),INTENT(IN)       :: thick
 
 
-integer(kind=irg)            		:: i,ui,vi,wi,ind(3),ii
-real(kind=sgl)               		:: gmax,pp,p,sc,scl
-real(kind=sgl),parameter   	:: le=3.25,he=2.9375
+integer(kind=irg)                       :: i,ui,vi,wi,ind(3),ii
+real(kind=sgl)                          :: gmax,pp,p,sc,scl
+real(kind=sgl),parameter        :: le=3.25,he=2.9375
 
 
 ! do page preamble stuff if this is a new page

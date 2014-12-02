@@ -114,11 +114,11 @@ EBSDwidget_s.detypc = Core_WTextE(file2,' , ', fontstr, 20, 25,  8, 1, string(EB
 
 ;---------- 
 file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
-EBSDwidget_s.detbeamcurrent = Core_WTextE(file2,'Beam current [nA]', fontstr, 140, 25, 10, 1, string(EBSDdata.detbeamcurrent,format="(F7.3)"),'DETBEAMCURRENT','EBSDDetectorWidget_event')
+EBSDwidget_s.detbeamcurrent = Core_WTextE(file2,'Beam current [nA]', fontstr, 140, 25, 10, 1, string(EBSDdata.detbeamcurrent,format="(F9.2)"),'DETBEAMCURRENT','EBSDDetectorWidget_event')
 
 ;---------- 
 file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
-EBSDwidget_s.detdwelltime = Core_WTextE(file2,'Dwell Time [mu s] ', fontstr, 140, 25, 10, 1, string(EBSDdata.detdwelltime,format="(F7.3)"),'DETDWELLTIME','EBSDDetectorWidget_event')
+EBSDwidget_s.detdwelltime = Core_WTextE(file2,'Dwell Time [mu s] ', fontstr, 140, 25, 10, 1, string(EBSDdata.detdwelltime,format="(F9.2)"),'DETDWELLTIME','EBSDDetectorWidget_event')
 
 
 file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)

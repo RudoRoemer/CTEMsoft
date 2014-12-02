@@ -122,8 +122,8 @@ complex,allocatable :: q(:,:),qin(:,:),qout(:,:),r(:,:)
  call CalcUcg((/0,0,0/))
  xgpz= aimag(rlp%qg)
 ! camera length
- laL = sngl(mLambda) * camlen
- mess = 'wavelength [nm] = '; oi_real(1) = sngl(mLambda); call WriteReal(1,"(F10.6)")
+ laL = sngl(cell%mLambda) * camlen
+ mess = 'wavelength [nm] = '; oi_real(1) = sngl(cell%mLambda); call WriteReal(1,"(F10.6)")
  mess = ' L         [mm] = '; oi_real(1) = camlen; call WriteReal(1,"(f10.2)")
  mess = 'camera length lambda*L [mm nm] = '; oi_real(1) = laL; call WriteReal(1,"(f10.5)")
 ! the number of beams is the same for all patterns 
@@ -158,7 +158,7 @@ complex,allocatable :: q(:,:),qin(:,:),qout(:,:),r(:,:)
   omega_min = omega_c - thc
   omega_max = omega_c + thc
 ! determine the number of pixels for this particular diffraction disk
-  gc = thc/mLambda     ! radius of disk in nm^-1
+  gc = thc/cell%mLambda     ! radius of disk in nm^-1
 ! scale bar (sc is the conversion factor from nm-1 to inches)
   sc = laL/25.4
   gci = gc*sc                 ! disk radius in inches
@@ -202,7 +202,7 @@ complex,allocatable :: q(:,:),qin(:,:),qout(:,:),r(:,:)
    do i=1,nn
     n = -ira+i-1
 ! exer = excitation error
-    exer = -n*glen*cos(omega)-(1.0-sqrt(1.0-(n*mLambda*glen*sin(omega))**2))/mLambda
+    exer = -n*glen*cos(omega)-(1.0-sqrt(1.0-(n*cell%mLambda*glen*sin(omega))**2))/cell%mLambda
     DHWMz(i,i)=2.0*cPi*cmplx(0.0,exer)
    end do
 ! compute the first slice scattering matrix from Taylor expansion

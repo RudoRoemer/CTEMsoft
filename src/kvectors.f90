@@ -134,7 +134,7 @@ integer(kind=irg),INTENT(OUT)           :: numk         !< total number of kvect
 integer(kind=irg),INTENT(IN)            :: isym         !< Laue symmetry group number 
 integer(kind=irg),INTENT(INOUT)         :: ijmax        !< max parameter used for Conical and StandardConical modes
 character(*),INTENT(IN)                 :: mapmode      !< controls the type of mapping used ('Standard' or 'RoscaLambert')
-!real(kind=sgl),INTENT(IN)		:: klaue(2)	!< Laue center coordinates
+!real(kind=sgl),INTENT(IN)              :: klaue(2)     !< Laue center coordinates
 logical,INTENT(IN),OPTIONAL             :: usehex       !< hexagonal mode for RoscaLambert mapmode
 
 integer(kind=irg)                       :: istat,i,j,istart,iend,jstart,jend, imin, imax, jmin, jmax
@@ -156,25 +156,25 @@ end if
 
 if (mapmode.eq.'Conical') then ! used for CBED without symmetry application, including CTEMZAdefect
 ! compute geometrical factors 
- glen = CalcLength(cell,ga,'r')              		! length of ga
- gan = ga/glen                                 	! normalized ga
- delta = 2.0*ktmax*glen/(2.0*float(npx)+1.0)   	! grid step size in nm-1 
- call TransSpace(cell,k,kstar,'d','r')       		! transform incident direction to reciprocal space
- call CalcCross(cell,ga,kstar,gperp,'r','r',0)      	! compute g_perp = ga x k
- call NormVec(cell,gperp,'r')                       	! normalize g_perp
- call NormVec(cell,kstar,'r')                       	! normalize reciprocal beam vector
+ glen = CalcLength(cell,ga,'r')                         ! length of ga
+ gan = ga/glen                                  ! normalized ga
+ delta = 2.0*ktmax*glen/(2.0*float(npx)+1.0)    ! grid step size in nm-1 
+ call TransSpace(cell,k,kstar,'d','r')                  ! transform incident direction to reciprocal space
+ call CalcCross(cell,ga,kstar,gperp,'r','r',0)          ! compute g_perp = ga x k
+ call NormVec(cell,gperp,'r')                           ! normalize g_perp
+ call NormVec(cell,kstar,'r')                           ! normalize reciprocal beam vector
 
 ! allocate the head and tail of the linked list
- allocate(khead,stat=istat)   				! allocate new value
+ allocate(khead,stat=istat)                             ! allocate new value
  if (istat.ne.0) call FatalError('Calckvectors','unable to allocate khead pointer')
- ktail => khead                      			! tail points to new value
- nullify(ktail%next)                			! nullify next in new value
- numk = 1                          			! keep track of number of k-vectors so far
- ktail%i = 0                             		! i-index of beam
- ktail%j = 0                             		! j-index of beam
- ktail%kt = (/0.0,0.0,0.0/)				! no tangential component for central beam direction
- ktail%k = kstar/mLambda				! divide by wavelength
- ktail%kn = CalcDot(cell,ktail%k,kstar,'r')			! normal component
+ ktail => khead                                         ! tail points to new value
+ nullify(ktail%next)                                    ! nullify next in new value
+ numk = 1                                               ! keep track of number of k-vectors so far
+ ktail%i = 0                                            ! i-index of beam
+ ktail%j = 0                                            ! j-index of beam
+ ktail%kt = (/0.0,0.0,0.0/)                             ! no tangential component for central beam direction
+ ktail%k = kstar/cell%mLambda                           ! divide by wavelength
+ ktail%kn = CalcDot(cell,ktail%k,kstar,'r')                     ! normal component
 
 ! set the loop limits
  imin = -npx; imax = npx; jmin = -npy; jmax = npy; 
@@ -182,9 +182,9 @@ if (mapmode.eq.'Conical') then ! used for CBED without symmetry application, inc
 ! and loop over the entire range (without symmetry considerations
  do i=imin,imax
   do j=jmin,jmax
-   if (.not.((i.eq.0).and.(j.eq.0))) then  		! the point (0,0) has already been taken care of
-    if ((i**2+j**2).le.ijmax) then 			! only directions inside the incident cone
-     call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 	! add k-vector to linked list
+   if (.not.((i.eq.0).and.(j.eq.0))) then               ! the point (0,0) has already been taken care of
+    if ((i**2+j**2).le.ijmax) then                      ! only directions inside the incident cone
+     call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/))     ! add k-vector to linked list
     end if
    end if
   end do
@@ -203,25 +203,25 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
   end if
 
 ! compute geometrical factors 
- glen = CalcLength(cell,ga,'r')              		! length of ga
- gan = ga/glen                                 	! normalized ga
- delta = 2.0*ktmax*glen/(2.0*float(npx)+1.0)   	! grid step size in nm-1 
- call TransSpace(cell,k,kstar,'d','r')       		! transform incident direction to reciprocal space
- call CalcCross(cell,ga,kstar,gperp,'r','r',0)      	! compute g_perp = ga x k
- call NormVec(cell,gperp,'r')                       	! normalize g_perp
- call NormVec(cell,kstar,'r')                       	! normalize reciprocal beam vector
+ glen = CalcLength(cell,ga,'r')                         ! length of ga
+ gan = ga/glen                                  ! normalized ga
+ delta = 2.0*ktmax*glen/(2.0*float(npx)+1.0)    ! grid step size in nm-1 
+ call TransSpace(cell,k,kstar,'d','r')                  ! transform incident direction to reciprocal space
+ call CalcCross(cell,ga,kstar,gperp,'r','r',0)          ! compute g_perp = ga x k
+ call NormVec(cell,gperp,'r')                           ! normalize g_perp
+ call NormVec(cell,kstar,'r')                           ! normalize reciprocal beam vector
 
 ! allocate the head and tail of the linked list
- allocate(khead,stat=istat)   				! allocate new value
+ allocate(khead,stat=istat)                             ! allocate new value
  if (istat.ne.0) call FatalError('Calckvectors','unable to allocate khead pointer')
- ktail => khead                      			! tail points to new value
- nullify(ktail%next)                			! nullify next in new value
- numk = 1                          			! keep track of number of k-vectors so far
- ktail%i = 0                             		! i-index of beam
- ktail%j = 0                             		! j-index of beam
- ktail%kt = (/0.0,0.0,0.0/)				! no tangential component for central beam direction
- ktail%k = kstar/mLambda				! divide by wavelength
- ktail%kn = CalcDot(cell,ktail%k,kstar,'r')			! normal component
+ ktail => khead                                         ! tail points to new value
+ nullify(ktail%next)                                    ! nullify next in new value
+ numk = 1                                               ! keep track of number of k-vectors so far
+ ktail%i = 0                                            ! i-index of beam
+ ktail%j = 0                                            ! j-index of beam
+ ktail%kt = (/0.0,0.0,0.0/)                             ! no tangential component for central beam direction
+ ktail%k = kstar/cell%mLambda                           ! divide by wavelength
+ ktail%kn = CalcDot(cell,ktail%k,kstar,'r')                     ! normal component
 
 ! implement symmetry Table 7.3 from CTEM book
   select case(isym)  ! negative values -> systematic row; positive -> zone axis
@@ -264,17 +264,17 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
 ! now do the real work for standard sets of wave vectors
   select case(grid)
 
-   case('srw')		! systematic row incident beam orientations
+   case('srw')          ! systematic row incident beam orientations
      do i=imin,imax
-      if (i.ne.0) then  				! the point (0,0) has already been taken care of
+      if (i.ne.0) then                                  ! the point (0,0) has already been taken care of
        call Add_knode(ktail,cell,i,0,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
       end if
      end do
 
-   case('sqa')		! from here on, all orientations are zone axis cases for all Laue groups
+   case('sqa')          ! from here on, all orientations are zone axis cases for all Laue groups
      do i=imin,imax
       do j=jmin,jmax
-       if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
+       if (.not.((i.eq.0).and.(j.eq.0))) then   ! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
          call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
         end if
@@ -285,8 +285,8 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
    case('sqb')
      do i=imin,imax
       jloop_sqb:  do j=jmin,jmax
-       if ((j.eq.0).and.(i.lt.0)) cycle jloop_sqb   	! skip the points  (i<0,0)
-       if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
+       if ((j.eq.0).and.(i.lt.0)) cycle jloop_sqb       ! skip the points  (i<0,0)
+       if (.not.((i.eq.0).and.(j.eq.0))) then   ! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
          call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
         end if
@@ -297,7 +297,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
    case('sqc')
      do j=0,jmax
       do i=j,imax
-       if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
+       if (.not.((i.eq.0).and.(j.eq.0))) then   ! the point (0,0) has already been taken care of
         if (i**2+j**2 .le. ijmax) then
          call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/)) 
         end if
@@ -308,7 +308,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
    case('hxa')
      do j=0,npy
       do i=1-Kdelta(j,0),npx
-       if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
+       if (.not.((i.eq.0).and.(j.eq.0))) then   ! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
          call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
@@ -319,7 +319,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
    case('hxb')
      do j=0,npy
       do i=j,npx
-       if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
+       if (.not.((i.eq.0).and.(j.eq.0))) then   ! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
          call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
@@ -330,7 +330,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
    case('hxc')
      do j=0,npy
       do i=1-Kdelta(j,0)-j,npx-j
-       if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
+       if (.not.((i.eq.0).and.(j.eq.0))) then   ! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
          call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
@@ -341,7 +341,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
    case('hxd')
      do j=0,npy
       do i=0,npx-j
-       if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
+       if (.not.((i.eq.0).and.(j.eq.0))) then   ! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
          call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
@@ -352,7 +352,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
    case('hxe')
      do j=0,npy-1
       do i=1-Kdelta(j,0),npx-j
-       if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
+       if (.not.((i.eq.0).and.(j.eq.0))) then   ! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
          call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
        end if
@@ -363,7 +363,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
    case('hxf')
      do j=0,npy/2
       do i=j,npx-j
-       if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
+       if (.not.((i.eq.0).and.(j.eq.0))) then   ! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
          call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
@@ -374,7 +374,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
    case('hxg')
      do j=0,npy
       do i=j/2,min(2*j,npy)
-       if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
+       if (.not.((i.eq.0).and.(j.eq.0))) then   ! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
          call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
@@ -385,7 +385,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
    case('hxh')
      do j=0,npy
       do i=-j/2,min(j,npy-1)
-       if (.not.((i.eq.0).and.(j.eq.0))) then  	! the point (0,0) has already been taken care of
+       if (.not.((i.eq.0).and.(j.eq.0))) then   ! the point (0,0) has already been taken care of
         if (i**2+j**2.le.ijmax) then
          call Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,(/ 0.0,0.0/),hexgrid) 
         end if
@@ -424,10 +424,10 @@ if (mapmode.eq.'RoscaLambert') then
    ktail%j = 0                                  ! j-index of beam
    kstar = (/ 0.0, 0.0, 1.0 /)                  ! we always use c* as the center of the RoscaLambert projection
    call NormVec(cell,kstar,'c')                 ! normalize incident direction
-   kstar = kstar/mLambda                        ! divide by wavelength
+   kstar = kstar/cell%mLambda                        ! divide by wavelength
 ! and transform to reciprocal crystal space using the structure matrix
    ktail%k = matmul(transpose(cell%dsm),kstar)
-   ktail%kn = 1.0/mLambda
+   ktail%kn = 1.0/cell%mLambda
 
 ! deal with each Laue group symmetry separately
  select case (isym)
@@ -623,7 +623,7 @@ kselected = 0
  ktail%kt = kt                                          ! store tangential component of k
  ktlen = CalcLength(cell,kt,'r')**2                     ! squared length of tangential component
 
- kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar           ! complete wave vector
+ kr = kt + sqrt(1.0/cell%mLambda**2 - ktlen)*kstar           ! complete wave vector
  ktail%k = kr                                           ! store in pointer list
  ktail%kn = CalcDot(cell,ktail%k,kstar,'r')             ! normal component of k
   
@@ -717,29 +717,29 @@ use diffraction
 IMPLICIT NONE
 
 type(kvectorlist),pointer              :: ktail
-type(unitcell),pointer	                :: cell
-integer(kind=irg),INTENT(IN)		:: i
-integer(kind=irg),INTENT(IN)		:: j
-integer(kind=irg),INTENT(INOUT)	:: numk
-real(kind=dbl),INTENT(IN)		:: delta
-real(kind=dbl),INTENT(IN)		:: gan(3)
-real(kind=dbl),INTENT(IN)		:: gperp(3)
-real(kind=dbl),INTENT(IN)		:: kstar(3)
-real(kind=sgl),INTENT(IN)		:: klaue(2)
-logical,INTENT(IN),OPTIONAL		:: hexgrid
+type(unitcell),pointer                  :: cell
+integer(kind=irg),INTENT(IN)            :: i
+integer(kind=irg),INTENT(IN)            :: j
+integer(kind=irg),INTENT(INOUT) :: numk
+real(kind=dbl),INTENT(IN)               :: delta
+real(kind=dbl),INTENT(IN)               :: gan(3)
+real(kind=dbl),INTENT(IN)               :: gperp(3)
+real(kind=dbl),INTENT(IN)               :: kstar(3)
+real(kind=sgl),INTENT(IN)               :: klaue(2)
+logical,INTENT(IN),OPTIONAL             :: hexgrid
 
-real(kind=sgl)				:: kt(3),kr(3)
-real(kind=sgl)				:: ktlen
-integer(kind=irg)			:: istat
+real(kind=sgl)                          :: kt(3),kr(3)
+real(kind=sgl)                          :: ktlen
+integer(kind=irg)                       :: istat
 
 
-allocate(ktail%next,stat=istat)  		! allocate new value
+allocate(ktail%next,stat=istat)                 ! allocate new value
 if (istat.ne.0) call FatalError('Add_knode:',' unable to allocate pointer')
-ktail => ktail%next               		! tail points to new value
-nullify(ktail%next)              		! nullify next in new value
-numk = numk + 1                 		! keep track of number of k-vectors so far
-ktail%i = i                      		! i-index of beam
-ktail%j = j                      		! j-index of beam
+ktail => ktail%next                             ! tail points to new value
+nullify(ktail%next)                             ! nullify next in new value
+numk = numk + 1                                 ! keep track of number of k-vectors so far
+ktail%i = i                                     ! i-index of beam
+ktail%j = j                                     ! j-index of beam
 
 ! is it a square or hexagonal grid ?
 if (present(hexgrid)) then
@@ -748,12 +748,12 @@ else
   kt = -(klaue(1)+float(i)*delta)*gan - (klaue(2)+float(j)*delta)*gperp  ! tangential component of k
 end if
 
-ktail%kt = kt                    		! store tangential component of k
-ktlen = CalcLength(cell,kt,'r')**2      		! squared length of tangential component
+ktail%kt = kt                                   ! store tangential component of k
+ktlen = CalcLength(cell,kt,'r')**2                      ! squared length of tangential component
 
-kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar 	! complete wave vector
-ktail%k = kr                     		! store in pointer list
-ktail%kn = CalcDot(cell,ktail%k,kstar,'r')    	! normal component of k
+kr = kt + sqrt(1.0/cell%mLambda**2 - ktlen)*kstar       ! complete wave vector
+ktail%k = kr                                    ! store in pointer list
+ktail%kn = CalcDot(cell,ktail%k,kstar,'r')      ! normal component of k
 
 end subroutine Add_knode
 
@@ -778,31 +778,31 @@ IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN):: x, y 
 
-real(kind=dbl),parameter	:: srt = 1.732050808   ! sqrt(3.D0)
-integer(kind=irg)		:: res
-real(kind=dbl)			:: xx
+real(kind=dbl),parameter        :: srt = 1.732050808   ! sqrt(3.D0)
+integer(kind=irg)               :: res
+real(kind=dbl)                  :: xx
 
-xx = dabs(x*srt)    	! |x| sqrt(3)
+xx = dabs(x*srt)        ! |x| sqrt(3)
 
 if (y.ge.0) then
   if (y.ge.xx) then
-	res = 0
+        res = 0
   else
-	if (x.gt.0.D0) then
-	  res = 1
-	else
-	  res = 5
-	end if
+        if (x.gt.0.D0) then
+          res = 1
+        else
+          res = 5
+        end if
   end if
 else
   if (dabs(y).ge.xx) then
-	res = 3
+        res = 3
   else
-	if (x.gt.0.D0) then
-	  res = 2
-	else
-	  res = 4
-	end if
+        if (x.gt.0.D0) then
+          res = 2
+        else
+          res = 4
+        end if
   end if
 end if
 
@@ -938,10 +938,10 @@ if (goahead) then
        ktail%j = j                                      ! j-index of beam
      end if 
      call NormVec(cell,kstar,'c')                       ! normalize incident direction in cartesian space
-     kstar = kstar/mLambda                              ! divide by wavelength
+     kstar = kstar/cell%mLambda                              ! divide by wavelength
 ! and transform to reciprocal crystal space using the direct structure matrix
      ktail%k = matmul(transpose(cell%dsm),kstar)
-     ktail%kn = 1.0/mLambda
+     ktail%kn = 1.0/cell%mLambda
 end if
 
 end subroutine AddkVector
@@ -1025,7 +1025,7 @@ if (associated(khead)) then                    ! deallocate the entire linked li
 end if
 
 k = (/0.0,0.0,1.0/)
-k = k/mLambda
+k = k/cell%mLambda
 thetacr = DtoR*thetac
 call TransSpace(cell,k,kk,'r','c')
 ktmax = tan(thetacr)*sqrt(sum(kk**2))
@@ -1038,15 +1038,15 @@ jmax = npy
 ijmax = npx**2
 
 ! allocate the head and tail of the linked list
-allocate(khead,stat=istat)   				! allocate new value
+allocate(khead,stat=istat)                              ! allocate new value
 if (istat.ne.0) call FatalError('Calckvectors','unable to allocate khead pointer')
 
-ktail => khead                      			! tail points to new value
-nullify(ktail%next)                			! nullify next in new value
+ktail => khead                                          ! tail points to new value
+nullify(ktail%next)                                     ! nullify next in new value
 numk = 0
-ktail%i = 0                             		! i-index of beam
-ktail%j = 0                             		! j-index of beam
-ktail%kt = (/0.0,0.0,0.0/)				! no tangential component for central beam direction
+ktail%i = 0                                             ! i-index of beam
+ktail%j = 0                                             ! j-index of beam
+ktail%kt = (/0.0,0.0,0.0/)                              ! no tangential component for central beam direction
 ktail%k = matmul(rotmat,kk)
 !kcent = ktail%k
 !print*,ktail%k
