@@ -795,7 +795,7 @@ do ii = 1,nnk
     allocate(ScatMat1(nns1,nns1),Minp1(nns1,nns1),S01(nns1),mat1(nns1,1),mat3(1,nns1),hlist1(nns1,3),stat=istat)
     ScatMat1 = dcmplx(0.D0,0.D0)
     Minp1 = dcmplx(0.D0,0.D0)
-    Minp1 = rltmpa%DynMat*dcmplx(0.D0,cPi * mLambda)
+    Minp1 = rltmpa%DynMat*dcmplx(0.D0,cPi * cell_subs%mLambda)
     hlist1 = rltmpa%hlist
     call MatrixExponential(Minp1, ScatMat1, dble(dthick), 'Pade', nns1)
     S01 = dcmplx(0.D0,0.D0)
@@ -803,6 +803,7 @@ do ii = 1,nnk
     mat3 = dcmplx(0.D0,0.D0)
     hlist1 = 0
     S01(1) = Sg(ii)
+    print*,S01
     mat1(:,1) = S01(:) ! the first incident beam
 
     rltmpb => refliststrong_subs
@@ -813,7 +814,7 @@ do ii = 1,nnk
         Minp2 = dcmplx(0.D0,0.D0)
         mat2 = dcmplx(0.D0,0.D0)
         hlist2 = 0
-        Minp2 = rltmpb%DynMat*dcmplx(0.D0,cPi * mLambda)
+        Minp2 = rltmpb%DynMat*dcmplx(0.D0,cPi * cell_subs%mLambda)
         hlist2 = rltmpb%hlist
         call MatrixExponential(Minp2, ScatMat2, dble(dthick), 'Pade', nns2)
         allocate(Shh(nns1,nns2),stat=istat)
@@ -858,6 +859,162 @@ do ii = 1,nnk
     deallocate(ScatMat1,S01,mat1,mat3,Minp1)
 end do
 end subroutine CalcSigmaggSubstrate
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: GetStrongBeamsSubs
+!
+!> @author Saransh Singh, Carnegie Mellon University
+!
+!> @brief get list of reflections for each incident beam on substrate
+!
+!> @param cell_film unit cell pointer of film
+!> @param cell_subs unit cell pointer of substrate
+!> @param reflist_film reflection list pointer to film
+!> @param refliststrong_subs pointer for list of strong reflections in substrate
+!> @param k0 wavevector incident on the film
+!> @param FN normal to the substrate i.e. gS
+!> @param nns_film number of strong beams in film
+!> @param dmin cutoff value for the g vectors used
+!> @param TTinv transformation matrix for the orientation relation between film and substrate
+!> @param eWavelength_subs electron wavelength in substrate
+!
+!> @date   12/01/14 MDG 1.0 original
+!--------------------------------------------------------------------------
+
+subroutine GetStrongBeamsSubs(cell_film,cell_subs,reflist_film,refliststrong_subs,&
+k0,FN,nns_film,dmin,TTinv,eWavelength_subs,rlp_subs)
+
+
+use typedefs
+use diffraction
+use crystal
+use constants
+use initializers
+
+IMPLICIT NONE
+
+type(unitcell),pointer                  :: cell_film,cell_subs
+type(reflisttype),pointer               :: reflist_film
+type(refliststrongsubstype),pointer     :: refliststrong_subs
+real(kind=sgl),INTENT(IN)               :: k0(3),dmin
+real(kind=dbl),INTENT(IN)               :: FN(3),eWavelength_subs
+real(kind=sgl),INTENT(IN)               :: TTinv(3,3)
+integer(kind=irg),INTENT(IN)            :: nns_film
+type(gnode),INTENT(INOUT)               :: rlp_subs
+
+
+type(reflisttype),pointer               :: reflist_film_tmp,reflist_subs,reflist_subs_tmp,firstw_subs
+type(refliststrongsubstype),pointer    :: refliststrong_subs_tmp
+type(BetheParameterType)                :: BetheParameters
+real(kind=sgl)                          :: kg(3),kg1(3)
+integer(kind=irg)                       :: nref_subs,nns_subs,nnw_subs,ii,jj,istat
+
+call Set_Bethe_Parameters(BetheParameters,.TRUE.)
+
+reflist_film_tmp => reflist_film
+
+kg = dble(k0 + reflist_film_tmp%hkl + reflist_film_tmp%sg*FN)
+kg1 = Convert_kgs_to_Substrate(cell_film, cell_subs,kg, TTinv,eWavelength_subs)
+call Initialize_ReflectionList(cell_subs, reflist_subs, BetheParameters, sngl(FN), kg1, sngl(dmin), nref_subs)
+
+call Apply_BethePotentials(cell_subs, reflist_subs, firstw_subs, BetheParameters, nref_subs, nns_subs, nnw_subs)
+
+reflist_subs_tmp => reflist_subs
+allocate(refliststrong_subs)
+allocate(refliststrong_subs%hlist(nns_subs,3),stat = istat)
+allocate(refliststrong_subs%DynMat(nns_subs,nns_subs),stat = istat)
+
+refliststrong_subs%kg(1:3) = kg1(1:3)
+refliststrong_subs%nns = nns_subs
+
+call GetDynMat(cell_subs,reflist_subs,firstw_subs,rlp_subs,refliststrong_subs%DynMat,nns_subs,nnw_subs)
+
+refliststrong_subs_tmp => refliststrong_subs
+nullify(refliststrong_subs_tmp%next)
+
+do jj = 1,nns_subs
+    refliststrong_subs%hlist(jj,:) = reflist_subs_tmp%hkl
+!print*,refliststrong_subs%hlist(jj,:)
+    reflist_subs_tmp => reflist_subs_tmp%next
+end do
+
+
+reflist_film_tmp => reflist_film_tmp%next
+do ii = 1,nns_film-1
+    kg = dble(k0 + reflist_film_tmp%hkl + reflist_film_tmp%sg*FN)
+    kg1 = Convert_kgs_to_Substrate(cell_film, cell_subs,kg, TTinv,eWavelength_subs)
+    call Initialize_ReflectionList(cell_subs, reflist_subs, BetheParameters, sngl(FN), kg1, sngl(dmin), nref_subs)
+    call Apply_BethePotentials(cell_subs, reflist_subs, firstw_subs, BetheParameters, nref_subs, nns_subs, nnw_subs)
+
+    reflist_subs_tmp => reflist_subs
+    allocate(refliststrong_subs_tmp%next)
+    allocate(refliststrong_subs_tmp%next%hlist(nns_subs,3),stat = istat)
+    allocate(refliststrong_subs_tmp%next%DynMat(nns_subs,nns_subs),stat = istat)
+
+    refliststrong_subs_tmp%next%kg(1:3) = kg1(1:3)
+    refliststrong_subs_tmp%next%nns = nns_subs
+
+    call GetDynMat(cell_subs,reflist_subs,firstw_subs,rlp_subs,refliststrong_subs_tmp%next%DynMat,nns_subs,nnw_subs)
+
+
+    refliststrong_subs_tmp => refliststrong_subs_tmp%next
+    nullify(refliststrong_subs_tmp%next)
+
+    do jj = 1,nns_subs
+        refliststrong_subs_tmp%hlist(jj,:) = reflist_subs_tmp%hkl
+!print*,refliststrong_subs%hlist(jj,:)
+        reflist_subs_tmp => reflist_subs_tmp%next
+    end do
+!do jj = 1,nns_subs
+!    refliststrong_subs%hlist(jj,:) = reflist_subs_tmp%hkl
+!    reflist_subs_tmp => reflist_subs_tmp%nexts
+!end do
+!call Delete_gvectorlist(reflist_subs)
+!call Delete_gvectorlist(firstw_subs)
+reflist_film_tmp => reflist_film_tmp%nexts
+
+end do
+
+end subroutine GetStrongBeamsSubs
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: Delete_StrongBeamList
+!
+!> @author Saransh Singh, Carnegie Mellon University
+!
+!> @brief delete the entire linked list
+!
+!> @param top top of the list to be removed
+!
+!> @date   12/2/14 SS 1.0 original
+!--------------------------------------------------------------------------
+recursive subroutine Delete_StrongBeamList(top)
+
+use local
+use typedefs
+
+IMPLICIT NONE
+
+type(refliststrongsubstype),pointer      :: top
+
+type(refliststrongsubstype),pointer      :: rltail, rltmpa
+
+! deallocate the entire linked list before returning, to prevent memory leaks
+rltail => top
+rltmpa => rltail % next
+do
+    deallocate(rltail%hlist,rltail%DynMat)
+    deallocate(rltail)
+    if (.not. associated(rltmpa)) EXIT
+    rltail => rltmpa
+    rltmpa => rltail % next
+end do
+
+end subroutine Delete_StrongBeamList
+
+!--------------------------------------------------------------------------
 
 
 end module MBmodule
