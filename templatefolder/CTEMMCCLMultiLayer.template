@@ -1,0 +1,38 @@
+&MCCLdata
+! only bse1 or full simulation
+mode = 'bse1' ! 'bse1' or 'full'
+! name of the crystal structure file
+xtalname_film = 'GaP.xtal'
+xtalname_subs = 'Si.xtal'
+! sample tilt angle from horizontal [degrees]
+sig = 0.0
+! sample tilt angle around RD axis [degrees]
+omega = 0.0
+! number of pixels along x-direction of square projection [odd number!]
+numsx = 361
+! list of prime numbers to be used as seeds. The list should have at least totnum_el/(globalworkgrpsz* globalworkgrpsz*num_el) entries 
+primelist = 'RandomSeeds.data'
+! number of incident electrons per thread
+num_el = 10
+! number of work items
+globalworkgrpsz = 150
+! total number of incident electrons
+totnum_el = 2000000000
+! incident beam energy [keV]
+EkeV = 30.D0
+! minimum energy to consider [keV]
+Ehistmin = 5.00
+! energy binsize [keV]
+Ebinsize = 0.5D0
+! maximum depth to consider for exit depth statistics [nm]
+depthmax = 150.0D0
+! depth step size [nm]
+depthstep = 1.0D0
+! maximum film thickness [nm]
+filmthickness = 150.D0
+! film thickness step
+filmstep = 5.0D0
+! output data file name
+dataname = 'MCoutput.data'
+/
+

@@ -1018,7 +1018,7 @@ real(kind=dbl),parameter                :: DtoR = 0.01745329251D0
 real(kind=sgl)                          :: delta,thetacr,ktmax
 integer(kind=irg)                       :: i,j,imin,imax,jmin,jmax,ijmax,istat
 real(kind=sgl)                          :: kk(3),krec(3)
-real(kind=sgl)                          :: k(3)
+real(kind=sgl)                          :: k(3),kcart(3),kkk
 
 if (associated(khead)) then                    ! deallocate the entire linked list
     call Delete_kvectorlist(khead)
@@ -1050,7 +1050,8 @@ ktail%kt = (/0.0,0.0,0.0/)				! no tangential component for central beam directi
 ktail%k = matmul(rotmat,kk)
 !kcent = ktail%k
 !print*,ktail%k
-ktail%kn = sqrt(sum(kk**2))!CalcDot(cell,ktail%k,kcart,'c')			! normal component
+kkk = CalcDot(cell,sngl(ktail%k),kcart,'c')			! normal component
+ktail%kn = kkk
 call NormVec(cell,ktail%k,'c')
 
 do i = imin,imax
@@ -1066,6 +1067,8 @@ do i = imin,imax
             ktail%k = ktail%kt + kk
             ktail%kt = matmul(rotmat,ktail%kt)
             ktail%k = matmul(rotmat,ktail%k)
+            kkk = CalcDot(cell,sngl(ktail%k),kcart,'c')
+            ktail%kn = kkk
             k = ktail%k
             call TransSpace(cell,k,krec,'c','r')
             ktail%k = krec

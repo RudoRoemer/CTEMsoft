@@ -1141,7 +1141,7 @@ type(ECCINameListType),INTENT(INOUT)            :: eccinl
 integer(kind=irg)                               :: i
 
 integer(kind=irg)       :: stdout
-integer(kind=irg)       :: nthreads,i
+integer(kind=irg)       :: nthreads
 integer(kind=irg)       :: k(3)
 integer(kind=irg)       :: nktstep
 integer(kind=irg)       :: DF_npix

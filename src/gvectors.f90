@@ -1077,5 +1077,157 @@ end do
 
 end subroutine Delete_gvectorlist
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: GetStrongBeamsSubs
+!
+!> @author Saransh Singh, Carnegie Mellon University
+!
+!> @brief get list of reflections for each incident beam on substrate
+!
+!> @param cell_film unit cell pointer of film
+!> @param cell_subs unit cell pointer of substrate
+!> @param reflist_film reflection list pointer to film
+!> @param refliststrong_subs pointer for list of strong reflections in substrate
+!> @param k0 wavevector incident on the film
+!> @param FN normal to the substrate i.e. gS
+!> @param nns_film number of strong beams in film
+!> @param dmin cutoff value for the g vectors used
+!> @param TTinv transformation matrix for the orientation relation between film and substrate
+!> @param eWavelength_subs electron wavelength in substrate
+!
+!> @date   12/01/14 MDG 1.0 original
+!--------------------------------------------------------------------------
+
+subroutine GetStrongBeamsSubs(cell_film,cell_subs,reflist_film,refliststrong_subs,&
+           k0,FN,nns_film,dmin,TTinv,eWavelength_subs,rlp_subs)
+
+use typedefs
+use diffraction
+use crystal
+use constants
+use initializers
+use MBmodule
+
+IMPLICIT NONE
+
+type(unitcell),pointer                  :: cell_film,cell_subs
+type(reflisttype),pointer               :: reflist_film
+type(refliststrongsubstype),pointer     :: refliststrong_subs
+real(kind=sgl),INTENT(IN)               :: k0(3),dmin
+real(kind=dbl),INTENT(IN)               :: FN(3),eWavelength_subs
+real(kind=sgl),INTENT(IN)               :: TTinv(3,3)
+integer(kind=irg),INTENT(IN)            :: nns_film
+type(gnode),INTENT(INOUT)               :: rlp_subs
+
+
+type(reflisttype),pointer               :: reflist_film_tmp,reflist_subs,reflist_subs_tmp,firstw_subs
+type(refliststrongsubstype),pointer    :: refliststrong_subs_tmp
+type(BetheParameterType)                :: BetheParameters
+real(kind=sgl)                          :: kg(3),kg1(3)
+integer(kind=irg)                       :: nref_subs,nns_subs,nnw_subs,ii,jj,istat
+
+call Set_Bethe_Parameters(BetheParameters,.TRUE.)
+
+reflist_film_tmp => reflist_film
+
+kg = dble(k0 + reflist_film_tmp%hkl + reflist_film_tmp%sg*FN)
+kg1 = Convert_kgs_to_Substrate(cell_film, cell_subs,kg, TTinv,eWavelength_subs)
+call Initialize_ReflectionList(cell_subs, reflist_subs, BetheParameters, sngl(FN), kg1, sngl(dmin), nref_subs)
+
+call Apply_BethePotentials(cell_subs, reflist_subs, firstw_subs, BetheParameters, nref_subs, nns_subs, nnw_subs)
+
+reflist_subs_tmp => reflist_subs
+allocate(refliststrong_subs)
+allocate(refliststrong_subs%hlist(nns_subs,3),stat = istat)
+allocate(refliststrong_subs%DynMat(nns_subs,nns_subs),stat = istat)
+
+refliststrong_subs%kg(1:3) = kg1(1:3)
+refliststrong_subs%nns = nns_subs
+
+call GetDynMat(cell_subs,reflist_subs,firstw_subs,rlp_subs,refliststrong_subs%DynMat,nns_subs,nnw_subs)
+
+refliststrong_subs_tmp => refliststrong_subs
+nullify(refliststrong_subs_tmp%next)
+
+do jj = 1,nns_subs
+    refliststrong_subs%hlist(jj,:) = reflist_subs_tmp%hkl
+    !print*,refliststrong_subs%hlist(jj,:)
+    reflist_subs_tmp => reflist_subs_tmp%next
+end do
+
+
+reflist_film_tmp => reflist_film_tmp%next
+do ii = 1,nns_film-1
+    kg = dble(k0 + reflist_film_tmp%hkl + reflist_film_tmp%sg*FN)
+    kg1 = Convert_kgs_to_Substrate(cell_film, cell_subs,kg, TTinv,eWavelength_subs)
+    call Initialize_ReflectionList(cell_subs, reflist_subs, BetheParameters, sngl(FN), kg1, sngl(dmin), nref_subs)
+    call Apply_BethePotentials(cell_subs, reflist_subs, firstw_subs, BetheParameters, nref_subs, nns_subs, nnw_subs)
+
+    reflist_subs_tmp => reflist_subs
+    allocate(refliststrong_subs_tmp%next)
+    allocate(refliststrong_subs_tmp%next%hlist(nns_subs,3),stat = istat)
+    allocate(refliststrong_subs_tmp%next%DynMat(nns_subs,nns_subs),stat = istat)
+
+    refliststrong_subs_tmp%next%kg(1:3) = kg1(1:3)
+    refliststrong_subs_tmp%next%nns = nns_subs
+
+    call GetDynMat(cell_subs,reflist_subs,firstw_subs,rlp_subs,refliststrong_subs_tmp%next%DynMat,nns_subs,nnw_subs)
+
+
+    refliststrong_subs_tmp => refliststrong_subs_tmp%next
+    nullify(refliststrong_subs_tmp%next)
+
+    do jj = 1,nns_subs
+        refliststrong_subs_tmp%hlist(jj,:) = reflist_subs_tmp%hkl
+        !print*,refliststrong_subs%hlist(jj,:)
+        reflist_subs_tmp => reflist_subs_tmp%next
+    end do
+    !do jj = 1,nns_subs
+    !    refliststrong_subs%hlist(jj,:) = reflist_subs_tmp%hkl
+    !    reflist_subs_tmp => reflist_subs_tmp%nexts
+    !end do
+    !call Delete_gvectorlist(reflist_subs)
+    !call Delete_gvectorlist(firstw_subs)
+    reflist_film_tmp => reflist_film_tmp%nexts
+
+end do
+
+end subroutine GetStrongBeamsSubs
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: Delete_StrongBeamList
+!
+!> @author Saransh Singh, Carnegie Mellon University
+!
+!> @brief delete the entire linked list
+!
+!> @param top top of the list to be removed
+!
+!> @date   12/2/14 SS 1.0 original
+!--------------------------------------------------------------------------
+recursive subroutine Delete_StrongBeamList(top)
+
+IMPLICIT NONE
+
+type(refliststrongsubstype),pointer      :: top
+
+type(refliststrongsubstype),pointer      :: rltail, rltmpa
+
+! deallocate the entire linked list before returning, to prevent memory leaks
+rltail => top
+rltmpa => rltail % next
+do
+deallocate(rltail%hlist,rltail%DynMat)
+deallocate(rltail)
+if (.not. associated(rltmpa)) EXIT
+rltail => rltmpa
+rltmpa => rltail % next
+end do
+
+end subroutine Delete_StrongBeamList
+
+!--------------------------------------------------------------------------
 
 end module gvectors

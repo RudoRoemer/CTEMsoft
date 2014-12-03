@@ -30,7 +30,6 @@ Create_exe_and_tll(CTEMmbcbed)
 Create_exe_and_tll(CTEMSRdefect) #MP 
 Create_exe_and_tll(CTEMZAdefect) 
 Create_exe_and_tll(CTEMECP)
-Create_exe_and_tll(CTEMECPpattern)
 Create_exe_and_tll(CTEMECPmaster)
 Create_exe_and_tll(CTEMECPthinfilm)
 Create_exe_and_tll(CTEMECCI) #read_stacking_fault_data has wrong number of args passed to it
