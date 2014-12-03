@@ -847,6 +847,22 @@ type FZpointd
 end type FZpointd
 
 
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+! type definition for linked list in substrate Bloch wave calculations
+type substrateBW
+        integer(kind=irg)               :: NSg          ! number of strong substrate reflections for this film g-vector
+        real(kind=sgl)                  :: kg(3)        ! incident reciprocal wave vector for particular g in substrate reference frame
+        integer(kind=irg),allocatable   :: hg(:,:)      ! reciprocal lattice point list for substrate (hg(3,NSg))
+        complex(kind=dbl),allocatable   :: betam(:)     ! beta excitation amplitudes
+        complex(kind=dbl),allocatable   :: Gammam(:)    ! Gamma eigenvalues of dynamical matrix
+        complex(kind=dbl),allocatable   :: Dmg(:,:)     ! Bloch wave coefficients (they already include the beta^(m) excitation amplitudes)
+        type(substrateBW),pointer       :: nextg        ! pointer to next entry in list
+end type substrateBW
+
+
 
 
 end module typedefs

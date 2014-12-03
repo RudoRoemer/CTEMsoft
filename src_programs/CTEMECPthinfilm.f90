@@ -130,19 +130,19 @@ real(kind=sgl)                  :: galen, bragg, klaue(2), io_real(6), kstar(3),
 integer(kind=irg)               :: nt, skip, dgn, pgnum, io_int(6), maxHOLZ, ik, numk, ga(3), gb(3), TID, izfilm, &
                                    nn, npx, npy, isym, numset, numsetS, it, ijmax, jp, istat, iequiv(2,12), nequiv, NUMTHREADS, & 
                                    nns, nnw, nref, tots, totw, ikf
-real(kind=dbl)                  :: ctmp(192,3),arg, lambdaF, lambdaS
+real(kind=dbl)                  :: ctmp(192,3),arg 
 integer                         :: i,j,ir, n,ipx,ipy,gzero,ic,ip,ikk
 real(kind=sgl)                  :: pre, tpi,Znsq, kkl, DBWF, frac
 real,allocatable                :: thick(:), sr(:,:,:) 
 complex(kind=dbl),allocatable   :: Lgh(:,:,:),Sgh(:,:),Sghtmp(:,:,:)
 complex(kind=dbl)               :: czero
-real(kind=dbl)    		:: dE(3,3)
+real(kind=dbl)                  :: dE(3,3)
 real(kind=sgl),allocatable      :: karray(:,:)
 integer(kind=irg),allocatable   :: kij(:,:), nat(:), natS(:)
 complex(kind=dbl),allocatable   :: DynMat(:,:)
 logical                         :: verbose
 
-type(orientation) 		:: orel
+type(orientation)               :: orel
 type(unitcell),pointer          :: cell, cellS
 type(gnode)                     :: rlp, rlpS
 type(DynType)                   :: Dyn, DynS
@@ -150,6 +150,7 @@ type(kvectorlist),pointer       :: khead, ktmp
 type(symdata2D)                 :: TDPG, TDPGS
 type(BetheParameterType)        :: BetheParameters
 type(reflisttype),pointer       :: reflist, firstw, rltmp, reflistS, firstwS, rltmpS
+type(substrateBW),pointer       :: sublist, subtmp
 
 
 ! init some parameters
@@ -169,7 +170,6 @@ type(reflisttype),pointer       :: reflist, firstw, rltmp, reflistS, firstwS, rl
   allocate(cell)
   verbose = .TRUE.
   call Initialize_Cell(cell,Dyn,rlp,ecpnl%xtalname, ecpnl%dmin, ecpnl%voltage,verbose)
-  lambdaF = cell%mLambda
 
 ! determine the point group number
   j=0
@@ -196,8 +196,6 @@ type(reflisttype),pointer       :: reflist, firstw, rltmp, reflistS, firstwS, rl
 ! load the substrate crystal structure and compute the Fourier coefficient lookup table
   allocate(cellS)
   call Initialize_Cell(cellS,DynS,rlpS,ecpnl%xtalname2, ecpnl%dmin, ecpnl%voltage, verbose)
-  lambdaS = cell%mLambda
-  cell%mLambda = lambdaF
 
 ! ======================================
 ! ======================================
@@ -217,9 +215,6 @@ type(reflisttype),pointer       :: reflist, firstw, rltmp, reflistS, firstwS, rl
  ! equivalent direct space vector in the substrate.
 ! ======================================
 ! ======================================
-
-! here is how we can use the transformation matrix from film to substrate to 
-! determine the vectors k_g in the substrate reciprocal reference frame
 
 ! reciprocal foil normal
   FN = ecpnl%fn
@@ -258,9 +253,7 @@ type(reflisttype),pointer       :: reflist, firstw, rltmp, reflistS, firstwS, rl
   io_int(1) = 2.0*npx + 1
   call WriteValue('Number of image pixels along diameter of central disk = ', io_int, 1, "(I4/)")
 
-! for now, the solution to the symmetry problem is to do the computation for the entire 
-! illumination cone without application of symmetry.  Instead, we'll get the speed up by 
-! going to multiple cores later on.
+! ignore symmetry, since a film+substrate system in general will not have any overall symmetry
   isym = 1
 ! set parameters for wave vector computation
   klaue = (/ 0.0, 0.0 /)
@@ -348,8 +341,6 @@ type(reflisttype),pointer       :: reflist, firstw, rltmp, reflistS, firstwS, rl
 
 ! generate the reflectionlist
         kk(1:3) = karray(1:3,ik)
-        cell%mLambda = lambdaF
-!       FN = kk
         call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, kk, ecpnl%dmin, nref)
 
 ! determine strong and weak reflections
@@ -377,8 +368,8 @@ type(reflisttype),pointer       :: reflist, firstw, rltmp, reflistS, firstwS, rl
 ! solve the dynamical eigenvalue equation; this is identical to what we have for the single layer
 ! version, but we need to end the integration/summation at the point where the substrate begins,
 ! instead of going to the largest depth.  So, we need a new CalcLghECP routine that takes the 
-! lambda weight function, as in the EBSD case, and also carries out the secondary summation/integration
-! over the substrate reflections.
+! lambda weight function, as in the EBSD case, and also returns the amplitudes of all the scattered
+! beams from the film, to be used as starting amplitudes for the beams in the substrate.
         kn = karray(4,ik)
         call CalcLghFilm(DynMat,Lgh,ecpnl%filmthickness,kn,nns,gzero,depthstep,lambdaE,izfilm,amps)
         deallocate(DynMat,Sghtmp)
@@ -408,6 +399,60 @@ type(reflisttype),pointer       :: reflist, firstw, rltmp, reflistS, firstwS, rl
 !$OMP END CRITICAL
         deallocate(Lgh, Sgh) 
           
+! next, we set up the nns dynamical scattering simulations for the substrate
+        nullify(sublist)        ! reset the substrate dynamical scattering list
+        allocate(sublist)
+        nullify(sublist%nextg)
+        subtmp => sublist
+
+! allocate all entries in the list, and set the incident wave vector kg in the substrate reference frame
+! then determine the reflection list and carry out the dynamical simulation
+        rltmp => reflist%next  ! point to the first strong beam of the film
+        filmbeamloop: do ikf=1,nns
+! get the incident beam direction in the substrate reciprocal reference frame
+            subtmp%kg = Convert_kgs_to_Substrate(cell, cellS, kk+float(rltmp%hkl)+Calcsg(cell,float(rltmp%hkl),kk,FNstar)*FNstar, &
+                    TTinv, cellS%mLambda) 
+
+! initialize the substrate reflection list
+            call Initialize_ReflectionList(cellS, reflistS, BetheParameters, FNstar, subtmp%kg, ecpnl%dmin, nrefS)
+
+! determine strong and weak reflections
+            call Apply_BethePotentials(cellS, reflistS, firstwS, BetheParameters, nrefS, nnsS, nnwS)
+            subtmp%NSg = nnsS
+
+! allocate all remaining arrays
+            allocate(subtmp%Dmg(nnsS,nnsS), subtmp%hg(3,nnsS), subtmp%Gammam(nnsS))
+
+! fill in the reflection list
+            rltmpS => reflistS%next  ! point to the first strong beam of the substrate
+            do ip=1,nnsS
+                subtmp%hg(1:3,ip) = rltmpS%hkl(1:3)
+                rltmpS => rltmpS%nexts
+            end do
+            
+! create the dynamical matrix
+            allocate(DynMat(nnsS,nnsS))
+            call GetDynMat(cellS, reflistS, firstwS, rlpS, DynMat, nnsS, nnwS)
+
+! and solve the eigenvalue problem
+            call BWsolve(DynMat,subtmp%GammamW,subtmp%Dmg,CGinv,nnsS,IPIV)
+
+           
+! and finally, generate the next entry in the sublist if we are not at the end
+            if (ikf.ne.nns) then
+                allocate(subtmp%nextg)
+                subtmp => subtmp%nextg
+                nullify(subtmp%nextg)
+            end if
+        end do filmbeamloop
+
+
+! ok, all the dynamical simulations are complete; now we need to take all this information and compute the 
+! nested sums to get to the substrate contribution for the integrated intensity.
+
+
+
+
 ! and here we need to do the loop over all the beams entering the substrate; we'll limit ourselves to
 ! the strong Film beams only, and for each one we'll compare the modulus of the amplitude to a threshold
 ! value to see if we should take it into account or not.  
