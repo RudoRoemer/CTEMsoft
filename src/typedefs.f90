@@ -465,6 +465,27 @@ end type reflisttype
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
 
+!> [note added on 11/28/14]
+!> we define the refliststrongsubstype for the purpose of the film+substrate system. This linked list
+!> stores the list of beams diffracted by the film which are incident on the substrate.
+!>
+!> @todo: we will need to figure out which beams to neglect and which beams to consider while 
+!> doing the calculations. Right now we consider all the beams.
+!
+! linked list of incident beams to the substrate
+type refliststrongsubstype
+    real(kind=dbl),allocatable              :: hlist(:,:)
+    complex(kind=dbl),allocatable           :: DynMat(:,:)
+    real(kind=dbl)                          :: kg(3)
+    integer(kind=irg)                       :: nns 
+    type(refliststrongsubstype),pointer     :: next ! only strong beams are considered
+end type refliststrongsubstype
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+
 ! a structure that contains all the relevant HOLZ geometry information;
 ! it can be filled by calling the GetHOLZGeometry subroutine in crystal.f90
 type HOLZentries
