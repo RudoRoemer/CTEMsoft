@@ -49,6 +49,7 @@
 !> @date    6/ 5/14 MDG 4.1 removed variable declaration for cell
 !> @date    6/ 9/14 MDG 4.2 added all defect type declarations
 !> @date    8/11/14 MDG 4.3 modified Rodrigues vector to 4 components
+!> @date   12/02/14 MDG 4.4 added a few entries to unitcell pointer
 !--------------------------------------------------------------------------
 module typedefs
 
@@ -391,33 +392,33 @@ logical,parameter       :: DGPG(32,31) = reshape((/ &
 ! declare user-defined types
 !> symdata type definition (for 3D symmetry operations with space groups)
 type symdata
-  integer(kind=irg) 	:: SYM_GENnum			!< number of generator matrices
-  integer(kind=irg) 	:: SYM_MATnum			!< number of non-zero symmetry matrices
-  integer(kind=irg) 	:: SYM_NUMpt			!< number of point group operators
-  logical          	:: SYM_reduce			!< switch to enable/disable reduction to fundamental cell
-  logical          	:: SYM_trigonal			!< switch for hexagonal vs. rhombohedral settings
-  logical          	:: SYM_second			!< switch for second setting of spacegroup (if any)
-  logical          	:: SYM_centrosym		!< switch for presence of centrosymmetry
-  real(kind=dbl)    	:: SYM_data(192,4,4)		!< all symmetry matrices for a given spacegroup
-  real(kind=dbl)    	:: SYM_direc(48,3,3)		!< direct space point group matrices
-  real(kind=dbl)    	:: SYM_recip(48,3,3)		!< reciprocal space point group matrices
-  real(kind=dbl)    	:: SYM_c(4,4)			!< dummy 4x4 matrix used for various computations
-  character(11)    	:: SYM_name			!< current space group name
+  integer(kind=irg)     :: SYM_GENnum                   !< number of generator matrices
+  integer(kind=irg)     :: SYM_MATnum                   !< number of non-zero symmetry matrices
+  integer(kind=irg)     :: SYM_NUMpt                    !< number of point group operators
+  logical               :: SYM_reduce                   !< switch to enable/disable reduction to fundamental cell
+  logical               :: SYM_trigonal                 !< switch for hexagonal vs. rhombohedral settings
+  logical               :: SYM_second                   !< switch for second setting of spacegroup (if any)
+  logical               :: SYM_centrosym                !< switch for presence of centrosymmetry
+  real(kind=dbl)        :: SYM_data(192,4,4)            !< all symmetry matrices for a given spacegroup
+  real(kind=dbl)        :: SYM_direc(48,3,3)            !< direct space point group matrices
+  real(kind=dbl)        :: SYM_recip(48,3,3)            !< reciprocal space point group matrices
+  real(kind=dbl)        :: SYM_c(4,4)                   !< dummy 4x4 matrix used for various computations
+  character(11)         :: SYM_name                     !< current space group name
 end type
 
 ! in Release 3.0 and beyond, there are no more global variables
 ! declare global variables
 !> @param SG entire space group structure, moved to cell in crystalvars.f90
-! type (symdata)   	:: SG
+! type (symdata)        :: SG
 
 
 ! for many diffraction calculations we need the 2D planar point groups; 
 ! the maximum order of such a group is 12, and there are only 10 of them, with
 ! two settings for one of them (3m1 and 31m).
 type symdata2D
-  integer(kind=irg)	:: SYM_pgnum			!< 2D point group number
-  integer(kind=irg)	:: SYM_MATnum			!< number of non-zero symmetry matrices (order)
-  integer(kind=irg)	:: SYM_direc(12,2,2)		!< point group matrices (filled in by Generate2DSymmetry)
+  integer(kind=irg)     :: SYM_pgnum                    !< 2D point group number
+  integer(kind=irg)     :: SYM_MATnum                   !< number of non-zero symmetry matrices (order)
+  integer(kind=irg)     :: SYM_direc(12,2,2)            !< point group matrices (filled in by Generate2DSymmetry)
 end type
 
 !--------------------------------------------------------------------------
@@ -445,7 +446,7 @@ type reflisttype
                                    strongnum,&          ! sequential number for strong beams
                                    weaknum,&            ! sequential number for weak beams
                                    famnum               ! family number
-! removed 1/10/14		   nab(2)  		! decomposition with respect to ga and gb
+! removed 1/10/14                  nab(2)               ! decomposition with respect to ga and gb
   logical                       :: dbdiff               ! double diffraction reflection ?
   real(kind=dbl)                :: sg, &               ! excitation error
                                    xg, &              ! extinction distance
@@ -488,8 +489,8 @@ end type refliststrongsubstype
 ! a structure that contains all the relevant HOLZ geometry information;
 ! it can be filled by calling the GetHOLZGeometry subroutine in crystal.f90
 type HOLZentries
-  real(kind=sgl)	:: g1(3),g2(3),g3(3),gx(3),gy(3),LC1,LC2,H,FNr(3),FNg(3),gp(2),gtoc(2,2),gshort(3)
-  integer(kind=irg)	:: uvw(3),FN(3)
+  real(kind=sgl)        :: g1(3),g2(3),g3(3),gx(3),gy(3),LC1,LC2,H,FNr(3),FNg(3),gp(2),gtoc(2,2),gshort(3)
+  integer(kind=irg)     :: uvw(3),FN(3)
 end type
 
 !--------------------------------------------------------------------------
@@ -560,12 +561,16 @@ end type
 !> reflist     = starting point of linked list of g-vectors
 !
 !> firstw	= pointer to first weak beam entry in list
-!
+        
 !> number of beams in linked list (used to be in dynamical.f90)
 !> DynNbeams   = current number being considered
 !> DynNbeamsLinked = total number
-!> nns	= number of strong beams
+!> nns  = number of strong beams
 !> nnw = number of weak beams
+!
+!> the following entries used to be globals in diffraction.f90 [MDG, 12/02/14]
+!>  voltage,mLambda,mRelcor,mSigma,mPsihat
+
 type unitcell
   real(kind=dbl)                       :: a,b,c,alpha,beta,gamma
   real(kind=dbl)                       :: dmt(3,3),rmt(3,3),dsm(3,3),rsm(3,3),vol
@@ -582,6 +587,7 @@ type unitcell
   type(reflisttype),pointer            :: reflist
   type(reflisttype),pointer            :: firstw                ! connection to first weak entry in linked list
   integer(kind=irg)                    :: DynNbeams, DynNbeamsLinked, nns, nnw
+  real(kind=dbl)                       :: voltage, mLambda, mRelcor, mSigma, mPsihat
 end type
 
 !--------------------------------------------------------------------------
@@ -591,7 +597,7 @@ end type
 !> this type is used to define an orientation relation, i.e., two parallel
 !> directions and two parallel planes
 type orientation
-  real(kind=sgl)        :: tA(3), tB(3), gA(3), gB(3)
+  real(kind=sgl)                        :: tA(3), tB(3), gA(3), gB(3)
 end type
 
 !> cell is a pointer to the generic unit cell variable used in all programs.  
@@ -608,14 +614,14 @@ end type
 
 ! define all defect types
 type dislocationtype
-  real(kind=dbl)     		:: burg(3),burgd(3),u(3),un(3),g(3),gn(3),id,jd, zfrac, zu
-  real(kind=dbl)     		:: top(3), bottom(3)
-  real(kind=dbl)		:: a_dc(4), a_id(4), a_di(4), a_df(4)
-  complex(kind=dbl)  		:: dismat(3,3),pa(3)
+  real(kind=dbl)                :: burg(3),burgd(3),u(3),un(3),g(3),gn(3),id,jd, zfrac, zu
+  real(kind=dbl)                :: top(3), bottom(3)
+  real(kind=dbl)                :: a_dc(4), a_id(4), a_di(4), a_df(4)
+  complex(kind=dbl)             :: dismat(3,3),pa(3)
 end type dislocationtype
 
 type inclusiontype
-	real(kind=sgl)       ::  xpos,ypos,zpos,radius,C
+        real(kind=sgl)       ::  xpos,ypos,zpos,radius,C
 end type inclusiontype
 
 type stackingfaulttype
@@ -626,17 +632,17 @@ type stackingfaulttype
 end type stackingfaulttype
 
 type voidtype
-	real(kind=sgl)       ::  xpos,ypos,zpos,radius
+        real(kind=sgl)       ::  xpos,ypos,zpos,radius
 end type voidtype
 
 type YDtype
-  real(kind=dbl)     	     :: burg(3), burgd(3), u(3), un(3), g(3), gn(3), id, jd, zu, bs, be, bx, beta
-  real(kind=dbl)     	     :: alpha, ca, sa, ta, cota,  top(3), bottom(3), sig
-  real(kind=dbl)	     :: a_dc(4), a_id(4), a_di(4)
+  real(kind=dbl)             :: burg(3), burgd(3), u(3), un(3), g(3), gn(3), id, jd, zu, bs, be, bx, beta
+  real(kind=dbl)             :: alpha, ca, sa, ta, cota,  top(3), bottom(3), sig
+  real(kind=dbl)             :: a_dc(4), a_id(4), a_di(4)
 end type YDtype
 
 type apbtype
-	real(kind=sgl)       ::  xpos,ypos,zpos,radius,w,Rdisp(3)
+        real(kind=sgl)       ::  xpos,ypos,zpos,radius,w,Rdisp(3)
 end type apbtype
 
 
@@ -651,11 +657,11 @@ type defecttype
   character(fnlen)                         :: voidname
   character(fnlen)                         :: incname
   character(fnlen)                         :: apbname
-  character(fnlen)	                    :: sfname(maxdefects)
-  character(fnlen)         	 	     :: dislname(3*maxdefects)
-  integer(kind=irg)                	     :: Nmat,DF_g(3),DF_npix,DF_npiy,DF_nums,DF_numinclusion,DF_numvoid
-  real(kind=sgl)                   	     :: DF_slice,DF_L,DF_gc(3),DF_gstar(3)
-  real(kind=sgl),allocatable       	     :: DF_foilsg(:,:),DF_R(:,:)
+  character(fnlen)                          :: sfname(maxdefects)
+  character(fnlen)                           :: dislname(3*maxdefects)
+  integer(kind=irg)                          :: Nmat,DF_g(3),DF_npix,DF_npiy,DF_nums,DF_numinclusion,DF_numvoid
+  real(kind=sgl)                             :: DF_slice,DF_L,DF_gc(3),DF_gstar(3)
+  real(kind=sgl),allocatable                 :: DF_foilsg(:,:),DF_R(:,:)
   type (dislocationtype), allocatable      :: DL(:)
   type (inclusiontype), allocatable        :: inclusions(:)
   type (stackingfaulttype), allocatable    :: SF(:)
@@ -719,9 +725,9 @@ type BetheParameterType
         real(kind=sgl)                 :: c2 = 20.0_sgl
         real(kind=sgl)                 :: c3 = 200.0_sgl
         real(kind=sgl)                 :: sgdbdiff = 0.05_sgl
-	real(kind=sgl)                 :: weakcutoff = 0.0_sgl
-	real(kind=sgl)                 :: cutoff = 0.0_sgl
-	real(kind=sgl)                 :: sgcutoff = 0.0_sgl
+        real(kind=sgl)                 :: weakcutoff = 0.0_sgl
+        real(kind=sgl)                 :: cutoff = 0.0_sgl
+        real(kind=sgl)                 :: sgcutoff = 0.0_sgl
         integer(kind=irg)              :: nns
         integer(kind=irg)              :: nnw
         integer(kind=irg)              :: minweak
@@ -734,8 +740,8 @@ type BetheParameterType
         integer(kind=irg),allocatable  :: stronglist(:)
         integer(kind=irg),allocatable  :: weakhkl(:,:)
         integer(kind=irg),allocatable  :: stronghkl(:,:)
-	real(kind=sgl),allocatable     :: weaksg(:)
-	real(kind=sgl),allocatable     :: strongsg(:)
+        real(kind=sgl),allocatable     :: weaksg(:)
+        real(kind=sgl),allocatable     :: strongsg(:)
         integer(kind=irg),allocatable  :: strongID(:)
         integer(kind=sgl),allocatable  :: reflistindex(:)              ! used to map strong reflections onto the original reflist
         integer(kind=sgl),allocatable  :: weakreflistindex(:)          ! used to map weak reflections onto the original reflist
@@ -747,13 +753,13 @@ end type BetheParameterType
 !--------------------------------------------------------------------------
 
 type STEMtype
-	character(fnlen)		:: weightoutput
-	character(2)  			:: geometry
-	integer(kind=irg) 		:: numberofsvalues, numk, numCL
-	real(kind=sgl) 			:: BFradius,ADFinnerradius,ADFouterradius,kt,beamconvergence,cameralength, &
-	                          	   BFmrad,ADFimrad,ADFomrad, diffapmrad, diffapmcenter, CLarray(20)
-	logical,allocatable  		:: ZABFweightsarray(:,:,:),ZAADFweightsarray(:,:,:)       ! only used for the zone axis case
-	real(kind=sgl),allocatable  	:: sgarray(:,:),BFweightsarray(:,:,:),ADFweightsarray(:,:,:)   ! only used for the systematic row case
+        character(fnlen)                :: weightoutput
+        character(2)                    :: geometry
+        integer(kind=irg)               :: numberofsvalues, numk, numCL
+        real(kind=sgl)                  :: BFradius,ADFinnerradius,ADFouterradius,kt,beamconvergence,cameralength, &
+                                           BFmrad,ADFimrad,ADFomrad, diffapmrad, diffapmcenter, CLarray(20)
+        logical,allocatable             :: ZABFweightsarray(:,:,:),ZAADFweightsarray(:,:,:)       ! only used for the zone axis case
+        real(kind=sgl),allocatable      :: sgarray(:,:),BFweightsarray(:,:,:),ADFweightsarray(:,:,:)   ! only used for the systematic row case
 end type STEMtype
 
 !--------------------------------------------------------------------------
@@ -762,11 +768,11 @@ end type STEMtype
 
 ! linked list of wave vectors (used by all diffraction programs)
 type kvectorlist  
-  integer(kind=irg) 		:: i,j         		! image coordinates
-  real(kind=dbl)    		:: kt(3)       	! tangential component of wavevector
-  real(kind=dbl)    		:: kn          	! normal component
-  real(kind=dbl)    		:: k(3)        	! full wave vector
-  type(kvectorlist),pointer	:: next     		! connection to next wave vector
+  integer(kind=irg)             :: i,j                  ! image coordinates
+  real(kind=dbl)                :: kt(3)        ! tangential component of wavevector
+  real(kind=dbl)                :: kn           ! normal component
+  real(kind=dbl)                :: k(3)         ! full wave vector
+  type(kvectorlist),pointer     :: next                 ! connection to next wave vector
 end type kvectorlist
 
 !--------------------------------------------------------------------------
@@ -775,21 +781,21 @@ end type kvectorlist
 
 ! collection of formatting parameters
 type postscript_type
- integer(kind=irg)   	:: pspage
- real(kind=sgl)      	:: psdash(20),psfigwidth,psfigheight,psscale
- character(fnlen)      	:: psname
+ integer(kind=irg)      :: pspage
+ real(kind=sgl)         :: psdash(20),psfigwidth,psfigheight,psscale
+ character(fnlen)       :: psname
 end type
 
 ! used by axonometry-related routines
 type axonotype
- integer(kind=irg)   	:: xi,yi,beta,xmod,ymod,countx,county
- real(kind=sgl)      	:: grid,scle,vscle,xstart,ystart
- logical             	:: visibility
+ integer(kind=irg)      :: xi,yi,beta,xmod,ymod,countx,county
+ real(kind=sgl)         :: grid,scle,vscle,xstart,ystart
+ logical                :: visibility
 end type
 
 ! used by axis and its routines
 type axistype
- real(kind=sgl)      	:: axw,xll,yll
+ real(kind=sgl)         :: axw,xll,yll
 end type
 
 !--------------------------------------------------------------------------
@@ -797,16 +803,16 @@ end type
 !--------------------------------------------------------------------------
 
 type timetype
-  real(kind=sgl)     	:: TIME_t_count
-  real(kind=sgl)     	:: TIME_unit_count
-  real(kind=sgl)     	:: TIME_interval
-  real(kind=sgl)     	:: TIME_fraction
-  integer(kind=irg)   	:: TIME_newcount
-  integer(kind=irg)   	:: TIME_count_rate
-  integer(kind=irg)   	:: TIME_count_max
-  integer(kind=irg)   	:: TIME_count
-  integer(kind=irg)   	:: TIME_old
-  integer(kind=irg)   	:: TIME_loops
+  real(kind=sgl)        :: TIME_t_count
+  real(kind=sgl)        :: TIME_unit_count
+  real(kind=sgl)        :: TIME_interval
+  real(kind=sgl)        :: TIME_fraction
+  integer(kind=irg)     :: TIME_newcount
+  integer(kind=irg)     :: TIME_count_rate
+  integer(kind=irg)     :: TIME_count_max
+  integer(kind=irg)     :: TIME_count
+  integer(kind=irg)     :: TIME_old
+  integer(kind=irg)     :: TIME_loops
 end type
 
 !--------------------------------------------------------------------------
@@ -817,10 +823,10 @@ end type
 ! also, transformation quaternions from various reference frames to the foil and back
 ! material properties are also stored here, such as the elastic moduli
 type foiltype
-  real(kind=dbl)		:: F(3), q(3),Fn(3),qn(3),brx,bry,brxy,cpx,cpy, & 
-				   alP,alS,alR,beP,elmo(6,6),z0,zb,B(3),Bn(3),Bm(3)
-  real(kind=dbl)		:: a_fc(4), a_fm(4), a_mi(4), a_ic(4), a_mc(4), a_fi(4)
-  integer(kind=irg)  		:: npix,npiy
+  real(kind=dbl)                :: F(3), q(3),Fn(3),qn(3),brx,bry,brxy,cpx,cpy, & 
+                                   alP,alS,alR,beP,elmo(6,6),z0,zb,B(3),Bn(3),Bm(3)
+  real(kind=dbl)                :: a_fc(4), a_fm(4), a_mi(4), a_ic(4), a_mc(4), a_fi(4)
+  integer(kind=irg)             :: npix,npiy
   real(kind=sgl),allocatable :: sg(:,:)
 end type foiltype
 
@@ -858,7 +864,7 @@ end type orientationtyped
 ! type definition for linked list of Rodrigues-Frank vectors (used in so3.module)
 type FZpointd
         real(kind=dbl)          :: rod(4)        ! Rodrigues-Frank vector [nx, ny, nz, tan(omega/2) ]
-        type(FZpointd),pointer	:: next	         ! link to next point
+        type(FZpointd),pointer  :: next          ! link to next point
 end type FZpointd
 
 

@@ -70,8 +70,8 @@ end else begin
  'DETXPC': EBSDdata.detxpc = Core_WidgetEvent( EBSDwidget_s.detxpc, 'Pattern Center x-coordinate set to [pixels] ', '(F7.2)', /flt)
  'DETYPC': EBSDdata.detypc = Core_WidgetEvent( EBSDwidget_s.detypc, 'Pattern Center y-coordinate set to [pixels] ', '(F7.2)', /flt)
 
- 'DETBEAMCURRENT': EBSDdata.detbeamcurrent = Core_WidgetEvent( EBSDwidget_s.detbeamcurrent, 'Beam current set to [nA] ', '(F7.3)', /flt)
- 'DETDWELLTIME': EBSDdata.detdwelltime = Core_WidgetEvent( EBSDwidget_s.detdwelltime, 'Dwell time set to [mu s] ', '(F7.3)', /flt)
+ 'DETBEAMCURRENT': EBSDdata.detbeamcurrent = Core_WidgetEvent( EBSDwidget_s.detbeamcurrent, 'Beam current set to [nA] ', '(F9.2)', /flt)
+ 'DETDWELLTIME': EBSDdata.detdwelltime = Core_WidgetEvent( EBSDwidget_s.detdwelltime, 'Dwell time set to [mu s] ', '(F9.2)', /flt)
 
  'DETax1': EBSDdata.detax1 = Core_WidgetEvent( EBSDwidget_s.detax1, 'Axis-angle entry 1 set to ', '(F6.2)', /flt)
  'DETax2': EBSDdata.detax2 = Core_WidgetEvent( EBSDwidget_s.detax2, 'Axis-angle entry 2 set to ', '(F6.2)', /flt)

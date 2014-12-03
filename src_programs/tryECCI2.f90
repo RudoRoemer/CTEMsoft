@@ -481,7 +481,7 @@ write (*,*) 'foil thickness', foil%zb, thick, DF_nums
         
 ! this is the dynamical matrix for the perfect crystal case, which we 
 ! need to convert to the structure matrix A by multiplication by i pi lambda
-	DynMat = DynMat * dcmplx(0.0, cPi * mLambda)
+	DynMat = DynMat * dcmplx(0.0, cPi * cell%mLambda)
 write (*,*) 'structure matrix computed ', shape(DynMat), nn
  
 ! next, we need to compute the Sgh matrix
@@ -771,7 +771,7 @@ if (ktstep.eq.0) then
    
 !   write (*,*) 0, 0, kt, ktlen
    
-   kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
+   kr = kt + sqrt(1.0/cell%mLambda**2 - ktlen)*kstar ! complete wave vector
    ktail%k = kr                            ! store in pointer list
    ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
  end if
@@ -800,7 +800,7 @@ else
 
 !   write (*,*) ic, jc, kt, ktlen
 
-   kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
+   kr = kt + sqrt(1.0/cell%mLambda**2 - ktlen)*kstar ! complete wave vector
    ktail%k = kr                            ! store in pointer list
    ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
  else
@@ -831,7 +831,7 @@ else
  
 !   write (*,*) i, j, kt, ktlen
 
-     kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
+     kr = kt + sqrt(1.0/cell%mLambda**2 - ktlen)*kstar ! complete wave vector
       ktail%k = kr                     ! store in pointer list
       ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
      end if
@@ -913,7 +913,7 @@ real                                :: kr(3),glen,delta,kstar(3),kt(3),gan(3),gp
 !   write (*,*) j, kt
    ktail%kt = kt                           ! store tangential component of k
    ktlen = glen**2*(ktx**2+kty**2)         ! squared length of tangential component
-   kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
+   kr = kt + sqrt(1.0/cell%mLambda**2 - ktlen)*kstar ! complete wave vector
    ktail%k = kr                            ! store in pointer list
    ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
  end if
@@ -930,7 +930,7 @@ real                                :: kr(3),glen,delta,kstar(3),kt(3),gan(3),gp
 !   write (*,*) j, kt
       ktail%kt = kt                    ! store tangential component of k
       ktlen = delta**2*(ktail%i**2+ktail%j**2)         ! squared length of tangential component
-      kr = kt + sqrt(1.0/mLambda**2 - ktlen)*kstar ! complete wave vector
+      kr = kt + sqrt(1.0/cell%mLambda**2 - ktlen)*kstar ! complete wave vector
       ktail%k = kr                     ! store in pointer list
       ktail%kn = CalcDot(ktail%k,dble(kstar),'r')    ! normal component of k
  end do

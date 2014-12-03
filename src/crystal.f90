@@ -1935,7 +1935,7 @@ end function GetHOLZcoordinates
 ! 
 !> @date 11/25/14 MDG 1.0 original
 !--------------------------------------------------------------------------
-function Convert_kgs_to_Substrate(cell, cellS, kg, TTinv, lambdaS) result(kgS)
+recursive function Convert_kgs_to_Substrate(cell, cellS, kg, TTinv, lambdaS) result(kgS)
 
 use local
 use typedefs

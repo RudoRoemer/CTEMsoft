@@ -40,6 +40,7 @@
 !> @date  05/22/01 MDG 2.0 f90
 !> @date  04/16/13 MDG 3.0 rewrite
 !> @date  06/14/14 MDG 4.0 removed all globals
+!> @date  12/02/14 MDG 4.1 added camlen as argument to DiffPage
 !--------------------------------------------------------------------------
 program CTEMxtalinfo
 
@@ -53,7 +54,7 @@ use postscript
 use diffraction
 
 logical                 :: topbot, loadingfile
-real(kind=sgl)          :: io_real(1)
+real(kind=sgl)          :: io_real(1), camlen
 integer(kind=irg)       :: imanum
 character(fnlen)        :: progname, progdesc
 type(unitcell),pointer  :: cell
@@ -139,7 +140,7 @@ end interface
  call Message('Stereographic Projections', frm = "(/A/)")
  call StereoPage(PS, cell)
  call Message('Diffraction Patterns' , frm = "(/A/)")
- call DiffPage(PS,cell,rlp)
+ call DiffPage(PS,cell,rlp,camlen)
 
 ! close Postscript file
  call PS_closefile(PS)
@@ -553,7 +554,7 @@ character(1)                                    :: space
   g(1:3)=float(family(k,1,1:3))
   gg(k)=CalcLength(cell,g,'r')
   ddg(k)=1.0/gg(k)
-  twth(k)=2.0*asin(0.5*mLambda*gg(k))
+  twth(k)=2.0*asin(0.5*cell%mLambda*gg(k))
   xip(k) = Vgg(k,5)
   xi(k)  = Vgg(k,6)
  end do

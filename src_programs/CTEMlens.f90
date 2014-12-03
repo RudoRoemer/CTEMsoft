@@ -243,7 +243,7 @@ type(rk_comm_real_1d) :: comm
  call CalcMatrices
 ! solve for phi(z), initial value pi/2
  eta = sngl(dsqrt(cCharge*0.5D0/cRestmass))
- pre1=0.5*eta/sqrt(sngl(mPsihat))
+ pre1=0.5*eta/sqrt(sngl(cell%mPsihat))
  phi(1)=cPi*0.5
  focal=bfield(1)**2*ddz
  do i=2,np
@@ -290,7 +290,7 @@ type(rk_comm_real_1d) :: comm
 !
 ! solve for r(z)
 !
- GL % pre2=0.25D0*eta**2/mPsihat
+ GL % pre2=0.25D0*eta**2/cell%mPsihat
  nstep=np-1
  t_start = z(1)
  t_end = z(np)
@@ -327,9 +327,9 @@ type(rk_comm_real_1d) :: comm
 ! first column
  q=sngl(mAccvol)
  call PS_textvar(sp,PS % psfigheight-0.75,'Voltage [V]',q)
- q=sngl(mPsihat)
+ q=sngl(cell%mPsihat)
  call PS_textvar(sp,PS % psfigheight-0.75-0.18,'Relativistic voltage [V]',q)
- call PS_textvar(sp,PS % psfigheight-0.75-0.36,'Wavelength [pm]',sngl(1000.0*mLambda))
+ call PS_textvar(sp,PS % psfigheight-0.75-0.36,'Wavelength [pm]',sngl(1000.0*cell%mLambda))
 ! second column
  call PS_textvar(0.5*PS % psfigwidth,PS % psfigheight-0.75,'Total rotation [rad]',sngl(phi(np)-phi(1)))
  call PS_textvar(0.5*PS % psfigwidth,PS % psfigheight-0.75-0.18,'Focal length  [mm]',1000.0*focal)

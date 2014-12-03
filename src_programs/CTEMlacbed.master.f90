@@ -231,7 +231,7 @@ end if
 !  allocate(disk(numt,npix,npix))
 !  disk=0.0
 
-  sc = mLambda*camlen*RR
+  sc = cell%mLambda*camlen*RR
 !  scmax = 1.5*300.0 + npx
 !  PX = npix/2
 

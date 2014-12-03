@@ -382,7 +382,7 @@ end if
   write (dataunit) int(foil%F)					! foil normal = incident wave vector
   write (dataunit) CalcDiffAngle(SRG(1),SRG(2),SRG(3))*0.5	! Bragg angle for the first reflection (whether allowed or not)
   write (dataunit) STEM%numberofsvalues			! number of pixels along disk radius
-  write (dataunit) sngl(mLambda)				! wave length
+  write (dataunit) sngl(cell%mLambda)				! wave length
   write (dataunit) STEM%beamconvergence			! beam divergence
   write (dataunit) DF_L					! pixel size
  

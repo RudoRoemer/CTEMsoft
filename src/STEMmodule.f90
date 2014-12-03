@@ -72,17 +72,17 @@ use diffraction
 IMPLICIT NONE
 
 type(STEMtype),INTENT(INOUT)          :: STEM
-type(unitcell),pointer	                :: cell
-integer(kind=irg),INTENT(IN)		:: nn
-integer(kind=irg),INTENT(IN)		:: g(3)
+type(unitcell),pointer                  :: cell
+integer(kind=irg),INTENT(IN)            :: nn
+integer(kind=irg),INTENT(IN)            :: g(3)
 
-integer(kind=irg) 			:: i,j,n,ira,jj,k,kk, iCL
-real(kind=sgl) 				:: glen, thb, alp, omega_c, omega_min, omega_max,omega,a,b,c,th,dom,p,q,dr,dx
-real(kind=sgl),parameter 		:: cPi=3.141592654
+integer(kind=irg)                       :: i,j,n,ira,jj,k,kk, iCL
+real(kind=sgl)                          :: glen, thb, alp, omega_c, omega_min, omega_max,omega,a,b,c,th,dom,p,q,dr,dx
+real(kind=sgl),parameter                :: cPi=3.141592654
 
 ! these are only used to debug this routine
-real(kind=sgl),allocatable 		:: thetar(:),outar(:,:,:)
-logical    				:: debug = .FALSE., diffappresent = .FALSE., apinBF=.FALSE. , apinADF = .FALSE.
+real(kind=sgl),allocatable              :: thetar(:),outar(:,:,:)
+logical                                 :: debug = .FALSE., diffappresent = .FALSE., apinBF=.FALSE. , apinADF = .FALSE.
 
 ! this routine initializes the excitation error arrays and the weight-factor arrays for systematic row STEM signals
 ! we'll assume that the central beam is centered on the BF detector; then we can 
@@ -113,7 +113,7 @@ do j=1,STEM%numberofsvalues
    do i=1,nn
     n = -ira+i
 ! excitation error
-    STEM%sgarray(nn+1-i,j) = -n*glen*cos(omega)-(1.0-sqrt(1.0-(n*mLambda*glen*sin(omega))**2))/mLambda
+    STEM%sgarray(nn+1-i,j) = -n*glen*cos(omega)-(1.0-sqrt(1.0-(n*cell%mLambda*glen*sin(omega))**2))/cell%mLambda
    end do
 end do
 
@@ -473,17 +473,17 @@ use gvectors
 IMPLICIT NONE
 
 type(STEMtype),INTENT(INOUT)        :: STEM
-type(unitcell),pointer	             :: cell
+type(unitcell),pointer               :: cell
 type(foiltype),INTENT(INOUT)        :: foil
 type(DynType),INTENT(INOUT)         :: Dyn
-type(kvectorlist),pointer	     :: khead
-type(reflisttype),pointer	     :: reflist
+type(kvectorlist),pointer            :: khead
+type(reflisttype),pointer            :: reflist
 integer(kind=irg),INTENT(IN)        :: nn
 
 integer(kind=irg)                   :: ik,ig, iCL
 real(kind=sgl)                      :: ll(3), lpg(3), gg(3), glen, gplen, kpg
-type(kvectorlist),pointer	      :: ktmp
-type(reflisttype),pointer	      :: rltmpa
+type(kvectorlist),pointer             :: ktmp
+type(reflisttype),pointer             :: rltmpa
 
 ! this routine initializes the excitation error arrays and the weight-factor arrays for zone axis STEM signals
 ! the weightfactors are quite a bit different from the ones for the systematic row case;
@@ -518,7 +518,7 @@ type(reflisttype),pointer	      :: rltmpa
       glen = CalcLength(cell,gg,'r')
       lpg = ll + gg                ! Laue + g
       gplen = CalcLength(cell,lpg,'r')
-      kpg = 2000.0*asin(0.50*sngl(mLambda)*gplen)    ! 2theta in mrad
+      kpg = 2000.0*asin(0.50*sngl(cell%mLambda)*gplen)    ! 2theta in mrad
       do iCL=1,STEM%numCL
         STEM%BFmrad = atan(STEM%BFradius/STEM%CLarray(iCL))*1000.0
         STEM%ADFimrad = atan(STEM%ADFinnerradius/STEM%CLarray(iCL))*1000.0
@@ -575,39 +575,39 @@ use gvectors
 IMPLICIT NONE
 
 type(STEMtype),INTENT(INOUT)                  :: STEM
-type(unitcell),pointer	                       :: cell
+type(unitcell),pointer                         :: cell
 type(foiltype),INTENT(INOUT)                  :: foil
 type(DynType),INTENT(INOUT)                   :: Dyn
-character(fnlen),INTENT(IN)			:: STEMnmlfile
-type(kvectorlist),pointer	                :: khead
-type(reflisttype),pointer	                :: reflist
-character(2),INTENT(IN) 			:: geometry  ! 'SR' or 'ZA'
-integer(kind=irg),INTENT(IN)			:: nn
-integer(kind=irg),INTENT(IN)			:: g(3)
-real(kind=sgl),INTENT(IN)			:: kt
-integer(kind=irg),INTENT(IN),OPTIONAL		:: numk
-real(kind=sgl),INTENT(OUT),OPTIONAL		:: beamdiv
+character(fnlen),INTENT(IN)                     :: STEMnmlfile
+type(kvectorlist),pointer                       :: khead
+type(reflisttype),pointer                       :: reflist
+character(2),INTENT(IN)                         :: geometry  ! 'SR' or 'ZA'
+integer(kind=irg),INTENT(IN)                    :: nn
+integer(kind=irg),INTENT(IN)                    :: g(3)
+real(kind=sgl),INTENT(IN)                       :: kt
+integer(kind=irg),INTENT(IN),OPTIONAL           :: numk
+real(kind=sgl),INTENT(OUT),OPTIONAL             :: beamdiv
 
-integer(kind=irg) 				:: numberofsvalues,numCL
-real(kind=sgl) 					:: BFradius,ADFinnerradius,ADFouterradius,beamconvergence,cameralength, &
-                          				diffaprad, diffapcenter,CLarray(20)
-character(fnlen) 				:: weightoutput
+integer(kind=irg)                               :: numberofsvalues,numCL
+real(kind=sgl)                                  :: BFradius,ADFinnerradius,ADFouterradius,beamconvergence,cameralength, &
+                                                        diffaprad, diffapcenter,CLarray(20)
+character(fnlen)                                :: weightoutput
 
 namelist / STEMdata / BFradius, ADFinnerradius, ADFouterradius, cameralength, numCL, &
                       beamconvergence, numberofsvalues, diffaprad, diffapcenter, weightoutput, CLarray
 
 ! set default values (based on OSU Tecnai F20)
-BFradius = 3.5			! mm
-ADFinnerradius = 3.5		! mm
-ADFouterradius = 10.0		! mm
-cameralength = 100.0 		! mm
-numCL = 0	 		! number of camera lengths to be used  (if zero, then use cameralength instead)
-CLarray = 0.0 			! values for the camera lengths
-beamconvergence = 2.0		! mrad
-numberofsvalues = 33		! integer
-diffaprad = 0.0			! diffraction aperture radius in mrad, 0.0 if no aperture is present
-diffapcenter = 0.0		! position of center of diffraction aperture in mrad along systematic row
-weightoutput = '' 		! string with filename root for graphical output of weight profiles, empty if not needed
+BFradius = 3.5                  ! mm
+ADFinnerradius = 3.5            ! mm
+ADFouterradius = 10.0           ! mm
+cameralength = 100.0            ! mm
+numCL = 0                       ! number of camera lengths to be used  (if zero, then use cameralength instead)
+CLarray = 0.0                   ! values for the camera lengths
+beamconvergence = 2.0           ! mrad
+numberofsvalues = 33            ! integer
+diffaprad = 0.0                 ! diffraction aperture radius in mrad, 0.0 if no aperture is present
+diffapcenter = 0.0              ! position of center of diffraction aperture in mrad along systematic row
+weightoutput = ''               ! string with filename root for graphical output of weight profiles, empty if not needed
 
 ! read the namelist file
 call Message('opening '//trim(STEMnmlfile), frm = "(/A)")

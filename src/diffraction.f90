@@ -43,13 +43,12 @@
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date    3/14/02 MDG 2.2 added CalcDynMat routine
 !> @date   01/10/14 MDG 3.0 update with new cell type etc...
+!> @date   12/01/14 MDG 3.1 removal of all global variables, including mLambda etc...
 !--------------------------------------------------------------------------
 module diffraction
 
 use local
 use typedefs
-
-
 
 ! atomic scattering factor parametrization (Doyle-Turner, Smith-Burge)
 ! used only if absorption is not taken into account;  otherwise
@@ -155,38 +154,18 @@ real(kind=sgl),parameter,private   :: scatfac(8,98) = reshape( (/ &
         6.548,5.526,2.520,0.000,0.28461,0.04965,0.00557,0.000/), (/8,98/))
 
 
-
-
-
+! the following variables used to be globals, but they are now entries in the cell pointer structure...
 !
-! mAccvol       = microscope accelerating voltage  [V]
 ! mLambda       = electron wavelength [nm]
 ! mRelcor       = relativistic correction factor gamma [dimensionless]
 ! mSigma        = interaction constant [ ]
 ! mPsihat       = relativistic acceleration potential
-! camlen        = diffraction camera length [mm]
-! 
-
-
-
-
-! WE STILL NEED TO GET RID OF MOST OF THESE GLOBAL VARIABLES !!!!!
-
-real(kind=sgl)           :: kzero(3),camlen
-real(kind=dbl)           :: mAccvol,mLambda,mRelcor,mSigma,mPsihat
-
-real(kind=dbl),allocatable    	:: phir(:,:),phii(:,:),SMr(:,:,:),SMi(:,:,:)
-
-real(kind=sgl),allocatable    	:: Vg(:),rg(:),Vgsave(:)
-integer(kind=irg),allocatable 	:: rfamily(:,:,:),rnumfam(:)
-
 
 ! interface statements
 interface Calcsg
-	module procedure CalcsgSingle
-	module procedure CalcsgDouble
+        module procedure CalcsgSingle
+        module procedure CalcsgDouble
 end interface
-
 
 contains
 
@@ -201,7 +180,8 @@ contains
 !> @date   10/20/98 MDG 1.0 original
 !> @date    5/22/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
-!> @date  03/26/13  MDG  3.0 updated IO
+!> @date   03/26/13 MDG 3.0 updated IO
+!> @date   12/02/14 MDG 3.1 added voltage as argument
 !--------------------------------------------------------------------------
 subroutine GetVoltage(cell, rlp)
 
@@ -209,14 +189,15 @@ use io
 
 IMPLICIT NONE
 
-type(unitcell),pointer	   :: cell
+type(unitcell),pointer    :: cell
 type(gnode),INTENT(INOUT) :: rlp
 
-real(kind=dbl)		:: io_real(1), voltage
+real(kind=dbl)            :: io_real(1), voltage
 
  call ReadValue('Enter the microscope accelerating voltage [V, R] : ', io_real, 1)
  voltage = io_real(1)
- call CalcWaveLength(cell,rlp,voltage)
+ cell%voltage = voltage
+ call CalcWaveLength(cell,rlp)
  
 end subroutine
 
@@ -234,15 +215,15 @@ end subroutine
 !>  then the gamma*V_0 term is added to correct for refraction.
 !
 !> @param cell unit cell pointer
-!> @param voltage electron accelerating voltage [V]
 !> @param skip scattering set identifier (optional)
 !
 !> @date   10/20/98 MDG 1.0 original
 !> @date    5/22/01 MDG 2.0 f90
 !> @date   11/27/01 MDG 2.1 added kind support
-!> @date  03/26/13  MDG  3.0 updated IO
+!> @date   03/26/13 MDG 3.0 updated IO
+!> @date   12/02/14 MDG 3.1 removed mAccvol as global variable
 !--------------------------------------------------------------------------
-subroutine CalcWaveLength(cell,rlp,voltage,skip)
+subroutine CalcWaveLength(cell,rlp,skip)
 
 use constants
 use symmetry
@@ -250,23 +231,20 @@ use io
 
 IMPLICIT NONE
 
-type(unitcell),pointer	               :: cell
-type(gnode),INTENT(INOUT)             :: rlp
-real(kind=dbl),INTENT(IN)   		:: voltage		!< accelerating voltage [V]
-integer(kind=irg),INTENT(IN),OPTIONAL 	:: skip			!< scattering set identifier
-real(kind=dbl)   			:: temp1,temp2, oi_real(1)
-integer(kind=irg)			:: hkl(3), io_int(1)
+type(unitcell),pointer                  :: cell
+type(gnode),INTENT(INOUT)               :: rlp
+integer(kind=irg),INTENT(IN),OPTIONAL   :: skip                 !< scattering set identifier
+real(kind=dbl)                          :: temp1,temp2, oi_real(1)
+integer(kind=irg)                       :: hkl(3), io_int(1)
 
-! store voltage in common block
- mAccvol = voltage
- temp1 = 1.0D+9*cPlanck/dsqrt(2.D0*cRestmass*cCharge)
- temp2 = cCharge*0.5D0*voltage/cRestmass/cLight**2
+  temp1 = 1.0D+9*cPlanck/dsqrt(2.D0*cRestmass*cCharge)
+  temp2 = cCharge*0.5D0*cell%voltage/cRestmass/cLight**2
 
 ! relativistic correction factor (known as gamma)      
- mRelcor = 1.0D0+2.0D0*temp2
+  cell%mRelcor = 1.0D0+2.0D0*temp2
 
 ! relativistic acceleration voltage
- mPsihat = voltage*(1.D0+temp2)
+  cell%mPsihat = cell%voltage*(1.D0+temp2)
 
 ! compute the electron wavelength in nm
 ! compute V_0 and add it to mPsihat (corrected by mRelcor)
@@ -296,22 +274,22 @@ integer(kind=irg)			:: hkl(3), io_int(1)
   hkl=(/0,0,0/)
   call CalcUcg(cell,rlp,hkl) 
   oi_real(1) = rlp%Vmod
-  call WriteValue('Mean inner potential [V] ', oi_real, 1)
-  mPsihat = mPsihat + dble(rlp%Vmod)
+  call WriteValue('Mean inner potential [V] ', oi_real, 1,"(' ',E10.4)")
+  cell%mPsihat = cell%mPsihat + dble(rlp%Vmod)
   call Message(' Wavelength corrected for refraction', frm = "(A)")
 
- oi_real(1) = mRelcor
- call WriteValue('Relativistic correction factor [gamma]  ', oi_real, 1)
- oi_real(1) = mPsihat
- call WriteValue('Relativistic Accelerating Potential [V] ', oi_real, 1)
- mLambda = temp1/dsqrt(mPsihat)
- oi_real(1) = mLambda
- call WriteValue('Electron Wavelength [nm]                ', oi_real, 1)
+  oi_real(1) = cell%mRelcor
+  call WriteValue('Relativistic correction factor [gamma]  ', oi_real, 1,"(' ',E10.4)")
+  oi_real(1) = cell%mPsihat
+  call WriteValue('Relativistic Accelerating Potential [V] ', oi_real, 1,"(' ',E10.4)")
+  cell%mLambda = temp1/dsqrt(cell%mPsihat)
+  oi_real(1) = cell%mLambda
+  call WriteValue('Electron Wavelength [nm]                ', oi_real, 1,"(' ',E10.4)")
 ! interaction constant sigma
- mSigma = 2.D0*cPi*cRestmass*mRelcor*cCharge*mLambda
- mSigma = 1.0D-18*mSigma/cPlanck**2
- oi_real(1) = mSigma
- call WriteValue('Interaction constant [V nm]^(-1)        ', oi_real, 1)
+  cell%mSigma = 2.D0*cPi*cRestmass*cell%mRelcor*cCharge*cell%mLambda
+  cell%mSigma = 1.0D-18*cell%mSigma/cPlanck**2
+  oi_real(1) = cell%mSigma
+  call WriteValue('Interaction constant [V nm]^(-1)        ', oi_real, 1,"(' ',E10.4)")
  
 end subroutine
 
@@ -338,12 +316,12 @@ use crystal
 
 IMPLICIT NONE
 
-type(unitcell),pointer	        :: cell
-integer(kind=irg),INTENT(IN)  	:: h,k,l 		!< Miller indices
+type(unitcell),pointer          :: cell
+integer(kind=irg),INTENT(IN)    :: h,k,l                !< Miller indices
 
-real(kind=sgl)     		:: tt
+real(kind=sgl)                  :: tt
 
-tt = 2.0*asin(0.50*sngl(mLambda)*CalcLength( cell, float( (/h,k,l/) ), 'r') )
+tt = 2.0*asin(0.50*sngl(cell%mLambda)*CalcLength( cell, float( (/h,k,l/) ), 'r') )
 
 end function
 
@@ -366,9 +344,9 @@ use crystal
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)  			:: theta 		!< scattering angle
-character(*),INTENT(IN),OPTIONAL		:: HEDM		!< for HEDM we have a different polarization factor
-real(kind=sgl)     				:: tt
+real(kind=sgl),INTENT(IN)                       :: theta                !< scattering angle
+character(*),INTENT(IN),OPTIONAL                :: HEDM         !< for HEDM we have a different polarization factor
+real(kind=sgl)                                  :: tt
 
 if (present(HEDM)) then
   tt = (1.0+cos(2.0*theta)**2) / sin(theta)**2 / cos(theta)
@@ -393,6 +371,7 @@ end function
 !> computation of kinematical x-ray scattering; this was needed for the HEDM package.
 !
 !> @param cell unit cell pointer
+!> @param rlp reciprocal lattice point
 !> @param hkl  Miller indices
 !
 !> @note CalcPositions must be called before calling this routine
@@ -404,6 +383,7 @@ end function
 !> @date  03/26/13 MDG 3.1 added XRD support
 !> @date  01/10/14 MDG 4.0 new cell type
 !> @date  06/09/14 MDG 4.1 added cell as argument
+!> @date  12/02/14 MDG 4.2 added voltage as argument
 !--------------------------------------------------------------------------
 recursive subroutine CalcUcg(cell,rlp,hkl)
 
@@ -414,16 +394,16 @@ use others
 
 IMPLICIT NONE
 
-type(unitcell),pointer	                :: cell
-type(gnode),INTENT(INOUT)              :: rlp
-integer(kind=irg),INTENT(IN)      	:: hkl(3)		!< Miller indices
+type(unitcell),pointer          :: cell
+type(gnode),INTENT(INOUT)       :: rlp
+integer(kind=irg),INTENT(IN)    :: hkl(3)               !< Miller indices
 
-integer(kind=irg)      		:: j,absflg,m,ii
-real(kind=sgl)         		:: s,twopi,arg,swk,dwwk,pref,ul,pre,preg,sct,fs,fsp
-complex(kind=sgl)      		:: ff,gg,sf,p1
-complex(kind=sgl)      		:: czero
-logical                		:: accflg, dwflg
-character(2)           		:: smb
+integer(kind=irg)               :: j,absflg,m,ii
+real(kind=sgl)                  :: s,twopi,arg,swk,dwwk,pref,ul,pre,preg,sct,fs,fsp
+complex(kind=sgl)               :: ff,gg,sf,p1
+complex(kind=sgl)               :: czero
+logical                         :: accflg, dwflg
+character(2)                    :: smb
 
 twopi = sngl(2.D0*cPi)
 czero = cmplx(0.0,0.0)
@@ -512,12 +492,12 @@ if (rlp%method.eq.'DT') then
 ! and fill in the entries of the rlp variable
  pre = 2.0*sngl(cRestmass*cCharge/cPlanck**2)*1.0E-18
  rlp%hkl = hkl
- rlp%Vmod = cabs(sf)*mRelcor
+ rlp%Vmod = cabs(sf)*cell%mRelcor
  rlp%Vphase = atan2(aimag(sf),real(sf))
  rlp%Vpmod = 0.0
  rlp%Vpphase = 0.0
  if (rlp%Vmod.gt.0.0) then
-  rlp%xg = 1.0/(pre*rlp%Vmod*mLambda)
+  rlp%xg = 1.0/(pre*rlp%Vmod*cell%mLambda)
  else
   rlp%xg = 1.0E+8
  end if
@@ -578,7 +558,7 @@ if (rlp%method.eq.'WK') then
 ! scale and include Debye-Waller factor and site occupation parameter
   ul = sqrt(cell % ATOM_pos(m,5)*dwwk)
   j = cell % ATOM_type(m)
-  sf = FSCATT(s,ul,j,smb,sngl(mAccvol)/1000.0,absflg,accflg,dwflg)*cell%ATOM_pos(m,4)
+  sf = FSCATT(s,ul,j,smb,sngl(cell%voltage)/1000.0,absflg,accflg,dwflg)*cell%ATOM_pos(m,4)
 
 ! loop over all atoms in the orbit
   p1 = czero
@@ -621,13 +601,13 @@ if (rlp%method.eq.'WK') then
 ! complex Vg 
  rlp%Vg = rlp%Ucg/preg
  if (abs(rlp%Umod).gt.0.0) then 
-  rlp%xg = 1.0/abs(rlp%Umod)/mLambda
+  rlp%xg = 1.0/abs(rlp%Umod)/cell%mLambda
  else
   rlp%xg = 1.0E+8
  end if 
 
  if (abs(rlp%Upmod).gt.0.0) then 
-  rlp%xgp = 1.0/abs(rlp%Upmod)/mLambda
+  rlp%xgp = 1.0/abs(rlp%Upmod)/cell%mLambda
  else
   rlp%xgp = 1.0E+8
  end if 
@@ -657,7 +637,7 @@ end subroutine CalcUcg
 !
 !> @param cell unit cell pointer
 !> @param gg reciprocal lattice point indices
-!> @param kk	wave vector components
+!> @param kk    wave vector components
 !> @param FN foil normal
 !
 !> @date   10/20/98 MDG 1.0 original
@@ -672,12 +652,12 @@ use crystal
 
 IMPLICIT NONE
 
-type(unitcell),pointer	        :: cell
-real(kind=sgl),INTENT(IN) 	:: gg(3)		!< reciprocal lattice point
-real(kind=sgl),INTENT(IN) 	:: kk(3)		!< wave vector
-real(kind=sgl),INTENT(IN) 	:: FN(3) 		!< foil normal
+type(unitcell),pointer          :: cell
+real(kind=sgl),INTENT(IN)       :: gg(3)                !< reciprocal lattice point
+real(kind=sgl),INTENT(IN)       :: kk(3)                !< wave vector
+real(kind=sgl),INTENT(IN)       :: FN(3)                !< foil normal
 
-real(kind=sgl)			:: kpg(3),tkpg(3),xnom,xden,q1,q2,sg
+real(kind=sgl)                  :: kpg(3),tkpg(3),xnom,xden,q1,q2,sg
 
 
  kpg=kk+gg
@@ -704,7 +684,7 @@ end function CalcsgSingle
 !
 !> @param cell unit cell pointer
 !> @param gg reciprocal lattice point indices
-!> @param kk	wave vector components
+!> @param kk    wave vector components
 !> @param FN foil normal
 !
 !> @date   10/20/98 MDG 1.0 original
@@ -719,12 +699,12 @@ use crystal
 
 IMPLICIT NONE
 
-type(unitcell),pointer	        :: cell
-real(kind=dbl),INTENT(IN) 	:: gg(3)		!< reciprocal lattice point
-real(kind=dbl),INTENT(IN) 	:: kk(3)		!< wave vector
-real(kind=dbl),INTENT(IN) 	:: FN(3) 		!< foil normal
+type(unitcell),pointer          :: cell
+real(kind=dbl),INTENT(IN)       :: gg(3)                !< reciprocal lattice point
+real(kind=dbl),INTENT(IN)       :: kk(3)                !< wave vector
+real(kind=dbl),INTENT(IN)       :: FN(3)                !< foil normal
 
-real(kind=dbl)			:: kpg(3),tkpg(3),xnom,xden,q1,q2,sg
+real(kind=dbl)                  :: kpg(3),tkpg(3),xnom,xden,q1,q2,sg
 
  kpg=kk+gg
  tkpg=2.D0*kk+gg
@@ -773,14 +753,14 @@ use constants
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)  	:: sg 			!< excitation error
-real(kind=sgl),INTENT(IN)  	:: z			!< thickness
-real(kind=sgl),INTENT(IN)  	:: xig 		!< extinction distance
-real(kind=sgl),INTENT(IN)  	:: xigp 		!< anomalous absorption length
-real(kind=sgl),INTENT(IN)  	:: xizero 		!< normal absorption length
-real(kind=sgl),INTENT(IN)  	:: betag 		!< phase parameter
-real(kind=sgl),INTENT(OUT)  	:: Ar(2,2)		!< real part of result 
-real(kind=sgl),INTENT(OUT)  	:: Ai(2,2)		!< imaginary part of result 
+real(kind=sgl),INTENT(IN)       :: sg                   !< excitation error
+real(kind=sgl),INTENT(IN)       :: z                    !< thickness
+real(kind=sgl),INTENT(IN)       :: xig          !< extinction distance
+real(kind=sgl),INTENT(IN)       :: xigp                 !< anomalous absorption length
+real(kind=sgl),INTENT(IN)       :: xizero               !< normal absorption length
+real(kind=sgl),INTENT(IN)       :: betag                !< phase parameter
+real(kind=sgl),INTENT(OUT)      :: Ar(2,2)              !< real part of result 
+real(kind=sgl),INTENT(OUT)      :: Ai(2,2)              !< imaginary part of result 
 
 real(kind=sgl)  :: pr, pi, cs, ss, ch, sh, q, q1, q2, sgs, sr, si, o , p, sb, cb, e, r, sq, xigi,xigpi
 
@@ -874,14 +854,14 @@ use constants
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)  	:: sg 			!< excitation error
-real(kind=sgl),INTENT(IN)  	:: z			!< thickness
-real(kind=sgl),INTENT(IN)  	:: xig 		!< extinction distance
-real(kind=sgl),INTENT(IN)  	:: xigp 		!< anomalous absorption length
-real(kind=sgl),INTENT(IN)  	:: xizero 		!< normal absorption length
-real(kind=sgl),INTENT(IN)  	:: betag 		!< phase parameter
-real(kind=sgl),INTENT(OUT)  	:: It			!< real part of result 
-real(kind=sgl),INTENT(OUT)  	:: Is			!< imaginary part of result 
+real(kind=sgl),INTENT(IN)       :: sg                   !< excitation error
+real(kind=sgl),INTENT(IN)       :: z                    !< thickness
+real(kind=sgl),INTENT(IN)       :: xig          !< extinction distance
+real(kind=sgl),INTENT(IN)       :: xigp                 !< anomalous absorption length
+real(kind=sgl),INTENT(IN)       :: xizero               !< normal absorption length
+real(kind=sgl),INTENT(IN)       :: betag                !< phase parameter
+real(kind=sgl),INTENT(OUT)      :: It                   !< real part of result 
+real(kind=sgl),INTENT(OUT)      :: Is                   !< imaginary part of result 
 
 real(kind=sgl) :: q, r, sq, qgsi, e, sr, si, cp, ch, pr, pi, xigi, xigpi, sgs
      
@@ -926,53 +906,6 @@ real(kind=sgl) :: q, r, sq, qgsi, e, sr, si, cp, ch, pr, pi, xigi, xigpi, sgs
 
 end subroutine
 
-!--------------------------------------------------------------------------
-!
-! SUBROUTINE: TBCalcdz
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief multiply the amplitude column vector with the Scattering Matrix
-!
-!> @param im ???
-!> @param nbm number of beams 
-!
-!> @todo Perhaps this needs to be rewritten with complex matrices and array operations?
-!
-!> @date   10/20/98 MDG 1.0 original
-!> @date    5/22/01 MDG 2.0 f90
-!> @date   11/27/01 MDG 2.1 added kind support
-!> @date   03/26/13 MDG 3.0 updated IO
-!--------------------------------------------------------------------------
-subroutine TBCalcdz(im,nbm)
- 
-IMPLICIT NONE
-
-integer(kind=irg),INTENT(IN)	:: im			!< ???
-integer(kind=irg),INTENT(IN)	:: nbm		!< number of beams
-real(kind=dbl),allocatable 	:: p(:),q(:)
-integer(kind=irg)          		:: k,i,j
-
- allocate(p(nbm), q(nbm))
-
- do k=1,im
-  do i=1,nbm
-   p(i)=0.D0
-   q(i)=0.D0
-   do j=1,nbm
-    p(i)=p(i)+SMr(k,i,j)*phir(k,j)-SMi(k,i,j)*phii(k,j)
-    q(i)=q(i)+SMi(k,i,j)*phir(k,j)+SMr(k,i,j)*phii(k,j)
-   end do
-  end do
-  do i=1,nbm
-   phir(k,i)=p(i)
-   phii(k,i)=q(i)
-  end do
- end do
-
- deallocate(p,q)
-
-end subroutine
 
 !--------------------------------------------------------------------------
 !
@@ -991,8 +924,9 @@ end subroutine
 !> @date   03/26/13 MDG 3.0 updated IO
 !> @date   01/10/14 MDG 4.0 update for new cell type
 !> @date   06/09/14 MDG 4.1 added cell, PS as arguments
+!> @date   12/02/14 MDG 4.2 added camlen as argument; modified Vg and Vgsave arrays
 !--------------------------------------------------------------------------
-subroutine DiffPage(PS,cell,rlp)
+subroutine DiffPage(PS,cell,rlp,camlen)
 
 use postscript
 use crystal
@@ -1006,6 +940,7 @@ IMPLICIT NONE
 type(unitcell),pointer          :: cell
 type(postscript_type),INTENT(INOUT) :: PS
 type(gnode),INTENT(INOUT)       :: rlp
+real(kind=sgl),INTENT(IN)       :: camlen
 
 integer(kind=irg),parameter     :: inm = 5
 character(1)                    :: list(256)
@@ -1022,6 +957,10 @@ real(kind=sgl),parameter        :: xoff(0:5)=(/0.0,3.3125,0.0,3.3125,0.0,3.3125/
 logical,allocatable             :: dbdiff(:)
 integer(kind=irg)               :: itmp(48,3)   !< array used for family computations etc
 
+real(kind=sgl),allocatable      :: Vg(:),rg(:),Vgsave(:)
+integer(kind=irg),allocatable   :: rfamily(:,:,:),rnumfam(:)
+
+
 ! set some parameters
  cell % SG % SYM_reduce=.TRUE.
  thr = 1.E-4 
@@ -1030,11 +969,11 @@ integer(kind=irg)               :: itmp(48,3)   !< array used for family computa
 
 ! gmax is the radius of the sphere whose intersection with the 
 ! back focal plane is the circle on the output zone axis patterns
- laL = sngl(mLambda) * camlen
+ laL = sngl(cell%mLambda) * camlen
  RR = 1.375 * 25.4
  gmax = RR/laL
 
- oi_real(1) = sngl(mLambda)
+ oi_real(1) = sngl(cell%mLambda)
  call WriteValue('wavelength [nm] = ', oi_real, 1)
  oi_real(1) = camlen
  call WriteValue(' L         [mm] = ', oi_real, 1)
@@ -1268,12 +1207,13 @@ integer(kind=irg)               :: itmp(48,3)   !< array used for family computa
   endif
   if (slect(i).eq.0) then
    call Message('Creating Powder Pattern ', frm = "(A)")
-   call DumpPP(PS,cell,xoff(imo),yoff(imo),np,laL,ricnt)
+   call DumpPP(PS,cell,xoff(imo),yoff(imo),np,laL,ricnt,Vgsave,rg,rnumfam)
    ppat=.FALSE.
   else
    io_int(1:3) = family(j,1:3)
    call WriteValue('Creating ZAP ', io_int,3, "('[',3i3,'] : ',$)")
-   call DumpZAP(PS,cell,xoff(imo),yoff(imo),family(j,1),family(j,2),family(j,3),numfam(j),np,first,iref,laL,ricnt,dbdiff)
+   call DumpZAP(PS,cell,xoff(imo),yoff(imo),family(j,1),family(j,2),family(j,3),numfam(j),np,first,iref,laL,ricnt,dbdiff, &
+        Vg, Vgsave, rg, rfamily, rnumfam, hhcc)
   endif
  end do
 
@@ -1312,7 +1252,7 @@ end subroutine DiffPage
 !> @date  03/26/13  MDG 3.0 updated IO
 !> @date  06/09/14  MDG 4.0 added PS argument
 !--------------------------------------------------------------------------
-subroutine DumpZAP(PS,cell,xo,yo,u,v,w,p,np,first,indi,laL,icnt,dbdiff)
+subroutine DumpZAP(PS,cell,xo,yo,u,v,w,p,np,first,indi,laL,icnt,dbdiff,Vg,Vgsave,rg,rfamily,rnumfam,hhcc)
 
 use io
 use postscript
@@ -1322,25 +1262,28 @@ use error
 IMPLICIT NONE
 
 type(postscript_type),INTENT(INOUT) :: PS
-type(unitcell),pointer	        :: cell
-real(kind=sgl),INTENT(IN)	:: xo, yo		!< lower left position
-integer(kind=irg),INTENT(IN)	:: u, v, w		!< zone axis components
-integer(kind=irg),INTENT(IN)	:: p			!< ??
-logical,INTENT(IN)		:: np			!< logical for new page
-logical,INTENT(IN)		:: first		!< logical
-integer(kind=irg),INTENT(IN)	:: indi		        !< ??
-real(kind=sgl),INTENT(IN)	:: laL			!< camera length
-integer(kind=irg),INTENT(IN)	:: icnt		        !< counter
-logical,INTENT(IN)            :: dbdiff(icnt)         !< array to deal with double diffraction spots
+type(unitcell),pointer          :: cell
+real(kind=sgl),INTENT(IN)       :: xo, yo               !< lower left position
+integer(kind=irg),INTENT(IN)    :: u, v, w              !< zone axis components
+integer(kind=irg),INTENT(IN)    :: p                    !< ??
+logical,INTENT(IN)              :: np                   !< logical for new page
+logical,INTENT(IN)              :: first                !< logical
+integer(kind=irg),INTENT(IN)    :: indi                 !< ??
+real(kind=sgl),INTENT(IN)       :: laL                  !< camera length
+integer(kind=irg),INTENT(IN)    :: icnt                 !< counter
+logical,INTENT(IN)              :: dbdiff(icnt)         !< array to deal with double diffraction spots
+real(kind=sgl),INTENT(IN)       :: Vg(*),rg(*),Vgsave(*)
+integer(kind=irg),INTENT(IN)    :: rfamily(hhcc,48,3),rnumfam(*)
+integer(kind=irg),INTENT(IN)    :: hhcc
 
 ! nref is the anticipated maximum number of reflections per pattern
-integer(kind=irg),parameter  	:: nref = 2000
-integer(kind=irg)            	:: dp,i,j,jcnt,ui,vi,wi,pp,locg(nref,3),ier, io_int(1)
-integer(kind=irg),allocatable	:: idx(:)
-real(kind=sgl)               	:: sc,gmax,leng(nref),PX,PY,qx,qy,locv(nref),locvsave(nref),t(3),c(3),gg(3),gx(3),gy(3)
-real(kind=sgl),allocatable   	:: lng(:)
-real(kind=sgl),parameter     	:: le=3.25,he=2.9375,thr=1.0E-4
-logical                      	:: dbd(nref)
+integer(kind=irg),parameter     :: nref = 2000
+integer(kind=irg)               :: dp,i,j,jcnt,ui,vi,wi,pp,locg(nref,3),ier, io_int(1)
+integer(kind=irg),allocatable   :: idx(:)
+real(kind=sgl)                  :: sc,gmax,leng(nref),PX,PY,qx,qy,locv(nref),locvsave(nref),t(3),c(3),gg(3),gx(3),gy(3)
+real(kind=sgl),allocatable      :: lng(:)
+real(kind=sgl),parameter        :: le=3.25,he=2.9375,thr=1.0E-4
+logical                         :: dbd(nref)
 
 ! do page preamble stuff if this is a new page
 ! [This assumes that the PostScript file has already been opened]
@@ -1484,24 +1427,26 @@ end subroutine
 !> @date  03/26/13  MDG 3.0 updated IO
 !> @date  06/09/14  MDG 4.0 added PS, cell as arguments
 !--------------------------------------------------------------------------
-subroutine DumpPP(PS,cell,xo,yo,np,laL,icnt)
+subroutine DumpPP(PS,cell,xo,yo,np,laL,icnt,Vgsave,rg,rnumfam)
 
 use postscript
 
 IMPLICIT NONE 
 
 type(postscript_type),INTENT(INOUT) :: PS
-type(unitcell),pointer	        :: cell
-real(kind=sgl),INTENT(IN)	:: xo, yo		!< lower left position
-logical,INTENT(IN)		:: np			!< logical for new page
-real(kind=sgl),INTENT(IN)	:: laL			!< camera length
-integer(kind=irg),INTENT(IN)	:: icnt		!< counter
+type(unitcell),pointer          :: cell
+real(kind=sgl),INTENT(IN)       :: xo, yo               !< lower left position
+logical,INTENT(IN)              :: np                   !< logical for new page
+real(kind=sgl),INTENT(IN)       :: laL                  !< camera length
+integer(kind=irg),INTENT(IN)    :: icnt         !< counter
+real(kind=sgl),INTENT(IN)       :: rg(*),Vgsave(*)
+integer(kind=irg),INTENT(IN)    :: rnumfam(*)
 
 ! nref = max number of rings
-integer(kind=irg),parameter 	:: nref = 500
-integer(kind=irg)           	:: i,j
-real(kind=sgl)              	:: sc,gmax,leng(nref),PX,PY,locv(nref),grad,w,Vmax
-real(kind=sgl),parameter    	:: le=3.25,he=2.9375,thr=1.0E-4
+integer(kind=irg),parameter     :: nref = 500
+integer(kind=irg)               :: i,j
+real(kind=sgl)                  :: sc,gmax,leng(nref),PX,PY,locv(nref),grad,w,Vmax
+real(kind=sgl),parameter        :: le=3.25,he=2.9375,thr=1.0E-4
 
 ! do page preamble stuff if this is a new page
 ! [This assumes that the PostScript file has already been opened]
@@ -1585,13 +1530,13 @@ subroutine studylist(list,slect,np,ppat)
 
 IMPLICIT NONE
 
-character(1),INTENT(IN) 		:: list(256)		!< input string
-integer(kind=irg),INTENT(OUT)     	:: slect(256)		!< list of patterns to be drawn
-integer(kind=irg),INTENT(OUT)     	:: np				!< number of patterns
-logical,INTENT(INOUT)			:: ppat			!< powder pattern included ?
+character(1),INTENT(IN)                 :: list(256)            !< input string
+integer(kind=irg),INTENT(OUT)           :: slect(256)           !< list of patterns to be drawn
+integer(kind=irg),INTENT(OUT)           :: np                           !< number of patterns
+logical,INTENT(INOUT)                   :: ppat                 !< powder pattern included ?
 
-integer(kind=irg)			:: comma(100),hyphen(100),ccnt,hcnt,i,j,k,ip,icnt,nd,n,istart,istop
-integer(kind=irg),parameter 		:: nmb(48:57)=(/0,1,2,3,4,5,6,7,8,9/)
+integer(kind=irg)                       :: comma(100),hyphen(100),ccnt,hcnt,i,j,k,ip,icnt,nd,n,istart,istop
+integer(kind=irg),parameter             :: nmb(48:57)=(/0,1,2,3,4,5,6,7,8,9/)
 
 ! initialize a few parameters
  ccnt = 0
@@ -1904,7 +1849,7 @@ end subroutine BWsolve
 !   9/29/01 MDG 2.0 f90
 !  11/27/01 MDG 2.1 added kind support
 ! ###################################################################
-subroutine CalcFresnelPropagator(beam,dimi,dimj,dz,scl,propname)
+subroutine CalcFresnelPropagator(beam,dimi,dimj,dz,scl,propname,lambda)
 
 use constants
 use io
@@ -1912,7 +1857,7 @@ use files
 
 IMPLICIT NONE
 
-real(kind=sgl)                  :: beam(3),b,bm(2),dz,fidim,fjdim,prefac,scl, oi_real(2)
+real(kind=sgl)                  :: beam(3),b,bm(2),dz,fidim,fjdim,prefac,scl, oi_real(2), lambda
 real(kind=sgl),allocatable      :: idimi(:),jdimj(:)
 complex(kind=sgl),allocatable   :: fr(:,:)
 integer(kind=irg)               :: dimi,dimj,i,ix,iy
@@ -1922,11 +1867,11 @@ INTENT(IN) :: beam,dimi,dimj,dz
 
   fidim = 1.0/float(dimi)
   fjdim = 1.0/float(dimj)
-  prefac = scl*cPi*mLambda*dz
+  prefac = scl*cPi*lambda*dz
   call Message('Computing Fresnel propagator', frm = "(A)")
 ! normalize the incident beam direction and rescale to the wavevector
   b = sqrt(sum(beam**2))
-  bm= beam(1:2)/b/mLambda
+  bm= beam(1:2)/b/lambda
   oi_real(1:2) = bm(1:2) 
   call WriteValue(' Laue center at ', oi_real, 2, "(F8.4,',',F8.4)")
 ! allocate variables

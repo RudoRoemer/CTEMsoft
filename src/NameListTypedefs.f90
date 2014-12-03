@@ -295,6 +295,7 @@ type PEDNameListType
     integer(kind=irg)       :: precsample
     integer(kind=irg)       :: precazimuthal
     integer(kind=irg)       :: npix
+    integer(kind=irg)       :: nthreads
     real(kind=sgl)          :: voltage
     real(kind=sgl)          :: dmin
     real(kind=sgl)          :: precangle
