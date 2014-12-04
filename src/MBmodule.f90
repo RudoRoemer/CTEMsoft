@@ -897,6 +897,7 @@ use typedefs
 use diffraction
 use crystal
 use constants
+use gvectors
 use initializers
 use gvectors
 
