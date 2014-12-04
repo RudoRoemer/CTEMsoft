@@ -160,7 +160,7 @@ type(BetheParameterType)                :: BetheParameters
 real(kind=sgl),allocatable              :: sr(:,:)
 complex(kind=dbl),allocatable           :: DynMat_film(:,:),Dynmat_subs(:,:)
 complex(kind=dbl),allocatable           :: Sghfilm(:,:),Lghfilm(:,:),Sghfilmtmp(:,:,:),Lghfilmtmp(:,:,:)
-complex(kind=dbl),allocatable           :: sigmagg(:,:)
+real(kind=dbl),allocatable              :: sigmagg(:,:)
 complex(kind=dbl),allocatable           :: S0_subs(:)
 complex(kind=dbl)                       :: czero
 integer(kind=irg),allocatable           :: nat_film(:),nat_subs(:)
@@ -364,8 +364,7 @@ beamloop: do ii = 1,numk
     if (istat .ne. 0) call FatalError("STOP:"," cannot allocate pointer")
     call CalcSigmaggSubstrate(cell_subs,nns_film,refliststrong_subs,S0_subs,sigmagg,&
          numzbins,thick,lambdaZ,filmthickness,nat_subs,numset_subs)
-
-    sr(ipx,ipy) = sr(ipx,ipy) + real(sum(sigmagg))/float(sum(nat_subs))
+    sr(ipx,ipy) = sr(ipx,ipy) + sum(sigmagg)/float(sum(nat_subs))
     call Delete_StrongBeamList(refliststrong_subs)
 !==================================================================================
 ! substrate contribution done

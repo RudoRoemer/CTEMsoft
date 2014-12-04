@@ -764,16 +764,16 @@ integer(kind=irg),INTENT(IN)                :: nnk
 integer(kind=irg),INTENT(IN)                :: nt
 type(refliststrongsubstype),pointer         :: refliststrong_subs
 complex(kind=dbl),INTENT(IN)                :: Sg(nnk)
-complex(kind=dbl),INTENT(OUT)               :: Sigmagg(nnk,nnk)
+real(kind=dbl),INTENT(OUT)                  :: Sigmagg(nnk,nnk)
 real(kind=sgl),INTENT(IN)                   :: thick(nt)
 real(kind=sgl),INTENT(IN)                   :: lambdaZ(nt)
 integer(kind=irg),INTENT(IN)                :: filmthickness,numset
 integer(kind=irg),INTENT(INOUT)             :: nat(numset)
 
-integer(kind=irg)                           :: ii,jj,kk,ll,mm,pp,qq,nns1,nns2,istat
-complex(kind=dbl),allocatable               :: mat1(:,:),mat2(:,:),mat3(:,:),Minp1(:,:),Minp2(:,:),Lhh(:,:)
+integer(kind=irg)                           :: ii,jj,kk,ll,mm,pp,qq,nns1,nns2,istat,lmm1,lmm2
+complex(kind=dbl),allocatable               :: mat1(:),mat2(:),Minp1(:,:),Minp2(:,:),Lhh(:,:)
 type(refliststrongsubstype),pointer         :: rltmpa,rltmpb
-complex(kind=dbl),allocatable               :: ScatMat1(:,:),ScatMat2(:,:),S01(:),S02(:),S03(:),Shh(:,:)
+complex(kind=dbl),allocatable               :: ScatMat1(:,:),ScatMat2(:,:),S01(:),S02(:),Shh(:,:)
 real(kind=sgl)                              :: dthick,delh(3),delkg(3),s
 real(kind=dbl)                              :: tpi,ctmp(192,3),Znsq,arg1(3),arg2(3),arg3,arg4
 integer(kind=irg)                           :: n
@@ -787,29 +787,29 @@ nullify(rltmpa)
 nullify(rltmpb)
 nns1 = 0
 nns2 = 0
-
+!print*,"Starting main loop"
 ! setting initial amplitude of the beam
 rltmpa => refliststrong_subs
 do ii = 1,nnk
     nns1 = rltmpa%nns
-    allocate(ScatMat1(nns1,nns1),Minp1(nns1,nns1),S01(nns1),mat1(nns1,1),mat3(1,nns1),hlist1(nns1,3),stat=istat)
+    allocate(ScatMat1(nns1,nns1),Minp1(nns1,nns1),S01(nns1),mat1(nns1),hlist1(nns1,3),stat=istat)
     ScatMat1 = dcmplx(0.D0,0.D0)
     Minp1 = dcmplx(0.D0,0.D0)
     Minp1 = rltmpa%DynMat*dcmplx(0.D0,cPi * cell_subs%mLambda)
     hlist1 = rltmpa%hlist
+    !print*,"Starting exponential calculation"
     call MatrixExponential(Minp1, ScatMat1, dble(dthick), 'Pade', nns1)
+    !print*,"Exponential calculation done"
     S01 = dcmplx(0.D0,0.D0)
     mat1 = dcmplx(0.D0,0.D0)
-    mat3 = dcmplx(0.D0,0.D0)
     hlist1 = 0
     S01(1) = Sg(ii)
-    print*,S01
-    mat1(:,1) = S01(:) ! the first incident beam
-
+    !print*,"entering inner loop for outer loop #",ii
+    !mat1(:,1) = S01(:) ! the first incident beam
     rltmpb => refliststrong_subs
     do jj = 1,nnk
         nns2 = rltmpb%nns
-        allocate(ScatMat2(nns2,nns2),Minp2(nns2,nns2),S02(nns2),mat2(nns2,1),hlist2(nns2,3),stat=istat)
+        allocate(ScatMat2(nns2,nns2),Minp2(nns2,nns2),S02(nns2),mat2(nns2),hlist2(nns2,3),stat=istat)
         ScatMat2 = dcmplx(0.D0,0.D0)
         Minp2 = dcmplx(0.D0,0.D0)
         mat2 = dcmplx(0.D0,0.D0)
@@ -817,10 +817,13 @@ do ii = 1,nnk
         Minp2 = rltmpb%DynMat*dcmplx(0.D0,cPi * cell_subs%mLambda)
         hlist2 = rltmpb%hlist
         call MatrixExponential(Minp2, ScatMat2, dble(dthick), 'Pade', nns2)
+        S02 = dcmplx(0.D0,0.D0)
+        S02(1) = Sg(jj)
+        !mat2(:,1) = S02(:)
         allocate(Shh(nns1,nns2),stat=istat)
         Shh = dcmplx(0.D0,0.D0)
         arg1 = tpi*(rltmpb%kg-rltmpa%kg)
-
+        !print*,"Starting CalcShh"
         do ll = 1,cell_subs%ATOM_ntype
             call CalcOrbit(cell_subs,ll,n,ctmp)
             nat(ll) = cell_subs%numat(ll)
@@ -838,25 +841,29 @@ do ii = 1,nnk
                 end do
             end do
         end do
-
-        S02 = dcmplx(0.D0,0.D0)
-        S02(1) = Sg(jj)
-        mat2(:,1) = S02(:) ! second incident beam
-        allocate(Lhh(nns1,nns2),stat=istat)
+        !print*,"Finished CalcShh....Starting CalcLhh"
+        allocate(Lhh(1:nns1,1:nns2),stat=istat)
         Lhh = dcmplx(0.D0,0.D0)
-        do mm = filmthickness,nt
-            mat1 = matmul(ScatMat1,mat1)
-            mat2 = matmul(ScatMat2,mat2)
-            mat3 = transpose(conjg(mat1))
-            Lhh = matmul(mat2,mat3)
-            Sigmagg(ii,jj) = Sigmagg(ii,jj) + lambdaZ(mm)*sum(Lhh(1:nns1,1:nns2)*Shh(1:nns1,1:nns2)) ! discrete integration
+        do mm = 1,nt-filmthickness
+            mat1 = matmul(ScatMat1,S01)
+            mat2 = matmul(ScatMat2,S02)
+            do lmm2 = 1,nns2
+                do lmm1 = 1,nns1
+                    Lhh(lmm1,lmm2) = conjg(mat1(lmm1))*mat2(lmm2)
+                end do
+            end do
+            Sigmagg(ii,jj) = Sigmagg(ii,jj) + real(lambdaZ(mm+filmthickness)*sum(Lhh*Shh(1:nns1,1:nns2))) ! discrete integration
+            S01 = mat1
+            S02 = mat2
+            !print*,"Finished CalcLhh"
         end do
-        Sigmagg(ii,jj) = Sigmagg(ii,jj)/dcmplx(float(nt)-filmthickness,0.D0) ! average depth integrated intensity
+        Sigmagg(ii,jj) = Sigmagg(ii,jj)/(float(nt-filmthickness)) ! average depth integrated intensity
         rltmpb => rltmpb%next
-        deallocate(ScatMat2,S02,mat2,Minp2,Shh,Lhh)
+        deallocate(ScatMat2,S02,mat2,Minp2,Shh,Lhh,hlist2)
+    !print*,"One beam with all the beams complete"
     end do
     rltmpa => rltmpa%next
-    deallocate(ScatMat1,S01,mat1,mat3,Minp1)
+    deallocate(ScatMat1,S01,mat1,Minp1,hlist1)
 end do
 end subroutine CalcSigmaggSubstrate
 
@@ -891,6 +898,7 @@ use diffraction
 use crystal
 use constants
 use initializers
+use gvectors
 
 IMPLICIT NONE
 
