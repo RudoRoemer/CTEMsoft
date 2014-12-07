@@ -252,7 +252,7 @@ real(kind=sgl)                                  :: dhkl, io_real(9), H, g3(3), g
 integer(kind=irg)                               :: io_int(3), gshort(3), gp(3)
 type(reflisttype),pointer                       :: rltail
 
-! set the truncation parameters 
+! set the truncation parameters
   rBethe_i = BetheParameter%c3          ! if larger than this value, we ignore the reflection completely
   rBethe_d = BetheParameter%sgdbdiff    ! excitation error cutoff for double diffraction reflections
   la = 1.0/sngl(cell%mLambda)

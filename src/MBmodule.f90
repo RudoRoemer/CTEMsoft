@@ -792,6 +792,11 @@ nns2 = 0
 rltmpa => refliststrong_subs
 do ii = 1,nnk
     nns1 = rltmpa%nns
+    if (allocated(ScatMat1)) deallocate(ScatMat1)
+    if (allocated(Minp1)) deallocate(Minp1)
+    if (allocated(S01)) deallocate(S01)
+    if (allocated(mat1)) deallocate(mat1)
+    if (allocated(hlist1)) deallocate(hlist1)
     allocate(ScatMat1(nns1,nns1),Minp1(nns1,nns1),S01(nns1),mat1(nns1),hlist1(nns1,3),stat=istat)
     ScatMat1 = dcmplx(0.D0,0.D0)
     Minp1 = dcmplx(0.D0,0.D0)
@@ -806,9 +811,17 @@ do ii = 1,nnk
     S01(1) = Sg(ii)
     !print*,"entering inner loop for outer loop #",ii
     !mat1(:,1) = S01(:) ! the first incident beam
+!if (associated(rltmpa)) print*,ii,rltmpa%nns
+!print*,rltmpa%kg,rltmpa%nns
+
     rltmpb => refliststrong_subs
     do jj = 1,nnk
         nns2 = rltmpb%nns
+        if (allocated(ScatMat2)) deallocate(ScatMat2)
+        if (allocated(Minp2)) deallocate(Minp2)
+        if (allocated(S02)) deallocate(S02)
+        if (allocated(mat2)) deallocate(mat2)
+        if (allocated(hlist2)) deallocate(hlist2)
         allocate(ScatMat2(nns2,nns2),Minp2(nns2,nns2),S02(nns2),mat2(nns2),hlist2(nns2,3),stat=istat)
         ScatMat2 = dcmplx(0.D0,0.D0)
         Minp2 = dcmplx(0.D0,0.D0)
@@ -820,6 +833,7 @@ do ii = 1,nnk
         S02 = dcmplx(0.D0,0.D0)
         S02(1) = Sg(jj)
         !mat2(:,1) = S02(:)
+        if (allocated(Shh)) deallocate(Shh)
         allocate(Shh(nns1,nns2),stat=istat)
         Shh = dcmplx(0.D0,0.D0)
         arg1 = tpi*(rltmpb%kg-rltmpa%kg)
@@ -842,6 +856,7 @@ do ii = 1,nnk
             end do
         end do
         !print*,"Finished CalcShh....Starting CalcLhh"
+        if (allocated(Lhh)) deallocate(Lhh)
         allocate(Lhh(1:nns1,1:nns2),stat=istat)
         Lhh = dcmplx(0.D0,0.D0)
         do mm = 1,nt-filmthickness
@@ -852,18 +867,16 @@ do ii = 1,nnk
                     Lhh(lmm1,lmm2) = conjg(mat1(lmm1))*mat2(lmm2)
                 end do
             end do
-            Sigmagg(ii,jj) = Sigmagg(ii,jj) + real(lambdaZ(mm+filmthickness)*sum(Lhh*Shh(1:nns1,1:nns2))) ! discrete integration
+            Sigmagg(ii,jj) = Sigmagg(ii,jj) + real(lambdaZ(mm+filmthickness)*sum(Lhh(1:nns1,1:nns2)*Shh(1:nns1,1:nns2))) ! discrete integration
             S01 = mat1
             S02 = mat2
             !print*,"Finished CalcLhh"
         end do
         Sigmagg(ii,jj) = Sigmagg(ii,jj)/(float(nt-filmthickness)) ! average depth integrated intensity
         rltmpb => rltmpb%next
-        deallocate(ScatMat2,S02,mat2,Minp2,Shh,Lhh,hlist2)
     !print*,"One beam with all the beams complete"
     end do
     rltmpa => rltmpa%next
-    deallocate(ScatMat1,S01,mat1,Minp1,hlist1)
 end do
 end subroutine CalcSigmaggSubstrate
 
@@ -899,7 +912,6 @@ use crystal
 use constants
 use gvectors
 use initializers
-use gvectors
 
 IMPLICIT NONE
 
@@ -913,78 +925,62 @@ integer(kind=irg),INTENT(IN)            :: nns_film
 type(gnode),INTENT(INOUT)               :: rlp_subs
 
 
-type(reflisttype),pointer               :: reflist_film_tmp,reflist_subs,reflist_subs_tmp,firstw_subs
-type(refliststrongsubstype),pointer    :: refliststrong_subs_tmp
+type(reflisttype),pointer               :: rltmpa,rltmpb,reflist_subs,firstw_subs
+type(refliststrongsubstype),pointer     :: refliststrong_subs_tmp
 type(BetheParameterType)                :: BetheParameters
 real(kind=sgl)                          :: kg(3),kg1(3)
-integer(kind=irg)                       :: nref_subs,nns_subs,nnw_subs,ii,jj,istat
+integer(kind=irg)                       :: nref_subs,nns_subs,nnw_subs,ii,jj,kk,istat
 
 call Set_Bethe_Parameters(BetheParameters,.TRUE.)
 
-reflist_film_tmp => reflist_film
-
-kg = dble(k0 + reflist_film_tmp%hkl + reflist_film_tmp%sg*FN)
+rltmpa => reflist_film%next
+kg = k0 + float(rltmpa%hkl) + rltmpa%sg*sngl(FN)
 kg1 = Convert_kgs_to_Substrate(cell_film, cell_subs,kg, TTinv,eWavelength_subs)
-call Initialize_ReflectionList(cell_subs, reflist_subs, BetheParameters, sngl(FN), kg1, sngl(dmin), nref_subs)
+!print*,k0,float(rltmpa%hkl),(rltmpa%sg)*sngl(FN)
+call Initialize_ReflectionList(cell_subs, reflist_subs, BetheParameters, sngl(FN), kg1, dmin, nref_subs)
 
 call Apply_BethePotentials(cell_subs, reflist_subs, firstw_subs, BetheParameters, nref_subs, nns_subs, nnw_subs)
-
-reflist_subs_tmp => reflist_subs
-allocate(refliststrong_subs)
-allocate(refliststrong_subs%hlist(nns_subs,3),stat = istat)
-allocate(refliststrong_subs%DynMat(nns_subs,nns_subs),stat = istat)
-
-refliststrong_subs%kg(1:3) = kg1(1:3)
-refliststrong_subs%nns = nns_subs
-
-call GetDynMat(cell_subs,reflist_subs,firstw_subs,rlp_subs,refliststrong_subs%DynMat,nns_subs,nnw_subs)
-
-refliststrong_subs_tmp => refliststrong_subs
+allocate(refliststrong_subs_tmp)
 nullify(refliststrong_subs_tmp%next)
+refliststrong_subs => refliststrong_subs_tmp
 
+allocate(refliststrong_subs_tmp%hlist(nns_subs,3),stat=istat)
+allocate(refliststrong_subs_tmp%DynMat(nns_subs,nns_subs),stat=istat)
+
+refliststrong_subs_tmp%kg(1:3) = kg(1:3)
+refliststrong_subs_tmp%nns = nns_subs
+
+call GetDynMat(cell_subs,reflist_subs,firstw_subs,rlp_subs,refliststrong_subs_tmp%DynMat,nns_subs,nnw_subs)
+
+rltmpb => reflist_subs%next
 do jj = 1,nns_subs
-    refliststrong_subs%hlist(jj,:) = reflist_subs_tmp%hkl
-!print*,refliststrong_subs%hlist(jj,:)
-    reflist_subs_tmp => reflist_subs_tmp%next
+    refliststrong_subs%hlist(jj,1:3) = float(rltmpb%hkl(1:3))
+    rltmpb => rltmpb%nexts
 end do
 
-
-reflist_film_tmp => reflist_film_tmp%next
+rltmpa => rltmpa%nexts
 do ii = 1,nns_film-1
-    kg = dble(k0 + reflist_film_tmp%hkl + reflist_film_tmp%sg*FN)
+    kg = k0 + float(rltmpa%hkl) + (rltmpa%sg)*sngl(FN)
     kg1 = Convert_kgs_to_Substrate(cell_film, cell_subs,kg, TTinv,eWavelength_subs)
     call Initialize_ReflectionList(cell_subs, reflist_subs, BetheParameters, sngl(FN), kg1, sngl(dmin), nref_subs)
     call Apply_BethePotentials(cell_subs, reflist_subs, firstw_subs, BetheParameters, nref_subs, nns_subs, nnw_subs)
-
-    reflist_subs_tmp => reflist_subs
-    allocate(refliststrong_subs_tmp%next)
-    allocate(refliststrong_subs_tmp%next%hlist(nns_subs,3),stat = istat)
-    allocate(refliststrong_subs_tmp%next%DynMat(nns_subs,nns_subs),stat = istat)
-
-    refliststrong_subs_tmp%next%kg(1:3) = kg1(1:3)
-    refliststrong_subs_tmp%next%nns = nns_subs
-
-    call GetDynMat(cell_subs,reflist_subs,firstw_subs,rlp_subs,refliststrong_subs_tmp%next%DynMat,nns_subs,nnw_subs)
-
-
+    allocate(refliststrong_subs_tmp%next,stat=istat)
     refliststrong_subs_tmp => refliststrong_subs_tmp%next
+    allocate(refliststrong_subs_tmp%hlist(nns_subs,3),stat=istat)
+    allocate(refliststrong_subs_tmp%DynMat(nns_subs,nns_subs),stat=istat)
     nullify(refliststrong_subs_tmp%next)
 
+    rltmpb => reflist_subs%next
     do jj = 1,nns_subs
-        refliststrong_subs_tmp%hlist(jj,:) = reflist_subs_tmp%hkl
-!print*,refliststrong_subs%hlist(jj,:)
-        reflist_subs_tmp => reflist_subs_tmp%next
+        refliststrong_subs_tmp%hlist(jj,1:3) = float(rltmpb%hkl(1:3))
+        rltmpb => rltmpb%nexts
     end do
-!do jj = 1,nns_subs
-!    refliststrong_subs%hlist(jj,:) = reflist_subs_tmp%hkl
-!    reflist_subs_tmp => reflist_subs_tmp%nexts
-!end do
-!call Delete_gvectorlist(reflist_subs)
-!call Delete_gvectorlist(firstw_subs)
-reflist_film_tmp => reflist_film_tmp%nexts
+    call GetDynMat(cell_subs,reflist_subs,firstw_subs,rlp_subs,refliststrong_subs_tmp%DynMat,nns_subs,nnw_subs)
 
+    refliststrong_subs_tmp%kg(1:3) = kg(1:3)
+    refliststrong_subs_tmp%nns = nns_subs
+    rltmpa => rltmpa%nexts
 end do
-
 end subroutine GetStrongBeamsSubs
 
 !--------------------------------------------------------------------------
@@ -999,26 +995,30 @@ end subroutine GetStrongBeamsSubs
 !
 !> @date   12/2/14 SS 1.0 original
 !--------------------------------------------------------------------------
-recursive subroutine Delete_StrongBeamList(top)
+recursive subroutine Delete_StrongBeamList(self)
 
 use local
 use typedefs
 
 IMPLICIT NONE
 
-type(refliststrongsubstype),pointer      :: top
+type(refliststrongsubstype),pointer      :: self
 
-type(refliststrongsubstype),pointer      :: rltail, rltmpa
+type(refliststrongsubstype),pointer      :: current,next
 
-! deallocate the entire linked list before returning, to prevent memory leaks
-rltail => top
-rltmpa => rltail % next
-do
-    deallocate(rltail%hlist,rltail%DynMat)
-    deallocate(rltail)
-    if (.not. associated(rltmpa)) EXIT
-    rltail => rltmpa
-    rltmpa => rltail % next
+current => self
+
+do while (associated(current))
+    next => current%next
+    if (allocated(current%hlist)) then
+        deallocate(current%hlist)
+    end if
+    if (allocated(current%DynMat)) then
+        deallocate(current%DynMat)
+    end if
+    deallocate(current)
+    nullify(current)
+    current => next
 end do
 
 end subroutine Delete_StrongBeamList

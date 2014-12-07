@@ -113,6 +113,7 @@ use files
 use diffraction
 use rotations
 use MBmodule
+use TIFF_f90
 
 IMPLICIT NONE
 
@@ -148,7 +149,7 @@ type(gnode)                             :: rlp_subs
 type(DynType)                           :: Dyn_film
 type(DynType)                           :: Dyn_subs
 integer(kind=irg)                       :: pgnum_film,pgnum_subs,isym_film,isym_subs,numset_film,numset_subs
-type(reflisttype),pointer               :: reflist_film,reflist_subs,reflisttmp,firstw_film,firstw_subs
+type(reflisttype),pointer               :: reflist_film,reflisttmp,firstw_film,rltmpb
 type(refliststrongsubstype),pointer     :: refliststrong_subs,rltmp
 
 type(kvectorlist),pointer               :: khead,ktmp
@@ -321,10 +322,10 @@ beamloop: do ii = 1,numk
 
     allocate(DynMat_film(nns_film,nns_film),stat=istat)
     call GetDynMat(cell_film, reflist_film, firstw_film, rlp_film, DynMat_film, nns_film, nnw_film)
-
     allocate(Sghfilmtmp(nns_film,nns_film,numset_film), Sghfilm(nns_film,nns_film),&
             Lghfilmtmp(nns_film,nns_film,filmthickness),Lghfilm(nns_film,nns_film),stat=istat)
     allocate(S0_subs(1:nns_film),stat =istat)
+
 
     Sghfilmtmp = czero
     Sghfilm = czero
@@ -340,12 +341,10 @@ beamloop: do ii = 1,numk
 
     sr(ipx,ipy) = real(sum(Lghfilm(1:nns_film,1:nns_film)*&
                 Sghfilm(1:nns_film,1:nns_film)))/float(sum(nat_film))
-    ktmp => ktmp%next
+print*,sr(ipx,ipy),'Film contribution'
 !==================================================================================
 ! film contribution done
 !==================================================================================
-
-    nullify(refliststrong_subs)
 
 ! this routine gives the list of reflections and corresponding dynamical matrices for every incident direction on the substrate
 ! the members of the linked list are 
@@ -356,24 +355,45 @@ beamloop: do ii = 1,numk
 
     call GetStrongBeamsSubs(cell_film,cell_subs,reflist_film,refliststrong_subs,&
          k0,dble(FN),nns_film,dmin,TTinv,cell_subs%mLambda,rlp_subs)
-
 ! calculate sigmagg
     if (allocated(sigmagg)) deallocate(sigmagg)
-    allocate(sigmagg(nns_film,nns_film),stat=istat)
+    allocate(sigmagg(1:nns_film,1:nns_film),stat=istat)
     sigmagg = 0.D0
     if (istat .ne. 0) call FatalError("STOP:"," cannot allocate pointer")
+
     call CalcSigmaggSubstrate(cell_subs,nns_film,refliststrong_subs,S0_subs,sigmagg,&
          numzbins,thick,lambdaZ,filmthickness,nat_subs,numset_subs)
     sr(ipx,ipy) = sr(ipx,ipy) + sum(sigmagg)/float(sum(nat_subs))
-    call Delete_StrongBeamList(refliststrong_subs)
+    print*,sum(sigmagg)/float(sum(nat_subs)),'Substrate contribution'
+    print*,sigmagg(1,1)/float(sum(nat_subs)),'Main substrate contribution term'
+    print*,sr(ipx,ipy),'Overall contribution'
+    !sigmagg = sigmagg + abs(minval(sigmagg))
+    !print*,(minval(sigmagg))
+    !sigmagg = nint((sigmagg/maxval(sigmagg))*255)
+    !TIFF_nx = nns_film
+    !TIFF_ny = nns_film
+    !if (allocated(TIFF_image)) deallocate(TIFF_image)
+    !allocate(TIFF_image(0:TIFF_nx-1,0:TIFF_ny-1),stat=istat)
+    !TIFF_filename = "test.tiff"
+    !do kk = 1,nns_film
+    !    do ll = 1,nns_film
+    !        TIFF_image(ll-1,kk-1) = 255-sigmagg(ll,kk)
+    !    end do
+    !end do
+    !call TIFF_Write_File
+    !deallocate(TIFF_image)
 !==================================================================================
 ! substrate contribution done
 !==================================================================================
 
-    if (mod(ii,50) .eq. 0) then
+    if (mod(ii,25) .eq. 0) then
         io_int_sgl = ii
         call WriteValue('Completed beam # ', io_int_sgl, 1, "(I8)")
     end if
+    call Delete_StrongBeamList(refliststrong_subs)
+    !call Delete_gvectorlist(reflist_film)
+    ktmp => ktmp%next
+
 end do beamloop
 
 open(unit=11,file="test.txt",action="write")
@@ -425,8 +445,8 @@ use math
 IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN)           :: mLambda
-integer(kind=sgl),INTENT(IN)        :: nn
-integer(kind=sgl),INTENT(IN)        :: nt
+integer(kind=irg),INTENT(IN)        :: nn
+integer(kind=irg),INTENT(IN)        :: nt
 real(kind=sgl),INTENT(IN)           :: thick(nt)
 real(kind=dbl),INTENT(IN)           :: kn
 complex(kind=dbl),INTENT(IN)        :: DynMat(nn,nn)
