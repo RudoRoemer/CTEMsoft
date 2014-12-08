@@ -1935,27 +1935,37 @@ end function GetHOLZcoordinates
 ! 
 !> @date 11/25/14 MDG 1.0 original
 !--------------------------------------------------------------------------
-recursive function Convert_kgs_to_Substrate(cell, cellS, kg, TTinv, lambdaS) result(kgS)
+recursive function Convert_kgs_to_Substrate(cell, cellS, kg, TTinv, FN) result(kgS)
 
 use local
 use typedefs
 
 IMPLICIT NONE
 
-type(unitcell),pointer,INTENT(IN)       :: cell, cellS
+type(unitcell),pointer                  :: cell, cellS
 real(kind=sgl),INTENT(IN)               :: kg(3)
 real(kind=sgl),INTENT(IN)               :: TTinv(3,3)
-real(kind=dbl),INTENT(IN)               :: lambdaS
+real(kind=sgl),INTENT(IN)               :: FN(3)
 real(kind=sgl)                          :: kgS(3)
+real(kind=sgl)                          :: dp,normal
+real(kind=sgl)                          :: tangential(3)
 
-real(kind=sgl)                          :: p(3), r(3)
+real(kind=sgl)                          :: p(3), r(3), p1(3)
 
 call TransSpace(cell,kg,p,'r','d')
 p = matmul(TTinv,p)
-call TransSpace(cellS,p,r,'d','r')
-call NormVec(cellS,r,'r')
-kgS = r/lambdaS
-
+call TransSpace(cellS,p,p1,'d','c')
+call NormVec(cellS,p1,'c')
+p1 = p1/cellS%mLambda
+call TransSpace(cellS,FN,r,'r','c')
+call NormVec(cellS,r,'c')
+dp = CalcDot(cellS,p1,r,'c')
+tangential = p1 - dp*FN
+normal = sqrt((1/cellS%mLambda)**2 - sum(tangential**2))
+p1 = normal*FN + tangential
+call TransSpace(cellS,p1,kgS,'c','r')
+call NormVec(cellS,kgS,'c')
+kgS = kgS/cellS%mLambda
 end function Convert_kgs_to_Substrate
 
 

@@ -935,7 +935,7 @@ call Set_Bethe_Parameters(BetheParameters,.TRUE.)
 
 rltmpa => reflist_film%next
 kg = k0 + float(rltmpa%hkl) + rltmpa%sg*sngl(FN)
-kg1 = Convert_kgs_to_Substrate(cell_film, cell_subs,kg, TTinv,eWavelength_subs)
+kg1 = Convert_kgs_to_Substrate(cell_film, cell_subs,kg, TTinv,sngl(FN))
 !print*,k0,float(rltmpa%hkl),(rltmpa%sg)*sngl(FN)
 call Initialize_ReflectionList(cell_subs, reflist_subs, BetheParameters, sngl(FN), kg1, dmin, nref_subs)
 
@@ -961,7 +961,8 @@ end do
 rltmpa => rltmpa%nexts
 do ii = 1,nns_film-1
     kg = k0 + float(rltmpa%hkl) + (rltmpa%sg)*sngl(FN)
-    kg1 = Convert_kgs_to_Substrate(cell_film, cell_subs,kg, TTinv,eWavelength_subs)
+    kg1 = Convert_kgs_to_Substrate(cell_film, cell_subs,kg, TTinv,sngl(FN))
+!print*,kg,kg1
     call Initialize_ReflectionList(cell_subs, reflist_subs, BetheParameters, sngl(FN), kg1, sngl(dmin), nref_subs)
     call Apply_BethePotentials(cell_subs, reflist_subs, firstw_subs, BetheParameters, nref_subs, nns_subs, nnw_subs)
     allocate(refliststrong_subs_tmp%next,stat=istat)
