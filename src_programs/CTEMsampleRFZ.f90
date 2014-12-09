@@ -43,20 +43,31 @@
 program CTEMsampleRFZ
 
 use local
+use typedefs
+use NameListTypedefs
+use NameListHandlers
 use files
 use io
 
 IMPLICIT NONE
 
-character(fnlen)	:: nmldeffile
+character(fnlen)                :: nmldeffile, progname, progdesc
+type(RFZNameListType)           :: rfznl
 
 ! deal with the command line arguments, if any
 nmldeffile = 'CTEMsampleRFZ.nml'
 progname = 'CTEMsampleRFZ.f90'
-call Interpret_Program_Arguments(nmldeffile,1,(/ 60 /) )
+progdesc = 'Create a uniform sampling of Rodrigues space and output Euler angles list'
+call Interpret_Program_Arguments(nmldeffile,1,(/ 60 /), progname )
+
+! deal with the namelist stuff
+call GetRFZNameList(nmldeffile,rfznl)
+
+! print some information
+call CTEMsoft(progname, progdesc)
 
 ! perform the zone axis computations
-call CreateSampling(nmldeffile)
+call CreateSampling(rfznl,progname)
 
 end program CTEMsampleRFZ
 
@@ -70,46 +81,43 @@ end program CTEMsampleRFZ
 !
 !> @param nmlfile namelist file name
 !
-!> @date 05/29/14  MDG 1.0 original
+!> @date 05/29/14 MDG 1.0 original
+!> @date 12/09/14 MDG 2.0 changed rfznl handling
 !--------------------------------------------------------------------------
-subroutine CreateSampling(nmlfile)
+subroutine CreateSampling(rfznl, progname)
 
 use local
+use typedefs
+use NameListTypedefs
 use constants
 use rotations
+use io
 use so3
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)::nmlfile
+type(RFZNameListType),INTENT(IN)        :: rfznl
+character(fnlen),INTENT(IN)             :: progname
 
-integer(kind=irg)	    :: i, pgnum, nsteps
-real(kind=dbl)             :: eud(3), rtod
-character(fnlen)           :: outname
-
-namelist /RFZlist/ pgnum, nsteps, outname
+integer(kind=irg)                       :: i, FZcnt, io_int(1)
+real(kind=dbl)                          :: eud(3), rtod
+type(FZpointd),pointer                  :: FZlist, FZtmp
 
 rtod = 180.D0/cPi
 
-pgnum = 1
-nsteps = 10
-outname = 'anglefile.txt'
-
-write (*,*) ro2eu( (/ 0.0, 0.0, 0.0 /) )
-
-! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
-read(UNIT=dataunit,NML=RFZlist)
-close(UNIT=dataunit,STATUS='keep')
-
-write (*,*) pgnum, nsteps, outname
+! a bit of output
+call Message('Starting computation for point group '//PGTHD(rfznl%pgnum))
 
 ! get the linked list for the FZ for point group symmetry pgnum for nsteps along the cubic semi-edge
-call SampleRFZ(nsteps,pgnum)
+nullify(FZlist)
+FZcnt = 0
+call SampleRFZ(rfznl%nsteps,rfznl%pgnum,FZcnt,FZlist)
 
-! now we have the linked list so we can do anything we want with it.
-! in this test program, we create a VTK file so that we can visualize the RFZ with ParaView
-open (UNIT=22,FILE=trim(outname),FORM='formatted',STATUS='unknown')
+io_int(1) = FZcnt
+call WriteValue('Total number of unique orientations generated = ',io_int,1,"(I10)")
+
+! generate a list of all orientations in Euler angle format
+open (UNIT=22,FILE=trim(rfznl%outname),FORM='formatted',STATUS='unknown')
 write (22,"(A)") 'eu'
 write (22,"(I8)") FZcnt
 
@@ -123,5 +131,8 @@ do i = 1, FZcnt
 end do
 
 close(UNIT=22,STATUS='keep')
+
+call Message('Euler angles stored in file '//rfznl%outname)
+
 
 end subroutine CreateSampling

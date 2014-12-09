@@ -1176,9 +1176,9 @@ character(fnlen)        :: voidname
 ! define the IO namelist to facilitate passing variables to the program.
 namelist / ECCIlist / DF_L, DF_npix, DF_npiy, DF_slice, dmin, sgname, incname, stdout, &
                       voidname, numdisl, dislname, numYdisl, dislYname, numsf, sfname, &
-		      progmode, dispfile, ktmax, dkt, ECPname, summode, lauec, lauec2, &
-	   	      dispmode, nthreads, xtalname, voltage, k, nktstep, &
-	   	      dataname, foilnmlfile, apbname
+                      progmode, dispfile, ktmax, dkt, ECPname, summode, lauec, lauec2, &
+                      dispmode, nthreads, xtalname, voltage, k, nktstep, &
+                      dataname, foilnmlfile, apbname
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 stdout = 6
@@ -1264,6 +1264,52 @@ eccinl%incname = incname
 eccinl%voidname = voidname
 
 end subroutine GetECCINameList
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:GetRFZNameList
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read namelist file and fill rfznl structure (used by CTEMsampleRFZ.f90)
+!
+!> @param nmlfile namelist file name
+!> @param rfznl RFZ name list structure
+!
+!> @date 12/09/14 MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine GetRFZNameList(nmlfile,rfznl)
+
+use error
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                     :: nmlfile
+type(RFZNameListType),INTENT(INOUT)             :: rfznl
+
+integer(kind=irg)                               :: pgnum, nsteps
+character(fnlen)                                :: outname
+
+! namelist components
+namelist / RFZlist / pgnum, nsteps, outname
+
+! initialize to default values
+pgnum = 32
+nsteps = 50
+outname = 'anglefile.txt'
+
+! read the namelist file
+open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+read(UNIT=dataunit,NML=RFZlist)
+close(UNIT=dataunit,STATUS='keep')
+
+! and copy the variables to the rfznl variable
+rfznl%pgnum  = pgnum
+rfznl%nsteps = nsteps
+rfznl%outname= outname
+
+end subroutine GetRFZNameList
+
 
 
 

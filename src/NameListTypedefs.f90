@@ -344,6 +344,12 @@ type ECCINameListType
 end type ECCINameListType
 
 
+! namelist for the CTEMsampleRFZ program
+type RFZNameListType
+    integer(kind=irg)       :: pgnum
+    integer(kind=irg)       :: nsteps
+    character(fnlen)        :: outname
+end type RFZNameListType
 
 
 

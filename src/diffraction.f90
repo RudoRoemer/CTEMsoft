@@ -1674,15 +1674,6 @@ real(kind=dbl)                  :: RWORK(2*nn), io_real(1)
 character                       :: JOBVL, JOBVR
 complex(kind=dbl),allocatable   :: MIWORK(:)
 
-!----------------------------------------------------------------
-! historical comment: ZGEEV potentially changes the order of the eigenvalues
-! from largest to smallest, and there is no easy way to find out what the 
-! permutations are.  If the order of the eigenvalues is important, then one should
-! use the optional parameter keeporder; this will cause the use of the ZGEES routine
-! which computes the Schur vectors, which are then transformed into the eigenvectors
-! by means of the ZTREVC routine.
-!----------------------------------------------------------------
-
 ! set some initial LAPACK variables 
  LDA = nn
  LDVL = nn
@@ -1704,11 +1695,11 @@ complex(kind=dbl),allocatable   :: MIWORK(:)
 
 ! it appears that the eigenvectors may not always be normalized ...
 ! so we renormalize them here...
-  do i=1,nn
-    normsum = sum(cdabs(CGG(1:nn,i))**2)
-    normsum = cmplx(1.0,0.0,dbl)/sqrt(normsum)
-    CGG(1:nn,i) = CGG(1:nn,i)*normsum
-  end do
+! do i=1,nn
+!   normsum = sum(cdabs(CGG(1:nn,i))**2)
+!   normsum = cmplx(1.0,0.0,dbl)/sqrt(normsum)
+!   CGG(1:nn,i) = CGG(1:nn,i)*normsum
+! end do
 
 ! make a copy of CG for the matrix inversion routines
  CGinv = CGG

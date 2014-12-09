@@ -93,7 +93,7 @@ IMPLICIT NONE
 real(kind=dbl), INTENT(IN)                :: rod(4)
 integer(kind=irg), INTENT(IN)             :: order
 
-logical	                                  :: res
+logical                                   :: res
 
 res = .FALSE.
 
@@ -130,7 +130,7 @@ IMPLICIT NONE
 real(kind=dbl), INTENT(IN)                :: rod(4)
 integer(kind=irg), INTENT(IN)             :: order
 
-logical	                                  :: res, c1, c2
+logical                                   :: res, c1, c2
 real(kind=dbl)                            :: r(3)
 real(kind=dbl),parameter                  :: r1 = 1.0D0
 
@@ -186,9 +186,9 @@ IMPLICIT NONE
 real(kind=dbl), INTENT(IN)                :: rod(4)
 character(3), INTENT(IN)                  :: ot
 
-logical	                                  :: res, c1, c2
+logical                                   :: res, c1, c2
 real(kind=dbl)                            :: rx, ry, rz
-real(kind=dbl),parameter	          :: r1 = 1.0D0
+real(kind=dbl),parameter                  :: r1 = 1.0D0
 
 rx = rod(1)*rod(4)
 ry = rod(2)*rod(4)
@@ -277,9 +277,9 @@ integer(kind=irg),INTENT(OUT)        :: FZcnt                ! counts number of 
 type(FZpointd),pointer,INTENT(OUT)   :: FZlist               ! pointers
 
 real(kind=dbl)                       :: x, y, z, s, rod(4), delta, rval
-type(FZpointd), pointer	             :: FZtmp, FZtmp2
+type(FZpointd), pointer              :: FZtmp, FZtmp2
 integer(kind=irg)                    :: FZtype, FZorder
-logical	                             :: insideFZ
+logical                              :: insideFZ
 
 ! cube semi-edge length
 s = 0.5D0 * LPs%ap
@@ -302,6 +302,14 @@ if (associated(FZlist)) then
   end do
   nullify(FZlist)
 end if
+
+! we always want the identity rotation to be the first one on the list
+! it is automatically skipped later on...
+allocate(FZlist)
+FZtmp => FZlist
+nullify(FZtmp%next)
+FZtmp%rod = (/ 0.D0, 0.D0, 0.D0, 0.D0 /)
+FZcnt = 1
 
 ! determine which function we should call for this point group symmetry
 FZtype = FZtarray(pgnum)
@@ -339,17 +347,10 @@ do while (x.lt.s)
 ! If insideFZ=.TRUE., then add this point to the linked list FZlist and keep
 ! track of how many points there are on this list
        if (insideFZ) then 
-        if (.not.associated(FZlist)) then ! do this only for the first point
-          allocate(FZlist)
-          FZtmp => FZlist
-          nullify(FZtmp%next)
-          FZtmp%rod = rod
-        else
-          allocate(FZtmp%next)
-          FZtmp => FZtmp%next
-          nullify(FZtmp%next)
-          FZtmp%rod = rod
-        end if
+        allocate(FZtmp%next)
+        FZtmp => FZtmp%next
+        nullify(FZtmp%next)
+        FZtmp%rod = rod
         FZcnt = FZcnt + 1
        end if
 

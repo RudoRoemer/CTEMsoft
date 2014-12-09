@@ -36,6 +36,7 @@ Create_exe_and_tll(CTEMECPSMMultiLayer)
 Create_exe_and_tll(CTEMECCI) #read_stacking_fault_data has wrong number of args passed to it
 Create_exe_and_tll(CTEMKossel)
 Create_exe_and_tll(CTEMKosselMaster)
+Create_exe_and_tll(CTEMsampleRFZ)
 Create_exe_and_tll(CTEMMC)  #MP
 Create_exe_and_tll(CTEMEBSD)
 Create_exe_and_tll(CTEMEBSDmaster)
