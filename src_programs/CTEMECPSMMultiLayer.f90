@@ -365,7 +365,7 @@ print*,sr(ipx,ipy),'Film contribution'
          numzbins,thick,lambdaZ,filmthickness,nat_subs,numset_subs)
     sr(ipx,ipy) = sr(ipx,ipy) + sum(sigmagg)/float(sum(nat_subs))
     print*,sum(sigmagg)/float(sum(nat_subs)),'Substrate contribution'
-    print*,sigmagg(1,1)/float(sum(nat_subs)),'Main substrate contribution term'
+    !print*,sigmagg(1,1)/float(sum(nat_subs)),'Main substrate contribution term'
     print*,sr(ipx,ipy),'Overall contribution'
     !sigmagg = sigmagg + abs(minval(sigmagg))
     !print*,(minval(sigmagg))
