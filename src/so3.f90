@@ -217,8 +217,9 @@ end function insideDihedralFZ
 !> @param rod Rodrigues coordinates  (double precision)
 !> @param ot 'oct' or 'tet', depending on symmetry
 !
-!> @date 05/12/14  MDG 1.0 original
-!> @date 10/02/14  MDG 2.0 rewrite
+!> @date 05/12/14 MDG 1.0 original
+!> @date 10/02/14 MDG 2.0 rewrite
+!> @date 01/03/15 MDG 2.1 correction of boundary error; simplification of octahedral planes
 !--------------------------------------------------------------------------
 recursive function insideCubicFZ(rod,ot) result(res)
 
@@ -239,16 +240,13 @@ res = .FALSE.
 
 ! primary cube planes (only needed for octahedral case)
 if (ot.eq.'oct') then
-  c1 = (maxval(dabs( (/ rx, ry, rz /) )).le.LPs%pi8) 
+  c1 = (maxval(dabs( (/ rx, ry, rz /) )).le.LPS%BP(4)) 
 else 
   c1 = .TRUE.
 end if
 
 ! octahedral truncation planes, both for tetrahedral and octahedral point groups
-c2 = (dabs(rx+ry+rz).le.r1)
-c2 = c2.and.(dabs(-rx+ry+rz).le.r1)
-c2 = c2.and.(dabs(rx-ry+rz).le.r1)
-c2 = c2.and.(dabs(rx+ry-rz).le.r1)
+c2 = ((dabs(rx)+dabs(ry)+dabs(rz)).le.r1)
 
 ! if both c1 and c2, then the point is inside
 if (c1.and.c2) res = .TRUE.
