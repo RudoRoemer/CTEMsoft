@@ -684,7 +684,122 @@ end if
 
 end function logCp
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: classifier
+!
+!> @author Saransh Singh, Carnegie Mellon University / Yu-Hui Chen, U. Michigan
+!
+!> @brief classify the point as grain interior or anomalous point
+!
+!> @details takes the kNN neighbor information as input and returns the 
+!  whether the point lies in the interior of the grain or lies on the 
+!  grain boundary. Details in pg 11 of the dictionary indexing paper
+!
+!> @param array input array
+!> @param k number of top matches for each pixel
+!> @param npx number of pixels in the x direction
+!> @param npy number of pixels in the y direction
+!
+!> @date 01/05/15 SS 1.0 original
+!--------------------------------------------------------------------------
+subroutine classifier(array,k,npx,npy,returnarr)
+
+use local
+
+IMPLICIT NONE
+
+real(kind=sgl),INTENT(IN)               :: array(npx,npy,k)
+integer(kind=irg),INTENT(IN)            :: k
+integer(kind=irg),INTENT(IN)            :: npx
+integer(kind=irg),INTENT(IN)            :: npy
+real(kind=sgl),INTENT(OUT)              :: returnarr(npx,npy)
+
+integer(kind=irg)                       :: ii,jj,similarity_measure_sum,res
+real(kind=sgl)                          :: similarity_measure
 
 
+similarity_measure_sum = 0
+similarity_measure = 0.0
+returnarr = 0.0
+
+do ii = 2,npx-1
+    do jj = 2,npy-1
+
+        call CardIntersection(array(ii-1,jj-1,1:k),array(ii,jj,1:k),k,res)
+        similarity_measure_sum = similarity_measure_sum + res
+
+        call CardIntersection(array(ii,jj-1,1:k),array(ii,jj,1:k),k,res)
+        similarity_measure_sum = similarity_measure_sum + res
+
+        call CardIntersection(array(ii+1,jj-1,1:k),array(ii,jj,1:k),k,res)
+        similarity_measure_sum = similarity_measure_sum + res
+
+        call CardIntersection(array(ii-1,jj,1:k),array(ii,jj,1:k),k,res)
+        similarity_measure_sum = similarity_measure_sum + res
+
+        call CardIntersection(array(ii+1,jj,1:k),array(ii,jj,1:k),k,res)
+        similarity_measure_sum = similarity_measure_sum + res
+
+        call CardIntersection(array(ii-1,jj+1,1:k),array(ii,jj,1:k),k,res)
+        similarity_measure_sum = similarity_measure_sum + res
+
+        call CardIntersection(array(ii,jj+1,1:k),array(ii,jj,1:k),k,res)
+        similarity_measure_sum = similarity_measure_sum + res
+
+        call CardIntersection(array(ii+1,jj+1,1:k),array(ii,jj,1:k),k,res)
+        similarity_measure_sum = similarity_measure_sum + res
+
+        similarity_measure = float(similarity_measure_sum)/float(8*k)
+        returnarr(ii,jj) = similarity_measure
+
+        similarity_measure = 0.0
+        similarity_measure_sum = 0
+
+    end do
+end do
+
+
+end subroutine classifier
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: CardIntersection
+!
+!> @author Saransh Singh, Carnegie Mellon University / Yu-Hui Chen, U. Michigan
+!
+!> @brief calculate the cardinality of the intersection of two sets
+!
+!> @param set1
+!> @param set2
+!> @param k number of elements in each set
+!
+!> @date 01/05/15 SS 1.0 original
+!--------------------------------------------------------------------------
+recursive subroutine CardIntersection(set1,set2,k,res)
+
+use local
+
+IMPLICIT NONE
+
+real(kind=sgl),INTENT(IN)               :: set1(k)
+real(kind=sgl),INTENT(IN)               :: set2(k)
+integer(kind=irg),INTENT(IN)            :: k
+integer(kind=irg),INTENT(OUT)           :: res
+
+integer(kind=irg)                       :: ii,jj
+jj = 1
+res = 0
+
+do ii = 1,k
+    do jj = 1,k
+        if (set1(ii) .eq. set2(jj)) then
+            res = res + 1
+            EXIT
+        end if
+    end do
+end do
+
+end subroutine CardIntersection
 
 end module dictmod
