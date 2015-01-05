@@ -395,10 +395,10 @@ dd = maxloc(L_All,1)
 Mu = Mu_all(dd,1:4)
 kappahat = Kappa_All(dd)
 
-write (*,*) ' All solutions : '
-do i=1,dict%Num_of_init
-  write (*,*) Mu_All(i,1:4), '---> ',L_All(i)
-end do
+!write (*,*) ' All solutions : '
+!do i=1,dict%Num_of_init
+!  write (*,*) Mu_All(i,1:4), '---> ',L_All(i)
+!end do
 
 ! the CTEMsoft package only considers quaternions with positive first component, 
 ! so we may need to change all the signs
