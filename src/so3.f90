@@ -36,10 +36,11 @@
 !
 !> @brief everything that has to do with sampling of rotation space SO(3)
 !
-!> @todo verify that this is correct for point groups with multiple settings, eg, 3m
+!> @todo verify that this is correct for point groups with multiple settings, eg, 3m, 32, ...
 !
 !> @date 05/29/14 MDG 1.0 original
 !> @date 10/02/14 MDG 2.0 removed globals + rewrite
+!> @date 01/01/15 MDG 2.1 added IsinsideFZ function, also used in dictionary indexing approach
 !--------------------------------------------------------------------------
 module so3
 
@@ -51,7 +52,7 @@ use rotations
 IMPLICIT NONE
 
 ! sampler routine
-public :: SampleRFZ
+public :: SampleRFZ, IsinsideFZ
 
 ! logical functions to determine if point is inside specific FZ
 private :: insideCyclicFZ, insideDihedralFZ, insideCubicFZ
@@ -61,7 +62,7 @@ contains
 
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
-! next, we define a number of logical routines, that decide whether or not 
+! We define a number of logical routines, that decide whether or not 
 ! a point in Rodrigues representation lies inside the fundamental zone (FZ)
 ! for a given crystal symmetry. This follows the Morawiec@Field paper:
 !
@@ -71,6 +72,46 @@ contains
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
 
+!--------------------------------------------------------------------------
+!
+! FUNCTION: IsinsideFZ
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief does Rodrigues point lie inside the relevant FZ
+!
+!> @param rod Rodrigues coordinates  (double precision)
+!> @param FZtype FZ type
+!> @param FZorder FZ order
+!
+!> @date 01/01/15 MDG 1.0 new routine, needed for dictionary indexing approach
+!--------------------------------------------------------------------------
+recursive function IsinsideFZ(rod,FZtype,FZorder) result(insideFZ)
+
+IMPLICIT NONE
+
+real(kind=dbl), INTENT(IN)              :: rod(4)
+integer(kind=irg),INTENT(IN)            :: FZtype
+integer(kind=irg),INTENT(IN)            :: FZorder
+logical                                 :: insideFZ
+
+! dealing with 180 rotations is needed only for 
+! FZtypes 0 and 1; the other FZs are always finite.
+select case (FZtype)
+  case (0)
+    insideFZ = .TRUE.   ! all points are inside the FZ
+  case (1)
+    insideFZ = insideCyclicFZ(rod,FZorder)        ! infinity is checked inside this function
+  case (2)
+    if (rod(4).ne.infty) insideFZ = insideDihedralFZ(rod,FZorder)
+  case (3)
+    if (rod(4).ne.infty) insideFZ = insideCubicFZ(rod,'tet')
+  case (4)
+    if (rod(4).ne.infty) insideFZ = insideCubicFZ(rod,'oct')
+end select
+
+end function IsinsideFZ
+
 
 !--------------------------------------------------------------------------
 !
@@ -78,7 +119,7 @@ contains
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief does rodrigues point lie inside cyclic FZ (for 2, 3, 4, and 6-fold)?
+!> @brief does Rodrigues point lie inside cyclic FZ (for 2, 3, 4, and 6-fold)?
 !
 !> @param rod Rodrigues coordinates  (double precision)
 !> @param order depending on main symmetry axis
@@ -171,13 +212,14 @@ end function insideDihedralFZ
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief does rodrigues point lie inside cubic FZ (octahedral or tetrahedral)?
+!> @brief does Rodrigues point lie inside cubic FZ (octahedral or tetrahedral)?
 !
 !> @param rod Rodrigues coordinates  (double precision)
 !> @param ot 'oct' or 'tet', depending on symmetry
 !
-!> @date 05/12/14  MDG 1.0 original
-!> @date 10/02/14  MDG 2.0 rewrite
+!> @date 05/12/14 MDG 1.0 original
+!> @date 10/02/14 MDG 2.0 rewrite
+!> @date 01/03/15 MDG 2.1 correction of boundary error; simplification of octahedral planes
 !--------------------------------------------------------------------------
 recursive function insideCubicFZ(rod,ot) result(res)
 
@@ -198,16 +240,13 @@ res = .FALSE.
 
 ! primary cube planes (only needed for octahedral case)
 if (ot.eq.'oct') then
-  c1 = (maxval(dabs( (/ rx, ry, rz /) )).le.LPs%pi8) 
+  c1 = (maxval(dabs( (/ rx, ry, rz /) )).le.LPS%BP(4)) 
 else 
   c1 = .TRUE.
 end if
 
 ! octahedral truncation planes, both for tetrahedral and octahedral point groups
-c2 = (dabs(rx+ry+rz).le.r1)
-c2 = c2.and.(dabs(-rx+ry+rz).le.r1)
-c2 = c2.and.(dabs(rx-ry+rz).le.r1)
-c2 = c2.and.(dabs(rx+ry-rz).le.r1)
+c2 = ((dabs(rx)+dabs(ry)+dabs(rz)).le.r1)
 
 ! if both c1 and c2, then the point is inside
 if (c1.and.c2) res = .TRUE.
@@ -279,7 +318,6 @@ type(FZpointd),pointer,INTENT(OUT)   :: FZlist               ! pointers
 real(kind=dbl)                       :: x, y, z, s, rod(4), delta, rval
 type(FZpointd), pointer              :: FZtmp, FZtmp2
 integer(kind=irg)                    :: FZtype, FZorder
-logical                              :: insideFZ
 
 ! cube semi-edge length
 s = 0.5D0 * LPs%ap
@@ -328,25 +366,9 @@ do while (x.lt.s)
 ! convert to Rodrigues representation
       rod = cu2ro( (/ x, y, z /) )
 
-! is this point inside the selected Rodrigues FZ ?  
-! dealing with 180 rotations is needed only for 
-! FZtypes 0 and 1; the other FZs are always finite.
-       select case (FZtype)
-        case (0)
-          insideFZ = .TRUE.   ! all points are inside the FZ
-        case (1)
-          insideFZ = insideCyclicFZ(rod,FZorder)        ! infinity is checked inside this function
-        case (2)
-          if (rod(4).ne.infty) insideFZ = insideDihedralFZ(rod,FZorder)
-        case (3)
-          if (rod(4).ne.infty) insideFZ = insideCubicFZ(rod,'tet')
-        case (4)
-          if (rod(4).ne.infty) insideFZ = insideCubicFZ(rod,'oct')
-       end select
-
 ! If insideFZ=.TRUE., then add this point to the linked list FZlist and keep
 ! track of how many points there are on this list
-       if (insideFZ) then 
+       if (IsinsideFZ(rod,FZtype,FZorder)) then 
         allocate(FZtmp%next)
         FZtmp => FZtmp%next
         nullify(FZtmp%next)

@@ -5,7 +5,7 @@ use constants
 use rotations
 use Lambert
 use typedefs
-use so3
+!use so3
  
 IMPLICIT NONE
  
@@ -17,34 +17,34 @@ integer(kind=irg)     :: tcnt, rcnt, i
 type(orientationtyped):: ot
 logical               :: verbose
  
-integer(kind=irg)       :: FZcnt, nsteps, pgnum
-type(FZpointd),pointer  :: FZlist, FZtmp
+!integer(kind=irg)       :: FZcnt, nsteps, pgnum
+!type(FZpointd),pointer  :: FZlist, FZtmp
 
-nullify(FZlist)
-FZcnt = 0
-nsteps = 10
-pgnum = 2
-call sampleRFZ(nsteps, pgnum, FZcnt, FZlist)
-write (*,*) 'Number of points in FZ linked list = ',FZcnt
+!nullify(FZlist)
+!FZcnt = 0
+!nsteps = 10
+!pgnum = 2
+!call sampleRFZ(nsteps, pgnum, FZcnt, FZlist)
+!write (*,*) 'Number of points in FZ linked list = ',FZcnt
 
-FZtmp => FZlist
-do i = 1,10
-  ot = init_orientation(FZtmp%rod,'ro',.TRUE.)
-  call print_orientation(ot)
-  FZtmp => FZtmp%next
-end do
+!FZtmp => FZlist
+!do i = 1,10
+!  ot = init_orientation(FZtmp%rod,'ro',.TRUE.)
+!  call print_orientation(ot)
+!  FZtmp => FZtmp%next
+!end do
 
-stop
-
-
+!stop
 
 
-ieu = (/ 1.D0, 1.D0, 0.D0 /)
-omega = 0.5D0
-ot = genrot(ieu,omega)
-call print_orientation(ot)
 
-stop
+
+!ieu = (/ 1.D0, 1.D0, 0.D0 /)
+!omega = 0.5D0
+!ot = genrot(ieu,omega)
+!call print_orientation(ot)
+
+!stop
 
 
 

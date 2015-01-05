@@ -39,6 +39,7 @@ set(CTEMSoftLib_SRCS
 	${CTEMSoftLib_SOURCE_DIR}/rng.f95
 	${CTEMSoftLib_SOURCE_DIR}/rotations.f90
 	${CTEMSoftLib_SOURCE_DIR}/so3.f90
+	${CTEMSoftLib_SOURCE_DIR}/dictmod.f90
 	${CTEMSoftLib_SOURCE_DIR}/spsort.f
 	${CTEMSoftLib_SOURCE_DIR}/stacking_fault.f90
 	${CTEMSoftLib_SOURCE_DIR}/STEMmodule.f90

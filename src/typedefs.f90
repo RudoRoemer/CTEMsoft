@@ -55,6 +55,11 @@ module typedefs
 
 use local
 
+! following are used to define the quaternion symmetry operators
+real(kind=dbl),private,parameter        :: sq22=0.7071067811865475244D0 ! sqrt(2)/2
+real(kind=dbl),private,parameter        :: sq32=0.8660254037844386467D0 ! sqrt(3)/2
+real(kind=dbl),private,parameter        :: half=0.5D0                   ! 1/2
+
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
@@ -307,6 +312,10 @@ character(5),parameter  :: PGTHD(32) =(/'    1','   -1','    2','    m','  2/m',
                                         '  6mm',' -6m2','6/mmm','   23','   m3','  432', &
                                         ' -43m',' m-3m'/)
 
+!> 3D point groups : purely rotational point groups corresponding to each point group
+integer(kind=irg),parameter       :: PGrot(32) = (/1,1,3,3,3,6,6,6,9,9,9,12,12,12,12,16,16, &
+                                                  18,18,18,21,21,21,24,24,24,24,28,28,30,30,30/)
+                                                  
 !> 3D point groups : Laue group number
 integer(kind=irg),parameter       :: PGLaue(32) =(/2,2,5,5,5,8,8,8,11,11,11,15,15,15,15,17,17, &
                                                   20,20,20,23,23,23,27,27,27,27,29,29,32,32,32/)
@@ -420,6 +429,41 @@ type symdata2D
   integer(kind=irg)     :: SYM_MATnum                   !< number of non-zero symmetry matrices (order)
   integer(kind=irg)     :: SYM_direc(12,2,2)            !< point group matrices (filled in by Generate2DSymmetry)
 end type
+
+! finally, we define the rotational crystal symmetry operators in terms of quaternions (q0, q1,q2,q3) with q0 the scalar part;
+! these are used in the dictmod EBSD dictionary indexing module, and are defined with respect to the standard cartesian reference frame
+real(kind=dbl),parameter :: SYM_Qsymop(4,29) = reshape( (/ &
+                                1.D0, 0.D0, 0.D0, 0.D0, &       ! 1: identity operator
+                                0.D0, 1.D0, 0.D0, 0.D0, &       ! 2: 180@[100]
+                                0.D0, 0.D0, 1.D0, 0.D0, &       ! 3: 180@[010]
+                                0.D0, 0.D0, 0.D0, 1.D0, &       ! 4: 180@[001]
+                                sq22, sq22, 0.D0, 0.D0, &       ! 5: 90@[100]
+                                sq22, 0.D0, sq22, 0.D0, &       ! 6: 90@[010]
+                                sq22, 0.D0, 0.D0, sq22, &       ! 7: 90@[001]
+                                sq22,-sq22, 0.D0, 0.D0, &       ! 8: 270@[100]
+                                sq22, 0.D0,-sq22, 0.D0, &       ! 9: 270@[010]
+                                sq22, 0.D0, 0.D0,-sq22, &       !10: 270@[001]
+                                0.D0, sq22, sq22, 0.D0, &       !11: 180@[110]
+                                0.D0,-sq22, sq22, 0.D0, &       !12: 180@[-110]
+                                0.D0, 0.D0, sq22, sq22, &       !13: 180@[011]
+                                0.D0, 0.D0,-sq22, sq22, &       !14: 180@[0-11]
+                                0.D0, sq22, 0.D0, sq22, &       !15: 180@[101]
+                                0.D0,-sq22, 0.D0, sq22, &       !16: 180@[-101]
+                                half, half, half, half, &       !17: 120@[111]
+                                half,-half,-half,-half, &       !18: 120@[-1-1-1]
+                                half, half,-half, half, &       !19: 120@[1-11]
+                                half,-half, half,-half, &       !20: 120@[-11-1]
+                                half,-half, half, half, &       !21: 120@[-111]
+                                half, half,-half,-half, &       !22: 120@[1-1-1]
+                                half,-half,-half, half, &       !23: 120@[-1-11]
+                                half, half, half,-half, &       !24: 120@[11-1]
+                                sq32, 0.D0, 0.D0, half, &       !25:  60@[001]   (hexagonal/trigonal operators start here)
+                                half, 0.D0, 0.D0, sq32, &       !26: 120@[001]
+                                0.D0, 0.D0, 0.D0, 1.D0, &       !27: 180@[001]  (duplicate from above, but useful to keep it here)
+                               -half, 0.D0, 0.D0, sq32, &       !28: 240@[001]
+                               -sq32, 0.D0, 0.D0, half  &       !29: 300@[001]
+                                /), (/4,29/) )
+! need to add the hexagonal and trigonal twofold rotational operators !
 
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
@@ -721,9 +765,9 @@ end type DynType
 
 ! define the cutoff parameters for the Bethe potential approach 
 type BetheParameterType
-        real(kind=sgl)                 :: c1 = 10.0_sgl
+        real(kind=sgl)                 :: c1 = 8.0_sgl
         real(kind=sgl)                 :: c2 = 20.0_sgl
-        real(kind=sgl)                 :: c3 = 200.0_sgl
+        real(kind=sgl)                 :: c3 = 100.0_sgl
         real(kind=sgl)                 :: sgdbdiff = 0.05_sgl
         real(kind=sgl)                 :: weakcutoff = 0.0_sgl
         real(kind=sgl)                 :: cutoff = 0.0_sgl
@@ -883,6 +927,22 @@ type substrateBW
 end type substrateBW
 
 
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+! type definition for dictionary-based indexing of EBSD patterns
+type dicttype
+        integer(kind=irg)               :: Nqsym        ! number of quaternion symmetry operators for current crystal system 
+        real(kind=dbl)                  :: Pm(4,48)     ! array for quaternion symmetry operators
+        integer(kind=irg)               :: pgnum        ! point group number
+        integer(kind=irg)               :: prot         ! rotational point group number
+        real(kind=dbl),allocatable      :: xAp(:)       ! kappa array
+        real(kind=dbl),allocatable      :: yAp(:)       ! A_4(u) lookup table
+        integer(kind=irg)               :: Apnum        ! number of entries in lookup table
+        integer(kind=irg)               :: Num_of_init  ! number of times that the EM algorithm needs to be carried out (set by user)
+        integer(kind=irg)               :: Num_of_iterations    ! number of iterations inside each EM call (set by user)
+end type dicttype
 
 
 end module typedefs
