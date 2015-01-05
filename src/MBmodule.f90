@@ -777,7 +777,7 @@ complex(kind=dbl),allocatable               :: ScatMat1(:,:),ScatMat2(:,:),S01(:
 real(kind=sgl)                              :: dthick,delh(3),delkg(3),s
 real(kind=dbl)                              :: tpi,ctmp(192,3),Znsq,arg1(3),arg2(3),arg3,arg4
 integer(kind=irg)                           :: n,sar1,sar2
-integer(kind=irg),allocatable               :: hlist1(:,:),hlist2(:,:)
+real(kind=sgl),allocatable                  :: hlist1(:,:),hlist2(:,:)
 
 
 tpi = 2.D0*cPi
@@ -790,7 +790,6 @@ nns2 = 0
 !print*,"Starting main loop"
 ! setting initial amplitude of the beam
 rltmpa => refliststrong_subs
-print*,rltmpa%kg
 do ii = 1,nnk
     nns1 = rltmpa%nns
     if (allocated(ScatMat1)) deallocate(ScatMat1)
@@ -802,8 +801,8 @@ do ii = 1,nnk
     ScatMat1 = dcmplx(0.D0,0.D0)
     Minp1 = dcmplx(0.D0,0.D0)
     Minp1 = rltmpa%DynMat*dcmplx(0.D0,cPi * cell_subs%mLambda)
-    hlist1 = 0
-    hlist1 = rltmpa%hlist
+    hlist1 = 0.0
+    hlist1(:,:) = rltmpa%hlist(:,:)
     !print*,"Starting exponential calculation"
     call MatrixExponential(Minp1, ScatMat1, dble(dthick), 'Pade', nns1)
     !print*,"Exponential calculation done"
@@ -827,18 +826,18 @@ do ii = 1,nnk
         ScatMat2 = dcmplx(0.D0,0.D0)
         Minp2 = dcmplx(0.D0,0.D0)
         mat2 = dcmplx(0.D0,0.D0)
-        hlist2 = 0
+        hlist2 = 0.0
         Minp2 = rltmpb%DynMat*dcmplx(0.D0,cPi * cell_subs%mLambda)
-        hlist2 = rltmpb%hlist
-
+        hlist2(:,:) = rltmpb%hlist(:,:)
         call MatrixExponential(Minp2, ScatMat2, dble(dthick), 'Pade', nns2)
         S02 = dcmplx(0.D0,0.D0)
         S02(1) = Sg(jj)
+!if (ii .eq. jj) print*,S01(1),S02(1)
         !mat2(:,1) = S02(:)
         if (allocated(Shh)) deallocate(Shh)
         allocate(Shh(nns1,nns2),stat=istat)
         Shh = dcmplx(0.D0,0.D0)
-        arg1 = tpi*(rltmpb%kg-rltmpa%kg)
+        arg1 = tpi*(rltmpa%kg-rltmpb%kg)
         !print*,"Starting CalcShh"
         do ll = 1,cell_subs%ATOM_ntype
             call CalcOrbit(cell_subs,ll,n,ctmp)
@@ -848,8 +847,8 @@ do ii = 1,nnk
             do pp = 1,nns2
                 do kk = 1,nns1
                     do qq = 1,n
-                        s = 0.25*CalcLength(cell_subs,float(hlist2(pp,1:3)-hlist1(kk,1:3)),'r')**2
-                        arg2 = tpi*float(hlist2(pp,1:3)-hlist1(kk,1:3))
+                        s = 0.25*CalcLength(cell_subs,hlist1(kk,1:3)-hlist2(pp,1:3),'r')**2
+                        arg2 = tpi*(hlist1(kk,1:3)-hlist2(pp,1:3))
                         arg3 = sum(arg1(1:3)*cell_subs%apos(ll,qq,1:3))
                         arg4 = sum(arg2(1:3)*cell_subs%apos(ll,qq,1:3))
                         Shh(kk,pp) = Shh(kk,pp) + Znsq*exp(-cell_subs%ATOM_pos(ll,5)*s)*dcmplx(dcos(arg3+arg4),dsin(arg3+arg4))
@@ -866,7 +865,7 @@ do ii = 1,nnk
             mat2 = matmul(ScatMat2,S02)
             do lmm2 = 1,nns2
                 do lmm1 = 1,nns1
-                    Lhh(lmm1,lmm2) = Lhh(lmm1,lmm2) + lambdaZ(mm+filmthickness)*conjg(mat1(lmm1))*mat2(lmm2)*dthick
+                    Lhh(lmm1,lmm2) = Lhh(lmm1,lmm2) + lambdaZ(mm+filmthickness)*conjg(mat2(lmm2))*mat1(lmm1)*dthick
                 end do
             end do
             S01 = mat1
@@ -961,7 +960,6 @@ do jj = 1,nns_subs
     refliststrong_subs%hlist(jj,1:3) = float(rltmpb%hkl(1:3))
     rltmpb => rltmpb%nexts
 end do
-
 rltmpa => rltmpa%nexts
 do ii = 1,nns_film-1
     kg = k0 + float(rltmpa%hkl) + (rltmpa%sg)*sngl(FN)
@@ -984,7 +982,9 @@ do ii = 1,nns_film-1
 
     refliststrong_subs_tmp%kg(1:3) = kg(1:3)
     refliststrong_subs_tmp%nns = nns_subs
+
     rltmpa => rltmpa%nexts
+
 end do
 end subroutine GetStrongBeamsSubs
 
