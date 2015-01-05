@@ -103,14 +103,15 @@
 ! 
 !> @date 12/31/14 MDG 1.0 original (based on UMich Matlab code and IDL intermediate version)
 !> @date 01/02/15 MDG 1.1 debug of code; produces same result as Matlab code
+!> @date 01/04/15 MDG 1.2 trial implementation of model using hyperbolic functions instead of exponential
 !--------------------------------------------------------------------------
 
 module dictmod
 
 IMPLICIT NONE
 
-public  :: InitDictionaryIndexing, EMforVMF
-private :: logCp, VMF_Estep, VMF_Mstep, VMFDensity,  VMF_getQandL
+public  :: InitDictionaryIndexing, EMforVMF, EMforVMFh, VMFDensity, VMFDensityh
+private :: logCp, VMF_Estep, VMF_Mstep, VMF_getQandL
 
 contains
 
@@ -319,11 +320,6 @@ real(kind=dbl)                          :: Mu(4), PmMu(4), MuKa(5), Qi, Li, rod(
 ! In this routine, we perform the EM algorithm to obtain an estimate for the 
 ! mean direction and concentration parameter of the modified von Mises-Fisher (mVMF)
 ! distribution that models the statistics of the orientation point cloud.
-! We made one simplification with respect to the paper: instead of using twice
-! the number of symmetry operators to account for the q/-q symmetry of the quaternion
-! unit sphere, we combine both of them in one step by replacing the exponential in the 
-! mVMF expression by a hyperbolic cosine.
-
 
 ! array sizes (we use shorthand notations)
 N = nums
@@ -432,6 +428,165 @@ end subroutine EMforVMF
 
 !--------------------------------------------------------------------------
 !
+! SUBROUTINE: EMforVMFh
+!
+!> @author Yu-Hui Chen, U. Michigan / Marc De Graef, Carnegie Mellon University
+!
+!> @brief Expectation maximization approach to maximum likelihood problem for mu and kappa
+!
+!> @details For all details, see following paper:
+!
+!> @param X list of input quaternions
+!> @param dict dictionary parameter pointer (must be declared in calling routine)
+!> @param nums number of input quaternions
+!> @param seed for normal random number generator 
+!> @param muhat output mean orientation
+!> @param kappahat output concentration parameter
+!
+!> @date 01/01/15 MDG 1.0 original, based on Chen's Matlab version + simplifications
+!> @date 01/04/15 MDG 1.1 modifications of original routine using hyperbolic functions
+!--------------------------------------------------------------------------
+recursive subroutine EMforVMFh(X, dict, nums, seed, muhat, kappahat)
+
+use local
+use constants
+use typedefs
+use math! , only:r8vec_normal_01, r4_uniform_01          ! array of normal random numbers
+use quaternions
+use rotations, only:qu2ro               ! we only need to move to Rodrigues-Frank space
+use so3, only:IsinsideFZ                ! we only need to do a test ...
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(IN)               :: X(4,nums)
+type(dicttype),pointer,INTENT(INOUT)    :: dict
+integer(kind=irg),INTENT(IN)            :: nums
+integer(kind=irg),INTENT(INOUT)         :: seed
+real(kind=dbl),INTENT(OUT)              :: muhat(4)
+real(kind=dbl),INTENT(OUT)              :: kappahat
+
+integer(kind=irg)                       :: i, j, N, Pmdims, init, dd
+integer(kind=irg)                       :: FZtype, FZorder
+real(kind=dbl),allocatable              :: Mu_All(:,:), Kappa_All(:), R_All(:,:,:), L_All(:), &
+                                           R(:,:), Q(:), L(:)
+real(kind=dbl)                          :: Mu(4), PmMu(4), MuKa(5), Qi, Li, rod(4), qu(4), Kappa
+
+! In this routine, we perform the EM algorithm to obtain an estimate for the 
+! mean direction and concentration parameter of the modified von Mises-Fisher (mVMF)
+! distribution that models the statistics of the orientation point cloud.
+! We made one simplification with respect to the paper: instead of using twice
+! the number of symmetry operators to account for the q/-q symmetry of the quaternion
+! unit sphere, we combine both of them in one step by replacing the exponential in the 
+! mVMF expression by a hyperbolic cosine.
+
+
+! array sizes (we use shorthand notations)
+N = nums
+Pmdims = dict%Nqsym
+
+! initialize some auxiliary arrays
+allocate(Mu_All(dict%Num_of_init,4), Kappa_All(dict%Num_of_init), &
+         R_All(N,Pmdims,dict%Num_of_init),L_All(dict%num_of_init))
+Mu_All = 0.D0
+Kappa_All = 0.D0
+R_All = 0.D0
+L_All = 0.D0
+
+
+! main loop (EM typically uses a few starting parameter sets to make sure we don't get stuck in a local maximum)
+do init=1,dict%Num_of_init 
+! create a vector to hold the results
+  allocate(R(N,Pmdims))
+  R = 0.D0
+
+! generate a normal random vector and normalize it as a starting guess for Mu (i.e., a unit quaternion)
+  call R8VEC_normal_01(4,seed,Mu)
+  Mu = Mu/cabs(Mu)
+! Mu = (/ -0.144499, -0.560162, 0.803906, -0.138108 /)     ! this is a test vector for Mu
+
+! the CTEMsoft package only considers quaternions with positive first component, 
+! so we may need to change all the signs
+  if (Mu(1).lt.0.D0) Mu = -Mu
+
+! starting value for Kappa
+  Kappa = 30.D0
+
+! define the number of iterations and the Q and L function arrays
+  allocate (Q(dict%Num_of_iterations), L(dict%Num_of_iterations))
+  Q = 0.D0
+  L = 0.D0
+
+
+! and here we go with the EM iteration...
+! we use quaternion multiplication throughout instead of the matrix version in the Matlab version
+! quaternion multiplication has been verified against the 4x4 matrix multiplication of the atlab code on 01/02/15 
+  iloop: do i=1,dict%Num_of_iterations 
+! E-step
+    R = VMF_Esteph(X,dict,Pmdims,N,Mu,Kappa)
+
+! M-step
+    MuKa = VMF_Msteph(X,dict,Pmdims,N,R)
+
+! calculate the Q and Likelihood function values
+    call VMF_getQandLh(X,dict,Pmdims,nums,MuKa,R,Qi,Li)
+    L(i) = Li
+    Q(i) = Qi
+
+! update the containers
+    Mu_All(init,1:4) = MuKa(1:4)
+    Kappa_All(init) = MuKa(5)
+    R_All(1:N,1:Pmdims,init) = R(1:N,1:Pmdims)
+    L_All(init) = L(i)
+    Mu = MuKa(1:4)
+    Kappa = MuKa(5)
+
+! and terminate if necessary
+    if (i.ge.2) then 
+      if (abs(Q(i)-Q(i-1)).lt.0.05) then 
+        EXIT iloop
+      end if
+    end if
+  end do iloop
+  deallocate(R,Q,L)
+end do
+
+dd = maxloc(L_All,1)
+Mu = Mu_all(dd,1:4)
+kappahat = Kappa_All(dd)
+
+write (*,*) ' All solutions : '
+do i=1,dict%Num_of_init
+  write (*,*) Mu_All(i,1:4), '---> ',L_All(i)
+end do
+
+! the CTEMsoft package only considers quaternions with positive first component, 
+! so we may need to change all the signs
+if (Mu(1).lt.0.D0) Mu = -Mu
+
+! the final step is to make sure that the resulting Mu lies in the same
+! fundamental zone that the dictionary elements are located in; since we start
+! the EM iterations from a random quaternion, there is no guarantee that the 
+! result lies in the same fundamental zone. Therefore, we cycle through all the 
+! equivalent quaternions, and stop as soon as we find one in the Rodrigues 
+! fundamental zone, which requires routines from the rotations and so3 modules. 
+FZtype = FZtarray(dict%pgnum)
+FZorder = FZoarray(dict%pgnum)
+
+FZloop: do i=1,Pmdims
+  qu = quat_mult(Mu,dict%Pm(1:4,i))
+  if (qu(1).lt.0.D0) qu = -qu
+  rod = qu2ro(qu)
+  if (IsinsideFZ(rod,FZtype,FZorder)) EXIT FZloop
+end do FZloop
+muhat = qu
+
+deallocate(Mu_All, Kappa_All, R_All, L_All)
+
+end subroutine EMforVMFh
+
+
+!--------------------------------------------------------------------------
+!
 ! FUNCTION: VMF_Estep
 !
 !> @author Marc De Graef, Carnegie Mellon University / Yu-Hui Chen, U. Michigan
@@ -480,6 +635,62 @@ do j=1,Pmdims
 end do
 
 end function VMF_Estep
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: VMF_Esteph
+!
+!> @author Marc De Graef, Carnegie Mellon University / Yu-Hui Chen, U. Michigan
+!
+!> @brief computes the E step of the EM process, verified against Matlab code on 01/02/15
+!
+!> @param X list of input quaternions
+!> @param dict pointer to dictionary type
+!> @param Pmdims number of quaternion symmetry operators
+!> @param nums number of samples
+!> @param Mu current guess for mean quaternion
+!> @param Kappa input parameter
+!
+!> @date 01/01/15 MDG 1.0 original
+!> @date 01/04/15 MDG 1.1 modified for hyperbolic distribution function
+!--------------------------------------------------------------------------
+recursive function VMF_Esteph(X,dict,Pmdims,nums,Mu,Kappa) result(R)
+
+use local
+use typedefs
+use quaternions
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(IN)               :: X(4,nums)
+type(dicttype),pointer,INTENT(IN)       :: dict
+integer(kind=irg),INTENT(IN)            :: Pmdims
+integer(kind=irg),INTENT(IN)            :: nums
+real(kind=dbl),INTENT(IN)               :: Mu(4)
+real(kind=dbl),INTENT(IN)               :: Kappa
+real(kind=dbl)                          :: R(nums,Pmdims)
+
+integer(kind=irg)                       :: j, i 
+real(kind=dbl)                          :: Rdenom(nums), PmMu(4), coshsum(nums), arg(nums)
+
+coshsum = 0.D0
+
+! this implements equation (15) of the appendix of the paper
+do j=1,Pmdims
+  do i=1,nums
+    arg(i) = Kappa*dot_product( quat_mult(Mu,dict%Pm(1:4,j)) ,X(1:4,i))
+  end do
+  coshsum = coshsum + dcosh(arg)
+  R(1:nums,j) = dsinh(arg)
+end do
+
+! and normalize
+Rdenom = 1.D0/coshsum
+do j=1,Pmdims 
+  R(1:nums,j) = R(1:nums,j)*Rdenom(1:nums)
+end do
+
+end function VMF_Esteph
 
 
 !--------------------------------------------------------------------------
@@ -538,6 +749,63 @@ MuKa(5) = dict%xAp(minp)
 
 end function VMF_Mstep
 
+!--------------------------------------------------------------------------
+!
+! FUNCTION: VMF_Msteph
+!
+!> @author Marc De Graef, Carnegie Mellon University / Yu-Hui Chen, U. Michigan
+!
+!> @brief computes the M step of the EM process
+!
+!> @param X list of input quaternions
+!> @param dict pointer to dictionary type
+!> @param Pmdims number of quaternion symmetry operators
+!> @param nums number of samples
+!> @param R weight factors form the E step
+!
+!> @date 01/01/15 MDG 1.0 original
+!> @date 01/04/15 MDG 1.1 modified for hyperbolic distribution function
+!--------------------------------------------------------------------------
+recursive function VMF_Msteph(X,dict,Pmdims,nums,R) result(MuKa)
+
+use local
+use typedefs
+use quaternions
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(IN)               :: X(4,nums)
+type(dicttype),pointer,INTENT(IN)       :: dict
+integer(kind=irg),INTENT(IN)            :: Pmdims
+integer(kind=irg),INTENT(IN)            :: nums
+real(kind=dbl),INTENT(IN)               :: R(nums,Pmdims)
+real(kind=dbl)                          :: MuKa(5)
+
+real(kind=dbl)                          :: tmpGamma(4), nGamma, diff(dict%Apnum), qu(4)
+integer(kind=irg)                       :: minp, i, j
+
+
+! this is simplified from the Matlab routine and uses straight summations and
+! quaternion multiplication instead of arrays
+tmpGamma = 0.D0
+do j=1,Pmdims 
+  do i=1,nums
+    qu = quat_mult(X(1:4,i),conjg(dict%Pm(1:4,j)))
+    tmpGamma = tmpGamma +  R(i,j) * qu
+  end do
+end do
+nGamma = cabs(tmpGamma)
+MuKa(1:4) = tmpGamma/nGamma
+
+
+! find kappa corresponding to this value of gamma (equation 17 in appendix of paper)
+diff = dabs( nGamma/dble(nums) - dict%yAp ) 
+minp = minloc( diff, 1 )
+if (minp.eq.1) minp = 2 
+MuKa(5) = dict%xAp(minp)
+
+end function VMF_Msteph
+
 
 !--------------------------------------------------------------------------
 !
@@ -595,6 +863,63 @@ Q = sum(R*dlog(Phi))
 
 end subroutine VMF_getQandL
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: VMF_getQandLh
+!
+!> @author Yu-Hui Chen, U. Michigan / Marc De Graef, Carnegie Mellon University
+!
+!> @brief Computes the Q array and the log-likelihood array
+!
+!> @details For all details, see following paper:
+!
+!> @param X list of input quaternions
+!> @param dict dictionary parameter pointer (must be declared in calling routine)
+!> @param Pmdims number of quaternion symmetry operators to consider
+!> @param number of input quaternions
+!> @param MuKa  vector with Mu and Kappa
+!> @param R output from the E step
+!> @param Q output Q 
+!> @param L output L 
+!
+!> @date 01/01/15 MDG 1.0 original, based on Chen's Matlab version + simplifications
+!> @date 01/04/15 MDG 1.1 modified for hyperbolic distribution function
+!--------------------------------------------------------------------------
+recursive subroutine VMF_getQandLh(X,dict,Pmdims,nums,MuKa,R,Q,L)
+
+use local
+use typedefs
+use quaternions
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(IN)               :: X(4,nums)
+type(dicttype),pointer,INTENT(INOUT)    :: dict
+integer(kind=irg),INTENT(IN)            :: Pmdims
+integer(kind=irg),INTENT(IN)            :: nums
+real(kind=dbl),INTENT(IN)               :: MuKa(5)
+real(kind=dbl),INTENT(IN)               :: R(nums,Pmdims)
+real(kind=dbl),INTENT(OUT)              :: Q
+real(kind=dbl),INTENT(OUT)              :: L
+
+real(kind=dbl)                          :: Phi(nums,Pmdims), PmMu(4), qu(4)
+integer(kind=irg)                       :: j
+
+! compute the auxiliary Phi array
+Phi = 0.D0
+qu = MuKa(1:4)
+do j=1,Pmdims
+  PmMu = quat_mult(dict%Pm(1:4,j), qu)
+  Phi(1:nums,j) = VMFDensity(X, nums, PmMu, MuKa(5))
+end do
+Phi = Phi/dble(dict%Nqsym)
+
+! and convert the array into the Q and L parameters.
+L = sum(dlog(sum(Phi,2)))
+Q = sum(R*dlog(Phi))
+
+end subroutine VMF_getQandLh
+
 
 !--------------------------------------------------------------------------
 !
@@ -634,11 +959,55 @@ real(kind=dbl)                          :: C
 C = logCp(kappa)
 
 do j=1,nums
-! vmf(j) = 2.D0*C*dcosh(kappa*dot_product(mu,X(1:4,j)))
   vmf(j) = dexp(C+kappa*dot_product(mu,X(1:4,j)))
 end do
 
 end function VMFDensity
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: VMFDensityh
+!
+!> @author Marc De Graef, Carnegie Mellon University / Yu-Hui Chen, U. Michigan
+!
+!> @brief computes the VMF density function, using a cosh() expression rather than exp()
+!
+!> @details function used by the VMFDensity function
+!> original in Matlab by Yu-Hui Chen, U. Michigan
+!> converted to IDL by MDG, 12/18/14, simplified arguments
+!> converted to f90 by MDG, 12/31/14, further simplifications
+!> output validated against Matlab output on 12/31/14
+!
+!> @param X input quaternion samples
+!> @param nums number of samples
+!> @param kappa input parameter
+!
+!> @date 01/01/15 MDG 1.0 original
+!> @date 01/04/15 MDG 1.1 modified for hyperbolic distribution function
+!--------------------------------------------------------------------------
+recursive function VMFDensityh(X,nums,mu,kappa) result(vmf)
+
+use local
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(IN)               :: X(4,nums)
+integer(kind=irg),INTENT(IN)            :: nums
+real(kind=dbl),INTENT(IN)               :: mu(4)
+real(kind=dbl),INTENT(IN)               :: kappa
+real(kind=dbl)                          :: vmf(nums)
+
+integer(kind=irg)                       :: j
+real(kind=dbl)                          :: C
+
+C = dexp(logCp(kappa))
+
+do j=1,nums
+  vmf(j) = 2.D0*C*dcosh(kappa*dot_product(mu,X(1:4,j)))
+end do
+
+end function VMFDensityh
+
 
 !--------------------------------------------------------------------------
 !
