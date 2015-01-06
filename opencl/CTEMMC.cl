@@ -77,7 +77,7 @@ struct lfsrret lfsr113_Bits(int,int,int,int);
 //
 //> @brief function to generate random number
 //
-//> @details this function generates a random number based on the seed value supplied. the random number generated serves as seed for the subsequent random number generated and so on. this is the the same implementation as in ANSI C
+//> @details this function generates a random number based on the seed value supplied. the random number generated serves as seed for the subsequent random number generated and so on.
 //
 //> @positive integer seed
 //> @date 05/14/14    SS 1.0 original
