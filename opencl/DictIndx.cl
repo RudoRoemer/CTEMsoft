@@ -33,6 +33,7 @@
 
 float4 quatmult(float4,float4);
 float factorial(int);
+float Bessel0(float);
 float Bessel1(float);
 float Bessel2(float);
 float Cp(float);
@@ -90,6 +91,58 @@ float CalcVMF(float4,float4,float,float4);
  /*
  //--------------------------------------------------------------------------
  //
+ // FUNCTION: Bessel0
+ //
+ //> @author Saransh Singh, Carnegie Mellon University
+ //
+ //> @brief function to compute modified Bessel function of first kind of order 0
+ //
+ //> @param x input parameter
+ //> @date 01/06/15    SS 1.0 original
+ //--------------------------------------------------------------------------
+ */
+float Bessel0(float x)
+{
+    float bessI0;
+    float Y,AX,BX;
+    
+    float P1 = 1.0f;
+    float P2 = 3.5156229f;
+    float P3 = 3.0899424f;
+    float P4 = 1.2067492f;
+    float P5 = 0.2659732f;
+    float P6 = 0.360768e-1f;
+    float P7 = 0.45813e-2f;
+    
+    float Q1 = 0.39894228f;
+    float Q2 = 0.1328592e-1f;
+    float Q3 = 0.225319e-2f;
+    float Q4 = 0.157565e-2f;
+    float Q5 = 0.916281e-2f;
+    float Q6 = -0.2057706e-1f;
+    float Q7 = 0.2635537e-1f;
+    float Q8 = -0.1647633e-1f;
+    float Q9 = 0.392377e-2f;
+    
+    if (fabs(x) <= 3.75f){
+        Y = (x/3.75f)*(x/3.75f);
+        bessI0 = P1+Y*(P2+Y*(P3+Y*(P4+Y*(P5+Y*(P6+Y*P7)))));
+    }
+    else {
+        AX = fabs(x);
+        Y  = 3.75f/AX;
+        BX = exp(AX)/sqrt(AX);
+        AX = Q1+Y*(Q2+Y*(Q3+Y*(Q4+Y*(Q5+Y*(Q6+Y*(Q7+Y*(Q8+Y*Q9)))))));
+        bessI0 = AX*BX;
+    }
+    
+    return bessI0;
+
+}
+
+ /*
+ //--------------------------------------------------------------------------
+ //
  // FUNCTION: Bessel1
  //
  //> @author Saransh Singh, Carnegie Mellon University
@@ -102,20 +155,42 @@ float CalcVMF(float4,float4,float,float4);
  */
 float Bessel1(float x)
 {
-    float tol = 1e-5f;
-    float sum;
-    int k = 1;
-    float term = x/4;
-    sum = term;
-    while (term >= tol){
-        term = (x/2)*pow((x*x/4),k)/(factorial(k)*factorial(k+2));
-        sum += term;
-        k++;
+    float bessI1;
+    float Y,AX,BX;
+    
+    float P1 = 0.5f;
+    float P2 = 0.87890594f;
+    float P3 = 0.51498869f;
+    float P4 = 0.15084934f;
+    float P5 = 0.2658733e-1f;
+    float P6 = 0.301532e-2f;
+    float P7 = 0.32411e-3f;
+    
+    float Q1 = 0.39894228f;
+    float Q2 = -0.3988024e-1f;
+    float Q3 = 0.362018e-2f;
+    float Q4 = 0.163801e-2f;
+    float Q5 = -0.1031555e-1f;
+    float Q6 = 0.2282967e-1f;
+    float Q7 = -0.2895312e-1f;
+    float Q8 = 0.1787654e-1f;
+    float Q9 = -0.420059e-2f;
+    
+    if (fabs(x) <= 3.75f){
+        Y = (x/3.75f)*(x/3.75f);
+        bessI1 = x*(P1+Y*(P2+Y*(P3+Y*(P4+Y*(P5+Y*(P6+Y*P7))))));
     }
-    return sum;
-
+    else {
+        AX = fabs(x);
+        Y  = 3.75f/AX;
+        BX = exp(AX)/sqrt(AX);
+        AX = Q1+Y*(Q2+Y*(Q3+Y*(Q4+Y*(Q5+Y*(Q6+Y*(Q7+Y*(Q8+Y*Q9)))))));
+        bessI1 = AX*BX;
+    }
+    
+    return bessI1;
+    
 }
-
  /*
  //--------------------------------------------------------------------------
  //
@@ -131,19 +206,16 @@ float Bessel1(float x)
  */
 float Bessel2(float x)
 {
-    float tol = 1e-5f;
-    float sum;
-    int k = 1;
-    float term = x*x/24;
-    sum = term;
-    while (term >= tol){
-        term = (x*x/4)*pow((x*x/4),k)/(factorial(k)*factorial(k+3));
-        sum += term;
-        k++;
+    float res;
+    if ( x >= 1.0e-5f){
+        res = Bessel0(x) - (2/x)*Bessel1(x);
     }
-    return sum;
-    
+    else {
+        res = 0.0f;
+    }
+    return res;
 }
+
  /*
  //--------------------------------------------------------------------------
  //
@@ -231,7 +303,7 @@ __kernel void ParamEstm(__global float* quaternion, __global float* mean, __glob
     for (int l = 0; l < 100; ++l){
         gamma = (float4)(0.0f,0.0f,0.0f,0.0f);
         for (int i = 0; i < numk; ++i){
-            quatlist = (float4)(quaternion[4*id],quaternion[4*id+1],quaternion[4*id+2],quaternion[4*id+3]);
+            quatlist = (float4)(quaternion[4*id*numk+i],quaternion[4*id*numk+i+1],quaternion[4*id*numk+i+2],quaternion[4*id*numk+i+3]);
             prefact = 0.0f;
             for (int j = 0; j < numsym; ++j){
                 sym = (float4)(symmetry[4*j],symmetry[4*j+1],symmetry[4*j+2],symmetry[4*j+3]);
