@@ -127,20 +127,25 @@ character(fnlen),INTENT(IN)             :: progname
 character(3)                    :: method
 real(kind=sgl)                  :: galen, bragg, klaue(2), io_real(6), kstar(3), gperp(3), delta, thetac, FNstar(3), gg(3), sg, &
                                    kk(3), ktmax, FN(3), kn, fnat, fnatS, TTinv(3,3), r(3), p(3)
-integer(kind=irg)               :: nt, skip, dgn, pgnum, io_int(6), maxHOLZ, ik, numk, ga(3), gb(3), TID, izfilm, &
+integer(kind=irg)               :: nt, skip, dgn, pgnum, io_int(6), maxHOLZ, ik, numk, ga(3), gb(3), TID, izfilm, ig, igp, im,  &
                                    nn, npx, npy, isym, numset, numsetS, it, ijmax, jp, istat, iequiv(2,12), nequiv, NUMTHREADS, & 
-                                   nns, nnw, nref, tots, totw, ikf
-real(kind=dbl)                  :: ctmp(192,3),arg 
+                                   nns, nnw, nref, tots, totw, ikf, numEbins, numzbins, nx, ny, totnum_el, kkk(3), imp, iz, kgg(3)
+real(kind=sgl)                  :: EkeV, Ehistmin, Ebinsize, depthmax, depthstep, sig, omega, filmthickness
+real(kind=dbl)                  :: ctmp(192,3),arg, argz 
 integer                         :: i,j,ir, n,ipx,ipy,gzero,ic,ip,ikk
 real(kind=sgl)                  :: pre, tpi,Znsq, kkl, DBWF, frac
-real,allocatable                :: thick(:), sr(:,:,:) 
-complex(kind=dbl),allocatable   :: Lgh(:,:,:),Sgh(:,:),Sghtmp(:,:,:)
-complex(kind=dbl)               :: czero
+real,allocatable                :: thick(:), sr(:,:,:), sigmagg(:,:), lambdaZ(:), integrand(:) 
+complex(kind=dbl),allocatable   :: Lgh(:,:,:),Sgh(:,:),Sghtmp(:,:,:), LhhS(:,:), ShhS(:,:), Iint(:,:), CGinv(:,:)
+complex(kind=dbl)               :: czero, carg
 real(kind=dbl)                  :: dE(3,3)
 real(kind=sgl),allocatable      :: karray(:,:)
-integer(kind=irg),allocatable   :: kij(:,:), nat(:), natS(:)
-complex(kind=dbl),allocatable   :: DynMat(:,:)
+integer(kind=irg),allocatable   :: kij(:,:), nat(:), natS(:), IPIV(:)
+complex(kind=dbl),allocatable   :: DynMat(:,:), atmp(:,:)
+integer(kind=sgl),allocatable   :: accum_e(:,:,:), accum_z(:,:,:,:)
 logical                         :: verbose
+character(4)                    :: MCmode
+character(8)                    :: MCscversion
+character(fnlen)                :: xtalname, xtalname2, oldprogname
 
 type(orientation)               :: orel
 type(unitcell),pointer          :: cell, cellS
@@ -149,18 +154,75 @@ type(DynType)                   :: Dyn, DynS
 type(kvectorlist),pointer       :: khead, ktmp
 type(symdata2D)                 :: TDPG, TDPGS
 type(BetheParameterType)        :: BetheParameters
-type(reflisttype),pointer       :: reflist, firstw, rltmp, reflistS, firstwS, rltmpS
-type(substrateBW),pointer       :: sublist, subtmp
+type(reflisttype),pointer       :: reflist, firstw, rltmp, reflistS, firstwS, rltmpS, rltmpa, rltmpb
+type(substrateBW),pointer       :: sublist, subtmp, subg, subgp
 
 
 ! init some parameters
   gzero = 1
   frac = 0.05
+  tpi = 2.D0 * cPi
 
   nullify(cell)
   nullify(khead)
   nullify(ktmp)
   nullify(cellS)
+
+
+! ======================================
+! ======================================
+! read the Monte Carlo file to get the lambdaZ curve ... 
+  call Message('opening '//trim(ecpnl%energyfile), frm = "(A)" )
+
+  open(dataunit,file=trim(ecpnl%energyfile),status='unknown',form='unformatted')
+
+  read (dataunit) oldprogname
+  read (dataunit) MCscversion
+  read (dataunit) xtalname
+  read (dataunit) xtalname2
+
+  read(dataunit) numEbins, numzbins, nx, ny, totnum_el
+  nx = (nx - 1)/2
+  ny = (ny - 1)/2
+
+  read (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
+  io_real(1:5) = (/ EkeV, Ehistmin, Ebinsize, depthmax, depthstep /)
+  call WriteValue(' EkeV, Ehistmin, Ebinsize, depthmax, depthstep ',io_real,5,"(4F10.5,',',F10.5)")
+
+  read (dataunit) sig, omega
+  read (dataunit) filmthickness
+  if (ecpnl%filmthickness.ne.filmthickness) call FatalError('ECpatternfos','Film and MC film thicknesses are different')
+
+  read (dataunit) MCmode
+  if (.not. (MCmode.eq.'BSE1')) call FatalError('ECpatternfos','Monte Carlo file is not a BSE1-only type file')
+
+  allocate(accum_e(numEbins,-nx:nx,-nx:nx),accum_z(numEbins,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
+
+  read(dataunit) accum_e
+! actually, we do not yet need the accum_e array for ECP. This will be removed with an updated (HDF) version of the MC code
+! but we need to skip it in this unformatted file so that we can read the accum_z array ...
+  deallocate(accum_e)
+
+  read(dataunit) accum_z    ! we only need this array for the depth integrations
+  close(dataunit,status='keep')
+  call Message(' -> completed reading '//trim(ecpnl%energyfile), frm = "(A)")
+
+! ======================================
+! ======================================
+! compute the lambda array for the thickness integration as well as all associated thickness parameters
+  allocate( lambdaZ(numzbins) )
+  do iz=1,numzbins
+      lambdaZ(iz) = float(sum(accum_z(:,iz,:,:)))/float(sum(accum_z(:,:,:,:)))
+  end do
+  deallocate( accum_z )
+
+! film thickness integer equivalent
+  izfilm = int(ecpnl%filmthickness/depthstep)
+
+! set the thickness array (note that there is a special thickness for the film)
+  nt = ecpnl%numthick
+  allocate(thick(nt))
+  thick = ecpnl%startthick + ecpnl%thickinc * (/ (i-1,i=1,nt) /)
 
 ! ======================================
 ! ======================================
@@ -221,14 +283,6 @@ type(substrateBW),pointer       :: sublist, subtmp
   call TransSpace(cell,FN,FNstar,'d','r')
   call NormVec(cell,FNstar,'r')
    
-
-
-! ======================================
-! ======================================
-! next, we need to read the Monte Carlo file to get the lambdaE curves etc ... 
-
-
-
 ! ======================================
 ! ======================================
 
@@ -251,7 +305,7 @@ type(substrateBW),pointer       :: sublist, subtmp
   npx = ecpnl%npix
   npy = npx
   io_int(1) = 2.0*npx + 1
-  call WriteValue('Number of image pixels along diameter of central disk = ', io_int, 1, "(I4/)")
+  call WriteValue('Number of pattern pixels along diameter of central disk = ', io_int, 1, "(I4/)")
 
 ! ignore symmetry, since a film+substrate system in general will not have any overall symmetry
   isym = 1
@@ -266,12 +320,6 @@ type(substrateBW),pointer       :: sublist, subtmp
 ! force dynamical matrix routine to read new Bethe parameters from file
   call Set_Bethe_Parameters(BetheParameters,.TRUE.)
 
-! set the thickness array (note that there is a special thickness for the film)
-  nt = ecpnl%numthick
-  allocate(thick(nt))
-  thick = ecpnl%startthick + ecpnl%thickinc * (/ (i-1,i=1,nt) /)
-! we also need to determine at which index the integration over the film ends.
-  izfilm = int(ecpnl%filmthickness/depthstep) 
   
 ! ======================================
 ! ======================================
@@ -286,6 +334,7 @@ type(substrateBW),pointer       :: sublist, subtmp
   allocate(nat(numset))
   nat = 0
   fnat = 1.0/float(sum(cell%numat(1:numset)))
+
 ! substrate
   numsetS = cellS % ATOM_ntype  ! number of special positions in the unit cell
   allocate(natS(numsetS))
@@ -310,21 +359,22 @@ type(substrateBW),pointer       :: sublist, subtmp
 ! and remove the linked list
   call Delete_kvectorlist(khead)
 
+
 ! allocate space for the results
   allocate(sr(2*npx+1,2*npy+1,nt)) 
   sr = 0.0
 
 ! set the number of OpenMP threads 
-  call OMP_SET_NUM_THREADS(ecpnl%nthreads)
-  io_int(1) = ecpnl%nthreads
-  call WriteValue(' Attempting to set number of threads to ',io_int, 1, frm = "(I4)")
+!  call OMP_SET_NUM_THREADS(ecpnl%nthreads)
+!  io_int(1) = ecpnl%nthreads
+!  call WriteValue(' Attempting to set number of threads to ',io_int, 1, frm = "(I4)")
 
 ! use OpenMP to run on multiple cores ... 
-!$OMP PARALLEL default(shared) PRIVATE(DynMat,ik,TID,kk,kn,ipx,ipy,iequiv,nequiv,fnat,ip,jp,reflist,firstw,nns,nnw,nref) &
-!$OMP& PRIVATE(Sgh, Lgh, SGHtmp, FN)
+!!$OMP PARALLEL default(shared) PRIVATE(DynMat,ik,TID,kk,kn,ipx,ipy,iequiv,nequiv,fnat,ip,jp,reflist,firstw,nns,nnw,nref) &
+!!$OMP& PRIVATE(Sgh, Lgh, SGHtmp, FN)
 
-  NUMTHREADS = OMP_GET_NUM_THREADS()
-  TID = OMP_GET_THREAD_NUM()
+!  NUMTHREADS = OMP_GET_NUM_THREADS()
+!  TID = OMP_GET_THREAD_NUM()
 
   nullify(reflist)
   nullify(firstw)
@@ -334,7 +384,7 @@ type(substrateBW),pointer       :: sublist, subtmp
   tots = 0
   totw = 0
 
-!$OMP DO SCHEDULE(DYNAMIC,100)    
+!!$OMP DO SCHEDULE(DYNAMIC,100)    
 
 !  work through the beam direction list for the Film
   beamloop: do ik=1,numk
@@ -378,7 +428,7 @@ type(substrateBW),pointer       :: sublist, subtmp
         ipx = kij(1,ik)
         ipy = kij(2,ik)
 
-!$OMP CRITICAL
+!!$OMP CRITICAL
         if (isym.ne.1) then 
           call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
           iequiv(1,1:nequiv) = iequiv(1,1:nequiv) + npx + 1
@@ -396,7 +446,7 @@ type(substrateBW),pointer       :: sublist, subtmp
         end if
         totw = totw + nnw
         tots = tots + nns
-!$OMP END CRITICAL
+!!$OMP END CRITICAL
         deallocate(Lgh, Sgh) 
           
 ! next, we set up the nns dynamical scattering simulations for the substrate
@@ -421,7 +471,7 @@ type(substrateBW),pointer       :: sublist, subtmp
             subtmp%NSg = nnsS
 
 ! allocate all remaining arrays
-            allocate(subtmp%Dmg(nnsS,nnsS), subtmp%hg(3,nnsS), subtmp%Gammam(nnsS))
+            allocate(subtmp%Dmg(nnsS,nnsS), subtmp%hg(3,nnsS), subtmp%Gammam(nnsS), CGinv(nnsS,nnsS), IPIV(nnsS))
 
 ! fill in the reflection list
             rltmpS => reflistS%next  ! point to the first strong beam of the substrate
@@ -434,106 +484,159 @@ type(substrateBW),pointer       :: sublist, subtmp
             allocate(DynMat(nnsS,nnsS))
             call GetDynMat(cellS, reflistS, firstwS, rlpS, DynMat, nnsS, nnwS)
 
-! and solve the eigenvalue problem
-            call BWsolve(DynMat,subtmp%GammamW,subtmp%Dmg,CGinv,nnsS,IPIV)
+! and solve the standard eigenvalue problem
+            call BWsolve(DynMat,subtmp%Gammam,subtmp%Dmg,CGinv,nnsS,IPIV)
+            deallocate( DynMat, IPIV )
 
+! scale the eigenvalues (compute kn value first !!!)
+
+            subtmp%Gammam = cPi*subtmp%Gammam/cmplx(kn,0.0)
+
+! the Bloch wave excitation amplitudes are given by the initial amplitude of the 
+! incident wave stored in the amps array, multiplied by the first column of the 
+! inverse of the eigenvector array CGinv.  At this point we carry out the multiplication
+! of the excitation amplitudes and the Bloch wave coefficients, because we have no
+! further need for the excitation amplitudes themselves. We do this by taking the first column
+! of CGinv, multiplying it by amps(ikf), and turning this column into a diagonal array, which
+! we then multiply by the Dmg array.
+            allocate( atmp(nnsS,nnsS) )
+            atmp = czero
+            do i=1,nnsS
+              atmp(i,i) = amps(ikf) * CGinv(i,1)
+            end do
+            subtmp%Dmg = matmul(atmp,subtmp%Dmg)
+            deallocate(atmp, CGinv)
            
-! and finally, generate the next entry in the sublist if we are not at the end
+! finally, generate the next entry in the sublist if we are not at the end
             if (ikf.ne.nns) then
                 allocate(subtmp%nextg)
                 subtmp => subtmp%nextg
                 nullify(subtmp%nextg)
             end if
+
+! this concludes the individual Bloch wave calculations; all the data needed for the thickness
+! integrations and reciprocal lattice sums is now available in the sublist and reflist linked lists
         end do filmbeamloop
 
 
-! ok, all the dynamical simulations are complete; now we need to take all this information and compute the 
-! nested sums to get to the substrate contribution for the integrated intensity.
+! here we start the thickness integration and fill in the sigma_g,g' array
+        allocate( sigmagg(nns,nns) )
 
+        subg => sublist
+        do ig=1,nns
+          subgp => sublist
+          do igp=1,nns
+            allocate( ShhS(subg%NSg,subgp%NSg), LhhS(subg%NSg, subgp%NSg), Iint(subg%NSg, subgp%NSg) )
 
-
-
-! and here we need to do the loop over all the beams entering the substrate; we'll limit ourselves to
-! the strong Film beams only, and for each one we'll compare the modulus of the amplitude to a threshold
-! value to see if we should take it into account or not.  
-        rltmpS => reflist%next  ! point to the first strong beam
-        cell%mLambda = lambdaS
-        filmbeamloop: do ikf=1,nns
-          bamp = cabs(amps(ikf))
-          if (bamp.gt.amplitudethreshold) then  ! we do need to consider this incident beam
-! get the incident beam direction in the substrate reciprocal reference frame
-            kg = Convert_kgs_to_Substrate(cell, cellS, kk+float(rltmpS%hkl)+Calcsg(cell,float(rltmpS%hkl),kk,FNstar)*FNstar, &
-                    TTinv, lambdaS) 
-            call Initialize_ReflectionList(cellS, reflistS, BetheParameters, FNstar, kg, ecpnl%dmin, nrefS)
-! determine strong and weak reflections
-            call Apply_BethePotentials(cellS, reflistS, firstwS, BetheParameters, nrefS, nnsS, nnwS)
-! generate the dynamical matrix
-            allocate(DynMat(nnsS,nnsS))
-            call GetDynMat(cellS, reflistS, firstwS, rlpS, DynMat, nnsS, nnwS)
-! then we need to initialize the Sgh and Lgh arrays
-            if (allocated(SghS)) deallocate(SghS)
-            if (allocated(LghS)) deallocate(LghS)
-            if (allocated(SghtmpS)) deallocate(SghtmpS)
-            allocate(SghtmpS(nnsS,nnsS,numsetS),LghS(nnsS,nnsS,ntS),Sgh(nnsS,nnsS))
-            SghS = czero
-            SghtmpS = czero
-            LghS = czero
-            natS = 0
-! compute Sgh matrix for the substrate
-            call CalcSghSubstrate(cellS,reflistS,nnsS,numsetS,SghtmpS,natS)
-! sum Sghtmp over the sites
-            SghS = sum(SghtmpS,3)
-! compute the Lgh matrix; fix normal component of k and integration thickness here !!!!!!!!!
-            kn = karray(4,ik)
-            call CalcLghSubstrate(DynMat,LghS,ecpnl%filmthickness,kn,nnsS,gzero,depthstep,lambdaE,izfilm,amp)
-            deallocate(DynMat,SghtmpS)
-! add to integrated signal from film
-!$OMP CRITICAL
-            if (isym.ne.1) then 
-              do ip=1,nequiv
-               do jp=1,ntS
-                sr(iequiv(1,ip),iequiv(2,ip),jp) = sr(iequiv(1,ip),iequiv(2,ip),jp) + &
-                  real(sum(LghS(1:nnsS,1:nnsS,jp)*SghS(1:nnsS,1:nnsS)))
-               end do
+! first we do the thickness integration and store the values in the Iint array
+            allocate( integrand(nnz) )
+            do im=1,subg%NSg
+              do imp=1,subgp%NSg
+                argz = (subg%Gammam(im)-subgp%Gammam(imp))*2.D0*cPi*zsubstrate
+                integrand = lambdasubstrate*cmplx(cos(argz),-sin(argz))*thickinc
+                Iint(im,imp) = sum(integrand)/thicksub
               end do
-            else
-               do jp=1,nt
-                sr(ipx+npx+1,ipy+npy+1,jp) = sr(ipx+npx+1,ipy+npy+1,jp)+real(sum(Lgh(1:nns,1:nns,jp)*Sgh(1:nns,1:nns)))
-               end do
-            end if
-!$OMP END CRITICAL
-            deallocate(LghS, SghS) 
-          end if ! consider this beam ?
-          rltmpS => rltmpS%nexts
-        end do filmbeamloop
+            end do
+            deallocate(integrand)
 
+! then we compute the LhhS array
+            LhhS = matmul(subg%Dmg,matmul(Iint,conjg(subgp%Dmg)))
+            deallocate(Iint)
 
+! and finally the structure factor-like array ShhS
+            kgg = subg%kg - subgp%kg
+            ShhS = czero
+            do ip=1,cellS % ATOM_ntype
+! get Zn-squared for this special position, and include the site occupation parameter as well
+              Znsq = float(cellS%ATOM_type(ip))**2 * cellS%ATOM_pos(ip,4)
+! loop over all contributing reflections
+! ir is the row index
+              do ir=1,subg%NSg
+! ic is the column index
+                do ic=1,subgp%NSg
+                  kkk = subg%hg(1:3,ir) - subgp%hg(1:3,ic)
+! We'll assume isotropic Debye-Waller factors for now ...
+! That means we need the square of the length of s=  kk^2/4
+                  kkl = 0.25 * CalcLength(cellS,float(kkk),'r')**2
+! Debye-Waller exponential times Z^2
+                  DBWF = Znsq * exp(-cellS%ATOM_pos(ip,5)*kkl)
+                  do ikk=1,cellS%numat(ip)
+! get the argument of the complex exponential
+                    arg = tpi*dot_product(kkk+kgg,cellS%apos(ip,ikk,1:3))
+                    carg = dcmplx(dcos(arg),dsin(arg))
+! multiply with the prefactor and add
+                    ShhS(ir,ic) = ShhS(ir,ic) + carg * dcmplx(DBWF,0.D0)
+                  end do
+                end do
+              end do  
+            end do
 
-  ! these lines are to be used later on...
-! incident beam direction into wave vector in reciprocal frame 
-! p = float(ecpnl%k)
-! call TransSpace(cell,p,r,'d','r')
-! call NormVec(cell,r,'r')
-! kstar = r/lambdaF
+! multiply the ShhS and LhhS arrays and sum over all elements
+            sigmagg(ig,igp) = real(sum(ShhS*LhhS))
 
-! transform k_g=k_0+g+s_g FN to Substrate reciprocal reference frame for the given orientation relation
+! and clean up
+            deallocate(ShhS, LhhS, Iint)
 
+! next entry
+            subgp=>subgp%nextg
+          end do
+          subg=>subg%nextg
+        end do
 
+! finally, we need to add this result to the previous thickness integrated result for the film
 
+!!$OMP CRITICAL
+        if (isym.ne.1) then 
+          do ip=1,nequiv
+           do jp=1,nt
+            sr(iequiv(1,ip),iequiv(2,ip),jp) = sr(iequiv(1,ip),iequiv(2,ip),jp) + &
+                  real(sum(Lgh(1:nns,1:nns,jp)*Sgh(1:nns,1:nns)))
+           end do
+          end do
+        else
+           do jp=1,nt
+            sr(ipx+npx+1,ipy+npy+1,jp) = real(sum(Lgh(1:nns,1:nns,jp)*Sgh(1:nns,1:nns)))
+           end do
+        end if
+        totw = totw + nnw
+        tots = tots + nns
+!!$OMP END CRITICAL
+        deallocate(Lgh, Sgh) 
+          
 
-        if (mod(ik,2500).eq.0) then
+! clean up all the allocatable arrays and reset the film linked list for the next incident wave vector
+! first remove the sublist linked list
+        subtmp=>sublist
+        subg=>subtmp%nextg
+        do 
+          deallocate(subtmp%Gammam, subtmp%Dmg, subtmp%hg)
+          deallocate(subtmp)
+          if (.not. associated(subg)) EXIT
+          subtmp=>subg
+          subg=>subtmp%nextg
+        end do
+        
+! then reset all the nextw and nexts entries in the reflist
+        rltmpa=>reflist%next
+        do 
+          if (.not. associated(rltmpa)) EXIT
+          nullify(rltmpa%nexts)
+          nullify(rltmpa%nextw)
+          rmtpa=>rltmpa%next
+        end do
+
+! and write out some stuff every so often
+        if (mod(ik,250).eq.0) then
           io_int(1) = ik
           call WriteValue('  completed beam direction ',io_int, 1, "(I8)")
-! write(*,*) minval(sr),maxval(sr)
         end if
 
-        call Delete_gvectorlist(reflist)
 
   end do beamloop
+!!$OMP END PARALLEL
 
-!$OMP END PARALLEL
+  call Delete_gvectorlist(reflist)
 
- sr = sr*fnat
 
 ! store additional information for the IDL interface  
   open(unit=dataunit,file=trim(ecpnl%outname),status='unknown',action='write',form='unformatted')
@@ -751,7 +854,7 @@ real(kind=dbl)                      :: tpi, dzt
 complex(kind=dbl)                   :: Ijk(nn,nn), q, getMIWORK, qold
 
 integer(kind=irg)                   :: INFO, LDA, LDVR, LDVL,  JPIV(nn), MILWORK
-complex(kind=dbl)                   :: CGG(nn,nn), W(nn)
+complex(kind=dbl)                   :: CGG(nn,nn), W(nn), diag(nn)
 complex(kind=dbl),allocatable       :: MIWORK(:)
 
 integer(kind=irg),parameter         :: LWMAX = 5000 
@@ -827,9 +930,13 @@ tmp3 = matmul(CGG,transpose(Ijk))
 Lgh = matmul(tmp3,transpose(conjg(CGG)))
 
 ! and finally we need to compute the array of amplitudes for all scattered beams at the film-substrate interface
-
-
-
+  W = W * thick
+  diag(1:nn)=exp(-imag(W(1:nn)))*cmplx(cos(real(W(1:nn))),sin(real(W(1:nn))))*CGinv(1:nn,1)
+! strong beam amplitudes (sum over (j) values)
+  do j=1,nn
+   amps(j) = sum(CGG(j,1:nn)*diag(1:nn))
+  end do
+   
 end subroutine CalcLghFilm
 
 
