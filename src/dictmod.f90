@@ -105,17 +105,278 @@
 !> @date 01/02/15 MDG 1.1 debug of code; produces same result as Matlab code
 !> @date 01/04/15 MDG 1.2 trial implementation of model using hyperbolic functions instead of exponential
 !> @date 01/06/15 MDG 1.3 changed public routine names with DI_ in front
+!> @date 01/07/15 MDG 1.4 added VMF sampling routines 
 !--------------------------------------------------------------------------
 
 module dictmod
 
 IMPLICIT NONE
 
-public  :: DI_Init, DI_EMforVMF, VMFDensity, DI_Similarity_Classifier, logCp
-private :: VMF_Estep, VMF_Mstep, VMF_getQandL, CardIntersection
+public  :: DI_Init, DI_EMforVMF, VMFDensity, DI_Similarity_Classifier, logCp, DI_SampleVMF
+private :: VMF_Estep, VMF_Mstep, VMF_getQandL, CardIntersection, randVMFMeanDir, randUniformSphere, &
+           getVMFDensityLBM,  VMFMeanDirDensity
 
 contains
 
+
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: DI_SampleVMF
+!
+!> @author Marc De Graef, Carnegie Mellon University / Yu-Hui Chen, U. Michigan
+!
+!> @brief Sample the von Mises-Fisher distribution on the quaternion unit sphere
+!
+!> @param N number of samples to return
+!> @param seed random number generator seed value
+!> @param mu mean direction (unit quaternion)
+!> @param kappa concentration
+!
+!> @date 01/07/15 MDG 1.0 original, based on Yu-Hui's Matlab code
+!--------------------------------------------------------------------------
+recursive function DI_SampleVMF(N, seed, mu, kappa) result(sVMF)
+
+use local
+use error
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)            :: N
+integer(kind=irg),INTENT(INOUT)         :: seed
+real(kind=dbl),INTENT(IN)               :: mu(4)
+real(kind=dbl),INTENT(IN)               :: kappa
+real(kind=dbl)                          :: sVMF(4,N)
+
+real(kind=dbl)                          :: nq, tmpmu(4), RandSphere(3,N), t(N), RS(4,N), lmu(4)
+integer(kind=irg)                       :: i
+
+! make sure the input quaternion is normalized
+nq = dsqrt(sum(mu*mu))
+if (nq.eq.0.D0) call FatalError('DI_SampleVMF','Input quaternion has zero length')
+lmu = mu/nq
+
+! initialize a bunch of parameters
+tmpmu = (/ 1.D0, 0.D0, 0.D0, 0.D0 /)
+sVMF = 0.D0
+RS = 0.D0
+
+! get the t-parameter and the distribution of random directions on the 2-sphere
+t = randVMFMeanDir(N, kappa,seed)
+
+RandSphere = randUniformSphere(N,seed)
+RS(2:4,1:N) = RandSphere(1:3,1:N)
+
+! merge these two parameters into the desired random variables
+sVMF = transpose( spread(t,DIM=2,NCOPIES=4) * spread(tmpmu,DIM=1,NCOPIES=N) + &
+                  spread(dsqrt(1.D0-t*t),DIM=2,NCOPIES=4) * transpose(RS) )
+
+! Rotate the distribution along the desired mean direction mu
+! In Matlab, one uses the null() operator which returns the null space of the argument
+! This is then inserted into a 4x4 rotation matrix and multiplied with the quaternions
+! from the random sample.  There might be another way to do this with direct quaternion
+! multiplication, but we still have to figure this out...
+
+! for now, the distribution will be around the initial direction only, until we figure out the algorithm
+!Otho = null(lmu);
+!Rot = [lmu' Otho];
+!RandVMF = (Rot*RandVMF')';
+
+end function DI_SampleVMF
+
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: randUniformSphere
+!
+!> @author Marc De Graef, Carnegie Mellon University / Yu-Hui Chen, U. Michigan
+!
+!> @brief 
+!
+!> @param N number of samples to return
+!> @param seed random number generator seed value
+!
+!> @date 01/07/15 MDG 1.0 original, based on Yu-Hui's Matlab code, output transposed
+!--------------------------------------------------------------------------
+recursive function randUniformSphere(N,seed) result(ranSphere)
+
+use local
+use math
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)            :: N
+integer(kind=irg),INTENT(INOUT)         :: seed
+real(kind=dbl)                          :: ranSphere(3,N)
+
+real(kind=dbl)                          :: nq, NR(N*3), randNorm(3,N)
+integer(kind=irg)                       :: i
+
+ranSphere = 0.D0
+call R8VEC_normal_01(N*3,seed,NR)
+randNorm = reshape( NR, (/ 3, N /) )
+
+! and normalize the three-vectors
+do i=1,N
+  nq = dsqrt(sum(randNorm(1:3,i)**2))
+  RanSphere(1:3,i) = randNorm(1:3,i)/nq
+end do
+
+end function randUniformSphere
+
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: randVMFMeanDir
+!
+!> @author Marc De Graef, Carnegie Mellon University / Yu-Hui Chen, U. Michigan
+!
+!> @brief 
+!
+!> @param N number of samples to return
+!> @param k concentration
+!> @param seed random number generator seed value
+!
+!> @date 01/07/15 MDG 1.0 original, based on Yu-Hui's Matlab code
+!--------------------------------------------------------------------------
+recursive function randVMFMeanDir(N, k, seed) result(t)
+
+use local
+use math
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)            :: N
+real(kind=dbl),INTENT(IN)               :: k
+integer(kind=irg),INTENT(INOUT)         :: seed
+real(kind=dbl)                          :: t(N)
+
+real(kind=dbl)                          :: LBM(2), h, x, C
+integer(kind=irg)                       :: i
+
+! Find the left bound and maximum
+C = 0.D0
+LBM = getVMFDensityLBM(k,C)
+
+! apply the rejection sampling algorithm
+t = 0.D0
+do i=1,N
+  do 
+    x = r8_uniform_01(seed)*(1.D0-LBM(1))+LBM(1)
+    h = VMFMeanDirDensity(x, k, C)
+    if (r8_uniform_01(seed)*LBM(2).le.h) EXIT 
+  end do
+  t(i) = x
+end do 
+
+end function randVMFMeanDir
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: getVMFDensityLBM
+!
+!> @author Marc De Graef, Carnegie Mellon University / Yu-Hui Chen, U. Michigan
+!
+!> @brief determines the left bound and maximum for rejection sampling
+!
+!> @param k concentration
+!> @param C constant prefactor of distribution function
+!
+!> @date 01/07/15 MDG 1.0 original, based on Yu-Hui's Matlab code
+!--------------------------------------------------------------------------
+recursive function getVMFDensityLBM(k,C) result(LBM)
+
+use local
+use error
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(IN)               :: k
+real(kind=dbl),INTENT(INOUT)            :: C
+real(kind=dbl)                          :: LBM(2)
+
+real(kind=dbl),parameter                :: min_thresh=0.000001D0
+real(kind=dbl)                          :: M, s, x
+integer(kind=irg)                       :: f, LBpos
+
+! first we look for the leftbound
+f = 1
+do 
+   x = -1.D0+dble(f)*0.000001D0
+   if (x.eq.1.D0) call FatalError('getVMFDensityLBM','reached +1 in leftbound determination')
+   s = VMFMeanDirDensity(x,k,C)
+   if (s.ge.min_thresh) EXIT
+   f = f+1
+end do
+!
+LBM(1) =  -1.D0 +dble(f)*0.000001D0
+
+! for the simplified version of the density function, we have an analytical
+! expression for where the maximum of the function occurs [convert the BesselI(3/2,x)
+! to hyperbolic functions, then to exponential, and ignore the negative exponential
+! which will be very small for reasonably sized k and t...]
+x = (-1.D0+dsqrt(1.D0+4.D0*k*k))/(2.D0*k)
+M = VMFMeanDirDensity(x,k,C)
+
+LBM(2) = M
+
+end function getVMFDensityLBM
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: VMFMeanDirDensity
+!
+!> @author Marc De Graef, Carnegie Mellon University / Yu-Hui Chen, U. Michigan
+!
+!> @brief function to be sampled for VMF random sampling; we're using a close approximation
+!
+!> @param x argument value
+!> @param k concentration
+!> @param C constant prefactor
+!
+!> @date 01/07/15 MDG 1.0 original, based on Yu-Hui's Matlab code
+!--------------------------------------------------------------------------
+recursive function VMFMeanDirDensity(x, k, C) result(y)
+
+use local
+use constants
+use math
+use error
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(IN)       :: x
+real(kind=dbl),INTENT(IN)       :: k
+real(kind=dbl),INTENT(INOUT)    :: C
+real(kind=dbl)                  :: y
+
+
+if (dabs(x).gt.1.D0) call FatalError('VMFMeanDirDensity','argument must be in [-1,1]')
+
+! explicit expression for p=4 (Gamma[3/2]Gamma[1/2] = pi/2)
+! and the BesselI(3/2) function reduces to hyperbolic functions
+! diverges for k->0, and becomes really small for large k
+if (C.eq.0.D0) then
+  C = 2.D0*k**(2.5D0)/dsqrt(2.D0*cPi)/(k-1.D0)
+end if
+
+! this is a close approximation, really good for larger values of k
+! and numerically more stable than the original, which has problems for k>600 or so
+y = C * dexp(k*(x-1.D0))*dsqrt(1.D0-x*x)
+
+end function VMFMeanDirDensity
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+! below we have a series of functions/subroutines used to index patterns based
+! on the set of 40 or so closest matches in the dictionary; these routines perform
+! an averaging on the quaternion unit sphere and return the mean direction and
+! the concentration parameter.
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
 !
 ! SUBROUTINE: DI_Init
@@ -764,6 +1025,12 @@ end if
 
 end function logCp
 
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+! the following routines have to do with the neighborhood similarity analysis
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
 !
 ! SUBROUTINE: classifier
