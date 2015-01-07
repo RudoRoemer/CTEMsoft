@@ -30,6 +30,8 @@
 
  #define PI 3.14159265359f
  #define e  2.71828182845f
+ #define BLOCK_SIZE 16
+
 
 float4 quatmult(float4,float4);
 float factorial(int);
@@ -295,12 +297,12 @@ __kernel void ParamEstm(__global float* quaternion, __global float* mean, __glob
     float modgamma;
     float prefact;
     
-    float4 mu = (float4)(0.0f,0.0f,0.0f,0.0f);
-    float kappa = 0.0f;
+    float4 mu = (float4)(1.0f,1.0f,1.0f,1.0f);
+    float kappa = 1.0f;
     float4 sym;
     float rim;
     
-    for (int l = 0; l < 100; ++l){
+    for (int l = 0; l < 30; ++l){
         gamma = (float4)(0.0f,0.0f,0.0f,0.0f);
         for (int i = 0; i < numk; ++i){
             quatlist = (float4)(quaternion[4*id*numk+i],quaternion[4*id*numk+i+1],quaternion[4*id*numk+i+2],quaternion[4*id*numk+i+3]);
@@ -327,7 +329,73 @@ __kernel void ParamEstm(__global float* quaternion, __global float* mean, __glob
     mean[4*id + 1] = mu.y;
     mean[4*id + 2] = mu.z;
     mean[4*id + 3] = mu.w;
-    
     ConcParam[id] = kappa;
+    
+}
+/*
+!--------------------------------------------------------------------------
+!
+! PROGRAM:InnerProd
+!
+!> @author Saransh Singh, Carnegie Mellon University
+!
+!> @brief perform inner product calculations for normalized images as a matrix multiplication
+!
+!> @param exp experimental pattern chunk
+!> @param dict dictionary pattern chunk
+!> @param L size of one image in pixels
+!> @param Ne number of experimental patterns in one chunk
+!> @param Nd number of dictionary patterns in one chunk
+!> @param result result of the dot product
+!
+!> @date 12/09/14  SS 1.0 original
+!--------------------------------------------------------------------------
+*/
+
+//#define AS(i,j) As[i * 64 + j]
+//#define BS(i,j) Bs[i * 64 + j]
+
+// Notice that the Block Size is pre-set to 16. This needs to maybe become more flexible in the future.
+
+__kernel void InnerProd(__global float* exp, __global float* dict, int Wexp, int Wdict, __global float* result)
+{
+    // Block index
+    int bx = get_group_id(0);
+    int by = get_group_id(1);
+    
+    // Thread index inside the block
+    int tx = get_local_id(0);
+    int ty = get_local_id(1);
+    
+    int aBegin = Wexp * BLOCK_SIZE * by;
+    int aEnd = aBegin + Wexp - 1;
+    int aStep = BLOCK_SIZE;
+    
+    int bBegin = BLOCK_SIZE * bx;
+    //int bEnd = bBegin + Wdict * (get_num_groups(1));
+    int bstep = BLOCK_SIZE * Wdict;
+    float Csub = 0.0f;
+    
+    __local float As[BLOCK_SIZE][BLOCK_SIZE];
+    __local float Bs[BLOCK_SIZE][BLOCK_SIZE];
+    
+    for (int a = aBegin, b = bBegin; /*b <= bEnd*/a <= aEnd; a += aStep, b += bstep){
+        
+        As[ty][tx] = exp[a + Wexp * ty + tx];
+        
+        Bs[ty][tx] = dict[b + Wdict * ty + tx];
+        
+        barrier(CLK_LOCAL_MEM_FENCE);
+        
+        #pragma unroll
+        for (int k = 0; k < BLOCK_SIZE; ++k){
+            Csub += As[ty][k] * Bs[k][tx];
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+    //int c = Wdict * BLOCK_SIZE * by + BLOCK_SIZE * bx;
+    result[get_global_id(1) * get_global_size(0) + get_global_id(0)] = Csub;
+    //result[get_global_id(1) * get_global_size(0) + get_global_id(0)] = float(tx);
+    //result[c + Wdict*ty + tx] = Csub;
     
 }

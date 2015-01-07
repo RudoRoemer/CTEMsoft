@@ -29,6 +29,7 @@
 program CTEMDictIndxOpenCL
 
 use math
+use typedefs
 use cl
 
 IMPLICIT NONE
@@ -49,12 +50,13 @@ integer, parameter              :: iunit = 10
 integer, parameter              :: source_length = 10000000
 character(len = source_length)  :: source
 
-integer(kind=4)                 :: num,ierr,istat,irec,numk,numsym
+integer(kind=4)                 :: num,ierr,istat,irec,numk,numsym,ii
 integer(kind=4)                 :: npx,npy
 integer(kind=8)                 :: size_in_bytes_quat,size_in_bytes_mean,size_in_bytes_ConcParam,size_in_bytes_sym
 integer(kind=8)                 :: globalsize(2),localsize(2)
 
-real(kind=sgl),allocatable      :: meanres(:),kappares(:)
+real(kind=sgl),allocatable      :: meanres(:),kappares(:),quat_rand(:),symmetry(:)
+real(kind=sgl)                  :: norm
 
 numk = 40
 numsym = 24
@@ -70,6 +72,22 @@ globalsize = (/npx,npy/)
 localsize = (/16,16/)
 
 allocate(meanres(4*npx*npy),kappares(npx*npy),stat=istat)
+allocate(quat_rand(4*npx*npy*numk),symmetry(4*numsym),stat=istat)
+
+do ii = 0,23
+    symmetry(4*ii+1:4*ii+4) = SYM_Qsymop(1:4,ii+1)
+end do
+
+!===================================
+! INITIALIZE QUATERNION ARRAY
+!===================================
+
+call RANDOM_NUMBER(quat_rand)
+
+do ii = 0,npx*npy*numk-1
+    norm = sqrt(sum(quat_rand(4*ii+1:4*ii+4)**2))
+    quat_rand(4*ii+1:4*ii+4) = quat_rand(4*ii+1:4*ii+4)/norm
+end do
 
 !=====================
 ! INITIALIZATION
@@ -148,8 +166,9 @@ if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
 
 
 ! write the set of quaternions for all the pixels in the image
-!call clEnqueueWriteBuffer(command_queue, cl_quaternion, cl_bool(.true.), 0_8, size_in_bytes_quat, quat_rand(1), ierr)
+call clEnqueueWriteBuffer(command_queue, cl_quaternion, cl_bool(.true.), 0_8, size_in_bytes_quat, quat_rand(1), ierr)
 
+call clEnqueueWriteBuffer(command_queue, cl_symmetry, cl_bool(.true.), 0_8, size_in_bytes_sym, symmetry(1), ierr)
 
 ! set the kernel arguments
 call clSetKernelArg(kernel, 0, cl_quaternion, ierr)
@@ -179,8 +198,9 @@ call clFinish(command_queue, ierr)
 call clEnqueueReadBuffer(command_queue, cl_mean, cl_bool(.true.), 0_8, size_in_bytes_mean, meanres(1), ierr)
 
 call clEnqueueReadBuffer(command_queue, cl_ConcParam, cl_bool(.true.), 0_8, size_in_bytes_ConcParam, kappares(1), ierr)
-
-
+print*,kappares(1:10)
+!print*,meanres(1:4)
+!print*,quat_rand(1:4)
 call clReleaseKernel(kernel, ierr)
 call clReleaseCommandQueue(command_queue, ierr)
 call clReleaseContext(context, ierr)
