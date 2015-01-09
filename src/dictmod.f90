@@ -992,6 +992,7 @@ end function VMFDensity
 !
 !> @date 12/31/14 MDG 1.0 original
 !> @date 01/09/14 MDG 1.1 introduced more accurate numerical approximation for Cp
+!> @date 01/09/14 MDG 1.2 moved some of the constants in front of the logarithm
 !--------------------------------------------------------------------------
 recursive function logCp(kappa) result(lCp)
 
@@ -1005,15 +1006,15 @@ real(kind=dbl),INTENT(IN)       :: kappa
 real(kind=dbl)                  :: lCp
 
 ! pre-computed constants
-real(kind=dbl),parameter        :: C=0.025330295911D0           ! C = 1.D0/(2.D0*cPi)**2
-real(kind=dbl),parameter        :: C2=65.0174831966627530       ! C2 = 512/sqrt(2)/pi^(3/2)
+real(kind=dbl),parameter        :: C=-3.675754132818690967D0    ! C = ln(1.D0/(2.D0*cPi)**2)
+real(kind=dbl),parameter        :: C2=4.1746562059854348688D0   ! C2 = ln(512/sqrt(2)/pi^(3/2))
 
-! for arguments larger than kappa=30, we use a numerical approximation
+! for arguments larger than kappa=30, we use a simple numerical approximation
 if (kappa.gt.30.D0) then 
-  lCp = C2 * (kappa**4.5D0/(-105D0+8.D0*kappa*(-15.D0+16.D0*kappa*(-3.D0+8.D0*kappa))))
-  lCp = -kappa + dlog(lCp)
+  lCp = kappa**4.5D0/(-105D0+8.D0*kappa*(-15.D0+16.D0*kappa*(-3.D0+8.D0*kappa)))
+  lCp = C2 - kappa + dlog(lCp)
 else 
-  lCp = dlog( C * ( kappa / BesselI1(kappa) ) ) 
+  lCp = C + dlog( kappa / BesselI1(kappa) )
 end if
 
 end function logCp
