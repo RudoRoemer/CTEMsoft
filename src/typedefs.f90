@@ -942,6 +942,7 @@ type dicttype
         integer(kind=irg)               :: Apnum        ! number of entries in lookup table
         integer(kind=irg)               :: Num_of_init  ! number of times that the EM algorithm needs to be carried out (set by user)
         integer(kind=irg)               :: Num_of_iterations    ! number of iterations inside each EM call (set by user)
+        logical                         :: full         ! summations over q and -q if .TRUE., otherwise only q
 end type dicttype
 
 

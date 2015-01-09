@@ -106,6 +106,7 @@
 !> @date 01/04/15 MDG 1.2 trial implementation of model using hyperbolic functions instead of exponential
 !> @date 01/06/15 MDG 1.3 changed public routine names with DI_ in front
 !> @date 01/07/15 MDG 1.4 added VMF sampling routines 
+!> @date 01/09/15 MDG 1.5 replaced several computations by numerically more stable versions
 !--------------------------------------------------------------------------
 
 module dictmod
@@ -295,30 +296,30 @@ real(kind=dbl),INTENT(IN)               :: k
 real(kind=dbl),INTENT(INOUT)            :: C
 real(kind=dbl)                          :: LBM(2)
 
-real(kind=dbl),parameter                :: min_thresh=0.000001D0
-real(kind=dbl)                          :: M, s, x
-integer(kind=irg)                       :: f, LBpos
+real(kind=dbl),parameter                :: min_thresh=0.00001D0
+real(kind=dbl)                          :: s, x
+integer(kind=irg)                       :: f
 
-! first we look for the leftbound
+! first we look for the left bound
 f = 1
 do 
-   x = -1.D0+dble(f)*0.000001D0
+   x = -1.D0+dble(f)*0.00001D0
    if (x.eq.1.D0) call FatalError('getVMFDensityLBM','reached +1 in leftbound determination')
    s = VMFMeanDirDensity(x,k,C)
    if (s.ge.min_thresh) EXIT
    f = f+1
 end do
 !
-LBM(1) =  -1.D0 +dble(f)*0.000001D0
+LBM(1) =  -1.D0 +dble(f)*0.00001D0
 
 ! for the simplified version of the density function, we have an analytical
 ! expression for where the maximum of the function occurs [convert the BesselI(3/2,x)
 ! to hyperbolic functions, then to exponential, and ignore the negative exponential
 ! which will be very small for reasonably sized k and t...]
 x = (-1.D0+dsqrt(1.D0+4.D0*k*k))/(2.D0*k)
-M = VMFMeanDirDensity(x,k,C)
 
-LBM(2) = M
+LBM(2) = VMFMeanDirDensity(x,k,C)
+
 
 end function getVMFDensityLBM
 
@@ -427,8 +428,10 @@ dict%prot = PGrot(dict%pgnum)
 
 if (present(full)) then
         M=2
+        dict%full = .TRUE.
 else
         M=1
+        dict%full = .FALSE.
 end if
 
 ! identity operator is part of all point groups
@@ -534,21 +537,15 @@ end select
 
 
 ! the next part of the initial Matlab code computes a lookup table for the parameter Ap(u) (Appendix in paper)
-dict%Apnum = 1400000
+! this lookup table is only used when the ratio of the BesselI functions is between 0 and 0.95; for the 
+! region between 0.95 and 1, we use an analytical approximation (see VMF_Mstep routine).
+dict%Apnum = 35000
 allocate(dict%xAp(dict%Apnum), dict%yAp(dict%Apnum))
 
 ! define the xAp array
 dict%xAp = (/ (0.001D0+dble(i-1)*0.001D0,i=1,dict%Apnum)  /)
 do i=1,dict%Apnum/2
   dict%yAp(i) = BesselIn(dict%xAp(i), 2) / BesselI1(dict%xAp(i))
-end do
-
-! do the rest via linear interpolation
-y1 = dict%yAp(699000)   
-y2 = dict%yAp(dict%Apnum/2) 
-y1 = y2-y1
-do i=1,dict%Apnum/2
-  dict%yAp(i+dict%Apnum/2) = y2 + y1*(dict%xAp(i+dict%Apnum/2)-700.D0)
 end do
 
 end subroutine DI_Init
@@ -569,12 +566,11 @@ end subroutine DI_Init
 !> @param seed for normal random number generator 
 !> @param muhat output mean orientation
 !> @param kappahat output concentration parameter
-!> @param full optional to distinguish between M and M/2 summations
 !
 !> @date 01/01/15 MDG 1.0 original, based on Chen's Matlab version + simplifications
 !> @date 01/06/15 MDG 1.1 added optional argument full
 !--------------------------------------------------------------------------
-recursive subroutine DI_EMforVMF(X, dict, nums, seed, muhat, kappahat, full)
+recursive subroutine DI_EMforVMF(X, dict, nums, seed, muhat, kappahat)
 
 use local
 use constants
@@ -592,7 +588,6 @@ integer(kind=irg),INTENT(IN)            :: nums
 integer(kind=irg),INTENT(INOUT)         :: seed
 real(kind=dbl),INTENT(OUT)              :: muhat(4)
 real(kind=dbl),INTENT(OUT)              :: kappahat
-logical,INTENT(IN),OPTIONAL             :: full
 
 integer(kind=irg)                       :: i, j, N, Pmdims, init, dd
 integer(kind=irg)                       :: FZtype, FZorder
@@ -643,21 +638,12 @@ do init=1,dict%Num_of_init
 ! we use quaternion multiplication throughout instead of the matrix version in the Matlab version
 ! quaternion multiplication has been verified against the 4x4 matrix multiplication of the Matlab code on 01/02/15 
   iloop: do i=1,dict%Num_of_iterations 
-    if (present(full)) then
 ! E-step
-        R = VMF_Estep(X,dict,Pmdims,N,Mu,Kappa,.TRUE.)
+    R = VMF_Estep(X,dict,Pmdims,N,Mu,Kappa)
 ! M-step
-        MuKa = VMF_Mstep(X,dict,Pmdims,N,R,.TRUE.)
+    MuKa = VMF_Mstep(X,dict,Pmdims,N,R)
 ! calculate the Q and Likelihood function values
-        call VMF_getQandL(X,dict,Pmdims,nums,MuKa,R,Qi,Li,.TRUE.)
-    else ! this part uses the hyperbolic functions
-! E-step
-        R = VMF_Estep(X,dict,Pmdims,N,Mu,Kappa)
-! M-step
-        MuKa = VMF_Mstep(X,dict,Pmdims,N,R)
-! calculate the Q and Likelihood function values
-        call VMF_getQandL(X,dict,Pmdims,nums,MuKa,R,Qi,Li)
-    end if
+    call VMF_getQandL(X,dict,Pmdims,nums,MuKa,R,Qi,Li)
     L(i) = Li
     Q(i) = Qi
 
@@ -723,12 +709,12 @@ end subroutine DI_EMforVMF
 !> @param nums number of samples
 !> @param Mu current guess for mean quaternion
 !> @param Kappa input parameter
-!> @param full optional to indicate M or M/2 summations
 !
 !> @date 01/01/15 MDG 1.0 original
 !> @date 01/06/15 MDG 1.1 added optional argument full
+!> @date 01/09/15 MDG 1.1 removed optional argument full (incorporated in dicttype)
 !--------------------------------------------------------------------------
-recursive function VMF_Estep(X,dict,Pmdims,nums,Mu,Kappa,full) result(R)
+recursive function VMF_Estep(X,dict,Pmdims,nums,Mu,Kappa) result(R)
 
 use local
 use typedefs
@@ -743,18 +729,17 @@ integer(kind=irg),INTENT(IN)            :: nums
 real(kind=dbl),INTENT(IN)               :: Mu(4)
 real(kind=dbl),INTENT(IN)               :: Kappa
 real(kind=dbl)                          :: R(nums,Pmdims)
-logical,INTENT(IN),OPTIONAL             :: full
 
 integer(kind=irg)                       :: j, i 
 real(kind=dbl)                          :: Rdenom(nums), PmMu(4), coshsum(nums), arg(nums), qu(4), C
 
 
-if (present(full)) then
+if (dict%full) then
   C = logCp(kappa)
 ! this implements equation (15) of the appendix of the paper
   do j=1,Pmdims
     PmMu = quat_mult(Mu,dict%Pm(1:4,j))
-    R(1:nums,j) = VMFDensity(X, nums, PmMu, Kappa, C, .TRUE.)
+    R(1:nums,j) = VMFDensity(X, nums, PmMu, Kappa, C, dict%full)
   end do
 ! and determine the normalization factors
   Rdenom = 1.D0/sum(R,2)
@@ -792,12 +777,13 @@ end function VMF_Estep
 !> @param Pmdims number of quaternion symmetry operators
 !> @param nums number of samples
 !> @param R weight factors form the E step
-!> @param full optional parameter distinguishing between M and M/2 summations
 !
 !> @date 01/01/15 MDG 1.0 original
 !> @date 01/06/15 MDG 1.1 added optional full parameter
+!> @date 01/09/15 MDG 1.2 removed optional argument full (incorporated in dicttype)
+!> @date 01/09/15 MDG 1.3 introduced accurate numerical approximation for kappa determination
 !--------------------------------------------------------------------------
-recursive function VMF_Mstep(X,dict,Pmdims,nums,R,full) result(MuKa)
+recursive function VMF_Mstep(X,dict,Pmdims,nums,R) result(MuKa)
 
 use local
 use typedefs
@@ -811,13 +797,12 @@ integer(kind=irg),INTENT(IN)            :: Pmdims
 integer(kind=irg),INTENT(IN)            :: nums
 real(kind=dbl),INTENT(IN)               :: R(nums,Pmdims)
 real(kind=dbl)                          :: MuKa(5)
-logical,INTENT(IN),OPTIONAL             :: full
 
-real(kind=dbl)                          :: tmpGamma(4), nGamma, diff(dict%Apnum), qu(4)
+real(kind=dbl)                          :: tmpGamma(4), nGamma, diff(dict%Apnum), qu(4), y
 integer(kind=irg)                       :: minp, i, j
 
 
-if (present(full)) then
+if (dict%full) then
 ! this is simplified from the Matlab routine and uses straight summations and
 ! quaternion multiplication instead of arrays
   tmpGamma = 0.D0
@@ -844,10 +829,18 @@ else
 end if
 
 ! find kappa corresponding to this value of gamma (equation 17 in appendix of paper)
-diff = dabs( nGamma/dble(nums) - dict%yAp ) 
-minp = minloc( diff, 1 )
-if (minp.eq.1) minp = 2 
-MuKa(5) = dict%xAp(minp)
+! we split this into two regionds: 0<=y<0.95, for which we use the look-up table 
+! approach, and 0.95<=y<=1, for which we have derived an analytical approximation
+! that is pretty accurate in the relevant region of kappa>30.
+y = nGamma/dble(nums)
+if (y.ge.0.95D0) then
+  MuKa(5) = (15.D0-3.D0*y+dsqrt(15.D0+90.D0*y+39.D0*y*y))/(16.D0*(1.0D0-y))
+else
+  diff = dabs( y - dict%yAp ) 
+  minp = minloc( diff, 1 )
+  if (minp.eq.1) minp = 2 
+  MuKa(5) = dict%xAp(minp)
+end if
 
 end function VMF_Mstep
 
@@ -870,12 +863,12 @@ end function VMF_Mstep
 !> @param R output from the E step
 !> @param Q output Q 
 !> @param L output L 
-!> @Param full optical parameter to distinguish between M and M/2 summations
 !
 !> @date 01/01/15 MDG 1.0 original, based on Chen's Matlab version + simplifications
 !> @date 01.06/15 MDG 1.1 added optional full parameter
+!> @date 01/09/15 MDG 1.1 removed optional argument full (incorporated in dicttype)
 !--------------------------------------------------------------------------
-recursive subroutine VMF_getQandL(X,dict,Pmdims,nums,MuKa,R,Q,L,full)
+recursive subroutine VMF_getQandL(X,dict,Pmdims,nums,MuKa,R,Q,L)
 
 use local
 use typedefs
@@ -891,25 +884,25 @@ real(kind=dbl),INTENT(IN)               :: MuKa(5)
 real(kind=dbl),INTENT(IN)               :: R(nums,Pmdims)
 real(kind=dbl),INTENT(OUT)              :: Q
 real(kind=dbl),INTENT(OUT)              :: L
-logical,INTENT(IN),OPTIONAL             :: full
 
 real(kind=dbl)                          :: Phi(nums,Pmdims), PmMu(4), qu(4), C
 integer(kind=irg)                       :: j
+real(kind=dbl),parameter                :: eps = 0.001D0
 
-if (present(full)) then 
+if (dict%full) then 
   C = logCp(MuKa(5))
 ! compute the auxiliary Phi array
   Phi = 0.D0
   qu = MuKa(1:4)
   do j=1,Pmdims
     PmMu = quat_mult(dict%Pm(1:4,j), qu)
-    Phi(1:nums,j) = VMFDensity(X, nums, PmMu, MuKa(5),C,.TRUE.)
+    Phi(1:nums,j) = VMFDensity(X, nums, PmMu, MuKa(5), C, dict%full)
   end do
   Phi = Phi/dble(dict%Nqsym)
 
 ! and convert the array into the Q and L parameters.
   L = sum(dlog(sum(Phi,2)))
-  Q = sum(R*dlog(Phi))
+  Q = sum(R*dlog(Phi+eps))
 else
   C = dexp(logCp(MuKa(5)))
 ! compute the auxiliary Phi array
@@ -998,6 +991,7 @@ end function VMFDensity
 !> @param kappa input parameter
 !
 !> @date 12/31/14 MDG 1.0 original
+!> @date 01/09/14 MDG 1.1 introduced more accurate numerical approximation for Cp
 !--------------------------------------------------------------------------
 recursive function logCp(kappa) result(lCp)
 
@@ -1012,13 +1006,12 @@ real(kind=dbl)                  :: lCp
 
 ! pre-computed constants
 real(kind=dbl),parameter        :: C=0.025330295911D0           ! C = 1.D0/(2.D0*cPi)**2
-! y2 = dlog( C * ( 700.D0 / BesselI1(700.D0) ) ) 
-! y1 = dlog( C * ( 699.D0 / BesselI1(699.D0) ) ) 
-real(kind=dbl),parameter        :: y2my1=-0.997856378284D0, y2=-692.929658999631D0       ! y2my1 = y2-y1
+real(kind=dbl),parameter        :: C2=65.0174831966627530       ! C2 = 512/sqrt(2)/pi^(3/2)
 
-! for arguments larger than kappa=700, we use a straight line interpolation, otherwise we compute the full function 
-if (kappa.gt.700.D0) then 
-  lCp = y2 + y2my1*(kappa-700.D0)
+! for arguments larger than kappa=30, we use a numerical approximation
+if (kappa.gt.30.D0) then 
+  lCp = C2 * (kappa**4.5D0/(-105D0+8.D0*kappa*(-15.D0+16.D0*kappa*(-3.D0+8.D0*kappa))))
+  lCp = -kappa + dlog(lCp)
 else 
   lCp = dlog( C * ( kappa / BesselI1(kappa) ) ) 
 end if
