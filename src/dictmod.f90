@@ -151,6 +151,9 @@ real(kind=dbl)                          :: sVMF(4,N)
 
 real(kind=dbl)                          :: nq, tmpmu(4), RandSphere(3,N), t(N), RS(4,N), lmu(4)
 integer(kind=irg)                       :: i
+! parameters for the singular value decomposition
+integer(kind=irg)                       :: nr, LDA, LDU, LDVT, lwork, info
+real(kind=dbl)                          :: mA(4,4), ss(4), u(4,4), vt, work(20)
 
 ! make sure the input quaternion is normalized
 nq = dsqrt(sum(mu*mu))
@@ -175,13 +178,26 @@ sVMF = transpose( spread(t,DIM=2,NCOPIES=4) * spread(tmpmu,DIM=1,NCOPIES=N) + &
 ! Rotate the distribution along the desired mean direction mu
 ! In Matlab, one uses the null() operator which returns the null space of the argument
 ! This is then inserted into a 4x4 rotation matrix and multiplied with the quaternions
-! from the random sample.  There might be another way to do this with direct quaternion
-! multiplication, but we still have to figure this out...
+! from the random sample.  The null space of the input quaternion can be computed with
+! singular value decomposition, which is done with the dgesvd Lapack routine. The matrix
+! returned as u is the desired rotation matrix, except that the numbers in the first 
+! column must have their signs reversed.
 
-! for now, the distribution will be around the initial direction only, until we figure out the algorithm
-!Otho = null(lmu);
-!Rot = [lmu' Otho];
-!RandVMF = (Rot*RandVMF')';
+mA = 0.D0
+mA(1:4,1) = lmu(1:4)
+nr = 4
+LDA = 4
+LDVT = 1
+LDU = 4
+lwork = 20
+call DGESVD('A','N',nr,nr,mA,LDA,ss, u, LDU, vt, LDVT, work, lwork, info)
+u(1:4,1) = -u(1:4,1)
+
+! next, apply this 4x4 rotation matrix to all of the generated quaternions to
+! rotate them along the mean direction mu
+do i=1,N
+        sVMF(1:4,i) = matmul(u,sVMF(1:4,i))
+end do
 
 end function DI_SampleVMF
 
