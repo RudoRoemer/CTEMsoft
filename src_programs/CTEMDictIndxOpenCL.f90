@@ -30,6 +30,7 @@ program CTEMDictIndxOpenCL
 
 use math
 use typedefs
+use dictmod
 use cl
 
 IMPLICIT NONE
@@ -55,8 +56,7 @@ integer(kind=4)                 :: npx,npy
 integer(kind=8)                 :: size_in_bytes_quat,size_in_bytes_mean,size_in_bytes_ConcParam,size_in_bytes_sym
 integer(kind=8)                 :: globalsize(2),localsize(2)
 
-real(kind=sgl),allocatable      :: meanres(:),kappares(:),quat_rand(:),symmetry(:)
-real(kind=sgl)                  :: norm
+real(kind=sgl),allocatable      :: meanres(:),kappares(:),quat_rand(:),symmetry(:),quat_sample(:,:),quat_sample_lin(:)
 
 numk = 40
 numsym = 24
@@ -73,6 +73,7 @@ localsize = (/16,16/)
 
 allocate(meanres(4*npx*npy),kappares(npx*npy),stat=istat)
 allocate(quat_rand(4*npx*npy*numk),symmetry(4*numsym),stat=istat)
+allocate(quat_sample(4,numk),quat_sample_lin(4*numk),stat=istat)
 
 do ii = 0,23
     symmetry(4*ii+1:4*ii+4) = SYM_Qsymop(1:4,ii+1)
@@ -82,13 +83,18 @@ end do
 ! INITIALIZE QUATERNION ARRAY
 !===================================
 
-call RANDOM_NUMBER(quat_rand)
+quat_sample = DI_SampleVMF(numk,12345,(/1.D0,0.D0,0.D0,0.D0/),200.D0)
 
-do ii = 0,npx*npy*numk-1
-    norm = sqrt(sum(quat_rand(4*ii+1:4*ii+4)**2))
-    quat_rand(4*ii+1:4*ii+4) = quat_rand(4*ii+1:4*ii+4)/norm
+do ii = 0,numk-1
+    quat_sample_lin(4*ii+1:4*ii+4) = quat_sample(:,ii+1)
 end do
 
+!call RANDOM_NUMBER(quat_rand)
+
+do ii = 0,npx*npy-1
+    quat_rand(4*numk*ii+1:4*numk*ii+4*numk) = quat_sample_lin(:)
+end do
+print*,quat_sample
 !=====================
 ! INITIALIZATION
 !=====================

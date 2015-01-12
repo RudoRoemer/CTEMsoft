@@ -32,14 +32,60 @@
  #define e  2.71828182845f
  #define BLOCK_SIZE 16
 
-
+float4 conjugate(float4);
+float modulus(float4);
 float4 quatmult(float4,float4);
 float factorial(int);
 float Bessel0(float);
 float Bessel1(float);
 float Bessel2(float);
-float Cp(float);
+float logCp(float);
 float CalcVMF(float4,float4,float,float4);
+float A4(float);
+float FalsiMethod(float,float,float,int);
+
+ /*
+ //--------------------------------------------------------------------------
+ //
+ // FUNCTION: conjugate
+ //
+ //> @author Saransh Singh, Carnegie Mellon University
+ //
+ //> @brief function to calculate conjugate of a quaternion
+ //
+ //> @param quat1 quaternion
+ //> @date 01/11/15    SS 1.0 original
+ //--------------------------------------------------------------------------
+ */
+
+float4 conjugate(float4 quat)
+{
+    float4 ret;
+    ret = (float4)(quat.x,-quat.y,-quat.z,-quat.w);
+    return ret;
+}
+
+ /*
+ //--------------------------------------------------------------------------
+ //
+ // FUNCTION: modulus
+ //
+ //> @author Saransh Singh, Carnegie Mellon University
+ //
+ //> @brief function to calculate modulus of a quaternion
+ //
+ //> @param quat1 quaternion
+ //> @date 01/12/15    SS 1.0 original
+ //--------------------------------------------------------------------------
+ */
+
+float modulus(float4 quat)
+{
+    float ret;
+    ret = quat.x*quat.x + quat.y*quat.y + quat.z*quat.z + quat.w*quat.w;
+    ret = sqrt(ret);
+    return ret;
+}
 
  /*
  //--------------------------------------------------------------------------
@@ -218,23 +264,59 @@ float Bessel2(float x)
     return res;
 }
 
- /*
+/*
  //--------------------------------------------------------------------------
  //
- // FUNCTION: Cp
+ // FUNCTION: A4
  //
  //> @author Saransh Singh, Carnegie Mellon University
  //
- //> @brief function to generate Cp in the VMF distribution
+ //> @brief function to compute A4(u) = I2(u)/I1(u); Ip is the modified Bessel function of the first kind of order p
+ //
+ //> @param u input parameter
+ //> @date 01/06/15    SS 1.0 original
+ //--------------------------------------------------------------------------
+ */
+
+float A4(float u)
+{
+    float ret;
+    if (u <= 29.7487f && u >= 1.0e-5f){
+        ret = Bessel2(u)/Bessel1(u);
+    }
+    else if (u > 29.7487f){
+        ret = 1.0f + (24.0f*(5.0f - 8.0f*u))/(-15.0f + 16.0f*u*(8.0f*u - 3.0f));
+    }
+    else {
+        ret = 0.0f;
+    }
+    return ret;
+}
+
+ /*
+ //--------------------------------------------------------------------------
+ //
+ // FUNCTION: logCp
+ //
+ //> @author Saransh Singh, Carnegie Mellon University
+ //
+ //> @brief function to generate logCp in the VMF distribution
  //
  //> @param kappa input value
  //> @date 01/06/15    SS 1.0 original
  //--------------------------------------------------------------------------
  */
- float Cp(float kappa)
+ float logCp(float kappa)
 {
     float res;
-    res = kappa/((4*PI*PI)*Bessel1(kappa));
+    if (kappa >= 30.0f){
+        res = pow(kappa,4.50f)/(-105.0f+8.0f*kappa*(-15.0f+16.0f*kappa*(-3.0f+8.0f*kappa)));
+        res = 4.1746562059854348688f - kappa + log(res);
+    }
+    else {
+        res = -3.675754132818690967f + log(kappa/Bessel1(kappa));
+ 
+    }
     return res;
 }
 
@@ -260,8 +342,63 @@ float Bessel2(float x)
     float dp;
     meansym = quatmult(sym,mu);
     dp = meansym.x*quat.x + meansym.y*quat.y + meansym.z*quat.z + meansym.w*quat.w;
-    VMF = Cp(kappa)*exp(kappa*dp);
+    VMF = exp(logCp(kappa)+kappa*dp);
+    //pf = 2.0f*powr(kappa,2.5f)/sqrt(2.0f*PI)/(kappa - 1.0f);
+    //VMF = pf*exp(kappa*(dp - 1.0f))*sqrt(1.0f - dp*dp);
     return VMF;
+}
+
+/*
+ //--------------------------------------------------------------------------
+ //
+ // FUNCTION: FalsiMethod
+ //
+ //> @author taken from wikipedia
+ //
+ //> @brief function to find the root of the equation A4(kappa) - ||gamma||/n = 0
+ //  where A4 is defined as A4(u) = I2(u)/I1(u); Ip is the modified Bessel function
+ //  of the first kind of order p
+ //
+ //> @param u value of ||gamma||/n
+ //--------------------------------------------------------------------------
+ */
+
+float FalsiMethod(float u, float s, float t, int m)
+{
+    float r,fr;
+    int n, side=0;
+    /* starting values at endpoints of interval */
+    float fs = A4(s)-u;
+    float ft = A4(t)-u;
+    
+    for (n = 0; n < m; n++)
+    {
+        
+        r = (fs*t - ft*s) / (fs - ft);
+        //if (fabs(t-s) < e*fabs(t+s)) break;
+        fr = A4(r)-u;
+        
+        if (fr * ft > 0)
+        {
+            /* fr and ft have same sign, copy r to t */
+            t = r; ft = fr;
+            if (side==-1) fs /= 2;
+            side = -1;
+        }
+        else if (fs * fr > 0)
+        {
+            /* fr and fs have same sign, copy r to s */
+            s = r;  fs = fr;
+            if (side==+1) ft /= 2;
+            side = +1;
+        }
+        else
+        {
+            /* fr * f_ very small (looks like zero) */
+            //break;
+        } 
+    }
+    return r;
 }
 
  /*
@@ -284,7 +421,7 @@ float Bessel2(float x)
  !--------------------------------------------------------------------------
  */
 
-__kernel void ParamEstm(__global float* quaternion, __global float* mean, __global float* ConcParam, __global float* symmetry, const int numk, const int numsym)
+__kernel void ParamEstm(__global float* quaternion, __global float* mean, __global float* ConcParam, __global float* symmetry, const int numk, const int numsym,__global float* lookup)
 {
     int tx = get_global_id(0);
     int ty = get_global_id(1);
@@ -293,16 +430,23 @@ __kernel void ParamEstm(__global float* quaternion, __global float* mean, __glob
     
     float4 quatlist;
     
-    float4 gamma = (float4)(0.0f,0.0f,0.0f,0.0f);
+    float4 gamma;
     float modgamma;
     float prefact;
     
-    float4 mu = (float4)(1.0f,1.0f,1.0f,1.0f);
-    float kappa = 1.0f;
+    float4 mu = (float4)(0.5f,0.5f,0.5f,0.5f);
+    float kappa = 90.0f;
+    float xvar = 0.0f;
     float4 sym;
     float rim;
+    float val,min;
+    //min = 100.0f;
+    //float LookupTable[590];
+    //for (int i = 0; i < 590; ++i){
+    //    LookupTable[i] = lookup[i];
+    //}
     
-    for (int l = 0; l < 30; ++l){
+    for (int l = 0; l < 20; ++l){
         gamma = (float4)(0.0f,0.0f,0.0f,0.0f);
         for (int i = 0; i < numk; ++i){
             quatlist = (float4)(quaternion[4*id*numk+i],quaternion[4*id*numk+i+1],quaternion[4*id*numk+i+2],quaternion[4*id*numk+i+3]);
@@ -315,21 +459,36 @@ __kernel void ParamEstm(__global float* quaternion, __global float* mean, __glob
             for (int k = 0; k < numsym; ++k){
                 sym = (float4)(symmetry[4*k],symmetry[4*k+1],symmetry[4*k+2],symmetry[4*k+3]);
                 rim = CalcVMF(quatlist,mu,kappa,sym)/prefact;
-                gamma += rim*quatmult(sym,quatlist);
+                gamma += rim*quatmult(quatlist,conjugate(sym));
                 
             }
         }
-        modgamma = gamma.x*gamma.x + gamma.y*gamma.y + gamma.z*gamma.z + gamma.w*gamma.w;
-        modgamma = sqrt(modgamma);
+
+        modgamma = modulus(gamma);
+        
         mu = gamma/modgamma;
-        kappa = Bessel1(modgamma/numk)/Bessel2(modgamma/numk);
+        xvar = modgamma/(float)numk;
+        if (xvar >=0.95f){
+            kappa = (-15.0f + 3.0f*xvar - 1.73205081f*sqrt(5.0f + 30.0f*xvar + 13.0f*xvar*xvar))/(16.0f*(xvar - 1.0f));
+        }
+        else {
+            min = 100.0f;
+            for (int m = 0; m < 590; ++m){
+                val = fabs(xvar - lookup[m]);
+                if (val <= min){
+                    min = val;
+                    kappa = 0.05f*(m+1);
+                }
+            }
+        }
+
     }
     
     mean[4*id] = mu.x;
     mean[4*id + 1] = mu.y;
     mean[4*id + 2] = mu.z;
     mean[4*id + 3] = mu.w;
-    ConcParam[id] = kappa;
+    ConcParam[id] = kappa;//kappa;//CalcVMF((float4)(0.5f,0.5f,0.5f,0.5f),(float4)(0.5f,0.5f,0.5f,0.5f),300.0f,(float4)(1.0f,0.0f,0.0f,0.0f));
     
 }
 /*
@@ -357,7 +516,7 @@ __kernel void ParamEstm(__global float* quaternion, __global float* mean, __glob
 
 // Notice that the Block Size is pre-set to 16. This needs to maybe become more flexible in the future.
 
-__kernel void InnerProd(__global float* exp, __global float* dict, int Wexp, int Wdict, __global float* result)
+__kernel void InnerProd(__global float* expt, __global float* dict, int Wexp, int Wdict, __global float* result)
 {
     // Block index
     int bx = get_group_id(0);
@@ -381,7 +540,7 @@ __kernel void InnerProd(__global float* exp, __global float* dict, int Wexp, int
     
     for (int a = aBegin, b = bBegin; /*b <= bEnd*/a <= aEnd; a += aStep, b += bstep){
         
-        As[ty][tx] = exp[a + Wexp * ty + tx];
+        As[ty][tx] = expt[a + Wexp * ty + tx];
         
         Bs[ty][tx] = dict[b + Wdict * ty + tx];
         
