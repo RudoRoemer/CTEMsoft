@@ -43,7 +43,7 @@ type(cl_context)                :: context
 type(cl_command_queue)          :: command_queue
 type(cl_program)                :: prog
 type(cl_kernel)                 :: kernel
-type(cl_mem)                    :: cl_quaternion,cl_mean,cl_ConcParam,cl_symmetry
+type(cl_mem)                    :: cl_quaternion,cl_mean,cl_ConcParam,cl_symmetry,cl_lookup,cl_seeds
 type(cl_event)                  :: event
 
 character(len = 100)            :: info ! info about the GPU
@@ -51,22 +51,30 @@ integer, parameter              :: iunit = 10
 integer, parameter              :: source_length = 10000000
 character(len = source_length)  :: source
 
-integer(kind=4)                 :: num,ierr,istat,irec,numk,numsym,ii
+integer(kind=4)                 :: num,ierr,istat,irec,numk,numsym,count,numinit
 integer(kind=4)                 :: npx,npy
-integer(kind=8)                 :: size_in_bytes_quat,size_in_bytes_mean,size_in_bytes_ConcParam,size_in_bytes_sym
+integer(kind=8)                 :: size_in_bytes_quat,size_in_bytes_mean,size_in_bytes_ConcParam,size_in_bytes_sym,&
+    size_in_bytes_lookup,size_in_bytes_seeds
 integer(kind=8)                 :: globalsize(2),localsize(2)
 
-real(kind=sgl),allocatable      :: meanres(:),kappares(:),quat_rand(:),symmetry(:),quat_sample(:,:),quat_sample_lin(:)
+real(kind=sgl),allocatable      :: meanres(:),kappares(:),quat_rand(:),symmetry(:),quat_sample_lin(:),lookup(:)
+real(kind=dbl),allocatable      :: quat_sample(:,:)
+integer(kind=irg)               :: nseeds,ii,jj,kk,seed
+integer(kind=irg),allocatable   :: init_seeds(:),rnseeds(:)
 
 numk = 40
-numsym = 24
-npx = 256
-npy = 256
+numsym = 48
+npx = 32
+npy = 32
+seed = 12345
+numinit = 3
 
 size_in_bytes_quat = 4*npx*npy*numk*sizeof(npx)
 size_in_bytes_mean = 4*npx*npy*sizeof(npx)
 size_in_bytes_ConcParam = npx*npy*sizeof(npx)
 size_in_bytes_sym = 4*numsym*sizeof(npx)
+size_in_bytes_lookup = 590*sizeof(npx)
+size_in_bytes_seeds = 4*npx*npy*sizeof(nseeds)
 
 globalsize = (/npx,npy/)
 localsize = (/16,16/)
@@ -74,16 +82,22 @@ localsize = (/16,16/)
 allocate(meanres(4*npx*npy),kappares(npx*npy),stat=istat)
 allocate(quat_rand(4*npx*npy*numk),symmetry(4*numsym),stat=istat)
 allocate(quat_sample(4,numk),quat_sample_lin(4*numk),stat=istat)
+allocate(lookup(590),stat=istat)
 
-do ii = 0,23
+do ii = 0,numsym/2 - 1
     symmetry(4*ii+1:4*ii+4) = SYM_Qsymop(1:4,ii+1)
+    symmetry(4*ii+97:4*ii+100) = -SYM_Qsymop(1:4,ii+1)
+end do
+
+do ii = 1,590
+    lookup(ii) = BesselIn(0.05D0*ii,2)/BesselI1(0.05D0*ii)
 end do
 
 !===================================
 ! INITIALIZE QUATERNION ARRAY
 !===================================
 
-quat_sample = DI_SampleVMF(numk,12345,(/1.D0,0.D0,0.D0,0.D0/),200.D0)
+quat_sample = DI_SampleVMF(numk,seed,(/1.D0,0.D0,0.D0,0.D0/),200.D0)
 
 do ii = 0,numk-1
     quat_sample_lin(4*ii+1:4*ii+4) = quat_sample(:,ii+1)
@@ -94,7 +108,6 @@ end do
 do ii = 0,npx*npy-1
     quat_rand(4*numk*ii+1:4*numk*ii+4*numk) = quat_sample_lin(:)
 end do
-print*,quat_sample
 !=====================
 ! INITIALIZATION
 !=====================
@@ -157,6 +170,25 @@ write(6,*) "Kernel Build Successful...."
 kernel = clCreateKernel(prog, 'ParamEstm', ierr)
 call clReleaseProgram(prog, ierr)
 
+open(unit = iunit, file = 'RandomSeeds.data', form='unformatted', status='old')
+read(iunit) nseeds
+allocate(rnseeds(nseeds))
+read(iunit) rnseeds
+close(unit=iunit,status='keep')
+
+if (4*npx*npy .gt. nseeds) Stop 'Insufficient number of primes in the list'
+
+allocate(init_seeds(4*npx*npy),stat=istat)
+init_seeds = 0
+do ii = 1,npy
+    do jj = 1,npx
+        do kk = 1,4
+            init_seeds(4*((ii-1)*npx+(jj-1))+kk) = rnseeds(4*((ii-1)*npx+(jj-1))+kk)
+        end do
+    end do
+end do
+
+
 ! create device memory buffers
 cl_quaternion = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_quat, ierr)
 if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
@@ -170,11 +202,21 @@ if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
 cl_ConcParam = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_ConcParam, ierr)
 if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
 
+cl_lookup = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_lookup, ierr)
+if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+
+cl_seeds = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_seeds, ierr)
+if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
 
 ! write the set of quaternions for all the pixels in the image
 call clEnqueueWriteBuffer(command_queue, cl_quaternion, cl_bool(.true.), 0_8, size_in_bytes_quat, quat_rand(1), ierr)
 
 call clEnqueueWriteBuffer(command_queue, cl_symmetry, cl_bool(.true.), 0_8, size_in_bytes_sym, symmetry(1), ierr)
+
+call clEnqueueWriteBuffer(command_queue, cl_lookup, cl_bool(.true.), 0_8, size_in_bytes_lookup, lookup(1), ierr)
+
+call clEnqueueWriteBuffer(command_queue, cl_seeds, cl_bool(.true.), 0_8, size_in_bytes_seeds, init_seeds(1), ierr)
+
 
 ! set the kernel arguments
 call clSetKernelArg(kernel, 0, cl_quaternion, ierr)
@@ -195,6 +237,15 @@ if(ierr /= CL_SUCCESS) stop 'Error: cannot set fifth kernel argument.'
 call clSetKernelArg(kernel, 5, numsym, ierr)
 if(ierr /= CL_SUCCESS) stop 'Error: cannot set sixth kernel argument.'
 
+call clSetKernelArg(kernel, 6, cl_lookup, ierr)
+if(ierr /= CL_SUCCESS) stop 'Error: cannot set sixth kernel argument.'
+
+call clSetKernelArg(kernel, 7, cl_seeds, ierr)
+if(ierr /= CL_SUCCESS) stop 'Error: cannot set sixth kernel argument.'
+
+call clSetKernelArg(kernel, 8, numinit, ierr)
+if(ierr /= CL_SUCCESS) stop 'Error: cannot set sixth kernel argument.'
+
 ! execute the kernel
 call clEnqueueNDRangeKernel(command_queue, kernel, globalsize, localsize, event, ierr)
 
@@ -204,8 +255,15 @@ call clFinish(command_queue, ierr)
 call clEnqueueReadBuffer(command_queue, cl_mean, cl_bool(.true.), 0_8, size_in_bytes_mean, meanres(1), ierr)
 
 call clEnqueueReadBuffer(command_queue, cl_ConcParam, cl_bool(.true.), 0_8, size_in_bytes_ConcParam, kappares(1), ierr)
-print*,kappares(1:10)
-!print*,meanres(1:4)
+
+count = 0
+do ii = 1,npx*npy
+    if (kappares(ii) .eq. 0.0) count = count + 1
+end do
+
+!print*,count,npx*npy,float(npx*npy)/float(count)
+print*,kappares
+!print*,meanres
 !print*,quat_rand(1:4)
 call clReleaseKernel(kernel, ierr)
 call clReleaseCommandQueue(command_queue, ierr)
@@ -214,6 +272,7 @@ call clReleaseMemObject(cl_quaternion, ierr)
 call clReleaseMemObject(cl_mean, ierr)
 call clReleaseMemObject(cl_ConcParam, ierr)
 call clReleaseMemObject(cl_symmetry, ierr)
+call clReleaseMemObject(cl_lookup, ierr)
 
 
 end program CTEMDictIndxOpenCL

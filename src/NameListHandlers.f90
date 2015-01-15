@@ -1310,7 +1310,100 @@ rfznl%outname= outname
 
 end subroutine GetRFZNameList
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:GetDictIndxOpenCLNameList
+!
+!> @author Saransh Singh, Carnegie Mellon University
+!
+!> @brief read namelist file and fill DictIndxOpenCLListType (used by CTEMDictIndxOpenCL.f90)
+!
+!> @param nmlfile namelist file name
+!> @param rfznl RFZ name list structure
+!
+!> @date 13/01/15 SS 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine GetDictIndxOpenCLNameList(nmlfile,dictindxnl)
 
+use error
+use local
 
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                                 :: nmlfile
+type(DictIndxOpenCLListType),INTENT(INOUT)                  :: dictindxnl
+
+integer(kind=irg)                                           :: numexptsingle
+integer(kind=irg)                                           :: numdictsingle
+integer(kind=irg)                                           :: totnumexpt
+integer(kind=irg)                                           :: totnumdict
+integer(kind=irg)                                           :: imght
+integer(kind=irg)                                           :: imgwd
+character(fnlen)                                            :: exptfile
+character(fnlen)                                            :: dictfile
+character(fnlen)                                            :: eulerfile
+
+! define the IO namelist to facilitate passing variables to the program.
+namelist /DictIndxOpenCLvars/ numexptsingle, numdictsingle, totnumexpt, totnumdict,&
+        imght, imgwd, exptfile, dictfile, eulerfile
+
+! set some of the input parameters to default values 
+numdictsingle = 1024
+numexptsingle = 1024
+imght = 0
+imgwd = 0
+exptfile = 'undefined'
+dictfile = 'undefined'
+eulerfile = 'undefined'
+totnumdict = 0
+totnumexpt = 0
+
+! read the namelist file
+open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+read(UNIT=dataunit,NML=DictIndxOpenCLvars)
+close(UNIT=dataunit,STATUS='keep')
+
+! check for required entries
+if (trim(exptfile).eq.'undefined') then
+    call FatalError('CTEMDictIndxOpenCL:',' experimental file name is undefined in '//nmlfile)
+end if
+
+if (trim(dictfile).eq.'undefined') then
+    call FatalError('CTEMDictIndxOpenCL:',' dictionary file name is undefined in '//nmlfile)
+end if
+
+if (trim(eulerfile).eq.'undefined') then
+    call FatalError('CTEMDictIndxOpenCL:',' euler angle file name is undefined in '//nmlfile)
+end if
+
+if (totnumexpt .eq. 0) then
+    call FatalError('CTEMDictIndxOpenCL:',' total number of experimental patterns is undefined in '//nmlfile)
+end if
+
+if (totnumdict .eq. 0) then
+    call FatalError('CTEMDictIndxOpenCL:',' total number of dictionary patterns is undefined in '//nmlfile)
+end if
+
+if (imght .eq. 0) then
+    call FatalError('CTEMDictIndxOpenCL:',' height of single pattern is undefined in '//nmlfile)
+end if
+
+if (imgwd .eq. 0) then
+    call FatalError('CTEMDictIndxOpenCL:',' width of single pattern is undefined in '//nmlfile)
+end if
+
+! if we get here, then all appears to be ok, and we need to fill in the emnl fields
+
+dictindxnl%numexptsingle = numexptsingle
+dictindxnl%numdictsingle = numdictsingle
+dictindxnl%imght = imght
+dictindxnl%imgwd = imgwd
+dictindxnl%exptfile = exptfile
+dictindxnl%dictfile = dictfile
+dictindxnl%eulerfile = eulerfile
+dictindxnl%totnumdict = totnumdict
+dictindxnl%totnumexpt = totnumexpt
+
+end subroutine GetDictIndxOpenCLNameList
 
 end module NameListHandlers

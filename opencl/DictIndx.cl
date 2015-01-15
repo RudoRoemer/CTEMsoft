@@ -31,6 +31,16 @@
  #define PI 3.14159265359f
  #define e  2.71828182845f
  #define BLOCK_SIZE 16
+ #define RAND_MAX  2147483647.0f
+
+
+struct lfsrret{
+    int z1;
+    int z2;
+    int z3;
+    int z4;
+    int rand;
+};
 
 float4 conjugate(float4);
 float modulus(float4);
@@ -43,7 +53,7 @@ float logCp(float);
 float CalcVMF(float4,float4,float,float4);
 float A4(float);
 float FalsiMethod(float,float,float,int);
-
+struct lfsrret lfsr113_Bits(int,int,int,int);
  /*
  //--------------------------------------------------------------------------
  //
@@ -348,6 +358,40 @@ float A4(float u)
     return VMF;
 }
 
+//--------------------------------------------------------------------------
+//
+// FUNCTION: lfsr113_Bits
+//
+//> @author Saransh Singh, Carnegie Mellon University
+//
+//> @brief function to generate random number
+//
+//> @details this function generates a random number based on the seed value supplied. the random number generated serves as seed for the subsequent random number generated and so on. this was taken from stacked overflow
+//
+//> @positive integer seed
+//> @date 05/14/14    SS 1.0 original
+//--------------------------------------------------------------------------
+struct lfsrret lfsr113_Bits (int z11,int z22,int z33,int z44)
+{
+    struct lfsrret ret;
+    int z1 = z11, z2 = z22, z3 = z33, z4 = z44;
+    int b;
+    b  = ((z1 << 6) ^ z1) >> 13;
+    z1 = ((z1 & 4294967294U) << 18) ^ b;
+    b  = ((z2 << 2) ^ z2) >> 27;
+    z2 = ((z2 & 4294967288U) << 2) ^ b;
+    b  = ((z3 << 13) ^ z3) >> 21;
+    z3 = ((z3 & 4294967280U) << 7) ^ b;
+    b  = ((z4 << 3) ^ z4) >> 12;
+    z4 = ((z4 & 4294967168U) << 13) ^ b;
+    ret.z1 = z1;
+    ret.z2 = z2;
+    ret.z3 = z3;
+    ret.z4 = z4;
+    ret.rand = (z1 ^ z2 ^ z3 ^ z4);
+    return ret;
+}
+
 /*
  //--------------------------------------------------------------------------
  //
@@ -421,7 +465,7 @@ float FalsiMethod(float u, float s, float t, int m)
  !--------------------------------------------------------------------------
  */
 
-__kernel void ParamEstm(__global float* quaternion, __global float* mean, __global float* ConcParam, __global float* symmetry, const int numk, const int numsym,__global float* lookup)
+__kernel void ParamEstm(__global float* quaternion, __global float* mean, __global float* ConcParam, __global float* symmetry, const int numk, const int numsym,__global float* lookup,__global int* seeds,const int numinit)
 {
     int tx = get_global_id(0);
     int ty = get_global_id(1);
@@ -434,20 +478,119 @@ __kernel void ParamEstm(__global float* quaternion, __global float* mean, __glob
     float modgamma;
     float prefact;
     
-    float4 mu = (float4)(0.5f,0.5f,0.5f,0.5f);
-    float kappa = 90.0f;
+    float4 mu = (float4)(0.0f,0.0f,0.0f,0.0f);
+    float kappa,spl;
+    
+    float rand;
+    int z11,z22,z33,z44;
+    struct lfsrret retrnd;
+    
     float xvar = 0.0f;
     float4 sym;
     float rim;
-    float val,min;
-    //min = 100.0f;
-    //float LookupTable[590];
-    //for (int i = 0; i < 590; ++i){
-    //    LookupTable[i] = lookup[i];
-    //}
+    float val,min,Lintd;
+    float Lnew,Lold;
+    float4 munew;
+    float kappanew;
+    Lold = 0.0f;
+    kappanew = 0.0f;
+    munew = (float4)(0.0f,0.0f,0.0f,0.0f);
+    kappa = 0.0f;
     
-    for (int l = 0; l < 20; ++l){
-        gamma = (float4)(0.0f,0.0f,0.0f,0.0f);
+    z11 = seeds[4*id];
+    z22 = seeds[4*id + 1];
+    z33 = seeds[4*id + 2];
+    z44 = seeds[4*id + 3];
+
+    
+    for (int p = 0; p < numinit; ++p){
+        Lintd = 0.0f;
+        /*
+        retrnd = lfsr113_Bits(z11,z22,z33,z44);
+        rand = fabs(retrnd.rand/RAND_MAX);
+        mu.x = rand*10.0f;
+        
+        z11 = retrnd.z1;
+        z22 = retrnd.z2;
+        z33 = retrnd.z3;
+        z44 = retrnd.z4;
+        
+        retrnd = lfsr113_Bits(z11,z22,z33,z44);
+        rand = fabs(retrnd.rand/RAND_MAX);
+        mu.y = rand*10.0f;
+        
+        z11 = retrnd.z1;
+        z22 = retrnd.z2;
+        z33 = retrnd.z3;
+        z44 = retrnd.z4;
+        
+        retrnd = lfsr113_Bits(z11,z22,z33,z44);
+        rand = fabs(retrnd.rand/RAND_MAX);
+        mu.z = rand*10.0f;
+        
+        z11 = retrnd.z1;
+        z22 = retrnd.z2;
+        z33 = retrnd.z3;
+        z44 = retrnd.z4;
+        
+        retrnd = lfsr113_Bits(z11,z22,z33,z44);
+        rand = fabs(retrnd.rand/RAND_MAX);
+        mu.w = rand*10.0f;
+        
+        z11 = retrnd.z1;
+        z22 = retrnd.z2;
+        z33 = retrnd.z3;
+        z44 = retrnd.z4;
+        
+        retrnd = lfsr113_Bits(z11,z22,z33,z44);
+        rand = fabs(retrnd.rand/RAND_MAX);
+        kappa = 200.0f + 100.0f*rand;
+
+        z11 = retrnd.z1;
+        z22 = retrnd.z2;
+        z33 = retrnd.z3;
+        z44 = retrnd.z4;*/
+        mu = (float4){2.0f,1.0f,3.0f,0.0f};
+        kappa = 100.0f;
+        mu = mu/modulus(mu);
+        for (int l = 0; l < 20; ++l){
+            gamma = (float4)(0.0f,0.0f,0.0f,0.0f);
+            for (int i = 0; i < numk; ++i){
+                quatlist = (float4)(quaternion[4*id*numk+i],quaternion[4*id*numk+i+1],quaternion[4*id*numk+i+2],quaternion[4*id*numk+i+3]);
+                prefact = 0.0f;
+                for (int j = 0; j < numsym; ++j){
+                    sym = (float4)(symmetry[4*j],symmetry[4*j+1],symmetry[4*j+2],symmetry[4*j+3]);
+                    prefact += CalcVMF(quatlist,mu,kappa,sym);
+                }
+                
+                for (int k = 0; k < numsym; ++k){
+                    sym = (float4)(symmetry[4*k],symmetry[4*k+1],symmetry[4*k+2],symmetry[4*k+3]);
+                    rim = CalcVMF(quatlist,mu,kappa,sym)/prefact;
+                    gamma += rim*quatmult(quatlist,conjugate(sym));
+                    
+                }
+            }
+            
+            modgamma = modulus(gamma);
+            
+            mu = gamma/modgamma;
+            
+            xvar = modgamma/(float)numk;
+            if (xvar >=0.95f){
+                kappa = (-15.0f + 3.0f*xvar - 1.73205081f*sqrt(5.0f + 30.0f*xvar + 13.0f*xvar*xvar))/(16.0f*(xvar - 1.0f));
+            }
+            else {
+                min = 100.0f;
+                for (int m = 0; m < 590; ++m){
+                    val = fabs(xvar - lookup[m]);
+                    if (val <= min){
+                        min = val;
+                        kappa = 0.05f*(m+1);
+                    }
+                }
+            }
+        }
+        
         for (int i = 0; i < numk; ++i){
             quatlist = (float4)(quaternion[4*id*numk+i],quaternion[4*id*numk+i+1],quaternion[4*id*numk+i+2],quaternion[4*id*numk+i+3]);
             prefact = 0.0f;
@@ -455,40 +598,23 @@ __kernel void ParamEstm(__global float* quaternion, __global float* mean, __glob
                 sym = (float4)(symmetry[4*j],symmetry[4*j+1],symmetry[4*j+2],symmetry[4*j+3]);
                 prefact += CalcVMF(quatlist,mu,kappa,sym);
             }
-            
-            for (int k = 0; k < numsym; ++k){
-                sym = (float4)(symmetry[4*k],symmetry[4*k+1],symmetry[4*k+2],symmetry[4*k+3]);
-                rim = CalcVMF(quatlist,mu,kappa,sym)/prefact;
-                gamma += rim*quatmult(quatlist,conjugate(sym));
-                
-            }
+            Lintd += log(prefact);
         }
-
-        modgamma = modulus(gamma);
-        
-        mu = gamma/modgamma;
-        xvar = modgamma/(float)numk;
-        if (xvar >=0.95f){
-            kappa = (-15.0f + 3.0f*xvar - 1.73205081f*sqrt(5.0f + 30.0f*xvar + 13.0f*xvar*xvar))/(16.0f*(xvar - 1.0f));
-        }
-        else {
-            min = 100.0f;
-            for (int m = 0; m < 590; ++m){
-                val = fabs(xvar - lookup[m]);
-                if (val <= min){
-                    min = val;
-                    kappa = 0.05f*(m+1);
-                }
-            }
+        Lnew = Lintd;
+        if (Lnew >= Lold){
+            kappanew = kappa;
+            munew = mu;
+            Lold = Lnew;
         }
 
     }
     
-    mean[4*id] = mu.x;
-    mean[4*id + 1] = mu.y;
-    mean[4*id + 2] = mu.z;
-    mean[4*id + 3] = mu.w;
-    ConcParam[id] = kappa;//kappa;//CalcVMF((float4)(0.5f,0.5f,0.5f,0.5f),(float4)(0.5f,0.5f,0.5f,0.5f),300.0f,(float4)(1.0f,0.0f,0.0f,0.0f));
+    //pos = maxpos(L,numinit);
+    mean[4*id] = munew.x;
+    mean[4*id + 1] = munew.y;
+    mean[4*id + 2] = munew.z;
+    mean[4*id + 3] = munew.w;
+    ConcParam[id] = kappanew;
     
 }
 /*

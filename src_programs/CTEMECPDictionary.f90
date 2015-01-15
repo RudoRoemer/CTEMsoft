@@ -50,7 +50,7 @@ use io
 
 IMPLICIT NONE
 
-character(fnlen)                          :: nmldeffile, progname, progdesc
+character(fnlen)                               :: nmldeffile, progname, progdesc
 type(ECPpatternNameListType)                   :: ecpnl
 
 nmldeffile = 'CTEMECP.nml'

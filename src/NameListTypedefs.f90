@@ -351,7 +351,17 @@ type RFZNameListType
     character(fnlen)        :: outname
 end type RFZNameListType
 
-
+type DictIndxOpenCLListType
+    integer(kind=irg)           :: numexptsingle
+    integer(kind=irg)           :: numdictsingle
+    integer(kind=irg)           :: totnumexpt
+    integer(kind=irg)           :: totnumdict
+    integer(kind=irg)           :: imght
+    integer(kind=irg)           :: imgwd
+    character(fnlen)            :: exptfile
+    character(fnlen)            :: dictfile
+    character(fnlen)            :: eulerfile
+end type DictIndxOpenCLListType
 
 
 end module NameListTypedefs

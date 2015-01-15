@@ -1043,7 +1043,7 @@ end function logCp
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE: classifier
+! SUBROUTINE: DI_similarity_classifier
 !
 !> @author Saransh Singh, Carnegie Mellon University / Yu-Hui Chen, U. Michigan
 !
