@@ -92,9 +92,9 @@ character(fnlen),INTENT(IN)                         :: progname
 
 real(kind=4),allocatable                            :: result(:)
 real(kind=4),allocatable                            :: expt(:)
-real(kind=4),allocatable                            :: dict(:)
-real(kind=4),allocatable                            :: eulerangles(:,:),image_lin_flt(:)
-integer(kind=1),allocatable                         :: image(:,:),image_lin(:),header(:)
+real(kind=4),allocatable                            :: dict(:),dicttranspose(:)
+real(kind=4),allocatable                            :: eulerangles(:,:),imagedictflt(:),imageexptflt(:),meandict(:),meanexpt(:)
+integer(kind=1),allocatable                         :: imagedict(:),imageexpt(:)
 integer(kind=4)                                     :: Ne
 integer(kind=4)                                     :: Nd
 integer(kind=4)                                     :: L
@@ -110,9 +110,9 @@ type(cl_kernel)                                     :: kernel
 type(cl_mem)                                        :: cl_expt,cl_dict,cl_result,cl_As,cl_Bs
 type(cl_event)                                      :: event
 
-integer(kind=4),parameter                           :: iunit = 10
-integer(kind=4),parameter                           :: iunitdict = 11
-integer(kind=4),parameter                           :: iunitexpt = 12
+integer(kind=4),parameter                           :: iunit = 40
+integer(kind=4),parameter                           :: iunitdict = 41
+integer(kind=4),parameter                           :: iunitexpt = 42
 character(len = 100)                                :: info ! info about the GPU
 integer(kind=8)                                     :: globalsize(2),localsize(2)
 integer, parameter                                  :: source_length = 10000000
@@ -120,6 +120,7 @@ character(len = source_length)                      :: source
 integer(kind=4)                                     :: num,ierr,istat,irec,Wexp,Wdict,i,j,ii,jj,kk,ll,mm,nn,pp,qq
 integer(kind=8)                                     :: size_in_bytes_expt,size_in_bytes_dict,size_in_bytes_result
 real(kind=sgl),allocatable                          :: exptsorted(:,:),topk(:,:,:)
+integer(kind=irg),allocatable                       :: exptindex(:,:)
 
 
 Ne = dictindxnl%numexptsingle
@@ -142,10 +143,17 @@ Wdict = Nd
 localsize = (/16,16/)
 globalsize = (/Ne,Nd/)
 
-allocate(image(imgwd,imght),image_lin(1:L),image_lin_flt(1:L),header(25),stat=istat)
-image = 0
-image_lin = 0
-image_lin_flt = 0.0
+allocate(imagedict(imgwd*imght),imageexpt(recordsize),stat=istat)
+imagedict = 0
+imageexpt = 0
+
+allocate(imagedictflt(imgwd*imght),imageexptflt(imgwd*imght),stat=istat)
+imagedict = 0.0
+imageexpt = 0.0
+
+allocate(meandict(imgwd*imght),meanexpt(imgwd*imght),stat=istat)
+meanexpt = 0.0
+meandict = 0.0
 
 allocate(eulerangles(totnumdict,3),stat=istat)
 eulerangles = 0.0
@@ -168,14 +176,43 @@ call Message(' -> completed reading '//trim(dictindxnl%eulerfile), frm = "(A)")
 ! OPENING DICT AND EXPT FOR I/O
 !=====================================
 
-
+print*,trim(dictindxnl%exptfile)
 call Message('opening '//trim(dictindxnl%dictfile), frm = "(A)" )
-open(unit=iunitdict,file=trim(dictindxnl%dictfile),status='old',form='unformatted',access='stream',iostat=ierr)
+open(unit=iunitdict,file=trim(dictindxnl%dictfile),status='old',form='unformatted',access='direct',recl=imght*imgwd,iostat=ierr)
 
 call Message('opening '//trim(dictindxnl%exptfile), frm = "(A)" )
-open(unit=iunitexpt,file=trim(dictindxnl%exptfile),status='old',form='unformatted',access='stream',iostat=ierr)
+open(unit=iunitexpt,file=trim(dictindxnl%exptfile),status='old',form='unformatted',access='direct',recl=recordsize,iostat=ierr)
+
+call Message('Start calculating mean pattern for dictionary '//trim(dictindxnl%dictfile), frm = "(A)" )
+!if (1 .eq. 0) then
+do ii = 1,totnumdict
+    read(iunitdict,rec=ii) imagedict
+    imagedictflt = float(imagedict)
+    do jj = 1,L
+        if (imagedictflt(jj) .lt. 0) imagedictflt(jj) = imagedictflt(jj)+255.0
+    end do
+    meandict = meandict+imagedictflt
+end do
+meandict = meandict/totnumdict
 
 
+call Message('Finished calculating mean pattern for dictionary '//trim(dictindxnl%dictfile), frm = "(A)" )
+
+call Message('Start calculating mean pattern for experiments '//trim(dictindxnl%exptfile), frm = "(A)" )
+
+do ii = 1,totnumexpt
+    read(iunitexpt,rec=ii) imageexpt
+    imageexptflt = float(imageexpt(26:recordsize))
+    do jj = 1,L
+        if (imageexptflt(jj) .lt. 0) imageexptflt(jj) = imageexptflt(jj)+255.0
+    end do
+    meanexpt = meanexpt+imageexptflt
+end do
+meanexpt = meanexpt/totnumexpt
+
+
+call Message('Finished calculating mean pattern for experiments '//trim(dictindxnl%exptfile), frm = "(A)" )
+!end if
 !=====================
 ! INITIALIZATION
 !=====================
@@ -206,7 +243,7 @@ if(ierr /= CL_SUCCESS) stop "Cannot create command queue"
 call getenv("CTEMsoft2013opencl",openclpathname)
 open(unit = iunit, file = trim(openclpathname)//'/DictIndx.cl', access='direct', status = 'old', &
 action = 'read', iostat = ierr, recl = 1)
-if (ierr /= 0) stop 'Cannot open file InnerProd.cl'
+if (ierr /= 0) stop 'Cannot open file DictIndx.cl'
 
 source = ''
 irec = 1
@@ -267,57 +304,73 @@ experimentalloop: do ll = 1,nint(float(totnumexpt)/float(numexptsingle))
     allocate(exptsorted(numexptsingle,totnumdict),stat=istat)
     exptsorted = 0.0
 
+    if (allocated(exptindex)) deallocate(exptindex)
+    allocate(exptindex(numexptsingle,totnumdict),stat=istat)
+    exptindex = 0
+
     if (allocated(topk)) deallocate(topk)
     allocate(topk(numexptsingle,100,2),stat=istat)
     do ii = 1,numexptsingle
-        read(iunitexpt) header
-        read(iunitexpt) image
-        do jj = 1,imght
-            image_lin((jj-1)*imght+1:jj*imght) = image(:,jj)
-        end do
-        image_lin_flt = float(image_lin)
+        read(iunitexpt,rec=(ll-1)*numexptsingle+ii) imageexpt
+        imageexptflt = float(imageexpt(26:recordsize))
         do mm = 1,L
-            if (image_lin_flt(mm) .lt. 0) image_lin_flt(mm) = image_lin_flt(mm) + 255.0
+            if (imageexptflt(mm) .lt. 0) imageexptflt(mm) = imageexptflt(mm) + 255.0
         end do
-        expt((ii-1)*L+1:ii*L) = image_lin_flt(1:L)/sqrt(sum(image_lin_flt**2))
+        expt((ii-1)*L+1:ii*L) = (imageexptflt(1:L)-meanexpt(1:L))/sqrt(sum((imageexptflt(1:L)-meanexpt(1:L))**2))
     end do
 
     call clEnqueueWriteBuffer(command_queue, cl_expt, cl_bool(.true.), 0_8, size_in_bytes_expt, expt(1), ierr)
     if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
-
-    dictionaryloop: do kk = 1,2!floor(float(totnumdict)/float(numdictsingle))
+!if (ll .eq. 1) then
+!imageexptflt = expt(616*L+1:617*L)
+!open(unit=13,file='testexpt.txt',action='write')
+!do i=1,imgwd
+!do j=1,imght
+!write(13, '(F15.6)', advance='no') imageexptflt((i-1)*imght+j)
+!end do
+!write(13, *) ''  ! this gives you the line break
+!end do
+!close(13)
+!end if
+    dictionaryloop: do kk = 1,floor(float(totnumdict)/float(numdictsingle))
 
         if (allocated(result)) deallocate(result)
         if (allocated(dict)) deallocate(dict)
+        if (allocated(dicttranspose)) deallocate(dicttranspose)
 
-        allocate(result(Ne*Nd),dict(Nd*L),stat=istat)
+        allocate(result(Ne*Nd),dict(Nd*L),dicttranspose(Nd*L),stat=istat)
 
         result = 0.0
         dict = 0.0
+        dicttranspose = 0.0
 
         do ii = 1,numdictsingle
-            read(iunitdict) image
-            do jj = 1,imght
-                image_lin((jj-1)*imght+1:jj*imght) = image(:,jj)
-            end do
-            image_lin_flt = float(image_lin)
+            read(iunitdict,rec=(kk-1)*numdictsingle+ii) imagedict
+            imagedictflt = float(imagedict)
             do mm = 1,L
-                if (image_lin_flt(mm) .lt. 0) image_lin_flt(mm) = image_lin_flt(mm) + 255.0
+                if (imagedictflt(mm) .lt. 0) imagedictflt(mm) = imagedictflt(mm) + 255.0
             end do
-            dict((ii-1)*L+1:ii*L) = image_lin_flt(1:L)/sqrt(sum(image_lin_flt**2))
+            dict((ii-1)*L+1:ii*L) = (imagedictflt(1:L)-meandict(1:L))/sqrt(sum((imagedictflt(1:L)-meandict(1:L))**2))
         end do
-!if (kk .eq. 2) then
-!open(unit=13,file='test.txt',action='write')
+
+        do ii = 1,L
+            do mm = 1,numdictsingle
+                dicttranspose((ii-1)*numdictsingle+mm) = dict((mm-1)*L+ii)
+            end do
+        end do
+!if (kk .eq. 1) then
+!imagedictflt = dict(91*L+1:92*L)
+!open(unit=13,file='testdict.txt',action='write')
 !do i=1,imgwd
 !do j=1,imght
-!write(13, '(I4)', advance='no') image(j,i)
+!write(13, '(F15.6)', advance='no') imagedictflt((i-1)*imght+j)
 !end do
 !write(13, *) ''  ! this gives you the line break
 !end do
 !close(13)
 !end if
 
-        call clEnqueueWriteBuffer(command_queue, cl_dict, cl_bool(.true.), 0_8, size_in_bytes_dict, dict(1), ierr)
+        call clEnqueueWriteBuffer(command_queue, cl_dict, cl_bool(.true.), 0_8, size_in_bytes_dict, dicttranspose(1), ierr)
         if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
 
 ! set kernel argument
@@ -343,39 +396,48 @@ experimentalloop: do ll = 1,nint(float(totnumexpt)/float(numexptsingle))
 ! read the resulting vector from device memory
         call clEnqueueReadBuffer(command_queue, cl_result, cl_bool(.true.), 0_8, size_in_bytes_result, result(1), ierr)
 ! copying the dot products to an array for sorting later
-        do i = 1,numexptsingle
-            exptsorted(i,numdictsingle*(kk-1)+1:numdictsingle*kk) = result((i-1)*numdictsingle+1:i*numdictsingle)
-        end do
+!        do i = 1,numexptsingle
+!            exptsorted(i,numdictsingle*(kk-1)+1:numdictsingle*kk) = result((i-1)*numdictsingle+1:i*numdictsingle)
+!            do j = numdictsingle*(kk-1)+1,numdictsingle*kk
+!                exptindex(i,numdictsingle*(kk-1)+1:numdictsingle*kk) = j
+!print*,j,numdictsingle*(kk-1)+1,numdictsingle*kk
+!            end do
+!        end do
 
-        if (mod(kk,1) .eq. 0) then
+        if (mod(kk,30) .eq. 0) then
             write(6,'(A26,I7,A26,I7)'),'Completed dot product of',kk*1024,'dictionary patterns with',ll*1024,'experimental patterns'
         end if
-
+    print*,maxval(result),maxloc(result)
     end do dictionaryloop
 
     if (allocated(result)) deallocate(result)
     if (allocated(dict)) deallocate(dict)
+    if (allocated(dicttranspose)) deallocate(dicttranspose)
 
-    allocate(result(Ne*Nd),dict(Nd*L),stat=istat)
+    allocate(result(Ne*Nd),dict(Nd*L),dicttranspose(Nd*L),stat=istat)
 
     result = 0.0
     dict = 0.0
-
+    dicttranspose = 0.0
 ! do the leftover dot products
-if (1 .eq. 0) then
+
     do ii = 1,MODULO(totnumdict,numdictsingle)
-        read(iunitdict) image
-        do jj = 1,imght
-            image_lin((jj-1)*imght+1:jj*imght) = image(:,jj)
-        end do
-        image_lin_flt = float(image_lin)
+        read(iunitdict,rec=(kk-1)*numdictsingle+ii) imagedict
+        imagedictflt = float(imagedict)
         do mm = 1,L
-            if (image_lin_flt(mm) .lt. 0) image_lin_flt(mm) = image_lin_flt(mm) + 255.0
+            if (imagedictflt(mm) .lt. 0) imagedictflt(mm) = imagedictflt(mm) + 255.0
         end do
-        dict((ii-1)*L+1:ii*L) = image_lin_flt(1:L)/sqrt(sum(image_lin_flt**2))
+        dict((ii-1)*L+1:ii*L) = (imagedictflt(1:L)-meandict(1:L))/sqrt(sum((imagedictflt(1:L)-meandict(1:L))**2))
     end do
 
-    call clEnqueueWriteBuffer(command_queue, cl_dict, cl_bool(.true.), 0_8, size_in_bytes_dict, dict(1), ierr)
+    do ii = 1,L
+        do mm = 1,numdictsingle
+            dicttranspose((ii-1)*numdictsingle+mm) = dict((mm-1)*L+ii)
+        end do
+    end do
+
+
+    call clEnqueueWriteBuffer(command_queue, cl_dict, cl_bool(.true.), 0_8, size_in_bytes_dict, dicttranspose(1), ierr)
     if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
 
 ! set kernel argument
@@ -403,20 +465,14 @@ if (1 .eq. 0) then
 ! adding dot products of leftover dictionary patterns
     do i = 1,numexptsingle
         exptsorted(i,numdictsingle*numexptsingle+1:numdictsingle*(numexptsingle+1)) = result((i-1)*numdictsingle+1:i*numdictsingle)
-    end do
-end if
-
-    !sort the exptsorted array and return the top 100 or so values
-    ! code goes here
-        do pp = 1,100
-            topk(1:numexptsingle,pp,1) = maxloc(exptsorted,2)
-            topk(1:numexptsingle,pp,2) = maxval(exptsorted,2)
-            do nn = 1,numexptsingle
-                exptsorted(nn,int(topk(nn,pp,1))) = 0.0
-            end do
+        do j = numdictsingle*numexptsingle+1,numdictsingle*(numexptsingle+1)
+            exptindex(i,numdictsingle*numexptsingle+1:numdictsingle*(numexptsingle+1)) = j
         end do
-print*,topk(1,:,1)
 
+    end do
+    !sort the exptsorted array and return the top 100 or so values
+    !call SSORT(exptsorted,)
+print*,maxval(result),maxloc(result)
 end do experimentalloop
 
 print*,result(1)
@@ -441,12 +497,65 @@ end subroutine InnerProdGPU
 !
 ! SUBROUTINE:Sort
 !
-!> @author Taken from rosettacode http://rosettacode.org/wiki/Sorting_algorithms/Insertion_sort#Fortran
-!
+!> @author Taken from http://www.personal.psu.edu/jhm/f90/examples/sort/sort3.f
 !> @brief sort the array
 !
-!> @param array input array
-!> @param size size of array
+!> Parameters described in the program
 !
 !--------------------------------------------------------------------------
-
+SUBROUTINE SSORT (X, IY, N, KFLAG)
+IMPLICIT NONE
+!
+!    Example of an Insertion Sort
+!
+!***BEGIN PROLOGUE  SSORT
+!***PURPOSE  Sort an array and make the same interchanges in
+!            an auxiliary array.  The array is sorted in
+!            decreasing order.
+!***TYPE      SINGLE PRECISION
+!***KEYWORDS  SORT, SORTING
+!
+!   Description of Parameters
+!      X - array of values to be sorted   (usually abscissas)
+!      IY - array to be carried with X (all swaps of X elements are
+!          matched in IY .  After the sort IY(J) contains the original
+!          postition of the value X(J) in the unsorted X array.
+!      N - number of values in array X to be sorted
+!      KFLAG - Not used in this implementation
+!
+!***REVISION HISTORY  (YYMMDD)
+!   950310  DATE WRITTEN
+!   John Mahaffy
+!***END PROLOGUE  SSORT
+!     .. Scalar Arguments ..
+INTEGER KFLAG, N
+!     .. Array Arguments ..
+REAL X(*)
+INTEGER IY(*)
+!     .. Local Scalars ..
+REAL TEMP
+INTEGER I, J, K, ITEMP
+!     .. External Subroutines ..
+!     None
+!     .. Intrinsic Functions ..
+!     None
+!
+!***FIRST EXECUTABLE STATEMENT  SSORT
+!
+DO 100 I=2,N
+IF ( X(I).GT.X(I-1) ) THEN
+DO 50 J=I-2,1,-1
+IF(X(I).LT.X(J)) go to 70
+50          CONTINUE
+J=0
+70        TEMP=X(I)
+ITEMP=IY(I)
+DO 90 K=I,J+2,-1
+IY(K)=IY(K-1)
+90          X(K)=X(K-1)
+X(J+1)=TEMP
+IY(J+1)=ITEMP
+ENDIF
+100 CONTINUE
+RETURN
+END
