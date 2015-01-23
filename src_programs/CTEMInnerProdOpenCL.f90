@@ -120,7 +120,8 @@ character(len = source_length)                      :: source
 integer(kind=4)                                     :: num,ierr,istat,irec,Wexp,Wdict,i,j,ii,jj,kk,ll,mm,nn,pp,qq
 integer(kind=8)                                     :: size_in_bytes_expt,size_in_bytes_dict,size_in_bytes_result
 real(kind=sgl),allocatable                          :: exptsorted(:,:),topk(:,:,:)
-integer(kind=irg),allocatable                       :: exptindex(:,:)
+integer(kind=irg),allocatable                       :: exptindex(:,:),indexlist(:)
+!real(kind=4),allocatable                            :: exptsr(:,:),dictsr(:,:),res(:,:)
 
 
 Ne = dictindxnl%numexptsingle
@@ -157,6 +158,13 @@ meandict = 0.0
 
 allocate(eulerangles(totnumdict,3),stat=istat)
 eulerangles = 0.0
+
+allocate(indexlist(1:totnumdict),stat=istat)
+indexlist = 0
+
+do ii = 1,totnumdict
+    indexlist(ii) = ii
+end do
 
 !=====================================
 ! I/O FOR EULER ANGLE FILE
@@ -294,6 +302,12 @@ if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
 ! MAIN LOOP OVER ALL PATTERNS
 !=====================================
 
+!allocate(exptsr(Ne,L),dictsr(Nd,L),res(Ne,Nd),stat=istat)
+!exptsr = 0.0
+!dictsr = 0.0
+!res = 0.0
+
+
 experimentalloop: do ll = 1,nint(float(totnumexpt)/float(numexptsingle))
 
     if (allocated(expt)) deallocate(expt)
@@ -311,6 +325,7 @@ experimentalloop: do ll = 1,nint(float(totnumexpt)/float(numexptsingle))
     if (allocated(topk)) deallocate(topk)
     allocate(topk(numexptsingle,100,2),stat=istat)
     do ii = 1,numexptsingle
+        exptindex(ii,:) = indexlist(:)
         read(iunitexpt,rec=(ll-1)*numexptsingle+ii) imageexpt
         imageexptflt = float(imageexpt(26:recordsize))
         do mm = 1,L
@@ -321,6 +336,12 @@ experimentalloop: do ll = 1,nint(float(totnumexpt)/float(numexptsingle))
 
     call clEnqueueWriteBuffer(command_queue, cl_expt, cl_bool(.true.), 0_8, size_in_bytes_expt, expt(1), ierr)
     if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
+
+!if (ll .eq. 1) then
+!do ii = 1,numexptsingle
+!exptsr(ii,1:L) = expt((ii-1)*L+1:ii*L)
+!end do
+!end if
 !if (ll .eq. 1) then
 !imageexptflt = expt(616*L+1:617*L)
 !open(unit=13,file='testexpt.txt',action='write')
@@ -395,19 +416,24 @@ experimentalloop: do ll = 1,nint(float(totnumexpt)/float(numexptsingle))
         call clFinish(command_queue, ierr)
 ! read the resulting vector from device memory
         call clEnqueueReadBuffer(command_queue, cl_result, cl_bool(.true.), 0_8, size_in_bytes_result, result(1), ierr)
+!if (kk .eq. 2) then
+!do ii = 1,numdictsingle
+!dictsr(ii,1:L) = dict((ii-1)*L+1:ii*L)
+!end do
+!res = matmul(exptsr,transpose(dictsr))
+!print*,res(2,1:20)
+!print*,''
+!print*,result(1025:1044)
+!end if
 ! copying the dot products to an array for sorting later
-!        do i = 1,numexptsingle
-!            exptsorted(i,numdictsingle*(kk-1)+1:numdictsingle*kk) = result((i-1)*numdictsingle+1:i*numdictsingle)
-!            do j = numdictsingle*(kk-1)+1,numdictsingle*kk
-!                exptindex(i,numdictsingle*(kk-1)+1:numdictsingle*kk) = j
-!print*,j,numdictsingle*(kk-1)+1,numdictsingle*kk
-!            end do
-!        end do
+        do i = 1,numexptsingle
+            exptsorted(i,numdictsingle*(kk-1)+1:numdictsingle*kk) = result((i-1)*numdictsingle+1:i*numdictsingle)
+        end do
 
         if (mod(kk,30) .eq. 0) then
             write(6,'(A26,I7,A26,I7)'),'Completed dot product of',kk*1024,'dictionary patterns with',ll*1024,'experimental patterns'
         end if
-    print*,maxval(result),maxloc(result)
+    !print*,maxval(result),maxloc(result)
     end do dictionaryloop
 
     if (allocated(result)) deallocate(result)
@@ -421,21 +447,20 @@ experimentalloop: do ll = 1,nint(float(totnumexpt)/float(numexptsingle))
     dicttranspose = 0.0
 ! do the leftover dot products
 
-    do ii = 1,MODULO(totnumdict,numdictsingle)
+    leftoverloop: do ii = 1,MODULO(totnumdict,numdictsingle)
         read(iunitdict,rec=(kk-1)*numdictsingle+ii) imagedict
         imagedictflt = float(imagedict)
         do mm = 1,L
             if (imagedictflt(mm) .lt. 0) imagedictflt(mm) = imagedictflt(mm) + 255.0
         end do
         dict((ii-1)*L+1:ii*L) = (imagedictflt(1:L)-meandict(1:L))/sqrt(sum((imagedictflt(1:L)-meandict(1:L))**2))
-    end do
+    end do leftoverloop
 
     do ii = 1,L
         do mm = 1,numdictsingle
             dicttranspose((ii-1)*numdictsingle+mm) = dict((mm-1)*L+ii)
         end do
     end do
-
 
     call clEnqueueWriteBuffer(command_queue, cl_dict, cl_bool(.true.), 0_8, size_in_bytes_dict, dicttranspose(1), ierr)
     if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
@@ -457,25 +482,24 @@ experimentalloop: do ll = 1,nint(float(totnumexpt)/float(numexptsingle))
     if(ierr /= CL_SUCCESS) stop 'Error: cannot set fifth kernel argument.'
 !execute the kernel
     call clEnqueueNDRangeKernel(command_queue, kernel, globalsize, localsize, event, ierr)
-
 ! wait for the commands to finish
     call clFinish(command_queue, ierr)
 ! read the resulting vector from device memory
     call clEnqueueReadBuffer(command_queue, cl_result, cl_bool(.true.), 0_8, size_in_bytes_result, result(1), ierr)
 ! adding dot products of leftover dictionary patterns
     do i = 1,numexptsingle
-        exptsorted(i,numdictsingle*numexptsingle+1:numdictsingle*(numexptsingle+1)) = result((i-1)*numdictsingle+1:i*numdictsingle)
-        do j = numdictsingle*numexptsingle+1,numdictsingle*(numexptsingle+1)
-            exptindex(i,numdictsingle*numexptsingle+1:numdictsingle*(numexptsingle+1)) = j
-        end do
-
+        exptsorted(i,numdictsingle*(kk-1)+1:numdictsingle*kk) = result((i-1)*numdictsingle+1:i*numdictsingle)
     end do
     !sort the exptsorted array and return the top 100 or so values
-    !call SSORT(exptsorted,)
-print*,maxval(result),maxloc(result)
+    !do ii = 1,numexptsingle
+        call SSORT(exptsorted(1,:),exptindex(1,:),totnumdict)
+    !end do
+print*,exptindex(1,1:100)
+print*,''
+print*,exptsorted(1,1:100)!maxval(result),maxloc(result)
 end do experimentalloop
 
-print*,result(1)
+!print*,result(1)
 call clReleaseKernel(kernel, ierr)
 call clReleaseCommandQueue(command_queue, ierr)
 call clReleaseContext(context, ierr)

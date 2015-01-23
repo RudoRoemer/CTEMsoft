@@ -479,11 +479,11 @@ __kernel void ParamEstm(__global float* quaternion, __global float* mean, __glob
     float prefact;
     
     float4 mu = (float4)(0.0f,0.0f,0.0f,0.0f);
-    float kappa,spl;
+    float kappa;//,spl;
     
-    float rand;
-    int z11,z22,z33,z44;
-    struct lfsrret retrnd;
+    //float rand;
+    //int z11,z22,z33,z44;
+    //struct lfsrret retrnd;
     
     float xvar = 0.0f;
     float4 sym;
@@ -497,10 +497,10 @@ __kernel void ParamEstm(__global float* quaternion, __global float* mean, __glob
     munew = (float4)(0.0f,0.0f,0.0f,0.0f);
     kappa = 0.0f;
     
-    z11 = seeds[4*id];
-    z22 = seeds[4*id + 1];
-    z33 = seeds[4*id + 2];
-    z44 = seeds[4*id + 3];
+    //z11 = seeds[4*id];
+    //z22 = seeds[4*id + 1];
+    //z33 = seeds[4*id + 2];
+    //z44 = seeds[4*id + 3];
 
     
     for (int p = 0; p < numinit; ++p){
@@ -550,6 +550,7 @@ __kernel void ParamEstm(__global float* quaternion, __global float* mean, __glob
         z22 = retrnd.z2;
         z33 = retrnd.z3;
         z44 = retrnd.z4;*/
+        
         mu = (float4){2.0f,1.0f,3.0f,0.0f};
         kappa = 100.0f;
         mu = mu/modulus(mu);
@@ -624,7 +625,7 @@ __kernel void ParamEstm(__global float* quaternion, __global float* mean, __glob
 !
 !> @author Saransh Singh, Carnegie Mellon University
 !
-!> @brief perform inner product calculations for normalized images as a matrix multiplication
+!> @brief perform inner product calculations for normalized images as a matrix multiplication. Based on the nVidia SDK code https://developer.nvidia.com/opencl
 !
 !> @param exp experimental pattern chunk
 !> @param dict dictionary pattern chunk
