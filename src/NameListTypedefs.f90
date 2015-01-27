@@ -358,6 +358,7 @@ type DictIndxOpenCLListType
     integer(kind=irg)           :: totnumdict
     integer(kind=irg)           :: imght
     integer(kind=irg)           :: imgwd
+    integer(kind=irg)           :: nnk
     character(fnlen)            :: exptfile
     character(fnlen)            :: dictfile
     character(fnlen)            :: eulerfile

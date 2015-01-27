@@ -1339,19 +1339,21 @@ integer(kind=irg)                                           :: totnumexpt
 integer(kind=irg)                                           :: totnumdict
 integer(kind=irg)                                           :: imght
 integer(kind=irg)                                           :: imgwd
+integer(kind=irg)                                           :: nnk
 character(fnlen)                                            :: exptfile
 character(fnlen)                                            :: dictfile
 character(fnlen)                                            :: eulerfile
 
 ! define the IO namelist to facilitate passing variables to the program.
 namelist /DictIndxOpenCLvars/ numexptsingle, numdictsingle, totnumexpt, totnumdict,&
-        imght, imgwd, exptfile, dictfile, eulerfile
+        imght, imgwd, exptfile, dictfile, eulerfile, nnk
 
 ! set some of the input parameters to default values 
 numdictsingle = 1024
 numexptsingle = 1024
 imght = 0
 imgwd = 0
+nnk = 40
 exptfile = 'undefined'
 dictfile = 'undefined'
 eulerfile = 'undefined'
@@ -1403,6 +1405,7 @@ dictindxnl%dictfile = dictfile
 dictindxnl%eulerfile = eulerfile
 dictindxnl%totnumdict = totnumdict
 dictindxnl%totnumexpt = totnumexpt
+dictindxnl%nnk = nnk
 
 end subroutine GetDictIndxOpenCLNameList
 
