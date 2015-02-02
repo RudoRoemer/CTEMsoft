@@ -22,6 +22,8 @@ exptfile = 'undefined'
 ! name of the dictionary data set
 dictfile = 'undefined'
 ! name of the euler angle file
-eulerfile = 'undefined' 
+eulerfile = 'undefined'
+! Mean Subtraction switch
+MeanSubtraction = .TRUE. 
 
 /

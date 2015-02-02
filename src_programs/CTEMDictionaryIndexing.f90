@@ -40,7 +40,7 @@ IMPLICIT NONE
 character(fnlen)                          :: nmldeffile, progname, progdesc
 type(DictIndxOpenCLListType)              :: dictindxnl
 
-nmldeffile = 'CTEMInnerProdOpenCL.nml'
+nmldeffile = 'CTEMDictionaryIndexing.nml'
 progname = 'CTEMInnerProdOpenCL.f90'
 progdesc = 'Program to compute inner product of observed and calculated patterns on a GPU'
 
@@ -101,6 +101,7 @@ integer(kind=1),allocatable                         :: imagedict(:),imageexpt(:)
 integer(kind=4)                                     :: Ne
 integer(kind=4)                                     :: Nd
 integer(kind=4)                                     :: L
+logical                                             :: MeanSub
 integer(kind=irg)                                   :: totnumdict,numdictsingle,numexptsingle,imght,imgwd,totnumexpt,nnk
 integer(kind=4)                                     :: recordsize,filesize
 
@@ -176,6 +177,7 @@ numexptsingle = dictindxnl%numexptsingle
 imght = dictindxnl%imght
 imgwd = dictindxnl%imgwd
 nnk = dictindxnl%nnk
+MeanSub = dictindxnl%MeanSubtraction
 recordsize = 25 + L
 filesize = 948633600
 
@@ -213,12 +215,20 @@ prevauxarr = 0
 allocate(indexlist(1:numdictsingle*(floor(float(totnumdict)/float(numdictsingle))+1)),stat=istat)
 indexlist = 0
 
-do ii = 1,numdictsingle*(floor(float(totnumdict)/float(numdictsingle))+1)
+do ii = 1,numdictsingle*ceiling(float(totnumdict)/float(numdictsingle))
     indexlist(ii) = ii
 end do
 
 allocate(result(Ne*Nd),stat=istat)
 result = 0.0
+
+if (allocated(dict)) deallocate(dict)
+allocate(dict(Nd*L),stat=istat)
+dict = 0.0
+
+if (allocated(expt)) deallocate(expt)
+allocate(expt(Ne*L),stat=istat)
+expt = 0.0
 
 !=====================================
 ! I/O FOR EULER ANGLE FILE
@@ -244,60 +254,59 @@ open(unit=iunitdict,file=trim(dictindxnl%dictfile),status='old',form='unformatte
 call Message(' -> opening '//trim(dictindxnl%exptfile), frm = "(A)" )
 open(unit=iunitexpt,file=trim(dictindxnl%exptfile),status='old',form='unformatted',access='direct',recl=recordsize,iostat=ierr)
 
-!if (1 .eq. 0) then
+if (MeanSub .eqv. .TRUE.) then
 
-!$OMP PARALLEL PRIVATE(TID) 
-TID = OMP_GET_THREAD_NUM()
+!==================================================================
+! CALCULATING MEAN FOR BOTH DICTIONARY AND EXPERIMENTAL DATA SET
+!==================================================================
 
-if (TID .eq. 0) then
+    !$OMP PARALLEL PRIVATE(TID)
+    TID = OMP_GET_THREAD_NUM()
 
-    call Message(' -> Start calculating mean pattern for dictionary '//trim(dictindxnl%dictfile), frm = "(A)" )
+    if (TID .eq. 0) then
 
-    do ii = 1,totnumdict
-        read(iunitdict,rec=ii) imagedict
-        imagedictflt = float(imagedict)
-        do jj = 1,L
-            if (imagedictflt(jj) .lt. 0) imagedictflt(jj) = imagedictflt(jj)+255.0
+        call Message(' -> Start calculating mean pattern for dictionary '//trim(dictindxnl%dictfile), frm = "(A)" )
+
+        do ii = 1,totnumdict
+            read(iunitdict,rec=ii) imagedict
+            imagedictflt = float(imagedict)
+            do jj = 1,L
+                if (imagedictflt(jj) .lt. 0) imagedictflt(jj) = imagedictflt(jj)+255.0
+            end do
+            meandict = meandict+imagedictflt/sqrt(sum(imagedictflt**2))
         end do
-        meandict = meandict+imagedictflt
-    end do
-    meandict = meandict/totnumdict
-    meandict = meandict/sqrt(sum(meandict**2))
+        meandict = meandict/totnumdict
 
-    call Message(' -> Finished calculating mean pattern for dictionary pattern '//trim(dictindxnl%dictfile), frm = "(A)" )
+        call Message(' -> Finished calculating mean pattern for dictionary pattern '//trim(dictindxnl%dictfile), frm = "(A)" )
 
-else if (TID .eq. 1) then
+    else if (TID .eq. 1) then
 
-    call Message(' -> Start calculating mean pattern for observed patterns '//trim(dictindxnl%exptfile), frm = "(A)" )
+        call Message(' -> Start calculating mean pattern for observed patterns '//trim(dictindxnl%exptfile), frm = "(A)" )
 
-    do ii = 1,totnumexpt
-        read(iunitexpt,rec=ii) imageexpt
-        imageexptflt = float(imageexpt(26:recordsize))
-        do jj = 1,L
-            if (imageexptflt(jj) .lt. 0) imageexptflt(jj) = imageexptflt(jj)+255.0
+        do ii = 1,totnumexpt
+            read(iunitexpt,rec=ii) imageexpt
+            imageexptflt = float(imageexpt(26:recordsize))
+            do jj = 1,L
+                if (imageexptflt(jj) .lt. 0) imageexptflt(jj) = imageexptflt(jj)+255.0
+            end do
+            meanexpt = meanexpt+imageexptflt/sqrt(sum(imageexptflt**2))
         end do
-        meanexpt = meanexpt+imageexptflt
-    end do
-    meanexpt = meanexpt/totnumexpt
-    meanexpt = meanexpt/sqrt(sum(meanexpt**2))
+        meanexpt = meanexpt/totnumexpt
 
-    call Message(' -> Finished calculating mean pattern for observed patterns '//trim(dictindxnl%exptfile), frm = "(A)" )
-
-
-end if
+        call Message(' -> Finished calculating mean pattern for observed patterns '//trim(dictindxnl%exptfile), frm = "(A)" )
+    end if
 !$OMP BARRIER
 !$OMP END PARALLEL
-!end if
+end if
+
+!=====================================================
+! MAIN LOOP FOR EVALUATING DOT PRODUCTS AND INDEXING
+!=====================================================
 
 
 experimentalloop: do ll = 1,floor(float(totnumexpt)/float(numexptsingle))
-    state1 = 0
-    state2 = 0
 
-    if (allocated(expt)) deallocate(expt)
-    allocate(expt(Ne*L),stat=istat)
     expt = 0.0
-
 
     prevarr = 0.0
     prevauxarr = 0
@@ -309,21 +318,20 @@ experimentalloop: do ll = 1,floor(float(totnumexpt)/float(numexptsingle))
             if (imageexptflt(mm) .lt. 0) imageexptflt(mm) = imageexptflt(mm) + 255.0
         end do
         expt((ii-1)*L+1:ii*L) = (imageexptflt(1:L)/sqrt(sum(imageexptflt(1:L)**2)))-meanexpt
+        expt((ii-1)*L+1:ii*L) = expt((ii-1)*L+1:ii*L)/sqrt(sum(expt((ii-1)*L+1:ii*L)**2))
+
     end do
 
     state1 = 0
+    state2 = 0
     dictionaryloop: do kk = 1,ceiling(float(totnumdict)/float(numdictsingle))
-! Fork here
 
-!$OMP PARALLEL PRIVATE(TID) &
-!$OMP& SHARED(state1,result,dict)
+!$OMP PARALLEL PRIVATE(TID,ii) &
+!$OMP& SHARED(state1,state2,result,dict,expt,kk,nnk,prevauxarr,samples,dictlist,seed)
         TID = OMP_GET_THREAD_NUM()
+        !nthreads = OMP_GET_NUM_THREADS()
 !$OMP BARRIER
 !$OMP SINGLE
-            if (allocated(dict)) deallocate(dict)
-
-            allocate(dict(Nd*L),stat=istat)
-
             dict = 0.0
 
             if (kk .le. floor(float(totnumdict)/float(numdictsingle))) then
@@ -334,6 +342,9 @@ experimentalloop: do ll = 1,floor(float(totnumexpt)/float(numexptsingle))
                         if (imagedictflt(mm) .lt. 0) imagedictflt(mm) = imagedictflt(mm) + 255.0
                     end do
                     dict((ii-1)*L+1:ii*L) = (imagedictflt(1:L)/sqrt(sum(imagedictflt(1:L)**2))) - meandict
+
+                    dict((ii-1)*L+1:ii*L) = dict((ii-1)*L+1:ii*L)/sqrt(sum(dict((ii-1)*L+1:ii*L)**2))
+
                 end do
             else
                 do ii = 1,MODULO(totnumdict,numdictsingle)
@@ -344,52 +355,54 @@ experimentalloop: do ll = 1,floor(float(totnumexpt)/float(numexptsingle))
                         if (imagedictflt(mm) .lt. 0) imagedictflt(mm) = imagedictflt(mm) + 255.0
                     end do
                     dict((ii-1)*L+1:ii*L) = (imagedictflt(1:L)/sqrt(sum(imagedictflt(1:L)**2))) - meandict
+                    dict((ii-1)*L+1:ii*L) = dict((ii-1)*L+1:ii*L)/sqrt(sum(dict((ii-1)*L+1:ii*L)**2))
+
                 end do
             end if
 
 !$OMP END SINGLE
-!$OMP BARRIER
 
         if (TID .eq. 0) then
+            call InnerProdGPU(expt,dict,Ne,Nd,L,result,source,source_length)
+            state1 = 1
 
-                call InnerProdGPU(expt,dict,Ne,Nd,L,result,source,source_length)
-                state1 = 1
+            if (mod(kk,30) .eq. 0) then
+                write(6,'(A26,I7,A26,I7)'),'Completed dot product of',kk*1024,'dictionary patterns with',ll*1024,&
+                    'experimental patterns'
+
+            end if
+
 
         else if ((TID .eq. 1) .and. (state1 .eq. 1)) then
 
             state1 = 0
+
             do ii = 1,numexptsingle
                 arr(ii,1:numdictsingle) = result((ii-1)*numdictsingle+1:ii*numdictsingle)
                 auxarr(ii,:) = indexlist((kk-1)*numdictsingle+1:kk*numdictsingle)
                 call SortTopk(arr(ii,:),auxarr(ii,:),numdictsingle,prevarr(ii,1:nnk),prevauxarr(ii,1:nnk),nnk)
             end do
             if (kk .eq. ceiling(float(totnumdict)/float(numdictsingle))) then
+                write(6,'(A28,I7,A26,I7)'),'Completed dot product of all',totnumdict, 'dictionary patterns with',ll*1024,'experimental patterns'
+                write(6,'(A20)'),' -> Starting Indexing'
                 do jj = 1,numexptsingle
                     do ii = 1,nnk
-                        samples(1:4,ii) = eu2qu(eulerangles(prevauxarr(jj,ii),1:3)*cPi/180.D0)
+                        samples(1:4,ii) = eu2qu((cPi/180.D0)*eulerangles(prevauxarr(jj,ii),1:3))
                     end do
 
                     call DI_EMforVMF(samples, dictlist, nnk, seed, muhat, kappahat)
-                    write (*,*) 'mu    = ',muhat
-                    write (*,*) 'kappa = ',kappahat
-                    write (*,*) 'equivalent angular precision : ',180.D0*dacos(1.D0-1.D0/kappahat)/cPi
+                    !write (*,*) 'mu    = ',muhat
+                    !write (*,*) 'kappa = ',kappahat
+                    !write (*,*) 'equivalent angular precision : ',180.D0*dacos(1.D0-1.D0/kappahat)/cPi
                 end do
+                write(6,'(A20)'),'-> Finished Indexing'
             end if
-
         end if
 
 !$OMP BARRIER
 !$OMP END PARALLEL
 
-        if (mod(kk,30) .eq. 0) then
-            write(6,'(A26,I7,A26,I7)'),'Completed dot product of',kk*1024,'dictionary patterns with',ll*1024,'experimental patterns'
-        end if
-
-
     end do dictionaryloop
-
-
-    write(6,'(A28,I7,A26,I7)'),'Completed dot product of all',totnumdict, 'dictionary patterns with',ll*1024,'experimental patterns'
 
 end do experimentalloop
 

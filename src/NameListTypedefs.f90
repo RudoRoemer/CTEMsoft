@@ -362,6 +362,7 @@ type DictIndxOpenCLListType
     character(fnlen)            :: exptfile
     character(fnlen)            :: dictfile
     character(fnlen)            :: eulerfile
+    logical                     :: MeanSubtraction
 end type DictIndxOpenCLListType
 
 
