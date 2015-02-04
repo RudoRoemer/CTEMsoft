@@ -69,12 +69,12 @@ IMPLICIT NONE
 ! for all representations that involve the unit vector.
 
 ! uncomment these for an alternative way of doing things
-!real(kind=sgl), parameter :: epsijk = -1.0
-!real(kind=dbl), parameter :: epsijkd = -1.D0
+real(kind=sgl), parameter :: epsijk = -1.0
+real(kind=dbl), parameter :: epsijkd = -1.D0
 
 ! uncomment these for the Morawiec version.
-real(kind=sgl), parameter :: epsijk = 1.0
-real(kind=dbl), parameter :: epsijkd = 1.D0
+!real(kind=sgl), parameter :: epsijk = 1.0
+!real(kind=dbl), parameter :: epsijkd = 1.D0
 
 ! In the first case, epsijk=-1, the rotation 120@[111] will result in 
 ! an axis angle pair of [111], 2pi/3.  In the second case, the axis-angle 

@@ -405,12 +405,13 @@ end function VMFMeanDirDensity
 !> @details For all details, see following paper:
 !
 !> @param dict dictionary parameter pointer (must be declared in calling routine)
+!> @param fmode  'VMF' or 'WAT' for von Mises-Fisher and Watson distributions, respectively.
 !> @param full optional, if present duplicate all operators for +q and -q
 !
 !> @date 12/31/14 MDG 1.0 original
 !> @date 01/06/15 MDG 1.1 added optional argument full
 !--------------------------------------------------------------------------
-recursive subroutine DI_Init(dict,full)
+recursive subroutine DI_Init(dict,fmode,full)
 
 use local
 use typedefs
@@ -420,6 +421,7 @@ use math
 IMPLICIT NONE
 
 type(dicttype),pointer,INTENT(INOUT)    :: dict
+character(3),INTENT(IN)                 :: fmode
 logical,INTENT(IN),OPTIONAL             :: full
 
 integer(kind=irg)                       :: i, M
@@ -442,12 +444,12 @@ dict%prot = PGrot(dict%pgnum)
 ! for the q, -q duplicity... This is taken care of by the optional argument full
 !------------
 
+M=1
+dict%full = .FALSE.
+
 if (present(full)) then
-        M=2
-        dict%full = .TRUE.
-else
-        M=1
-        dict%full = .FALSE.
+  M=2
+  dict%full = .TRUE.
 end if
 
 ! identity operator is part of all point groups
@@ -551,18 +553,33 @@ select case (dict%prot)
                 call FatalError('InitDictionaryIndexing','unknown rotational point group number')
 end select
 
-
+! von Mises-Fisher mode:
 ! the next part of the initial Matlab code computes a lookup table for the parameter Ap(u) (Appendix in paper)
 ! this lookup table is only used when the ratio of the BesselI functions is between 0 and 0.95; for the 
 ! region between 0.95 and 1, we use an analytical approximation (see VMF_Mstep routine).
+!
+! Watson mode:
+! we've used a similar approach to create a lookup table for values of kappa that are smaller than 35, in
+! which case we use the standard ration of Kummer functions:  Kummer[3/2,3,k]/Kummer[1/2,2,k]/k.  For
+! larger kappa values, we have an expansion using the large argument behavior of the modified Bessel functions.
+! 
 dict%Apnum = 35000
 allocate(dict%xAp(dict%Apnum), dict%yAp(dict%Apnum))
 
-! define the xAp array
+  ! define the xAp array
 dict%xAp = (/ (0.001D0+dble(i-1)*0.001D0,i=1,dict%Apnum)  /)
-do i=1,dict%Apnum/2
-  dict%yAp(i) = BesselIn(dict%xAp(i), 2) / BesselI1(dict%xAp(i))
-end do
+
+if (fmode.eq.'VMF') then ! von Mises-Fisher distribution
+  do i=1,dict%Apnum
+    dict%yAp(i) = BesselIn(dict%xAp(i), 2) / BesselI1(dict%xAp(i))
+  end do
+else ! Watson distribution
+  do i=1,dict%Apnum
+    y1 = BesselI1(dict%xAp(i)*0.5D0)
+    y2 = BesselI0(dict%xAp(i)*0.5D0)
+    dict%yAp(i) = y1 / (y2-y1) / dict%xAp(i)
+  end do
+end if
 
 end subroutine DI_Init
 
@@ -673,7 +690,7 @@ do init=1,dict%Num_of_init
 
 ! and terminate if necessary
     if (i.ge.2) then 
-      if (abs(Q(i)-Q(i-1)).lt.0.05) then 
+      if (abs(Q(i)-Q(i-1)).lt.0.01) then 
         EXIT iloop
       end if
     end if
@@ -1142,5 +1159,433 @@ do ii = 1,k
 end do
 
 end subroutine CardIntersection
+
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+! the following routines have to do with the axial Watson distribution
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!
+! FUNCTION: WatsonDensity
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief computes the axial Watson density function
+!
+!> @param X input quaternion samples
+!> @param nums number of samples
+!> @param mu mean direction
+!> @param kappa concentration
+!> @param CW logCpW(kappa) (precomputed in calling routine)
+!
+!> @date 01/24/15 MDG 1.0 original
+!--------------------------------------------------------------------------
+recursive function WatsonDensity(X,nums,mu,kappa,CW) result(watson)
+
+use local
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(IN)               :: X(4,nums)
+integer(kind=irg),INTENT(IN)            :: nums
+real(kind=dbl),INTENT(IN)               :: mu(4)
+real(kind=dbl),INTENT(IN)               :: kappa
+real(kind=dbl),INTENT(IN)               :: CW
+real(kind=dbl)                          :: watson(nums)
+
+integer(kind=irg)                       :: j
+
+do j=1,nums
+ watson(j) = dexp(CW+kappa*dot_product(mu,X(1:4,j))**2)
+end do
+
+end function WatsonDensity
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: logCpW
+!
+!> @author Marc De Graef, Carnegie Mellon University 
+!
+!> @brief computes the logarithm of Cp for the Watson distribution function
+!
+!> @details For large value of kappa (>20), we use an approximation based on
+!> the large argument expansions for the modified Bessel functions
+!
+!> @param kappa input parameter
+!
+!> @date 01/25/15 MDG 1.0 original
+!--------------------------------------------------------------------------
+recursive function logCpW(kappa) result(lCpW)
+
+use local
+use constants
+use math 
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(IN)       :: kappa
+real(kind=dbl)                  :: lCpW
+
+! pre-computed constants
+real(kind=dbl),parameter        :: C2=5.4243952068443172530D0   ! C2 = ln(128*sqrt(pi))
+
+! for arguments larger than kappa=20, we use a simple numerical approximation
+if (kappa.gt.20.D0) then 
+  lCpW = kappa**4.5D0/(525.D0 + 4.D0*kappa*(45.D0 + 8.D0*kappa*(3.D0 + 4.D0*kappa)))
+  lCpW = C2 - kappa + dlog(lCpW)
+else 
+  lCpW = -kappa*0.5D0 - dlog( BesselI0(kappa*0.5D0) - BesselI1(kappa*0.5D0) )
+end if
+
+end function logCpW
+
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: DI_EMforWatson
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief Expectation maximization approach to maximum likelihood problem for mu and kappa, axial Watson distribution
+!
+!> @details For all details, see following paper:
+!
+!> @param X list of input quaternions
+!> @param dict dictionary parameter pointer (must be declared in calling routine)
+!> @param nums number of input quaternions
+!> @param seed for normal random number generator 
+!> @param muhat output mean orientation
+!> @param kappahat output concentration parameter
+!
+!> @date 01/25/15 MDG 1.0 original, based on Chen's original VMF implementation
+!--------------------------------------------------------------------------
+recursive subroutine DI_EMforWatson(X, dict, nums, seed, muhat, kappahat)
+
+use local
+use constants
+use typedefs
+use math! , only:r8vec_normal_01, r4_uniform_01          ! array of normal random numbers
+use quaternions
+use rotations, only:qu2ro               ! we only need to move to Rodrigues-Frank space
+use so3, only:IsinsideFZ                ! we only need to do a test ...
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(IN)               :: X(4,nums)
+type(dicttype),pointer,INTENT(INOUT)    :: dict
+integer(kind=irg),INTENT(IN)            :: nums
+integer(kind=irg),INTENT(INOUT)         :: seed
+real(kind=dbl),INTENT(OUT)              :: muhat(4)
+real(kind=dbl),INTENT(OUT)              :: kappahat
+
+integer(kind=irg)                       :: i, j, N, Pmdims, init, dd
+integer(kind=irg)                       :: FZtype, FZorder
+real(kind=dbl),allocatable              :: Mu_All(:,:), Kappa_All(:), R_All(:,:,:), L_All(:), &
+                                           R(:,:), Q(:), L(:)
+real(kind=dbl)                          :: Mu(4), PmMu(4), MuKa(5), Qi, Li, rod(4), qu(4), Kappa
+
+! In this routine, we perform the EM algorithm to obtain an estimate for the 
+! mean direction and concentration parameter of the axial Watson distribution
+! that models the statistics of the orientation point cloud for the case where
+! -q and q represent identical rotations (i.e., as is the case for quaternions)
+
+! array sizes (we use shorthand notations)
+N = nums
+Pmdims = dict%Nqsym
+
+! initialize some auxiliary arrays
+allocate(Mu_All(dict%Num_of_init,4), Kappa_All(dict%Num_of_init), &
+         R_All(N,Pmdims,dict%Num_of_init),L_All(dict%num_of_init))
+Mu_All = 0.D0
+Kappa_All = 0.D0
+R_All = 0.D0
+L_All = 0.D0
+
+
+! main loop (EM typically uses a few starting parameter sets to make sure we don't get stuck in a local maximum)
+do init=1,dict%Num_of_init 
+! create a vector to hold the results
+  allocate(R(N,Pmdims))
+  R = 0.D0
+
+! generate a normal random vector and normalize it as a starting guess for Mu (i.e., a unit quaternion)
+  call R8VEC_normal_01(4,seed,Mu)
+  Mu = Mu/cabs(Mu)
+
+! the CTEMsoft package only considers quaternions with positive first component, 
+! so we may need to change all the signs
+  if (Mu(1).lt.0.D0) Mu = -Mu
+
+! starting value for Kappa
+  Kappa = 30.D0
+
+! define the number of iterations and the Q and L function arrays
+  allocate (Q(dict%Num_of_iterations), L(dict%Num_of_iterations))
+  Q = 0.D0
+  L = 0.D0
+
+! and here we go with the EM iteration...
+! we use quaternion multiplication throughout instead of the matrix version in the Matlab version
+! quaternion multiplication has been verified against the 4x4 matrix multiplication of the Matlab code on 01/02/15 
+  iloop: do i=1,dict%Num_of_iterations 
+! E-step
+    R = Watson_Estep(X,dict,Pmdims,N,Mu,Kappa)
+! M-step
+    MuKa = Watson_Mstep(X,dict,Pmdims,N,R)
+! calculate the Q and Likelihood function values
+    call Watson_getQandL(X,dict,Pmdims,nums,MuKa,R,Qi,Li)
+    L(i) = Li
+    Q(i) = Qi
+
+! update the containers
+    Mu_All(init,1:4) = MuKa(1:4)
+    Kappa_All(init) = MuKa(5)
+    R_All(1:N,1:Pmdims,init) = R(1:N,1:Pmdims)
+    L_All(init) = L(i)
+    Mu = MuKa(1:4)
+    Kappa = MuKa(5)
+
+! and terminate if necessary
+    if (i.ge.2) then 
+      if (abs(Q(i)-Q(i-1)).lt.0.01) then 
+        EXIT iloop
+      end if
+    end if
+  end do iloop
+  deallocate(R,Q,L)
+end do
+
+dd = maxloc(L_All,1)
+Mu = Mu_all(dd,1:4)
+kappahat = Kappa_All(dd)
+
+! the CTEMsoft package only considers quaternions with positive first component, 
+! so we may need to change all the signs
+if (Mu(1).lt.0.D0) Mu = -Mu
+
+! the final step is to make sure that the resulting Mu lies in the same
+! fundamental zone that the dictionary elements are located in; since we start
+! the EM iterations from a random quaternion, there is no guarantee that the 
+! result lies in the same fundamental zone. Therefore, we cycle through all the 
+! equivalent quaternions, and stop as soon as we find one in the Rodrigues 
+! fundamental zone, which requires routines from the rotations and so3 modules. 
+FZtype = FZtarray(dict%pgnum)
+FZorder = FZoarray(dict%pgnum)
+
+FZloop: do i=1,Pmdims
+  qu = quat_mult(Mu,dict%Pm(1:4,i))
+  if (qu(1).lt.0.D0) qu = -qu
+  rod = qu2ro(qu)
+  if (IsinsideFZ(rod,FZtype,FZorder)) EXIT FZloop
+end do FZloop
+muhat = qu
+
+deallocate(Mu_All, Kappa_All, R_All, L_All)
+
+end subroutine DI_EMforWatson
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: Watson_Estep
+!
+!> @author Marc De Graef, Carnegie Mellon University / Yu-Hui Chen, U. Michigan
+!
+!> @brief computes the E step of the EM process, 
+!
+!> @param X list of input quaternions
+!> @param dict pointer to dictionary type
+!> @param Pmdims number of quaternion symmetry operators
+!> @param nums number of samples
+!> @param Mu current guess for mean quaternion
+!> @param Kappa input parameter
+!
+!> @date 01/01/15 MDG 1.0 original
+!> @date 01/06/15 MDG 1.1 added optional argument full
+!> @date 01/09/15 MDG 1.1 removed optional argument full (incorporated in dicttype)
+!--------------------------------------------------------------------------
+recursive function Watson_Estep(X,dict,Pmdims,nums,Mu,Kappa) result(R)
+
+use local
+use typedefs
+use quaternions
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(IN)               :: X(4,nums)
+type(dicttype),pointer,INTENT(IN)       :: dict
+integer(kind=irg),INTENT(IN)            :: Pmdims
+integer(kind=irg),INTENT(IN)            :: nums
+real(kind=dbl),INTENT(IN)               :: Mu(4)
+real(kind=dbl),INTENT(IN)               :: Kappa
+real(kind=dbl)                          :: R(nums,Pmdims)
+
+integer(kind=irg)                       :: j, i 
+real(kind=dbl)                          :: Rdenom(nums), PmMu(4), coshsum(nums), arg(nums), qu(4), C
+
+
+C = logCpW(kappa)
+! 
+do j=1,Pmdims
+    PmMu = quat_mult(Mu,dict%Pm(1:4,j))
+    R(1:nums,j) = WatsonDensity(X, nums, PmMu, Kappa, C)
+end do
+! and determine the normalization factors
+Rdenom = 1.D0/sum(R,2)
+
+do j=1,Pmdims 
+  R(1:nums,j) = R(1:nums,j)*Rdenom(1:nums)
+end do
+
+end function Watson_Estep
+
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: Watson_Mstep
+!
+!> @author Marc De Graef, Carnegie Mellon University / Yu-Hui Chen, U. Michigan
+!
+!> @brief computes the M step of the EM process for the Watson distribution
+!
+!> @param X list of input quaternions
+!> @param dict pointer to dictionary type
+!> @param Pmdims number of quaternion symmetry operators
+!> @param nums number of samples
+!> @param R weight factors form the E step
+!
+!> @date 01/01/15 MDG 1.0 original
+!> @date 01/06/15 MDG 1.1 added optional full parameter
+!> @date 01/09/15 MDG 1.2 removed optional argument full (incorporated in dicttype)
+!> @date 01/09/15 MDG 1.3 introduced accurate numerical approximation for kappa determination
+!--------------------------------------------------------------------------
+recursive function Watson_Mstep(X,dict,Pmdims,nums,R) result(MuKa)
+
+use local
+use typedefs
+use quaternions
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(IN)               :: X(4,nums)
+type(dicttype),pointer,INTENT(IN)       :: dict
+integer(kind=irg),INTENT(IN)            :: Pmdims
+integer(kind=irg),INTENT(IN)            :: nums
+real(kind=dbl),INTENT(IN)               :: R(nums,Pmdims)
+real(kind=dbl)                          :: MuKa(5)
+
+real(kind=dbl)                          :: diff(dict%Apnum), qu(4), y, Tscatt(4,4), tmp(4,4), D4k
+integer(kind=irg)                       :: minp, i, j
+
+! variables needed for the dsyev Lapack eigenvalue routine
+CHARACTER                               :: JOBZ, UPLO
+INTEGER                                 :: INFO, LDA, LWORK, NN
+DOUBLE PRECISION                        :: A( 4 , 4 ), W( 4 ), WORK( 20 )
+
+! here, we compute the modified scattering matrix Tscatt and compute its largest eigenvalue
+! under the assumption that kappa will always be positive for the types of problems that we
+! need to consider; we need to use the outer product, implemented using spread calls
+Tscatt = 0.D0
+do j=1,Pmdims 
+  do i=1,nums
+      qu = quat_mult(X(1:4,i),conjg(dict%Pm(1:4,j)))
+      tmp = spread(qu,dim=2,ncopies=4)*spread(qu,dim=1,ncopies=4)
+      Tscatt = Tscatt + R(i,j) * tmp
+  end do
+end do
+Tscatt = Tscatt/dble(nums)
+
+JOBZ = 'V'
+UPLO = 'U'
+NN = 4
+LDA = 4
+LWORK = 20
+
+A = Tscatt
+
+call DSYEV( JOBZ, UPLO, NN, A, LDA, W, WORK, LWORK, INFO )
+
+qu(1:4) = A(1:4,4)
+MuKa(1:4) = qu(1:4)
+
+! this next step comes from Mardia&Jupp; may need to be modified using Yu Hui's expression...
+D4k = dot_product(qu,matmul(Tscatt,qu))
+
+! and here we invert D4k to get an estimate of kappa
+if (D4k.ge.0.94D0) then
+  MuKa(5) = (5.D0*D4k-11.D0-dsqrt(39.D0-12.D0*D4k+9.D0*D4k**2))/(8.D0*(D4k-1.D0))
+else
+  diff = dabs( D4k - dict%yAp ) 
+  minp = minloc( diff, 1 )
+  if (minp.eq.1) minp = 2 
+  MuKa(5) = dict%xAp(minp)
+end if
+
+end function Watson_Mstep
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: Watson_getQandL
+!
+!> @author Yu-Hui Chen, U. Michigan / Marc De Graef, Carnegie Mellon University
+!
+!> @brief Computes the Q array and the log-likelihood array
+!
+!> @details For all details, see following paper:
+!
+!> @param X list of input quaternions
+!> @param dict dictionary parameter pointer (must be declared in calling routine)
+!> @param Pmdims number of quaternion symmetry operators to consider
+!> @param number of input quaternions
+!> @param MuKa  vector with Mu and Kappa
+!> @param R output from the E step
+!> @param Q output Q 
+!> @param L output L 
+!
+!> @date 01/01/15 MDG 1.0 original, based on Chen's Matlab version + simplifications
+!> @date 01.06/15 MDG 1.1 added optional full parameter
+!> @date 01/09/15 MDG 1.1 removed optional argument full (incorporated in dicttype)
+!> @date 02/04/15 MDG 2.0 new routine, derived from equivalent VMF routine
+!--------------------------------------------------------------------------
+recursive subroutine Watson_getQandL(X,dict,Pmdims,nums,MuKa,R,Q,L)
+
+use local
+use typedefs
+use quaternions
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(IN)               :: X(4,nums)
+type(dicttype),pointer,INTENT(INOUT)    :: dict
+integer(kind=irg),INTENT(IN)            :: Pmdims
+integer(kind=irg),INTENT(IN)            :: nums
+real(kind=dbl),INTENT(IN)               :: MuKa(5)
+real(kind=dbl),INTENT(IN)               :: R(nums,Pmdims)
+real(kind=dbl),INTENT(OUT)              :: Q
+real(kind=dbl),INTENT(OUT)              :: L
+
+real(kind=dbl)                          :: Phi(nums,Pmdims), PmMu(4), qu(4), C
+integer(kind=irg)                       :: j
+real(kind=dbl),parameter                :: eps = 0.00001D0
+
+  C = logCpW(MuKa(5))
+! compute the auxiliary Phi array
+  Phi = 0.D0
+  qu = MuKa(1:4)
+  do j=1,Pmdims
+    PmMu = quat_mult(dict%Pm(1:4,j), qu)
+    Phi(1:nums,j) = WatsonDensity(X, nums, PmMu, MuKa(5), C)
+  end do
+  Phi = Phi/dble(dict%Nqsym)
+
+! and convert the array into the Q and L parameters.
+  L = sum(dlog(sum(Phi,2)))
+  Q = sum(R*dlog(Phi+eps))
+
+end subroutine Watson_getQandL
+
 
 end module dictmod
