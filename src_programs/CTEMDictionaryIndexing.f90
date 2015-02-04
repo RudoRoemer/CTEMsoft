@@ -93,7 +93,7 @@ IMPLICIT NONE
 type(DictIndxOpenCLListType),INTENT(IN)             :: dictindxnl
 character(fnlen),INTENT(IN)                         :: progname
 
-real(kind=4),allocatable                            :: result(:)
+real(kind=4),allocatable                            :: result(:),resultcpy(:)
 real(kind=4),allocatable                            :: expt(:)
 real(kind=4),allocatable                            :: dict(:)
 real(kind=4),allocatable                            :: eulerangles(:,:),imagedictflt(:),imageexptflt(:),meandict(:),meanexpt(:)
@@ -120,7 +120,7 @@ real(kind=sgl),allocatable                          :: arr(:,:),prevarr(:,:)
 integer(kind=4),allocatable                         :: auxarr(:,:),prevauxarr(:,:),indexlist(:)
 type(cl_platform_id)                                :: platform
 type(cl_device_id)                                  :: device
-integer(kind=irg)                                   :: TID,state1,state2,nthreads
+integer(kind=irg)                                   :: TID,state1,state2,nthreads,index
 integer(kind=irg)                                   :: seed
 real(kind=dbl),allocatable                          :: samples(:,:)
 type(dicttype),pointer                              :: dictlist
@@ -128,14 +128,13 @@ real(kind=dbl)                                      :: q0, q1, q2, q3, muhat(4),
 integer(kind=irg)                                   :: t1,t2,rate,max
 
 seed = 432514
-allocate(samples(4,nnk),stat=istat)
 
 allocate(dictlist,stat=istat)
 dictlist%Num_of_init = 3
 dictlist%Num_of_iterations = 30
 dictlist%pgnum = 32
 
-call DI_Init(dictlist)
+call DI_Init(dictlist,.TRUE.)
 
 !=====================
 ! INITIALIZATION
@@ -219,8 +218,9 @@ do ii = 1,numdictsingle*ceiling(float(totnumdict)/float(numdictsingle))
     indexlist(ii) = ii
 end do
 
-allocate(result(Ne*Nd),stat=istat)
+allocate(result(Ne*Nd),resultcpy(Ne*Nd),stat=istat)
 result = 0.0
+resultcpy = 0.0
 
 if (allocated(dict)) deallocate(dict)
 allocate(dict(Nd*L),stat=istat)
@@ -229,6 +229,9 @@ dict = 0.0
 if (allocated(expt)) deallocate(expt)
 allocate(expt(Ne*L),stat=istat)
 expt = 0.0
+
+allocate(samples(4,nnk),stat=istat)
+samples = 0
 
 !=====================================
 ! I/O FOR EULER ANGLE FILE
@@ -295,7 +298,6 @@ if (MeanSub .eqv. .TRUE.) then
 
         call Message(' -> Finished calculating mean pattern for observed patterns '//trim(dictindxnl%exptfile), frm = "(A)" )
     end if
-!$OMP BARRIER
 !$OMP END PARALLEL
 end if
 
@@ -303,9 +305,7 @@ end if
 ! MAIN LOOP FOR EVALUATING DOT PRODUCTS AND INDEXING
 !=====================================================
 
-
 experimentalloop: do ll = 1,floor(float(totnumexpt)/float(numexptsingle))
-
     expt = 0.0
 
     prevarr = 0.0
@@ -324,15 +324,17 @@ experimentalloop: do ll = 1,floor(float(totnumexpt)/float(numexptsingle))
 
     state1 = 0
     state2 = 0
+
     dictionaryloop: do kk = 1,ceiling(float(totnumdict)/float(numdictsingle))
 
 !$OMP PARALLEL PRIVATE(TID,ii) &
-!$OMP& SHARED(state1,state2,result,dict,expt,kk,nnk,prevauxarr,samples,dictlist,seed)
+!$OMP& SHARED(state1,result,dict,prevarr,prevauxarr,expt,kk,nnk,resultcpy,arr,auxarr,samples,dictlist,seed,muhat,kappahat)
         TID = OMP_GET_THREAD_NUM()
         !nthreads = OMP_GET_NUM_THREADS()
-!$OMP BARRIER
 !$OMP SINGLE
+
             dict = 0.0
+            resultcpy = result
 
             if (kk .le. floor(float(totnumdict)/float(numdictsingle))) then
                 do ii = 1,numdictsingle
@@ -346,7 +348,7 @@ experimentalloop: do ll = 1,floor(float(totnumexpt)/float(numexptsingle))
                     dict((ii-1)*L+1:ii*L) = dict((ii-1)*L+1:ii*L)/sqrt(sum(dict((ii-1)*L+1:ii*L)**2))
 
                 end do
-            else
+            else if (kk .eq. ceiling(float(totnumdict)/float(numdictsingle))) then
                 do ii = 1,MODULO(totnumdict,numdictsingle)
 
                     read(iunitdict,rec=(kk-1)*numdictsingle+ii) imagedict
@@ -363,31 +365,33 @@ experimentalloop: do ll = 1,floor(float(totnumexpt)/float(numexptsingle))
 !$OMP END SINGLE
 
         if (TID .eq. 0) then
+
             call InnerProdGPU(expt,dict,Ne,Nd,L,result,source,source_length)
             state1 = 1
-
-            if (mod(kk,30) .eq. 0) then
-                write(6,'(A26,I7,A26,I7)'),'Completed dot product of',kk*1024,'dictionary patterns with',ll*1024,&
+print*,result(1:5)
+            if (mod(kk,floor(float(totnumdict)/float(numdictsingle)/10.0)) .eq. 0) then
+                write(6,'(A26,I7,A26,I7)'),'Completed dot product of',kk*numdictsingle,'dictionary patterns with',ll*numexptsingle,&
                     'experimental patterns'
 
             end if
+        end if
 
-
-        else if ((TID .eq. 1) .and. (state1 .eq. 1)) then
-
-            state1 = 0
-
+        if ((TID .eq. 1) .and. (state1 .eq. 1)) then
+            !state1 = 0
             do ii = 1,numexptsingle
-                arr(ii,1:numdictsingle) = result((ii-1)*numdictsingle+1:ii*numdictsingle)
+                arr(ii,1:numdictsingle) = resultcpy((ii-1)*numdictsingle+1:ii*numdictsingle)
                 auxarr(ii,:) = indexlist((kk-1)*numdictsingle+1:kk*numdictsingle)
                 call SortTopk(arr(ii,:),auxarr(ii,:),numdictsingle,prevarr(ii,1:nnk),prevauxarr(ii,1:nnk),nnk)
             end do
             if (kk .eq. ceiling(float(totnumdict)/float(numdictsingle))) then
-                write(6,'(A28,I7,A26,I7)'),'Completed dot product of all',totnumdict, 'dictionary patterns with',ll*1024,'experimental patterns'
-                write(6,'(A20)'),' -> Starting Indexing'
+                write(6,'(A28,I7,A26,I7)'),'Completed dot product of all',totnumdict,&
+                'dictionary patterns with',ll*numexptsingle,'experimental patterns'
+                write(6,'(A21)'),' -> Starting Indexing'
+
                 do jj = 1,numexptsingle
                     do ii = 1,nnk
-                        samples(1:4,ii) = eu2qu((cPi/180.D0)*eulerangles(prevauxarr(jj,ii),1:3))
+                        index = prevauxarr(jj,ii)
+                        samples(1:4,ii) = eu2qu((cPi/180.D0)*eulerangles(index,1:3))
                     end do
 
                     call DI_EMforVMF(samples, dictlist, nnk, seed, muhat, kappahat)
@@ -395,18 +399,17 @@ experimentalloop: do ll = 1,floor(float(totnumexpt)/float(numexptsingle))
                     !write (*,*) 'kappa = ',kappahat
                     !write (*,*) 'equivalent angular precision : ',180.D0*dacos(1.D0-1.D0/kappahat)/cPi
                 end do
-                write(6,'(A20)'),'-> Finished Indexing'
-            end if
-        end if
 
+                write(6,'(A21)'),' -> Finished Indexing'
+            end if
+
+        end if
 !$OMP BARRIER
 !$OMP END PARALLEL
 
     end do dictionaryloop
 
 end do experimentalloop
-
-
 
 end subroutine MasterSubroutine
 
