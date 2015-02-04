@@ -95,7 +95,7 @@ character(fnlen),INTENT(IN)                         :: progname
 
 real(kind=4),allocatable                            :: result(:),resultcpy(:)
 real(kind=4),allocatable                            :: expt(:)
-real(kind=4),allocatable                            :: dict(:)
+real(kind=4),allocatable                            :: dict(:),dicttranspose(:)
 real(kind=4),allocatable                            :: eulerangles(:,:),imagedictflt(:),imageexptflt(:),meandict(:),meanexpt(:)
 integer(kind=1),allocatable                         :: imagedict(:),imageexpt(:)
 integer(kind=4)                                     :: Ne
@@ -120,6 +120,9 @@ real(kind=sgl),allocatable                          :: arr(:,:),prevarr(:,:)
 integer(kind=4),allocatable                         :: auxarr(:,:),prevauxarr(:,:),indexlist(:)
 type(cl_platform_id)                                :: platform
 type(cl_device_id)                                  :: device
+type(cl_context)                                    :: context
+type(cl_command_queue)                              :: command_queue
+type(cl_mem)                                        :: cl_expt,cl_dict
 integer(kind=irg)                                   :: TID,state1,state2,nthreads,index
 integer(kind=irg)                                   :: seed
 real(kind=dbl),allocatable                          :: samples(:,:)
@@ -150,6 +153,14 @@ if(ierr /= CL_SUCCESS) stop "Cannot get CL device."
 ! get the device name and print it
 call clGetDeviceInfo(device, CL_DEVICE_NAME, info, ierr)
 write(6,*) "CL device: ", info
+
+! create the context and the command queue
+context = clCreateContext(platform, device, ierr)
+if(ierr /= CL_SUCCESS) stop "Cannot create context"
+
+command_queue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, ierr)
+if(ierr /= CL_SUCCESS) stop "Cannot create command queue"
+
 
 call getenv("CTEMsoft2013opencl",openclpathname)
 open(unit = iunit, file = trim(openclpathname)//'/DictIndx.cl', access='direct', status = 'old', &
@@ -226,12 +237,23 @@ if (allocated(dict)) deallocate(dict)
 allocate(dict(Nd*L),stat=istat)
 dict = 0.0
 
+if (allocated(dicttranspose)) deallocate(dicttranspose)
+allocate(dicttranspose(Nd*L),stat=istat)
+dicttranspose = 0.0
+
 if (allocated(expt)) deallocate(expt)
 allocate(expt(Ne*L),stat=istat)
 expt = 0.0
 
 allocate(samples(4,nnk),stat=istat)
 samples = 0
+
+! allocate device memory
+cl_expt = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_expt, ierr)
+if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for experimental data.'
+
+cl_dict = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_dict, ierr)
+if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for dictionary data.'
 
 !=====================================
 ! I/O FOR EULER ANGLE FILE
@@ -322,6 +344,8 @@ experimentalloop: do ll = 1,floor(float(totnumexpt)/float(numexptsingle))
 
     end do
 
+    call clEnqueueWriteBuffer(command_queue, cl_expt, cl_bool(.true.), 0_8, size_in_bytes_expt, expt(1), ierr)
+    if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
     state1 = 0
     state2 = 0
 
@@ -362,13 +386,27 @@ experimentalloop: do ll = 1,floor(float(totnumexpt)/float(numexptsingle))
                 end do
             end if
 
+            dicttranspose = 0.0
+
+            do ii = 1,L
+                do jj = 1,Nd
+                    dicttranspose((ii-1)*Nd+jj) = dict((jj-1)*L+ii)
+                end do
+            end do
+
+            call clEnqueueWriteBuffer(command_queue, cl_dict, cl_bool(.true.), 0_8, size_in_bytes_dict, dicttranspose(1), ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
+
+
 !$OMP END SINGLE
 
         if (TID .eq. 0) then
-
-            call InnerProdGPU(expt,dict,Ne,Nd,L,result,source,source_length)
+!call system_clock(t1,rate,max)
+            call InnerProdGPU(cl_expt,cl_dict,Ne,Nd,L,result,source,source_length,platform,device,context,command_queue)
+!call system_clock(t2,rate,max)
+!print*,'Time take for kernel call = ',float(t2-t1)/float(rate)
+!print*,result(1:5)
             state1 = 1
-print*,result(1:5)
             if (mod(kk,floor(float(totnumdict)/float(numdictsingle)/10.0)) .eq. 0) then
                 write(6,'(A26,I7,A26,I7)'),'Completed dot product of',kk*numdictsingle,'dictionary patterns with',ll*numexptsingle,&
                     'experimental patterns'
@@ -410,6 +448,12 @@ print*,result(1:5)
     end do dictionaryloop
 
 end do experimentalloop
+
+call clReleaseCommandQueue(command_queue, ierr)
+call clReleaseContext(context, ierr)
+call clReleaseMemObject(cl_expt, ierr)
+call clReleaseMemObject(cl_dict, ierr)
+
 
 end subroutine MasterSubroutine
 
@@ -494,7 +538,7 @@ end subroutine
 !> @date 12/09/14  SS 1.0 original
 !> @date 27/01/15  SS 1.1 modified to call the subroutine from mastersubroutine
 !--------------------------------------------------------------------------
-subroutine InnerProdGPU(expt,dict,Ne,Nd,L,result,source,source_length)
+subroutine InnerProdGPU(cl_expt,cl_dict,Ne,Nd,L,result,source,source_length,platform,device,context,command_queue)
 
 use local
 use cl
@@ -502,21 +546,22 @@ use cl
 IMPLICIT NONE
 
 real(kind=4),INTENT(OUT)                            :: result(Ne*Nd)
-real(kind=4),INTENT(IN)                             :: expt(Ne*L)
-real(kind=4),INTENT(IN)                             :: dict(Nd*L)
+type(cl_mem),INTENT(INOUT)                          :: cl_expt
+type(cl_mem),INTENT(INOUT)                          :: cl_dict
+
 integer(kind=4),INTENT(IN)                          :: Ne
 integer(kind=4),INTENT(IN)                          :: Nd
 integer(kind=4),INTENT(IN)                          :: L
 character(len=source_length),INTENT(IN)             :: source
 integer(kind=4),INTENT(IN)                          :: source_length
+type(cl_platform_id),INTENT(IN)                     :: platform
+type(cl_device_id),INTENT(INOUT)                    :: device
+type(cl_context),INTENT(INOUT)                      :: context
+type(cl_command_queue),INTENT(INOUT)                :: command_queue
 
-type(cl_platform_id)                                :: platform
-type(cl_device_id)                                  :: device
-type(cl_context)                                    :: context
-type(cl_command_queue)                              :: command_queue
 type(cl_program)                                    :: prog
 type(cl_kernel)                                     :: kernel
-type(cl_mem)                                        :: cl_expt,cl_dict,cl_result
+type(cl_mem)                                        :: cl_result
 type(cl_event)                                      :: event
 
 real(kind=4)                                        :: dicttranspose(Nd*L)
@@ -529,8 +574,8 @@ integer(kind=4)                                     :: num,ierr,istat,irec,Wexp,
 integer(kind=8)                                     :: size_in_bytes_expt,size_in_bytes_dict,size_in_bytes_result
 real(kind=sgl)                                      :: res(Ne,Nd),exptsr(Ne,L),dictsr(Nd,L)
 
-size_in_bytes_expt = L*Ne*sizeof(L)
-size_in_bytes_dict = L*Nd*sizeof(L)
+!size_in_bytes_expt = L*Ne*sizeof(L)
+!size_in_bytes_dict = L*Nd*sizeof(L)
 size_in_bytes_result = Ne*Nd*sizeof(result(1))
 Wexp = L
 Wdict = Nd
@@ -543,17 +588,17 @@ globalsize = (/Ne,Nd/)
 ! INITIALIZATION
 !=====================
 ! get the platform ID
-call clGetPlatformIDs(platform, num, ierr)
-if(ierr /= CL_SUCCESS) stop "Cannot get CL platform."
+!call clGetPlatformIDs(platform, num, ierr)
+!if(ierr /= CL_SUCCESS) stop "Cannot get CL platform."
 ! get the device ID
-call clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, device, num, ierr)
-if(ierr /= CL_SUCCESS) stop "Cannot get CL device."
+!call clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, device, num, ierr)
+!if(ierr /= CL_SUCCESS) stop "Cannot get CL device."
 ! create the context and the command queue
-context = clCreateContext(platform, device, ierr)
-if(ierr /= CL_SUCCESS) stop "Cannot create context"
+!context = clCreateContext(platform, device, ierr)
+!if(ierr /= CL_SUCCESS) stop "Cannot create context"
 
-command_queue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, ierr)
-if(ierr /= CL_SUCCESS) stop "Cannot create command queue"
+!command_queue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, ierr)
+!if(ierr /= CL_SUCCESS) stop "Cannot create command queue"
 
 
 !=====================
@@ -580,17 +625,17 @@ kernel = clCreateKernel(prog, 'InnerProd', ierr)
 call clReleaseProgram(prog, ierr)
 !print*,'First three values in expt is ',expt(1:3)
 ! allocate device memory
-cl_expt = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_expt, ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+!cl_expt = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_expt, ierr)
+!if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
 
-cl_dict = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_dict, ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+!cl_dict = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_dict, ierr)
+!if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
 
 cl_result = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_result, ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for result.'
 
-call clEnqueueWriteBuffer(command_queue, cl_expt, cl_bool(.true.), 0_8, size_in_bytes_expt, expt(1), ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
+!call clEnqueueWriteBuffer(command_queue, cl_expt, cl_bool(.true.), 0_8, size_in_bytes_expt, expt(1), ierr)
+!if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
 
 !if (ll .eq. 1) then
 !do ii = 1,numexptsingle
@@ -608,13 +653,13 @@ if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
 !end do
 !close(13)
 !end if
-dicttranspose = 0.0
+!dicttranspose = 0.0
 
-do ii = 1,L
-    do jj = 1,Nd
-        dicttranspose((ii-1)*Nd+jj) = dict((jj-1)*L+ii)
-    end do
-end do
+!do ii = 1,L
+!    do jj = 1,Nd
+!        dicttranspose((ii-1)*Nd+jj) = dict((jj-1)*L+ii)
+!    end do
+!end do
 
 !if (kk .eq. 1) then
 !imagedictflt = dict(91*L+1:92*L)
@@ -628,8 +673,8 @@ end do
 !close(13)
 !end if
 
-call clEnqueueWriteBuffer(command_queue, cl_dict, cl_bool(.true.), 0_8, size_in_bytes_dict, dicttranspose(1), ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
+!call clEnqueueWriteBuffer(command_queue, cl_dict, cl_bool(.true.), 0_8, size_in_bytes_dict, dicttranspose(1), ierr)
+!if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
 
 ! set kernel argument
 call clSetKernelArg(kernel, 0, cl_expt, ierr)
@@ -670,10 +715,10 @@ call clEnqueueReadBuffer(command_queue, cl_result, cl_bool(.true.), 0_8, size_in
 
 !print*,result(1)
 call clReleaseKernel(kernel, ierr)
-call clReleaseCommandQueue(command_queue, ierr)
-call clReleaseContext(context, ierr)
-call clReleaseMemObject(cl_expt, ierr)
-call clReleaseMemObject(cl_dict, ierr)
+!call clReleaseCommandQueue(command_queue, ierr)
+!call clReleaseContext(context, ierr)
+!call clReleaseMemObject(cl_expt, ierr)
+!call clReleaseMemObject(cl_dict, ierr)
 call clReleaseMemObject(cl_result, ierr)
 
 end subroutine InnerProdGPU
