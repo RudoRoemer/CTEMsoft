@@ -82,8 +82,8 @@ use typedefs
 use files
 use io
 use dictmod
-use others
-use rotations
+use others, only: SSORT
+use rotations, only: eu2qu,qu2eu
 use constants
 use cl
 use omp_lib
@@ -129,6 +129,8 @@ real(kind=dbl),allocatable                          :: samples(:,:)
 type(dicttype),pointer                              :: dictlist
 real(kind=dbl)                                      :: q0, q1, q2, q3, muhat(4), kappahat, qu(4)
 integer(kind=irg)                                   :: t1,t2,rate,max
+real(kind=4),allocatable                            :: resultarray(:,:)
+integer(kind=4),allocatable                         :: indexarray(:,:)
 
 seed = 432514
 
@@ -193,11 +195,22 @@ filesize = 948633600
 
 size_in_bytes_expt = L*Ne*sizeof(L)
 size_in_bytes_dict = L*Nd*sizeof(L)
-size_in_bytes_result = Ne*Nd*sizeof(result(1))!Ne*Nd*sizeof(L)
+!size_in_bytes_result = Ne*Nd*sizeof(result(1))!Ne*Nd*sizeof(L)
 Wexp = L
 Wdict = Nd
 localsize = (/16,16/)
 globalsize = (/Ne,Nd/)
+
+allocate(resultarray(numdictsingle*ceiling(float(totnumdict)/float(numdictsingle)),numexptsingle),stat=istat)
+resultarray = 0.0
+
+if (istat .ne. 0) stop 'Could not allocate big result array'
+
+allocate(indexarray(numdictsingle*ceiling(float(totnumdict)/float(numdictsingle)),numexptsingle),stat=istat)
+indexarray = 0
+
+if (istat .ne. 0) stop 'Could not allocate big result array'
+
 
 allocate(imagedict(imgwd*imght),imageexpt(recordsize),stat=istat)
 imagedict = 0
@@ -214,13 +227,13 @@ meandict = 0.0
 allocate(eulerangles(totnumdict,3),stat=istat)
 eulerangles = 0.0
 
-allocate(arr(numexptsingle,numdictsingle),auxarr(numexptsingle,numdictsingle),stat=istat)
-arr = 0.0
-auxarr = 0
+!allocate(arr(numexptsingle,numdictsingle),auxarr(numexptsingle,numdictsingle),stat=istat)
+!arr = 0.0
+!auxarr = 0
 
-allocate(prevarr(numexptsingle,nnk),prevauxarr(numexptsingle,nnk),stat=istat)
-prevarr = 0.0
-prevauxarr = 0
+!allocate(prevarr(numexptsingle,nnk),prevauxarr(numexptsingle,nnk),stat=istat)
+!prevarr = 0.0
+!prevauxarr = 0
 
 allocate(indexlist(1:numdictsingle*(floor(float(totnumdict)/float(numdictsingle))+1)),stat=istat)
 indexlist = 0
@@ -228,6 +241,7 @@ indexlist = 0
 do ii = 1,numdictsingle*ceiling(float(totnumdict)/float(numdictsingle))
     indexlist(ii) = ii
 end do
+
 
 allocate(result(Ne*Nd),resultcpy(Ne*Nd),stat=istat)
 result = 0.0
@@ -279,19 +293,18 @@ open(unit=iunitdict,file=trim(dictindxnl%dictfile),status='old',form='unformatte
 call Message(' -> opening '//trim(dictindxnl%exptfile), frm = "(A)" )
 open(unit=iunitexpt,file=trim(dictindxnl%exptfile),status='old',form='unformatted',access='direct',recl=recordsize,iostat=ierr)
 
-if (MeanSub .eqv. .TRUE.) then
-
 !==================================================================
 ! CALCULATING MEAN FOR BOTH DICTIONARY AND EXPERIMENTAL DATA SET
 !==================================================================
 
-    !$OMP PARALLEL PRIVATE(TID)
+if (MeanSub .eqv. .TRUE.) then
+
+!$OMP PARALLEL PRIVATE(TID,imagedict,imagedictflt) &
+!$OMP& SHARED(meandict,meanexpt)
     TID = OMP_GET_THREAD_NUM()
 
     if (TID .eq. 0) then
-
         call Message(' -> Start calculating mean pattern for dictionary '//trim(dictindxnl%dictfile), frm = "(A)" )
-
         do ii = 1,totnumdict
             read(iunitdict,rec=ii) imagedict
             imagedictflt = float(imagedict)
@@ -301,13 +314,12 @@ if (MeanSub .eqv. .TRUE.) then
             meandict = meandict+imagedictflt/sqrt(sum(imagedictflt**2))
         end do
         meandict = meandict/totnumdict
-
         call Message(' -> Finished calculating mean pattern for dictionary pattern '//trim(dictindxnl%dictfile), frm = "(A)" )
+    end if
 
-    else if (TID .eq. 1) then
 
+    if (TID .eq. 1) then
         call Message(' -> Start calculating mean pattern for observed patterns '//trim(dictindxnl%exptfile), frm = "(A)" )
-
         do ii = 1,totnumexpt
             read(iunitexpt,rec=ii) imageexpt
             imageexptflt = float(imageexpt(26:recordsize))
@@ -317,7 +329,6 @@ if (MeanSub .eqv. .TRUE.) then
             meanexpt = meanexpt+imageexptflt/sqrt(sum(imageexptflt**2))
         end do
         meanexpt = meanexpt/totnumexpt
-
         call Message(' -> Finished calculating mean pattern for observed patterns '//trim(dictindxnl%exptfile), frm = "(A)" )
     end if
 !$OMP END PARALLEL
@@ -327,22 +338,35 @@ end if
 ! MAIN LOOP FOR EVALUATING DOT PRODUCTS AND INDEXING
 !=====================================================
 
-experimentalloop: do ll = 1,floor(float(totnumexpt)/float(numexptsingle))
+experimentalloop: do ll = 1,ceiling(float(totnumexpt)/float(numexptsingle))
+
     expt = 0.0
+    resultarray = 0
+    indexarray = 0
 
-    prevarr = 0.0
-    prevauxarr = 0
-
-    do ii = 1,numexptsingle
-        read(iunitexpt,rec=(ll-1)*numexptsingle+ii) imageexpt
-        imageexptflt = float(imageexpt(26:recordsize))
-        do mm = 1,L
-            if (imageexptflt(mm) .lt. 0) imageexptflt(mm) = imageexptflt(mm) + 255.0
+    if (ll .le. floor(float(totnumexpt)/float(numexptsingle))) then
+        do ii = 1,numexptsingle
+            read(iunitexpt,rec=(ll-1)*numexptsingle+ii) imageexpt
+            imageexptflt = float(imageexpt(26:recordsize))
+            do mm = 1,L
+                if (imageexptflt(mm) .lt. 0) imageexptflt(mm) = imageexptflt(mm) + 255.0
+            end do
+            expt((ii-1)*L+1:ii*L) = (imageexptflt(1:L)/sqrt(sum(imageexptflt(1:L)**2)))-meanexpt
+            expt((ii-1)*L+1:ii*L) = expt((ii-1)*L+1:ii*L)/sqrt(sum(expt((ii-1)*L+1:ii*L)**2))
         end do
-        expt((ii-1)*L+1:ii*L) = (imageexptflt(1:L)/sqrt(sum(imageexptflt(1:L)**2)))-meanexpt
-        expt((ii-1)*L+1:ii*L) = expt((ii-1)*L+1:ii*L)/sqrt(sum(expt((ii-1)*L+1:ii*L)**2))
 
-    end do
+    else if (ll .eq. ceiling(float(totnumexpt)/float(numexptsingle))) then
+        do ii = 1,MODULO(totnumexpt,numexptsingle)
+            read(iunitexpt,rec=(ll-1)*numexptsingle+ii) imageexpt
+            imageexptflt = float(imageexpt(26:recordsize))
+            do mm = 1,L
+                if (imageexptflt(mm) .lt. 0) imageexptflt(mm) = imageexptflt(mm) + 255.0
+            end do
+            expt((ii-1)*L+1:ii*L) = (imageexptflt(1:L)/sqrt(sum(imageexptflt(1:L)**2)))-meanexpt
+            expt((ii-1)*L+1:ii*L) = expt((ii-1)*L+1:ii*L)/sqrt(sum(expt((ii-1)*L+1:ii*L)**2))
+        end do
+    end if
+
 
     call clEnqueueWriteBuffer(command_queue, cl_expt, cl_bool(.true.), 0_8, size_in_bytes_expt, expt(1), ierr)
     if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
@@ -351,101 +375,85 @@ experimentalloop: do ll = 1,floor(float(totnumexpt)/float(numexptsingle))
 
     dictionaryloop: do kk = 1,ceiling(float(totnumdict)/float(numdictsingle))
 
-!$OMP PARALLEL PRIVATE(TID,ii) &
-!$OMP& SHARED(state1,result,dict,prevarr,prevauxarr,expt,kk,nnk,resultcpy,arr,auxarr,samples,dictlist,seed,muhat,kappahat)
-        TID = OMP_GET_THREAD_NUM()
-        !nthreads = OMP_GET_NUM_THREADS()
-!$OMP SINGLE
+        dict = 0.0
 
-            dict = 0.0
-            resultcpy = result
-
-            if (kk .le. floor(float(totnumdict)/float(numdictsingle))) then
-                do ii = 1,numdictsingle
-                    read(iunitdict,rec=(kk-1)*numdictsingle+ii) imagedict
-                    imagedictflt = float(imagedict)
-                    do mm = 1,L
-                        if (imagedictflt(mm) .lt. 0) imagedictflt(mm) = imagedictflt(mm) + 255.0
-                    end do
-                    dict((ii-1)*L+1:ii*L) = (imagedictflt(1:L)/sqrt(sum(imagedictflt(1:L)**2))) - meandict
-
-                    dict((ii-1)*L+1:ii*L) = dict((ii-1)*L+1:ii*L)/sqrt(sum(dict((ii-1)*L+1:ii*L)**2))
-
+        if (kk .le. floor(float(totnumdict)/float(numdictsingle))) then
+            do ii = 1,numdictsingle
+                read(iunitdict,rec=(kk-1)*numdictsingle+ii) imagedict
+                imagedictflt = float(imagedict)
+                do mm = 1,L
+                    if (imagedictflt(mm) .lt. 0) imagedictflt(mm) = imagedictflt(mm) + 255.0
                 end do
-            else if (kk .eq. ceiling(float(totnumdict)/float(numdictsingle))) then
-                do ii = 1,MODULO(totnumdict,numdictsingle)
+                dict((ii-1)*L+1:ii*L) = (imagedictflt(1:L)/sqrt(sum(imagedictflt(1:L)**2))) - meandict
 
-                    read(iunitdict,rec=(kk-1)*numdictsingle+ii) imagedict
-                    imagedictflt = float(imagedict)
-                    do mm = 1,L
-                        if (imagedictflt(mm) .lt. 0) imagedictflt(mm) = imagedictflt(mm) + 255.0
-                    end do
-                    dict((ii-1)*L+1:ii*L) = (imagedictflt(1:L)/sqrt(sum(imagedictflt(1:L)**2))) - meandict
-                    dict((ii-1)*L+1:ii*L) = dict((ii-1)*L+1:ii*L)/sqrt(sum(dict((ii-1)*L+1:ii*L)**2))
+                dict((ii-1)*L+1:ii*L) = dict((ii-1)*L+1:ii*L)/sqrt(sum(dict((ii-1)*L+1:ii*L)**2))
 
-                end do
-            end if
-
-            dicttranspose = 0.0
-
-            do ii = 1,L
-                do jj = 1,Nd
-                    dicttranspose((ii-1)*Nd+jj) = dict((jj-1)*L+ii)
-                end do
             end do
+        else if (kk .eq. ceiling(float(totnumdict)/float(numdictsingle))) then
+            do ii = 1,MODULO(totnumdict,numdictsingle)
 
-            call clEnqueueWriteBuffer(command_queue, cl_dict, cl_bool(.true.), 0_8, size_in_bytes_dict, dicttranspose(1), ierr)
-            if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
+                read(iunitdict,rec=(kk-1)*numdictsingle+ii) imagedict
+                imagedictflt = float(imagedict)
+                do mm = 1,L
+                    if (imagedictflt(mm) .lt. 0) imagedictflt(mm) = imagedictflt(mm) + 255.0
+                end do
+                dict((ii-1)*L+1:ii*L) = (imagedictflt(1:L)/sqrt(sum(imagedictflt(1:L)**2))) - meandict
+                dict((ii-1)*L+1:ii*L) = dict((ii-1)*L+1:ii*L)/sqrt(sum(dict((ii-1)*L+1:ii*L)**2))
 
+            end do
+        end if
 
-!$OMP END SINGLE
+        dicttranspose = 0.0
 
-        if (TID .eq. 0) then
-!call system_clock(t1,rate,max)
-            call InnerProdGPU(cl_expt,cl_dict,Ne,Nd,L,result,source,source_length,platform,device,context,command_queue)
-!call system_clock(t2,rate,max)
-!print*,'Time take for kernel call = ',float(t2-t1)/float(rate)
-!print*,result(1:5)
-            state1 = 1
-            if (mod(kk,floor(float(totnumdict)/float(numdictsingle)/10.0)) .eq. 0) then
-                write(6,'(A26,I7,A26,I7)'),'Completed dot product of',kk*numdictsingle,'dictionary patterns with',ll*numexptsingle,&
+        do ii = 1,L
+            do jj = 1,Nd
+                dicttranspose((ii-1)*Nd+jj) = dict((jj-1)*L+ii)
+            end do
+        end do
+
+        call clEnqueueWriteBuffer(command_queue, cl_dict, cl_bool(.true.), 0_8, size_in_bytes_dict, dicttranspose(1), ierr)
+        if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
+
+        call InnerProdGPU(cl_expt,cl_dict,Ne,Nd,L,result,source,source_length,platform,device,context,command_queue)
+
+        if (mod(kk,floor(float(totnumdict)/float(numdictsingle)/10.0)) .eq. 0) then
+            write(6,'(A26,I7,A26,I7)'),'Completed dot product of',kk*numdictsingle,'dictionary patterns with',ll*numexptsingle,&
                     'experimental patterns'
-
-            end if
         end if
 
-        if ((TID .eq. 1) .and. (state1 .eq. 1)) then
-            !state1 = 0
-            do ii = 1,numexptsingle
-                arr(ii,1:numdictsingle) = resultcpy((ii-1)*numdictsingle+1:ii*numdictsingle)
-                auxarr(ii,:) = indexlist((kk-1)*numdictsingle+1:kk*numdictsingle)
-                call SortTopk(arr(ii,:),auxarr(ii,:),numdictsingle,prevarr(ii,1:nnk),prevauxarr(ii,1:nnk),nnk)
-            end do
-            if (kk .eq. ceiling(float(totnumdict)/float(numdictsingle))) then
-                write(6,'(A28,I7,A26,I7)'),'Completed dot product of all',totnumdict,&
-                'dictionary patterns with',ll*numexptsingle,'experimental patterns'
-                write(6,'(A21)'),' -> Starting Indexing'
+        do ii = 1,numexptsingle
+            resultarray((kk-1)*numdictsingle+1:kk*numdictsingle,ii) = result((ii-1)*numdictsingle+1:ii*numdictsingle)
+        end do
 
-                do jj = 1,numexptsingle
-                    do ii = 1,nnk
-                        index = prevauxarr(jj,ii)
-                        samples(1:4,ii) = eu2qu((cPi/180.D0)*eulerangles(index,1:3))
-                    end do
-
-                    call DI_EMforVMF(samples, dictlist, nnk, seed, muhat, kappahat)
-                    !write (*,*) 'mu    = ',muhat
-                    !write (*,*) 'kappa = ',kappahat
-                    !write (*,*) 'equivalent angular precision : ',180.D0*dacos(1.D0-1.D0/kappahat)/cPi
-                end do
-
-                write(6,'(A21)'),' -> Finished Indexing'
-            end if
-
-        end if
-!$OMP BARRIER
-!$OMP END PARALLEL
 
     end do dictionaryloop
+
+    write(6,'(A28,I7,A26,I7)'),'Completed dot product of all',totnumdict,&
+    'dictionary patterns with',ll*numexptsingle,'experimental patterns'
+
+    write(6,'(A41,I8,A8)'),' -> Starting sorting and indexing of the',numexptsingle,'patterns'
+!$OMP PARALLEL PRIVATE(TID,arr,auxarr,prevarr,prevauxarr,index,samples,muhat,kappahat) &
+!$OMP& SHARED(indexlist,nthreads)
+    TID = OMP_GET_THREAD_NUM()
+    nthreads = OMP_GET_NUM_THREADS()
+    if (TID .eq. 0) write(6,'(A20,I3)'),'Number of threads =',nthreads
+
+!$OMP DO SCHEDULE(DYNAMIC)
+    do ii = 1,numexptsingle
+        indexarray(:,ii) = indexlist(:)
+        call SSORT(resultarray(:,ii),indexarray(:,ii),numdictsingle*ceiling(float(totnumdict)/float(numdictsingle)),-2)
+        do jj = 1,nnk
+            index = indexarray(jj,ii)
+            samples(1:4,jj) = eu2qu((cPi/180.D0)*eulerangles(index,1:3))
+        end do
+        call DI_EMforVMF(samples, dictlist, nnk, seed, muhat, kappahat)
+        !write (*,*) 'mu    = ',muhat
+        !write (*,*) 'kappa = ',kappahat
+        !write (*,*) 'equivalent angular precision : ',180.D0*dacos(1.D0-1.D0/kappahat)/cPi
+    end do
+!$OMP END DO
+!$OMP END PARALLEL
+write(6,'(A51)'),' -> Finished sorting and indexing of the patterns'
 
 end do experimentalloop
 
