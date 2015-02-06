@@ -36,6 +36,7 @@
 ;> @brief main routine for display of EBSD patterns
 ;
 ;> @date 05/22/14 MDG 1.0 first version
+;> @date 02/06/15 MDG 1.1 added pattern orientation parameters
 ;--------------------------------------------------------------------------
 pro EBSDshowPattern, single=single, nodisplay=nodisplay
 
@@ -103,8 +104,13 @@ WIDGET_CONTROL, set_value=string(EBSDdata.Patternmax,format="(F7.2)"), EBSDwidge
     finalpattern = bytscl(image)
   end
 
-; then we apply the pattern origin (not sure if this is a useful operation or not)
-
+; then we apply the pattern origin 
+;    vals = ['Upper Left','Lower Left','Upper Right','Lower Right']
+  if (EBSDdata.PatternOrigin ne 0) then begin
+    if (EBSDdata.PatternOrigin eq 1) then finalpattern = reverse(finalpattern,2)
+    if (EBSDdata.PatternOrigin eq 2) then finalpattern = reverse(finalpattern,1)
+    if (EBSDdata.PatternOrigin eq 3) then finalpattern = reverse(reverse(finalpattern,2),1)
+  endif
 
 
 ; finally, we use the binning factor

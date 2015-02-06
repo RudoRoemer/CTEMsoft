@@ -107,6 +107,7 @@
 !> @date 01/06/15 MDG 1.3 changed public routine names with DI_ in front
 !> @date 01/07/15 MDG 1.4 added VMF sampling routines 
 !> @date 01/09/15 MDG 1.5 replaced several computations by numerically more stable versions
+!> @date 02/05/15 MDG 1.6 added sampling for axial Watson distribution
 !--------------------------------------------------------------------------
 
 module dictmod
@@ -382,6 +383,240 @@ end if
 y = C * dexp(k*(x-1.D0))*dsqrt(1.D0-x*x)
 
 end function VMFMeanDirDensity
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+! sampling routines for the axial Watson distribution
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: DI_SampleWatson
+!
+!> @author Marc De Graef, Carnegie Mellon University 
+!
+!> @brief Sample the axial Watson distribution on the quaternion unit sphere
+!
+!> @param N number of samples to return
+!> @param seed random number generator seed value
+!> @param mu mean direction (unit quaternion)
+!> @param kappa concentration
+!
+!> @date 02/05/15 MDG 1.0 original
+!--------------------------------------------------------------------------
+recursive function DI_SampleWatson(N, seed, mu, kappa) result(sWatson)
+
+use local
+use error
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)            :: N
+integer(kind=irg),INTENT(INOUT)         :: seed
+real(kind=dbl),INTENT(IN)               :: mu(4)
+real(kind=dbl),INTENT(IN)               :: kappa
+real(kind=dbl)                          :: sWatson(4,N)
+
+real(kind=dbl)                          :: nq, tmpmu(4), RandSphere(3,N), t(N), RS(4,N), lmu(4)
+integer(kind=irg)                       :: i
+
+! parameters for the singular value decomposition
+integer(kind=irg)                       :: nr, LDA, LDU, LDVT, lwork, info
+real(kind=dbl)                          :: mA(4,4), ss(4), u(4,4), vt, work(20)
+
+! make sure the input quaternion is normalized
+nq = dsqrt(sum(mu*mu))
+if (nq.eq.0.D0) call FatalError('DI_SampleWatson','Input quaternion has zero length')
+lmu = mu/nq
+
+! initialize a bunch of parameters
+tmpmu = (/ 1.D0, 0.D0, 0.D0, 0.D0 /)
+sWatson = 0.D0
+RS = 0.D0
+
+! get the t-parameter and the distribution of random directions on the 2-sphere
+t = randWatsonMeanDir(N, kappa,seed)
+
+RandSphere = randUniformSphere(N,seed)
+RS(2:4,1:N) = RandSphere(1:3,1:N)
+
+! merge these two parameters into the desired random variables
+sWatson = transpose( spread(t,DIM=2,NCOPIES=4) * spread(tmpmu,DIM=1,NCOPIES=N) + &
+                  spread(dsqrt(1.D0-t*t),DIM=2,NCOPIES=4) * transpose(RS) )
+
+! Rotate the distribution along the desired mean direction mu
+! In Matlab, one uses the null() operator which returns the null space of the argument
+! This is then inserted into a 4x4 rotation matrix and multiplied with the quaternions
+! from the random sample.  The null space of the input quaternion can be computed with
+! singular value decomposition, which is done with the dgesvd Lapack routine. The matrix
+! returned as u is the desired rotation matrix, except that the numbers in the first 
+! column must have their signs reversed.
+
+mA = 0.D0
+mA(1:4,1) = lmu(1:4)
+nr = 4
+LDA = 4
+LDVT = 1
+LDU = 4
+lwork = 20
+call DGESVD('A','N',nr,nr,mA,LDA,ss, u, LDU, vt, LDVT, work, lwork, info)
+u(1:4,1) = -u(1:4,1)
+
+! next, apply this 4x4 rotation matrix to all of the generated quaternions to
+! rotate them along the mean direction mu
+do i=1,N
+        sWatson(1:4,i) = matmul(u,sWatson(1:4,i))
+end do
+
+end function DI_SampleWatson
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: randWatsonMeanDir
+!
+!> @author Marc De Graef, Carnegie Mellon University 
+!
+!> @brief 
+!
+!> @param N number of samples to return
+!> @param k concentration
+!> @param seed random number generator seed value
+!
+!> @date 02/05/15 MDG 1.0 original 
+!--------------------------------------------------------------------------
+recursive function randWatsonMeanDir(N, k, seed) result(t)
+
+use local
+use math
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)            :: N
+real(kind=dbl),INTENT(IN)               :: k
+integer(kind=irg),INTENT(INOUT)         :: seed
+real(kind=dbl)                          :: t(N)
+
+real(kind=dbl)                          :: LBM(2), h, x, C
+integer(kind=irg)                       :: i
+
+! Find the left bound and maximum
+C = 0.D0
+LBM = getWatsonDensityLBM(k,C)
+
+! apply the rejection sampling algorithm
+t = 0.D0
+do i=1,N
+  do 
+    x = r8_uniform_01(seed)*(1.D0-LBM(1))+LBM(1)
+    h = WatsonMeanDirDensity(x, k, C)
+    if (r8_uniform_01(seed)*LBM(2).le.h) EXIT 
+  end do
+  t(i) = x
+end do 
+
+end function randWatsonMeanDir
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: getWatsonDensityLBM
+!
+!> @author Marc De Graef, Carnegie Mellon University / Yu-Hui Chen, U. Michigan
+!
+!> @brief determines the left bound and maximum for rejection sampling
+!
+!> @param k concentration
+!> @param C constant prefactor of distribution function
+!
+!> @date 01/07/15 MDG 1.0 original, based on Yu-Hui's Matlab code
+!--------------------------------------------------------------------------
+recursive function getWatsonDensityLBM(k,C) result(LBM)
+
+use local
+use error
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(IN)               :: k
+real(kind=dbl),INTENT(INOUT)            :: C
+real(kind=dbl)                          :: LBM(2)
+
+real(kind=dbl),parameter                :: min_thresh=0.00001D0
+real(kind=dbl)                          :: s, x
+integer(kind=irg)                       :: f
+
+! first we look for the left bound
+f = 1
+do 
+   x = dble(f)*0.00001D0
+   if (x.eq.1.D0) call FatalError('getWatsonDensityLBM','reached +1 in leftbound determination')
+   s = WatsonMeanDirDensity(x,k,C)
+   if (s.ge.min_thresh) EXIT
+   f = f+1
+end do
+!
+LBM(1) = dble(f)*0.00001D0
+
+! for the simplified version of the density function, we have an analytical
+! expression for where the maximum of the function occurs 
+x = dsqrt((2.D0*k-1.D0)/(2.D0*k))
+
+LBM(2) = WatsonMeanDirDensity(x,k,C)
+
+write (*,*) ' LBM = ',LBM
+
+end function getWatsonDensityLBM
+
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: WatsonMeanDirDensity
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief function to be sampled for Watson random sampling; we're using a close approximation
+!
+!> @param x argument value
+!> @param k concentration
+!> @param C constant prefactor
+!
+!> @date 02/05/15 MDG 1.0 original
+!--------------------------------------------------------------------------
+recursive function WatsonMeanDirDensity(x, k, C) result(y)
+
+use local
+use constants
+use math
+use error
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(IN)       :: x
+real(kind=dbl),INTENT(IN)       :: k
+real(kind=dbl),INTENT(INOUT)    :: C
+real(kind=dbl)                  :: y
+
+real(kind=dbl),parameter        :: CC = 144.43253338822560946D0         ! 256/sqrt(pi)
+
+
+if (dabs(x).gt.1.D0) call FatalError('WatsonMeanDirDensity','argument must be in [-1,1]')
+
+! approximate expression for p=4 
+if (C.eq.0.D0) then
+  C = CC*k**4.5D0/(525.D0+4.D0*k*(45.D0+8.D0*k*(3.D0+4.D0*k)))
+end if
+
+! this is a close approximation, really good for larger values of k
+! and numerically more stable than the original, which has problems for k>600 or so
+y = C * dexp(k*(x*x-1.D0))*dsqrt(1.D0-x*x)
+
+end function WatsonMeanDirDensity
+
+
 
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
@@ -772,7 +1007,7 @@ if (dict%full) then
 ! this implements equation (15) of the appendix of the paper
   do j=1,Pmdims
     PmMu = quat_mult(Mu,dict%Pm(1:4,j))
-    R(1:nums,j) = VMFDensity(X, nums, PmMu, Kappa, C, dict%full)
+    R(1:nums,j) = VMFDensity(X, nums, PmMu, Kappa, C)
   end do
 ! and determine the normalization factors
   Rdenom = 1.D0/sum(R,2)
@@ -782,10 +1017,10 @@ else
   do j=1,Pmdims
     PmMu =  quat_mult(Mu,dict%Pm(1:4,j)) 
     do i=1,nums
-      arg(i) = Kappa*dot_product(PmMu,X(1:4,i))
+      arg(i) = dot_product(PmMu,X(1:4,i))
     end do
-    coshsum = coshsum + dcosh(arg)
-    R(1:nums,j) = dsinh(arg)
+    coshsum = coshsum + dcosh(Kappa*arg)
+    R(1:nums,j) = dsinh(Kappa*arg)
   end do
 ! and determine the normalization factors
   Rdenom = 1.D0/coshsum
@@ -929,7 +1164,7 @@ if (dict%full) then
   qu = MuKa(1:4)
   do j=1,Pmdims
     PmMu = quat_mult(dict%Pm(1:4,j), qu)
-    Phi(1:nums,j) = VMFDensity(X, nums, PmMu, MuKa(5), C, dict%full)
+    Phi(1:nums,j) = VMFDensity(X, nums, PmMu, MuKa(5), C)
   end do
   Phi = Phi/dble(dict%Nqsym)
 
@@ -973,12 +1208,11 @@ end subroutine VMF_getQandL
 !> @param mu mean direction
 !> @param kappa concentration
 !> @param C logCp(kappa) or exp(logCp(kappa) (precomputed in calling routine)
-!> @param full optional parameter to distinguish between M and M/2 summations
 !
 !> @date 01/01/15 MDG 1.0 original
 !> @date 01/06/15 MDG 1.1 added C and full parameters
 !--------------------------------------------------------------------------
-recursive function VMFDensity(X,nums,mu,kappa,C,full) result(vmf)
+recursive function VMFDensity(X,nums,mu,kappa,C) result(vmf)
 
 use local
 
@@ -989,20 +1223,13 @@ integer(kind=irg),INTENT(IN)            :: nums
 real(kind=dbl),INTENT(IN)               :: mu(4)
 real(kind=dbl),INTENT(IN)               :: kappa
 real(kind=dbl),INTENT(IN)               :: C
-logical,INTENT(IN),OPTIONAL             :: full
 real(kind=dbl)                          :: vmf(nums)
 
 integer(kind=irg)                       :: j
 
-if (present(full)) then ! C = logCp(kappa)
-  do j=1,nums
-      vmf(j) = dexp(C+kappa*dot_product(mu,X(1:4,j)))
-  end do
-else  ! C = dexp(logCp(kappa))
-  do j=1,nums
-    vmf(j) = 2.D0*C*dcosh(kappa*dot_product(mu,X(1:4,j)))
-  end do
-end if
+do j=1,nums
+  vmf(j) = dexp(C+kappa*dot_product(mu,X(1:4,j)))
+end do
 
 end function VMFDensity
 
