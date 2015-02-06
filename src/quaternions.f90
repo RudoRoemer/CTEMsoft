@@ -117,9 +117,10 @@
 !> @note Quaternions are defined with the scalar part in position 1, and the 
 !> vector part in positions 2:4.
 ! 
-!> @date 3/15/12   MDG 1.0 original
-!> @date 8/04/13   MDG 1.1 moved rotation conversion functions to rotations.f90
-!> @date 8/12/13   MDG 2.0 re-defined quaternions to be arrays of 4 reals rather than by letter ... 
+!> @date 03/15/12   MDG 1.0 original
+!> @date 08/04/13   MDG 1.1 moved rotation conversion functions to rotations.f90
+!> @date 08/12/13   MDG 2.0 re-defined quaternions to be arrays of 4 reals rather than by letter ... 
+!> @date 02/06/15   MDG 2.1 added quat_slerp interpolation routines
 !--------------------------------------------------------------------------
 module quaternions
 
@@ -183,6 +184,13 @@ public :: quat_rotate_vector
 interface quat_rotate_vector
         module procedure quat_rotate_vector
         module procedure quat_rotate_vector_d
+end interface
+
+! quaternion SLERP interpolation between two quaternions
+public :: quat_slerp
+interface quat_slerp
+        module procedure quat_slerp
+        module procedure quat_slerp_d
 end interface
 
 
@@ -574,6 +582,96 @@ recursive function quat_rotate_vector_d(q,v) result (res)
     res = rqv(2:4)
 
 end function quat_rotate_vector_d
+
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: quat_slerp
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief   return an array of interpolated quaternions
+!
+!> @param qa starting quaternion 
+!> @param qb ending quaternion 
+!> @param n number of interpolation points
+! 
+!> @date 02/06/15   MDG 1.0 original
+!--------------------------------------------------------------------------!
+recursive function quat_slerp(qa,qb,n) result (res)
+
+
+    real(kind=sgl),intent(in)                   :: qa(4)         !< input quaternion
+    real(kind=sgl),intent(in)                   :: qb(4)         !< input quaternion
+    integer(kind=irg),intent(in)                :: n            
+
+    real(kind=sgl)                              :: qv(4), theta, phi, dphi, s
+    real(kind=sgl)                              :: res(4,n)
+    integer(kind=irg)                           :: i
+
+    res = 0.0
+    theta = acos( dot_product(qb, quat_conjg(qa) ))
+    if (theta.ne.0.0) then
+      s = 1.0/sin(theta)
+      dphi = theta/real(n-1)
+
+      do i=1,n
+        phi = real(i-1)*dphi
+        res(1:4,i) = s * ( qa(1:4) * sin(theta-phi) + qb(1:4) * sin(phi) )
+      end do
+    else
+      do i=1,n
+        res(1:4,i) = qa(1:4)
+      end do
+    end if
+
+end function quat_slerp
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: quat_slerp_d
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief   return an array of interpolated quaternions (double precision)
+!
+!> @param qa starting quaternion 
+!> @param qb ending quaternion 
+!> @param n number of interpolation points
+! 
+!> @date 02/06/15   MDG 1.0 original
+!--------------------------------------------------------------------------!
+recursive function quat_slerp_d(qa,qb,n) result (res)
+
+
+    real(kind=dbl),intent(in)                   :: qa(4)         !< input quaternion
+    real(kind=dbl),intent(in)                   :: qb(4)         !< input quaternion
+    integer(kind=irg),intent(in)                :: n            
+
+    real(kind=dbl)                              :: qv(4), theta, phi, dphi, s
+    real(kind=dbl)                              :: res(4,n)
+    integer(kind=irg)                           :: i
+
+    res = 0.D0
+    theta = dacos( dot_product(qb, quat_conjg_d(qa) ) )
+    if (theta.ne.0.D0) then
+      s = 1.D0/dsin(theta)
+      dphi = theta/dble(n-1)
+
+      do i=1,n
+        phi = dble(i-1)*dphi
+        res(1:4,i) = s * ( qa(1:4) * dsin(theta-phi) + qb(1:4) * dsin(phi) )
+      end do
+    else
+      do i=1,n
+        res(1:4,i) = qa(1:4)
+      end do
+    end if
+
+end function quat_slerp_d
+
+
+
 
 
 
