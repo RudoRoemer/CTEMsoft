@@ -934,7 +934,7 @@ end type substrateBW
 ! type definition for dictionary-based indexing of EBSD patterns
 type dicttype
         integer(kind=irg)               :: Nqsym        ! number of quaternion symmetry operators for current crystal system 
-        real(kind=dbl)                  :: Pm(4,48)     ! array for quaternion symmetry operators
+        real(kind=dbl)                  :: Pm(4,24)     ! array for quaternion symmetry operators
         integer(kind=irg)               :: pgnum        ! point group number
         integer(kind=irg)               :: prot         ! rotational point group number
         real(kind=dbl),allocatable      :: xAp(:)       ! kappa array
@@ -942,7 +942,6 @@ type dicttype
         integer(kind=irg)               :: Apnum        ! number of entries in lookup table
         integer(kind=irg)               :: Num_of_init  ! number of times that the EM algorithm needs to be carried out (set by user)
         integer(kind=irg)               :: Num_of_iterations    ! number of iterations inside each EM call (set by user)
-        logical                         :: full         ! summations over q and -q if .TRUE., otherwise only q
 end type dicttype
 
 
