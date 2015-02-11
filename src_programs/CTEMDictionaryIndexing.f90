@@ -428,8 +428,14 @@ experimentalloop: do ll = 1,ceiling(float(totnumexpt)/float(numexptsingle))
 
     end do dictionaryloop
 
-    write(6,'(A28,I7,A26,I7)'),'Completed dot product of all',totnumdict,&
-    'dictionary patterns with',ll*numexptsingle,'experimental patterns'
+    if (ll .le. floor(float(totnumexpt)/float(numexptsingle)) then
+        write(6,'(A28,I7,A26,I7)'),'Completed dot product of all',totnumdict,&
+        'dictionary patterns with',ll*numexptsingle,'experimental patterns'
+    else
+        write(6,'(A28,I7,A30,I7)'),'Completed dot product of all',totnumdict,&
+        'dictionary patterns with all',totnumexpt,'experimental patterns'
+    end if
+
 
     write(6,'(A41,I8,A8)'),' -> Starting sorting and indexing of the',numexptsingle,'patterns'
 !$OMP PARALLEL PRIVATE(TID,arr,auxarr,prevarr,prevauxarr,index,samples,muhat,kappahat) &
