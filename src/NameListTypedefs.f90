@@ -73,6 +73,8 @@ type KosselMasterNameListType
         real(kind=sgl)          :: dmin
         real(kind=sgl)          :: startthick
         real(kind=sgl)          :: thickinc
+        real(kind=sgl)          :: tfraction
+        character(6)            :: Kosselmode
         character(fnlen)        :: xtalname
         character(fnlen)        :: outname
 end type KosselMasterNameListType

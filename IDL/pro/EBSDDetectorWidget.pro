@@ -129,7 +129,7 @@ EBSDwidget_s.EulerConvention = CW_BGROUP(file2, $
                         /NO_RELEASE, $
                         /EXCLUSIVE, $
                         FONT=fontstr, $
-                        LABEL_LEFT = 'Euler phi2 Convention', $
+                        LABEL_LEFT = 'Euler phi1 Convention', $
                         EVENT_FUNC ='EBSDevent', $
                         UVALUE='EBSDEULERCONVENTION', $
                         SET_VALUE=EBSDdata.EulerConvention)

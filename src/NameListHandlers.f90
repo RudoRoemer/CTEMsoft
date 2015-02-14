@@ -161,11 +161,13 @@ real(kind=sgl)          :: voltage
 real(kind=sgl)          :: dmin
 real(kind=sgl)          :: startthick
 real(kind=sgl)          :: thickinc
+real(kind=sgl)          :: tfraction
+character(6)            :: Kosselmode
 character(fnlen)        :: xtalname
 character(fnlen)        :: outname
 
 namelist /Kosselmasterlist/ stdout, xtalname, voltage, dmin,  nthreads, &
-                              startthick, thickinc, numthick, outname, npix
+                              startthick, thickinc, numthick, tfraction, outname, npix, Kosselmode
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 stdout = 6                      ! standard output
@@ -178,6 +180,8 @@ startthick = 10.0               ! starting thickness [nm]
 thickinc = 10.0                 ! thickness increment
 xtalname = 'undefined'          ! initial value to check that the keyword is present in the nml file
 outname = 'Kosselout.data'      ! output filename
+Kosselmode = 'normal'           ! 'thicks' for thickness determination, 'normal' for normal plot
+tfraction = 0.1                 ! thickness fraction for 'thicks' mode
 
 ! read the namelist file
  open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
@@ -198,6 +202,8 @@ knl%voltage = voltage
 knl%dmin = dmin
 knl%startthick = startthick
 knl%thickinc = thickinc
+knl%tfraction = tfraction
+knl%Kosselmode = Kosselmode
 knl%xtalname = xtalname
 knl%outname = outname
 

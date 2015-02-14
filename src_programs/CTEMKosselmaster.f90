@@ -61,6 +61,7 @@
 !> @date  05/03/14  MDG 4.2 test version to resolve bug in the Sgh matrix part (solved)
 !> @date  06/19/14  MDG 4.3 rewrite, removal of all globals, split of namelist handling from computation; add OpenMP
 !> @date  09/09/14  MDG 5.0 forked from CTEMEBSDmaster to CTEMKosselmaster program
+!> @date  02/14/15  MDG 5.1 added Kosselmode option for thickness fraction plot
 !--------------------------------------------------------------------------
 program CTEMKosselmaster
 
@@ -140,13 +141,13 @@ character(fnlen),INTENT(IN)               :: progname
 
 real(kind=dbl)          :: ctmp(192,3), arg
 integer(kind=irg)      :: isym,i,j,ik,npy,ipx,ipy,debug,izz, izzmax, iequiv(2,12), nequiv, num_el, MCnthreads, & ! counters
-                        numk, & ! number of independent incident beam directions
+                        numk,numthick,  & ! number of independent incident beam directions
                         ir,kk(3), npyhex, skip, ijmax, one, NUMTHREADS, TID, &
                         n,ix,iy, io_int(6), nns, nnw, nref,  &
                         istat,gzero,ic,ip,ikk, totstrong, totweak     ! counters
 real(kind=dbl)         :: tpi,Znsq, kkl, DBWF, kin !
 real(kind=sgl)          :: io_real(5), selE, kn, FN(3), kkk(3)
-real(kind=sgl),allocatable      :: sr(:,:,:), srhex(:,:,:), Iz(:), thick(:)
+real(kind=sgl),allocatable      :: sr(:,:,:), srhex(:,:,:), Iz(:), thick(:), trange(:,:)
 complex(kind=dbl)               :: czero
 logical                 :: usehex, switchmirror, verbose
 ! the following will need to be moved elsewhere at some point...
@@ -214,12 +215,19 @@ if (((isym.ge.6).and.(isym.le.9)).or.(isym.eq.12)) usehex = .TRUE.
 !=============================================
 !=============================================
 
+
 !=============================================
 !=============================================
 ! this is where we determine the values for the thicknesses 
-allocate(thick(kmnl%numthick),Iz(kmnl%numthick))
+if (kmnl%Kosselmode.eq.'thicks') then
+  numthick = 1
+else 
+  numthick = kmnl%numthick
+end if
 
-do i=1,kmnl%numthick
+allocate(thick(numthick),Iz(numthick))
+
+do i=1,numthick
   thick(i) = kmnl%startthick + float(i-1)*kmnl%thickinc
 end do
 !=============================================
@@ -243,7 +251,8 @@ end do
 ! which leads to 9 different shapes for the stereographic asymmetric unit for the 
 ! independent incident beam directions.  
 ! allocate space for the results (needs to be altered for general symmetry case)
-allocate(sr(-kmnl%npix:kmnl%npix,-npy:npy,1:kmnl%numthick),stat=istat)
+if (kmnl%Kosselmode.eq.'normal') then 
+  allocate(sr(-kmnl%npix:kmnl%npix,-npy:npy,1:kmnl%numthick),stat=istat)
 
 ! in the trigonal/hexagonal case, we need intermediate storage arrays
   if (usehex) then
@@ -256,6 +265,10 @@ allocate(sr(-kmnl%npix:kmnl%npix,-npy:npy,1:kmnl%numthick),stat=istat)
    if (usehex) then
      srhex = 0.0
    end if
+else
+! Kosselmode must be 'thicks'
+  allocate(trange(-kmnl%npix:kmnl%npix,-npy:npy),stat=istat)
+end if
 ! ---------- end allocate memory for the master pattern
 !=============================================
 !=============================================
@@ -359,7 +372,11 @@ call Message('Starting computation', frm = "(/A)")
 ! for now, we're disabling the kinematical part
 ! solve the dynamical eigenvalue equation for this beam direction  Lgh,thick,kn,nn,gzero,kin,debug
      kn = karray(4,ik)
-     call CalcKint(DynMat,kn,nns,kmnl%numthick,thick,Iz)
+     if (kmnl%Kosselmode.eq.'thicks') then 
+       call CalcKthick(DynMat,kn,nns,kmnl%tfraction,Iz)
+     else
+       call CalcKint(DynMat,kn,nns,numthick,thick,Iz)
+     end if
      deallocate(DynMat)
 
 
@@ -368,14 +385,26 @@ call Message('Starting computation', frm = "(/A)")
      ipy = kij(2,ik)
      call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
 !$OMP CRITICAL
-     if (usehex) then
+     if (kmnl%Kosselmode.eq.'normal') then
+      if (usehex) then
        do ix=1,nequiv
-         srhex(iequiv(1,ix),iequiv(2,ix),1:kmnl%numthick) = Iz(1:kmnl%numthick)
+         srhex(iequiv(1,ix),iequiv(2,ix),1:numthick) = Iz(1:numthick)
         end do
-     else
+      else
          do ix=1,nequiv
-           sr(iequiv(1,ix),iequiv(2,ix),1:kmnl%numthick) = Iz(1:kmnl%numthick)
+           sr(iequiv(1,ix),iequiv(2,ix),1:numthick) = Iz(1:numthick)
           end do
+      end if
+     else
+!     if (usehex) then
+!      do ix=1,nequiv
+!        srhex(iequiv(1,ix),iequiv(2,ix)) = Iz(1)
+!       end do
+!     else
+         do ix=1,nequiv
+           trange(iequiv(1,ix),iequiv(2,ix)) = Iz(1)
+          end do
+!     end if
      end if
 !$OMP END CRITICAL
   
@@ -406,16 +435,26 @@ call Message('Starting computation', frm = "(/A)")
 ! pattern size parameter
   write (dataunit) kmnl%npix
 ! thickness parameters
-  write (dataunit) kmnl%numthick
+  write (dataunit) numthick
   write (dataunit) kmnl%startthick, kmnl%thickinc
-! is this a regular (square) or hexagonal projection ?
-  if (usehex) then 
+! is this a regular (square) or hexagonal projection ? and what is the Kosselmode ?
+  if (kmnl%Kosselmode.eq.'normal') then
+   if (usehex) then 
     write (dataunit) 'hexago'
-  else
+   else
     write (dataunit) 'square'
-  end if
+   end if
 ! and finally the results array
-  write (dataunit) sr
+   write (dataunit) sr
+  else 
+   if (usehex) then 
+    write (dataunit) 'hexagt'
+   else
+    write (dataunit) 'squart'
+   end if
+! and finally the results array
+   write (dataunit) trange
+  end if
   close(unit=dataunit,status='keep')
 
   call Message('Final data stored in file '//trim(kmnl%outname), frm = "(A/)")

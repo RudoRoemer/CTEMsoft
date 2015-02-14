@@ -309,6 +309,83 @@ end subroutine CalcKint
 
 !--------------------------------------------------------------------------
 !
+! SUBROUTINE: CalcKthick
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief compute the thickness for which the Kossel intensity drops below a treshold
+!
+!> @param DynMat dynamical matrix
+!> @param ktmp wave vector structure
+!> @param nn number of strong beams
+!> @param thresh thickness fraction parameter
+!> @param Iz returned thickness value 
+!
+!> @date  10/13/98 MDG 1.0 original
+!> @date   7/04/01 MDG 2.0 f90
+!> @date  04/29/13 MDG 3.0 inclusion of Bethe weak beams
+!> @date  01/08/14 MDG 3.1 forked from CalcBWint, specialized for Kossel computation
+!> @date  06/10/14 MDG 4.0 added Dyn, cell, and ktmp arguments
+!> @date  06/15/14 MDG 4.1 removed global W, CG and alpha initializations
+!> @date  06/16/14 MDG 4.2 made routine recursive for OPenMP
+!> @date  02/14/15 MDG 4.3 spawned from CalcKint
+!--------------------------------------------------------------------------
+recursive subroutine CalcKthick(DynMat,kn,nn,thresh,Iz)
+
+use local
+use io
+use diffraction
+use kvectors
+use gvectors
+use constants
+
+IMPLICIT NONE
+
+complex(kind=dbl),INTENT(IN)    :: DynMat(nn,nn)
+real(kind=sgl),INTENT(IN)       :: kn
+integer(kind=irg),INTENT(IN)    :: nn                   !< number of strong beams
+real(kind=sgl),INTENT(IN)       :: thresh               !< thickness fraction parameter
+real(kind=sgl),INTENT(INOUT)    :: Iz(1)                !< output (thickness)
+
+integer(kind=irg)               :: j, IPIV(nn), k
+complex(kind=dbl)               :: CGinv(nn,nn), Minp(nn,nn), Wloc(nn), lCG(nn,nn), lW(nn), lalpha(nn)
+real(kind=dbl)                  :: s(nn), q(nn), t, ss
+
+
+! compute the eigenvalues and eigenvectors
+ Minp = DynMat
+ IPIV = 0
+ call BWsolve(Minp,Wloc,lCG,CGinv,nn,IPIV)
+
+
+! the alpha coefficients are in the first column of the inverse matrix
+ lW = cPi*Wloc/cmplx(kn,0.0)
+ lalpha(1:nn) = CGinv(1:nn,1)
+
+! make sure the alpha excitation coefficients are normalized 
+ ss = sum(cdabs(lalpha(1:nn))**2)
+ if (ss.ne.1.D0) then
+  ss = dcmplx(1.D0/dsqrt(ss),0.D0)
+  lalpha = lalpha*ss
+ endif 
+ 
+! compute the thickness value in steps of 0.25 nm until less than thresh
+ do j=1,nn
+  q(j) = -4.D0*cPi*aimag(lW(j))
+  s(j) = cdabs(lalpha(j))**2
+ end do
+ t = 0.D0
+ do 
+   t = t+0.25D0
+   ss = sum(s*dexp(t*q))
+   if (ss.le.thresh) EXIT
+ end do
+ Iz(1) = t
+   
+end subroutine CalcKthick
+
+!--------------------------------------------------------------------------
+!
 ! SUBROUTINE: CalcSgh
 !
 !> @author Marc De Graef, Carnegie Mellon University
