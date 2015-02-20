@@ -131,15 +131,20 @@ real(kind=dbl)                                      :: q0, q1, q2, q3, muhat(4),
 integer(kind=irg)                                   :: t1,t2,rate,max
 real(kind=4),allocatable                            :: resultarray(:,:)
 integer(kind=4),allocatable                         :: indexarray(:,:)
+real(kind=sgl),allocatable                          :: res(:,:),exptsr(:,:),dictsr(:,:)
+character                                           :: TAB
+character(fnlen)                                    :: str1,str2,str3,str4,str5,str6,str7,str8,str9,str10
+real(kind=sgl)                                      :: euler(3)
 
+
+TAB = CHAR(9)
 seed = 432514
-
 allocate(dictlist,stat=istat)
 dictlist%Num_of_init = 3
 dictlist%Num_of_iterations = 30
 dictlist%pgnum = 32
 
-call DI_Init(dictlist,.TRUE.)
+call DI_Init(dictlist,'WAT')
 
 !=====================
 ! INITIALIZATION
@@ -200,6 +205,8 @@ Wexp = L
 Wdict = Nd
 localsize = (/16,16/)
 globalsize = (/Ne,Nd/)
+
+allocate(exptsr(Ne,L),dictsr(Nd,L),res(Ne,Nd))
 
 allocate(resultarray(numdictsingle*ceiling(float(totnumdict)/float(numdictsingle)),numexptsingle),stat=istat)
 resultarray = 0.0
@@ -337,6 +344,9 @@ end if
 !=====================================================
 ! MAIN LOOP FOR EVALUATING DOT PRODUCTS AND INDEXING
 !=====================================================
+open(unit=iunit,file='Results.ctf',action='write',status='unknown')
+
+call WriteHeader(iunit,'ctf')
 
 experimentalloop: do ll = 1,ceiling(float(totnumexpt)/float(numexptsingle))
 
@@ -417,27 +427,77 @@ experimentalloop: do ll = 1,ceiling(float(totnumexpt)/float(numexptsingle))
         call InnerProdGPU(cl_expt,cl_dict,Ne,Nd,L,result,source,source_length,platform,device,context,command_queue)
 
         if (mod(kk,floor(float(totnumdict)/float(numdictsingle)/10.0)) .eq. 0) then
-            write(6,'(A26,I7,A26,I7)'),'Completed dot product of',kk*numdictsingle,'dictionary patterns with',ll*numexptsingle,&
+            if (ll .le. floor(float(totnumexpt)/float(numexptsingle))) then
+                write(6,'(A26,I7,A26,I7)'),'Completed dot product of',kk*numdictsingle,'dictionary patterns with',ll*numexptsingle,&
                     'experimental patterns'
+            else if (ll .eq. ceiling(float(totnumexpt)/float(numexptsingle))) then
+                write(6,'(A26,I7,A30,I7)'),'Completed dot product of',kk*numdictsingle,'dictionary patterns with all',totnumexpt,&
+                'experimental patterns'
+            end if
         end if
 
         do ii = 1,numexptsingle
             resultarray((kk-1)*numdictsingle+1:kk*numdictsingle,ii) = result((ii-1)*numdictsingle+1:ii*numdictsingle)
         end do
 
-
     end do dictionaryloop
 
-    if (ll .le. floor(float(totnumexpt)/float(numexptsingle)) then
+    if (ll .le. floor(float(totnumexpt)/float(numexptsingle))) then
+
         write(6,'(A28,I7,A26,I7)'),'Completed dot product of all',totnumdict,&
         'dictionary patterns with',ll*numexptsingle,'experimental patterns'
-    else
-        write(6,'(A28,I7,A30,I7)'),'Completed dot product of all',totnumdict,&
-        'dictionary patterns with all',totnumexpt,'experimental patterns'
+
+    else if (ll .eq. ceiling(float(totnumexpt)/float(numexptsingle))) then
+
+        write(6,'(A28,I7,A30,I7)'),'Completed dot product of all',totnumdict,'dictionary patterns with all',totnumexpt,&
+        'experimental patterns'
+
     end if
 
+    write(6,'(A41,I8,A10)'),' -> Starting sorting and indexing of the',numexptsingle,'  patterns'
 
-    write(6,'(A41,I8,A8)'),' -> Starting sorting and indexing of the',numexptsingle,'patterns'
+    if (ll .le. floor(float(totnumexpt)/float(numexptsingle))) then
+!$OMP PARALLEL PRIVATE(TID,arr,auxarr,prevarr,prevauxarr,index,samples,muhat,kappahat) &
+!$OMP& PRIVATE(str1,str2,str3,str4,str5,str6,str7,str8,str9,str10,euler) &
+!$OMP& SHARED(indexlist,nthreads)
+    TID = OMP_GET_THREAD_NUM()
+    nthreads = OMP_GET_NUM_THREADS()
+    if (TID .eq. 0) write(6,'(A20,I3)'),'Number of threads =',nthreads
+
+!$OMP DO SCHEDULE(DYNAMIC)
+        do ii = 1,numexptsingle
+            indexarray(:,ii) = indexlist(:)
+            call SSORT(resultarray(:,ii),indexarray(:,ii),numdictsingle*ceiling(float(totnumdict)/float(numdictsingle)),-2)
+            do jj = 1,nnk
+                index = indexarray(jj,ii)
+                samples(1:4,jj) = eu2qu((cPi/180.D0)*eulerangles(index,1:3))
+            end do
+            call DI_EMforDD(samples, dictlist, nnk, seed, muhat, kappahat,'WAT')
+            euler = 180.0/cPi*qu2eu(muhat)
+            write(str1,'(F12.3)') float(MODULO(ii-1,512))
+            write(str2,'(F12.3)') float(floor(float((ll-1)*numexptsingle+ii-1)/512.0))
+            write(str3,'(I2)') 10
+            write(str4,'(I2)') 0
+            write(str5,'(F12.3)') euler(1)
+            write(str6,'(F12.3)') euler(2)
+            write(str7,'(F12.3)') euler(3)
+            write(str8,'(F12.3)') 180.0*acos(1.0-1.0/kappahat)/cPi
+            write(str9,'(I3)') 255
+            write(str10,'(I3)') 255
+!$OMP CRITICAL
+            write(iunit,'(A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A)')'1',TAB,trim(adjustl(str1)),TAB,&
+            trim(adjustl(str2)),TAB,trim(adjustl(str3)),TAB,trim(adjustl(str4)),TAB,trim(adjustl(str5)),&
+            ' ',trim(adjustl(str6)),' ',trim(adjustl(str7)),TAB,trim(adjustl(str8)),TAB,trim(adjustl(str9)),&
+            TAB,trim(adjustl(str10))
+!$OMP END CRITICAL
+        !write (*,*) 'mu    = ',muhat
+        !write (*,*) 'kappa = ',kappahat
+        !write (*,*) 'equivalent angular precision : ',180.D0*dacos(1.D0-1.D0/kappahat)/cPi
+        end do
+!$OMP END DO
+!$OMP END PARALLEL
+
+    else if (ll .eq. ceiling(float(totnumexpt)/float(numexptsingle))) then
 !$OMP PARALLEL PRIVATE(TID,arr,auxarr,prevarr,prevauxarr,index,samples,muhat,kappahat) &
 !$OMP& SHARED(indexlist,nthreads)
     TID = OMP_GET_THREAD_NUM()
@@ -445,24 +505,30 @@ experimentalloop: do ll = 1,ceiling(float(totnumexpt)/float(numexptsingle))
     if (TID .eq. 0) write(6,'(A20,I3)'),'Number of threads =',nthreads
 
 !$OMP DO SCHEDULE(DYNAMIC)
-    do ii = 1,numexptsingle
-        indexarray(:,ii) = indexlist(:)
-        call SSORT(resultarray(:,ii),indexarray(:,ii),numdictsingle*ceiling(float(totnumdict)/float(numdictsingle)),-2)
-        do jj = 1,nnk
-            index = indexarray(jj,ii)
-            samples(1:4,jj) = eu2qu((cPi/180.D0)*eulerangles(index,1:3))
+        do ii = 1,MODULO(totnumexpt,numexptsingle)
+            indexarray(:,ii) = indexlist(:)
+            call SSORT(resultarray(:,ii),indexarray(:,ii),numdictsingle*ceiling(float(totnumdict)/float(numdictsingle)),-2)
+            do jj = 1,nnk
+                index = indexarray(jj,ii)
+                samples(1:4,jj) = eu2qu((cPi/180.D0)*eulerangles(index,1:3))
+            end do
+            call DI_EMforDD(samples, dictlist, nnk, seed, muhat, kappahat,'WAT')
+!$OMP CRITICAL
+            write(iunit,'(A,A,2F12.4,A,I2,A,I1,A,3F12.4,A,F12.4,A,I3,A,I3)')'1',TAB,float(MODULO(ii-1,512)),&
+            float(floor(float((ll-1)*numexptsingle+ii-1)/512.0)),&
+            TAB,10,TAB,0,TAB,180.0/cPi*qu2eu(muhat),TAB,180.0*acos(1.0-1.0/kappahat)/cPi,TAB,255,TAB,255
+!$OMP END CRITICAL
         end do
-        call DI_EMforVMF(samples, dictlist, nnk, seed, muhat, kappahat)
-        !write (*,*) 'mu    = ',muhat
-        !write (*,*) 'kappa = ',kappahat
-        !write (*,*) 'equivalent angular precision : ',180.D0*dacos(1.D0-1.D0/kappahat)/cPi
-    end do
 !$OMP END DO
 !$OMP END PARALLEL
-write(6,'(A51)'),' -> Finished sorting and indexing of the patterns'
+
+    end if
+
+    write(6,'(A)'),' -> Finished sorting, indexing and I/O of the patterns'
 
 end do experimentalloop
-
+write(6,'(A)'),' -> Finished indexing....quitting code now'
+close(iunit)
 call clReleaseCommandQueue(command_queue, ierr)
 call clReleaseContext(context, ierr)
 call clReleaseMemObject(cl_expt, ierr)
@@ -473,66 +539,97 @@ end subroutine MasterSubroutine
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE:SortTopk
+! SUBROUTINE:WriteHeader
 !
 !> @author Saransh Singh, Carnegie Mellon University
 !
-!> @brief Sort the array and keep only top k values
+!> @brief Write the header for *.ctf or *.ang file file format
 !
-!> @param arr array to be sorted
-!> @param auxarr auxiliary array in which the same switching is performed
-!> @param sizearr size of array
-!> @param nnkk highest nnk values to be retained from the array
+!> @param iunit unit to write to
+!> @param fileformat string to tell which type of header to write
 !
-!> @date 01/27/15  SS 1.0 original
+!> @date 02/07/15  SS 1.0 original
 !--------------------------------------------------------------------------
-subroutine SortTopk(arr,auxarr,sizearr,prevarr,prevauxarr,nnk)
+subroutine WriteHeader(iunit,fileformat)
 
 use local
-use others
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(INOUT)                    :: arr(sizearr)
-integer(kind=irg),INTENT(INOUT)                 :: auxarr(sizearr)
-real(kind=sgl),INTENT(INOUT)                    :: prevarr(nnk)
-integer(kind=irg),INTENT(INOUT)                 :: prevauxarr(nnk)
-integer(kind=irg),INTENT(IN)                    :: sizearr
-integer(kind=irg),INTENT(IN)                    :: nnk
+integer(kind=irg),INTENT(IN)                        :: iunit
+character(len=3),INTENT(IN)                         :: fileformat
 
-real(kind=sgl),allocatable                      :: topk(:),topkintd(:)
-integer(kind=irg),allocatable                   :: indextopk(:),indextopkintd(:)
-integer(kind=irg)                               :: istat
+logical                                             :: isopen
+integer(kind=irg)                                   :: ierr
+character(fnlen)                                    :: filename
+character                                           :: TAB
 
-allocate(topk(nnk),topkintd(2*nnk),stat=istat)
-topk = 0.0
-topkintd = 0.0
+TAB = CHAR(9)
+inquire(unit=iunit,OPENED=isopen)
+if (isopen .eqv. .FALSE.) then
+    filename = 'test.'//fileformat
+    write(6,*),'Warning: No such file exists...creating file with name test.'//fileformat
+    open(unit=iunit,file=trim(filename),status='unknown',action='write',iostat=ierr)
+end if
 
-allocate(indextopk(nnk),indextopkintd(2*nnk),stat=istat)
-indextopk = 0
-indextopkintd = 0
+if (fileformat .eq. 'ctf') then
+    write(iunit,'(A)'),'Channel Text File'
+    write(iunit,'(A)'),'Prj Test'
+    write(iunit,'(3A)'),'Author	[Unknown]'
+    write(iunit,'(A)'),'JobMode	Grid'
+    write(iunit,'(3A)'),'XCells',Tab,'512'
+    write(iunit,'(3A)'),'YCells',TAB,'384'
+    write(iunit,'(3A)'),'XStep',TAB,'1'
+    write(iunit,'(3A)'),'YStep',TAB,'1'
+    write(iunit,'(A)'),'AcqE1	0'
+    write(iunit,'(A)'),'AcqE2	0'
+    write(iunit,'(A)'),'AcqE3	0'
+    write(iunit,'(A)',advance='no'),'Euler angles refer to Sample Coordinate system (CS0)!  '
+    write(iunit,'(A)')'Mag	30	Coverage	100	Device	0	KV	288.9	TiltAngle	-1	TiltAxis	0'
+    write(iunit,'(A)'),'Phases	1'
+    write(iunit,'(A)'),'3.524;3.524;3.524	90;90;90	Nickel	11	225'
+    write(iunit,'(A)'),'Phase	X	Y	Bands	Error	Euler1	Euler2	Euler3	MAD	BC	BS'
 
-topkintd(1:nnk) = prevarr(1:nnk)
-indextopkintd(1:nnk) = prevauxarr(1:nnk)
+else if (fileformat .eq. 'ang') then
+    write(iunit,'(A)'),'# TEM_PIXperUM          1.000000'
+    write(iunit,'(A)'),'# x-star                0.372300'
+    write(iunit,'(A)'),'# y-star                0.689300'
+    write(iunit,'(A)'),'# z-star                0.970100'
+    write(iunit,'(A)'),'# WorkingDistance       5.000000'
+    write(iunit,'(A)'),'#'
+    write(iunit,'(A)'),'# Phase 1'
+    write(iunit,'(A)'),'# MaterialName  	Nickel'
+    write(iunit,'(A)'),'# Formula     	Ni'
+    write(iunit,'(A)'),'# Info'
+    write(iunit,'(A)'),'# Symmetry              43'
+    write(iunit,'(A)'),'# LatticeConstants      3.520 3.520 3.520  90.000  90.000  90.000'
+    write(iunit,'(A)'),'# NumberFamilies        4'
+    write(iunit,'(A)'),'# hklFamilies   	 1  1  1 1 0.000000'
+    write(iunit,'(A)'),'# hklFamilies   	 2  0  0 1 0.000000'
+    write(iunit,'(A)'),'# hklFamilies   	 2  2  0 1 0.000000'
+    write(iunit,'(A)'),'# hklFamilies   	 3  1  1 1 0.000000'
+    write(iunit,'(A)'),'# Categories 0 0 0 0 0'
+    write(iunit,'(A)'),'#'
+    write(iunit,'(A)'),'# GRID: SqrGrid'
+    write(iunit,'(A)'),'# XSTEP: 1.000000'
+    write(iunit,'(A)'),'# YSTEP: 1.000000'
+    write(iunit,'(A)'),'# NCOLS_ODD: 189'
+    write(iunit,'(A)'),'# NCOLS_EVEN: 189'
+    write(iunit,'(A)'),'# NROWS: 201'
+    write(iunit,'(A)'),'#'
+    write(iunit,'(A)'),'# OPERATOR: 	Administrator'
+    write(iunit,'(A)'),'#'
+    write(iunit,'(A)'),'# SAMPLEID:'
+    write(iunit,'(A)'),'#'
+    write(iunit,'(A)'),'# SCANID:'
+    write(iunit,'(A)'),'#'
+else
 
-call SSORT(arr,auxarr,sizearr,-2)
+    stop 'Error: Can not recognize specified file format'
 
-topk(1:nnk) = arr(1:nnk)
+end if
 
-indextopk(1:nnk) = auxarr(1:nnk)
-
-topkintd(nnk+1:2*nnk) = topk(1:nnk)
-
-indextopkintd(nnk+1:2*nnk) = indextopk(1:nnk)
-
-call SSORT(topkintd(1:2*nnk),indextopkintd(1:2*nnk),2*nnk,-2)
-
-prevarr(1:nnk) = topkintd(1:nnk)
-
-prevauxarr(1:nnk) = indextopkintd(1:nnk)
-
-end subroutine
-
+end subroutine WriteHeader
 
 !--------------------------------------------------------------------------
 !
@@ -586,7 +683,6 @@ integer, parameter                                  :: source_length_build_info 
 character(len = source_length)                      :: source_build_info
 integer(kind=4)                                     :: num,ierr,istat,irec,Wexp,Wdict,i,j,ii,jj,kk
 integer(kind=8)                                     :: size_in_bytes_expt,size_in_bytes_dict,size_in_bytes_result
-real(kind=sgl)                                      :: res(Ne,Nd),exptsr(Ne,L),dictsr(Nd,L)
 
 !size_in_bytes_expt = L*Ne*sizeof(L)
 !size_in_bytes_dict = L*Nd*sizeof(L)
@@ -722,9 +818,9 @@ call clEnqueueReadBuffer(command_queue, cl_result, cl_bool(.true.), 0_8, size_in
 !dictsr(ii,1:L) = dict((ii-1)*L+1:ii*L)
 !end do
 !res = matmul(exptsr,transpose(dictsr))
-!print*,res(2,1:20)
+!print*,res(353,356:456)-result(352*numdictsingle+356:352*numdictsingle+456)
 !print*,''
-!print*,result(1025:1044)
+!print*,maxval(res),maxloc(res),maxval(result),maxloc(result)
 !end if
 
 !print*,result(1)
