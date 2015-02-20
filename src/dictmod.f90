@@ -588,12 +588,16 @@ select case (dict%prot)
                 call FatalError('InitDictionaryIndexing','this symmetry has not yet been implemented (pg 32)')
 
         case(21)        ! 6
-                dict%Nqsym = 2
-                call FatalError('InitDictionaryIndexing','this symmetry has not yet been implemented (pg 6)')
+                dict%Nqsym = 6
+                do i=25,29
+                  dict%Pm(1:4,i-23) = SYM_Qsymop(1:4,i)
+                end do
 
         case(24)        ! 622
-                dict%Nqsym = 2
-                call FatalError('InitDictionaryIndexing','this symmetry has not yet been implemented (pg 622)')
+                dict%Nqsym = 12
+                do i=25,35
+                  dict%Pm(1:4,i-23) = SYM_Qsymop(1:4,i)
+                end do
 
         case(28)        ! 23
                 dict%Nqsym = 12

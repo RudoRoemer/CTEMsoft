@@ -432,7 +432,7 @@ end type
 
 ! finally, we define the rotational crystal symmetry operators in terms of quaternions (q0, q1,q2,q3) with q0 the scalar part;
 ! these are used in the dictmod EBSD dictionary indexing module, and are defined with respect to the standard cartesian reference frame
-real(kind=dbl),parameter :: SYM_Qsymop(4,29) = reshape( (/ &
+real(kind=dbl),parameter :: SYM_Qsymop(4,35) = reshape( (/ &
                                 1.D0, 0.D0, 0.D0, 0.D0, &       ! 1: identity operator
                                 0.D0, 1.D0, 0.D0, 0.D0, &       ! 2: 180@[100]
                                 0.D0, 0.D0, 1.D0, 0.D0, &       ! 3: 180@[010]
@@ -461,8 +461,14 @@ real(kind=dbl),parameter :: SYM_Qsymop(4,29) = reshape( (/ &
                                 half, 0.D0, 0.D0, sq32, &       !26: 120@[001]
                                 0.D0, 0.D0, 0.D0, 1.D0, &       !27: 180@[001]  (duplicate from above, but useful to keep it here)
                                -half, 0.D0, 0.D0, sq32, &       !28: 240@[001]
-                               -sq32, 0.D0, 0.D0, half  &       !29: 300@[001]
-                                /), (/4,29/) )
+                               -sq32, 0.D0, 0.D0, half, &       !29: 300@[001]
+                                0.D0, 1.D0, 0.D0, 0.D0, &       !30: 180@[100]
+                                0.D0, sq32, half, 0.D0, &       !31: 180@[xxx]
+                                0.D0, half, sq32, 0.D0, &       !32: 180@[xxx]
+                                0.D0, 0.D0, 1.D0, 0.D0, &       !33: 180@[010]
+                                0.D0,-half, sq32, 0.D0, &       !34: 180@[xxx]
+                                0.D0,-sq32, half, 0.D0  &       !35: 180@[xxx]
+                                /), (/4,35/) )
 ! need to add the hexagonal and trigonal twofold rotational operators !
 
 !--------------------------------------------------------------------------

@@ -39,6 +39,7 @@ Create_exe_and_tll(CTEMKosselMaster)
 Create_exe_and_tll(CTEMsampleRFZ)
 Create_exe_and_tll(CTEMMC)  #MP
 Create_exe_and_tll(CTEMEBSD)
+Create_exe_and_tll(CTEMquatSP)
 Create_exe_and_tll(CTEMEBSDmaster)
 Create_exe_and_tll(CTEMmkxtal)
 Create_exe_and_tll(CTEMlistSG)
