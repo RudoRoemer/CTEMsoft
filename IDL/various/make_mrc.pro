@@ -6,21 +6,22 @@ pro make_mrc,sinogram,outname
 ;
 dims = size(sinogram,/dimensions)
 
-nth = dims[0]
+nth = dims[2]
 th = findgen(nth) - float(nth/2)
 
 mi = min(sinogram,max=ma)
 print,'extreme values = ',mi,ma
 
-sinogram = uint(sinogram)
-mi = min(sinogram,max=ma)
-print,'extreme uint values = ',mi,ma
+;sinogram = uint(sinogram)
+;mi = min(sinogram,max=ma)
+;print,'extreme uint values = ',mi,ma
 me = mean(sinogram)
 
 ; and then convert these slices into a single .mrc file
 MRCinit,M,F,/create
 
 ; set the M variable
+M.mode = 2
 M.nx = long(dims[0])
 M.ny = long(dims[1])
 M.mx = M.nx

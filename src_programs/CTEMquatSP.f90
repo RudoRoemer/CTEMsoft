@@ -53,6 +53,7 @@
 ! 
 !> @date    02/17/15 MDG 1.0 original
 !> @date    02/19/15 MDG 1.1 tested the use of 3D Gaussian blobs but so far this doesn't work well
+!> @date    02/20/15 MDG 1.2 added option to draw Euler space instead of 3D-SP
 !--------------------------------------------------------------------------
 program CTEMquatSP
 
@@ -68,15 +69,15 @@ use math
 IMPLICIT NONE 
 
 integer(kind=irg)               :: nums, seed, FZtype, FZorder, i, j, k, nt, numt, ii, jj, kk, &
-                                   dimx, dimy, pgnum, np, fx, fy, fz, npix, nump
+                                   dimx, dimy, pgnum, np, fx, fy, fz, npix, nump, bad
 real(kind=sgl),allocatable      :: eulers(:,:),cube(:,:,:) ! ,xx(:,:,:), yy(:,:,:), zz(:,:,:), arg(:,:,:), e(:,:,:)
 
 type(dicttype),pointer          :: dict
-real(kind=dbl)                  :: qu(4), c, s, rod(4), n, delta, cu(3), qq(4)
-real(kind=sgl)                  :: x, y, z, xfrac, yfrac, zfrac !, sig
+real(kind=dbl)                  :: qu(4), c, s, rod(4), n, delta, qq(4)
+real(kind=sgl)                  :: x, y, z, xfrac, yfrac, zfrac, tpi, eu(3), ho(3), cu(3), m, ma !, sig
                                 
 character(fnlen)                :: eulerdatafile, cubefile
-character(6)                    :: FZmode               ! 'FullSP', 'DrawFZ' or 'FZonly', 
+character(6)                    :: FZmode               ! 'FullSP', 'DrawFZ', 'EulerS' or 'FZonly', 
 character(1)                    :: circles,verbose      ! 'y' or 'n'
 
 namelist /Stereogram/ eulerdatafile, cubefile, pgnum, FZmode, verbose, np, npix
@@ -87,14 +88,16 @@ pgnum = 32
 FZmode = 'FullSP'
 np = 2
 npix = 128 
-!sig = 1.0
 verbose = 'n'
 
 open(UNIT=dataunit,FILE='Stereogram.nml',DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=Stereogram)
 close(UNIT=dataunit,STATUS='keep')
 
+if (verbose.eq.'y') write (*,nml=Stereogram)
+
 nump = npix + np + 1
+bad = 0
 
 allocate(dict)
 dict%Num_of_init = 3 
@@ -116,8 +119,6 @@ end if
 
 ! We'll create a binary raw data file with a 3D array of 256^3 points that 
 ! represents the 3D stereographic projection as a normalized histogram
-allocate(cube(-nump:nump,-nump:nump,-nump:nump))
-cube = 0.0
 
 if (FZmode.eq.'DrawFZ') then 
   numt = 0
@@ -150,90 +151,155 @@ if (FZmode.eq.'DrawFZ') then
   cube(-1:1,-1:1,npix) = 1.0
 end if
 
-! the commented souorce code is to be used for Gaussian blobs, but that needs a bit 
-! more work...
 
-if (FZmode.ne.'DrawFZ') then 
-! prepare for Gaussian interpolations
-! allocate(xx(-np:np,-np:np,-np:np), yy(-np:np,-np:np,-np:np), zz(-np:np,-np:np,-np:np), &
-!          arg(-np:np,-np:np,-np:np), e(-np:np,-np:np,-np:np))
-! do i=-np,np
-!  do j=-np,np
-!   do k=-np,np
-!     xx(i,j,k) = float(i)
-!     yy(i,j,k) = float(j)
-!     zz(i,j,k) = float(k)
-!   end do
-!  end do
-! end do
-
- numt = 0
- do i=1,nums
-  qu = eu2qu(eulers(1:3,i))
-  if (qu(1).lt.0.0) qu = -qu
-  if ((abs(eulers(1,i))+abs(eulers(2,i))+abs(eulers(3,i))).ne.0.0) then 
-   do j=1,dict%Nqsym
-    qq = quat_mult(qu,dict%Pm(1:4,j))
-    if (qq(1).lt.0.0) qq = -qq
-    if (FZmode.eq.'FZonly') then
-     if (IsinsideFZ(qu2ro(qq),FZtype,FZorder)) then 
-      numt = numt + 1
-      s = float(npix)/(1.0+qq(1))
-      x = qq(2)*s
-      y = qq(3)*s
-      z = qq(4)*s
-!      xfrac = x - floor(x)
-!      yfrac = y - floor(y)
-!      zfrac = z - floor(z)
-!      arg = (xx-xfrac)**2 + (yy-yfrac)**2 + (zz-zfrac)**2
-!      e = exp(-arg*sig)
-!      fx = floor(x)
-!      fy = floor(y)
-!      fz = floor(z)
-!      do ii=-np,np
-!       do jj=-np,np
-!        do kk=-np,np
-!          cube(fx+ii,fy+jj,fz+kk) = cube(fx+np-ii,fy+np-jj,fz+np-kk) + e(ii,jj,kk)
-!        end do
-!       end do
-!      end do 
-      cube(nint(x),nint(y),nint(z)) = cube(nint(x),nint(y),nint(z)) + 1.0
-     end if
-    else
-      numt = numt + 1
-      s = float(npix)/(1.0+qq(1))
-      x = qq(2)*s
-      y = qq(3)*s
-      z = qq(4)*s
-!     xfrac = x - floor(x)
-!     yfrac = y - floor(y)
-!     zfrac = z - floor(z)
-!     arg = (xx-xfrac)**2 + (yy-yfrac)**2 + (zz-zfrac)**2
-!     e = exp(-arg*sig)
-!     fx = floor(x)
-!     fy = floor(y)
-!     fz = floor(z)
-!     do ii=-np,np
-!      do jj=-np,np
-!       do kk=-np,np
-!         cube(fx+ii,fy+jj,fz+kk) = cube(fx+np-ii,fy+np-jj,fz+np-kk) + e(ii,jj,kk)
-!       end do
-!      end do
-!     end do 
-      cube(nint(x),nint(y),nint(z)) = cube(nint(x),nint(y),nint(z)) + 1.0
+if (FZmode.eq.'EulerS') then ! Euler space representation
+  i = (npix+np)/2+1
+  allocate(cube(-nump:nump,-i:i,-nump:nump)) 
+  cube = 0.0
+  if (verbose.eq.'y') write (*,*) 'starting creation of euler space'
+   numt = 0
+   bad = 0
+   tpi = 2.0*sngl(cPi)
+   do i=1,nums
+    qu = eu2qu(eulers(1:3,i))
+    if (qu(1).lt.0.0) qu = -qu
+    if ((abs(eulers(1,i))+abs(eulers(2,i))+abs(eulers(3,i))).ne.0.0) then 
+     do j=1,dict%Nqsym
+      qq = quat_mult(qu,dict%Pm(1:4,j))
+      eu = qu2eu(qq)
+      if(eu(1).lt.0.0) eu(1) = eu(1) + tpi
+      if(eu(2).lt.0.0) eu(2) = eu(2) + tpi
+      if(eu(3).lt.0.0) eu(3) = eu(3) + tpi
+      x = npix * (eu(1)-cPi)/cPi
+      y = (npix/2) * (eu(2)-cPi/2.0)/(cPi/2.0)
+      z = npix * (eu(3)-cPi)/cPi
+      if ((abs(x).le.npix).and.(abs(y).le.npix/2).and.(abs(z).le.npix)) then
+        cube(nint(x),nint(y),nint(z)) = cube(nint(x),nint(y),nint(z)) + 1.0
+        numt = numt+1
+      else
+        bad = bad+1
+      end if
+     end do    
     end if
    end do
-  end if
- end do
+! and put some identifiers in
+   i = (npix+np)/2+1
+   cube(-nump:(-nump+2),-i:(-i+2),-nump:(-nump+2)) = -10
+   cube(-nump:(-nump+1),-i:(-i+1),(nump-1):nump) = -10
+   cube(-nump:(-nump+1),(i-1):i,-nump:(-nump+1)) = -10
+   cube(-nump:(-nump+1),(i-1):i,(nump-1):nump) = -10
+   cube((nump-1):nump,-i:(-i+1),-nump:(-nump+1)) = -10
+   cube((nump-1):nump,-i:(-i+1),(nump-1):nump) = -10
+   cube((nump-1):nump,(i-1):i,-nump:(-nump+1)) = -10
+   cube((nump-1):nump,(i-1):i,(nump-1):nump) = -10
+end if
+
+if (FZmode.eq.'HomocS') then ! homochoric ball
+   s = float(npix) / (3.0*sngl(cPi)/4.0)**0.3333333   ! scaled radius of homochoric ball
+   allocate(cube(-nump:nump,-nump:nump,-nump:nump))
+   cube = 0.0
+   numt = 0
+   do i=1,nums
+    qu = eu2qu(eulers(1:3,i))
+    if (qu(1).lt.0.0) qu = -qu
+    if ((abs(eulers(1,i))+abs(eulers(2,i))+abs(eulers(3,i))).ne.0.0) then 
+     do j=1,dict%Nqsym
+      qq = quat_mult(qu,dict%Pm(1:4,j))
+      if (qq(1).lt.0.0) qq = -qq
+      ho = qu2ho(qq)*s
+      numt = numt + 1
+      x = ho(1)
+      y = ho(2)
+      z = ho(3)
+      cube(nint(x),nint(y),nint(z)) = cube(nint(x),nint(y),nint(z)) + 1.0
+     end do
+    end if
+   end do
+end if
+
+if (FZmode.eq.'CubocS') then ! cubochoric cube
+   s = float(npix) / sngl(0.5D0 * LPs%ap)    ! scaled semi-edge length of cubochoric cube
+   allocate(cube(-nump:nump,-nump:nump,-nump:nump))
+   cube = 0.0
+   numt = 0
+   bad = 0
+   do i=1,nums
+    qu = eu2qu(eulers(1:3,i))
+    if (qu(1).lt.0.0) qu = -qu
+    if ((abs(eulers(1,i))+abs(eulers(2,i))+abs(eulers(3,i))).ne.0.0) then 
+     do j=1,dict%Nqsym
+      qq = quat_mult(qu,dict%Pm(1:4,j))
+      if (qq(1).lt.0.0) qq = -qq
+      cu = qu2cu(qq)*s
+      x = cu(1)
+      y = cu(2)
+      z = cu(3)
+      if ((abs(x).lt.npix).and.(abs(y).le.npix).and.(abs(z).le.npix)) then
+        cube(nint(x),nint(y),nint(z)) = cube(nint(x),nint(y),nint(z)) + 1.0
+        numt = numt + 1
+      else
+        bad = bad+1
+      end if
+     end do
+    end if
+   end do
+end if
+
+if (FZmode.eq.'FZonly') then ! standard stereographic projection, Rodrigues FZ only
+   allocate(cube(-nump:nump,-nump:nump,-nump:nump))
+   cube = 0.0
+   numt = 0
+   do i=1,nums
+    qu = eu2qu(eulers(1:3,i))
+    if (qu(1).lt.0.0) qu = -qu
+    if ((abs(eulers(1,i))+abs(eulers(2,i))+abs(eulers(3,i))).ne.0.0) then 
+     do j=1,dict%Nqsym
+      qq = quat_mult(qu,dict%Pm(1:4,j))
+      if (qq(1).lt.0.0) qq = -qq
+      if (IsinsideFZ(qu2ro(qq),FZtype,FZorder)) then 
+        numt = numt + 1
+        s = float(npix)/(1.0+qq(1))
+        x = qq(2)*s
+        y = qq(3)*s
+        z = qq(4)*s
+        cube(nint(x),nint(y),nint(z)) = cube(nint(x),nint(y),nint(z)) + 1.0
+      end if
+     end do
+    end if
+   end do
+end if
+
+if (FZmode.eq.'FullSP') then ! standard stereographic projection
+   allocate(cube(-nump:nump,-nump:nump,-nump:nump))
+   cube = 0.0
+   numt = 0
+   do i=1,nums
+    qu = eu2qu(eulers(1:3,i))
+    if (qu(1).lt.0.0) qu = -qu
+    if ((abs(eulers(1,i))+abs(eulers(2,i))+abs(eulers(3,i))).ne.0.0) then 
+     do j=1,dict%Nqsym
+      qq = quat_mult(qu,dict%Pm(1:4,j))
+      if (qq(1).lt.0.0) qq = -qq
+        numt = numt + 1
+        s = float(npix)/(1.0+qq(1))
+        x = qq(2)*s
+        y = qq(3)*s
+        z = qq(4)*s
+        cube(nint(x),nint(y),nint(z)) = cube(nint(x),nint(y),nint(z)) + 1.0
+     end do
+    end if
+   end do
 end if
 
 if (verbose.eq.'y') then
   write (*,*) 'number of starting Euler triplets : ',nums
   write (*,*) 'total number of possible points   : ',nums*dict%Nqsym
   write (*,*) 'actual number of good points      : ',numt
+  if (bad.ne.0) write (*,*) 'number of bad points              : ',bad
 end if
 
 open(UNIT=dataunit,file=cubefile,status='unknown',form='unformatted')
+write (dataunit) shape(cube)
 write (dataunit) cube
 close(UNIT=dataunit,status='keep')
 

@@ -17,42 +17,9 @@ integer(kind=irg)     :: tcnt, rcnt, i
 type(orientationtyped):: ot
 logical               :: verbose
  
-!integer(kind=irg)       :: FZcnt, nsteps, pgnum
-!type(FZpointd),pointer  :: FZlist, FZtmp
-
-!nullify(FZlist)
-!FZcnt = 0
-!nsteps = 10
-!pgnum = 2
-!call sampleRFZ(nsteps, pgnum, FZcnt, FZlist)
-!write (*,*) 'Number of points in FZ linked list = ',FZcnt
-
-!FZtmp => FZlist
-!do i = 1,10
-!  ot = init_orientation(FZtmp%rod,'ro',.TRUE.)
-!  call print_orientation(ot)
-!  FZtmp => FZtmp%next
-!end do
-
-!stop
-
-
-
-
-!ieu = (/ 1.D0, 1.D0, 0.D0 /)
-!omega = 0.5D0
-!ot = genrot(ieu,omega)
-!call print_orientation(ot)
-
-!stop
-
-
-
-
-
 
 ivec = (/ 1.D0, 1.D0, 0.D0 /)
-verbose =  .FALSE.
+verbose =  .TRUE.
 dtor = cPi/180.D0
 open(unit=20,file='rotations.txt',status='old')
 read(20,"(I5)") rcnt
@@ -63,6 +30,7 @@ do i=1,rcnt
 if (verbose)  write (*,*) rots(1:3,i)
 end do
 close(unit=20,status='keep')
+
 do i=1,rcnt
 ! create the orientation type for a given Euler triplet
  ieu = rots(1:3,i) * dtor
@@ -148,9 +116,6 @@ tcnt = tcnt+1
  
   iom = ot%om
   oom = ax2om(om2ax(iom))
-write (*,*) iom
-write (*,*) om2ax(iom)
-write (*,*) oom
   diff = maxval(abs(oom-iom))
 if (verbose)   write (*,*) 'om2ax max difference = ', diff
   diffmax = maxval( (/ diffmax,diff /) )

@@ -94,6 +94,13 @@ REAL,public :: infty
 EQUIVALENCE (inf,infty) ! stores two variable at the same address
 DATA inf/z'7f800000'/ !Hex for +Infinity
 
+INTEGER(kind=8),private :: infd
+REAL(kind=dbl),public :: inftyd
+EQUIVALENCE (infd,inftyd) ! stores two variable at the same address
+DATA infd/z'7FF0000000000000'/ !Hex for +Infinity
+
+
+
 
 ! various physical constants
 !> cPi		= pi [dimensionless]
