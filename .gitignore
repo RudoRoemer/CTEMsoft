@@ -24,6 +24,9 @@ IDL/**/*.sav
 # fortrancl folder
 /fortrancl/
 
+# VMF folder
+/VMF/
+
 # ORR folder
 /ORR/
 

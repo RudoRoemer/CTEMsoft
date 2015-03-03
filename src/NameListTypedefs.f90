@@ -309,6 +309,21 @@ type PEDNameListType
     character(fnlen)        :: outname
 end type PEDNameListType
 
+!namelist for the CTEMPEDKIN program
+type PEDKINNameListType
+    integer(kind=irg)       :: stdout
+    integer(kind=irg)       :: npix
+    integer(kind=irg)       :: ncubochoric
+    integer(kind=irg)       :: nthreads
+    real(kind=sgl)          :: voltage
+    real(kind=sgl)          :: dmin
+    real(kind=sgl)          :: thickness
+    real(kind=sgl)          :: pixelsize
+    real(kind=sgl)          :: camlen
+    character(fnlen)        :: xtalname
+    character(fnlen)        :: outname
+end type PEDKINNameListType
+
 ! namelist for the CTEMECCI program
 type ECCINameListType
     integer(kind=irg)       :: stdout
