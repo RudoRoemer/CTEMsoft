@@ -318,8 +318,7 @@ type PEDKINNameListType
     real(kind=sgl)          :: voltage
     real(kind=sgl)          :: dmin
     real(kind=sgl)          :: thickness
-    real(kind=sgl)          :: pixelsize
-    real(kind=sgl)          :: camlen
+    real(kind=sgl)          :: rnmpp
     character(fnlen)        :: xtalname
     character(fnlen)        :: outname
 end type PEDKINNameListType

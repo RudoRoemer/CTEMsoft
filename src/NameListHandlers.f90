@@ -1056,14 +1056,13 @@ integer(kind=irg)       :: ncubochoric
 integer(kind=irg)       :: nthreads
 real(kind=sgl)          :: voltage
 real(kind=sgl)          :: thickness
-real(kind=sgl)          :: pixelsize
-real(kind=sgl)          :: camlen
+real(kind=sgl)          :: rnmpp
 real(kind=sgl)          :: dmin
 character(fnlen)        :: xtalname
 character(fnlen)        :: outname
 
 ! define the IO namelist to facilitate passing variables to the program.
-namelist /inputlist/ stdout, xtalname, voltage, npix, pixelsize, camlen, ncubochoric, nthreads, &
+namelist /inputlist/ stdout, xtalname, voltage, npix, rnmpp, ncubochoric, nthreads, &
                               thickness, outname , dmin
 
 ! set the input parameters to default values (except for xtalname, which must be present)
@@ -1074,10 +1073,9 @@ nthreads = 1                    ! number of OpenMP threads to start
 thickness = 10.0                ! sample thickness [nm]
 npix = 256                      ! output arrays will have size npix x npix
 outname = 'pedout.data'         ! output filename
-camlen = 1000.0                 ! camera length [mm]
 dmin = 0.04                     ! smallest d-spacing [nm]
 ncubochoric = 100               ! number of samples along the cubochoric edge length
-pixelsize = 1.0                 ! nm^{-1} per pattern pixel
+rnmpp = 0.2                     ! nm^{-1} per pattern pixel
 
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
@@ -1094,12 +1092,11 @@ pednl%xtalname = xtalname
 pednl%stdout = stdout
 pednl%voltage = voltage
 pednl%thickness = thickness
-pednl%pixelsize = pixelsize
 pednl%dmin = dmin
 pednl%npix = npix
 pednl%nthreads = nthreads
 pednl%outname = outname
-pednl%camlen = camlen
+pednl%rnmpp = rnmpp
 pednl%ncubochoric = ncubochoric
 
 end subroutine GetPEDKINNameList
