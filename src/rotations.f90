@@ -2147,6 +2147,11 @@ end if
 
 res = (/ phi1, Phi, phi2 /)
 
+! reduce Euler angles to definition ranges (and positive values only)
+if (res(1).lt.0.0) res(1) = mod(res(1)+100.0*sngl(cPi),2.0*sngl(cPi))
+if (res(2).lt.0.0) res(2) = mod(res(2)+100.0*sngl(cPi),sngl(cPi))
+if (res(3).lt.0.0) res(3) = mod(res(3)+100.0*sngl(cPi),2.0*sngl(cPi))
+
 end function qu2eu
 
 !--------------------------------------------------------------------------
@@ -2217,6 +2222,11 @@ else            ! this is not a special degenerate case
 end if
 
 res = (/ phi1, Phi, phi2 /)
+
+! reduce Euler angles to definition ranges (and positive values only)
+if (res(1).lt.0.D0) res(1) = dmod(res(1)+100.D0*cPi,2.D0*cPi)
+if (res(2).lt.0.D0) res(2) = dmod(res(2)+100.D0*cPi,cPi)
+if (res(3).lt.0.D0) res(3) = dmod(res(3)+100.D0*cPi,2.D0*cPi)
 
 end function qu2eu_d
 
