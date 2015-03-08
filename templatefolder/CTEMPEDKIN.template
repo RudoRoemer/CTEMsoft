@@ -18,6 +18,8 @@ npix = 256
 thickness = 50.0
 ! output will be stored here (full pathname)
 outname = '/some/folder/on/my/disk/ped.data'
+! Euler angle output will be stored here (full pathname)
+eulername = '/some/folder/on/my/disk/EulerAngles.txt'
 ! number of sampling points along cubochoric edge
 ncubochoric = 100
 ! number of threads for parallel computation

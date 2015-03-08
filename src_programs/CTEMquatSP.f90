@@ -415,6 +415,9 @@ if (FZmode.ne.'Random') then
  open(UNIT=dataunit,file=cubefile,status='unknown',form='unformatted')
  write (dataunit) shape(cube)
  write (dataunit) dict%Nqsym, nquats
+ s = maxval(cube)
+ write (*,*) 'maximum value in cube array = ',s
+ cube = cube*100.0/s
  write (dataunit) cube
  close(UNIT=dataunit,status='keep')
 end if

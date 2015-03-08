@@ -321,6 +321,7 @@ type PEDKINNameListType
     real(kind=sgl)          :: rnmpp
     character(fnlen)        :: xtalname
     character(fnlen)        :: outname
+    character(fnlen)        :: eulername
 end type PEDKINNameListType
 
 ! namelist for the CTEMECCI program

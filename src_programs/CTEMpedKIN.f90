@@ -81,6 +81,7 @@ end program CTEMPEDKIN
 !> @param nmlfile namelist file name
 !
 !> @date 03/02/15 MDG 1.0 original
+!> @date 03/06/15 MDG 1.1 testing complete; added EulerAngles.txt output
 !--------------------------------------------------------------------------
 subroutine PEDKIN_dictionary(pednl,progname)
 
@@ -106,7 +107,7 @@ character(fnlen),INTENT(IN)             :: progname
 integer(kind=irg)               :: FZcnt, pgnum
 type(FZpointd),pointer          :: FZlist, FZtmp
 real(kind=sgl)                  :: la, dval, dmin, glen, gmax, io_real(3), om(3,3), k(3), sgmax, FN(3), xgmin, Ig, Igmax, & 
-                                   maxint, w, ku(3), kp(3), rnmpp, dx, dy
+                                   maxint, w, ku(3), kp(3), rnmpp, dx, dy, eu(3)
 integer(kind=irg)               :: gp(3), imh, imk, iml, nref, gg(3), ix, iy, iz, io_int(3), ww, nsize, tdp, sx, sy
 logical                         :: verbose
 
@@ -137,6 +138,21 @@ do i=1,32
 end do
 pgnum = j
 write (*,*) 'point group number = ', pgnum
+
+!=============================================
+!=============================================
+! rotation sampling section
+! we need to get a sampling of orientation space, starting from the 
+! cubochoric representation
+nullify(FZlist)
+FZcnt = 0
+write (*,*) 'pgnum = ', pgnum
+write (*,*) 'N = ',pednl%ncubochoric
+
+call sampleRFZ(pednl%ncubochoric, pgnum, FZcnt, FZlist)
+
+io_int(1) = FZcnt
+call WriteValue(' Number of incident beam directions       : ', io_int, 1, "(I8)")
 
 !=============================================
 !=============================================
@@ -194,18 +210,6 @@ izl:   do iz=-iml,iml
 io_int(1) = nref
 call WriteValue(' Length of the master list of reflections : ', io_int, 1, "(I8)")
 
-!=============================================
-!=============================================
-! rotation sampling section
-! we need to get a sampling of orientation space, starting from the 
-! cubochoric representation
-nullify(FZlist)
-FZcnt = 0
-call sampleRFZ(pednl%ncubochoric, pgnum, FZcnt, FZlist)
-
-io_int(1) = FZcnt
-call WriteValue(' Number of incident beam directions       : ', io_int, 1, "(I8)")
-
 
 !=============================================
 !=============================================
@@ -231,8 +235,17 @@ write (*,*) ' Maximum intensity = ',maxint
 !=============================================
 !=============================================
 ! open the output files, one for the patterns, another one for the Euler angle triplets
-open(unit=dataunit,file=trim(pednl%outname),status='unknown',form='unformatted')
+open(unit=dataunit2,file=trim(pednl%eulername),status='unknown',form='formatted')
+write (dataunit2,"(I6)") FZcnt
+FZtmp => FZlist                        ! point to the top of the list
+do i=1,FZcnt
+  eu = ro2eu(FZtmp%rod)
+  write (dataunit2,"(3F10.5)") eu(1), eu(2), eu(3)
+  FZtmp => FZtmp%next                  ! point to the next entry
+end do
+close(unit=dataunit2,status='keep')
 
+open(unit=dataunit,file=trim(pednl%outname),status='unknown',form='unformatted')
 write (dataunit) pednl%npix, FZcnt
 
 !=============================================
@@ -246,12 +259,7 @@ orientationloop: do i = 1, FZcnt       ! loop over all incident beam directions
   image = 0.0
 
 ! convert the rodrigues vector to a passive rotation matrix.
-  if (i.lt.20) then 
-    w = 1.0/sqrt(2.0)
-    om = ax2om( (/ -w, -w, 0.0, 0.0025*float(i-1) /) )
-  else 
-    om = ro2om(FZtmp%rod)                
-  end if
+  om = ro2om(FZtmp%rod)                
 
 ! multiplication with (0,0,1) produces the normalized beam direction in a
 ! cartesian reference frame; so now we can compute the excitation errors 

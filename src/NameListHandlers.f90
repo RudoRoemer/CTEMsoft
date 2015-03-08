@@ -1060,10 +1060,11 @@ real(kind=sgl)          :: rnmpp
 real(kind=sgl)          :: dmin
 character(fnlen)        :: xtalname
 character(fnlen)        :: outname
+character(fnlen)        :: eulername
 
 ! define the IO namelist to facilitate passing variables to the program.
 namelist /inputlist/ stdout, xtalname, voltage, npix, rnmpp, ncubochoric, nthreads, &
-                              thickness, outname , dmin
+                              thickness, outname , dmin, eulername
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 xtalname = 'undefined'          ! initial value to check that the keyword is present in the nml file
@@ -1073,6 +1074,7 @@ nthreads = 1                    ! number of OpenMP threads to start
 thickness = 10.0                ! sample thickness [nm]
 npix = 256                      ! output arrays will have size npix x npix
 outname = 'pedout.data'         ! output filename
+eulername = 'EulerAngles.txt'   ! output filename
 dmin = 0.04                     ! smallest d-spacing [nm]
 ncubochoric = 100               ! number of samples along the cubochoric edge length
 rnmpp = 0.2                     ! nm^{-1} per pattern pixel
@@ -1096,6 +1098,7 @@ pednl%dmin = dmin
 pednl%npix = npix
 pednl%nthreads = nthreads
 pednl%outname = outname
+pednl%eulername = eulername
 pednl%rnmpp = rnmpp
 pednl%ncubochoric = ncubochoric
 

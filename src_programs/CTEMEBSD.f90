@@ -290,7 +290,7 @@ do iang=1,enl%numangles
             do j=1,enl%numsy
 !  do the coordinate transformation for this euler agle
               qq = (/ 0.0, master%rgx(i,j),master%rgy(i,j),master%rgz(i,j) /)
-              qq3 = quat_mult(qq2, quat_mult(qq,qq1) )
+              qq3 = quat_mult(qq1, quat_mult(qq,qq2) )
               dc(1:3) = (/ qq3(2), qq3(3), qq3(4) /) ! these are the direction cosines 
 ! make sure the third one is positive; if not, switch all 
               dc = dc/sqrt(sum(dc**2))
