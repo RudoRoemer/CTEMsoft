@@ -7,6 +7,8 @@ pro rd5,dummy
 ; version 5 of a program to create an mrc file of a 3D quatenrion stereographic projection 
 
 
+folder = '/users/mdg/Files/OSU/Software/CTEMsoft2013/VMF/testfolder/'
+
 ; Titanium data set UCSB
 
 fname = 'Ti64_2D_EBSD_Set2_Strain1/strain1_1.ang'
@@ -24,7 +26,7 @@ goto,skipit
 nalpha = 0L
 nbeta = 0L
 
-openr,1,fname
+openr,1,folder+fname
 line=''
 for i=1,skip do begin
   readf,1,line
@@ -46,7 +48,7 @@ nbeta = 346621L
 eu_alpha = fltarr(3,nalpha)
 eu_beta = fltarr(3,nbeta)
 
-openr,1,fname
+openr,1,folder+fname
 line=''
 for i=1,skip do begin
   readf,1,line
@@ -68,20 +70,20 @@ endfor
 close,1
 
 
-spawn,'touch Tiequi_alpha.data'
-openu,1,'Tiequi_alpha.data',/f77
+spawn,'touch '+folder+'Tiequi_alpha.data'
+openu,1,folder+'Tiequi_alpha.data',/f77
 writeu,1,nalpha
 writeu,1,eu_alpha
 close,1
-print,'file Tiequi_alpha.data created with ',nalpha,' data points'
+print,'file '+folder+'Tiequi_alpha.data created with ',nalpha,' data points'
 
 
-spawn,'touch Tiequi_beta.data'
-openu,1,'Tiequi_beta.data',/f77
+spawn,'touch '+folder+'Tiequi_beta.data'
+openu,1,folder+'Tiequi_beta.data',/f77
 writeu,1,nbeta 
 writeu,1,eu_beta
 close,1
-print,'file Tiequi_alpha.data created with ',nbeta,' data points'
+print,'file '+folder+'Tiequi_alpha.data created with ',nbeta,' data points'
 
 skipit:
 
@@ -93,19 +95,81 @@ np = 2L
 
 print,'calling f90 conversion program'
 
-cube = prep_mrc_file('Tiequi_alpha.data','cube.raw','stereogramCubicFZ.mrc',32,'DrawFZ',np,npix)
-tvscl,total(cube,1)
+;cube = prep_mrc_file(folder+'Tiequi_alpha.data',folder+'cube.raw',folder+'stereogramCubicFZ.mrc',32,'DrawFZ',np,npix)
+;tvscl,total(cube,1)
 
-cube = prep_mrc_file('Tiequi_alpha.data','cube.raw','stereogramHexagonalFZ.mrc',24,'DrawFZ',np,npix)
-tvscl,total(cube,1)
+;cube = prep_mrc_file(folder+'Tiequi_alpha.data',folder+'cube.raw',folder+'stereogramHexagonalFZ.mrc',24,'DrawFZ',np,npix)
+;tvscl,total(cube,1)
 
-cube = prep_mrc_file('Tiequi_alpha.data','cube.raw','stereogramTiequi_alpha.mrc',24,'FullSP',np,npix)
+nump = 2L*(npix + np + 1)+1L
+
+window,0,xsi=3*nump,ysi=nump,retain=2
+erase
+
+goto,skipalpha
+cube = prep_mrc_file(folder+'Tiequi_alpha.data',folder+'cubeSP.raw',folder+'stereogramTiequi_alphaSP.mrc',24,'FullSP',np,npix)
+tvscl,total(cube>0,1),0,0
+tvscl,total(cube>0,2),nump,0
+tvscl,total(cube>0,3),2*nump,0
+write_jpeg,'projectionsSP.jpeg',tvrd(),quality=100
+
+cube = prep_mrc_file(folder+'Tiequi_alpha.data',folder+'cubeEU.raw',folder+'stereogramTiequi_alphaEU.mrc',24,'EulerS',np,npix)
+erase
+tvscl,total(cube>0,1),0,0
+tvscl,total(cube>0,2),nump,0
+tvscl,total(cube>0,3),2*nump,0
+write_jpeg,'projectionsEU.jpeg',tvrd(),quality=100
+
+cube = prep_mrc_file(folder+'Tiequi_alpha.data',folder+'cubeHO.raw',folder+'stereogramTiequi_alphaHO.mrc',24,'HomocS',np,npix)
+erase
+tvscl,total(cube>0,1),0,0
+tvscl,total(cube>0,2),nump,0
+tvscl,total(cube>0,3),2*nump,0
+write_jpeg,'projectionsHO.jpeg',tvrd(),quality=100
+
+cube = prep_mrc_file(folder+'Tiequi_alpha.data',folder+'cubeCU.raw',folder+'stereogramTiequi_alphaCU.mrc',24,'CubocS',np,npix)
+erase
+tvscl,total(cube>0,1),0,0
+tvscl,total(cube>0,2),nump,0
+tvscl,total(cube>0,3),2*nump,0
+write_jpeg,'projectionsCU.jpeg',tvrd(),quality=100
+
+skipalpha:
+
+cube = prep_mrc_file(folder+'Tiequi_beta.data',folder+'cubebSP.raw',folder+'stereogramTiequi_betaSP.mrc',24,'FullSP',np,npix)
+tvscl,total(cube>0,1),0,0
+tvscl,total(cube>0,2),nump,0
+tvscl,total(cube>0,3),2*nump,0
+write_jpeg,'projectionsbSP.jpeg',tvrd(),quality=100
+
+cube = prep_mrc_file(folder+'Tiequi_beta.data',folder+'cubebEU.raw',folder+'stereogramTiequi_betaEU.mrc',24,'EulerS',np,npix)
+erase
+tvscl,total(cube>0,1),0,0
+tvscl,total(cube>0,2),nump,0
+tvscl,total(cube>0,3),2*nump,0
+write_jpeg,'projectionsbEU.jpeg',tvrd(),quality=100
+
+cube = prep_mrc_file(folder+'Tiequi_beta.data',folder+'cubebHO.raw',folder+'stereogramTiequi_betaHO.mrc',24,'HomocS',np,npix)
+erase
+tvscl,total(cube>0,1),0,0
+tvscl,total(cube>0,2),nump,0
+tvscl,total(cube>0,3),2*nump,0
+write_jpeg,'projectionsbHO.jpeg',tvrd(),quality=100
+
+cube = prep_mrc_file(folder+'Tiequi_beta.data',folder+'cubebCU.raw',folder+'stereogramTiequi_betaCU.mrc',24,'CubocS',np,npix)
+erase
+tvscl,total(cube>0,1),0,0
+tvscl,total(cube>0,2),nump,0
+tvscl,total(cube>0,3),2*nump,0
+write_jpeg,'projectionsbCU.jpeg',tvrd(),quality=100
+
+
+stop
+cube = prep_mrc_file(folder+'Tiequi_beta.data',folder+'cube.raw',folder+'stereogramTiequi_betaFZ.mrc',24,'FZonly',np,npix)
 tvscl,total(cube,1)
-cube = prep_mrc_file('Tiequi_alpha.data','cube.raw','stereogramTiequi_alphaFZ.mrc',24,'FZonly',np,npix)
+cube = prep_mrc_file(folder+'Tiequi_beta.data',folder+'cube.raw',folder+'stereogramTiequi_beta.mrc',32,'FullSP',np,npix)
 tvscl,total(cube,1)
-cube = prep_mrc_file('Tiequi_beta.data','cube.raw','stereogramTiequi_beta.mrc',32,'FullSP',np,npix)
-tvscl,total(cube,1)
-cube = prep_mrc_file('Tiequi_beta.data','cube.raw','stereogramTiequi_betaFZ.mrc',32,'FZonly',np,npix)
+cube = prep_mrc_file(folder+'Tiequi_beta.data',folder+'cube.raw',folder+'stereogramTiequi_betaFZ.mrc',32,'FZonly',np,npix)
 tvscl,total(cube,1)
 
 end

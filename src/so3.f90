@@ -353,6 +353,7 @@ FZcnt = 1
 FZtype = FZtarray(pgnum)
 FZorder = FZoarray(pgnum)
 
+
 ! loop over the cube of volume pi^2; note that we do not want to include
 ! the opposite edges/facets of the cube, to avoid double counting rotations
 ! with a rotation angle of 180 degrees.  This only affects the cyclic groups.
@@ -384,6 +385,9 @@ do while (x.lt.s)
 end do
 
 ! that's it.
+write (*,*) 'pgnum, nsteps, delta, s = ',pgnum, nsteps,delta,s
+write (*,*) 'FZtype, FZorder = ',FZtype,FZorder
+write (*,*) 'FZcnt = ',FZcnt
 
 end subroutine SampleRFZ
 

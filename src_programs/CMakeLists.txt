@@ -57,6 +57,7 @@ Create_exe_and_tll(CTEMzap)
 Create_exe_and_tll(CTEMdrawcell)
 Create_exe_and_tll(CTEMBethe)
 Create_exe_and_tll(CTEMPED)
+Create_exe_and_tll(CTEMPEDKIN)
 
 Create_exe_and_tll(structest)
 Create_exe_and_tll(rotationtest)

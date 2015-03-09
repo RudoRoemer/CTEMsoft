@@ -1030,6 +1030,82 @@ end subroutine GetECPpatternNameList
 
 !--------------------------------------------------------------------------
 !
+! SUBROUTINE:GetPEDKINNameList
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read namelist file and fill pednl structure (used by CTEMpedKIN.f90)
+!
+!> @param nmlfile namelist file name
+!> @param pednl PED name list structure
+!
+!> @date 03/02/15 MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine GetPEDKINNameList(nmlfile,pednl)
+
+use error
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                     :: nmlfile
+type(PEDKINNameListType),INTENT(INOUT)             :: pednl
+
+integer(kind=irg)       :: stdout
+integer(kind=irg)       :: npix
+integer(kind=irg)       :: ncubochoric
+integer(kind=irg)       :: nthreads
+real(kind=sgl)          :: voltage
+real(kind=sgl)          :: thickness
+real(kind=sgl)          :: rnmpp
+real(kind=sgl)          :: dmin
+character(fnlen)        :: xtalname
+character(fnlen)        :: outname
+character(fnlen)        :: eulername
+
+! define the IO namelist to facilitate passing variables to the program.
+namelist /inputlist/ stdout, xtalname, voltage, npix, rnmpp, ncubochoric, nthreads, &
+                              thickness, outname , dmin, eulername
+
+! set the input parameters to default values (except for xtalname, which must be present)
+xtalname = 'undefined'          ! initial value to check that the keyword is present in the nml file
+stdout = 6                      ! standard output
+voltage = 200000.0              ! acceleration voltage [V]
+nthreads = 1                    ! number of OpenMP threads to start
+thickness = 10.0                ! sample thickness [nm]
+npix = 256                      ! output arrays will have size npix x npix
+outname = 'pedout.data'         ! output filename
+eulername = 'EulerAngles.txt'   ! output filename
+dmin = 0.04                     ! smallest d-spacing [nm]
+ncubochoric = 100               ! number of samples along the cubochoric edge length
+rnmpp = 0.2                     ! nm^{-1} per pattern pixel
+
+! read the namelist file
+open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+read(UNIT=dataunit,NML=inputlist)
+close(UNIT=dataunit,STATUS='keep')
+
+! check for required entries
+if (trim(xtalname).eq.'undefined') then
+  call FatalError('CTEMPED:',' crystal structure file name is undefined in '//nmlfile)
+end if
+
+! if we get here, then all appears to be ok, and we need to fill in the pednl fields
+pednl%xtalname = xtalname
+pednl%stdout = stdout
+pednl%voltage = voltage
+pednl%thickness = thickness
+pednl%dmin = dmin
+pednl%npix = npix
+pednl%nthreads = nthreads
+pednl%outname = outname
+pednl%eulername = eulername
+pednl%rnmpp = rnmpp
+pednl%ncubochoric = ncubochoric
+
+end subroutine GetPEDKINNameList
+
+!--------------------------------------------------------------------------
+!
 ! SUBROUTINE:GetPEDNameList
 !
 !> @author Marc De Graef, Carnegie Mellon University

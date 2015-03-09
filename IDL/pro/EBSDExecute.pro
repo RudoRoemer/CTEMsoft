@@ -138,6 +138,9 @@ end
   printf,10,'/'
   close,10
 
+cmd = 'more '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
+spawn,cmd
+
   if (EBSDdata.numangles gt 1000) then begin
     Core_Print,'',/blank
     Core_Print,'You are computing more than 1000 EBSPs; this will take a while...'

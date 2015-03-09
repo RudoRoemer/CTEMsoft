@@ -20,12 +20,14 @@ printf,1,'np = '+string(np,format="(I2)")
 printf,1,'npix = '+string(npix,format="(I4)")
 printf,1,'/'
 close,1
-cmd = '/users/mdg/Files/OSU/Software/CTEMsoft2013/Build/Bin/CTEMquatRC'
+cmd = '/users/mdg/Files/OSU/Software/CTEMsoft2013/Build/Bin/CTEMquatSP'
 print,cmd
 spawn,cmd
 
 openu,1,cubefile,/f77
-cube = fltarr(nump,nump,nump)
+dims = lonarr(3)
+readu,1,dims
+cube = fltarr(dims)
 readu,1,cube
 close,1
 
