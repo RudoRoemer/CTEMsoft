@@ -164,7 +164,8 @@ end program CTEMEBSD
 !> @date 02/26/14  MDG 4.0 new version
 !> @date 03/26/14  MDG 4.1 adapted to new input and out file formats
 !> @date 05/22/14  MDG 4.2 slight modification of angle input file; update for new CTEMEBSDMaster file format
-!> @date 06/24/14  MDG 5.0 removal of global variables; removal of namelist stuff; OpenMP functionality
+!> @date 06/24/14  MDG 5.0 removal of global variables; removal of namelist stuff; 
+!> @date 03/09/15  MDG 5.1 added OpenMP functionality for final loop
 !--------------------------------------------------------------------------
 subroutine ComputeEBSDPatterns(enl, angles, acc, master, progname)
 
@@ -182,6 +183,7 @@ use Lambert
 use quaternions
 use rotations
 use noise
+use omp_lib
 
 IMPLICIT NONE
 
@@ -206,6 +208,7 @@ real(kind=sgl)                          :: qq(4), qq1(4), qq2(4), qq3(4)
 integer(kind=irg)                       :: i, j, iang,k, io_int(6), etotal          ! various counters
 integer(kind=irg)                       :: istat                ! status for allocate operations
 integer(kind=irg)                       :: nix, niy, binx, biny,num_el       ! various parameters
+integer(kind=irg)                       :: NUMTHREADS, TID   ! number of allocated threads, thread ID
 real(kind=sgl)                          :: bindx, sig
 real(kind=sgl),parameter                :: dtor = 0.0174533  ! convert from degrees to radians
 real(kind=dbl),parameter                :: nAmpere = 6.241D+18   ! Coulomb per second
@@ -277,6 +280,27 @@ end if
 !====================================
 ! ------ start the actual image computation loop
 !====================================
+
+! set the number of OpenMP threads and allocate the corresponding number of random number streams
+ io_int(1) = pednl%nthreads
+ call WriteValue(' Attempting to set number of threads to ',io_int,1,"(I4)")
+ call OMP_SET_NUM_THREADS(pednl%nthreads)
+
+!====================================
+! to speed things up, we'll split the computation into batches of 5,000 patterns each; once those 
+! are computed, we leave the OpenMP part to write them to a file (will be replaced with HDF5 output
+! at a later stage)
+!====================================
+
+
+
+! use OpenMP to run on multiple cores ... 
+!!$OMP PARALLEL  PRIVATE(i,TID,acc_e,acc_z,istat) &
+!!$OMP& SHARED(NUMTHREADS,varpas,accum_e,accum_z,nel,numEbins,numzbins)
+
+! NUMTHREADS = OMP_GET_NUM_THREADS()
+! TID = OMP_GET_THREAD_NUM()
+
 
 do iang=1,enl%numangles
 ! convert the direction cosines to quaternions, include the 
@@ -366,7 +390,7 @@ do iang=1,enl%numangles
        end if
 ! this will need to become an HDF5 formatted file with all the program output
 ! it should be readable in IDL as well as DREAM.3D.
-
+  if (mod(iang,500).eq.0) write (*,"(A1,$)") '.'
 ! that's it for this pattern ... 
 end do
 
