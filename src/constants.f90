@@ -230,6 +230,11 @@ end type LambertParametersType
 type(LambertParametersType)        :: LPs
 
 
+
+
+! Following numbers are coefficients used to calculate the exponential of a matrix
+
+
 ! The following two arrays are used to determine the FZtype (FZtarray) and primary rotation axis order (FZoarray)
 ! for each of the 32 crystallographic point group symmetries (in the order of the International Tables)
 !

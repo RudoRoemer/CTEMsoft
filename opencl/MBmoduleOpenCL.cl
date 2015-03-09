@@ -40,6 +40,7 @@
 //--------------------------------------------------------------------------
 
 float2 cmplxmult(float2, float2);
+float2 conjg(float2);
 
 float2 cmplxmult(float2 a, float2 b){
     float2 res;
@@ -81,7 +82,7 @@ float2 conjg(float2 a)
 //> @date 02/16/15  SS  1.1 bug fixes and simplification using cmplxmult
 //--------------------------------------------------------------------------
 
-__kernel void ScatMat(__global float2* cl_expA,__global float2* cl_A,__global float2* cl_AA,__global float2* cl_AAA,__global int* arrsize,__global float2* cl_coeff,__global float2* cl_T1,__global float2* cl_T2,__global float2* cl_wavefncoeff,__global float2* cl_wavefncoeffintd,const int ns,__global int* offset,__global int* arrsizesum,const int numdepth)
+__kernel void ScatMat(__global float2* cl_expA,__global float2* cl_A,__global float2* cl_AA,__global float2* cl_AAA,__global int* arrsize,__global float2* cl_coeff,__global float2* cl_T1,__global float2* cl_T2,__global float2* cl_wavefncoeff,__global float2* cl_wavefncoeffintd,__global int* sqrsize,__global int* offset,__global int* arrsizesum,__global int* numdepth)
 {
     int tx,ty,id;
     tx = get_global_id(0);
@@ -92,6 +93,7 @@ __kernel void ScatMat(__global float2* cl_expA,__global float2* cl_A,__global fl
     int nn = arrsize[id];
     int off = offset[id];
     int off2 = arrsizesum[id];
+    int ns = sqrsize[id];
     // calculating A^2 and A^3
     
     for (int i = 0; i < nn; i++){
@@ -219,7 +221,7 @@ __kernel void ScatMat(__global float2* cl_expA,__global float2* cl_A,__global fl
         
     }
     
-    int nstep = numdepth;
+    int nstep = numdepth[id];
   
     
     for (int i = 0; i < nstep; i++){
@@ -257,10 +259,10 @@ __kernel void ScatMat(__global float2* cl_expA,__global float2* cl_A,__global fl
 //
 //> @brief OpenCL kernel for calculating exponential of matrix using Taylor series when multiple exponentials are calculated simultaneously
 //
-//> @date 02/19/14  SS  1.0 Original
+//> @date 02/19/15  SS  1.0 Original
 //--------------------------------------------------------------------------
 
-__kernel void CalcLgh(__global float2* cl_expA,__global float2* cl_A,__global float2* cl_AA,__global float2* cl_AAA,__global int* arrsize,__global float2* cl_coeff,__global float2* cl_T1,__global float2* cl_T2,__global float2* cl_wavefncoeff,__global float2* cl_wavefncoeffintd,const int ns,__global int* offset,__global int* arrsizesum,const int numdepth,__global float* lambdas)
+__kernel void CalcLgh(__global float2* cl_expA,__global float2* cl_A,__global float2* cl_AA,__global float2* cl_AAA,__global int* arrsize,__global float2* cl_coeff,__global float2* cl_T1,__global float2* cl_T2,__global float2* cl_wavefncoeff,__global float2* cl_wavefncoeffintd,__global int* sqrsize,__global int* offset,__global int* arrsizesum,const int numdepth,__global float* lambdas)
 {
     int tx,ty,id;
     tx = get_global_id(0);
@@ -271,6 +273,7 @@ __kernel void CalcLgh(__global float2* cl_expA,__global float2* cl_A,__global fl
     int nn = arrsize[id];
     int off = offset[id];
     int off2 = arrsizesum[id];
+    int ns = sqrsize[id];
     // calculating A^2 and A^3
     
     for (int i = 0; i < nn; i++){
@@ -435,6 +438,7 @@ __kernel void CalcLgh(__global float2* cl_expA,__global float2* cl_A,__global fl
     }
     
    // we now have the Lgh matrix for depth integrated intensity calculations
+   // ready to quit code
     
     
 }
