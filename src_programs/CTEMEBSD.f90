@@ -43,6 +43,7 @@
 !> @date  02/26/14  MDG 3.0 incorporation into git and adapted to new libraries
 !> @date  03/26/14  MDG 3.1 modification of file formats; made compatible with IDL visualization interface
 !> @date  06/24/14  MDG 4.0 removal of all global variables; separation of nml from computation; OpenMP
+!> @date  03/10/15  MDG 4.1 added output format selector
 ! ###################################################################
 ! 
 
@@ -166,6 +167,7 @@ end program CTEMEBSD
 !> @date 05/22/14  MDG 4.2 slight modification of angle input file; update for new CTEMEBSDMaster file format
 !> @date 06/24/14  MDG 5.0 removal of global variables; removal of namelist stuff; 
 !> @date 03/09/15  MDG 5.1 added OpenMP functionality for final loop
+!> @date 03/10/15  MDG 5.2 added 'bin' and 'gui' outputformat; added mask support for 'bin' outputformat
 !--------------------------------------------------------------------------
 subroutine ComputeEBSDPatterns(enl, angles, acc, master, progname)
 
@@ -209,7 +211,7 @@ integer(kind=irg)                       :: i, j, iang, jang, k, io_int(6), etota
 integer(kind=irg)                       :: istat                ! status for allocate operations
 integer(kind=irg)                       :: nix, niy, binx, biny,num_el       ! various parameters
 integer(kind=irg)                       :: NUMTHREADS, TID   ! number of allocated threads, thread ID
-integer(kind=irg)                       :: istart, istop, ninbatch, nbatches, nremainder, ibatch
+integer(kind=irg)                       :: istart, istop, ninbatch, nbatches, nremainder, ibatch, nthreads, maskradius
 
 real(kind=sgl)                          :: bindx, sig, ma, mi
 real(kind=sgl),parameter                :: dtor = 0.0174533  ! convert from degrees to radians
@@ -220,12 +222,17 @@ real(kind=sgl)                          :: dc(3), scl           ! direction cosi
 real(kind=sgl)                          :: sx, dx, dxm, dy, dym, rhos, x         ! various parameters
 real(kind=sgl)                          :: ixy(2)
 
+real(kind=sgl),allocatable              :: mask(:,:), lx(:), ly(:)
 character(len=1),allocatable            :: batchpatterns(:,:,:), bpat(:,:)
+character(len=3)                        :: outputformat
 
 ! parameter for random number generator
 integer, parameter                      :: K4B=selected_int_kind(9)      ! used by ran function in math.f90
 integer(K4B)                            :: idum
 
+!====================================
+! what is the output format?  GUI or BIN ?
+outputformat = enl%outputformat
 
 ! define some energy-related parameters derived from MC input parameters
 !====================================
@@ -254,7 +261,6 @@ num_el = nint(sum(acc%accum_e_detector))
   bindx = 1.0/float(enl%binning)**2
 
 
-
 ! determine the scale factor for the Lambert interpolation; the square has
 ! an edge length of 2 x sqrt(pi/2)
   scl = float(enl%npx) / LPs%sPio2
@@ -278,23 +284,47 @@ end if
 ! ------ start the actual image computation loop
 !====================================
 
-! set the number of OpenMP threads and allocate the corresponding number of random number streams
- io_int(1) = enl%nthreads
- call WriteValue(' Attempting to set number of threads to ',io_int,1,"(I4)")
- call OMP_SET_NUM_THREADS(enl%nthreads)
-
 !====================================
 ! to speed things up, we'll split the computation into batches of 1,000 patterns per thread; once those 
 ! are computed, we leave the OpenMP part to write them to a file (will be replaced with HDF5 output
 ! at a later stage)
 !====================================
 
-ninbatch = 1000
-nbatches = enl%numangles/(ninbatch*enl%nthreads)
-nremainder = mod(enl%numangles,ninbatch*enl%nthreads)
 
 ! and allocate space to store each batch
-allocate(batchpatterns(enl%numsx,enl%numsy,ninbatch*enl%nthreads),stat=istat)
+if (outputformat.eq.'gui') then
+  nthreads = 1
+  ninbatch = 1000
+  nbatches = 0
+  nremainder = mod(enl%numangles,ninbatch)
+else
+  nthreads = enl%nthreads
+  ninbatch = 1000
+  nbatches = enl%numangles/(ninbatch*nthreads)
+  nremainder = mod(enl%numangles,ninbatch*nthreads)
+  allocate(batchpatterns(enl%numsx,enl%numsy,ninbatch*nthreads),stat=istat)
+! here we also create a mask if necessary
+  allocate(mask(binx,biny),stat=istat)
+  mask = 1.0
+  if (enl%maskpattern.eq.'y') then
+! create the circular mask in a potentially rectangular array
+    maskradius = (minval( (/ binx, biny /) ) / 2 )**2
+    allocate(lx(binx), ly(biny), stat=istat)
+    lx = (/ (float(i),i=1,binx) /) - float(binx/2)
+    ly = (/ (float(i),i=1,biny) /) - float(biny/2)
+    do i=1,binx
+      do j=1,biny
+        if ((lx(i)**2+ly(j)**2).gt.maskradius) mask(i,j) = 0.0
+      end do
+    end do
+    deallocate(lx, ly)
+  end if
+end if
+
+! set the number of OpenMP threads and allocate the corresponding number of random number streams
+io_int(1) = nthreads
+call WriteValue(' Attempting to set number of threads to ',io_int,1,"(I4)")
+call OMP_SET_NUM_THREADS(nthreads)
 
 io_int(1) = ninbatch
 io_int(2) = nbatches
@@ -307,7 +337,7 @@ do ibatch=1,nbatches+1
   if (ibatch.eq.nbatches+1) then ! take care of the remainder patterns
     istop = nremainder
   else
-    istop = ninbatch*enl%nthreads
+    istop = ninbatch*nthreads
   end if
 
 ! use OpenMP to run on multiple cores ... 
@@ -331,7 +361,7 @@ do ibatch=1,nbatches+1
 ! convert the direction cosines to quaternions, include the 
 ! sample quaternion orientation, and then back to direction cosines...
 ! then convert these individually to the correct EBSD pattern location
-        jang = (ibatch-1)*ninbatch*enl%nthreads + iang
+        jang = (ibatch-1)*ninbatch*nthreads + iang
         qq1 = conjg(angles%quatang(1:4,jang))
         qq2 = angles%quatang(1:4,jang)
         EBSDpattern = 0.0
@@ -374,6 +404,12 @@ do ibatch=1,nbatches+1
           end do
         end do      
 
+! if this is a GUI-computation, then we can directly store the current pattern in the output file;
+! otherwise, we process it and turn it into a byte array of the right binning level.
+        if (outputformat.eq.'gui') then 
+          write (dataunit) EBSDpattern
+        else
+
 ! we may need to deal with the energy sensitivity of the scintillator as well...
 
 
@@ -387,7 +423,7 @@ do ibatch=1,nbatches+1
 ! that means that at this point, we really only need to store all the patterns in a single
 ! file, at full resolution, as observed at the scintillator stage.
        
-       if (enl%scalingmode.ne.'not') then
+        if (enl%scalingmode.ne.'not') then
 
 ! apply any camera binning
          if (enl%binning.ne.1) then 
@@ -404,31 +440,39 @@ do ibatch=1,nbatches+1
         
 ! and finally, before saving the patterns, apply the contrast function (linear or gamma correction)
 ! for the linear case, we do not need to do anything here...
-        if (enl%scalingmode.eq.'gam') then
+         if (enl%scalingmode.eq.'gam') then
            binned = binned**enl%gammavalue
-        end if
+         end if
 
-       end if ! scaling mode .ne. 'not'
+        end if ! scaling mode .ne. 'not'
 
 ! write either the EBSDpattern array or the binned array to the batchpatterns array (convert to bytes first)
-       if (enl%scalingmode.eq.'not') then
+        if (enl%scalingmode.eq.'not') then
          ma = maxval(EBSDpattern)
          mi = minval(EBSDpattern)
-         EBSDpattern = (EBSDpattern - mi)/ (ma-mi)
+         EBSDpattern = mask * ((EBSDpattern - mi)/ (ma-mi))
          bpat = char(nint(255.0*EBSDpattern))
-       else
+        else
          ma = maxval(binned)
          mi = minval(binned)
-         binned = (binned - mi)/ (ma-mi)
+         binned = mask * ((binned - mi)/ (ma-mi))
          bpat = char(nint(255.0*binned))
+        end if
+       
+        if (enl%binning.ne.1) then 
+         batchpatterns(1:enl%numsx/enl%binning+1,1:enl%numsy/enl%binning+1, iang) = bpat
+       else
+         batchpatterns(1:enl%numsx,1:enl%numsy, iang) = bpat
        end if
-       batchpatterns(1:enl%numsx/enl%binning+1,1:enl%numsy/enl%binning+1, iang) = bpat
+
+      end if
   end do
 !$OMP END DO
 
 !$OMP END PARALLEL
 
 ! here we write all the entries in the batchpatterns array to a file, one at a time for now...
+ if (outputformat.eq.'bin') then
   if (ibatch.le.nbatches) then 
     do iang=1,ninbatch*enl%nthreads 
       bpat = batchpatterns(1:binx,1:biny,iang)
@@ -440,7 +484,7 @@ do ibatch=1,nbatches+1
       write (dataunit) bpat
     end do
   end if
-
+ end if
   write (*,*) 'completed cycle ',ibatch,' of ',nbatches+1
 end do
 

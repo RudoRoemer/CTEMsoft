@@ -682,8 +682,10 @@ real(kind=sgl)          :: gammavalue
 real(kind=sgl)          :: axisangle(4)
 real(kind=dbl)          :: beamcurrent
 real(kind=dbl)          :: dwelltime
+character(1)            :: maskpattern
 character(3)            :: scalingmode
 character(3)            :: eulerconvention
+character(3)            :: outputformat
 character(fnlen)        :: anglefile
 character(fnlen)        :: masterfile
 character(fnlen)        :: energyfile 
@@ -692,7 +694,7 @@ character(fnlen)        :: datafile
 ! define the IO namelist to facilitate passing variables to the program.
 namelist  / EBSDdata / stdout, L, thetac, delta, numsx, numsy, xpc, ypc, anglefile, eulerconvention, masterfile, &
                         energyfile, datafile, beamcurrent, dwelltime, energymin, energymax, binning, gammavalue, &
-                        scalingmode, axisangle, nthreads
+                        scalingmode, axisangle, nthreads, outputformat, maskpattern
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 stdout          = 6
@@ -708,11 +710,13 @@ ypc             = 0.0           ! [pixels]
 energymin       = 15.0          ! minimum energy to consider
 energymax       = 30.0          ! maximum energy to consider
 gammavalue      = 1.0           ! gamma factor
-axisangle       = (/0.0, 0.0, 0.0, 0.0/)        ! no additional axis angle rotation
+axisangle       = (/0.0, 0.0, 1.0, 0.0/)        ! no additional axis angle rotation
 beamcurrent     = 14.513D0      ! beam current (actually emission current) in nano ampere
 dwelltime       = 100.0D0       ! in microseconds
+maskpattern     = 'n'           ! 'y' or 'n' to include a circular mask
 scalingmode     = 'not'         ! intensity selector ('lin', 'gam', or 'not')
 eulerconvention = 'tsl'         ! convention for the first Euler angle ['tsl' or 'hkl']
+outputformat    = 'gui'         ! output format for 'bin' or 'gui' use
 anglefile       = 'undefined'   ! filename
 masterfile      = 'undefined'   ! filename
 energyfile      = 'undefined'   ! name of file that contains energy histograms for all scintillator pixels (output from MC program)
@@ -758,8 +762,10 @@ enl%gammavalue = gammavalue
 enl%axisangle = axisangle
 enl%beamcurrent = beamcurrent
 enl%dwelltime = dwelltime
+enl%maskpattern = maskpattern
 enl%scalingmode = scalingmode
 enl%eulerconvention = eulerconvention
+enl%outputformat = outputformat
 enl%anglefile = anglefile
 enl%masterfile = masterfile
 enl%energyfile = energyfile

@@ -231,7 +231,7 @@ if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
 
 ; and finally, we read the actual data arrays accum_e and accum_z
   accum_e = lonarr(EBSDdata.mcenergynumbin, 2*EBSDdata.mcimx+1,2*EBSDdata.mcimy+1)
-  accum_z = lonarr(EBSDdata.mcenergynumbin, EBSDdata.mcdepthnumbins, 2*EBSDdata.mcimx/10+1,2*EBSDdata.mcimy/10+1)
+  accum_z = lonarr(EBSDdata.mcenergynumbin, EBSDdata.mcdepthnumbins, 2*(EBSDdata.mcimx/10)+1,2*(EBSDdata.mcimy/10)+1)
   readu,1,accum_e
   readu,1,accum_z
 

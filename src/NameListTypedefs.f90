@@ -175,8 +175,10 @@ type EBSDNameListType
 	real(kind=sgl)          :: axisangle(4)
 	real(kind=dbl)          :: beamcurrent
 	real(kind=dbl)          :: dwelltime
+        character(1)            :: maskpattern
         character(3)            :: scalingmode
         character(3)            :: eulerconvention
+        character(3)            :: outputformat
         character(fnlen)        :: anglefile
         character(fnlen)        :: masterfile
         character(fnlen)        :: energyfile 
