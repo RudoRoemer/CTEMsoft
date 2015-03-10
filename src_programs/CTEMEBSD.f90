@@ -205,11 +205,13 @@ real(kind=sgl),allocatable              :: z(:,:)               ! used to store 
 real(kind=sgl)                          :: qq(4), qq1(4), qq2(4), qq3(4)
 
 ! various items
-integer(kind=irg)                       :: i, j, iang,k, io_int(6), etotal          ! various counters
+integer(kind=irg)                       :: i, j, iang, jang, k, io_int(6), etotal          ! various counters
 integer(kind=irg)                       :: istat                ! status for allocate operations
 integer(kind=irg)                       :: nix, niy, binx, biny,num_el       ! various parameters
 integer(kind=irg)                       :: NUMTHREADS, TID   ! number of allocated threads, thread ID
-real(kind=sgl)                          :: bindx, sig
+integer(kind=irg)                       :: istart, istop, ninbatch, nbatches, nremainder, ibatch
+
+real(kind=sgl)                          :: bindx, sig, ma, mi
 real(kind=sgl),parameter                :: dtor = 0.0174533  ! convert from degrees to radians
 real(kind=dbl),parameter                :: nAmpere = 6.241D+18   ! Coulomb per second
 integer(kind=irg),parameter             :: storemax = 20        ! number of EBSD patterns stored in one output block
@@ -218,7 +220,7 @@ real(kind=sgl)                          :: dc(3), scl           ! direction cosi
 real(kind=sgl)                          :: sx, dx, dxm, dy, dym, rhos, x         ! various parameters
 real(kind=sgl)                          :: ixy(2)
 
-
+character(len=1),allocatable            :: batchpatterns(:,:,:), bpat(:,:)
 
 ! parameter for random number generator
 integer, parameter                      :: K4B=selected_int_kind(9)      ! used by ran function in math.f90
@@ -250,13 +252,8 @@ num_el = nint(sum(acc%accum_e_detector))
   binx = enl%numsx/enl%binning
   biny = enl%numsy/enl%binning
   bindx = 1.0/float(enl%binning)**2
-  allocate(binned(binx,biny),stat=istat)
 
-! allocate the array that will hold the computed pattern
-  allocate(EBSDpattern(enl%numsx,enl%numsy),stat=istat)
-! if (istat.ne.0) then ...
 
-  idum = -1               ! to initialize the random number generator
 
 ! determine the scale factor for the Lambert interpolation; the square has
 ! an edge length of 2 x sqrt(pi/2)
@@ -282,33 +279,64 @@ end if
 !====================================
 
 ! set the number of OpenMP threads and allocate the corresponding number of random number streams
- io_int(1) = pednl%nthreads
+ io_int(1) = enl%nthreads
  call WriteValue(' Attempting to set number of threads to ',io_int,1,"(I4)")
- call OMP_SET_NUM_THREADS(pednl%nthreads)
+ call OMP_SET_NUM_THREADS(enl%nthreads)
 
 !====================================
-! to speed things up, we'll split the computation into batches of 5,000 patterns each; once those 
+! to speed things up, we'll split the computation into batches of 1,000 patterns per thread; once those 
 ! are computed, we leave the OpenMP part to write them to a file (will be replaced with HDF5 output
 ! at a later stage)
 !====================================
 
+ninbatch = 1000
+nbatches = enl%numangles/(ninbatch*enl%nthreads)
+nremainder = mod(enl%numangles,ninbatch*enl%nthreads)
 
+! and allocate space to store each batch
+allocate(batchpatterns(enl%numsx,enl%numsy,ninbatch*enl%nthreads),stat=istat)
+
+io_int(1) = ninbatch
+io_int(2) = nbatches
+io_int(3) = nremainder
+call WriteValue('  OpenMP loop variables : ',io_int,3,"(I6,I6,I6)")
+
+do ibatch=1,nbatches+1
+
+  istart = 1
+  if (ibatch.eq.nbatches+1) then ! take care of the remainder patterns
+    istop = nremainder
+  else
+    istop = ninbatch*enl%nthreads
+  end if
 
 ! use OpenMP to run on multiple cores ... 
-!!$OMP PARALLEL  PRIVATE(i,TID,acc_e,acc_z,istat) &
-!!$OMP& SHARED(NUMTHREADS,varpas,accum_e,accum_z,nel,numEbins,numzbins)
+!$OMP PARALLEL default(shared)  PRIVATE(TID,iang,jang,i,j,qq,qq1,qq2,qq3,dc,ixy,istat,nix,niy,dx,dy,dxm,dym,EBSDpattern) &
+!$OMP& PRIVATE(k,binned,idum,bpat)
 
-! NUMTHREADS = OMP_GET_NUM_THREADS()
-! TID = OMP_GET_THREAD_NUM()
+! allocate the array that will hold the computed pattern
+  allocate(EBSDpattern(enl%numsx,enl%numsy),stat=istat)
+  allocate(binned(binx,biny),stat=istat)
+  allocate(bpat(binx,biny),stat=istat)
+! if (istat.ne.0) then ...
 
+  NUMTHREADS = OMP_GET_NUM_THREADS()
+  TID = OMP_GET_THREAD_NUM()
 
-do iang=1,enl%numangles
+! initialize the random number generator for the Poison noise
+  idum = -1-TID               
+
+!$OMP DO SCHEDULE(STATIC,1000)  
+  do iang=istart,istop
 ! convert the direction cosines to quaternions, include the 
 ! sample quaternion orientation, and then back to direction cosines...
 ! then convert these individually to the correct EBSD pattern location
-        qq1 = conjg(angles%quatang(1:4,iang))
-        qq2 = angles%quatang(1:4,iang)
+        jang = (ibatch-1)*ninbatch*enl%nthreads + iang
+        qq1 = conjg(angles%quatang(1:4,jang))
+        qq2 = angles%quatang(1:4,jang)
         EBSDpattern = 0.0
+        binned = 0.0
+        bpat = ' '
 
         do i=1,enl%numsx
             do j=1,enl%numsy
@@ -382,19 +410,40 @@ do iang=1,enl%numangles
 
        end if ! scaling mode .ne. 'not'
 
-! write either the EBSDpattern array or the binned array to the file 
+! write either the EBSDpattern array or the binned array to the batchpatterns array (convert to bytes first)
        if (enl%scalingmode.eq.'not') then
-         write (dataunit) EBSDpattern
+         ma = maxval(EBSDpattern)
+         mi = minval(EBSDpattern)
+         EBSDpattern = (EBSDpattern - mi)/ (ma-mi)
+         bpat = char(nint(255.0*EBSDpattern))
        else
-         write (dataunit) binned
+         ma = maxval(binned)
+         mi = minval(binned)
+         binned = (binned - mi)/ (ma-mi)
+         bpat = char(nint(255.0*binned))
        end if
-! this will need to become an HDF5 formatted file with all the program output
-! it should be readable in IDL as well as DREAM.3D.
-  if (mod(iang,500).eq.0) write (*,"(A1,$)") '.'
-! that's it for this pattern ... 
+       batchpatterns(1:enl%numsx/enl%binning+1,1:enl%numsy/enl%binning+1, iang) = bpat
+  end do
+!$OMP END DO
+
+!$OMP END PARALLEL
+
+! here we write all the entries in the batchpatterns array to a file, one at a time for now...
+  if (ibatch.le.nbatches) then 
+    do iang=1,ninbatch*enl%nthreads 
+      bpat = batchpatterns(1:binx,1:biny,iang)
+      write (dataunit) bpat
+    end do
+  else
+    do iang=1,nremainder
+      bpat = batchpatterns(1:binx,1:biny,iang)
+      write (dataunit) bpat
+    end do
+  end if
+
+  write (*,*) 'completed cycle ',ibatch,' of ',nbatches+1
 end do
 
-! write (dataunit) accum_e_detector
 
 close(unit=dataunit,status='keep')
 
