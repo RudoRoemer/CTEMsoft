@@ -489,47 +489,48 @@ sr = 0.0
 allocate(arrsize(npx*npy),arrsizesum(npx*npy),offset(npx*npy),ns(npx*npy),locpix(npx*npy,2),stat=istat)
 
 ktmp => khead
-kheadtmp => ktmp
+kheadtmp => khead
 
-do ii = 1,floor(float(numk)/float(npx*npy))
+do ii = 1,ceiling(float(numk)/float(npx*npy))
     arrsize = 0
     arrsizesum = 0
     offset = 0
     ns = 0
     locpix = 0
-    do kk = 1,npx
-        do ll = 1,npy
-            k = ktmp%k
-            FN = kk
-            locpix((kk-1)*npy+ll,1) = ktmp%i
-            locpix((kk-1)*npy+ll,2) = ktmp%j
+    if (ii .le. floor(float(numk)/float(npx*npy))) then
+        do kk = 1,npx
+            do ll = 1,npy
+                k = ktmp%k
+                FN = k
+                locpix((kk-1)*npy+ll,1) = ktmp%i
+                locpix((kk-1)*npy+ll,2) = ktmp%j
 
-            call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, k, ecpnl%dmin, nref)
+                call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, k, ecpnl%dmin, nref)
 
 ! determine strong and weak reflections
-            call Apply_BethePotentials(cell, reflist, firstw, BetheParameters, nref, nns, nnw)
-            arrsize((kk-1)*npy+ll) = nns
+                call Apply_BethePotentials(cell, reflist, firstw, BetheParameters, nref, nns, nnw)
+                arrsize((kk-1)*npy+ll) = nns
 
-            if ((kk-1)*npy+ll .lt. npx*npy) then
-                arrsizesum((kk-1)*npy+ll+1) = sum(arrsize)
-                offset((kk-1)*npy+ll+1) = sum(arrsize**2)
-            end if
+                if ((kk-1)*npy+ll .lt. npx*npy) then
+                    arrsizesum((kk-1)*npy+ll+1) = sum(arrsize)
+                    offset((kk-1)*npy+ll+1) = sum(arrsize**2)
+                end if
 
-            ktmp => ktmp%next
+                ktmp => ktmp%next
+            end do
         end do
-    end do
 
-    ktmp => kheadtmp
+        ktmp => kheadtmp
 
-    if (allocated(SghCumulative)) deallocate(SghCumulative)
-    if (allocated(A)) deallocate(A)
+        if (allocated(SghCumulative)) deallocate(SghCumulative)
+        if (allocated(A)) deallocate(A)
 
-    allocate(SghCumulative(1:offset(npx*npy)+arrsize(npx*npy)**2),A(1:offset(npx*npy)+arrsize(npx*npy)**2),stat=istat)
+        allocate(SghCumulative(1:offset(npx*npy)+arrsize(npx*npy)**2),A(1:offset(npx*npy)+arrsize(npx*npy)**2),stat=istat)
 
-    do kk = 1,npx
-        do ll = 1,npy
+        do kk = 1,npx
+            do ll = 1,npy
                 k = ktmp%k
-                FN = kk
+                FN = k
 
                 call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, k, ecpnl%dmin, nref)
 
@@ -657,6 +658,7 @@ do ii = 1,floor(float(numk)/float(npx*npy))
         call clEnqueueWriteBuffer(command_queue, cl_lambdas, cl_bool(.true.), 0_8, size_in_bytes_lambda, lambdaZ(1), ierr)
         if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
 
+
 ! set kernel arguments
 
         call clSetKernelArg(kernel, 0, cl_expA, ierr)
@@ -702,7 +704,9 @@ do ii = 1,floor(float(numk)/float(npx*npy))
         if(ierr /= CL_SUCCESS) stop 'Error: cannot set thirteenth kernel argument.'
 
         call clSetKernelArg(kernel, 14, cl_lambdas, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot set thirteenth kernel argument.'
+        if(ierr /= CL_SUCCESS) stop 'Error: cannot set fourteenth kernel argument.'
+
+
 
 !execute the kernel
 
@@ -714,13 +718,16 @@ do ii = 1,floor(float(numk)/float(npx*npy))
 
         call clEnqueueReadBuffer(command_queue, cl_T1, cl_bool(.true.), 0_8, size_in_bytes, LghCumulative(1), ierr)
 
+
+! divide by integration depth explicitly (OpenCL kernel giving some problems)
+        LghCumulative = LghCumulative/float(izz-1)
+
         do pp = 1,npx
             do qq = 1,npy
                 ipx = locpix((pp-1)*npy+qq,1)
                 ipy = locpix((pp-1)*npy+qq,2)
                 size1 = arrsize((pp-1)*npy+qq)
                 size2 = offset((pp-1)*npy+qq)
-
                 if (isym.ne.1) then
                     call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
                     iequiv(1,1:nequiv) = iequiv(1,1:nequiv) + npiximgx + 1
@@ -755,6 +762,69 @@ do ii = 1,floor(float(numk)/float(npx*npy))
         call clReleaseMemObject(cl_offset, ierr)
         call clReleaseMemObject(cl_lambdas, ierr)
 
+    else if (ii .eq. ceiling(float(numk)/float(npx*npy))) then
+        write(6,'(A,I4,A)')'Performing computation of last ',MODULO(numk,npx*npy),' beams on the CPU'
+        do jj = 1,MODULO(numk,npx*npy)
+
+            k = ktmp%k
+            FN = k
+
+            call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, k, ecpnl%dmin, nref)
+
+! determine strong and weak reflections
+            call Apply_BethePotentials(cell, reflist, firstw, BetheParameters, nref, nns, nnw)
+
+            if (allocated(DynMat)) deallocate(DynMat)
+
+            allocate(DynMat(nns,nns),stat=istat)
+
+            call GetDynMat(cell, reflist, firstw, rlp, DynMat, nns, nnw)
+
+            if (allocated(Lgh)) deallocate(Lgh)
+            if (allocated(Sgh)) deallocate(Sgh)
+            if (allocated(Sghtmp)) deallocate(Sghtmp)
+
+            allocate(Sghtmp(nns,nns,numset),Sgh(nns,nns),Lgh(nns,nns))
+
+            Sgh = dcmplx(0.D0,0.D0)
+            Sghtmp = dcmplx(0.D0,0.D0)
+            nat = 0
+
+            call CalcSgh(cell,reflist,nns,numset,Sghtmp,nat)
+! sum Sghtmp over the sites
+            Sgh = sum(Sghtmp,3)
+
+! solve the dynamical eigenvalue equation
+            kn = ktmp%kn
+
+            call CalcLgh(DynMat,Lgh,intthick,dble(kn),nns,gzero,depthstep,lambdaZ,izz)
+            deallocate(DynMat,Sghtmp)
+
+! and store the resulting values
+
+!print*, iequiv(1,:)
+
+!print*, nequiv, isym
+!print*, iequiv(1,:)
+            ipx = ktmp%i
+            ipy = ktmp%j
+
+            if (isym.ne.1) then
+                call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
+                iequiv(1,1:nequiv) = iequiv(1,1:nequiv) + ecpnl%npx + 1
+                iequiv(2,1:nequiv) = iequiv(2,1:nequiv) + ecpnl%npx + 1
+                do ip=1,nequiv
+                    sr(iequiv(1,ip),iequiv(2,ip)) = real(sum(Lgh(1:nns,1:nns)*Sgh(1:nns,1:nns)))/float(sum(nat))
+                end do
+            else
+                sr(ipx+ecpnl%npx+1,ipy+ecpnl%npx+1) = real(sum(Lgh(1:nns,1:nns)*Sgh(1:nns,1:nns)))/float(sum(nat))
+            end if
+
+            ktmp => ktmp%next
+
+        end do
+
+    end if
     !end do
 end do
 

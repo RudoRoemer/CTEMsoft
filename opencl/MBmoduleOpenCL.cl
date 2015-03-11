@@ -404,7 +404,6 @@ __kernel void CalcLgh(__global float2* cl_expA,__global float2* cl_A,__global fl
     
     int nstep = numdepth;
     
-    
     for (int i = 0; i < nstep; i++){
         
         sum = (float2)(0.0f,0.0f);
