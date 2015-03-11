@@ -101,6 +101,7 @@
 !> @date 08/21/14 MDG 3.4 minor correction in om2ax to get things to work for epsijk>0 mode; all tests passed!
 !> @date 09/30/14 MDG 3.5 added routines to make rotation definitions easier
 !> @date 09/30/14 MDG 3.6 added strict range checking routines for all representations (tested on 10/1/14)
+!> @date 03/11/15 MDG 3.7 removed the RotVec_q routine, since it is surpassed by the new quat_Lp and quat_Lpstar routines
 !--------------------------------------------------------------------------
 module rotations
 
@@ -477,8 +478,6 @@ public :: RotateVector
 interface RotateVector
         module procedure RotVec_om
         module procedure RotVec_om_d
-        module procedure RotVec_qu
-        module procedure RotVec_qu_d
 end interface
 
 ! apply a rotation to a second rank tensor
@@ -4579,8 +4578,8 @@ end function cu2qu_d
 !> @details This routine provides a way for the user to transform a vector
 !> and it returns the new vector components.  The user can use either a 
 !> rotation matrix or a quaternion to define the transformation, and must
-!> also specifiy whether an active or passive result is needed.
-!>
+!> also specifiy whether an active or passive result is needed.  The quaternion
+!> rotation is part of the quaternion.f90 file, in the routine quat_Lp or quat_Lpstar.
 !
 !> @param vec input vector components (single precision)
 !> @param om orientation matrix (single precision)
@@ -4618,8 +4617,8 @@ end function RotVec_om
 !> @details This routine provides a way for the user to transform a vector
 !> and it returns the new vector components.  The user can use either a 
 !> rotation matrix or a quaternion to define the transformation, and must
-!> also specifiy whether an active or passive result is needed.
-!>
+!> also specifiy whether an active or passive result is needed.  The quaternion
+!> rotation is part of the quaternion.f90 file, in the routine quat_Lp or quat_Lpstar.
 !
 !> @param vec input vector components (double precision)
 !> @param om orientation matrix (double precision)
@@ -4645,116 +4644,6 @@ else
 end if
 
 end function RotVec_om_d
-
-
-!--------------------------------------------------------------------------
-!
-! FUNCTION: RotVec_qu
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief rotate a vector using a quaternion, active or passive (single precision)
-!
-!> @details This routine provides a way for the user to transform a vector
-!> and it returns the new vector components.  The user can use either a 
-!> rotation matrix or a quaternion to define the transformation, and must
-!> also specifiy whether an active or passive result is needed.
-!>
-!
-!> @param vec input vector components (single precision)
-!> @param qu quaternion (single precision)
-!> @param ap active/passive switch
-!>  
-!
-!> @date 8/18/14   MDG 1.0 original
-!--------------------------------------------------------------------------
-recursive function RotVec_qu(vec,qu,ap) result(res)
-
-use local
-use quaternions
-use constants
-
-real(kind=sgl),INTENT(IN)       :: vec(3)
-real(kind=sgl),INTENT(IN)       :: qu(4)
-character(1),INTENT(IN)         :: ap
-
-real(kind=sgl)                  :: res(3)
-real(kind=sgl)                  :: rq(4), rr(4)
-
-rq = (/ 0.0, vec(1), vec(2), vec(3) /)
-
-if (epsijk.lt.0) then
-  if (ap.eq.'a') then
-    rr = quat_mult(qu,quat_mult(rq,conjg(qu)) )
-  else
-    rr = quat_mult(conjg(qu),quat_mult(rq,qu) )
-  end if
-else
-  if (ap.eq.'p') then
-    rr = quat_mult(qu,quat_mult(rq,conjg(qu)) )
-  else
-    rr = quat_mult(conjg(qu),quat_mult(rq,qu) )
-  end if
-end if
-
-res = rr(2:4)
-
-end function RotVec_qu
-
-
-!--------------------------------------------------------------------------
-!
-! FUNCTION: RotVec_qu_d
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief rotate a vector using a quaternion, active or passive (double precision)
-!
-!> @details This routine provides a way for the user to transform a vector
-!> and it returns the new vector components.  The user can use either a 
-!> rotation matrix or a quaternion to define the transformation, and must
-!> also specifiy whether an active or passive result is needed.
-!>
-!
-!> @param vec input vector components (double precision)
-!> @param qu quaternion (double precision)
-!> @param ap active/passive switch
-!>  
-!
-!> @date 8/18/14   MDG 1.0 original
-!--------------------------------------------------------------------------
-recursive function RotVec_qu_d(vec,qu,ap) result(res)
-
-use local
-use quaternions
-use constants
-
-real(kind=dbl),INTENT(IN)       :: vec(3)
-real(kind=dbl),INTENT(IN)       :: qu(4)
-character(1),INTENT(IN)         :: ap
-
-real(kind=dbl)                  :: res(3)
-real(kind=dbl)                  :: rq(4), rr(4)
-
-rq = (/ 0.D0, vec(1), vec(2), vec(3) /)
-
-if (epsijk.lt.0) then
-  if (ap.eq.'a') then
-    rr = quat_mult(qu,quat_mult(rq,conjg(qu)) )
-  else
-    rr = quat_mult(conjg(qu),quat_mult(rq,qu) )
-  end if
-else
-  if (ap.eq.'p') then
-    rr = quat_mult(qu,quat_mult(rq,conjg(qu)) )
-  else
-    rr = quat_mult(conjg(qu),quat_mult(rq,qu) )
-  end if
-end if
-
-res = rr(2:4)
-
-end function RotVec_qu_d
 
 !--------------------------------------------------------------------------
 !

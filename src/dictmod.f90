@@ -509,7 +509,7 @@ end function WatsonMeanDirDensity
 !
 !> @date 12/31/14 MDG 1.0 original
 !> @date 01/06/15 MDG 1.1 added optional argument full
-!> @date 02/06/15 MDG 1.2 removed fukk again after extensive testing; no need to use 2M operators
+!> @date 02/06/15 MDG 1.2 removed full again after extensive testing; no need to use 2M operators
 !--------------------------------------------------------------------------
 recursive subroutine DI_Init(dict,Dtype) 
 

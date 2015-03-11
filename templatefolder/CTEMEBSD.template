@@ -33,6 +33,10 @@ binning = 1
 scalingmode = 'not'
 ! gamma correction factor
 gammavalue = 1.0
+! output format selector  'bin' for dictionaries, 'gui' for interactive mode
+outputformat = 'gui'
+! should a circular mask be applied to the data? 'y', 'n'
+maskpattern = 'n'
 ! number of threads (default = 1)
 nthreads = 1
 /

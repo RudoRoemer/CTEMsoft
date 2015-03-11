@@ -176,7 +176,6 @@ interface LambertInverse
 end interface
 
 contains
-
 !--------------------------------------------------------------------------
 !
 ! FUNCTION: Lambert2DSquareForwardSingle
@@ -724,7 +723,9 @@ end function GetSextantDouble
 !
 ! all derivations and equations can be found in 
 !
-! D. Rosca and M. De Graef, ... in preparation
+! D. Rosca, A. Morawiec, and M. De Graef. “A new method of constructing a grid in the space of 
+! 3D rotations and its applications to texture analysis”. Modeling and Simulations in Materials 
+! Science and Engineering 22, 075013 (2014)
 !--------------------------------------------------------------------------
 
 
@@ -1992,3 +1993,4 @@ end subroutine Apply2DPGSymmetry
 
 
 end module Lambert
+
