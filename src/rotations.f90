@@ -102,6 +102,7 @@
 !> @date 09/30/14 MDG 3.5 added routines to make rotation definitions easier
 !> @date 09/30/14 MDG 3.6 added strict range checking routines for all representations (tested on 10/1/14)
 !> @date 03/11/15 MDG 3.7 removed the RotVec_q routine, since it is surpassed by the new quat_Lp and quat_Lpstar routines
+!> @date 03/12/15 MDG 3.8 correction of Rodrigues representation for identity rotation -> [0,0,epsijk,0]
 !--------------------------------------------------------------------------
 module rotations
 
@@ -1730,7 +1731,7 @@ if (abs(t-sngl(cPi)).lt.thr) then
 end if
  
 if (t.eq.0.0) then 
-  res = (/ 0.0, 0.0, 1.0, 0.0 /)
+  res = (/ 0.0, 0.0, epsijk, 0.0 /)
 else
   res(4) = tan(t*0.5)
 end if
@@ -1774,7 +1775,7 @@ if (abs(t-cPi).lt.thr) then
 end if
  
 if (t.eq.0.D0) then 
-  res = (/ 0.D0, 0.D0, 1.D0, 0.D0 /)
+  res = (/ 0.D0, 0.D0, epsijkd, 0.D0 /)
 else
   res(4) = dtan(t*0.5D0)
 end if
@@ -2678,7 +2679,7 @@ real(kind=sgl)                          :: t
 real(kind=sgl),parameter                :: thr = 1.0E-7
 
 if (a(4).eq.0.0) then
-  res = (/ 0.0, 0.0, 1.0, 0.0 /)
+  res = (/ 0.0, 0.0, epsijk, 0.0 /)
   return
 end if
 
@@ -2720,7 +2721,7 @@ real(kind=sgl)                          :: t
 real(kind=sgl),parameter                :: thr = 1.0E-7
 
 if (a(4).eq.0.D0) then
-  res = (/ 0.D0, 0.D0, 1.D0, 0.D0 /)
+  res = (/ 0.D0, 0.D0, epsijkd, 0.D0 /)
   return
 end if
 
@@ -3215,7 +3216,7 @@ end if
 
 s = sqrt(sum(res(1:3)*res(1:3)))
 if (s.lt.thr) then
-  res = (/ 0.0, 0.0, 1.0, 0.0 /)
+  res = (/ 0.0, 0.0, epsijk, 0.0 /)
   return
 else
   t = tan(acos(q(1)))
@@ -3258,7 +3259,7 @@ end if
 
 s = dsqrt(sum(res(1:3)*res(1:3)))
 if (s.lt.thr) then
-  res = (/ 0.D0, 0.D0, 1.D0, 0.D0 /)
+  res = (/ 0.D0, 0.D0, epsijkd, 0.D0 /)
   return
 else
   t = dtan(dacos(q(1)))
