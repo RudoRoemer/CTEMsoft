@@ -1730,7 +1730,7 @@ if (abs(t-sngl(cPi)).lt.thr) then
 end if
  
 if (t.eq.0.0) then 
-  res = (/ 0.0, 0.0, 0.0, 0.0 /)
+  res = (/ 0.0, 0.0, 1.0, 0.0 /)
 else
   res(4) = tan(t*0.5)
 end if
@@ -1774,7 +1774,7 @@ if (abs(t-cPi).lt.thr) then
 end if
  
 if (t.eq.0.D0) then 
-  res = (/ 0.D0, 0.D0, 0.D0, 0.D0 /)
+  res = (/ 0.D0, 0.D0, 1.D0, 0.D0 /)
 else
   res(4) = dtan(t*0.5D0)
 end if
@@ -1895,8 +1895,9 @@ IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)       :: o(3,3)               !< orientation matrix
 real(kind=sgl)                  :: res(3), zeta
+real(kind=dbl),parameter        :: thr = 1.0D-6
 
-if (abs(o(3,3)).ne.1.0) then
+if (abs((abs(o(3,3))-1.D0)).gt.thr) then
         res(2) = acos(o(3,3))
         zeta = 1.0/sqrt(1.0-o(3,3)**2)
         res(1) = atan2(o(3,1)*zeta,-o(3,2)*zeta)
@@ -2677,7 +2678,7 @@ real(kind=sgl)                          :: t
 real(kind=sgl),parameter                :: thr = 1.0E-7
 
 if (a(4).eq.0.0) then
-  res = (/ 0.0, 0.0, 0.0, 0.0 /)
+  res = (/ 0.0, 0.0, 1.0, 0.0 /)
   return
 end if
 
@@ -2719,7 +2720,7 @@ real(kind=sgl)                          :: t
 real(kind=sgl),parameter                :: thr = 1.0E-7
 
 if (a(4).eq.0.D0) then
-  res = (/ 0.D0, 0.D0, 0.D0, 0.D0 /)
+  res = (/ 0.D0, 0.D0, 1.D0, 0.D0 /)
   return
 end if
 
@@ -3082,9 +3083,9 @@ res = (/ s, s1, s2, s3 /) * 0.5
 
 ! verify the signs (q0 always positive)
 if (epsijkd.eq.1.D0) then
-  if (x(3,2).lt.x(2,3)) res(2) = -res(2)
-  if (x(1,3).lt.x(3,1)) res(3) = -res(3)
-  if (x(2,1).lt.x(1,2)) res(4) = -res(4)
+  if (x(3,2).lt.x(2,3)) res(2) = -epsijkd * res(2)
+  if (x(1,3).lt.x(3,1)) res(3) = -epsijkd * res(3)
+  if (x(2,1).lt.x(1,2)) res(4) = -epsijkd * res(4)
 end if
 
 ! normalize
@@ -3214,7 +3215,7 @@ end if
 
 s = sqrt(sum(res(1:3)*res(1:3)))
 if (s.lt.thr) then
-  res = (/ 0.0, 0.0, 0.0, 0.0 /)
+  res = (/ 0.0, 0.0, 1.0, 0.0 /)
   return
 else
   t = tan(acos(q(1)))
@@ -3257,7 +3258,7 @@ end if
 
 s = dsqrt(sum(res(1:3)*res(1:3)))
 if (s.lt.thr) then
-  res = (/ 0.D0, 0.D0, 0.D0, 0.D0 /)
+  res = (/ 0.D0, 0.D0, 1.D0, 0.D0 /)
   return
 else
   t = dtan(dacos(q(1)))

@@ -298,6 +298,8 @@ end function quat_mult
 !--------------------------------------------------------------------------
 recursive function quat_mult_d(x,y) result (res)
 
+use constants
+
     real(kind=dbl), intent(in)          :: x(4), y(4)           !< input quaternions
     real(kind=dbl)                      :: res(4)
 
@@ -648,7 +650,7 @@ recursive function quat_Lpstar_d(q,v) result (res)
     real(kind=dbl)                              :: res(3)
 
     qv = (/ 0.D0, v(1), v(2), v(3) /)   
-    rqv = quat_mult_d(quat_conjg_d(q_,quat_mult_d(qv,q ) )
+    rqv = quat_mult_d(quat_conjg_d(q),quat_mult_d(qv,q ) )
     res = rqv(2:4)
 
 end function quat_Lpstar_d

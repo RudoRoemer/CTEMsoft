@@ -435,7 +435,7 @@ else
 end if
 
 ! transform the line direction to the foil reference frame
-tmp = quat_rotate_vector( foil%a_fc, dble(defects%DL(inum)%un) ) / DF_L
+tmp = quat_Lpstar( foil%a_fc, dble(defects%DL(inum)%un) ) / DF_L
 
 if (dinfo.eq.1) then
   write (*,*) 'transformed line direction ', tmp, zang, zz
@@ -468,7 +468,7 @@ if (dinfo.eq.1) then
 end if
 
 ! transform beam direction (currently in foil frame) to cartesian 
-tmp = quat_rotate_vector(conjg(foil%a_fc), dble(foil%Bn))
+tmp = quat_Lpstar(conjg(foil%a_fc), dble(foil%Bn))
 !tmp = quat_rotate_vector(conjg(foil%a_fc), (/ 0.0D0, 0.0D0, -1.0D0/) )
 call NormVec(cell,tmp,'c')
 
@@ -502,7 +502,7 @@ defects%DL(inum)%a_df = quat_mult( defects%DL(inum)%a_di, conjg(foil%a_fi) )
 ! first transform Burgers vector to crystal cartesian reference frame
 call TransSpace(cell,dble(defects%DL(inum)%burg),tmp,'d','c')
 ! then convert this to the defect reference frame
-defects%DL(inum)%burgd(1:3) = quat_rotate_vector(defects%DL(inum)%a_dc,dble(tmp))
+defects%DL(inum)%burgd(1:3) = quat_Lpstar(defects%DL(inum)%a_dc,dble(tmp))
 
 if (dinfo.eq.1) then
   write (*,*) 'rotated burgers vector  = ', defects%DL(inum)%burgd(1:3) 

@@ -46,9 +46,9 @@ if (verbose)   write (*,*) '  active, rotation matrix ',ovec
   ovec = RotateVector(ivec,iom,'p')
 if (verbose)   write (*,*) '  passive, rotation matrix ',ovec
   iqu = ot%quat
-  ovec = RotateVector(ivec,iqu,'a')
+  ovec = quat_Lp(iqu,ivec)
 if (verbose)   write (*,*) '  active, quaternion ',ovec
-  ovec = RotateVector(ivec,iqu,'p')
+  ovec = quat_Lpstar(iqu,ivec)
 if (verbose)   write (*,*) '  passive, quaternion ',ovec
 if (verbose)  write (*,*) ' '
  
