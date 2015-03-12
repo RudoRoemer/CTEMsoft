@@ -157,7 +157,7 @@ logical               			:: isvoid
     sumR = 0.0
         
 ! set the position in the foil reference frame
-    tmpf = quat_rotate_vector( foil%a_fi, dble( (/ xpos, ypos, zpos /)) )
+    tmpf = quat_LPstar( foil%a_fi, dble( (/ xpos, ypos, zpos /)) )
 
 !------------
 !----VOIDS---
@@ -201,7 +201,7 @@ do ii=1,defects%numdisl
   tmp2 =  tmpf - dble((/ defects%DF_L*defects%DL(ii)%id, defects%DF_L*defects%DL(ii)%jd, defects%DL(ii)%zfrac*foil%z0 /))
 
 ! then convert the difference vector to the defect reference frame for this dislocation (we will only need the x and y coordinates)
-  tmp = quat_rotate_vector( defects%DL(ii)%a_df, tmp2 ) 
+  tmp = quat_LPstar( defects%DL(ii)%a_df, tmp2 ) 
 
 
 ! compute x1 + p_alpha x2  (eq. 8.38)
@@ -244,7 +244,7 @@ do ii=1,defects%numdisl
   end if
   u = 2.0*real(matmul(defects%DL(ii)%dismat,cmplx(zr,zi)))
 ! transform displacement vector u to the Cartesian crystal reference frame
-  u = quat_rotate_vector( conjg(defects%DL(ii)%a_dc), dble(u) )  
+  u = quat_LPstar( conjg(defects%DL(ii)%a_dc), dble(u) )  
   sumR = sumR + u 
 end do
 
@@ -263,15 +263,15 @@ if (defects%numYdisl.gt.0) then
      tmp =  tmpf -  (/ defects%DF_L*defects%YD(ii)%id, defects%DF_L*defects%YD(ii)%jd, foil%z0*0.5 /)
 
 ! rotate into the defect reference frame
-     tmp = quat_rotate_vector( defects%YD(ii)%a_di, tmp )   
+     tmp = quat_LPstar( defects%YD(ii)%a_di, tmp )   
 
 ! compute the displacement vector
 !     u = sngl(YSHDisp(dble(tmp(2)),-dble(tmp(1)),dble(tmp(3)),ii))
      u = sngl(YSHDisp(defects,dble(tmp(1)),dble(tmp(2)),dble(tmp(3)),ii))
 
 ! and rotate back to the image reference frame
-     u = quat_rotate_vector( defects%YD(ii)%a_id, u )
-     u = quat_rotate_vector( conjg(foil%a_ic), u ) 
+     u = quat_LPstar( defects%YD(ii)%a_id, u )
+     u = quat_LPstar( conjg(foil%a_ic), u ) 
 
 ! that should do it !
      sumR = sumR + u

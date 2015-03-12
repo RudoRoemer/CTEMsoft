@@ -121,6 +121,8 @@
 !> @date 08/04/13   MDG 1.1 moved rotation conversion functions to rotations.f90
 !> @date 08/12/13   MDG 2.0 re-defined quaternions to be arrays of 4 reals rather than by letter ... 
 !> @date 02/06/15   MDG 2.1 added quat_slerp interpolation routines
+!> @date 03/11/15   MDG 2.2 renamed quaternion vector rotation routines and split into active and passive
+!> @date 03/11/15   MDG 2.3 redefined quaternion product using epsijk constant (see rotations tutorial paper)
 !--------------------------------------------------------------------------
 module quaternions
 
@@ -179,11 +181,18 @@ interface quat_angle
      module procedure quat_angle_d
   end interface
 
-! quaternion rotation of a unit vector  q v q-1
-public :: quat_rotate_vector
-interface quat_rotate_vector
-        module procedure quat_rotate_vector
-        module procedure quat_rotate_vector_d
+! active quaternion rotation of a unit vector  q v q*
+public :: quat_Lp
+interface quat_Lp
+        module procedure quat_Lp
+        module procedure quat_Lp_d
+end interface
+
+! passive quaternion rotation of a unit vector  q* v q
+public :: quat_Lpstar
+interface quat_Lpstar
+        module procedure quat_Lpstar
+        module procedure quat_Lpstar_d
 end interface
 
 ! quaternion SLERP interpolation between two quaternions
@@ -257,16 +266,19 @@ end subroutine quaternion_print_d
 ! 
 !> @date 3/15/12   MDG 1.0 original
 !> @date 8/12/13   MDG 2.0 rewrite
+!> @date 3/11/15   MDG 3.0 redefined quaternion product (see rotations tutorial paper)
 !--------------------------------------------------------------------------
 recursive function quat_mult(x,y) result (res)
+
+use constants
 
     real(kind=sgl), intent(in)          :: x(4), y(4)           !< input quaternions
     real(kind=sgl)                      :: res(4)
 
     res = (/ x(1)*y(1) - x(2)*y(2) - x(3)*y(3) - x(4)*y(4), &
-             x(1)*y(2) + x(2)*y(1) + x(3)*y(4) - x(4)*y(3), &
-             x(1)*y(3) - x(2)*y(4) + x(3)*y(1) + x(4)*y(2), &
-             x(1)*y(4) + x(2)*y(3) - x(3)*y(2) + x(4)*y(1) /)
+             x(1)*y(2) + x(1)*y(2) - epsijk * ( x(3)*y(4) - x(4)*y(3) ), &
+             x(1)*y(3) + x(1)*y(3) - epsijk * ( x(4)*y(2) - x(2)*y(4) ), &
+             x(1)*y(4) + x(1)*y(4) - epsijk * ( x(2)*y(3) - x(3)*y(2) ) /)
     
 end function quat_mult
 
@@ -286,13 +298,15 @@ end function quat_mult
 !--------------------------------------------------------------------------
 recursive function quat_mult_d(x,y) result (res)
 
+use constants
+
     real(kind=dbl), intent(in)          :: x(4), y(4)           !< input quaternions
     real(kind=dbl)                      :: res(4)
 
     res = (/ x(1)*y(1) - x(2)*y(2) - x(3)*y(3) - x(4)*y(4), &
-             x(1)*y(2) + x(2)*y(1) + x(3)*y(4) - x(4)*y(3), &
-             x(1)*y(3) - x(2)*y(4) + x(3)*y(1) + x(4)*y(2), &
-             x(1)*y(4) + x(2)*y(3) - x(3)*y(2) + x(4)*y(1) /)
+             x(1)*y(2) + x(1)*y(2) - epsijkd * ( x(3)*y(4) - x(4)*y(3) ), &
+             x(1)*y(3) + x(1)*y(3) - epsijkd * ( x(4)*y(2) - x(2)*y(4) ), &
+             x(1)*y(4) + x(1)*y(4) - epsijkd * ( x(2)*y(3) - x(3)*y(2) ) /)
 
 end function quat_mult_d
 
@@ -531,19 +545,20 @@ end function quat_angle_d
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION: quat_rotate_vector
+! FUNCTION: quat_Lp
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief   rotate a unit vector by a unit quaternion
+!> @brief   actively rotate a unit vector by a unit quaternion, L_p = p v p*
 !
 !> @param q quaternion 
 !> @param v vector to be rotated 
 ! 
 !> @date 3/15/12   MDG 1.0 original
 !> @date 8/12/13   MDG 2.0 rewrite
+!> @date 3/11/15   MDG 3.0 name change, to be compatible with rotations tutorial paper
 !--------------------------------------------------------------------------!
-recursive function quat_rotate_vector(q,v) result (res)
+recursive function quat_Lp(q,v) result (res)
 
     real(kind=sgl),intent(in)                   :: q(4)         !< input quaternion
     real(kind=sgl),intent(in)                   :: v(3)         !< input vector (must be normalized)
@@ -554,25 +569,26 @@ recursive function quat_rotate_vector(q,v) result (res)
     rqv = quat_mult(q,quat_mult(qv,quat_conjg(q) ) )
     res = rqv(2:4)
 
-end function quat_rotate_vector
+end function quat_Lp
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION: quat_rotate_vector_d
+! FUNCTION: quat_Lp_d
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief   rotate a unit vector by a unit quaternion (double precision)
+!> @brief   actively rotate a unit vector by a unit quaternion, L_p = p v p*
 !
 !> @param q quaternion 
 !> @param v vector to be rotated 
 ! 
 !> @date 3/15/12   MDG 1.0 original
 !> @date 8/12/13   MDG 2.0 rewrite
+!> @date 3/11/15   MDG 3.0 name change, to be compatible with rotations tutorial paper
 !--------------------------------------------------------------------------!
-recursive function quat_rotate_vector_d(q,v) result (res)
+recursive function quat_Lp_d(q,v) result (res)
 
-    real(kind=dbl), intent(in)          :: q(4)         !< input quaternion
+    real(kind=dbl),intent(in)                   :: q(4)         !< input quaternion
     real(kind=dbl),intent(in)                   :: v(3)         !< input vector (must be normalized)
     real(kind=dbl)                              :: qv(4), rqv(4)
     real(kind=dbl)                              :: res(3)
@@ -581,8 +597,63 @@ recursive function quat_rotate_vector_d(q,v) result (res)
     rqv = quat_mult_d(q,quat_mult_d(qv,quat_conjg_d(q) ) )
     res = rqv(2:4)
 
-end function quat_rotate_vector_d
+end function quat_Lp_d
 
+!--------------------------------------------------------------------------
+!
+! FUNCTION: quat_Lpstar
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief   passively rotate a unit vector by a unit quaternion, L_p* = p* v p
+!
+!> @param q quaternion 
+!> @param v vector to be rotated 
+! 
+!> @date 3/15/12   MDG 1.0 original
+!> @date 8/12/13   MDG 2.0 rewrite
+!> @date 3/11/15   MDG 3.0 name change, to be compatible with rotations tutorial paper
+!--------------------------------------------------------------------------!
+recursive function quat_Lpstar(q,v) result (res)
+
+    real(kind=sgl),intent(in)                   :: q(4)         !< input quaternion
+    real(kind=sgl),intent(in)                   :: v(3)         !< input vector (must be normalized)
+    real(kind=sgl)                              :: qv(4), rqv(4)
+    real(kind=sgl)                              :: res(3)
+
+    qv = (/ 0.0, v(1), v(2), v(3) /)   
+    rqv = quat_mult(quat_conjg(q),quat_mult(qv,q ) )
+    res = rqv(2:4)
+
+end function quat_Lpstar
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: quat_Lpstar_d
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief  passively  rotate a unit vector by a unit quaternion, L_p* = p* v p
+!
+!> @param q quaternion 
+!> @param v vector to be rotated 
+! 
+!> @date 3/15/12   MDG 1.0 original
+!> @date 8/12/13   MDG 2.0 rewrite
+!> @date 3/11/15   MDG 3.0 name change, to be compatible with rotations tutorial paper
+!--------------------------------------------------------------------------!
+recursive function quat_Lpstar_d(q,v) result (res)
+
+    real(kind=dbl),intent(in)                   :: q(4)         !< input quaternion
+    real(kind=dbl),intent(in)                   :: v(3)         !< input vector (must be normalized)
+    real(kind=dbl)                              :: qv(4), rqv(4)
+    real(kind=dbl)                              :: res(3)
+
+    qv = (/ 0.D0, v(1), v(2), v(3) /)   
+    rqv = quat_mult_d(quat_conjg_d(q),quat_mult_d(qv,q ) )
+    res = rqv(2:4)
+
+end function quat_Lpstar_d
 
 !--------------------------------------------------------------------------
 !

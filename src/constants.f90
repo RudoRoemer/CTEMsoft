@@ -52,6 +52,7 @@
 !> @date 08/11/14 MDG 4.4 added epsijk option to package
 !> @date 09/30/14 MDG 4.5 added some additional comments about epsijk
 !> @date 10/02/14 MDG 4.6 removed omegamax again, since we now have properly dealt with 180 degree rotations
+!> @date 03/11/15 MDG 4.7 added some additional comments about epsijk 
 !--------------------------------------------------------------------------
 
 module constants
@@ -66,9 +67,12 @@ IMPLICIT NONE
 ! used to change the sign of the permutation symbol from Adam Morawiec's book to
 ! the convention used for the CTEMsoft package.  If you want to use Adam's convention,
 ! both of these parameters should be set to +1; -1 will change the sign everywhere
-! for all representations that involve the unit vector.
+! for all representations that involve the unit vector.  The quaternion product is 
+! also redefined to include the epsijk parameter.  Doing so guarantees that the 
+! quat_Lp operator ALWAYS returns an active result, regardless of the choice of epsijk;
+! quat_LPstar ALWAYS returns a passive result.
 
-! uncomment these for an alternative way of doing things
+! Uncomment these for an alternative way of doing things
 real(kind=sgl), parameter :: epsijk = -1.0
 real(kind=dbl), parameter :: epsijkd = -1.D0
 
@@ -82,7 +86,10 @@ real(kind=dbl), parameter :: epsijkd = -1.D0
 ! in the passive sense.  The case epsijk=+1 corresponds to the mathematically 
 ! consistent case, using the standard definition for the quaternion product; in
 ! the other case, epsijk=-1, one must redefine the quaternion product in order
-! to produce consistent results.  This takes a lengthy explanation ...  
+! to produce consistent results.  This takes a lengthy explanation ... see the
+! rotations tutorial paper for an in-depth explanation.  These changes propagate
+! to a number of files, notably quaternions.f90, and everywhere else that quaternions
+! and rotations in general are used.
 ! ****************************************************
 ! ****************************************************
 ! ****************************************************

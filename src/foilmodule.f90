@@ -144,7 +144,7 @@ character(10)			:: pret
   
 ! This allows us to get the beam direction, since we know the foil normal and tilt angles
 ! The beam direction is the inverse transform of the microscope e_z-axis to the foil reference frame [verified 11/12/13]
-  foil%B = quat_rotate_vector( foil%a_fm, (/ 0.D0,0.D0,-1.D0 /) )
+  foil%B = quat_LPstar( foil%a_fm, (/ 0.D0,0.D0,-1.D0 /) )
   foil%Bn = foil%B
   call NormVec(cell,foil%Bn,'c')
   if (dinfo.eq.1) then
@@ -197,7 +197,7 @@ character(10)			:: pret
   
 ! express the beam direction in the Bravais reference frame [verified 4/23/11, and again on 11/12/13
 ! after changes elsewhere]
-  ex = quat_rotate_vector( conjg(foil%a_fc), dble(foil%Bn) ) 
+  ex = quat_Lpstar( conjg(foil%a_fc), dble(foil%Bn) ) 
   call TransSpace(cell,ex,ey,'c','d')
   call NormVec(cell,ey,'c')
   if (dinfo.eq.1) then

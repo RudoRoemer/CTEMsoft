@@ -42,12 +42,12 @@
 !>
 !> Remember also that the quat_mult routine for quaternion multiplication expects 
 !> the subscripts for the a_xx rotations to be read from right to left, whereas the 
-!> quat_rotate_vector routine expects them the other way around...  So, to combine
+!> quat_LPstar routine expects them the other way around...  So, to combine
 !> the quaternions a_fc (from crystal to foil) with a_if (from foil to image) we
 !> need to do a_ic=quat_mult(a_if,a_fc); if we want to rotate the vector v from crystal
-!> to image frame, then we need quat_rotate_vector(a_ci,v).  This is really important
+!> to image frame, then we need quat_LPstar(a_ci,v).  This is really important
 !> and has caused some confusion/errors in the past; it is a consequence of my choice for
-!> the quat_rotate_vector order of operations... 
+!> the quat_LPstar order of operations... 
 ! 
 !> @date   04/29/11 MDG 1.0 original
 !> @date   06/04/13 MDG 2.0 rewrite + quaternions instead of rotations
@@ -380,10 +380,10 @@ if (dinfo.eq.1) write (*,*) 'determinant (should be zero) = ',det
 
 ! ok, next we need to figure out which image pixels lie on the projection of the stacking fault plane.
 ! We need to transform the corner points into the image reference frame !!!
-lptopi = quat_rotate_vector( conjg(foil%a_fi), dble(defects%SF(inum)%lptop))
-lpboti = quat_rotate_vector( conjg(foil%a_fi), dble(defects%SF(inum)%lpbot))
-tptopi = quat_rotate_vector( conjg(foil%a_fi), dble(defects%SF(inum)%tptop))
-tpboti = quat_rotate_vector( conjg(foil%a_fi), dble(defects%SF(inum)%tpbot))
+lptopi = quat_LPstar( conjg(foil%a_fi), dble(defects%SF(inum)%lptop))
+lpboti = quat_LPstar( conjg(foil%a_fi), dble(defects%SF(inum)%lpbot))
+tptopi = quat_LPstar( conjg(foil%a_fi), dble(defects%SF(inum)%tptop))
+tpboti = quat_LPstar( conjg(foil%a_fi), dble(defects%SF(inum)%tpbot))
 if (dinfo.eq.1) then
   write (*,*) 'SF parameters :'
   write (*,*) lptopi,' <> ',lpboti
@@ -417,8 +417,8 @@ call NormVec(cell,ex,'c')
 call NormVec(cell,ey,'c')
 call CalcCross(cell,ex,ey,fpn,'c','c',0)
 
-A(1:3) = fpn ! quat_rotate_vector( conjg(foil%a_fi), dble(fpn(1:3)) )
-midpoint = 0.25*(lptopi+lpboti+tptopi+tpboti) ! quat_rotate_vector( conjg(foil%a_fi), dble(0.25*(lptopi+lpboti+tptopi+tpboti) ))
+A(1:3) = fpn ! quat_LPstar( conjg(foil%a_fi), dble(fpn(1:3)) )
+midpoint = 0.25*(lptopi+lpboti+tptopi+tpboti) ! quat_LPstar( conjg(foil%a_fi), dble(0.25*(lptopi+lpboti+tptopi+tpboti) ))
 A(4) = sum(A(1:3)*midpoint)
 if (dinfo.eq.1) write (*,*) 'fault plane parameters : ',A, midpoint
 
@@ -584,7 +584,7 @@ else
 end if
 
 ! transform the line direction to the foil reference frame
-  tmp = quat_rotate_vector( foil%a_fc, dble(lun) ) / DF_L
+  tmp = quat_LPstar( foil%a_fc, dble(lun) ) / DF_L
 
 ! determine the top and bottom intersection coordinates 
   defects%YD(ndl+1)%top = (/ defects%YD(ndl+1)%id, defects%YD(ndl+1)%jd, foil%z0*0.5 /)
@@ -606,7 +606,7 @@ else
   zu = 100000.0         ! this is when the dislocation is nearly parallel to the foil
 end if
 ! transform the line direction to the foil reference frame
-  tmp = quat_rotate_vector( foil%a_fc, dble(tun) ) / DF_L
+  tmp = quat_LPstar( foil%a_fc, dble(tun) ) / DF_L
 
 ! determine the top and bottom intersection coordinates 
   defects%YD(ndl+2)%top = (/ defects%YD(ndl+2)%id, defects%YD(ndl+2)%jd, foil%z0*0.5 /)
@@ -638,10 +638,10 @@ if (dinfo.eq.1) write (*,*) 'determinant (should be zero) = ',det
 
 ! ok, next we need to figure out which image pixels lie on the projection of the stacking fault plane.
 ! We need to transform the corner points into the image reference frame !!!
-lptopi = quat_rotate_vector( conjg(foil%a_fi), dble(defects%SF(inum)%lptop))
-lpboti = quat_rotate_vector( conjg(foil%a_fi), dble(defects%SF(inum)%lpbot))
-tptopi = quat_rotate_vector( conjg(foil%a_fi), dble(defects%SF(inum)%tptop))
-tpboti = quat_rotate_vector( conjg(foil%a_fi), dble(defects%SF(inum)%tpbot))
+lptopi = quat_LPstar( conjg(foil%a_fi), dble(defects%SF(inum)%lptop))
+lpboti = quat_LPstar( conjg(foil%a_fi), dble(defects%SF(inum)%lpbot))
+tptopi = quat_LPstar( conjg(foil%a_fi), dble(defects%SF(inum)%tptop))
+tpboti = quat_LPstar( conjg(foil%a_fi), dble(defects%SF(inum)%tpbot))
 if (dinfo.eq.1) then
   write (*,*) 'SF parameters :'
   write (*,*) lptopi,' <> ',lpboti
@@ -675,8 +675,8 @@ call NormVec(cell,ex,'c')
 call NormVec(cell,ey,'c')
 call CalcCross(cell,ex,ey,fpn,'c','c',0)
 
-A(1:3) = fpn ! quat_rotate_vector( conjg(foil%a_fi), dble(fpn(1:3)) )
-midpoint = 0.25*(lptopi+lpboti+tptopi+tpboti) ! quat_rotate_vector( conjg(foil%a_fi), dble(0.25*(lptopi+lpboti+tptopi+tpboti) ))
+A(1:3) = fpn ! quat_LPstar( conjg(foil%a_fi), dble(fpn(1:3)) )
+midpoint = 0.25*(lptopi+lpboti+tptopi+tpboti) ! quat_LPstar( conjg(foil%a_fi), dble(0.25*(lptopi+lpboti+tptopi+tpboti) ))
 A(4) = sum(A(1:3)*midpoint)
 if (dinfo.eq.1) write (*,*) 'fault plane parameters : ',A, midpoint
 
