@@ -99,6 +99,7 @@ end
   printf,10,'xpc = '+string(EBSDdata.detxpc,FORMAT="(F8.3)")
   printf,10,'ypc = '+string(EBSDdata.detypc,FORMAT="(F8.3)")
   printf,10,'outputformat = ''gui'''
+  printf,10,'energyaverage = 0'
   printf,10,'maskpattern = ''n'''
   th = EBSDdata.mcenergymin + EBSDdata.Eminsel*EBSDdata.mcenergybinsize
   printf,10,'energymin = '+string(th,FORMAT="(F8.3)")

@@ -671,6 +671,7 @@ integer(kind=irg)       :: numsx
 integer(kind=irg)       :: numsy
 integer(kind=irg)       :: binning
 integer(kind=irg)       :: nthreads
+integer(kind=irg)       :: energyaverage
 real(kind=sgl)          :: L
 real(kind=sgl)          :: thetac
 real(kind=sgl)          :: delta
@@ -694,7 +695,7 @@ character(fnlen)        :: datafile
 ! define the IO namelist to facilitate passing variables to the program.
 namelist  / EBSDdata / stdout, L, thetac, delta, numsx, numsy, xpc, ypc, anglefile, eulerconvention, masterfile, &
                         energyfile, datafile, beamcurrent, dwelltime, energymin, energymax, binning, gammavalue, &
-                        scalingmode, axisangle, nthreads, outputformat, maskpattern
+                        scalingmode, axisangle, nthreads, outputformat, maskpattern, energyaverage
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 stdout          = 6
@@ -703,6 +704,7 @@ numsy           = 480           ! [dimensionless]
 binning         = 1             ! binning mode  (1, 2, 4, or 8)
 L               = 20000.0       ! [microns]
 nthreads        = 1             ! number of OpenMP threads
+energyaverage   = 0             ! apply energy averaging (1) or not (0); useful for dictionary computations
 thetac          = 0.0           ! [degrees]
 delta           = 25.0          ! [microns]
 xpc             = 0.0           ! [pixels]
@@ -752,6 +754,7 @@ enl%numsy = numsy
 enl%binning = binning
 enl%L = L
 enl%nthreads = nthreads
+enl%energyaverage = energyaverage
 enl%thetac = thetac
 enl%delta = delta
 enl%xpc = xpc

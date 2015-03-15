@@ -168,6 +168,7 @@ end program CTEMEBSD
 !> @date 06/24/14  MDG 5.0 removal of global variables; removal of namelist stuff; 
 !> @date 03/09/15  MDG 5.1 added OpenMP functionality for final loop
 !> @date 03/10/15  MDG 5.2 added 'bin' and 'gui' outputformat; added mask support for 'bin' outputformat
+!> @date 03/14/15  MDG 5.3 attempt at speeding up the program by performing approximate energy sums (energyaverage = 1)
 !--------------------------------------------------------------------------
 subroutine ComputeEBSDPatterns(enl, angles, acc, master, progname)
 
@@ -224,6 +225,8 @@ real(kind=sgl)                          :: ixy(2)
 
 real(kind=sgl),allocatable              :: mask(:,:), lx(:), ly(:)
 character(len=1),allocatable            :: batchpatterns(:,:,:), bpat(:,:)
+integer(kind=irg),allocatable           :: acc_array(:,:)
+real(kind=sgl),allocatable              :: master_array(:,:), wf(:) 
 character(len=3)                        :: outputformat
 
 ! parameter for random number generator
@@ -321,6 +324,25 @@ else
   end if
 end if
 
+! for dictionary computations, the patterns are usually rather small, so perhaps the explicit 
+! energy sums can be replaced by an averaged approximate approach, in which all the energy bins
+! are added together from the start, and all the master patterns are totaled as well...
+if (enl%energyaverage.eq.1) then
+  allocate(acc_array(enl%numsx,enl%numsy))
+  acc_array = sum(acc%accum_e_detector,1)
+  allocate(wf(enl%numEbins))
+  wf = sum(sum(acc%accum_e_detector,2),2)
+  wf = wf/sum(wf)
+
+! this is a straightforward sum; we should probably do a weighted sum instead
+  allocate(master_array(-enl%npx:enl%npx,-enl%npy:enl%npy))
+  do k=Emin,Emax
+    master%sr(-enl%npx:enl%npx,-enl%npy:enl%npy,k) = master%sr(-enl%npx:enl%npx,-enl%npy:enl%npy,k) * wf(k)
+  end do
+  master_array = sum(master%sr,3)
+end if
+
+
 ! set the number of OpenMP threads and allocate the corresponding number of random number streams
 io_int(1) = nthreads
 call WriteValue(' Attempting to set number of threads to ',io_int,1,"(I4)")
@@ -383,11 +405,17 @@ do ibatch=1,nbatches+1
               dxm = 1.0-dx
               dym = 1.0-dy
  ! interpolate the intensity 
-              do k=Emin,Emax 
-                EBSDpattern(i,j) = EBSDpattern(i,j) + acc%accum_e_detector(k,i,j) * ( master%sr(nix,niy,k) * dxm * dym + &
-                                           master%sr(nix+1,niy,k) * dx * dym + master%sr(nix,niy+1,k) * dxm * dy + &
-                                           master%sr(nix+1,niy+1,k) * dx * dy )
-              end do
+              if (enl%energyaverage.eq.1) then
+                EBSDpattern(i,j) = EBSDpattern(i,j) + acc_array(i,j) * ( master_array(nix,niy) * dxm * dym + &
+                                           master_array(nix+1,niy) * dx * dym + master_array(nix,niy+1) * dxm * dy + &
+                                           master_array(nix+1,niy+1) * dx * dy )
+              else
+                do k=Emin,Emax 
+                  EBSDpattern(i,j) = EBSDpattern(i,j) + acc%accum_e_detector(k,i,j) * ( master%sr(nix,niy,k) * dxm * dym + &
+                                             master%sr(nix+1,niy,k) * dx * dym + master%sr(nix,niy+1,k) * dxm * dy + &
+                                             master%sr(nix+1,niy+1,k) * dx * dy )
+                end do
+              end if
           end do
        end do
 
@@ -487,6 +515,8 @@ end do
 
 close(unit=dataunit,status='keep')
 
+i=6
+call timestamp(i)
 
 end subroutine ComputeEBSDPatterns
 
