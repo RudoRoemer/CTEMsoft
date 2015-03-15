@@ -197,14 +197,14 @@ character(fnlen),INTENT(IN)             :: progname
 
 
 ! all geometrical parameters and filenames
-real(kind=dbl)                          :: prefactor
+real(kind=dbl)                          :: prefactor, qz(3)
 
 ! allocatable arrays
 real(kind=sgl),allocatable              :: EBSDpattern(:,:), binned(:,:)        ! array with EBSD patterns
 real(kind=sgl),allocatable              :: z(:,:)               ! used to store the computed patterns before writing to disk
 
 ! quaternion variables
-real(kind=sgl)                          :: qq(4), qq1(4), qq2(4), qq3(4)
+real(kind=dbl)                          :: qq(4), qq1(4), qq2(4), qq3(4)
 
 ! various items
 integer(kind=irg)                       :: i, j, iang, jang, k, io_int(6), etotal          ! various counters
@@ -362,18 +362,14 @@ do ibatch=1,nbatches+1
 ! sample quaternion orientation, and then back to direction cosines...
 ! then convert these individually to the correct EBSD pattern location
         jang = (ibatch-1)*ninbatch*nthreads + iang
-        qq1 = conjg(angles%quatang(1:4,jang))
-        qq2 = angles%quatang(1:4,jang)
         EBSDpattern = 0.0
         binned = 0.0
         bpat = ' '
 
         do i=1,enl%numsx
             do j=1,enl%numsy
-!  do the coordinate transformation for this euler agle
-              qq = (/ 0.0, master%rgx(i,j),master%rgy(i,j),master%rgz(i,j) /)
-              qq3 = quat_mult(qq1, quat_mult(qq,qq2) )
-              dc(1:3) = (/ qq3(2), qq3(3), qq3(4) /) ! these are the direction cosines 
+!  do the active coordinate transformation for this euler angle
+              dc = sngl(quat_Lp(conjg(angles%quatang(1:4,jang)),  (/ master%rgx(i,j),master%rgy(i,j),master%rgz(i,j) /) )) 
 ! make sure the third one is positive; if not, switch all 
               dc = dc/sqrt(sum(dc**2))
               if (dc(3).lt.0.0) dc = -dc
