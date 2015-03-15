@@ -105,7 +105,7 @@ do i=1,defects%numvoids
   defects%voids(i)%zpos = Vz * foil%z0
   defects%voids(i)%radius = Vrad    ! radius in nanometers
 ! transform to the foil reference frame  
-  tmp = quat_LPstar( foil%a_fc, dble((/ defects%voids(i)%xpos, defects%voids(i)%ypos, defects%voids(i)%zpos /)) )  
+  tmp = quat_Lp( conjg(foil%a_fc), dble((/ defects%voids(i)%xpos, defects%voids(i)%ypos, defects%voids(i)%zpos /)) )  
   defects%voids(i)%xpos = tmp(1)
   defects%voids(i)%ypos = tmp(2)
   defects%voids(i)%zpos = tmp(3)
