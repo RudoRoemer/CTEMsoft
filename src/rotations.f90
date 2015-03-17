@@ -103,6 +103,7 @@
 !> @date 09/30/14 MDG 3.6 added strict range checking routines for all representations (tested on 10/1/14)
 !> @date 03/11/15 MDG 3.7 removed the RotVec_q routine, since it is surpassed by the new quat_Lp and quat_Lpstar routines
 !> @date 03/12/15 MDG 3.8 correction of Rodrigues representation for identity rotation -> [0,0,epsijk,0]
+!> @date 03/16/15 MDG 3.9 added quat_average routine
 !--------------------------------------------------------------------------
 module rotations
 
@@ -488,6 +489,12 @@ interface RotateTensor2
         module procedure RotTensor2_om_d
 end interface
 
+! average a list of quaternions 
+public :: quat_average
+interface quat_average
+        module procedure quat_average
+        module procedure quat_average_d
+end interface
 
 !--------------------------------
 ! print quaternion and equivalent 3x3 rotation matrix
@@ -4713,6 +4720,125 @@ else
 end if
 
 end function RotTensor2_om_d
+
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+! some basic averaging routines for quaternions
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+!--------------------------------------------------------------------------
+!
+! function: quat_average
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief  computes the geometrical mean of a list of quaternions using the quaternion logarithm
+! 
+!> @param qlist quaternion list
+!> @param numq number of quaternions in list
+!> @param qstdev standard deviation quaternion
+! 
+!> @date 03/16/15 MDG 1.0 original
+!--------------------------------------------------------------------------
+recursive function quat_average(qlist,numq,qstdev) result(res)
+
+use local
+
+real(kind=sgl),INTENT(IN)       :: qlist(4,numq)
+integer(kind=irg)               :: numq
+real(kind=sgl),INTENT(OUT)      :: qstdev(4)
+real(kind=sgl)                  :: res(4)
+
+integer(kind=irg)               :: i
+real(kind=sgl)                  :: lsum(3), ax(4), qv, sqv, dfm(3)
+real(kind=sgl)                  :: axanglist(3,numq)
+
+! convert each one to a logarithm, which is really the unit rotation vector multiplied by half the rotation angle
+do i=1,numq
+! convert each quaternion to an axis angle pair
+  ax = qu2ax(qlist(1:4,i))
+  axanglist(1:3,i) =  ax(1:3)*0.5*ax(4)
+end do
+
+! compute the geometric mean
+lsum = sum(axanglist,2)/float(numq)
+
+! then get the standard deviation from the mean
+dfm = 0.0
+do i=1,numq
+  dfm(1:3) = dfm(1:3) + (lsum - axanglist(1:3,i))**2
+end do
+dfm = sqrt(dfm/float(numq))
+
+! then convert this average back to a quaternion via the exponentiation operation
+qv = sqrt(sum(lsum*lsum))
+sqv = sin(qv)/qv
+res = (/ cos(qv), lsum(1)*sqv, lsum(2)*sqv, lsum(3)*sqv /)
+
+! and do the same with the standard deviation quaternion
+qv = sqrt(sum(dfm*dfm))
+sqv = sin(qv)/qv
+qstdev = (/ cos(qv), dfm(1)*sqv, dfm(2)*sqv, dfm(3)*sqv /)
+
+end function quat_average
+
+!--------------------------------------------------------------------------
+!
+! function: quat_average_d
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief  computes the geometrical mean of a list of quaternions using the quaternion logarithm
+! 
+!> @param qlist quaternion list
+!> @param numq number of quaternions in list
+!> @param qstdev standard deviation quaternion
+! 
+!> @date 03/16/15 MDG 1.0 original
+!--------------------------------------------------------------------------
+recursive function quat_average_d(qlist,numq,qstdev) result(res)
+
+use local
+
+real(kind=dbl),INTENT(IN)       :: qlist(4,numq)
+integer(kind=irg)               :: numq
+real(kind=dbl),INTENT(OUT)      :: qstdev(4)
+real(kind=dbl)                  :: res(4)
+
+integer(kind=irg)               :: i
+real(kind=dbl)                  :: lsum(3), ax(4), qv, sqv, dfm(3)
+real(kind=dbl)                  :: axanglist(3,numq)
+
+! convert each one to a logarithm, which is really the unit rotation vector multiplied by half the rotation angle
+do i=1,numq
+! convert the quaternion to an axis angle pair
+  ax = qu2ax_d(qlist(1:4,i))
+  axanglist(1:3,i) =  ax(1:3)*0.5D0*ax(4)
+end do
+
+! compute the geometric mean
+lsum = sum(axanglist,2)/dble(numq)
+
+! then get the standard deviation from the mean
+dfm = 0.D0
+do i=1,numq
+  dfm(1:3) = dfm(1:3) + (lsum - axanglist(1:3,i))**2
+end do
+dfm = dsqrt(dfm/dble(numq))
+
+! then convert this average back to a quaternion via the exponentiation operation; check interval first ?
+qv = dsqrt(sum(lsum*lsum))
+sqv = dsin(qv)/qv
+res = (/ dcos(qv), lsum(1)*sqv, lsum(2)*sqv, lsum(3)*sqv /)
+
+! and do the same with the standard deviation quaternion
+qv = dsqrt(sum(dfm*dfm))
+sqv = dsin(qv)/qv
+qstdev = (/ dcos(qv), dfm(1)*sqv, dfm(2)*sqv, dfm(3)*sqv /)
+
+end function quat_average_d
 
 
 !--------------------------------------------------------------------------
