@@ -60,6 +60,70 @@ public :: HDF_pop
 
 contains
 
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:HDF_writeEMheader
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief write the EMsoft header information to the HDF file
+!
+!> @details The EMheader is a dataset that contains
+!> the following basic items
+!>
+!> EMsoft version 
+!> execution date
+!> start time
+!> end time
+!> program name 
+!> user name
+!> computer name 
+!> computer ID
+!> GPU type
+!>
+!> @param HDF_head top of the current stack
+!> @param HDF_tail bottom of the current stack
+!> @param oT object type character
+!> @param oID object identifier
+!> @param verbose (optional) 
+!
+!> @date 03/17/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+subroutine HDF_writeEMheader(HDF_head, HDF_tail, )
+
+use local
+use io
+
+IMPLICIT NONE
+
+type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_tail
+
+
+! create and open the EMheader group
+call HDF_createGroup('EMheader', HDF_head, HDF_tail)
+
+! version number /EMheader/Version 'character'
+call h5ltmake_dataset_f(file_id, datapath, rnk, data_dims, H5T_NATIVE_REAL, buf_flt1, error)
+
+
+
+
+! and close this group
+call HDF_pop
+
+end subroutine HDF_writeEMheader
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+! from here on, we have basic HDF support routines
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+
 !--------------------------------------------------------------------------
 !
 ! SUBROUTINE:HDF_push
@@ -113,6 +177,8 @@ node % objectID = oID
 node % next => HDF_head
 ! and re-point the head
 HDF_head => node
+
+call HDF_stackdump(HDF_head)
 
 end subroutine HDF_push
 
@@ -169,6 +235,8 @@ else
   HDF_head => HDF_head % next  
 ! delete the old entry
   deallocate(tmp)
+
+  call HDF_stackdump(HDF_head)
 end if
 
 contains
@@ -208,6 +276,41 @@ contains
 end function HDF_close_level
 
 end subroutine MXA_pop
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:HDF_stackdump
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief print out the entire stack for debugging purposes
+!
+!> @param HDF_head top of the current stack
+!
+!> @date 03/19/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+subroutine HDF_stackdump(HDF_head)
+
+use local
+use io
+
+IMPLICIT NONE
+
+type(HDFobjectStackType),INTENT(IN),pointer          :: HDF_head
+
+type(HDFobjectStackType),pointer                     :: tmp
+integer(kind=irg)                                    :: io_int(1)
+
+tmp => HDF_head
+do
+  if (.not.associated(tmp)) EXIT
+  call WriteValue(' HDF stack entry :', tmp%objectType//'  '//tmp%objectName, frm = "(A$)") 
+  io_int(1) = tmp%objectID
+  call WriteValue('',io_int,1)
+  tmp => tmp%next
+end do
+
+end subroutine HDF_stackdump(HDF_head)
 
 !--------------------------------------------------------------------------
 !
@@ -405,7 +508,83 @@ end if
 
 end function HDF_createGroup
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:HDF_createDataset
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief create a new dataset (this also opens the dataset)
+!
+!> @param dataname string
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/17/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_createDataset(dataame, HDF_head, HDF_tail) result(success)
 
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer(kind=irg)                                       :: success
+
+integer(HID_T)                                          :: data_id!  identifier
+integer                                                 :: error  ! error flag
+
+success = 0
+
+call H5dcreate_f(HDF_head%oID, dataname, data_id, error)
+if (error.ne.0) then
+  call HDF_handleError(error,'HDF_createDataset')
+  success = -1
+else
+! and put the data_id onto the HDF_stack
+  call HDF_push(HDF_head, HDF_tail, 'd', data_id)
+end if
+
+end function HDF_createDataset
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:HDF_openDataset
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief open an existing dataset
+!
+!> @param dataname string
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/17/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_openDataset(dataname, HDF_head, HDF_tail) result(success)
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer(kind=irg)                                       :: success
+
+integer(HID_T)                                          :: data_id !  identifier
+integer                                                 :: error  ! error flag
+
+success = 0
+
+call H5dopen_f(HDF_head%oID, dataname, data_id, error)
+if (error.ne.0) then
+  call HDF_handleError(error,'HDF_openDataset')
+  success = -1
+else
+! put the data_id onto the HDF_stack
+  call HDF_push(HDF_head, HDF_tail, 'd', data_id)
+end if
+
+end function HDF_createDataset
 
 
 
