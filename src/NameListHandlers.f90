@@ -1407,7 +1407,7 @@ end subroutine GetRFZNameList
 !> @brief read namelist file and fill DictIndxOpenCLListType (used by CTEMDictIndxOpenCL.f90)
 !
 !> @param nmlfile namelist file name
-!> @param rfznl RFZ name list structure
+!> @param DictIndxOpenCL name list structure
 !
 !> @date 13/01/15 SS 1.0 new routine
 !--------------------------------------------------------------------------
@@ -1499,5 +1499,112 @@ dictindxnl%nnk = nnk
 dictindxnl%MeanSubtraction = MeanSubtraction
 
 end subroutine GetDictIndxOpenCLNameList
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:GetPEDIndxNameList
+!
+!> @author Saransh Singh, Carnegie Mellon University
+!
+!> @brief read namelist file and fill PEDKINIndxListType (used by CTEMPEDIndexing.f90)
+!
+!> @param nmlfile namelist file name
+!> @param pednl PEDKINIndx name list structure
+!
+!> @date 13/01/15 SS 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine GetPEDIndxNameList(nmlfile,pednl)
+
+use error
+use local
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                                 :: nmlfile
+type(PEDKINIndxListType),INTENT(INOUT)                      :: pednl
+
+integer(kind=irg)                                           :: npix
+integer(kind=irg)                                           :: ncubochoric
+real(kind=sgl)                                              :: voltage
+real(kind=sgl)                                              :: dmin
+real(kind=sgl)                                              :: thickness
+real(kind=sgl)                                              :: rnmpp
+character(fnlen)                                            :: xtalname
+integer(kind=irg)                                           :: numexptsingle
+integer(kind=irg)                                           :: numdictsingle
+integer(kind=irg)                                           :: totnumexpt
+integer(kind=irg)                                           :: imght
+integer(kind=irg)                                           :: imgwd
+integer(kind=irg)                                           :: nnk
+character(fnlen)                                            :: exptfile
+
+! define the IO namelist to facilitate passing variables to the program.
+namelist /inputlist/ npix,ncubochoric,numexptsingle, numdictsingle, totnumexpt,voltage,dmin,thickness,rnmpp,xtalname, &
+imght, imgwd, exptfile, nnk
+
+! set some of the input parameters to default values
+npix = 0
+ncubochoric = 50
+voltage = 200000.0
+dmin = 0.04
+thickness = 50.0
+rnmpp = 0.20
+xtalname = 'undefined'
+numdictsingle = 1024
+numexptsingle = 1024
+imght = 0
+imgwd = 0
+nnk = 40
+exptfile = 'undefined'
+totnumexpt = 0
+
+! read the namelist file
+open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+read(UNIT=dataunit,NML=inputlist)
+close(UNIT=dataunit,STATUS='keep')
+
+! check for required entries
+if (npix .eq. 0) then
+call FatalError('CTEMPEDIndexing:',' size of dictionary pattern not specified or set to 0 in '//nmlfile)
+end if
+
+if (trim(xtalname) .eq. 'undefined') then
+call FatalError('CTEMPEDIndexing:',' crystal file undefined in '//nmlfile)
+end if
+
+if (trim(exptfile).eq.'undefined') then
+call FatalError('CTEMPEDIndexing:',' experimental file name is undefined in '//nmlfile)
+end if
+
+
+if (totnumexpt .eq. 0) then
+call FatalError('CTEMPEDIndexing:',' total number of experimental patterns is undefined in '//nmlfile)
+end if
+
+if (imght .eq. 0) then
+call FatalError('CTEMPEDIndexing:',' height of single pattern is undefined in '//nmlfile)
+end if
+
+if (imgwd .eq. 0) then
+call FatalError('CTEMPEDIndexing:',' width of single pattern is undefined in '//nmlfile)
+end if
+
+! if we get here, then all appears to be ok, and we need to fill in the emnl fields
+pednl%npix = npix
+pednl%ncubochoric = ncubochoric
+pednl%voltage = voltage
+pednl%dmin = dmin
+pednl%thickness = thickness
+pednl%rnmpp = rnmpp
+pednl%xtalname = xtalname
+pednl%numexptsingle = numexptsingle
+pednl%numdictsingle = numdictsingle
+pednl%imght = imght
+pednl%imgwd = imgwd
+pednl%exptfile = exptfile
+pednl%totnumexpt = totnumexpt
+pednl%nnk = nnk
+
+end subroutine GetPEDIndxNameList
 
 end module NameListHandlers

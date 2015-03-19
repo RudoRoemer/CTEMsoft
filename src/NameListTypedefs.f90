@@ -385,4 +385,21 @@ type DictIndxOpenCLListType
 end type DictIndxOpenCLListType
 
 
+type PEDKINIndxListType
+    integer(kind=irg)           :: npix
+    integer(kind=irg)           :: ncubochoric
+    real(kind=sgl)              :: voltage
+    real(kind=sgl)              :: dmin
+    real(kind=sgl)              :: thickness
+    real(kind=sgl)              :: rnmpp
+    character(fnlen)            :: xtalname
+    integer(kind=irg)           :: numexptsingle
+    integer(kind=irg)           :: numdictsingle
+    integer(kind=irg)           :: totnumexpt
+    integer(kind=irg)           :: imght
+    integer(kind=irg)           :: imgwd
+    integer(kind=irg)           :: nnk
+    character(fnlen)            :: exptfile
+end type PEDKINIndxListType
+
 end module NameListTypedefs

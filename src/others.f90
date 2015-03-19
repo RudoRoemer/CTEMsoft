@@ -778,7 +778,7 @@ END FUNCTION
 !> Parameters described in the program
 !
 !--------------------------------------------------------------------------
-SUBROUTINE SSORT (X, Y, N, KFLAG)
+RECURSIVE SUBROUTINE SSORT (X, Y, N, KFLAG)
 !***BEGIN PROLOGUE  SSORT
 !***PURPOSE  Sort an array and optionally make the same interchanges in
 !            an auxiliary array.  The array may be sorted in increasing
