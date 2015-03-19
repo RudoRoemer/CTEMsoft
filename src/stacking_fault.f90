@@ -380,10 +380,10 @@ if (dinfo.eq.1) write (*,*) 'determinant (should be zero) = ',det
 
 ! ok, next we need to figure out which image pixels lie on the projection of the stacking fault plane.
 ! We need to transform the corner points into the image reference frame !!!
-lptopi = quat_LPstar( conjg(foil%a_fi), dble(defects%SF(inum)%lptop))
-lpboti = quat_LPstar( conjg(foil%a_fi), dble(defects%SF(inum)%lpbot))
-tptopi = quat_LPstar( conjg(foil%a_fi), dble(defects%SF(inum)%tptop))
-tpboti = quat_LPstar( conjg(foil%a_fi), dble(defects%SF(inum)%tpbot))
+lptopi = quat_Lp( foil%a_fi, dble(defects%SF(inum)%lptop))
+lpboti = quat_Lp( foil%a_fi, dble(defects%SF(inum)%lpbot))
+tptopi = quat_Lp( foil%a_fi, dble(defects%SF(inum)%tptop))
+tpboti = quat_Lp( foil%a_fi, dble(defects%SF(inum)%tpbot))
 if (dinfo.eq.1) then
   write (*,*) 'SF parameters :'
   write (*,*) lptopi,' <> ',lpboti
@@ -584,7 +584,7 @@ else
 end if
 
 ! transform the line direction to the foil reference frame
-  tmp = quat_LPstar( foil%a_fc, dble(lun) ) / DF_L
+  tmp = quat_Lp( conjg(foil%a_fc), dble(lun) ) / DF_L
 
 ! determine the top and bottom intersection coordinates 
   defects%YD(ndl+1)%top = (/ defects%YD(ndl+1)%id, defects%YD(ndl+1)%jd, foil%z0*0.5 /)
@@ -606,7 +606,7 @@ else
   zu = 100000.0         ! this is when the dislocation is nearly parallel to the foil
 end if
 ! transform the line direction to the foil reference frame
-  tmp = quat_LPstar( foil%a_fc, dble(tun) ) / DF_L
+  tmp = quat_Lp( conjg(foil%a_fc), dble(tun) ) / DF_L
 
 ! determine the top and bottom intersection coordinates 
   defects%YD(ndl+2)%top = (/ defects%YD(ndl+2)%id, defects%YD(ndl+2)%jd, foil%z0*0.5 /)
@@ -638,10 +638,10 @@ if (dinfo.eq.1) write (*,*) 'determinant (should be zero) = ',det
 
 ! ok, next we need to figure out which image pixels lie on the projection of the stacking fault plane.
 ! We need to transform the corner points into the image reference frame !!!
-lptopi = quat_LPstar( conjg(foil%a_fi), dble(defects%SF(inum)%lptop))
-lpboti = quat_LPstar( conjg(foil%a_fi), dble(defects%SF(inum)%lpbot))
-tptopi = quat_LPstar( conjg(foil%a_fi), dble(defects%SF(inum)%tptop))
-tpboti = quat_LPstar( conjg(foil%a_fi), dble(defects%SF(inum)%tpbot))
+lptopi = quat_Lp( foil%a_fi, dble(defects%SF(inum)%lptop))
+lpboti = quat_Lp( foil%a_fi, dble(defects%SF(inum)%lpbot))
+tptopi = quat_Lp( foil%a_fi, dble(defects%SF(inum)%tptop))
+tpboti = quat_Lp( foil%a_fi, dble(defects%SF(inum)%tpbot))
 if (dinfo.eq.1) then
   write (*,*) 'SF parameters :'
   write (*,*) lptopi,' <> ',lpboti

@@ -47,9 +47,9 @@ if (verbose)   write (*,*) '  active, rotation matrix ',ovec
 if (verbose)   write (*,*) '  passive, rotation matrix ',ovec
   iqu = ot%quat
   ovec = quat_Lp(iqu,ivec)
-if (verbose)   write (*,*) '  active, quaternion ',ovec
-  ovec = quat_Lpstar(iqu,ivec)
 if (verbose)   write (*,*) '  passive, quaternion ',ovec
+  ovec = quat_Lp(conjg(iqu),ivec)
+if (verbose)   write (*,*) '  active, quaternion ',ovec
 if (verbose)  write (*,*) ' '
  
 ! individual tests  x = Oinv [ O [x] ]

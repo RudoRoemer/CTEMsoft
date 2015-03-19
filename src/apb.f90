@@ -105,7 +105,7 @@ do i=1,defects%numapb
   call TransSpace(cell,tmp,tmp2,'d','c') 
   defects%apbs(i)%Rdisp = tmp2 
 
-  tmp = quat_LPstar( foil%a_fc, dble((/ defects%apbs(i)%xpos, defects%apbs(i)%ypos, defects%apbs(i)%zpos /)) )  
+  tmp = quat_Lp( conjg(foil%a_fc), dble((/ defects%apbs(i)%xpos, defects%apbs(i)%ypos, defects%apbs(i)%zpos /)) )  
   defects%apbs(i)%xpos = tmp(1)
   defects%apbs(i)%ypos = tmp(2)
   defects%apbs(i)%zpos = tmp(3)

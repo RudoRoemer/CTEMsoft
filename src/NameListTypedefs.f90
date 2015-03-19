@@ -164,6 +164,7 @@ type EBSDNameListType
         integer(kind=irg)       :: numsy
         integer(kind=irg)       :: binning
         integer(kind=irg)       :: nthreads
+        integer(kind=irg)       :: energyaverage
 	real(kind=sgl)          :: L
 	real(kind=sgl)          :: thetac
 	real(kind=sgl)          :: delta

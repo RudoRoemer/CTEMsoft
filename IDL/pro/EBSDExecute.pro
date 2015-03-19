@@ -99,7 +99,8 @@ end
   printf,10,'xpc = '+string(EBSDdata.detxpc,FORMAT="(F8.3)")
   printf,10,'ypc = '+string(EBSDdata.detypc,FORMAT="(F8.3)")
   printf,10,'outputformat = ''gui'''
-  printf,10,'maskpattern = ''y'''
+  printf,10,'energyaverage = 0'
+  printf,10,'maskpattern = ''n'''
   th = EBSDdata.mcenergymin + EBSDdata.Eminsel*EBSDdata.mcenergybinsize
   printf,10,'energymin = '+string(th,FORMAT="(F8.3)")
   th = EBSDdata.mcenergymin + EBSDdata.Emaxsel*EBSDdata.mcenergybinsize
@@ -166,12 +167,12 @@ spawn,cmd
   end else status = 1 
 
 if keyword_set(single) then begin
-  cmd = '/bin/rm '+EBSDdata.pathname+'/'+'tmpangle.txt'
-  spawn, cmd
+;  cmd = '/bin/rm '+EBSDdata.pathname+'/'+'tmpangle.txt'
+;  spawn, cmd
 end
 
-  cmd = '/bin/rm '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
-  spawn, cmd
+; cmd = '/bin/rm '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
+; spawn, cmd
 
 ; next, we need to load the pattern if we are in single mode
 if keyword_set(single) then begin
