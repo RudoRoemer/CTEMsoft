@@ -35,6 +35,26 @@
 !
 !> @brief HDF5 helper routines
 !
+!> @details: the EM HDF format has three parts: 
+!>
+!> EMheader, created with HDF_writeEMheader
+!> 
+!> EMnamelistfiles, which contains all the variables from all the namelists
+!> and is created as follows in the calling program:
+!>
+!>     create and open the EMnamelistfiles group
+!>     call HDF_createGroup('EMnamelistfiles', HDF_head, HDF_tail)
+!>
+!>     then for each relevant namelist: (from the NameListHDFwriters module)
+!>     HDFwriteKosselNameList(HDF_head, knl)
+!>     ...
+!>
+!>     and then close the group
+!>     call HDF_pop(HDF_head)
+!> 
+!> and finally the EMdata section
+!>
+!
 !> @date  03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 module HDFsupport
@@ -44,22 +64,7 @@ use typedefs
 use HDF5
 use h5lt
 
-! the following declaration needs to go into the typedefs.f90 module
-type HDFobjectStackType   ! this is a push-pop stack to keep track of the open objects
-  character(LEN=1)                      :: objectType
-  character(fnlen)                      :: objectName
-  integer(HID_T)                        :: objectID
-  type(HDFobjectStackType),pointer      :: next
-end type HDFobjectStackType
-
-
-! type(HDFobjectStackType),pointer :: HDF_stack_head, HDF_stack_tail
-
-public :: HDF_push
-public :: HDF_pop
-
 contains
-
 
 !--------------------------------------------------------------------------
 !
@@ -69,28 +74,29 @@ contains
 !
 !> @brief write the EMsoft header information to the HDF file
 !
-!> @details The EMheader is a dataset that contains
-!> the following basic items
+!> @details The EMheader is a group that contains
+!> the following basic dataset strings
 !>
 !> EMsoft version       : scversion from local.f90
 !> execution date       : dstr
 !> start time           : tstr1
 !> end time             : tstr2
 !> program name         : prn
-!> user name            : username
-!> computer name        : cpu
-!> computer ID          : cpuID
-!> GPU type             : GPU
+!> user name            : username (local.f90) [these can/should be redefined by the user via nml files] 
+!> user location        : userlocn (local.f90)
+!> user email           : useremail (local.f90)
+!> computer name        : read via system call hostnm()
 !>
-!> @param HDF_head top of the current stack
-!> @param HDF_tail bottom of the current stack
-!> @param oT object type character
-!> @param oID object identifier
-!> @param verbose (optional) 
-!
-!> @date 03/17/15  MDG 1.0 original
+!> @param HDF_head pointer to top of push-pop stack
+!> @param HDF_tail pointer to bottom of push-pop stack
+!> @param dstr date string
+!> @param tstrb time start string
+!> @param tstre time end string
+!> @param prn program name
+!>
+!> @date 03/20/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-subroutine HDF_writeEMheader(HDF_head, HDF_tail, dstr, tstrb, tstre, prn,  )
+subroutine HDF_writeEMheader(HDF_head, HDF_tail, dstr, tstrb, tstre, prn)
 
 use local
 use io
@@ -105,29 +111,97 @@ character(15),INTENT(IN)                              :: tstr2
 character(fnlen),INTENT(IN)                           :: prn
 
 integer                                               :: error  ! error flag
+integer                                               :: i,ic,nlen 
+character(100)                                        :: c
+
 
 ! create and open the EMheader group
 call HDF_createGroup('EMheader', HDF_head, HDF_tail)
 
 ! version number /EMheader/Version 'character'
 call h5ltmake_dataset_string_f(HDF_head%oID, 'Version', scversion, error)
+if (error.ne.0) call HDF_handleError(error,'HDF_writeEMheader: unable to write Version',.TRUE.)
 
 ! execution data /EMheader/Date 'character'
 call h5ltmake_dataset_string_f(HDF_head%oID, 'Date', dstr, error)
+if (error.ne.0) call HDF_handleError(error,'HDF_writeEMheader: unable to write Date',.TRUE.)
 
 ! start time /EMheader/StartTime 'character'
 call h5ltmake_dataset_string_f(HDF_head%oID, 'StartTime', tstr1, error)
+if (error.ne.0) call HDF_handleError(error,'HDF_writeEMheader: unable to write StartTime',.TRUE.)
 
 ! stop time /EMheader/StopTime 'character'
 call h5ltmake_dataset_string_f(HDF_head%oID, 'StopTime', tstr2, error)
+if (error.ne.0) call HDF_handleError(error,'HDF_writeEMheader: unable to write StopTime',.TRUE.)
 
+! program name /EMheader/ProgramName 'character'
+call h5ltmake_dataset_string_f(HDF_head%oID, 'ProgramName', trim(prn), error)
+if (error.ne.0) call HDF_handleError(error,'HDF_writeEMheader: unable to write ProgramName',.TRUE.)
 
+! user name /EMheader/UserName 'character'
+call h5ltmake_dataset_string_f(HDF_head%oID, 'UserName', trim(username), error)
+if (error.ne.0) call HDF_handleError(error,'HDF_writeEMheader: unable to write Username',.TRUE.)
 
+! user location /EMheader/UserLocation 'character'
+call h5ltmake_dataset_string_f(HDF_head%oID, 'UserLocation', trim(userlocn), error)
+if (error.ne.0) call HDF_handleError(error,'HDF_writeEMheader: unable to write UserLocation',.TRUE.)
+
+! user email /EMheader/UserEmail 'character'
+call h5ltmake_dataset_string_f(HDF_head%oID, 'UserEmail', trim(useremail), error)
+if (error.ne.0) call HDF_handleError(error,'HDF_writeEMheader: unable to write UserEmail',.TRUE.)
+
+! hostname /EMheader/HostName 'character'
+call hostnm(c)
+! lowercase it
+nlen = len(c) 
+do i=1,nlen 
+   ic = ichar(c(i:i)) 
+   if (ic >= 65 .and. ic < 90) c(i:i) = char(ic+32) 
+end do 
+call h5ltmake_dataset_string_f(HDF_head%oID, 'HostName', trim(c), error)
+if (error.ne.0) call HDF_handleError(error,'HDF_writeEMheader: unable to write HostName',.TRUE.)
 
 ! and close this group
-call HDF_pop
+call HDF_pop(HDF_head)
 
 end subroutine HDF_writeEMheader
+
+
+
+! create and open the EMheader group
+! call HDF_createGroup('EMnamelistfiles', HDF_head, HDF_tail)
+!
+! then for each relevant namelist:
+! HDFwriteKosselNameList(HDF_head, knl)
+! ...
+!
+! and then close the group
+! call HDF_pop(HDF_head)
+
+! loop over the files and write them to the HDF file as individual groups 
+!do i=1,numf(1)
+!  call HDF_createGroup(trim(nml_list(i)), HDF_head, HDF_tail)
+! get the file information
+!  call stat(trim(nml_list(i)), values)
+!  numb(1) = values(8)
+!  allocate(filebuf(numb(1)))
+! and read the file
+!  open(unit=dataunit,file=trim(nml_list(i)),access='DIRECT',RECL=numb(1))
+!  read (dataunit,REC=1) filebuf
+!  close(dataunit)
+! then create a dataset with this data
+!  data_name = trim(nml_list(i))
+!  call h5screate_simple_f(rnk, numb, dataspace, error)
+!  call h5dcreate_f(HDF_head%oID, data_name, H5T_NATIVE_CHARACTER, dataspace, dset_id, error)
+!  call h5dwrite_f(dset_id, H5T_NATIVE_CHARACTER, filebuf, numb, error)
+!  call h5dclose_f(dset_id,error)
+!  if (error.ne.0) write (*,*) ' error writing to file '
+! and get rid of the string array
+!  deallocate(filebuf)
+!end do
+
+
+
 
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------

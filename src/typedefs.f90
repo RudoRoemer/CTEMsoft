@@ -950,6 +950,18 @@ type dicttype
         integer(kind=irg)               :: Num_of_iterations    ! number of iterations inside each EM call (set by user)
 end type dicttype
 
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+! type definition for HDF-based output
+type HDFobjectStackType   ! this is a push-pop stack to keep track of the open objects
+  character(LEN=1)                      :: objectType
+  character(fnlen)                      :: objectName
+  integer(HID_T)                        :: objectID
+  type(HDFobjectStackType),pointer      :: next
+end type HDFobjectStackType
+
 
 
 end module typedefs

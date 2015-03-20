@@ -82,17 +82,20 @@ module local
 !> long integer kind parameter  
   integer,parameter                     :: irg = SELECTED_INT_KIND(9)
 
-! in Release 3.0 and beyond, this parameter should be replaced by a more flexible
+!> standard string length for filenames
+  integer(kind=irg),parameter           :: fnlen=132
+
+! in Release 3.0 and beyond, this parameter has been replaced by a more flexible
 ! mechanism for source code version numbering using the CMake facilities.
 !> source code version number
   character(8), parameter               :: scversion="@CTEMsoft_VER_MAJOR@_@CTEMsoft_VER_MINOR@_@CTEMsoft_VER_PATCH@"
-!> source code author name
-  character(13), parameter              :: username="Marc De Graef"     
-!> source code author location
-  character(26), parameter              :: userlocn="Carnegie Mellon University"
+!> code user name
+  character(fnlen), parameter           :: username="Marc De Graef"     
+!> code user location
+  character(fnlen), parameter           :: userlocn="Carnegie Mellon University"
+!> code user email
+  character(fnlen), parameter           :: useremail="degraef@cmu.edu"
 
-!> standard string length for filenames
-  integer(kind=irg),parameter           :: fnlen=132
   
 !> reserved IO unit identifiers for postscript (20) and data (21-23)
   integer(kind=irg), parameter          :: psunit=20, dataunit=21, dataunit2=22, dataunit3=23

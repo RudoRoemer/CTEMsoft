@@ -93,12 +93,14 @@ end program CTEMKossel
 !> @date 01/07/14  MDG 1.0 complete rewrite
 !> @date 06/13/14  MDG 2.0 another complete rewrite, removal of namelist stuff
 !> @date 06/16/14  MDG 2.1 debug and removal of unnecessary code; OpenMP implementation
+!> @date 03/20/15  MDG 3.0 first implementation of HDF5 formatted output
 !--------------------------------------------------------------------------
 subroutine ComputeKosselpattern(knl,progname)
 
 use local
 use typedefs
 use NameListTypedefs
+use NameListHDFwriters
 use initializers
 use symmetry
 use Lambert, ONLY: Apply2DPGSymmetry
@@ -116,6 +118,8 @@ use postscript
 use timing
 use MBmodule
 use omp_lib
+use HDF5
+use h5lt
 
 IMPLICIT NONE
 
@@ -320,13 +324,17 @@ type(reflisttype),pointer       :: reflist, firstw,rltmp
     
 !$OMP END PARALLEL
 
-
 ! stop the clock and report the total time     
   call system_clock(newcount,count_rate,count_max)
   io_real(1)=float(newcount-cnt)/float(count_rate)
   call Message(' Program run completed ', frm = "(/A/)")
   call WriteValue('Total computation time [s] ' , io_real, 1, "(F10.3)")
   
+! create the HDF5 output file
+  call HDF_createFile(knl%outname, HDF_head, HDF_tail)
+
+  call HDF_writeEMheader(HDF_head, HDF_tail, dstr, tstrb, tstre, prn)
+
   
 ! store additional information for the IDL interface  
   open(unit=dataunit,file=trim(knl%outname),status='unknown',action='write',form='unformatted')
