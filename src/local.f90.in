@@ -185,12 +185,15 @@ end subroutine CTEMsoft
 !> @date 05/31/01  JB original
 !> @date 05/01/13 MDG changed 'm' to 'mo' for month variable, and some other minor changes
 !> @date 06/05/14 MDG added stdout as optional argument
+!> @date 03/19/15 MDG added timestring and datestring optional arguments
 !--------------------------------------------------------------------------
-subroutine timestamp (stdout)
+subroutine timestamp (stdout, timestring, datestring)
 
   IMPLICIT NONE
   
-  integer(kind=irg),INTENT(IN),OPTIONAL :: stdout
+  integer(kind=irg),INTENT(IN),OPTIONAL    :: stdout
+  character(len = 11),INTENT(OUT),OPTIONAL :: datestring
+  character(len = 15),INTENT(OUT),OPTIONAL :: timestring
 
   integer(kind=irg)      :: std
   character ( len = 8 )  :: ampm
@@ -242,10 +245,16 @@ subroutine timestamp (stdout)
     end if
   end if
 
-  write ( std, '(a,1x,i2,1x,i4,2x,i2,a1,i2.2,a1,i2.2,a1,i3.3,1x,a)' ) &
-    month(mo), d, y, h, ':', n, ':', s, '.', mm, trim ( ampm )
+  if ((.not.PRESENT(datestring)).and.(.not.PRESENT(timestring))) then
+    write ( std, '(a,1x,i2,1x,i4,2x,i2,a1,i2.2,a1,i2.2,a1,i3.3,1x,a)' ) &
+      month(mo), d, y, h, ':', n, ':', s, '.', mm, trim ( ampm )
+  else
+    if (PRESENT(datestring)) write (datestring, '(a,1x,i2,1x,i4)' ) month(mo), d, y
+    if (PRESENT(timestring)) then
+      write (timestring, '(i2,a1,i2.2,a1,i2.2,a1,i3.3,1x,a)' ) h,':',n,':',s,'.',mm,trim(ampm)
+    end if
+  end if
 
-!  return   ! return statement is not needed in subroutines
 end subroutine timestamp
 
 

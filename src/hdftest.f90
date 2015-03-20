@@ -87,7 +87,18 @@ IMPLICIT NONE
      real(kind=8),allocatable   :: buf_dbl1(:), buf_dbl2(:,:), buf_dbl3(:,:,:)
      real(kind=4),allocatable   :: buf_flt1(:)
 
+     character(8)               :: scversion
+     character(11)              :: dstring
+     character(15)              :: tstring
+
+call timestamp(datestring=dstring, timestring=tstring)
+
 fname = 'Nidata.h5'
+
+scversion = '3.x.x'
+
+write (*,*) 'Date = '//dstring 
+write (*,*) 'Time = '//tstring 
 
 !
 ! Initialize FORTRAN interface.
@@ -127,10 +138,31 @@ write (*,*) 'error   = ',error
 ! now let's do a test an create a new file with this dataset written to it in a different location
 fname = 'test.h5'
 call h5fcreate_f(fname, H5F_ACC_TRUNC_F, file_id, error)
+
+g1 = 'EMheader'
+call h5gcreate_f(file_id,g1,grp1_id,error)
+write (*,*) 'open group ',trim(g1),' ',error
+
+! version number /EMheader/Version 'character'
+call h5ltmake_dataset_string_f(grp1_id, 'Version', scversion, error)
+
+! execution data /EMheader/Date 'character'
+call h5ltmake_dataset_string_f(grp1_id, 'Date', dstring, error)
+
+! start time /EMheader/StartTime 'character'
+call h5ltmake_dataset_string_f(grp1_id, 'StartTime', tstring, error)
+
+! stop time /EMheader/StopTime 'character'
+call h5ltmake_dataset_string_f(grp1_id, 'StopTime', tstring, error)
+
+call h5gclose_f(grp1_id,error)
+
+
 g1 = 'level1'
 g2 = 'level2'
 g3 = 'CI'
 s = '/'
+
 
 call h5gcreate_f(file_id,g1,grp1_id,error)
 write (*,*) 'open group ',trim(g1),' ',error
@@ -156,7 +188,80 @@ CALL h5close_f(error)
 write (*,*) 'close fortran interface error   = ',error
 
 
-
-
-
 end program hdftest
+
+
+subroutine timestamp (stdout, timestring, datestring)
+
+  IMPLICIT NONE
+  
+  integer(kind=irg),INTENT(IN),OPTIONAL    :: stdout
+  character(len = 11),INTENT(OUT),OPTIONAL :: datestring
+  character(len = 15),INTENT(OUT),OPTIONAL :: timestring
+
+  integer(kind=4)      :: std
+  character ( len = 8 )  :: ampm
+  integer ( kind = 4 ) :: d
+  character ( len = 8 )  :: date
+  integer ( kind = 4 ) :: h
+  integer ( kind = 4 ) :: mo
+  integer ( kind = 4 ) :: mm
+  character ( len = 3 ), parameter, dimension(12) :: month = (/ &
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' /)
+  integer ( kind = 4 ) :: n
+  integer ( kind = 4 ) :: s
+  character ( len = 10 ) :: time
+  integer ( kind = 4 ) :: values(8)
+  integer ( kind = 4 ) :: y
+  character ( len = 5 )  :: zone
+
+  std = 6
+  if (PRESENT(stdout)) std=stdout
+
+  call date_and_time ( date, time, zone, values )
+
+  y = values(1)
+  mo = values(2)
+  d = values(3)
+  h = values(5)
+  n = values(6)
+  s = values(7)
+  mm = values(8)
+
+  if ( h < 12 ) then
+    ampm = 'AM'
+  else if ( h == 12 ) then
+    if ( n == 0 .and. s == 0 ) then
+      ampm = 'Noon'
+    else
+      ampm = 'PM'
+    end if
+  else
+    h = h - 12
+    if ( h < 12 ) then
+      ampm = 'PM'
+    else if ( h == 12 ) then
+      if ( n == 0 .and. s == 0 ) then
+        ampm = 'Midnight'
+      else
+        ampm = 'AM'
+      end if
+    end if
+  end if
+
+  if ((.not.PRESENT(datestring)).and.(.not.PRESENT(timestring))) then
+    write ( std, '(a,1x,i2,1x,i4,2x,i2,a1,i2.2,a1,i2.2,a1,i3.3,1x,a)' ) &
+      month(mo), d, y, h, ':', n, ':', s, '.', mm, trim ( ampm )
+  else
+    if (PRESENT(datestring)) write (datestring, '(a,1x,i2,1x,i4)' ) month(mo), d, y
+    if (PRESENT(timestring)) then
+      write (timestring, '(i2,a1,i2.2,a1,i2.2,a1,i3.3,1x,a)' ) h,':',n,':',s,'.',mm,trim(ampm)
+    end if
+  end if
+
+end subroutine timestamp
+
+
+
+
+

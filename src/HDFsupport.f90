@@ -72,15 +72,15 @@ contains
 !> @details The EMheader is a dataset that contains
 !> the following basic items
 !>
-!> EMsoft version 
-!> execution date
-!> start time
-!> end time
-!> program name 
-!> user name
-!> computer name 
-!> computer ID
-!> GPU type
+!> EMsoft version       : scversion from local.f90
+!> execution date       : dstr
+!> start time           : tstr1
+!> end time             : tstr2
+!> program name         : prn
+!> user name            : username
+!> computer name        : cpu
+!> computer ID          : cpuID
+!> GPU type             : GPU
 !>
 !> @param HDF_head top of the current stack
 !> @param HDF_tail bottom of the current stack
@@ -90,7 +90,7 @@ contains
 !
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-subroutine HDF_writeEMheader(HDF_head, HDF_tail, )
+subroutine HDF_writeEMheader(HDF_head, HDF_tail, dstr, tstrb, tstre, prn,  )
 
 use local
 use io
@@ -99,13 +99,27 @@ IMPLICIT NONE
 
 type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
 type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_tail
+character(11),INTENT(IN)                              :: dstr
+character(15),INTENT(IN)                              :: tstr1
+character(15),INTENT(IN)                              :: tstr2
+character(fnlen),INTENT(IN)                           :: prn
 
+integer                                               :: error  ! error flag
 
 ! create and open the EMheader group
 call HDF_createGroup('EMheader', HDF_head, HDF_tail)
 
 ! version number /EMheader/Version 'character'
-call h5ltmake_dataset_f(file_id, datapath, rnk, data_dims, H5T_NATIVE_REAL, buf_flt1, error)
+call h5ltmake_dataset_string_f(HDF_head%oID, 'Version', scversion, error)
+
+! execution data /EMheader/Date 'character'
+call h5ltmake_dataset_string_f(HDF_head%oID, 'Date', dstr, error)
+
+! start time /EMheader/StartTime 'character'
+call h5ltmake_dataset_string_f(HDF_head%oID, 'StartTime', tstr1, error)
+
+! stop time /EMheader/StopTime 'character'
+call h5ltmake_dataset_string_f(HDF_head%oID, 'StopTime', tstr2, error)
 
 
 
