@@ -169,6 +169,7 @@ end program CTEMEBSD
 !> @date 03/09/15  MDG 5.1 added OpenMP functionality for final loop
 !> @date 03/10/15  MDG 5.2 added 'bin' and 'gui' outputformat; added mask support for 'bin' outputformat
 !> @date 03/14/15  MDG 5.3 attempt at speeding up the program by performing approximate energy sums (energyaverage = 1)
+!> @date 03/20/15  MDG 5.4 corrected out-of-bounds error in EBSDpattern array
 !--------------------------------------------------------------------------
 subroutine ComputeEBSDPatterns(enl, angles, acc, master, progname)
 
@@ -210,7 +211,7 @@ real(kind=dbl)                          :: qq(4), qq1(4), qq2(4), qq3(4)
 ! various items
 integer(kind=irg)                       :: i, j, iang, jang, k, io_int(6), etotal          ! various counters
 integer(kind=irg)                       :: istat                ! status for allocate operations
-integer(kind=irg)                       :: nix, niy, binx, biny,num_el       ! various parameters
+integer(kind=irg)                       :: nix, niy, binx, biny,num_el, nixp, niyp       ! various parameters
 integer(kind=irg)                       :: NUMTHREADS, TID   ! number of allocated threads, thread ID
 integer(kind=irg)                       :: istart, istop, ninbatch, nbatches, nremainder, ibatch, nthreads, maskradius
 
@@ -364,7 +365,7 @@ do ibatch=1,nbatches+1
 
 ! use OpenMP to run on multiple cores ... 
 !$OMP PARALLEL default(shared)  PRIVATE(TID,iang,jang,i,j,qq,qq1,qq2,qq3,dc,ixy,istat,nix,niy,dx,dy,dxm,dym,EBSDpattern) &
-!$OMP& PRIVATE(k,binned,idum,bpat)
+!$OMP& PRIVATE(k,binned,idum,bpat,nixp,niyp)
 
 ! allocate the array that will hold the computed pattern
   allocate(EBSDpattern(enl%numsx,enl%numsy),stat=istat)
@@ -400,6 +401,10 @@ do ibatch=1,nbatches+1
 ! four-point interpolation (bi-quadratic)
               nix = int(enl%npx+ixy(1))-enl%npx
               niy = int(enl%npy+ixy(2))-enl%npy
+              nixp = nix+1
+              niyp = niy+1
+              if (nixp.gt.enl%npx) nixp = nix
+              if (niyp.gt.enl%npy) niyp = niy
               dx = ixy(1)-nix
               dy = ixy(2)-niy
               dxm = 1.0-dx
@@ -407,13 +412,13 @@ do ibatch=1,nbatches+1
  ! interpolate the intensity 
               if (enl%energyaverage.eq.1) then
                 EBSDpattern(i,j) = EBSDpattern(i,j) + acc_array(i,j) * ( master_array(nix,niy) * dxm * dym + &
-                                           master_array(nix+1,niy) * dx * dym + master_array(nix,niy+1) * dxm * dy + &
-                                           master_array(nix+1,niy+1) * dx * dy )
+                                           master_array(nixp,niy) * dx * dym + master_array(nix,niyp) * dxm * dy + &
+                                           master_array(nixp,niyp) * dx * dy )
               else
                 do k=Emin,Emax 
                   EBSDpattern(i,j) = EBSDpattern(i,j) + acc%accum_e_detector(k,i,j) * ( master%sr(nix,niy,k) * dxm * dym + &
-                                             master%sr(nix+1,niy,k) * dx * dym + master%sr(nix,niy+1,k) * dxm * dy + &
-                                             master%sr(nix+1,niy+1,k) * dx * dy )
+                                             master%sr(nixp,niy,k) * dx * dym + master%sr(nix,niyp,k) * dxm * dy + &
+                                             master%sr(nixp,niyp,k) * dx * dy )
                 end do
               end if
           end do
@@ -422,11 +427,13 @@ do ibatch=1,nbatches+1
         EBSDpattern = prefactor * EBSDpattern
 
 ! add sampling noise (Poisson noise in this case, so multiplicative, sort of)
-        do i=1,enl%numsx
+        if (outputformat.eq.'gui') then 
+         do i=1,enl%numsx
           do j=1,enl%numsy
               EBSDpattern(i,j) = POIDEV(EBSDpattern(i,j),idum)
           end do
-        end do      
+         end do      
+        end if
 
 ! if this is a GUI-computation, then we can directly store the current pattern in the output file;
 ! otherwise, we process it and turn it into a byte array of the right binning level.

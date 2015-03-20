@@ -115,6 +115,7 @@ end
   printf,10,'datafile = '''+EBSDdata.EBSDpatternfilename+''''
   printf,10,'beamcurrent = '+string(EBSDdata.detbeamcurrent,FORMAT="(F9.2)")
   printf,10,'dwelltime = '+string(EBSDdata.detdwelltime,FORMAT="(F9.2)")
+  if keyword_set(single) then printf,10,'scalingmode = ''not'''
 ; and here are the imaging parameters that are only needed if we are NOT in single image mode
   if not keyword_set(single) then begin
 ; angle file
