@@ -118,7 +118,7 @@ use error
 IMPLICIT NONE
 
 type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
-integer(kind=irg),INTENT(IN)                          :: io_real(n_real)
+real(kind=sgl),INTENT(IN)                             :: io_real(n_real)
 character(20),INTENT(IN)                              :: reallist(n_real)
 integer(kind=irg),INTENT(IN)                          :: n_real
 
@@ -135,6 +135,47 @@ do i=1,n_real
 end do
 
 end subroutine HDF_writeNMLreals
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:HDF_writeNMLdbles
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief write a series of double precisin namelist entries to an HDF file
+!
+!> @param HDF_head top of stack pointer
+!> @param io_real list of doubles
+!> @param reallist list of string descriptors
+!> @param n_real number of entries
+!
+!> @date 03/20/15  MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine HDF_writeNMLdbles(HDF_head, io_real, reallist, n_real)
+
+use error
+
+IMPLICIT NONE
+
+type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
+real(kind=dbl),INTENT(IN)                             :: io_real(n_real)
+character(20),INTENT(IN)                              :: reallist(n_real)
+integer(kind=irg),INTENT(IN)                          :: n_real
+
+integer(kind=irg)                                     :: rnk, dims(1), error
+real(kind=dbl)                                        :: ioval(1)
+
+rnk = 1
+dims(1) = 1
+
+do i=1,n_real
+  ioval(1) = io_real(i)
+  call h5ltmake_dataset_f(HDF_head%oID, trim(reallist(i)), rnk, dims, H5T_NATIVE_DOUBLE, ioval, error)
+  if (error.ne.0) call HDF_handleError(error,'HDF_writeNMLdbles: unable to create'//trim(reallist(i))//' dataset',.TRUE.)
+end do
+
+end subroutine HDF_writeNMLdbles
+
 
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
@@ -167,14 +208,14 @@ type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
 type(KosselNameListType),INTENT(IN)                   :: knl
 
 integer(HID_T)                                        :: grp_id
-integer(kind=irg),parameter                           :: n_int = 5, n_reals = 6
+integer(kind=irg),parameter                           :: n_int = 5, n_real = 6
 integer(kind=irg)                                     :: rnk, error, dims(1), io_int(n_int)
 real(kind=sgl)                                        :: io_real(n_real)
 character(20)                                         :: intlist(n_int), reallist(n_real)
 
 ! create the group for this namelist
 call h5gcreate_f(HDF_head%oID,'KosselNameList',grp_id,error)
-if (error.ne.0) call HDF_handleError(error,'HDF_writeKosselNameList: unable to open KosselNameList group',.TRUE.)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteKosselNameList: unable to open KosselNameList group',.TRUE.)
 
 ! write all the single integers
 io_int = (/ knl%stdout, knl%numthick, knl%npix, knl%maxHOLZ, knl%nthreads /)
@@ -185,10 +226,10 @@ call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 rnk = 1
 dims(1) = 3
 call h5ltmake_dataset_f(HDF_head%oID, 'k', rnk, dims, H5T_NATIVE_INTEGER, knl%k, error)
-if (error.ne.0) call HDF_handleError(error,'HDF_writeKosselNameList: unable to create k dataset',.TRUE.)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteKosselNameList: unable to create k dataset',.TRUE.)
 
 call h5ltmake_dataset_f(HDF_head%oID, 'fn', rnk, dims, H5T_NATIVE_INTEGER, knl%fn, error)
-if (error.ne.0) call HDF_handleError(error,'HDF_writeKosselNameList: unable to create fn dataset',.TRUE.)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteKosselNameList: unable to create fn dataset',.TRUE.)
 
 ! write all the single reals
 io_real = (/ knl%voltage, knl%dmin, knl%convergence, knl%startthick, knl%thickinc, knl%minten /)
@@ -197,10 +238,10 @@ call HDF_writeNMLreals(HDF_head, io_real, reallist, n_real)
 
 ! write all the strings
 call h5ltmake_dataset_string_f(HDF_head%oID, 'xtalname', knl%xtalname, error)
-if (error.ne.0) call HDF_handleError(error,'HDF_writeKosselNameList: unable to create xtalname dataset',.TRUE.)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteKosselNameList: unable to create xtalname dataset',.TRUE.)
 
 call h5ltmake_dataset_string_f(HDF_head%oID, 'outname', knl%outname, error)
-if (error.ne.0) call HDF_handleError(error,'HDF_writeKosselNameList: unable to create outname dataset',.TRUE.)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteKosselNameList: unable to create outname dataset',.TRUE.)
 
 ! and pop this group off the stack
 call HDF_pop(HDF_head)
@@ -215,12 +256,12 @@ end subroutine HDFwriteKosselNameList
 !
 !> @brief write namelist file into HDF file
 !
-!> @param nmlfile namelist file name
+!> @param HDF_head top of push stack
 !> @param knl Kossel name list structure
 !
-!> @date 03/20/15  MDG 1.0 new routine
+!> @date 03/21/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine HDFwriteKosselMasterNameList(nmlfile, knl)
+subroutine HDFwriteKosselMasterNameList(HDF_head, knl)
 
 use error
 
@@ -230,66 +271,37 @@ type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
 type(KosselMasterNameListType),INTENT(IN)             :: knl
 
 integer(HID_T)                                        :: grp_id
-integer(kind=irg),parameter                           :: n_int = 5, n_reals = 6
+integer(kind=irg),parameter                           :: n_int = 4, n_real = 5
 integer(kind=irg)                                     :: rnk, error, dims(1), io_int(n_int)
 real(kind=sgl)                                        :: io_real(n_real)
 character(20)                                         :: intlist(n_int), reallist(n_real)
 
+! create the group for this namelist
+call h5gcreate_f(HDF_head%oID,'KosselMasterNameList',grp_id,error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteKosselMasterNameList: unable to open KosselMasterNameList group',.TRUE.)
 
+! write all the single integers
+io_int = (/ knl%stdout, knl%numthick, knl%npix, knl%nthreads /)
+intlist = (/ 'stdout', 'numthick', 'npix', 'nthreads' /) 
+call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
-integer(kind=irg)       :: stdout
-integer(kind=irg)       :: numthick
-integer(kind=irg)       :: npix
-integer(kind=irg)       :: nthreads
-real(kind=sgl)          :: voltage
-real(kind=sgl)          :: dmin
-real(kind=sgl)          :: startthick
-real(kind=sgl)          :: thickinc
-real(kind=sgl)          :: tfraction
-character(6)            :: Kosselmode
-character(fnlen)        :: xtalname
-character(fnlen)        :: outname
+! write all the single reals
+io_real = (/ knl%voltage, knl%dmin, knl%startthick, knl%thickinc, knl%tfraction /)
+reallist = (/ 'voltage', 'dmin', 'startthick', 'thickinc', 'tfraction' /) 
+call HDF_writeNMLreals(HDF_head, io_real, reallist, n_real)
 
-namelist /Kosselmasterlist/ stdout, xtalname, voltage, dmin,  nthreads, &
-                              startthick, thickinc, numthick, tfraction, outname, npix, Kosselmode
+! write all the strings
+call h5ltmake_dataset_string_f(HDF_head%oID, 'Kosselmode', knl%Kosselmode, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteKosselMasterNameList: unable to create Kosselmode dataset',.TRUE.)
 
-! set the input parameters to default values (except for xtalname, which must be present)
-stdout = 6                      ! standard output
-numthick = 10                   ! number of increments
-npix = 256                      ! output arrays will have size npix x npix
-nthreads = 4                    ! default number of threads for OpenMP
-voltage = 200000.0              ! acceleration voltage [V]
-dmin = 0.025                    ! smallest d-spacing to include in dynamical matrix [nm]
-startthick = 10.0               ! starting thickness [nm]
-thickinc = 10.0                 ! thickness increment
-xtalname = 'undefined'          ! initial value to check that the keyword is present in the nml file
-outname = 'Kosselout.data'      ! output filename
-Kosselmode = 'normal'           ! 'thicks' for thickness determination, 'normal' for normal plot
-tfraction = 0.1                 ! thickness fraction for 'thicks' mode
+call h5ltmake_dataset_string_f(HDF_head%oID, 'xtalname', knl%xtalname, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteKosselMasterNameList: unable to create xtalname dataset',.TRUE.)
 
-! read the namelist file
- open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
- read(UNIT=dataunit,NML=Kosselmasterlist)
- close(UNIT=dataunit,STATUS='keep')
+call h5ltmake_dataset_string_f(HDF_head%oID, 'outname', knl%outname, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteKosselMasterNameList: unable to create outname dataset',.TRUE.)
 
-! check for required entries
- if (trim(xtalname).eq.'undefined') then
-  call FatalError('CTEMKosselMaster:',' structure file name is undefined in '//nmlfile)
- end if
-
-! if we get here, then all appears to be ok, and we need to fill in the knl fields
-knl%stdout = stdout
-knl%numthick = numthick
-knl%npix = npix
-knl%nthreads = nthreads
-knl%voltage = voltage
-knl%dmin = dmin
-knl%startthick = startthick
-knl%thickinc = thickinc
-knl%tfraction = tfraction
-knl%Kosselmode = Kosselmode
-knl%xtalname = xtalname
-knl%outname = outname
+! and pop this group off the stack
+call HDF_pop(HDF_head)
 
 end subroutine HDFwriteKosselMasterNameList
 
@@ -300,86 +312,54 @@ end subroutine HDFwriteKosselMasterNameList
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill mcnl structure (used by CTEMMC.f90)
+!> @brief write namelist file into HDF file
 !
-!> @param nmlfile namelist file name
-!> @param mcnl Monte Carloname list structure
+!> @param HDF_head top of push stack
+!> @param mcnl Monte Carlo name list structure
 !
-!> @date 06/18/14  MDG 1.0 new routine
+!> @date 03/21/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine HDFwriteMCNameList(nmlfile, mcnl)
+subroutine HDFwriteMCNameList(HDF_head, mcnl)
 
 use error
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)             :: nmlfile
-type(MCNameListType),INTENT(INOUT)      :: mcnl
+type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
+type(MCNameListType),INTENT(INOUT)                    :: mcnl
 
-integer(kind=irg)       :: stdout
-integer(kind=irg)       :: numsx
-integer(kind=irg)       :: primeseed
-integer(kind=irg)       :: num_el
-integer(kind=irg)       :: nthreads
-real(kind=dbl)          :: sig
-real(kind=dbl)          :: omega
-real(kind=dbl)          :: EkeV
-real(kind=dbl)          :: Ehistmin
-real(kind=dbl)          :: Ebinsize
-real(kind=dbl)          :: depthmax
-real(kind=dbl)          :: depthstep
-character(4)            :: MCmode
-character(fnlen)        :: xtalname
-character(fnlen)        :: dataname
+integer(HID_T)                                        :: grp_id
+integer(kind=irg),parameter                           :: n_int = 5, n_real = 7
+integer(kind=irg)                                     :: rnk, error, dims(1), io_int(n_int)
+real(kind=dbl)                                        :: io_real(n_real)
+character(20)                                         :: intlist(n_int), reallist(n_real)
 
-! define the IO namelist to facilitate passing variables to the program.
-namelist  / MCdata / stdout, xtalname, sig, numsx, num_el, primeseed, EkeV, &
-                dataname, nthreads, Ehistmin, Ebinsize, depthmax, depthstep, omega, MCmode
+! create the group for this namelist
+call h5gcreate_f(HDF_head%oID,'MCNameList',grp_id,error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteMCNameList: unable to open KosselNameList group',.TRUE.)
 
-! set the input parameters to default values (except for xtalname, which must be present)
-stdout = 6
-numsx = 1501
-primeseed = 932117
-num_el = 12500000
-nthreads = 1
-sig = 70.D0
-omega = 0.D0
-EkeV = 30.D0
-Ehistmin = 5.D0
-Ebinsize = 0.5D0
-depthmax = 100.D0
-depthstep = 1.0D0
-MCmode = 'CSDA'
-xtalname = 'undefined'
-dataname = 'MCoutput.data'
+! write all the single integers
+io_int = (/ mcnl%stdout, mcnl%numsx, mcnl%primeseed, mcnl%num_el, mcnl%nthreads /)
+intlist = (/ 'stdout', 'numsx', 'primeseed', 'num_el', 'nthreads' /)
+call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
-! read the namelist file
- open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
- read(UNIT=dataunit,NML=MCdata)
- close(UNIT=dataunit,STATUS='keep')
+! write all the single doubles
+io_real = (/ mcnl%sig, mcnl%omega, mcnl%EkeV, mcnl%Ehistmin, mcnl%Ebinsize, mcnl%depthmax, mcnl%depthstep /)
+reallist = (/ 'sig', 'omega', 'EkeV', 'Ehistmin', 'Ebinsize', 'depthmax', 'depthstep' /)
+call HDF_writeNMLdbles(HDF_head, io_real, reallist, n_real)
 
-! check for required entries
- if (trim(xtalname).eq.'undefined') then
-  call FatalError('CTEMMC:',' structure file name is undefined in '//nmlfile)
- end if
+! write all the strings
+call h5ltmake_dataset_string_f(HDF_head%oID, 'MCmode', mcnl%MCmode, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteMCNameList: unable to create MCmode dataset',.TRUE.)
 
-! if we get here, then all appears to be ok, and we need to fill in the mcnl fields
-mcnl%stdout = stdout
-mcnl%numsx = numsx
-mcnl%primeseed = primeseed
-mcnl%num_el = num_el
-mcnl%nthreads = nthreads
-mcnl%sig = sig
-mcnl%omega = omega
-mcnl%EkeV = EkeV
-mcnl%Ehistmin = Ehistmin
-mcnl%Ebinsize = Ebinsize
-mcnl%depthmax = depthmax
-mcnl%depthstep = depthstep
-mcnl%MCmode = MCmode
-mcnl%xtalname = xtalname
-mcnl%dataname = dataname
-mcnl%stdout = stdout
+call h5ltmake_dataset_string_f(HDF_head%oID, 'xtalname', mcnl%xtalname, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteMCNameList: unable to create xtalname dataset',.TRUE.)
+
+call h5ltmake_dataset_string_f(HDF_head%oID, 'dataname', mcnl%dataname, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteMCNameList: unable to create dataname dataset',.TRUE.)
+
+! and pop this group off the stack
+call HDF_pop(HDF_head)
 
 end subroutine HDFwriteMCNameList
 
@@ -387,14 +367,14 @@ end subroutine HDFwriteMCNameList
 !
 ! SUBROUTINE:HDFwriteMCCLNameList
 !
-!> @author Saransh Singh/Marc De Graef, Carnegie Mellon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill mcnl structure (used by CTEMMCCL.f90)
+!> @brief write namelist to HDF file
 !
-!> @param nmlfile namelist file name
-!> @param mcnl Monte Carloname list structure
+!> @param HDF_head top of push stack
+!> @param mcnl Monte Carlon ame list structure
 !
-!> @date 06/18/14  SS 1.0 new routine
+!> @date 03/21/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine HDFwriteMCCLNameList(nmlfile, mcnl)
 
@@ -402,78 +382,47 @@ use error
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)             :: nmlfile
-type(MCCLNameListType),INTENT(INOUT)      :: mcnl
+type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
+type(MCCLNameListType),INTENT(INOUT)                  :: mcnl
 
-integer(kind=irg)       :: stdout
-integer(kind=irg)       :: numsx
-integer(kind=irg)       :: globalworkgrpsz
-integer(kind=irg)       :: num_el
-integer(kind=irg)       :: totnum_el
-real(kind=dbl)          :: sig
-real(kind=dbl)          :: omega
-real(kind=dbl)          :: EkeV
-real(kind=dbl)          :: Ehistmin
-real(kind=dbl)          :: Ebinsize
-real(kind=dbl)          :: depthmax
-real(kind=dbl)          :: depthstep
-character(4)            :: MCmode
-character(fnlen)        :: xtalname
-character(fnlen)        :: dataname
-character(fnlen)        :: primelist
-character(fnlen)        :: mode
+integer(HID_T)                                        :: grp_id
+integer(kind=irg),parameter                           :: n_int = 5, n_real = 7
+integer(kind=irg)                                     :: rnk, error, dims(1), io_int(n_int)
+real(kind=dbl)                                        :: io_real(n_real)
+character(20)                                         :: intlist(n_int), reallist(n_real)
 
-! define the IO namelist to facilitate passing variables to the program.
-namelist  / MCCLdata / stdout, xtalname, sig, numsx, num_el, globalworkgrpsz, EkeV, &
-dataname, primelist, totnum_el, Ehistmin, Ebinsize, depthmax, depthstep, omega, MCmode, mode
+! create the group for this namelist
+call h5gcreate_f(HDF_head%oID,'MCCLNameList',grp_id,error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteMCCLNameList: unable to open MCCLNameList group',.TRUE.)
 
-! set the input parameters to default values (except for xtalname, which must be present)
-stdout = 6
-numsx = 1501
-globalworkgrpsz = 100
-num_el = 10
-totnum_el = 100000
-sig = 70.D0
-omega = 0.D0
-EkeV = 30.D0
-Ehistmin = 5.D0
-Ebinsize = 0.5D0
-depthmax = 100.D0
-depthstep = 1.0D0
-MCmode = 'CSDA'
-xtalname = 'undefined'
-dataname = 'MCoutput.data'
-primelist = 'list.txt'
-mode = 'full'
+! write all the single integers
+io_int = (/ mcnl%stdout, mcnl%numsx, mcnl%globalworkgrpsz, mcnl%num_el, mcnl%totnum_el /)
+intlist = (/ 'stdout', 'numsx', 'globalworkgrpsz', 'num_el', 'totnum_el' /)
+call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
-! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
-read(UNIT=dataunit,NML=MCCLdata)
-close(UNIT=dataunit,STATUS='keep')
+! write all the single doubles
+io_real = (/ mcnl%sig, mcnl%omega, mcnl%EkeV, mcnl%Ehistmin, mcnl%Ebinsize, mcnl%depthmax, mcnl%depthstep /)
+reallist = (/ 'sig', 'omega', 'EkeV', 'Ehistmin', 'Ebinsize', 'depthmax', 'depthstep' /)
+call HDF_writeNMLdbles(HDF_head, io_real, reallist, n_real)
 
-! check for required entries
-if (trim(xtalname).eq.'undefined') then
-call FatalError('CTEMMC:',' structure file name is undefined in '//nmlfile)
-end if
+! write all the strings
+call h5ltmake_dataset_string_f(HDF_head%oID, 'MCmode', mcnl%MCelmode, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteMCCLNameList: unable to create MCmode dataset',.TRUE.)
 
-! if we get here, then all appears to be ok, and we need to fill in the mcnl fields
-mcnl%stdout = stdout
-mcnl%numsx = numsx
-mcnl%globalworkgrpsz = globalworkgrpsz
-mcnl%num_el = num_el
-mcnl%totnum_el = totnum_el
-mcnl%sig = sig
-mcnl%omega = omega
-mcnl%EkeV = EkeV
-mcnl%Ehistmin = Ehistmin
-mcnl%Ebinsize = Ebinsize
-mcnl%depthmax = depthmax
-mcnl%depthstep = depthstep
-mcnl%MCmode = MCmode
-mcnl%xtalname = xtalname
-mcnl%dataname = dataname
-mcnl%primelist = primelist
-mcnl%mode = mode
+call h5ltmake_dataset_string_f(HDF_head%oID, 'xtalname', mcnl%xtalname, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteMCCLNameList: unable to create xtalname dataset',.TRUE.)
+
+call h5ltmake_dataset_string_f(HDF_head%oID, 'dataname', mcnl%dataname, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteMCCLNameList: unable to create dataname dataset',.TRUE.)
+
+call h5ltmake_dataset_string_f(HDF_head%oID, 'primelist', mcnl%primelist, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteMCCLNameList: unable to create primelist dataset',.TRUE.)
+
+call h5ltmake_dataset_string_f(HDF_head%oID, 'mode', mcnl%mode, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteMCCLNameList: unable to create mode dataset',.TRUE.)
+
+! and pop this group off the stack
+call HDF_pop(HDF_head)
 
 end subroutine HDFwriteMCCLNameList
 
@@ -481,105 +430,67 @@ end subroutine HDFwriteMCCLNameList
 !
 ! SUBROUTINE:HDFwriteMCCLMultiLayerNameList
 !
-!> @author Saransh Singh/Marc De Graef, Carnegie Mellon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill mcnl structure (used by CTEMMCCL.f90)
+!> @brief write namelist to HDF file
 !
-!> @param nmlfile namelist file name
-!> @param mcnl Monte Carloname list structure
+!> @param HDF_head top of push stack
+!> @param mcnl Monte Carlo name list structure
 !
-!> @date 06/18/14  SS 1.0 new routine
+!> @date 03/21/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine HDFwriteMCCLMultiLayerNameList(nmlfile, mcnl)
+subroutine HDFwriteMCCLMultiLayerNameList(HDF_head, mcnl)
 
 use error
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)             :: nmlfile
-type(MCCLMultiLayerNameListType),INTENT(INOUT)      :: mcnl
+type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
+type(MCCLMultiLayerNameListType),INTENT(INOUT)        :: mcnl
 
-integer(kind=irg)       :: stdout
-integer(kind=irg)       :: numsx
-integer(kind=irg)       :: globalworkgrpsz
-integer(kind=irg)       :: num_el
-integer(kind=irg)       :: totnum_el
-real(kind=dbl)          :: sig
-real(kind=dbl)          :: omega
-real(kind=dbl)          :: EkeV
-real(kind=dbl)          :: Ehistmin
-real(kind=dbl)          :: Ebinsize
-real(kind=dbl)          :: depthmax
-real(kind=dbl)          :: depthstep
-real(kind=dbl)          :: filmthickness
-real(kind=dbl)          :: filmstep
-character(4)            :: MCmode
-character(fnlen)        :: xtalname_film
-character(fnlen)        :: xtalname_subs
-character(fnlen)        :: dataname
-character(fnlen)        :: primelist
-character(fnlen)        :: mode
+integer(HID_T)                                        :: grp_id
+integer(kind=irg),parameter                           :: n_int = 5, n_real = 9
+integer(kind=irg)                                     :: rnk, error, dims(1), io_int(n_int)
+real(kind=dbl)                                        :: io_real(n_real)
+character(20)                                         :: intlist(n_int), reallist(n_real)
 
-! define the IO namelist to facilitate passing variables to the program.
-namelist  / MCCLdata / stdout, sig, numsx, num_el, globalworkgrpsz, EkeV, &
-        dataname, primelist, totnum_el, Ehistmin, Ebinsize, depthmax, &
-        depthstep, omega, MCmode, mode, xtalname_film, xtalname_subs, &
-        filmthickness, filmstep
+! create the group for this namelist
+call h5gcreate_f(HDF_head%oID,'MCCLMultiLayerNameList',grp_id,error)
+if (error.ne.0) call HDF_handleError(error, &
+                     'HDFwriteMCCLMultiLayerNameList: unable to open MCCLMultiLayerNameList group',.TRUE.)
 
+! write all the single integers
+io_int = (/ mcnl%stdout, mcnl%numsx, mcnl%globalworkgrpsz, mcnl%num_el, mcnl%totnum_el /)
+intlist = (/ 'stdout', 'numsx', 'globalworkgrpsz', 'num_el', 'totnum_el' /)
+call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
-! set the input parameters to default values (except for xtalname, which must be present)
-stdout = 6
-numsx = 1501
-globalworkgrpsz = 100
-num_el = 10
-totnum_el = 100000
-sig = 70.D0
-omega = 0.D0
-EkeV = 30.D0
-Ehistmin = 5.D0
-Ebinsize = 0.5D0
-depthmax = 100.D0
-depthstep = 1.0D0
-MCmode = 'CSDA'
-xtalname_film = 'undefined'
-xtalname_subs = 'undefined'
-dataname = 'MCoutput.data'
-primelist = 'RandomSeeds.data'
-mode = 'full'
-filmthickness = 20.D0
-filmstep = 2.D0
+! write all the single doubles
+io_real = (/ mcnl%sig, mcnl%omega, mcnl%EkeV, mcnl%Ehistmin, mcnl%Ebinsize, mcnl%depthmax, mcnl%depthstep, &
+             mcnl%filmthickness, mcnl%filmstep /)
+reallist = (/ 'sig', 'omega', 'EkeV', 'Ehistmin', 'Ebinsize', 'depthmax', 'depthstep', 'filmthickness', 'filmstep'
+call HDF_writeNMLdbles(HDF_head, io_real, reallist, n_real)
 
-! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
-read(UNIT=dataunit,NML=MCCLdata)
-close(UNIT=dataunit,STATUS='keep')
+! write all the strings
+call h5ltmake_dataset_string_f(HDF_head%oID, 'MCmode', mcnl%MCelmode, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteMCCLMultiLayerNameList: unable to create MCmode dataset',.TRUE.)
 
-! check for required entries
-if ((trim(xtalname_film).eq.'undefined') .or. (trim(xtalname_subs).eq.'undefined')) then
-call FatalError('CTEMMC:',' structure file name is undefined in '//nmlfile)
-end if
+call h5ltmake_dataset_string_f(HDF_head%oID, 'xtalname_film', mcnl%xtalname_film, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteMCCLMultiLayerNameList: unable to create xtalname_film dataset',.TRUE.)
 
-! if we get here, then all appears to be ok, and we need to fill in the mcnl fields
-mcnl%stdout = stdout
-mcnl%numsx = numsx
-mcnl%globalworkgrpsz = globalworkgrpsz
-mcnl%num_el = num_el
-mcnl%totnum_el = totnum_el
-mcnl%sig = sig
-mcnl%omega = omega
-mcnl%EkeV = EkeV
-mcnl%Ehistmin = Ehistmin
-mcnl%Ebinsize = Ebinsize
-mcnl%depthmax = depthmax
-mcnl%depthstep = depthstep
-mcnl%MCmode = MCmode
-mcnl%xtalname_film = xtalname_film
-mcnl%xtalname_subs = xtalname_subs
-mcnl%dataname = dataname
-mcnl%primelist = primelist
-mcnl%mode = mode
-mcnl%filmthickness = filmthickness
-mcnl%filmstep = filmstep
+call h5ltmake_dataset_string_f(HDF_head%oID, 'xtalname_subs', mcnl%xtalname_subs, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteMCCLMultiLayerNameList: unable to create xtalname_subs dataset',.TRUE.)
+
+call h5ltmake_dataset_string_f(HDF_head%oID, 'dataname', mcnl%dataname, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteMCCLMultiLayerNameList: unable to create dataname dataset',.TRUE.)
+
+call h5ltmake_dataset_string_f(HDF_head%oID, 'primelist', mcnl%primelist, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteMCCLMultiLayerNameList: unable to create primelist dataset',.TRUE.)
+
+call h5ltmake_dataset_string_f(HDF_head%oID, 'mode', mcnl%mode, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteMCCLMultiLayerNameList: unable to create mode dataset',.TRUE.)
+
+! and pop this group off the stack
+call HDF_pop(HDF_head)
 
 end subroutine HDFwriteMCCLMultiLayerNameList
 
@@ -589,60 +500,54 @@ end subroutine HDFwriteMCCLMultiLayerNameList
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill mcnl structure (used by CTEMEBSDmaster.f90)
+!> @brief write namelist to HDF file
 !
-!> @param nmlfile namelist file name
+!> @param HDF_head top of push stack
 !> @param emnl EBSD master name list structure
 !
-!> @date 06/19/14  MDG 1.0 new routine
+!> @date 03/21/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine HDFwriteEBSDMasterNameList(nmlfile, emnl)
+subroutine HDFwriteEBSDMasterNameList(HDF_head, emnl)
 
 use error
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)                     :: nmlfile
-type(EBSDMasterNameListType),INTENT(INOUT)      :: emnl
+type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
+type(EBSDMasterNameListType),INTENT(INOUT)            :: emnl
 
-integer(kind=irg)       :: stdout
-integer(kind=irg)       :: npx
-integer(kind=irg)       :: Esel
-integer(kind=irg)       :: nthreads
-real(kind=sgl)          :: dmin
-character(fnlen)        :: energyfile
-character(fnlen)        :: outname
+integer(HID_T)                                        :: grp_id
+integer(kind=irg),parameter                           :: n_int = 5, n_real = 9
+integer(kind=irg)                                     :: rnk, error, dims(1), io_int(n_int)
+real(kind=sgl)                                        :: io_real(n_real)
+character(20)                                         :: intlist(n_int), reallist(n_real)
 
-! define the IO namelist to facilitate passing variables to the program.
-namelist /EBSDmastervars/ dmin,npx,nthreads,outname,energyfile,Esel
+! create the group for this namelist
+call h5gcreate_f(HDF_head%oID,'EBSDMasterNameList',grp_id,error)
+if (error.ne.0) call HDF_handleError(error, &
+                     'HDFwriteEBSDMasterNameList: unable to open EBSDMasterNameList group',.TRUE.)
 
-! set the input parameters to default values (except for xtalname, which must be present)
-stdout = 6
-npx = 500                       ! Nx pixels (total = 2Nx+1)
-nthreads = 1
-Esel = -1                       ! selected energy value for single energy run
-dmin = 0.025                    ! smallest d-spacing to include in dynamical matrix [nm]
-energyfile = 'undefined'        ! default filename for z_0(E_e) data from CTEMMC Monte Carlo simulations
-outname = 'EBSDmasterout.data'  ! default filename for final output
+! write all the single integers
+io_int = (/ emnl%stdout, emnl%npx, emnl%Esel, emnl%nthreads /)
+intlist = (/ 'stdout', 'npx', 'Esel', 'nthreads' /)
+call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
-! read the namelist file
- open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
- read(UNIT=dataunit,NML=EBSDmastervars)
- close(UNIT=dataunit,STATUS='keep')
+! write a single real
+io_real(1) = emnl%dmin
+rnk = 1
+dims(1) = 1
+call h5ltmake_dataset_f(HDF_head%oID, 'dmin', rnk, dims, H5T_NATIVE_REAL, ioval, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteEBSDMasterNameList: unable to create dmin dataset',.TRUE.)
 
-! check for required entries
- if (trim(energyfile).eq.'undefined') then
-  call FatalError('CTEMEBSDmaster:',' energy file name is undefined in '//nmlfile)
- end if
+! write all the strings
+call h5ltmake_dataset_string_f(HDF_head%oID, 'outname', emnl%outname, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteEBSDMasterNameList: unable to create outname dataset',.TRUE.)
 
-! if we get here, then all appears to be ok, and we need to fill in the emnl fields
-emnl%stdout = stdout
-emnl%npx = npx
-emnl%Esel = Esel
-emnl%nthreads = nthreads
-emnl%dmin = dmin
-emnl%energyfile = energyfile
-emnl%outname = outname
+call h5ltmake_dataset_string_f(HDF_head%oID, 'energyfile', emnl%energyfile, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteEBSDMasterNameList: unable to create energyfile dataset',.TRUE.)
+
+! and pop this group off the stack
+call HDF_pop(HDF_head)
 
 end subroutine HDFwriteEBSDMasterNameList
 
