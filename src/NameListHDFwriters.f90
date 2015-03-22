@@ -214,8 +214,7 @@ real(kind=sgl)                                        :: io_real(n_real)
 character(20)                                         :: intlist(n_int), reallist(n_real)
 
 ! create the group for this namelist
-call h5gcreate_f(HDF_head%oID,'KosselNameList',grp_id,error)
-if (error.ne.0) call HDF_handleError(error,'HDFwriteKosselNameList: unable to open KosselNameList group',.TRUE.)
+call HDF_createGroup('KosselNameList',HDF_head, HDF_tail)
 
 ! write all the single integers
 io_int = (/ knl%stdout, knl%numthick, knl%npix, knl%maxHOLZ, knl%nthreads /)
@@ -277,8 +276,7 @@ real(kind=sgl)                                        :: io_real(n_real)
 character(20)                                         :: intlist(n_int), reallist(n_real)
 
 ! create the group for this namelist
-call h5gcreate_f(HDF_head%oID,'KosselMasterNameList',grp_id,error)
-if (error.ne.0) call HDF_handleError(error,'HDFwriteKosselMasterNameList: unable to open KosselMasterNameList group',.TRUE.)
+call HDF_createGroup('KosselMasterNameList',HDF_head, HDF_tail)
 
 ! write all the single integers
 io_int = (/ knl%stdout, knl%numthick, knl%npix, knl%nthreads /)
@@ -335,8 +333,7 @@ real(kind=dbl)                                        :: io_real(n_real)
 character(20)                                         :: intlist(n_int), reallist(n_real)
 
 ! create the group for this namelist
-call h5gcreate_f(HDF_head%oID,'MCNameList',grp_id,error)
-if (error.ne.0) call HDF_handleError(error,'HDFwriteMCNameList: unable to open KosselNameList group',.TRUE.)
+call HDF_createGroup('MCNameList',HDF_head, HDF_tail)
 
 ! write all the single integers
 io_int = (/ mcnl%stdout, mcnl%numsx, mcnl%primeseed, mcnl%num_el, mcnl%nthreads /)
@@ -392,8 +389,7 @@ real(kind=dbl)                                        :: io_real(n_real)
 character(20)                                         :: intlist(n_int), reallist(n_real)
 
 ! create the group for this namelist
-call h5gcreate_f(HDF_head%oID,'MCCLNameList',grp_id,error)
-if (error.ne.0) call HDF_handleError(error,'HDFwriteMCCLNameList: unable to open MCCLNameList group',.TRUE.)
+call HDF_createGroup('MCCLNameList',HDF_head, HDF_tail)
 
 ! write all the single integers
 io_int = (/ mcnl%stdout, mcnl%numsx, mcnl%globalworkgrpsz, mcnl%num_el, mcnl%totnum_el /)
@@ -455,9 +451,7 @@ real(kind=dbl)                                        :: io_real(n_real)
 character(20)                                         :: intlist(n_int), reallist(n_real)
 
 ! create the group for this namelist
-call h5gcreate_f(HDF_head%oID,'MCCLMultiLayerNameList',grp_id,error)
-if (error.ne.0) call HDF_handleError(error, &
-                     'HDFwriteMCCLMultiLayerNameList: unable to open MCCLMultiLayerNameList group',.TRUE.)
+call HDF_createGroup('MCCLMultiLayerNameList',HDF_head, HDF_tail)
 
 ! write all the single integers
 io_int = (/ mcnl%stdout, mcnl%numsx, mcnl%globalworkgrpsz, mcnl%num_el, mcnl%totnum_el /)
@@ -523,9 +517,7 @@ real(kind=sgl)                                        :: io_real(n_real)
 character(20)                                         :: intlist(n_int), reallist(n_real)
 
 ! create the group for this namelist
-call h5gcreate_f(HDF_head%oID,'EBSDMasterNameList',grp_id,error)
-if (error.ne.0) call HDF_handleError(error, &
-                     'HDFwriteEBSDMasterNameList: unable to open EBSDMasterNameList group',.TRUE.)
+call HDF_createGroup('EBSDMasterNameList',HDF_head, HDF_tail)
 
 ! write all the single integers
 io_int = (/ emnl%stdout, emnl%npx, emnl%Esel, emnl%nthreads /)
@@ -555,81 +547,67 @@ end subroutine HDFwriteEBSDMasterNameList
 !
 ! SUBROUTINE:HDFwriteECPMasterNameList
 !
-!> @author Saransh Singh/Marc De Graef, Carnegie Mellon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill mcnl structure (used by CTEMECPmaster.f90)
+!> @brief write namelist to HDF file
 !
-!> @param nmlfile namelist file name
-!> @param emnl ECP master name list structure
+!> @param HDF_head top of push stack
+!> @param ecpnl ECP master name list structure
 !
-!> @date 06/19/14  SS 1.0 new routine
+!> @date 03/22/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine HDFwriteECPMasterNameList(nmlfile, ecpnl)
+subroutine HDFwriteECPMasterNameList(HDF_head, ecpnl)
 
 use error
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)                     :: nmlfile
-type(ECPMasterNameListType),INTENT(INOUT)      :: ecpnl
+type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
+type(ECPMasterNameListType),INTENT(INOUT)             :: ecpnl
 
-integer(kind=irg)       :: stdout
-integer(kind=irg)       :: npx
-integer(kind=irg)       :: Esel
-integer(kind=irg)       :: numthick
-real(kind=irg)          :: startthick
-real(kind=irg)          :: fn(3)
-real(kind=sgl)          :: dmin
-real(kind=sgl)          :: zintstep
-real(kind=sgl)          :: abcdist(3)
-real(kind=sgl)          :: albegadist(3)
-real(kind=sgl)          :: thickinc
-character(fnlen)        :: compmode
-character(fnlen)        :: energyfile
-character(fnlen)        :: outname
-logical                 :: distort
+integer(HID_T)                                        :: grp_id
+integer(kind=irg),parameter                           :: n_int = 5, n_real = 3
+integer(kind=irg)                                     :: rnk, error, dims(1), io_int(n_int), distort
+real(kind=sgl)                                        :: io_real(n_real)
+character(20)                                         :: intlist(n_int), reallist(n_real)
 
-! define the IO namelist to facilitate passing variables to the program.
-namelist /ECPmastervars/ stdout, startthick, dmin, fn, abcdist, albegadist, compmode, &
-    distort, outname, energyfile, Esel, npx
+! create the group for this namelist
+call HDF_createGroup('ECPMasterNameList',HDF_head, HDF_tail)
 
-! set the input parameters to default values (except for xtalname, which must be present)
-stdout = 6
-startthick = 2.0
-fn = (/0.0, 0.0, 1.0/)
-Esel = -1                       ! selected energy value for single energy run
-dmin = 0.025                    ! smallest d-spacing to include in dynamical matrix [nm]
-npx = 256
-abcdist = (/0.4, 0.4, 0.4/)
-albegadist = (/90.0, 90.0, 90.0/)
-compmode = 'Blochwv'
-distort = .FALSE.
-energyfile = 'undefined'        ! default filename for z_0(E_e) data from CTEMMC Monte Carlo simulations
-outname = 'ECPmasterout.data'  ! default filename for final output
-
-! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
-read(UNIT=dataunit,NML=ECPmastervars)
-close(UNIT=dataunit,STATUS='keep')
-
-! check for required entries
-if (trim(energyfile).eq.'undefined') then
-call FatalError('CTEMECPmaster:',' energy file name is undefined in '//nmlfile)
+! write all the single integers
+! distort is a logical, for which there is no real HDF_NATIVE_anything conversion, so we'll store it as a 1 or 0
+if (ecpnl%distort) then 
+  distort = 1
+else 
+  distort = 0
 end if
+io_int = (/ ecpnl%stdout, ecpnl%Esel, ecpnl%npx, ecpnl%startthick, distort /)
+intlist = (/ 'stdout', 'Esel', 'npx', 'startthick', 'distort' /)
+call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
-! if we get here, then all appears to be ok, and we need to fill in the emnl fields
-ecpnl%stdout = stdout
-ecpnl%Esel = Esel
-ecpnl%npx = npx
-ecpnl%startthick = startthick
-ecpnl%fn = fn
-ecpnl%abcdist = abcdist
-ecpnl%albegadist = albegadist
-ecpnl%dmin = dmin
-ecpnl%compmode = compmode
-ecpnl%distort = distort
-ecpnl%energyfile = energyfile
-ecpnl%outname = outname
+! integer vectors
+rnk = 1
+dims(1) = 3
+call h5ltmake_dataset_f(HDF_head%oID, 'fn', rnk, dims, H5T_NATIVE_INTEGER, ecpnl%fn, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteECPMasterNameList: unable to create fn dataset',.TRUE.)
+
+! write all the single doubles
+io_real = (/ ecpnl%abcdist, ecpnl%albegadist, ecpnl%dmin /)
+reallist = (/ 'abcdist', 'albegadist', 'dmin' /)
+call HDF_writeNMLdbles(HDF_head, io_real, reallist, n_real)
+
+! write all the strings
+call h5ltmake_dataset_string_f(HDF_head%oID, 'outname', ecpnl%outname, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteECPMasterNameList: unable to create outname dataset',.TRUE.)
+
+call h5ltmake_dataset_string_f(HDF_head%oID, 'energyfile', ecpnl%energyfile, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteECPMasterNameList: unable to create energyfile dataset',.TRUE.)
+
+call h5ltmake_dataset_string_f(HDF_head%oID, 'compmode', ecpnl%compmode, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteECPMasterNameList: unable to create compmode dataset',.TRUE.)
+
+! and pop this group off the stack
+call HDF_pop(HDF_head)
 
 end subroutine HDFwriteECPMasterNameList
 
@@ -639,129 +617,77 @@ end subroutine HDFwriteECPMasterNameList
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill enl structure (used by CTEMEBSD.f90)
+!> @brief write namelist to HDF file
 !
-!> @param nmlfile namelist file name
+!> @param HDF_head top of push stack
 !> @param enl EBSD name list structure
 !
-!> @date 06/23/14  MDG 1.0 new routine
+!> @date 03/22/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine HDFwriteEBSDNameList(nmlfile, enl)
+subroutine HDFwriteEBSDNameList(HDF_head, enl)
 
 use error
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)               :: nmlfile
+type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
 type(EBSDNameListType),INTENT(INOUT)      :: enl
 
-integer(kind=irg)       :: stdout
-integer(kind=irg)       :: numsx
-integer(kind=irg)       :: numsy
-integer(kind=irg)       :: binning
-integer(kind=irg)       :: nthreads
-integer(kind=irg)       :: energyaverage
-real(kind=sgl)          :: L
-real(kind=sgl)          :: thetac
-real(kind=sgl)          :: delta
-real(kind=sgl)          :: xpc
-real(kind=sgl)          :: ypc
-real(kind=sgl)          :: energymin
-real(kind=sgl)          :: energymax
-real(kind=sgl)          :: gammavalue
-real(kind=sgl)          :: axisangle(4)
-real(kind=dbl)          :: beamcurrent
-real(kind=dbl)          :: dwelltime
-character(1)            :: maskpattern
-character(3)            :: scalingmode
-character(3)            :: eulerconvention
-character(3)            :: outputformat
-character(fnlen)        :: anglefile
-character(fnlen)        :: masterfile
-character(fnlen)        :: energyfile 
-character(fnlen)        :: datafile
+integer(HID_T)                                        :: grp_id
+integer(kind=irg),parameter                           :: n_int = 6, n_real = 9
+integer(kind=irg)                                     :: rnk, error, dims(1), io_int(n_int), distort
+real(kind=sgl)                                        :: io_real(n_real)
+character(20)                                         :: intlist(n_int), reallist(n_real)
 
-! define the IO namelist to facilitate passing variables to the program.
-namelist  / EBSDdata / stdout, L, thetac, delta, numsx, numsy, xpc, ypc, anglefile, eulerconvention, masterfile, &
-                        energyfile, datafile, beamcurrent, dwelltime, energymin, energymax, binning, gammavalue, &
-                        scalingmode, axisangle, nthreads, outputformat, maskpattern, energyaverage
+! create the group for this namelist
+call HDF_createGroup('EBSDNameList',HDF_head, HDF_tail)
 
-! set the input parameters to default values (except for xtalname, which must be present)
-stdout          = 6
-numsx           = 640           ! [dimensionless]
-numsy           = 480           ! [dimensionless]
-binning         = 1             ! binning mode  (1, 2, 4, or 8)
-L               = 20000.0       ! [microns]
-nthreads        = 1             ! number of OpenMP threads
-energyaverage   = 0             ! apply energy averaging (1) or not (0); useful for dictionary computations
-thetac          = 0.0           ! [degrees]
-delta           = 25.0          ! [microns]
-xpc             = 0.0           ! [pixels]
-ypc             = 0.0           ! [pixels]
-energymin       = 15.0          ! minimum energy to consider
-energymax       = 30.0          ! maximum energy to consider
-gammavalue      = 1.0           ! gamma factor
-axisangle       = (/0.0, 0.0, 1.0, 0.0/)        ! no additional axis angle rotation
-beamcurrent     = 14.513D0      ! beam current (actually emission current) in nano ampere
-dwelltime       = 100.0D0       ! in microseconds
-maskpattern     = 'n'           ! 'y' or 'n' to include a circular mask
-scalingmode     = 'not'         ! intensity selector ('lin', 'gam', or 'not')
-eulerconvention = 'tsl'         ! convention for the first Euler angle ['tsl' or 'hkl']
-outputformat    = 'gui'         ! output format for 'bin' or 'gui' use
-anglefile       = 'undefined'   ! filename
-masterfile      = 'undefined'   ! filename
-energyfile      = 'undefined'   ! name of file that contains energy histograms for all scintillator pixels (output from MC program)
-datafile        = 'undefined'   ! output file name
+! write all the single integers
+io_int = (/ enl%stdout, enl%numsx, enl%numsy, enl%binning, enl%nthreads, enl%energyaverage /)
+inlist = (/ 'stdout', 'numsx', 'numsy', 'binning', 'nthreads', 'energyaverage' /)
+call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
+! write all the single reals 
+io_real = (/ enl%L, enl%thetac, enl%delta, enl%xpc, enl%ypc, enl%energymin, enl%energymax, enl%gammavalue, enl%axisangle /)
+reallist = (/ 'L', 'thetac', 'delta', 'xpc', 'ypc', 'energymin', 'energymax', 'gammavalue', 'axisangle' /)
+call HDF_writeNMLreals(HDF_head, io_real, reallist, n_real)
 
-! read the namelist file
- open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
- read(UNIT=dataunit,NML=EBSDdata)
- close(UNIT=dataunit,STATUS='keep')
+! a few doubles
+rnk = 1
+dims(1) = 1
+call h5ltmake_dataset_f(HDF_head%oID, 'beamcurrent', rnk, dims, H5T_NATIVE_DOUBLE, enl%beamcurrent, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteEBSDNameList: unable to create beamcurrent dataset',.TRUE.)
 
-! check for required entries
- if (trim(energyfile).eq.'undefined') then
-  call FatalError('CTEMEBSD:',' energy file name is undefined in '//nmlfile)
- end if
+call h5ltmake_dataset_f(HDF_head%oID, 'dwelltime', rnk, dims, H5T_NATIVE_DOUBLE, enl%dwelltime, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteEBSDNameList: unable to create dwelltime dataset',.TRUE.)
 
- if (trim(anglefile).eq.'undefined') then
-  call FatalError('CTEMEBSD:',' angle file name is undefined in '//nmlfile)
- end if
+! write all the strings
+call h5ltmake_dataset_string_f(HDF_head%oID, 'maskpattern', enl%maskpattern, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteEBSDNameList: unable to create maskpattern dataset',.TRUE.)
 
- if (trim(masterfile).eq.'undefined') then
-  call FatalError('CTEMEBSD:',' master pattern file name is undefined in '//nmlfile)
- end if
+call h5ltmake_dataset_string_f(HDF_head%oID, 'scalingmode', enl%scalingmode, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteEBSDNameList: unable to create scalingmode dataset',.TRUE.)
 
- if (trim(datafile).eq.'undefined') then
-  call FatalError('CTEMEBSD:',' output file name is undefined in '//nmlfile)
- end if
+call h5ltmake_dataset_string_f(HDF_head%oID, 'eulerconvention', enl%eulerconvention, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteEBSDNameList: unable to create eulerconvention dataset',.TRUE.)
 
-! if we get here, then all appears to be ok, and we need to fill in the emnl fields
-enl%stdout = stdout
-enl%numsx = numsx
-enl%numsy = numsy
-enl%binning = binning
-enl%L = L
-enl%nthreads = nthreads
-enl%energyaverage = energyaverage
-enl%thetac = thetac
-enl%delta = delta
-enl%xpc = xpc
-enl%ypc = ypc
-enl%energymin = energymin
-enl%energymax = energymax
-enl%gammavalue = gammavalue
-enl%axisangle = axisangle
-enl%beamcurrent = beamcurrent
-enl%dwelltime = dwelltime
-enl%maskpattern = maskpattern
-enl%scalingmode = scalingmode
-enl%eulerconvention = eulerconvention
-enl%outputformat = outputformat
-enl%anglefile = anglefile
-enl%masterfile = masterfile
-enl%energyfile = energyfile
-enl%datafile = datafile
+call h5ltmake_dataset_string_f(HDF_head%oID, 'outputformat', enl%outputformat, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteEBSDNameList: unable to create outputformat dataset',.TRUE.)
+
+call h5ltmake_dataset_string_f(HDF_head%oID, 'energyfile', ecpnl%energyfile, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteEBSDNameList: unable to create energyfile dataset',.TRUE.)
+
+call h5ltmake_dataset_string_f(HDF_head%oID, 'masterfile', ecpnl%masterfile, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteEBSDNameList: unable to create masterfile dataset',.TRUE.)
+
+call h5ltmake_dataset_string_f(HDF_head%oID, 'anglefile', ecpnl%anglefile, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteEBSDNameList: unable to create anglefile dataset',.TRUE.)
+
+call h5ltmake_dataset_string_f(HDF_head%oID, 'datafile', ecpnl%datafile, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteEBSDNameList: unable to create datafile dataset',.TRUE.)
+
+! and pop this group off the stack
+call HDF_pop(HDF_head)
 
 end subroutine HDFwriteEBSDNameList
 
@@ -771,110 +697,81 @@ end subroutine HDFwriteEBSDNameList
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill ecpnl structure (used by CTEMECP.f90)
+!> @brief write namelist to HDF file
 !
-!> @param nmlfile namelist file name
-!> @param knl Kossel name list structure
+!> @param HDF_head top of push stack
+!> @param ecpnl ECP namelist structure
 !
-!> @date 06/13/14  MDG 1.0 new routine
-!> @date 11/25/14  MDG 2.0 added parameters for film on substrate mode
+!> @date 03/22/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine HDFwriteECPNameList(nmlfile, ecpnl)
+subroutine HDFwriteECPNameList(HDF_head, ecpnl)
 
 use error
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)             :: nmlfile
-type(ECPNameListType),INTENT(INOUT)     :: ecpnl
+type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
+type(ECPNameListType),INTENT(INOUT)                   :: ecpnl
 
-integer(kind=irg)       :: stdout
-integer(kind=irg)       :: k(3)
-integer(kind=irg)       :: fn(3)
-integer(kind=irg)       :: numthick
-integer(kind=irg)       :: npix
-integer(kind=irg)       :: nthreads
-integer(kind=irg)       :: gF(3)
-integer(kind=irg)       :: gS(3)
-integer(kind=irg)       :: tF(3)
-integer(kind=irg)       :: tS(3)
-real(kind=sgl)          :: voltage
-real(kind=sgl)          :: dmin
-real(kind=sgl)          :: ktmax
-real(kind=sgl)          :: thetac
-real(kind=sgl)          :: startthick
-real(kind=sgl)          :: thickinc
-real(kind=sgl)          :: zintstep
-real(kind=sgl)          :: filmthickness
-character(7)            :: compmode
-character(fnlen)        :: outname
-character(fnlen)        :: xtalname
-character(fnlen)        :: xtalname2
-character(fnlen)        :: energyfile
+integer(HID_T)                                        :: grp_id
+integer(kind=irg),parameter                           :: n_int = 4, n_real = 8
+integer(kind=irg)                                     :: rnk, error, dims(1), io_int(n_int), distort
+real(kind=sgl)                                        :: io_real(n_real)
+character(20)                                         :: intlist(n_int), reallist(n_real)
 
-! namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, distort, abcdist, albegadist, ktmax, &
-namelist /ECPlist/ stdout, xtalname, xtalname2, voltage, k, fn, dmin, ktmax, filmthickness, &
-                   startthick, thickinc, nthreads, numthick, npix, outname, thetac, compmode, zintstep, &
-                   gF, gS, tF, tS, energyfile
+! create the group for this namelist
+call HDF_createGroup('ECPNameList',HDF_head, HDF_tail)
 
-! default values
-stdout = 6                              ! standard output
-k = (/ 0, 0, 1 /)                       ! beam direction [direction indices]
-fn = (/ 0, 0, 1 /)                      ! foil normal [direction indices]
-gF = (/ 0, 0, 0 /)                      ! plane normal in film
-gS = (/ 0, 0, 0 /)                      ! plane normal in substrate
-tF = (/ 0, 0, 0 /)                      ! direction in film
-tS = (/ 0, 0, 0 /)                      ! direction in substrate
-numthick = 10                           ! number of increments
-npix = 256                              ! output arrays will have size npix x npix
-nthreads = 1                            ! number of OpenMP threads
-voltage = 30000.0                       ! acceleration voltage [V]
-dmin = 0.025                            ! smallest d-spacing to include in dynamical matrix [nm]
-ktmax = 0.0                             ! beam convergence in units of |g_a|
-thetac = 0.0                            ! beam convergence in mrad (either ktmax or thetac must be given)
-startthick = 2.0                        ! starting thickness [nm]
-thickinc = 2.0                          ! thickness increment
-zintstep = 1.0                          ! integration step size for ScatMat mode
-filmthickness = 0.0                     ! 0.0 if there is no film
-compmode = 'Blochwv'                    ! 'Blochwv' or 'ScatMat' solution mode (Bloch is default)
-outname = 'ecp.data'                    ! output filename
-xtalname = 'undefined'                  ! initial value to check that the keyword is present in the nml file
-xtalname2 = 'undefined'                 ! initial value for substrate structure name
-energyfile = 'undefined'
+! write all the single integers
+io_int = (/ ecpnl%stdout, ecpnl%numthick, ecpnl%npix, ecpnl%nthreads /)
+intlist = (/ 'stdout', 'numthick', 'npix', 'nthreads' /)
+call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
-! read the namelist file
- open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
- read(UNIT=dataunit,NML=ECPlist)
- close(UNIT=dataunit,STATUS='keep')
+! integer vectors
+rnk = 1
+dims(1) = 3
+call h5ltmake_dataset_f(HDF_head%oID, 'k', rnk, dims, H5T_NATIVE_INTEGER, ecpnl%k, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteECPNameList: unable to create k dataset',.TRUE.)
 
-! check for required entries
- if (trim(xtalname).eq.'undefined') then
-  call FatalError('CTEMEECP:',' crystal file name is undefined in '//nmlfile)
- end if
+call h5ltmake_dataset_f(HDF_head%oID, 'fn', rnk, dims, H5T_NATIVE_INTEGER, ecpnl%fn, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteECPNameList: unable to create fn dataset',.TRUE.)
 
-ecpnl%stdout = stdout
-ecpnl%k = k
-ecpnl%fn = fn
-ecpnl%gF = gF
-ecpnl%gS = gS
-ecpnl%tF = tF
-ecpnl%tS = tS
-ecpnl%numthick = numthick
-ecpnl%npix = npix
-ecpnl%nthreads = nthreads
-ecpnl%voltage = voltage
-ecpnl%dmin = dmin
-ecpnl%ktmax = ktmax
-ecpnl%thetac = thetac
-ecpnl%startthick = startthick
-ecpnl%thickinc = thickinc
-ecpnl%zintstep = zintstep
-ecpnl%filmthickness = filmthickness
-ecpnl%compmode = compmode
-ecpnl%outname = outname
-ecpnl%xtalname = xtalname
-ecpnl%xtalname2 = xtalname2
-ecpnl%energyfile = energyfile
+call h5ltmake_dataset_f(HDF_head%oID, 'gF', rnk, dims, H5T_NATIVE_INTEGER, ecpnl%gF, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteECPNameList: unable to create gF dataset',.TRUE.)
+
+call h5ltmake_dataset_f(HDF_head%oID, 'gS', rnk, dims, H5T_NATIVE_INTEGER, ecpnl%gS, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteECPNameList: unable to create gS dataset',.TRUE.)
+
+call h5ltmake_dataset_f(HDF_head%oID, 'tF', rnk, dims, H5T_NATIVE_INTEGER, ecpnl%tF, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteECPNameList: unable to create tF dataset',.TRUE.)
+
+call h5ltmake_dataset_f(HDF_head%oID, 'tS', rnk, dims, H5T_NATIVE_INTEGER, ecpnl%tS, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteECPNameList: unable to create tS dataset',.TRUE.)
+
+! write all the single reals
+io_real = (/ ecpnl%voltage, ecpnl%dmin, ecpnl%ktmax, ecpnl%thetac, ecpnl%startthick, ecpnl%thickinc, ecpnl%zintstep, &
+             ecpnl%filmthickness /)
+reallist = (/ 'voltage', 'dmin', 'ktmax', 'thetac', 'startthick', 'thickinc', 'zintstep', 'filmthickness' /)
+call HDF_writeNMLreals(HDF_head, io_real, reallist, n_real)
+
+! write all the strings
+call h5ltmake_dataset_string_f(HDF_head%oID, 'compmode', ecpnl%compmode, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteECPNameList: unable to create compmode dataset',.TRUE.)
+
+call h5ltmake_dataset_string_f(HDF_head%oID, 'energyfile', ecpnl%energyfile, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteECPNameList: unable to create energyfile dataset',.TRUE.)
+
+call h5ltmake_dataset_string_f(HDF_head%oID, 'outname', ecpnl%outname, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteECPNameList: unable to create outname dataset',.TRUE.)
+
+call h5ltmake_dataset_string_f(HDF_head%oID, 'xtalname', ecpnl%xtalname, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteECPNameList: unable to create xtalname dataset',.TRUE.)
+
+call h5ltmake_dataset_string_f(HDF_head%oID, 'xtalname2', ecpnl%xtalname2, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteECPNameList: unable to create xtalname2 dataset',.TRUE.)
+
+! and pop this group off the stack
+call HDF_pop(HDF_head)
 
 end subroutine HDFwriteECPNameList
 
@@ -884,84 +781,59 @@ end subroutine HDFwriteECPNameList
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill lacbednl structure (used by CTEMLACBED.f90)
+!> @brief write namelist to HDF file
 !
-!> @param nmlfile namelist file name
+!> @param HDF_head top of push stack
 !> @param lacbednl LACBED name list structure
 !
-!> @date 07/01/14  MDG 1.0 new routine
+!> @date 06/22/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine HDFwriteLACBEDNameList(nmlfile, lacbednl)
+subroutine HDFwriteLACBEDNameList(HDF_head, lacbednl)
 
 use error
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)             :: nmlfile
-type(LACBEDNameListType),INTENT(INOUT)  :: lacbednl
+type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
+type(LACBEDNameListType),INTENT(INOUT)                :: lacbednl
 
-integer(kind=irg)       :: stdout
-integer(kind=irg)       :: k(3)
-integer(kind=irg)       :: fn(3)
-integer(kind=irg)       :: maxHOLZ
-integer(kind=irg)       :: numthick
-integer(kind=irg)       :: npix
-integer(kind=irg)       :: nthreads
-real(kind=sgl)          :: voltage
-real(kind=sgl)          :: dmin
-real(kind=sgl)          :: convergence
-real(kind=sgl)          :: startthick
-real(kind=sgl)          :: thickinc
-real(kind=sgl)          :: minten
-character(fnlen)        :: xtalname
-character(fnlen)        :: outname
+integer(HID_T)                                        :: grp_id
+integer(kind=irg),parameter                           :: n_int = 5, n_real = 6
+integer(kind=irg)                                     :: rnk, error, dims(1), io_int(n_int), distort
+real(kind=sgl)                                        :: io_real(n_real)
+character(20)                                         :: intlist(n_int), reallist(n_real)
 
-namelist /inputlist/ stdout, xtalname, voltage, k, fn, dmin, convergence, minten, &
-                              nthreads, startthick, thickinc, numthick, outname, npix, maxHOLZ
+! create the group for this namelist
+call HDF_createGroup('LACBEDNameList',HDF_head, HDF_tail)
 
-stdout = 6                      ! standard output
-k = (/ 0, 0, 1 /)               ! beam direction [direction indices]
-fn = (/ 0, 0, 1 /)              ! foil normal [direction indices]
-maxHOLZ = 2                     ! maximum HOLZ layer index to be used for the output file; note that his number
-                                ! does not affect the actual computations; it only determines which reflection 
-                                ! families will end up in the output file
-numthick = 10                   ! number of increments
-npix = 256                      ! output arrays will have size npix x npix
-nthreads = 1                    ! number of computational threads
-voltage = 200000.0              ! acceleration voltage [V]
-dmin = 0.025                    ! smallest d-spacing to include in dynamical matrix [nm]
-convergence = 25.0              ! beam convergence angle [mrad]
-startthick = 10.0               ! starting thickness [nm]
-thickinc = 10.0                 ! thickness increment
-minten = 1.0E-5                 ! minimum intensity in diffraction disk to make it into the output file
-xtalname = 'undefined'          ! initial value to check that the keyword is present in the nml file
-outname = 'lacbedout.data'      ! output filename
+! write all the single integers
+io_int = (/ lacbednl%stdout, lacbednl%maxHOLZ, lacbednl%numthick, lacbednl%npix, lacbednl%nthreads /)
+intlist = (/ 'stdout', 'maxHOLZ', 'numthick', 'npix', 'nthreads' /)
+call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
-! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
-read(UNIT=dataunit,NML=inputlist)
-close(UNIT=dataunit,STATUS='keep')
+! vectors
+rnk = 1
+dims(1) = 3
+call h5ltmake_dataset_f(HDF_head%oID, 'k', rnk, dims, H5T_NATIVE_INTEGER, lacbednl%k, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteLACBEDNameList: unable to create k dataset',.TRUE.)
 
-! check for required entries
-if (trim(xtalname).eq.'undefined') then
-  call FatalError('CTEMLACBED:',' structure file name is undefined in '//nmlfile)
-end if
+call h5ltmake_dataset_f(HDF_head%oID, 'fn', rnk, dims, H5T_NATIVE_INTEGER, lacbednl%fn, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteLACBEDNameList: unable to create fn dataset',.TRUE.)
 
-lacbednl%stdout = stdout
-lacbednl%k = k
-lacbednl%fn = fn
-lacbednl%maxHOLZ = maxHOLZ
-lacbednl%numthick = numthick
-lacbednl%npix = npix
-lacbednl%nthreads = nthreads
-lacbednl%voltage = voltage
-lacbednl%dmin = dmin
-lacbednl%convergence = convergence
-lacbednl%startthick = startthick
-lacbednl%thickinc = thickinc
-lacbednl%minten = minten
-lacbednl%xtalname = xtalname
-lacbednl%outname = outname
+! write all the single reals
+io_real = (/ lacbednl%voltage, lacbednl%dmin, lacbednl%convergence, lacbednl%startthick, lacbednl%thickinc, lacbednl%minten/)
+reallist = (/ 'voltage', 'dmin', 'convergence', 'startthick', 'thickinc', 'minten' /)
+call HDF_writeNMLreals(HDF_head, io_real, reallist, n_real)
+
+! write all the strings
+call h5ltmake_dataset_string_f(HDF_head%oID, 'outname', lacbednl%outname, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteLACBEDNameList: unable to create outname dataset',.TRUE.)
+
+call h5ltmake_dataset_string_f(HDF_head%oID, 'xtalname', lacbednl%xtalname, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteLACBEDNameList: unable to create xtalname dataset',.TRUE.)
+
+! and pop this group off the stack
+call HDF_pop(HDF_head)
 
 end subroutine HDFwriteLACBEDNameList
 
@@ -970,59 +842,58 @@ end subroutine HDFwriteLACBEDNameList
 !
 ! SUBROUTINE:HDFwriteECPpatternNameList
 !
-!> @author Saransh Singh, Carnegie Mellon University
+!> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill mcnl structure (used by CTEMECPpattern.f90)
+!> @brief write namelist into HDF file
 !
-!> @param nmlfile namelist file name
-!> @param emnl ECP name list structure
+!> @param HDF_head top of push stack
+!> @param ecpnl ECP name list structure
 !
-!> @date 06/19/14  SS 1.0 new routine
+!> @date 03/22/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine HDFwriteECPpatternNameList(nmlfile,ecpnl)
+subroutine HDFwriteECPpatternNameList(HDF_head,ecpnl)
 
 use error
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)                     :: nmlfile
-type(ECPpatternNameListType),INTENT(INOUT)             :: ecpnl
+type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
+type(ECPpatternNameListType),INTENT(INOUT)            :: ecpnl
 
-integer(kind=irg)       :: stdout
-integer(kind=irg)       :: npix
-real(kind=sgl)          :: thetac
-real(kind=sgl)          :: k(3)
-character(fnlen)        :: masterfile
-character(fnlen)        :: outname
+integer(HID_T)                                        :: grp_id
+integer(kind=irg),parameter                           :: n_int = 2, n_real = 6
+integer(kind=irg)                                     :: rnk, error, dims(1), io_int(n_int), distort
+real(kind=sgl)                                        :: io_real(n_real)
+character(20)                                         :: intlist(n_int), reallist(n_real)
 
-! define the IO namelist to facilitate passing variables to the program.
-namelist /ECPvars/ stdout, npix, masterfile, outname, thetac, k
+! create the group for this namelist
+call HDF_createGroup('ECPpatternNameList',HDF_head, HDF_tail)
 
-! set the input parameters to default values (except for masterfile, which must be present)
-stdout = 6
-npix = 256
-thetac = 5.0
-k = (/0.0,0.0,1.0/)
-masterfile = 'undefined'        ! default filename for master data from CTEMECPmaster
-outname = 'ECP.data'  ! default filename for final output
+! write all the single integers
+io_int = (/ ecpnl%stdout, ecpnl%npix /)
+intlist = (/ 'stdout', 'npix' /)
+call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
-! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
-read(UNIT=dataunit,NML=ECPvars)
-close(UNIT=dataunit,STATUS='keep')
+! single real
+rnk = 1
+dims(1) = 1
+call h5ltmake_dataset_f(HDF_head%oID, 'thetac', rnk, dims, H5T_NATIVE_REAL, ecpnl%thetac, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteECPpatternNameList: unable to create thetac dataset',.TRUE.)
 
-! check for required entries
-if (trim(masterfile).eq.'undefined') then
-call FatalError('CTEMECP:',' master file name is undefined in '//nmlfile)
-end if
+! real vector
+dims(1) = 3
+call h5ltmake_dataset_f(HDF_head%oID, 'k', rnk, dims, H5T_NATIVE_REAL, ecpnl%k, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteECPpatternNameList: unable to create k dataset',.TRUE.)
 
-! if we get here, then all appears to be ok, and we need to fill in the emnl fields
-ecpnl%stdout = stdout
-ecpnl%npix = npix
-ecpnl%thetac = thetac
-ecpnl%k = k
-ecpnl%masterfile = masterfile
-ecpnl%outname = outname
+! write all the strings
+call h5ltmake_dataset_string_f(HDF_head%oID, 'outname', ecpnl%outname, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteECPpatternNameList: unable to create outname dataset',.TRUE.)
+
+call h5ltmake_dataset_string_f(HDF_head%oID, 'masterfile', ecpnl%masterfile, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwriteECPpatternNameList: unable to create masterfile dataset',.TRUE.)
+
+! and pop this group off the stack
+call HDF_pop(HDF_head)
 
 end subroutine HDFwriteECPpatternNameList
 
@@ -1032,73 +903,53 @@ end subroutine HDFwriteECPpatternNameList
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill pednl structure (used by CTEMpedKIN.f90)
+!> @brief write namelist to HDF file
 !
-!> @param nmlfile namelist file name
+!> @param HDF_head top of push stack
 !> @param pednl PED name list structure
 !
-!> @date 03/02/15 MDG 1.0 new routine
+!> @date 03/22/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine HDFwritePEDKINNameList(nmlfile,pednl)
+subroutine HDFwritePEDKINNameList(HDF_head,pednl)
 
 use error
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)                     :: nmlfile
-type(PEDKINNameListType),INTENT(INOUT)             :: pednl
+type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
+type(PEDKINNameListType),INTENT(INOUT)                :: pednl
 
-integer(kind=irg)       :: stdout
-integer(kind=irg)       :: npix
-integer(kind=irg)       :: ncubochoric
-integer(kind=irg)       :: nthreads
-real(kind=sgl)          :: voltage
-real(kind=sgl)          :: thickness
-real(kind=sgl)          :: rnmpp
-real(kind=sgl)          :: dmin
-character(fnlen)        :: xtalname
-character(fnlen)        :: outname
-character(fnlen)        :: eulername
+integer(HID_T)                                        :: grp_id
+integer(kind=irg),parameter                           :: n_int = 4, n_real = 4
+integer(kind=irg)                                     :: rnk, error, dims(1), io_int(n_int), distort
+real(kind=sgl)                                        :: io_real(n_real)
+character(20)                                         :: intlist(n_int), reallist(n_real)
 
-! define the IO namelist to facilitate passing variables to the program.
-namelist /inputlist/ stdout, xtalname, voltage, npix, rnmpp, ncubochoric, nthreads, &
-                              thickness, outname , dmin, eulername
+! create the group for this namelist
+call HDF_createGroup('PEDKINNameList',HDF_head, HDF_tail)
 
-! set the input parameters to default values (except for xtalname, which must be present)
-xtalname = 'undefined'          ! initial value to check that the keyword is present in the nml file
-stdout = 6                      ! standard output
-voltage = 200000.0              ! acceleration voltage [V]
-nthreads = 1                    ! number of OpenMP threads to start
-thickness = 10.0                ! sample thickness [nm]
-npix = 256                      ! output arrays will have size npix x npix
-outname = 'pedout.data'         ! output filename
-eulername = 'EulerAngles.txt'   ! output filename
-dmin = 0.04                     ! smallest d-spacing [nm]
-ncubochoric = 100               ! number of samples along the cubochoric edge length
-rnmpp = 0.2                     ! nm^{-1} per pattern pixel
+! write all the single integers
+io_int = (/ pednl%stdout, pednl%npix, pednl%ncubochoric, pednl%nthreads /)
+intlist = (/ 'stdout', 'npix', 'ncubochoric', 'nthreads' /)
+call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
-! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
-read(UNIT=dataunit,NML=inputlist)
-close(UNIT=dataunit,STATUS='keep')
+! write all the single reals
+io_real = (/ pednl%voltage, pednl%thickness, pednl%dmin, pednl%rnmpp /)
+reallist = (/ 'voltage', 'thickness', 'dmin', 'rnmpp' /)
+call HDF_writeNMLreals(HDF_head, io_real, reallist, n_real)
 
-! check for required entries
-if (trim(xtalname).eq.'undefined') then
-  call FatalError('CTEMPED:',' crystal structure file name is undefined in '//nmlfile)
-end if
+! write all the strings
+call h5ltmake_dataset_string_f(HDF_head%oID, 'outname', pednl%outname, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwritePEDKINNameList: unable to create outname dataset',.TRUE.)
 
-! if we get here, then all appears to be ok, and we need to fill in the pednl fields
-pednl%xtalname = xtalname
-pednl%stdout = stdout
-pednl%voltage = voltage
-pednl%thickness = thickness
-pednl%dmin = dmin
-pednl%npix = npix
-pednl%nthreads = nthreads
-pednl%outname = outname
-pednl%eulername = eulername
-pednl%rnmpp = rnmpp
-pednl%ncubochoric = ncubochoric
+call h5ltmake_dataset_string_f(HDF_head%oID, 'xtalname', pednl%xtalname, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwritePEDKINNameList: unable to create xtalname dataset',.TRUE.)
+
+call h5ltmake_dataset_string_f(HDF_head%oID, 'eulername', pednl%eulername, error)
+if (error.ne.0) call HDF_handleError(error,'HDFwritePEDKINNameList: unable to create eulername dataset',.TRUE.)
+
+! and pop this group off the stack
+call HDF_pop(HDF_head)
 
 end subroutine HDFwritePEDKINNameList
 
