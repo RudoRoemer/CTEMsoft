@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:MBmodule.f90
+! EMsoft:MBmodule.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: MBmodule
@@ -399,7 +399,7 @@ end subroutine CalcKthick
 !
 !> @date 03/05/14  MDG 1.0 original (used to be in-line in ECP and ECCI programs)
 !> @date 03/11/14  MDG 1.1 converted to diagonal Sgh array only
-!> @date 06/19/14  MDG 2.0 no globals, taken out of CTEMECCI.f90
+!> @date 06/19/14  MDG 2.0 no globals, taken out of EMECCI.f90
 !--------------------------------------------------------------------------
 recursive subroutine CalcSgh(cell,reflist,nn,numset,Sgh,nat)
 
@@ -819,7 +819,7 @@ end subroutine CalcLghECP
 !
 !> @date 03/05/14  MDG 1.0 original (used to be in-line in ECP and ECCI programs)
 !> @date 03/11/14  MDG 1.1 converted to diagonal Sgh array only
-!> @date 06/19/14  MDG 2.0 no globals, taken out of CTEMECCI.f90
+!> @date 06/19/14  MDG 2.0 no globals, taken out of EMECCI.f90
 !> @date 11/29/14  SS  3.0 extended to film+substrate system
 !--------------------------------------------------------------------------
 

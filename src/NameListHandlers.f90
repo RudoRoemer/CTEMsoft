@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:NameListHandlers.f90
+! EMsoft:NameListHandlers.f90
 !--------------------------------------------------------------------------
 !
 ! PROGRAM: NameListHandlers
@@ -51,7 +51,7 @@ contains
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill knl structure (used by CTEMKossel.f90)
+!> @brief read namelist file and fill knl structure (used by EMKossel.f90)
 !
 !> @param nmlfile namelist file name
 !> @param knl Kossel name list structure
@@ -110,7 +110,7 @@ outname = 'Kosselout.data'      ! output filename
 
 ! check for required entries
  if (trim(xtalname).eq.'undefined') then
-  call FatalError('CTEMKossel:',' structure file name is undefined in '//nmlfile)
+  call FatalError('EMKossel:',' structure file name is undefined in '//nmlfile)
  end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the knl fields
@@ -137,7 +137,7 @@ end subroutine GetKosselNameList
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill knl structure (used by CTEMKosselmaster.f90)
+!> @brief read namelist file and fill knl structure (used by EMKosselmaster.f90)
 !
 !> @param nmlfile namelist file name
 !> @param knl Kossel name list structure
@@ -190,7 +190,7 @@ tfraction = 0.1                 ! thickness fraction for 'thicks' mode
 
 ! check for required entries
  if (trim(xtalname).eq.'undefined') then
-  call FatalError('CTEMKosselMaster:',' structure file name is undefined in '//nmlfile)
+  call FatalError('EMKosselMaster:',' structure file name is undefined in '//nmlfile)
  end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the knl fields
@@ -216,7 +216,7 @@ end subroutine GetKosselMasterNameList
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill mcnl structure (used by CTEMMC.f90)
+!> @brief read namelist file and fill mcnl structure (used by EMMC.f90)
 !
 !> @param nmlfile namelist file name
 !> @param mcnl Monte Carloname list structure
@@ -276,7 +276,7 @@ dataname = 'MCoutput.data'
 
 ! check for required entries
  if (trim(xtalname).eq.'undefined') then
-  call FatalError('CTEMMC:',' structure file name is undefined in '//nmlfile)
+  call FatalError('EMMC:',' structure file name is undefined in '//nmlfile)
  end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the mcnl fields
@@ -305,7 +305,7 @@ end subroutine GetMCNameList
 !
 !> @author Saransh Singh/Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill mcnl structure (used by CTEMMCCL.f90)
+!> @brief read namelist file and fill mcnl structure (used by EMMCCL.f90)
 !
 !> @param nmlfile namelist file name
 !> @param mcnl Monte Carloname list structure
@@ -369,7 +369,7 @@ close(UNIT=dataunit,STATUS='keep')
 
 ! check for required entries
 if (trim(xtalname).eq.'undefined') then
-call FatalError('CTEMMC:',' structure file name is undefined in '//nmlfile)
+call FatalError('EMMC:',' structure file name is undefined in '//nmlfile)
 end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the mcnl fields
@@ -399,7 +399,7 @@ end subroutine GetMCCLNameList
 !
 !> @author Saransh Singh/Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill mcnl structure (used by CTEMMCCL.f90)
+!> @brief read namelist file and fill mcnl structure (used by EMMCCL.f90)
 !
 !> @param nmlfile namelist file name
 !> @param mcnl Monte Carloname list structure
@@ -472,7 +472,7 @@ close(UNIT=dataunit,STATUS='keep')
 
 ! check for required entries
 if ((trim(xtalname_film).eq.'undefined') .or. (trim(xtalname_subs).eq.'undefined')) then
-call FatalError('CTEMMC:',' structure file name is undefined in '//nmlfile)
+call FatalError('EMMC:',' structure file name is undefined in '//nmlfile)
 end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the mcnl fields
@@ -505,7 +505,7 @@ end subroutine GetMCCLMultiLayerNameList
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill mcnl structure (used by CTEMEBSDmaster.f90)
+!> @brief read namelist file and fill mcnl structure (used by EMEBSDmaster.f90)
 !
 !> @param nmlfile namelist file name
 !> @param emnl EBSD master name list structure
@@ -538,7 +538,7 @@ npx = 500                       ! Nx pixels (total = 2Nx+1)
 nthreads = 1
 Esel = -1                       ! selected energy value for single energy run
 dmin = 0.025                    ! smallest d-spacing to include in dynamical matrix [nm]
-energyfile = 'undefined'        ! default filename for z_0(E_e) data from CTEMMC Monte Carlo simulations
+energyfile = 'undefined'        ! default filename for z_0(E_e) data from EMMC Monte Carlo simulations
 outname = 'EBSDmasterout.data'  ! default filename for final output
 
 ! read the namelist file
@@ -548,7 +548,7 @@ outname = 'EBSDmasterout.data'  ! default filename for final output
 
 ! check for required entries
  if (trim(energyfile).eq.'undefined') then
-  call FatalError('CTEMEBSDmaster:',' energy file name is undefined in '//nmlfile)
+  call FatalError('EMEBSDmaster:',' energy file name is undefined in '//nmlfile)
  end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the emnl fields
@@ -568,7 +568,7 @@ end subroutine GetEBSDMasterNameList
 !
 !> @author Saransh Singh/Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill mcnl structure (used by CTEMECPmaster.f90)
+!> @brief read namelist file and fill mcnl structure (used by EMECPmaster.f90)
 !
 !> @param nmlfile namelist file name
 !> @param emnl ECP master name list structure
@@ -615,7 +615,7 @@ abcdist = (/0.4, 0.4, 0.4/)
 albegadist = (/90.0, 90.0, 90.0/)
 compmode = 'Blochwv'
 distort = .FALSE.
-energyfile = 'undefined'        ! default filename for z_0(E_e) data from CTEMMC Monte Carlo simulations
+energyfile = 'undefined'        ! default filename for z_0(E_e) data from EMMC Monte Carlo simulations
 outname = 'ECPmasterout.data'  ! default filename for final output
 
 ! read the namelist file
@@ -625,7 +625,7 @@ close(UNIT=dataunit,STATUS='keep')
 
 ! check for required entries
 if (trim(energyfile).eq.'undefined') then
-call FatalError('CTEMECPmaster:',' energy file name is undefined in '//nmlfile)
+call FatalError('EMECPmaster:',' energy file name is undefined in '//nmlfile)
 end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the emnl fields
@@ -650,7 +650,7 @@ end subroutine GetECPMasterNameList
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill enl structure (used by CTEMEBSD.f90)
+!> @brief read namelist file and fill enl structure (used by EMEBSD.f90)
 !
 !> @param nmlfile namelist file name
 !> @param enl EBSD name list structure
@@ -732,19 +732,19 @@ datafile        = 'undefined'   ! output file name
 
 ! check for required entries
  if (trim(energyfile).eq.'undefined') then
-  call FatalError('CTEMEBSD:',' energy file name is undefined in '//nmlfile)
+  call FatalError('EMEBSD:',' energy file name is undefined in '//nmlfile)
  end if
 
  if (trim(anglefile).eq.'undefined') then
-  call FatalError('CTEMEBSD:',' angle file name is undefined in '//nmlfile)
+  call FatalError('EMEBSD:',' angle file name is undefined in '//nmlfile)
  end if
 
  if (trim(masterfile).eq.'undefined') then
-  call FatalError('CTEMEBSD:',' master pattern file name is undefined in '//nmlfile)
+  call FatalError('EMEBSD:',' master pattern file name is undefined in '//nmlfile)
  end if
 
  if (trim(datafile).eq.'undefined') then
-  call FatalError('CTEMEBSD:',' output file name is undefined in '//nmlfile)
+  call FatalError('EMEBSD:',' output file name is undefined in '//nmlfile)
  end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the emnl fields
@@ -782,7 +782,7 @@ end subroutine GetEBSDNameList
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill ecpnl structure (used by CTEMECP.f90)
+!> @brief read namelist file and fill ecpnl structure (used by EMECP.f90)
 !
 !> @param nmlfile namelist file name
 !> @param knl Kossel name list structure
@@ -860,7 +860,7 @@ energyfile = 'undefined'
 
 ! check for required entries
  if (trim(xtalname).eq.'undefined') then
-  call FatalError('CTEMEECP:',' crystal file name is undefined in '//nmlfile)
+  call FatalError('EMEECP:',' crystal file name is undefined in '//nmlfile)
  end if
 
 ecpnl%stdout = stdout
@@ -895,7 +895,7 @@ end subroutine GetECPNameList
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill lacbednl structure (used by CTEMLACBED.f90)
+!> @brief read namelist file and fill lacbednl structure (used by EMLACBED.f90)
 !
 !> @param nmlfile namelist file name
 !> @param lacbednl LACBED name list structure
@@ -955,7 +955,7 @@ close(UNIT=dataunit,STATUS='keep')
 
 ! check for required entries
 if (trim(xtalname).eq.'undefined') then
-  call FatalError('CTEMLACBED:',' structure file name is undefined in '//nmlfile)
+  call FatalError('EMLACBED:',' structure file name is undefined in '//nmlfile)
 end if
 
 lacbednl%stdout = stdout
@@ -983,7 +983,7 @@ end subroutine GetLACBEDNameList
 !
 !> @author Saransh Singh, Carnegie Mellon University
 !
-!> @brief read namelist file and fill mcnl structure (used by CTEMECPpattern.f90)
+!> @brief read namelist file and fill mcnl structure (used by EMECPpattern.f90)
 !
 !> @param nmlfile namelist file name
 !> @param emnl ECP name list structure
@@ -1014,7 +1014,7 @@ stdout = 6
 npix = 256
 thetac = 5.0
 k = (/0.0,0.0,1.0/)
-masterfile = 'undefined'        ! default filename for master data from CTEMECPmaster
+masterfile = 'undefined'        ! default filename for master data from EMECPmaster
 outname = 'ECP.data'  ! default filename for final output
 
 ! read the namelist file
@@ -1024,7 +1024,7 @@ close(UNIT=dataunit,STATUS='keep')
 
 ! check for required entries
 if (trim(masterfile).eq.'undefined') then
-call FatalError('CTEMECP:',' master file name is undefined in '//nmlfile)
+call FatalError('EMECP:',' master file name is undefined in '//nmlfile)
 end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the emnl fields
@@ -1043,7 +1043,7 @@ end subroutine GetECPpatternNameList
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill pednl structure (used by CTEMpedKIN.f90)
+!> @brief read namelist file and fill pednl structure (used by EMpedKIN.f90)
 !
 !> @param nmlfile namelist file name
 !> @param pednl PED name list structure
@@ -1095,7 +1095,7 @@ close(UNIT=dataunit,STATUS='keep')
 
 ! check for required entries
 if (trim(xtalname).eq.'undefined') then
-  call FatalError('CTEMPED:',' crystal structure file name is undefined in '//nmlfile)
+  call FatalError('EMPED:',' crystal structure file name is undefined in '//nmlfile)
 end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the pednl fields
@@ -1119,7 +1119,7 @@ end subroutine GetPEDKINNameList
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill pednl structure (used by CTEMPED.f90)
+!> @brief read namelist file and fill pednl structure (used by EMPED.f90)
 !
 !> @param nmlfile namelist file name
 !> @param pednl PED name list structure
@@ -1182,7 +1182,7 @@ close(UNIT=dataunit,STATUS='keep')
 
 ! check for required entries
 if (trim(xtalname).eq.'undefined') then
-call FatalError('CTEMPED:',' crystal structure file name is undefined in '//nmlfile)
+call FatalError('EMPED:',' crystal structure file name is undefined in '//nmlfile)
 end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the pednl fields
@@ -1212,7 +1212,7 @@ end subroutine GetPEDNameList
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill eccinl structure (used by CTEMECCI.f90)
+!> @brief read namelist file and fill eccinl structure (used by EMECCI.f90)
 !
 !> @param nmlfile namelist file name
 !> @param eccinl ECCI name list structure
@@ -1312,12 +1312,12 @@ close(UNIT=dataunit,STATUS='keep')
 
 ! check for required entries
 if (trim(xtalname).eq.'undefined') then
-  call FatalError('CTEMECCI:',' crystal structure file name is undefined in '//nmlfile)
+  call FatalError('EMECCI:',' crystal structure file name is undefined in '//nmlfile)
 end if
 
 ! make sure the ECPname variable has been properly defined
 if (trim(ECPname).eq.'undefined') then
-  call FatalError('CTEMECCI:',' ECP pattern file name is undefined in '//nmlfile)
+  call FatalError('EMECCI:',' ECP pattern file name is undefined in '//nmlfile)
 end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the emnl fields
@@ -1362,7 +1362,7 @@ end subroutine GetECCINameList
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief read namelist file and fill rfznl structure (used by CTEMsampleRFZ.f90)
+!> @brief read namelist file and fill rfznl structure (used by EMsampleRFZ.f90)
 !
 !> @param nmlfile namelist file name
 !> @param rfznl RFZ name list structure
@@ -1407,7 +1407,7 @@ end subroutine GetRFZNameList
 !
 !> @author Saransh Singh, Carnegie Mellon University
 !
-!> @brief read namelist file and fill DictIndxOpenCLListType (used by CTEMDictIndxOpenCL.f90)
+!> @brief read namelist file and fill DictIndxOpenCLListType (used by EMDictIndxOpenCL.f90)
 !
 !> @param nmlfile namelist file name
 !> @param rfznl RFZ name list structure
@@ -1460,31 +1460,31 @@ close(UNIT=dataunit,STATUS='keep')
 
 ! check for required entries
 if (trim(exptfile).eq.'undefined') then
-    call FatalError('CTEMDictIndxOpenCL:',' experimental file name is undefined in '//nmlfile)
+    call FatalError('EMDictIndxOpenCL:',' experimental file name is undefined in '//nmlfile)
 end if
 
 if (trim(dictfile).eq.'undefined') then
-    call FatalError('CTEMDictIndxOpenCL:',' dictionary file name is undefined in '//nmlfile)
+    call FatalError('EMDictIndxOpenCL:',' dictionary file name is undefined in '//nmlfile)
 end if
 
 if (trim(eulerfile).eq.'undefined') then
-    call FatalError('CTEMDictIndxOpenCL:',' euler angle file name is undefined in '//nmlfile)
+    call FatalError('EMDictIndxOpenCL:',' euler angle file name is undefined in '//nmlfile)
 end if
 
 if (totnumexpt .eq. 0) then
-    call FatalError('CTEMDictIndxOpenCL:',' total number of experimental patterns is undefined in '//nmlfile)
+    call FatalError('EMDictIndxOpenCL:',' total number of experimental patterns is undefined in '//nmlfile)
 end if
 
 if (totnumdict .eq. 0) then
-    call FatalError('CTEMDictIndxOpenCL:',' total number of dictionary patterns is undefined in '//nmlfile)
+    call FatalError('EMDictIndxOpenCL:',' total number of dictionary patterns is undefined in '//nmlfile)
 end if
 
 if (imght .eq. 0) then
-    call FatalError('CTEMDictIndxOpenCL:',' height of single pattern is undefined in '//nmlfile)
+    call FatalError('EMDictIndxOpenCL:',' height of single pattern is undefined in '//nmlfile)
 end if
 
 if (imgwd .eq. 0) then
-    call FatalError('CTEMDictIndxOpenCL:',' width of single pattern is undefined in '//nmlfile)
+    call FatalError('EMDictIndxOpenCL:',' width of single pattern is undefined in '//nmlfile)
 end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the emnl fields

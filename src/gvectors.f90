@@ -26,7 +26,7 @@
 ! USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ! ###################################################################
 !--------------------------------------------------------------------------
-! CTEMsoft:gvectors.f90 
+! EMsoft:gvectors.f90 
 !--------------------------------------------------------------------------
 !
 ! MODULE: gvectors
@@ -160,7 +160,7 @@ integer(kind=irg)               :: istat
  rltail%famnum = 0                              ! init this value for Prune_ReflectionList
 ! rltail%Ucgmod = cabs(rlp%Ucg)                 ! added on 2/29/2012 for Bethe potential computations
 ! rltail%sangle = 1000.0*dble(CalcDiffAngle(hkl(1),hkl(2),hkl(3)))    ! added 4/18/2012 for EIC project HAADF/BF tomography simulations
-! rltail%thetag = rlp%Vphase                   ! added 12/14/2013 for CTEMECCI program
+! rltail%thetag = rlp%Vphase                   ! added 12/14/2013 for EMECCI program
  nullify(rltail%nextw)
  nullify(rltail%nexts)
  
@@ -727,7 +727,7 @@ else  ! this is the Bloch wave + Bethe potentials initialization (originally imp
 ! deal with the foil normal; if IgnoreFoilNormal is .TRUE., then assume it is parallel to the beam direction
      if (IgnoreFoilNormal) then 
 ! we're taking the foil normal to be parallel to the incident beam direction at each point of
-! the standard stereographic triangle, so cos(alpha) = 1 always in eqn. 5.11 of CTEM
+! the standard stereographic triangle, so cos(alpha) = 1 always in eqn. 5.11 of EM
         kpg = kk+gg                             ! k0 + g (vectors)
         gplen = CalcLength(cell,kpg,'r')        ! |k0+g|
         rltmpa%sg = (1.0/cell%mLambda**2 - gplen**2)*0.5/gplen

@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft:crystal.f90
+! EMsoft:crystal.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: crystal
@@ -1627,7 +1627,7 @@ end subroutine GetOR
 !> @param cellB unit cell B pointer
 !> @param direction 'AB' for A new, B old; 'BA' for B new, A old
 !
-!> @date   12/20/13 MDG 1.0 first version, used for CTEMoverlap and CTEMorient
+!> @date   12/20/13 MDG 1.0 first version, used for EMoverlap and EMorient
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !> @date   06/05/14 MDG 4.1 modification for cell pointers
 !--------------------------------------------------------------------------

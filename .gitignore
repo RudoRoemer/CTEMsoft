@@ -11,6 +11,10 @@
 *.psd
 
 IDL/**/*.sav
+IDL/various
+/ideas/
+/MathStuff/
+/rotations/
 
 # ignore OS files
 .DS_Store

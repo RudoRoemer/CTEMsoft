@@ -334,7 +334,7 @@ namelist / rundata / DF_L, DF_npix, DF_npiy, DF_slice, Nmat, sgname, numvoids, i
 ! display the standard program info
  progname = 'dispfield.f90'
  progdesc = 'Defect displacement field simulation program'
- call CTEMsoft
+ call EMsoft
  
 ! get the crystal data and microscope voltage
  SG % SYM_reduce=.TRUE.
@@ -370,7 +370,7 @@ namelist / rundata / DF_L, DF_npix, DF_npiy, DF_slice, Nmat, sgname, numvoids, i
  t_interval = 10       ! default timing interval (output every t_interval image columns)
  dispfile = 'none'     ! name of the displacement field output file (will be created if different from none)
  dispmode = 'not'  ! should a diplacement file be written ('new') or read ('old') or neither ('not')?
- illumination_mode = 'CTEM'  ! default illumination mode (can be 'CTEM' or 'STEM')
+ illumination_mode = 'EM'  ! default illumination mode (can be 'EM' or 'STEM')
  
  
 ! then we read the rundata namelist, which may override some of these defaults  

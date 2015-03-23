@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft:others.f90
+! EMsoft:others.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: others
@@ -41,7 +41,7 @@
 !
 !> @note This code was originally f77, and was converted to f90 by MDG [5/22/01];
 !> core functionality is unchanged from the f77 version, but the output statements
-!> were adapted to the current CTEMsoft package standard.
+!> were adapted to the current EMsoft package standard.
 ! 
 !> @date   10/13/98 MDG 1.0 original
 !> @date    5/22/01 MDG 2.0 f90

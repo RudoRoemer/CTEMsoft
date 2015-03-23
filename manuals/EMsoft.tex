@@ -1,0 +1,353 @@
+
+\documentclass[DIV=calc, paper=letter, fontsize=11pt]{scrartcl}	 % A4 paper and 11pt font size
+
+\usepackage[body={6.5in,9.0in},
+  top=1.0in, left=1.0in]{geometry}
+  
+\usepackage[english]{babel} % English language/hyphenation
+\usepackage[protrusion=true,expansion=true]{microtype} % Better typography
+\usepackage{amsmath,amsfonts,amsthm} % Math packages
+\usepackage[svgnames]{xcolor} % Enabling colors by their 'svgnames'
+\usepackage[hang, small,labelfont=bf,up,textfont=it,up]{caption} % Custom captions under/above floats in tables or figures
+\usepackage{booktabs} % Horizontal rules in tables
+\usepackage{fix-cm}	 % Custom font sizes - used for the initial letter in the document
+
+\usepackage{sectsty} % Enables custom section titles
+\allsectionsfont{\usefont{OT1}{phv}{b}{n}} % Change the font of all section commands
+
+\usepackage{fancyhdr} % Needed to define custom headers/footers
+\pagestyle{fancy} % Enables the custom headers/footers
+\usepackage{lastpage} % Used to determine the number of pages in the document (for "Page X of Total")
+
+\usepackage{fancyvrb}% used to include files verbatim
+%\usepackage{chemsym}
+
+\usepackage{hyperref}
+
+\usepackage[backend=bibtex,style=numeric,sorting=ydnt,maxnames=15]{biblatex}
+\renewbibmacro{in:}{}
+
+% Count total number of entries in each refsection
+\AtDataInput{%
+  \csnumgdef{entrycount:\therefsection}{%
+    \csuse{entrycount:\therefsection}+1}}
+
+% Print the labelnumber as the total number of entries in the
+% current refsection, minus the actual labelnumber, plus one
+\DeclareFieldFormat{labelnumber}{\mkbibdesc{#1}}    
+\newrobustcmd*{\mkbibdesc}[1]{%
+  \number\numexpr\csuse{entrycount:\therefsection}+1-#1\relax}
+
+
+%\addbibresource[label=papers]{mypubs.bib}
+%\addbibresource[label=books]{mypubs.bib}
+%\addbibresource[label=edited]{mypubs.bib}
+%\addbibresource[label=chapters]{mypubs.bib}
+
+
+% Headers - all currently empty
+\lhead{}
+\chead{}
+\rhead{}
+
+% Footers
+\lfoot{\textsf{EMsoft--2015} manual, Release 3.0, \today}
+\cfoot{}
+\rfoot{\footnotesize Page \thepage\ of \pageref{LastPage}} % "Page 1 of 2"
+
+\renewcommand{\headrulewidth}{0.0pt} % No header rule
+\renewcommand{\footrulewidth}{0.4pt} % Thin footer rule
+
+\usepackage{lettrine} % Package to accentuate the first letter of the text
+\newcommand{\initial}[1]{ % Defines the command and style for the first letter
+\lettrine[lines=3,lhang=0.3,nindent=0em]{
+\color{DarkGoldenrod}
+{\textsf{#1}}}{}}
+
+\usepackage{titling} % Allows custom title configuration
+
+\newcommand{\HorRule}{\color{DarkGoldenrod} \rule{\linewidth}{1pt}} % Defines the gold horizontal rule around the title
+
+\pretitle{\vspace{-1.5in} \begin{center} \HorRule \fontsize{25}{25} \usefont{OT1}{phv}{b}{n} \color{DarkRed} \selectfont} % Horizontal rule before the title
+
+\title{EMsoft\\ General User Manual} % Your article title
+
+\posttitle{\par\end{center}\vskip 0.5em} % Whitespace under the title
+
+\preauthor{\begin{center}\large \lineskip 0.5em \usefont{OT1}{phv}{b}{sl} \color{DarkRed}} % Author font configuration
+
+\author{\vspace*{-0.7in}} % Your name
+
+\postauthor{\footnotesize \usefont{OT1}{phv}{m}{sl} \color{Black} % Configuration for the institution name
+
+\par\end{center}\HorRule} % Horizontal rule after the title
+\date{Program Manual, Release 3.0, \today}
+
+\newcommand{\ctp}{\textsf{EMsoft}}
+%
+\begin{document}
+\maketitle
+
+\renewcommand{\contentsname}{Table of Contents}
+{\small\tableofcontents}
+
+\newpage
+\section{Introduction}
+This manual describes those aspects of the \ctp\ package that are common to almost all of the programs; it also describes the functionality of 
+the library source code files.  The 2013 version of the source code is based on the original CTEMsoft code from the late 90s and the years 
+leading up to the publication of the CTEM textbook (2003, Cambridge University Press).  While some of the code was described in the 
+book, not everything was subsequently released in the public domain.  In fact, only the code corresponding to Chapters 1 through 7 was 
+released; the remainder exists, but due to time limitations it was never released.  The present version (Release 3.0) aims to correct this issue and also
+provides a significantly upgraded and updated code base.  The name of the package has also been changed from CTEMsoft to \ctp, to reflect the 
+fact that both SEM and TEM codes are part of the library.
+
+At the time of writing of this manual, these programs have been successfully compiled on the Mac OS X platform using the public domain gfortran compiler.  
+There is no basic reason why this code should not work on Windows and Linux systems, and efforts are underway
+to make sure that the code will run on all platforms. It would be interesting to see some of this code
+implemented in a super computer setting, since many of the routines should be quite parallellizable.  Where possible, some of the computations
+are carried out using the OpenMP directives, so that multiple cores can be used.  This aspect of the code is still under further development,
+and we anticipate that GPUs will become useful as well, using the OpenCL approach.
+
+The \ctp\ package is entirely written in f90 and does not use any of the newer commands available in the 95 and 2003 versions.
+
+The source code is extensively commented, using regular comment lines, but also using DOxygen documentation generation commands.  Hence
+there exists an extensive on-line documentation of all variables, variable types, modules, subroutines, functions, etc. for the latest version 
+of the code.  For selected programs, more extensive manual pages are available.  If interested, please contact the author for further information.
+
+\newpage
+\section{The EMsoft library and third party libraries\label{sec:library}}
+The core of the \ctp\ package is the static library \textsf{EMsoftlib.a}.  This library contains all the code segments and variable/type definitions
+that are used by the programs.  The library must be compiled first, before any program can be compiled.  The source code is organized 
+in a series of modules, starting with \textsf{src/local.f90} which is/should be the only routine that might need some editing before the library is 
+compiled.  
+
+\ctp\ also makes use of a number of third party libraries and source files, all of them in the public domain.  The most important ones are 
+the LAPACK and associated BLAS libraries, as well as the HDF5 library.  With the help of Mike Jackson and Megna Shah (BlueQuartz.net), the 
+compilation files from version 1.0 have been reworked from old-fashioned
+makefiles to use the more flexible CMake environment; to compile the \ctp\ you must have the following installed on your system:
+
+
+
+
+\newpage
+\section{Things to do before running any of the programs\label{sec:todo}}
+The programs require that three environment variables be set: \textsf{EMsofttemplates},
+\textsf{EMsoftresources} and \textsf{EMsoftopencl}.  Depending on the UNIX shell that one is using, they must be set in
+the appropriate shell start-up files.
+
+\begin{itemize}
+\item \textit{csh}: edit the \textsf{.cshrc} file in your home folder and add the following lines:
+\begin{verbatim}
+  setenv EMsofttemplates /some/absolute/path/EMsoft/templatefolder
+  setenv EMsoftresources /some/absolute/path/EMsoft/resources
+  setenv EMsoftopencl /som/absolute/path/EMsoft/opencl
+\end{verbatim}
+\item \textit{bash}: edit the \textsf{.bash\_profile} file in your home folder and add the following lines:
+\begin{verbatim}
+  EMsofttemplates=/some/absolute/path/EMsoft/templatefolder
+  EMsoftresources=/some/absolute/path/EMsoft/resources
+  EMsoftopencl=/some/absolute/path/EMsoft/opencl
+  export EMsofttemplates EMsoftresources EMsoftopencl
+\end{verbatim}
+\end{itemize}
+Make sure that you replace the string \textsf{/some/absolute/path} by the correct path for your system.
+For other shells, please use the appropriate approach to defining shell variables.
+
+{\color{blue}How is this done on the PC platform?}
+
+\newpage
+\section{The general structure of EMsoft programs\label{sec:structure}}
+Each \ctp\ program has the same high level source code structure, and is called in the same way.  If \textsf{CTEMprogram} represents 
+a program name (for instance \textsf{CTEMECP} or \textsf{CTEMlacbed}, then the following command line options can be used (all of them optional):
+\begin{verbatim}
+	CTEMprogram [-h] [-t] [file.nml]
+\end{verbatim}
+The arguments  between square brackets are optional, and are defined as follows:
+\begin{itemize}
+	\item \textsf{-h}: (h=help) this argument causes the program to display a list of all command line arguments and their meaning.  The program will quit after printing 
+	the help message.
+	\item \textsf{-t}: (t=template) this argument causes the program to create template files for all the input files used by the program.  For each
+	name-value entry in the template file (see section~\ref{sec:f90input} for more details), a comment line is inserted with a brief explanation 
+	of the variable and its units, if appropriate.  The user can then copy the template file to a new file with the namelist (.nml) extension and edit the 
+	file with a regular text editor.  The program will quit after generating the template files.  Each template file contains the default values for each parameter.
+	If this option produces an error, then this is likely due to an incorrect setting of the shell variables in the previous section.
+	\item \textsf{file.nml}: the main namelist file to be used by the program.  If no name is present, then the default filename CTEMprogram.nml will be used.  If the 
+	provided namelist file does not exist, the program will report an error and abort.
+\end{itemize}
+
+The programs in the top half of the table on the last page of this manual function in the way described above; all other programs
+have a simple command line interface, with user prompts for all relevant variables.  Eventually, in the next Release, all programs
+will make use of namelist files and will likely be callable from a single user interface.
+
+
+\newpage
+\section{Namelist input files\label{sec:f90input}}
+All user input for the \ctp\ programs is performed via namelist files; this is a special f90 IO format that allows one to list 
+\textit{name-value} pairs in an ordinary text file, and then this file will be read and interpreted by the 
+program.  The basic format of a namelist file is as follows:
+\begin{verbatim}
+&nmlname
+var1 = val1
+var2 = val2
+...
+/
+\end{verbatim}
+The first line must begin with the ampersand character ``\&'' and is followed (without spaces) by the internal name used by the program 
+to identify the set of variables (this is similar to a \textit{common block} in the older f77 standard).  After the mandatory first line, which should not be altered, a 
+list of name-value pairs follows.  These can appear in any order, and variables may be omitted from the file, in which case the program
+will use a default value (this value can be found in the template file; see section~\ref{sec:structure}).  The final line of the file must contain a single forward slash
+character, ``/'', to end the namelist.
+
+As a concrete example, consider the namelist file used to define a dislocation:
+\begin{Verbatim}%
+	[formatcom=\color{blue},frame=lines]
+&dislocationdata
+id = 0.501
+jd = 0.501
+u = 1.0,0.0,1.0
+bv = 0.5,0.0,0.5
+/
+\end{Verbatim}
+Internally, the program identifies this set of variables with the namelist identifier ``dislocationdata,'' as shown on the first line of the file.
+Then there are four name-value pairs: \textsf{id} and \textsf{jd} are real numbers in the range $[-1,1]$ and define the position
+of the defect; \textsf{u} represents the line direction, which is declared as a triplet of 
+floating point numbers; and the burgers vector is represented by another triplet of floating point numbers and the variable name \textsf{bv}.
+The forward slash closes the file.  Note that these entries can appear in any order. Comment lines are allowed in the namelist
+file; simply start the line with the f90 comment character (the exclamation mark ``!'') and then type your comment.  For variables that 
+have components, such as the two vectors above, one may also define each component separately, in which case the file would look
+as follows:
+\begin{verbatim}
+&dislocationdata
+id = 0.501
+jd = 0.501
+! these vectors are defined one component at a time
+u(1) = 1.0 
+u(2) = 0.0 
+u(3) = 1.0
+bv(1) = 0.5
+bv(2) = 0.0
+bv(3) = 0.5
+/
+\end{verbatim}
+It is not necessary to leave spaces before and after the ``='' symbol, but it does improve the readability of the namelist file to do so. Since 
+one can always recover the template file(s) by using the [-t] option when calling the program, there is no need to list all the name-value pairs
+in the namelist file; pairs which are not listed will take on their default value(s), which are the ones listed in the template file.
+
+One important thing to note: when entering file names and other strings in name list files, one must use single quotes both at the start and at 
+the end of the string.  Some word processing programs have so-called ``smart quotes'' settings, which will introduce a different kind of quote,
+and the fortran programs will not recognize smart quotes as being the same as single quotes.  Therefore, turn of the ``smart quotes'' option
+in your editor before you start editing namelist files.
+
+
+\section{Generating a crystal structure file\label{sec:f90input5}}
+
+With very few exceptions, all programs in the \ctp\ suite of programs require a crystallographic input file that defines the 
+crystal system, crystal lattice parameters, space group number, and all unique positions in the 
+asymmetric unit along with site occupations and Debye-Waller parameters.  To keep things simple and 
+portable across platforms, structure description files (*.xtal) are small binary files that contain the minimum
+amount of information needed to unambiguously define the complete unit cell.  In a later version of the package, this
+will be replaced by a more standard file format, perhaps one that can be created by the CrystalMaker program.
+
+To create a crystal structure description file, one uses the \textsf{CTEMmkxtal} program, which will prompt
+the user for the crystal system number, the lattice parameters (in nm and degrees), the space group number,
+and the atom positions in the asymmetric unit.  Each atom entry is defined by five numbers: the fractional
+coordinates (which can be entered as real numbers or as fraction, e.g., $0.5$ or $1/2$), the site 
+occupation parameter (a real number between $0$ and $1$), and the isotropic Debye-Waller factor in nm$^{2}$.
+
+Once all atoms in the asymmetric unit have been entered, the program will ask for a structure file name; we
+recommend that all such files have the extension \textsf{.xtal}, to make them easily recognizable.  You can also
+create a folder that holds all the structure files, and then use an absolute or relative path name to store 
+the file in that folder.
+
+%
+%With very few exceptions, all programs in the \ctp\ suite of programs require a crystallographic input file that defines the 
+%crystal system, crystal lattice parameters, space group number, and all unique positions in the 
+%asymmetric unit along with site occupations and Debye-Waller parameters.  To keep things simple and 
+%portable across platforms, structure description files (*.ctem) are simple editable text files that contain the minimum
+%amount of information needed to unambiguously define the complete unit cell.
+%
+%The crystal structure definition file format is best illustrated with a few examples.  Consider first a simple face-centered 
+%cubic unit cell for copper:
+%\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize,numbers=left}
+%%\VerbatimInput{../resources/Cu.xtal}
+%\begin{itemize}
+%\item The first line contains the crystal system number (1 integer), using the following values:
+%cubic=1, tetragonal=2, orthorhombic=3, hexagonal=4, trigonal=5, monoclinic=6, and triclinic=7.
+%\item The second line contains the space group number (1 integer), potentially followed by a second integer (see later).
+%\item The third line lists the lattice parameters $\{a,b,c,\alpha,\beta,\gamma\}$ (6 reals; lengths in  nm; angles in degrees);
+%\item The fourth line contains the number of atoms in the asymmetric unit (1 integer);
+%\item The remaining lines (as many as indicated on line 4) each have six numbers, the first one an integer, the others reals.
+%The first number is the atomic number, followed by three fractional coordinates, the site occupation number (in the interval $[0,1]$),
+%and the isotropic Debye-Waller factor (in nm$^2$).  The fractional coordinates may be entered either as reals (e.g., $0.23$) or as fractions
+%(e.g., $1/3$, $7/12$, etc.).
+%\end{itemize}
+%The structure file can be generated manually, or it can be generated by means of the \textsf{CTEMxtal} program, which prompts the 
+%user for all relevant parameters and then creates the file in the appropriate format.
+%
+%A more complex example is the structure of tetragonal BaTiO$_3$:
+%\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize,numbers=left}
+%\VerbatimInput{../xtal/BaTiO3.xtal}
+%Note that all lines after the last atom position line are ignored by the \ctp\ programs, so that one can add any relevant comment lines. 
+%
+%For space groups with two origin settings, special care is needed when defining the space group number.
+%
+%Finally, for trigonal space groups, one can define the lattice parameters in terms of the rhombohedral unit cell or a hexagonal unit 
+%cell.  The \ctp\ programs will check the value of the $\gamma$ unit cell angle; if $\gamma=120^{\circ}$, then the hexagonal setting
+%will be taken, otherwise the rhombohedral unit cell will be assumed.
+%
+
+\section{List of programs}
+The list below shows all the available programs in the current Release (2.0) of the \ctp\ suite, along with whether or not there is a 
+separate manual for each program.  Programs for which no manual is available are generally relatively easy to figure out.
+In the current release, many programs still have a command-line interaction with the user; this will be modified
+in the next release so that all programs will eventually make use of namelist files.  The top half of the table
+lists those programs for which an extensive manual is available, as well as IDL visualization routines. The \textsf{CTEMmkxtal}
+program is explained in the present document.  The other programs do not yet have manual pages, but are generally 
+simple to figure out.  Many of the programs in the bottom half of the table are simple illustrations of how 
+to perform certain computations.
+
+%All it takes is to run the program with the \textit{-t} option, to create a template namelist file in the current folder;
+%you can then edit this file to set the appropriate parameters, and 
+
+\begin{table*}[h]
+\centering\leavevmode
+\begin{tabular}{|l|l|c|}
+\hline
+Program & Short description & Manual? \\
+\hline\hline
+  \textsf{CTEMlacbed} & large angle CBED pattern computation (TEM)& $\checkmark$ \\
+  \textsf{CTEMmbcbed} & regular CBED pattern (TEM)& $\checkmark$\\
+  \textsf{CTEMSRdefect} & (S)TEM systematic row defect images (TEM) & $\checkmark$\\
+  \textsf{CTEMZAdefect} & (S)TEM zone axis defect images (TEM) & $\checkmark$\\
+  \textsf{CTEMECP} & electron channeling pattern (SEM) & $\checkmark$\\
+  \textsf{CTEMECCI} & ECCI defect images (SEM) & $\checkmark$\\
+  \textsf{CTEMKossel} & electron Kossel patterns (SEM) & $\checkmark$\\
+  \textsf{CTEMMC} & Monte Carlo trajectory simulations (SEM) & $\checkmark$\\
+  \textsf{CTEMEBSDmaster} & EBSD master pattern simulation (SEM) & $\checkmark$\\
+  \textsf{CTEMEBSD} & EBSD pattern simulation (SEM) & $\checkmark$\\
+\hline
+  \textsf{CTEMmkxtal} & make a crystal structure input file& $\checkmark$\\
+  \textsf{CTEMlistSG} & list the equivalent positions of any space group & \\
+  \textsf{CTEMqg} & list Fourier coefficient information & \\
+  \textsf{CTEMfamily} & draw a family of planes (stereographic) & \\
+  \textsf{CTEMstar} & list the star of any reciprocal lattice point & \\
+  \textsf{CTEMorbit} & list the orbit of a point & \\
+  \textsf{CTEMZAgeom} & print zone axis geometry and symmetry information & \\
+  \textsf{CTEMlatgeom} & perform some simple lattice geometry calculations & \\
+  \textsf{CTEMstereo} & basic stereographic prpjection tool & \\
+  \textsf{CTEMorient} & stereographic projection for orientation relation & \\
+  \textsf{CTEMxtalinfo} & makes postscript file with lots of information & \\
+  \textsf{CTEMzap} & create postscript file with zone axis patterns & \\
+  \textsf{CTEMdrawcell} & draw a unit cell (very primitive) & \\
+\hline
+\end{tabular}
+\end{table*}
+
+
+
+
+
+\end{document}
+
+
+

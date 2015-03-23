@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:math.f90
+! EMsoft:math.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: math
@@ -324,7 +324,7 @@ end subroutine MatrixExponential
 !> @param X input argument
 !> @param N Bessel order
 !
-!> @date 12/31/14 MDG 1.0 original, rewritten with CTEMsoft module calls and renamed
+!> @date 12/31/14 MDG 1.0 original, rewritten with EMsoft module calls and renamed
 !--------------------------------------------------------------------------
 recursive function BesselIn(X,N) result(BESSI)
 ! original comment:
@@ -405,7 +405,7 @@ end function BesselIn
 !
 !> @param X input argument
 !
-!> @date 12/31/14 MDG 1.0 original, rewritten with CTEMsoft module calls and renamed
+!> @date 12/31/14 MDG 1.0 original, rewritten with EMsoft module calls and renamed
 !--------------------------------------------------------------------------
 recursive function BesselI0(X) result(BESSI0)
 
@@ -455,7 +455,7 @@ end function BesselI0
 !
 !> @param X input argument
 !
-!> @date 12/31/14 MDG 1.0 original, rewritten with CTEMsoft module calls and renamed
+!> @date 12/31/14 MDG 1.0 original, rewritten with EMsoft module calls and renamed
 !--------------------------------------------------------------------------
 recursive function BesselI1(X) result(BESSI1)
 

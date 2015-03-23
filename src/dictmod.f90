@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft:dictmod.f90
+! EMsoft:dictmod.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: dictmod
@@ -725,7 +725,7 @@ do init=1,dict%Num_of_init
   call R8VEC_normal_01(4,seed,Mu)
   Mu = Mu/cabs(Mu)
 
-! the CTEMsoft package only considers quaternions with positive first component, 
+! the EMsoft package only considers quaternions with positive first component, 
 ! so we may need to change all the signs
   if (Mu(1).lt.0.D0) Mu = -Mu
 
@@ -772,7 +772,7 @@ dd = maxloc(L_All,1)
 Mu = Mu_all(dd,1:4)
 kappahat = Kappa_All(dd)
 
-! the CTEMsoft package only considers quaternions with positive first component, 
+! the EMsoft package only considers quaternions with positive first component, 
 ! so we may need to change all the signs
 if (Mu(1).lt.0.D0) Mu = -Mu
 

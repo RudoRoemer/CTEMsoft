@@ -26,16 +26,16 @@
 ! USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ! ###################################################################
 !--------------------------------------------------------------------------
-! CTEMsoft2013:EBSDmod.f90
+! EMsoft:EBSDmod.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: EBSDmod
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief CTEMEBSD helper routines
+!> @brief EMEBSD helper routines
 !
-!> @date  06/24/14  MDG 1.0 original, lifted from CTEMEBSD.f90 to simplify code
+!> @date  06/24/14  MDG 1.0 original, lifted from EMEBSD.f90 to simplify code
 !--------------------------------------------------------------------------
 module EBSDmod
 
@@ -237,7 +237,7 @@ open(dataunit,file=trim(enl%energyfile),status='unknown',form='unformatted')
  read(dataunit) acc%accum_e
  enl%num_el = sum(acc%accum_e)
 ! we do not need the other array in this energyfile
-! read(dataunit) accum_z    ! we only need this array for the depth integrations in CTEMEBSDmaster.f90
+! read(dataunit) accum_z    ! we only need this array for the depth integrations in EMEBSDmaster.f90
 close(dataunit,status='keep')
 
 if (present(verbose)) call Message(' -> completed reading '//trim(enl%energyfile), frm = "(A)")

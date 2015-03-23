@@ -28,7 +28,7 @@
 
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:defectmodule.f90
+! EMsoft:defectmodule.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: defectmodule
@@ -251,7 +251,7 @@ end do
 !-------------------------------------
 !--SURFACE INTERSECTING DISLOCATIONS--
 !-------------------------------------
-! this part is mostly used for ECCI-type image simulations, not for CTEM or STEM,
+! this part is mostly used for ECCI-type image simulations, not for EM or STEM,
 ! although it could probably be used there as well; we would need to extend it 
 ! to incorporate both top and bottom foil surfaces
 

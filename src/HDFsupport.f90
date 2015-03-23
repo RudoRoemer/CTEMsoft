@@ -26,7 +26,7 @@
 ! USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ! ###################################################################
 !--------------------------------------------------------------------------
-! CTEMsoft2013:HDFsupport.f90
+! EMsoft:HDFsupport.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: HDFsupport

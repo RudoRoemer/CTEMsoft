@@ -1,5 +1,5 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! CTEMsoft:  family.f90                                                         !
+! EMsoft:  family.f90                                                         !
 ! Copyright (c) 2001, 2002  Marc De Graef/Carnegie Mellon University (CMU)      !
 !                                                                               !
 !     This program is free software; you can redistribute it and/or modify      !
@@ -71,7 +71,7 @@ integer(kind=irg)    :: h,k,l,hkl(3),iview(3),cr,ans,sgn,i,num
 
  progname = 'family.f90'
  progdesc = 'Stereographic projection of family'
- call CTEMsoft
+ call EMsoft
  
  SG % SYM_reduce=.TRUE.
  topbot=.TRUE.
