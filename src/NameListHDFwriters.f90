@@ -713,6 +713,7 @@ integer(kind=irg),parameter                           :: n_int = 6, n_real = 8
 integer(kind=irg)                                     :: rnk, error,  io_int(n_int), distort
 integer(HSIZE_T)                                      :: dims(1)
 real(kind=sgl)                                        :: io_real(n_real)
+real(kind=dbl)                                        :: t(1)
 character(20)                                         :: intlist(n_int), reallist(n_real)
 
 ! create the group for this namelist
@@ -749,10 +750,12 @@ if (error.ne.0) call HDF_handleError(error,'HDFwriteEBSDNameList: unable to crea
 ! a few doubles
 rnk = 1
 dims(1) = 1
-call h5ltmake_dataset_f(HDF_head%objectID, 'beamcurrent', rnk, dims, H5T_NATIVE_DOUBLE, enl%beamcurrent, error)
+t(1) = enl%beamcurrent
+call h5ltmake_dataset_f(HDF_head%objectID, 'beamcurrent', rnk, dims, H5T_NATIVE_DOUBLE, t, error)
 if (error.ne.0) call HDF_handleError(error,'HDFwriteEBSDNameList: unable to create beamcurrent dataset',.TRUE.)
 
-call h5ltmake_dataset_f(HDF_head%objectID, 'dwelltime', rnk, dims, H5T_NATIVE_DOUBLE, enl%dwelltime, error)
+t(1) = enl%dwelltime
+call h5ltmake_dataset_f(HDF_head%objectID, 'dwelltime', rnk, dims, H5T_NATIVE_DOUBLE, t, error)
 if (error.ne.0) call HDF_handleError(error,'HDFwriteEBSDNameList: unable to create dwelltime dataset',.TRUE.)
 
 ! write all the strings
@@ -979,7 +982,7 @@ integer(HID_T)                                        :: grp_id
 integer(kind=irg),parameter                           :: n_int = 2, n_real = 6
 integer(kind=irg)                                     :: rnk, error,  io_int(n_int), distort
 integer(HSIZE_T)                                      :: dims(1)
-real(kind=sgl)                                        :: io_real(n_real)
+real(kind=sgl)                                        :: io_real(n_real), t(1)
 character(20)                                         :: intlist(n_int), reallist(n_real)
 
 ! create the group for this namelist
@@ -994,7 +997,8 @@ call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 ! single real
 rnk = 1
 dims(1) = 1
-call h5ltmake_dataset_f(HDF_head%objectID, 'thetac', rnk, dims, H5T_NATIVE_REAL, ecpnl%thetac, error)
+t(1) = ecpnl%thetac
+call h5ltmake_dataset_f(HDF_head%objectID, 'thetac', rnk, dims, H5T_NATIVE_REAL, t, error)
 if (error.ne.0) call HDF_handleError(error,'HDFwriteECPpatternNameList: unable to create thetac dataset',.TRUE.)
 
 ! real vector
@@ -1263,15 +1267,15 @@ if (error.ne.0) call HDF_handleError(error,'HDFwriteECCINameList: unable to crea
 ! THESE NEED WORK; PERHAPS WE NEED TO REDEFINE ONE OF THE WRAPPER ROUTINES ?
 
 ! maxdefects string arrays
-call h5ltmake_dataset_string_f(HDF_head%objectID, 'sfname', eccinl%sfname, error)
-if (error.ne.0) call HDF_handleError(error,'HDFwriteECCINameList: unable to create sfname dataset',.TRUE.)
+!call h5ltmake_dataset_string_f(HDF_head%objectID, 'sfname', eccinl%sfname, error)
+!if (error.ne.0) call HDF_handleError(error,'HDFwriteECCINameList: unable to create sfname dataset',.TRUE.)
 
 ! 3*maxdefects string arrays
-call h5ltmake_dataset_string_f(HDF_head%objectID, 'dislYname', eccinl%dislYname, error)
-if (error.ne.0) call HDF_handleError(error,'HDFwriteECCINameList: unable to create dislYname dataset',.TRUE.)
+!call h5ltmake_dataset_string_f(HDF_head%objectID, 'dislYname', eccinl%dislYname, error)
+!if (error.ne.0) call HDF_handleError(error,'HDFwriteECCINameList: unable to create dislYname dataset',.TRUE.)
 
-call h5ltmake_dataset_string_f(HDF_head%objectID, 'dislname', eccinl%dislname, error)
-if (error.ne.0) call HDF_handleError(error,'HDFwriteECCINameList: unable to create dislname dataset',.TRUE.)
+!call h5ltmake_dataset_string_f(HDF_head%objectID, 'dislname', eccinl%dislname, error)
+!if (error.ne.0) call HDF_handleError(error,'HDFwriteECCINameList: unable to create dislname dataset',.TRUE.)
 
 ! and pop this group off the stack
 call HDF_pop(HDF_head)
