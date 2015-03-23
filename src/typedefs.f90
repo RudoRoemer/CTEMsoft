@@ -54,6 +54,7 @@
 module typedefs
 
 use local
+use HDF5
 
 ! following are used to define the quaternion symmetry operators
 real(kind=dbl),private,parameter        :: sq22=0.7071067811865475244D0 ! sqrt(2)/2

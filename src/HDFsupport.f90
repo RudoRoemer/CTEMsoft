@@ -106,48 +106,48 @@ IMPLICIT NONE
 type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
 type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_tail
 character(11),INTENT(IN)                              :: dstr
-character(15),INTENT(IN)                              :: tstr1
-character(15),INTENT(IN)                              :: tstr2
+character(15),INTENT(IN)                              :: tstrb
+character(15),INTENT(IN)                              :: tstre
 character(fnlen),INTENT(IN)                           :: prn
 
-integer                                               :: error  ! error flag
+integer                                               :: error, istat  ! error flag
 integer                                               :: i,ic,nlen 
 character(100)                                        :: c
 
 
 ! create and open the EMheader group
-call HDF_createGroup('EMheader', HDF_head, HDF_tail)
+istat = HDF_createGroup('EMheader', HDF_head, HDF_tail)
 
 ! version number /EMheader/Version 'character'
-call h5ltmake_dataset_string_f(HDF_head%oID, 'Version', scversion, error)
+call h5ltmake_dataset_string_f(HDF_head%objectID, 'Version', scversion, error)
 if (error.ne.0) call HDF_handleError(error,'HDF_writeEMheader: unable to write Version',.TRUE.)
 
 ! execution data /EMheader/Date 'character'
-call h5ltmake_dataset_string_f(HDF_head%oID, 'Date', dstr, error)
+call h5ltmake_dataset_string_f(HDF_head%objectID, 'Date', dstr, error)
 if (error.ne.0) call HDF_handleError(error,'HDF_writeEMheader: unable to write Date',.TRUE.)
 
 ! start time /EMheader/StartTime 'character'
-call h5ltmake_dataset_string_f(HDF_head%oID, 'StartTime', tstr1, error)
+call h5ltmake_dataset_string_f(HDF_head%objectID, 'StartTime', tstrb, error)
 if (error.ne.0) call HDF_handleError(error,'HDF_writeEMheader: unable to write StartTime',.TRUE.)
 
 ! stop time /EMheader/StopTime 'character'
-call h5ltmake_dataset_string_f(HDF_head%oID, 'StopTime', tstr2, error)
+call h5ltmake_dataset_string_f(HDF_head%objectID, 'StopTime', tstre, error)
 if (error.ne.0) call HDF_handleError(error,'HDF_writeEMheader: unable to write StopTime',.TRUE.)
 
 ! program name /EMheader/ProgramName 'character'
-call h5ltmake_dataset_string_f(HDF_head%oID, 'ProgramName', trim(prn), error)
+call h5ltmake_dataset_string_f(HDF_head%objectID, 'ProgramName', trim(prn), error)
 if (error.ne.0) call HDF_handleError(error,'HDF_writeEMheader: unable to write ProgramName',.TRUE.)
 
 ! user name /EMheader/UserName 'character'
-call h5ltmake_dataset_string_f(HDF_head%oID, 'UserName', trim(username), error)
+call h5ltmake_dataset_string_f(HDF_head%objectID, 'UserName', trim(username), error)
 if (error.ne.0) call HDF_handleError(error,'HDF_writeEMheader: unable to write Username',.TRUE.)
 
 ! user location /EMheader/UserLocation 'character'
-call h5ltmake_dataset_string_f(HDF_head%oID, 'UserLocation', trim(userlocn), error)
+call h5ltmake_dataset_string_f(HDF_head%objectID, 'UserLocation', trim(userlocn), error)
 if (error.ne.0) call HDF_handleError(error,'HDF_writeEMheader: unable to write UserLocation',.TRUE.)
 
 ! user email /EMheader/UserEmail 'character'
-call h5ltmake_dataset_string_f(HDF_head%oID, 'UserEmail', trim(useremail), error)
+call h5ltmake_dataset_string_f(HDF_head%objectID, 'UserEmail', trim(useremail), error)
 if (error.ne.0) call HDF_handleError(error,'HDF_writeEMheader: unable to write UserEmail',.TRUE.)
 
 ! hostname /EMheader/HostName 'character'
@@ -158,7 +158,7 @@ do i=1,nlen
    ic = ichar(c(i:i)) 
    if (ic >= 65 .and. ic < 90) c(i:i) = char(ic+32) 
 end do 
-call h5ltmake_dataset_string_f(HDF_head%oID, 'HostName', trim(c), error)
+call h5ltmake_dataset_string_f(HDF_head%objectID, 'HostName', trim(c), error)
 if (error.ne.0) call HDF_handleError(error,'HDF_writeEMheader: unable to write HostName',.TRUE.)
 
 ! and close this group
@@ -192,7 +192,7 @@ end subroutine HDF_writeEMheader
 ! then create a dataset with this data
 !  data_name = trim(nml_list(i))
 !  call h5screate_simple_f(rnk, numb, dataspace, error)
-!  call h5dcreate_f(HDF_head%oID, data_name, H5T_NATIVE_CHARACTER, dataspace, dset_id, error)
+!  call h5dcreate_f(HDF_head%objectID, data_name, H5T_NATIVE_CHARACTER, dataspace, dset_id, error)
 !  call h5dwrite_f(dset_id, H5T_NATIVE_CHARACTER, filebuf, numb, error)
 !  call h5dclose_f(dset_id,error)
 !  if (error.ne.0) write (*,*) ' error writing to file '
@@ -239,7 +239,7 @@ type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
 type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_tail
 character(LEN=1),INTENT(IN)                           :: oT
 integer(HID_T),INTENT(IN)                             :: oID 
-logical,INTENT(IN),OPTIONAL
+logical,INTENT(IN),OPTIONAL                           :: verbose
 
 type(HDFobjectStackType),pointer                      :: node
 integer(kind=irg)                                     :: istat
@@ -293,7 +293,7 @@ IMPLICIT NONE
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical,INTENT(IN),optional                             :: closeall
 
-integer                                                 :: error
+integer                                                 :: error, istat
 type(HDFobjectStackType),pointer                        :: tmp
 
 nullify(tmp)
@@ -363,7 +363,7 @@ contains
 
 end function HDF_close_level
 
-end subroutine MXA_pop
+end subroutine HDF_pop
 
 !--------------------------------------------------------------------------
 !
@@ -398,7 +398,7 @@ do
   tmp => tmp%next
 end do
 
-end subroutine HDF_stackdump(HDF_head)
+end subroutine HDF_stackdump
 
 !--------------------------------------------------------------------------
 !
@@ -536,7 +536,7 @@ function HDF_createGroup(groupname, HDF_head, HDF_tail) result(success)
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)                             :: groupname
+character(*),INTENT(IN)                                 :: groupname
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
@@ -546,7 +546,7 @@ integer                                                 :: error  ! error flag
 
 success = 0
 
-call H5Gcreate_f(HDF_head%oID, groupname, group_id, error)
+call H5Gcreate_f(HDF_head%objectID, groupname, group_id, error)
 if (error.ne.0) then
   call HDF_handleError(error,'HDF_createGroup')
   success = -1
@@ -575,7 +575,7 @@ function HDF_openGroup(groupname, HDF_head, HDF_tail) result(success)
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)                             :: groupname
+character(*),INTENT(IN)                                 :: groupname
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
@@ -585,7 +585,7 @@ integer                                                 :: error  ! error flag
 
 success = 0
 
-call H5Gopen_f(HDF_head%oID, groupname, group_id, error)
+call H5Gopen_f(HDF_head%objectID, groupname, group_id, error)
 if (error.ne.0) then
   call HDF_handleError(error,'HDF_openGroup')
   success = -1
@@ -594,7 +594,7 @@ else
   call HDF_push(HDF_head, HDF_tail, 'g', group_id)
 end if
 
-end function HDF_createGroup
+end function HDF_openGroup
 
 !--------------------------------------------------------------------------
 !
@@ -610,30 +610,30 @@ end function HDF_createGroup
 !
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_createDataset(dataame, HDF_head, HDF_tail) result(success)
-
-IMPLICIT NONE
-
-character(fnlen),INTENT(IN)                             :: dataname
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
-integer(kind=irg)                                       :: success
-
-integer(HID_T)                                          :: data_id!  identifier
-integer                                                 :: error  ! error flag
-
-success = 0
-
-call H5dcreate_f(HDF_head%oID, dataname, data_id, error)
-if (error.ne.0) then
-  call HDF_handleError(error,'HDF_createDataset')
-  success = -1
-else
-! and put the data_id onto the HDF_stack
-  call HDF_push(HDF_head, HDF_tail, 'd', data_id)
-end if
-
-end function HDF_createDataset
+!function HDF_createDataset(dataname, HDF_head, HDF_tail) result(success)
+!
+!IMPLICIT NONE
+!
+!character(fnlen),INTENT(IN)                             :: dataname
+!type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+!type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+!integer(kind=irg)                                       :: success
+!
+!integer(HID_T)                                          :: data_id!  identifier
+!integer                                                 :: error  ! error flag
+!
+!success = 0
+!
+!call H5dcreate_f(HDF_head%objectID, dataname, data_id, error)
+!if (error.ne.0) then
+!  call HDF_handleError(error,'HDF_createDataset')
+!  success = -1
+!else
+!! and put the data_id onto the HDF_stack
+!  call HDF_push(HDF_head, HDF_tail, 'd', data_id)
+!end if
+!
+!end function HDF_createDataset
 
 !--------------------------------------------------------------------------
 !
@@ -649,31 +649,31 @@ end function HDF_createDataset
 !
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_openDataset(dataname, HDF_head, HDF_tail) result(success)
-
-IMPLICIT NONE
-
-character(fnlen),INTENT(IN)                             :: dataname
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
-integer(kind=irg)                                       :: success
-
-integer(HID_T)                                          :: data_id !  identifier
-integer                                                 :: error  ! error flag
-
-success = 0
-
-call H5dopen_f(HDF_head%oID, dataname, data_id, error)
-if (error.ne.0) then
-  call HDF_handleError(error,'HDF_openDataset')
-  success = -1
-else
-! put the data_id onto the HDF_stack
-  call HDF_push(HDF_head, HDF_tail, 'd', data_id)
-end if
-
-end function HDF_createDataset
-
+!function HDF_openDataset(dataname, HDF_head, HDF_tail) result(success)
+!
+!IMPLICIT NONE
+!
+!character(fnlen),INTENT(IN)                             :: dataname
+!type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+!type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+!integer(kind=irg)                                       :: success
+!
+!integer(HID_T)                                          :: data_id !  identifier
+!integer                                                 :: error  ! error flag
+!
+!success = 0
+!
+!call H5dopen_f(HDF_head%objectID, dataname, data_id, error)
+!if (error.ne.0) then
+!  call HDF_handleError(error,'HDF_openDataset')
+!  success = -1
+!else
+!! put the data_id onto the HDF_stack
+!  call HDF_push(HDF_head, HDF_tail, 'd', data_id)
+!end if
+!
+!end function HDF_openDataset
+!
 
 
 

@@ -31,6 +31,7 @@ set(CTEMSoftLib_SRCS
  	${CTEMSoftLib_SOURCE_DIR}/NameListTypedefs.f90
  	${CTEMSoftLib_SOURCE_DIR}/NameListHandlers.f90
  	${CTEMSoftLib_SOURCE_DIR}/NameListHDFwriters.f90
+ 	${CTEMSoftLib_SOURCE_DIR}/HDFsupport.f90
  	${CTEMSoftLib_SOURCE_DIR}/noise.f90
 	${CTEMSoftLib_SOURCE_DIR}/others.f90
 	${CTEMSoftLib_SOURCE_DIR}/pgm.f90
@@ -53,8 +54,8 @@ set(CTEMSoftLib_SRCS
 )
 
 ADD_LIBRARY(CTEMSoftLib ${LIB_TYPE} ${CTEMSoftLib_SRCS})
-ADD_LIBRARY(local ${CTEMSoftLib_SOURCE_DIR}/local.f90)
-TARGET_LINK_LIBRARIES(CTEMSoftLib blas lapack)
+#ADD_LIBRARY(local ${CTEMSoftLib_SOURCE_DIR}/local.f90)
+TARGET_LINK_LIBRARIES(CTEMSoftLib blas lapack ${HDF5_LIBRARIES})
 
 set(install_dir "tools")
 set(lib_install_dir "lib")
