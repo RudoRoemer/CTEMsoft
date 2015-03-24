@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:inclusion.f90
+! EMsoft:inclusion.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: inclusion
@@ -105,7 +105,7 @@ do i=1,defects%numinc
   defects%inclusions(i)%ypos = Vy * 0.5 * float(DF_npiy)*DF_L
   defects%inclusions(i)%zpos = Vz * foil%z0         ! vertical fractional location in interval [-1,1]
   defects%inclusions(i)%radius = Vrad    ! radius in nanometers
-  defects%inclusions(i)%C = C                 ! this is the parameter defined in equation (8.36) of the CTEM book.
+  defects%inclusions(i)%C = C                 ! this is the parameter defined in equation (8.36) of the EM book.
   tmp = quat_Lp( conjg(foil%a_fc), dble((/ defects%inclusions(i)%xpos, defects%inclusions(i)%ypos, &
         defects%inclusions(i)%zpos /)) )  
   defects%inclusions(i)%xpos = tmp(1)

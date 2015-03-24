@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft:files.f90
+! EMsoft:files.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: files
@@ -533,8 +533,8 @@ character(255)                  :: line
 std = 6
 if (PRESENT(stdout)) std = stdout
 
-call getenv("CTEMsoft2013templates",templatepathname)
-call getenv("CTEMsoft2013resources",resourcepathname)
+call getenv("EMsofttemplates",templatepathname)
+call getenv("EMsoftresources",resourcepathname)
 !write (*,*) 'template folder location: ',templatepathname
 !write (*,*) 'resource folder location: ',resourcepathname
 

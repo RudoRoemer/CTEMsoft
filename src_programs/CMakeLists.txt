@@ -3,7 +3,7 @@ project(Apps)
 
 macro (Create_exe_and_tll INPUT)
 	ADD_EXECUTABLE(${INPUT} ${Apps_SOURCE_DIR}/${INPUT}.f90)
- 	TARGET_LINK_LIBRARIES(${INPUT} CTEMSoftLib gomp)
+ 	TARGET_LINK_LIBRARIES(${INPUT} EMSoftLib gomp)
 	
 	
 	set(install_dir "bin")
@@ -25,42 +25,43 @@ macro (Create_exe_and_tll INPUT)
 endmacro (Create_exe_and_tll)
 
 
-Create_exe_and_tll(CTEMlacbed)
-Create_exe_and_tll(CTEMmbcbed)
-Create_exe_and_tll(CTEMSRdefect) #MP 
-Create_exe_and_tll(CTEMZAdefect) 
-Create_exe_and_tll(CTEMECP)
-Create_exe_and_tll(CTEMECPmaster)
-Create_exe_and_tll(CTEMECPthinfilm)
-Create_exe_and_tll(CTEMECPSMMultiLayer)
-Create_exe_and_tll(CTEMECCI) #read_stacking_fault_data has wrong number of args passed to it
-Create_exe_and_tll(CTEMKossel)
-Create_exe_and_tll(CTEMKosselMaster)
-Create_exe_and_tll(CTEMsampleRFZ)
-Create_exe_and_tll(CTEMMC)  #MP
-Create_exe_and_tll(CTEMEBSD)
-Create_exe_and_tll(CTEMquatSP)
-Create_exe_and_tll(CTEMEBSDmaster)
-Create_exe_and_tll(CTEMmkxtal)
-Create_exe_and_tll(CTEMlistSG)
-Create_exe_and_tll(CTEMqg)
-Create_exe_and_tll(CTEMped)
-Create_exe_and_tll(CTEMfamily)
-Create_exe_and_tll(CTEMstar)
-Create_exe_and_tll(CTEMorbit)
-Create_exe_and_tll(CTEMZAgeom)
-Create_exe_and_tll(CTEMlatgeom)
-Create_exe_and_tll(CTEMstereo)
-Create_exe_and_tll(CTEMorient)
-Create_exe_and_tll(CTEMxtalinfo)
-Create_exe_and_tll(CTEMzap)
-Create_exe_and_tll(CTEMdrawcell)
-Create_exe_and_tll(CTEMBethe)
-Create_exe_and_tll(CTEMPED)
-Create_exe_and_tll(CTEMPEDKIN)
+Create_exe_and_tll(EMlacbed)
+Create_exe_and_tll(EMmbcbed)
+Create_exe_and_tll(EMSRdefect) #MP 
+Create_exe_and_tll(EMZAdefect) 
+Create_exe_and_tll(EMECP)
+Create_exe_and_tll(EMECPmaster)
+Create_exe_and_tll(EMECPthinfilm)
+Create_exe_and_tll(EMECPSMMultiLayer)
+Create_exe_and_tll(EMECCI) #read_stacking_fault_data has wrong number of args passed to it
+Create_exe_and_tll(EMKossel)
+Create_exe_and_tll(EMKosselMaster)
+Create_exe_and_tll(EMsampleRFZ)
+Create_exe_and_tll(EMMC)  #MP
+Create_exe_and_tll(EMEBSD)
+Create_exe_and_tll(EMquatSP)
+Create_exe_and_tll(EMEBSDmaster)
+Create_exe_and_tll(EMmkxtal)
+Create_exe_and_tll(EMlistSG)
+Create_exe_and_tll(EMqg)
+Create_exe_and_tll(EMped)
+Create_exe_and_tll(EMfamily)
+Create_exe_and_tll(EMstar)
+Create_exe_and_tll(EMorbit)
+Create_exe_and_tll(EMZAgeom)
+Create_exe_and_tll(EMlatgeom)
+Create_exe_and_tll(EMstereo)
+Create_exe_and_tll(EMorient)
+Create_exe_and_tll(EMxtalinfo)
+Create_exe_and_tll(EMzap)
+Create_exe_and_tll(EMdrawcell)
+Create_exe_and_tll(EMBethe)
+Create_exe_and_tll(EMPED)
+Create_exe_and_tll(EMPEDKIN)
 
 Create_exe_and_tll(structest)
 Create_exe_and_tll(rotationtest)
+Create_exe_and_tll(HDFtest)
 
 
 
@@ -94,23 +95,23 @@ include_directories(${FORTRANCL_INCLUDE_DIR})
 
 message(STATUS "FORTRANCL_LIBRARIES: ${FORTRANCL_LIBRARIES}")
 
-ADD_EXECUTABLE(CTEMMCOpenCL CTEMMCOpenCL.f90)
-TARGET_LINK_LIBRARIES(CTEMMCOpenCL ${OPENCL_LIBRARIES} ${LAPACK_LIB} ${FORTRANCL_LIBRARIES} CTEMSoftLib)
+ADD_EXECUTABLE(EMMCOpenCL EMMCOpenCL.f90)
+TARGET_LINK_LIBRARIES(EMMCOpenCL ${OPENCL_LIBRARIES} ${LAPACK_LIB} ${FORTRANCL_LIBRARIES} EMSoftLib)
 
 
-#Create_exe_and_tll(CTEMBWshow)
-#Create_exe_and_tll(CTEMECPSM)
-#Create_exe_and_tll(CTEMMCTKD) 
-##Create_exe_and_tll(CTEMSRBW) #Explicit interface required for 'extractbwdata' 
-#Create_exe_and_tll(CTEMSRCBED)
-#Create_exe_and_tll(CTEMTBBFDF)
-#Create_exe_and_tll(CTEMTBBW)
-#Create_exe_and_tll(CTEMTBSM)
-#Create_exe_and_tll(CTEMexpeditions)
-#Create_exe_and_tll(CTEMgamma)
-#Create_exe_and_tll(CTEMgammadefect)
-#Create_exe_and_tll(CTEMholz)
-##Create_exe_and_tll(CTEMlens) #can't open rksuite
-##Create_exe_and_tll(CTEMoverlap) #doesn't look like dbdiffB has been initialized anywhere
-#Create_exe_and_tll(CTEMvr)
-##Create_exe_and_tll(CTEMvrfft)  #need fft? 
+#Create_exe_and_tll(EMBWshow)
+#Create_exe_and_tll(EMECPSM)
+#Create_exe_and_tll(EMMCTKD) 
+##Create_exe_and_tll(EMSRBW) #Explicit interface required for 'extractbwdata' 
+#Create_exe_and_tll(EMSRCBED)
+#Create_exe_and_tll(EMTBBFDF)
+#Create_exe_and_tll(EMTBBW)
+#Create_exe_and_tll(EMTBSM)
+#Create_exe_and_tll(EMexpeditions)
+#Create_exe_and_tll(EMgamma)
+#Create_exe_and_tll(EMgammadefect)
+#Create_exe_and_tll(EMholz)
+##Create_exe_and_tll(EMlens) #can't open rksuite
+##Create_exe_and_tll(EMoverlap) #doesn't look like dbdiffB has been initialized anywhere
+#Create_exe_and_tll(EMvr)
+##Create_exe_and_tll(EMvrfft)  #need fft? 

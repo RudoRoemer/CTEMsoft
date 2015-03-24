@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft:constants.f90
+! EMsoft:constants.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: constants
@@ -65,7 +65,7 @@ IMPLICIT NONE
 ! ****************************************************
 ! ****************************************************
 ! used to change the sign of the permutation symbol from Adam Morawiec's book to
-! the convention used for the CTEMsoft package.  If you want to use Adam's convention,
+! the convention used for the EMsoft package.  If you want to use Adam's convention,
 ! both of these parameters should be set to +1; -1 will change the sign everywhere
 ! for all representations that involve the unit vector.  The quaternion product is 
 ! also redefined to include the epsijk parameter.  Doing so guarantees that the 

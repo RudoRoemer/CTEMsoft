@@ -28,7 +28,7 @@
 
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:kvectors.f90
+! EMsoft:kvectors.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: kvectors
@@ -154,7 +154,7 @@ if ( .not.( (mapmode.eq.'Conical').or.(mapmode.eq.'Standard').or.(mapmode.eq.'St
   call FatalError('Calckvectors','mapmode unknown')
 end if
 
-if (mapmode.eq.'Conical') then ! used for CBED without symmetry application, including CTEMZAdefect
+if (mapmode.eq.'Conical') then ! used for CBED without symmetry application, including EMZAdefect
 ! compute geometrical factors 
  glen = CalcLength(cell,ga,'r')                         ! length of ga
  gan = ga/glen                                  ! normalized ga
@@ -223,7 +223,7 @@ if ( (mapmode.eq.'Standard').or.(mapmode.eq.'StandardConical') ) then
  ktail%k = kstar/cell%mLambda                           ! divide by wavelength
  ktail%kn = CalcDot(cell,ktail%k,kstar,'r')                     ! normal component
 
-! implement symmetry Table 7.3 from CTEM book
+! implement symmetry Table 7.3 from EM book
   select case(isym)  ! negative values -> systematic row; positive -> zone axis
    case(-1)  ! centrosymmetric systematic row
      imin = 0; imax = npx; grid = 'srw'

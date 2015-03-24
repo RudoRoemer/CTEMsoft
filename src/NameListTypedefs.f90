@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:NameListTypedefs.f90
+! EMsoft:NameListTypedefs.f90
 !--------------------------------------------------------------------------
 !
 ! PROGRAM: NameListTypedefs
@@ -44,7 +44,7 @@ use local
 
 IMPLICIT NONE
 
-! namelist for the CTEMKossel program
+! namelist for the EMKossel program
 type KosselNameListType
         integer(kind=irg)       :: stdout
         integer(kind=irg)       :: numthick
@@ -63,7 +63,7 @@ type KosselNameListType
         character(fnlen)        :: outname
 end type KosselNameListType
 
-! namelist for the CTEMKosselmaster program
+! namelist for the EMKosselmaster program
 type KosselMasterNameListType
         integer(kind=irg)       :: stdout
         integer(kind=irg)       :: numthick
@@ -79,7 +79,7 @@ type KosselMasterNameListType
         character(fnlen)        :: outname
 end type KosselMasterNameListType
 
-! namelist for the CTEMMC program
+! namelist for the EMMC program
 type MCNameListType
         integer(kind=irg)       :: stdout
         integer(kind=irg)       :: numsx
@@ -98,7 +98,7 @@ type MCNameListType
         character(fnlen)        :: dataname
 end type MCNameListType
 
-! namelist for the CTEMMCOpenCL program
+! namelist for the EMMCOpenCL program
 type MCCLNameListType
         integer(kind=irg)       :: stdout
         integer(kind=irg)       :: numsx
@@ -144,7 +144,7 @@ type MCCLMultiLayerNameListType
     character(fnlen)        :: mode
 end type MCCLMultiLayerNameListType
 
-! namelist for the CTEMEBSDmaster program
+! namelist for the EMEBSDmaster program
 type EBSDMasterNameListType
         integer(kind=irg)       :: stdout
         integer(kind=irg)       :: npx
@@ -155,7 +155,7 @@ type EBSDMasterNameListType
         character(fnlen)        :: outname
 end type EBSDMasterNameListType
 
-! namelist for the CTEMEBSD program
+! namelist for the EMEBSD program
 ! note that not all of these are actually entered via a namelist file
 ! some of them are used to facilitate passing of subroutine arguments in EBSDmod.f90
 type EBSDNameListType
@@ -266,7 +266,7 @@ type LACBEDNameListType
         character(fnlen)        :: outname
 end type LACBEDNameListType
 
-! namelist for the CTEMECPmaster program
+! namelist for the EMECPmaster program
 type ECPMasterNameListType
     integer(kind=irg)       :: stdout
     integer(kind=irg)       :: npx
@@ -282,7 +282,7 @@ type ECPMasterNameListType
     logical                 :: distort
 end type ECPMasterNameListType
 
-!namelist for the CTEMECP program
+!namelist for the EMECP program
 type ECPpatternNameListType
     integer(kind=irg)       :: stdout
     integer(kind=irg)       :: npix
@@ -292,7 +292,7 @@ type ECPpatternNameListType
     character(fnlen)        :: outname
 end type ECPpatternNameListType
 
-!namelist for the CTEMPED program
+!namelist for the EMPED program
 type PEDNameListType
     integer(kind=irg)       :: stdout
     integer(kind=irg)       :: k(3)
@@ -312,7 +312,7 @@ type PEDNameListType
     character(fnlen)        :: outname
 end type PEDNameListType
 
-!namelist for the CTEMPEDKIN program
+!namelist for the EMPEDKIN program
 type PEDKINNameListType
     integer(kind=irg)       :: stdout
     integer(kind=irg)       :: npix
@@ -327,7 +327,7 @@ type PEDKINNameListType
     character(fnlen)        :: eulername
 end type PEDKINNameListType
 
-! namelist for the CTEMECCI program
+! namelist for the EMECCI program
 type ECCINameListType
     integer(kind=irg)       :: stdout
     integer(kind=irg)       :: nthreads
@@ -364,7 +364,7 @@ type ECCINameListType
 end type ECCINameListType
 
 
-! namelist for the CTEMsampleRFZ program
+! namelist for the EMsampleRFZ program
 type RFZNameListType
     integer(kind=irg)       :: pgnum
     integer(kind=irg)       :: nsteps

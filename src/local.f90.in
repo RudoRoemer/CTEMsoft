@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft:local.f90
+! EMsoft:local.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: local
@@ -67,7 +67,7 @@ module local
 
 !> @note This module must be "use"d by every program, subroutine, and function!
 
-! The entire CTEMsoft package should be processor independent.  This can
+! The entire EMsoft package should be processor independent.  This can
 ! be accomplished by the use of the "kind" parameters.
 
 ! Define the "kind" parameters for single and double precision reals, 
@@ -82,17 +82,20 @@ module local
 !> long integer kind parameter  
   integer,parameter                     :: irg = SELECTED_INT_KIND(9)
 
-! in Release 3.0 and beyond, this parameter should be replaced by a more flexible
-! mechanism for source code version numbering using the CMake facilities.
-!> source code version number
-  character(8), parameter               :: scversion="@CTEMsoft_VER_MAJOR@_@CTEMsoft_VER_MINOR@_@CTEMsoft_VER_PATCH@"
-!> source code author name
-  character(13), parameter              :: username="Marc De Graef"     
-!> source code author location
-  character(26), parameter              :: userlocn="Carnegie Mellon University"
-
 !> standard string length for filenames
   integer(kind=irg),parameter           :: fnlen=132
+
+! in Release 3.0 and beyond, this parameter has been replaced by a more flexible
+! mechanism for source code version numbering using the CMake facilities.
+!> source code version number
+  character(8), parameter               :: scversion="@EMsoft_VER_MAJOR@_@EMsoft_VER_MINOR@_@EMsoft_VER_PATCH@"
+!> code user name
+  character(fnlen), parameter           :: username="Marc De Graef"     
+!> code user location
+  character(fnlen), parameter           :: userlocn="Carnegie Mellon University"
+!> code user email
+  character(fnlen), parameter           :: useremail="degraef@cmu.edu"
+
   
 !> reserved IO unit identifiers for postscript (20) and data (21-23)
   integer(kind=irg), parameter          :: psunit=20, dataunit=21, dataunit2=22, dataunit3=23
@@ -111,19 +114,19 @@ module local
 
 !> pathnames to the namelist template files
 ! This should be reworked via CMake commands
-  character(fnlen)                      :: templatepathname   !='~/.CTEMsoft2013/templatefolder'
-  character(fnlen)                      :: resourcepathname   !='~/.CTEMsoft2013/resources'
-  character(fnlen)                      :: openclpathname   !='~/.CTEMsoft2013/opencl'
+  character(fnlen)                      :: templatepathname 
+  character(fnlen)                      :: resourcepathname
+  character(fnlen)                      :: openclpathname
   character(17)                         :: templatecodefilename = 'templatecodes.txt'
 
 contains
 
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:local:CTEMsoft.f90
+! EMsoft2013:local:EMsoft.f90
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE: CTEMsoft
+! SUBROUTINE: EMsoft
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -143,7 +146,7 @@ contains
 !> @date  06/05/14 MDG 4.0 progname and progdesc are now subroutine arguments; made stdout optional
 !--------------------------------------------------------------------------
 
-subroutine CTEMsoft(progname,progdesc,stdout)
+subroutine EMsoft(progname,progdesc,stdout)
 
 IMPLICIT NONE
 
@@ -156,8 +159,8 @@ integer(kind=irg)                     :: std
  std = 6
  if (PRESENT(stdout)) std=stdout
 
- write (std,"(//1x,'CTEMsoft version ',A,', Copyright (C) 2001-2014 Marc De Graef/CMU')") trim(scversion)
- write (std,"(1x,'CTEMsoft comes with ABSOLUTELY NO WARRANTY.')")
+ write (std,"(//1x,'EMsoft version ',A,', Copyright (C) 2001-2015 Marc De Graef/CMU')") trim(scversion)
+ write (std,"(1x,'EMsoft comes with ABSOLUTELY NO WARRANTY.')")
  write (std,"(1x,'This is free software, and you are welcome to redistribute it')")
  write (std,"(1x,'under certain conditions; see License.txt file for details.'//)")
 
@@ -167,7 +170,7 @@ integer(kind=irg)                     :: std
  call timestamp(std)
  write (std,"(1x,//)")
  
-end subroutine CTEMsoft
+end subroutine EMsoft
 
 
 !--------------------------------------------------------------------------
@@ -185,12 +188,15 @@ end subroutine CTEMsoft
 !> @date 05/31/01  JB original
 !> @date 05/01/13 MDG changed 'm' to 'mo' for month variable, and some other minor changes
 !> @date 06/05/14 MDG added stdout as optional argument
+!> @date 03/19/15 MDG added timestring and datestring optional arguments
 !--------------------------------------------------------------------------
-subroutine timestamp (stdout)
+subroutine timestamp (stdout, timestring, datestring)
 
   IMPLICIT NONE
   
-  integer(kind=irg),INTENT(IN),OPTIONAL :: stdout
+  integer(kind=irg),INTENT(IN),OPTIONAL    :: stdout
+  character(len = 11),INTENT(OUT),OPTIONAL :: datestring
+  character(len = 15),INTENT(OUT),OPTIONAL :: timestring
 
   integer(kind=irg)      :: std
   character ( len = 8 )  :: ampm
@@ -242,10 +248,16 @@ subroutine timestamp (stdout)
     end if
   end if
 
-  write ( std, '(a,1x,i2,1x,i4,2x,i2,a1,i2.2,a1,i2.2,a1,i3.3,1x,a)' ) &
-    month(mo), d, y, h, ':', n, ':', s, '.', mm, trim ( ampm )
+  if ((.not.PRESENT(datestring)).and.(.not.PRESENT(timestring))) then
+    write ( std, '(a,1x,i2,1x,i4,2x,i2,a1,i2.2,a1,i2.2,a1,i3.3,1x,a)' ) &
+      month(mo), d, y, h, ':', n, ':', s, '.', mm, trim ( ampm )
+  else
+    if (PRESENT(datestring)) write (datestring, '(a,1x,i2,1x,i4)' ) month(mo), d, y
+    if (PRESENT(timestring)) then
+      write (timestring, '(i2,a1,i2.2,a1,i2.2,a1,i3.3,1x,a)' ) h,':',n,':',s,'.',mm,trim(ampm)
+    end if
+  end if
 
-!  return   ! return statement is not needed in subroutines
 end subroutine timestamp
 
 

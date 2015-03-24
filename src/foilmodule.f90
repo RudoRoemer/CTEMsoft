@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft2013:foilmodule.f90
+! EMsoft:foilmodule.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: foilmodule
@@ -130,7 +130,7 @@ character(10)			:: pret
   end if
 
 ! a_mi (image to microscope) apart from a scale factor, these two are identical 
-! The CTEM book uses a beta rotation angle between the image and the microscope,
+! The EM book uses a beta rotation angle between the image and the microscope,
 ! but that is really not necessary because we already fix the image with respect to
 ! the microscope by defining q (the horizontal image direction) to point to the 
 ! airlock. [verified 4/23/11, converted to quaternions on 6/4/13]

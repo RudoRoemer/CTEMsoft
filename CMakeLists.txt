@@ -1,7 +1,7 @@
 
 
 cmake_minimum_required (VERSION 2.8.12)
-project (CTEMsoft C CXX Fortran)
+project (EMsoft C CXX Fortran)
 
 if(${CMAKE_MAJOR_VERSION} STREQUAL "3")
   # CMake 3.0 introduces VERSION variables for each Project. We do our own version numbering so we need to have
@@ -51,21 +51,21 @@ endif(BUILD_SHARED_LIBS)
 
 
 
-set(CMP_SOURCE_DIR ${CTEMsoft_SOURCE_DIR}/Support/cmp)
+set(CMP_SOURCE_DIR ${EMsoft_SOURCE_DIR}/Support/cmp)
 INCLUDE (${CMP_SOURCE_DIR}/cmpCMakeMacros.cmake )
 INCLUDE (${CMP_SOURCE_DIR}/cmpProject.cmake)
 
 # --------------------------------------------------------------------
 # Over ride CMake's built in module directory by prepending cmp's module
 # directory first
-set(CMAKE_MODULE_PATH ${CTEMsoft_SOURCE_DIR}/Support/CMakeModules ${CMAKE_MODULE_PATH})
+set(CMAKE_MODULE_PATH ${EMsoft_SOURCE_DIR}/Support/CMakeModules ${CMAKE_MODULE_PATH})
 
 
 set(EXE_DEBUG_EXTENSION "_debug")
 
-set(CTEMsoft_VER_MAJOR "3")
-set(CTEMsoft_VER_MINOR "x")
-set(CTEMsoft_VER_PATCH "x")
+set(EMsoft_VER_MAJOR "3")
+set(EMsoft_VER_MINOR "x")
+set(EMsoft_VER_PATCH "x")
 
 	   
 # FFLAGS depend on the compiler
@@ -94,6 +94,13 @@ else (Fortran_COMPILER_NAME MATCHES "gfortran.*")
 endif (Fortran_COMPILER_NAME MATCHES "gfortran.*")
 
 
+# ---------- Find HDF5 Headers/Libraries -----------------------
+# HDF5 now comes with everything that is needed for CMake to load
+# up the targets (Exported) that it needs. We just need to find where
+# HDF5 is installed.
+include(${CMP_SOURCE_DIR}/ExtLib/HDF5Support.cmake)
+
+
 # --------------------------------------------------------------------
 # Generate our ReadMe and License Files
 configure_file(${PROJECT_SOURCE_DIR}/License.txt
@@ -105,7 +112,7 @@ install(FILES ${PROJECT_SOURCE_DIR}/ReadMe.md ${PROJECT_SOURCE_DIR}/License.txt
         COMPONENT Applications)
 
 
-include_directories(${CTEMsoft_BINARY_DIR}/src)
+include_directories(${EMsoft_BINARY_DIR}/src)
 #find_package (FFTW3 COMPONENTS single double)
 
 
@@ -115,12 +122,12 @@ include(CMakeAddFortranSubdirectory)
 # the subdir is lapack, the project is LAPACK
 cmake_add_fortran_subdirectory(src
   NO_EXTERNAL_INSTALL
-  PROJECT CTEMSoftLib  # project name in toplevel CMakeLists.txt in lapack
+  PROJECT EMSoftLib  # project name in toplevel CMakeLists.txt in lapack
   #ARCHIVE_DIR lapack/lib # .lib location relative to root binary tree
   #RUNTIME_DIR lapack/bin # .dll location relative to root binary tree
-  LIBRARIES CTEMSoftLib # target libraries created
+  LIBRARIES EMSoftLib # target libraries created
   LINK_LIBRARIES blas lapack  # link interface libraries
-  LINK_LIBS  CTEMSoftLib blas lapack 
+  LINK_LIBS  EMSoftLib blas lapack 
 )
 
 cmake_add_fortran_subdirectory(src_sampleRFZ
@@ -149,6 +156,6 @@ cmake_add_fortran_subdirectory(Apps
 ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/src_programs ${PROJECT_BINARY_DIR}/src_programs)
 
 # This should be the last line in this file:
-include(${CTEMsoft_SOURCE_DIR}/Support/CPack/PackageProject.cmake)
+include(${EMsoft_SOURCE_DIR}/Support/CPack/PackageProject.cmake)
 
 

@@ -1,0 +1,25 @@
+&DictIndxOpenCLvars
+! The line above must not be changed
+!
+! The values below are the default values for this program
+!
+! number of experimental patterns in one single data transfer the GPU
+numexptsingle = 1024
+! number of dictionary patterns in one single data transfer the GPU
+numdictsingle = 1024
+! total number of patterns in the experimental data set
+totnumexpt = 200000
+! total number of patterns in the dictionary
+totnumdict = 200000
+! height of one diffraction pattern
+imght = 60
+! width of one diffraction pattern
+imgwd = 80
+! name of the experimental data set
+exptfile = 'undefined'
+! name of the dictionary data set
+dictfile = 'undefined'
+! name of the euler angle file
+eulerfile = 'undefined' 
+
+/

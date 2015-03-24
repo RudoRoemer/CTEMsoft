@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft:symmetry.f90
+! EMsoft:symmetry.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: symmetry
@@ -1526,7 +1526,7 @@ end function GetPatternSymmetry
 !
 !> @brief get the diffraction group number for this zone axis orientation
 !
-!> @details This implements Table 4 in BESR76 or Table 7.2 in the CTEM book
+!> @details This implements Table 4 in BESR76 or Table 7.2 in the EM book
 !> This is a bit tricky and we want to do this as efficiently as possible...
 !> In this first version, let's compute the order of the family of directions
 !> and based on that and the PG number determine what the diffraction group is.

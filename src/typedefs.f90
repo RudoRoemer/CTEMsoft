@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! CTEMsoft:crystalvars.f90
+! EMsoft:crystalvars.f90
 !--------------------------------------------------------------------------
 !
 ! MODULE: crystalvars
@@ -54,6 +54,7 @@
 module typedefs
 
 use local
+use HDF5
 
 ! following are used to define the quaternion symmetry operators
 real(kind=dbl),private,parameter        :: sq22=0.7071067811865475244D0 ! sqrt(2)/2
@@ -949,6 +950,18 @@ type dicttype
         integer(kind=irg)               :: Num_of_init  ! number of times that the EM algorithm needs to be carried out (set by user)
         integer(kind=irg)               :: Num_of_iterations    ! number of iterations inside each EM call (set by user)
 end type dicttype
+
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+! type definition for HDF-based output
+type HDFobjectStackType   ! this is a push-pop stack to keep track of the open objects
+  character(LEN=1)                      :: objectType
+  character(fnlen)                      :: objectName
+  integer(HID_T)                        :: objectID
+  type(HDFobjectStackType),pointer      :: next
+end type HDFobjectStackType
 
 
 
