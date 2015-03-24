@@ -61,6 +61,7 @@ Create_exe_and_tll(EMPEDKIN)
 
 Create_exe_and_tll(structest)
 Create_exe_and_tll(rotationtest)
+Create_exe_and_tll(HDFtest)
 
 
 

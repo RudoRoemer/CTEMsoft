@@ -247,7 +247,7 @@ integer(kind=irg)                                     :: istat
 ! if the stack doesn't exist yet, create it.
 if (.not.associated(HDF_tail)) then 
    allocate(HDF_tail,stat=istat)                        ! allocate new value
-   if (istat.ne.0) call H5U_handleError(istat,'HDF_push: unable to allocate HDF_stack_tail pointer',.TRUE.)
+   if (istat.ne.0) call HDF_handleError(istat,'HDF_push: unable to allocate HDF_stack_tail pointer',.TRUE.)
    nullify(HDF_tail%next)                               ! nullify next in tail value
    HDF_head => HDF_tail                                 ! head points to new value
    if (PRESENT(verbose)) then 
@@ -390,13 +390,18 @@ type(HDFobjectStackType),pointer                     :: tmp
 integer(kind=irg)                                    :: io_int(1)
 
 tmp => HDF_head
-do
-  if (.not.associated(tmp)) EXIT
-  call WriteValue(' HDF stack entry :', tmp%objectType//'  '//tmp%objectName, frm = "(A$)") 
-  io_int(1) = tmp%objectID
-  call WriteValue('',io_int,1)
-  tmp => tmp%next
-end do
+if (.not.associated(tmp%next)) then
+  call WriteValue('Stack is empty','')
+else
+  call WriteValue('HDF stack entries','')
+  do
+    if (.not.associated(tmp%next)) EXIT
+    call WriteValue('',tmp%objectType//'  '//tmp%objectName, frm = "(A$)") 
+    io_int(1) = tmp%objectID
+    call WriteValue('',io_int,1,frm="(I12)")
+    tmp => tmp%next
+  end do
+end if
 
 end subroutine HDF_stackdump
 
