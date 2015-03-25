@@ -88,13 +88,13 @@ module local
 ! in Release 3.0 and beyond, this parameter has been replaced by a more flexible
 ! mechanism for source code version numbering using the CMake facilities.
 !> source code version number
-  character(8), parameter               :: scversion="@EMsoft_VER_MAJOR@_@EMsoft_VER_MINOR@_@EMsoft_VER_PATCH@"
+  character(8)                          :: scversion="@EMsoft_VER_MAJOR@_@EMsoft_VER_MINOR@_@EMsoft_VER_PATCH@"
 !> code user name
-  character(fnlen), parameter           :: username="Marc De Graef"     
+  character(fnlen)                      :: username="Marc De Graef"     
 !> code user location
-  character(fnlen), parameter           :: userlocn="Carnegie Mellon University"
+  character(fnlen)                      :: userlocn="Carnegie Mellon University"
 !> code user email
-  character(fnlen), parameter           :: useremail="degraef@cmu.edu"
+  character(fnlen)                      :: useremail="degraef@cmu.edu"
 
   
 !> reserved IO unit identifiers for postscript (20) and data (21-23)

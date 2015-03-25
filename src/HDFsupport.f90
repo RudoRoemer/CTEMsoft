@@ -250,21 +250,20 @@ if (.not.associated(HDF_tail)) then
    if (istat.ne.0) call HDF_handleError(istat,'HDF_push: unable to allocate HDF_stack_tail pointer',.TRUE.)
    nullify(HDF_tail%next)                               ! nullify next in tail value
    HDF_head => HDF_tail                                 ! head points to new value
-   if (PRESENT(verbose)) then 
-     if (verbose) call Message('  -> creating HDF_stack_tail linker list', frm = "(A)")
-   end if
+!  if (PRESENT(verbose)) then 
+!    if (verbose) call Message('  -> creating HDF_stack_tail linker list', frm = "(A)")
+!  end if
+   call Message('  -> creating HDF_stack_tail linker list', frm = "(A)")
+else
+   allocate(node,stat=istat)                        ! allocate new value
+   if (istat.ne.0) call HDF_handleError(istat,'HDF_push: unable to allocate node pointer',.TRUE.)
+   node%next => HDF_head
+   HDF_head => node
 end if
 
-! allocate a new node
-allocate(node,stat=istat)   
-if (istat.ne.0) call HDF_handleError(istat,'HDF_push: unable to allocate node pointer',.TRUE.)
 ! set the values
-node % objectType = oT
-node % objectID = oID
-! insert the node into the stack
-node % next => HDF_head
-! and re-point the head
-HDF_head => node
+HDF_head % objectType = oT
+HDF_head % objectID = oID
 
 call HDF_stackdump(HDF_head)
 
@@ -390,12 +389,12 @@ type(HDFobjectStackType),pointer                     :: tmp
 integer(kind=irg)                                    :: io_int(1)
 
 tmp => HDF_head
-if (.not.associated(tmp%next)) then
+if (.not.associated(tmp)) then
   call WriteValue('Stack is empty','')
 else
   call WriteValue('HDF stack entries','')
   do
-    if (.not.associated(tmp%next)) EXIT
+    if (.not.associated(tmp)) EXIT
     call WriteValue('',tmp%objectType//'  '//tmp%objectName, frm = "(A$)") 
     io_int(1) = tmp%objectID
     call WriteValue('',io_int,1,frm="(I12)")
@@ -654,31 +653,31 @@ end function HDF_openGroup
 !
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-!function HDF_openDataset(dataname, HDF_head, HDF_tail) result(success)
-!
-!IMPLICIT NONE
-!
-!character(fnlen),INTENT(IN)                             :: dataname
-!type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-!type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
-!integer(kind=irg)                                       :: success
-!
-!integer(HID_T)                                          :: data_id !  identifier
-!integer                                                 :: error  ! error flag
-!
-!success = 0
-!
-!call H5dopen_f(HDF_head%objectID, dataname, data_id, error)
-!if (error.ne.0) then
-!  call HDF_handleError(error,'HDF_openDataset')
-!  success = -1
-!else
-!! put the data_id onto the HDF_stack
-!  call HDF_push(HDF_head, HDF_tail, 'd', data_id)
-!end if
-!
-!end function HDF_openDataset
-!
+function HDF_openDataset(dataname, HDF_head, HDF_tail) result(success)
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer(kind=irg)                                       :: success
+
+integer(HID_T)                                          :: data_id !  identifier
+integer                                                 :: error  ! error flag
+
+success = 0
+
+call H5dopen_f(HDF_head%objectID, dataname, data_id, error)
+if (error.ne.0) then
+  call HDF_handleError(error,'HDF_openDataset')
+  success = -1
+else
+! put the data_id onto the HDF_stack
+  call HDF_push(HDF_head, HDF_tail, 'd', data_id)
+end if
+
+end function HDF_openDataset
+
 
 
 
