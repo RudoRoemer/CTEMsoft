@@ -250,10 +250,9 @@ if (.not.associated(HDF_tail)) then
    if (istat.ne.0) call HDF_handleError(istat,'HDF_push: unable to allocate HDF_stack_tail pointer',.TRUE.)
    nullify(HDF_tail%next)                               ! nullify next in tail value
    HDF_head => HDF_tail                                 ! head points to new value
-!  if (PRESENT(verbose)) then 
-!    if (verbose) call Message('  -> creating HDF_stack_tail linker list', frm = "(A)")
-!  end if
-   call Message('  -> creating HDF_stack_tail linker list', frm = "(A)")
+   if (PRESENT(verbose)) then 
+     if (verbose) call Message('  -> creating HDF_stack_tail linker list', frm = "(A)")
+   end if
 else
    allocate(node,stat=istat)                        ! allocate new value
    if (istat.ne.0) call HDF_handleError(istat,'HDF_push: unable to allocate node pointer',.TRUE.)
@@ -265,7 +264,7 @@ end if
 HDF_head % objectType = oT
 HDF_head % objectID = oID
 
-call HDF_stackdump(HDF_head)
+if (present(verbose)) call HDF_stackdump(HDF_head)
 
 end subroutine HDF_push
 
@@ -282,7 +281,7 @@ end subroutine HDF_push
 !
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-subroutine HDF_pop(HDF_head, closeall)
+subroutine HDF_pop(HDF_head, closeall, verbose)
 
 use local
 use io
@@ -291,6 +290,7 @@ IMPLICIT NONE
 
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical,INTENT(IN),optional                             :: closeall
+logical,INTENT(IN),optional                             :: verbose
 
 integer                                                 :: error, istat
 type(HDFobjectStackType),pointer                        :: tmp
@@ -323,7 +323,7 @@ else
 ! delete the old entry
   deallocate(tmp)
 
-  call HDF_stackdump(HDF_head)
+  if (present(verbose)) call HDF_stackdump(HDF_head)
 end if
 
 contains
@@ -679,6 +679,244 @@ end if
 end function HDF_openDataset
 
 
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_writeDatasetTextFile
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief write a text file data set to the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param filename of the text file
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_writeDatasetTextFile(dataname, filename, HDF_head, HDF_tail) result(success)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+character(fnlen),INTENT(IN)                             :: filename
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer(kind=irg)                                       :: success
+
+character(len=fnlen, KIND=c_char),allocatable, TARGET   :: stringarray(:) 
+integer(kind=irg)                                       :: nlines
+
+integer(HSIZE_T)                                        :: dim0 
+integer(SIZE_T)                                         :: sdim 
+integer(HID_T)                                          :: filetype, space, dset ! Handles
+integer                                                 :: hdferr, i, rnk
+integer(HSIZE_T), DIMENSION(1:1)                        :: dims
+integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+
+TYPE(C_PTR), ALLOCATABLE, TARGET                        :: wdata(:)
+TYPE(C_PTR)                                             :: f_ptr
+
+success = 0
+
+stringarray =  HDF_readfromTextfile(filename, nlines) 
+
+! first, convert the stringarray to an array of C-pointers, with each string
+! terminated by a C_NULL_CHAR.
+dims(1) = nlines
+allocate(wdata(1:dims(1)))
+do i=1,dims(1)
+  wdata(i) = C_LOC(stringarray(i))
+end do
+
+! then we write this C_ptr to the HDF file in the proper data set
+
+! first create the memory data type (filetype)
+CALL H5Tcopy_f(H5T_STRING, filetype, hdferr)
+if (hdferr.ne.0) then
+  call HDF_handleError(hdferr,'HDF_writeDatasetStringArray',.TRUE.)
+  success = -1
+end if
+!
+! Create dataspace.
+!
+rnk = 1
+CALL h5screate_simple_f(rnk, dims, space, hdferr)
+!
+! Create the dataset and write the variable-length string data to it.
+!
+CALL h5dcreate_f(HDF_head%objectID, trim(dataname), filetype, space, dset, hdferr)
+if (hdferr.ne.0) then
+  call HDF_handleError(hdferr,'HDF_writeDatasetStringArray:hd5create_f',.TRUE.)
+  success = -1
+end if
+f_ptr = C_LOC(wdata(1))
+CALL h5dwrite_f(dset, filetype, f_ptr, hdferr )
+if (hdferr.ne.0) then
+  call HDF_handleError(hdferr,'HDF_writeDatasetStringArray:hd5write_f',.TRUE.)
+  success = -1
+end if
+!
+! Close and release resources.
+!
+CALL h5dclose_f(dset , hdferr)
+CALL h5sclose_f(space, hdferr)
+deallocate(wdata)
+
+! that's it
+
+end function HDF_writeDatasetTextFile
+
+!--------------------------------------------------------------------------
+!
+! F?UNCTION:HDF_readfromTextfile
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read a text file and return it in a C_NULL_CHAR terminated string array
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param filename file name (string)
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readfromTextfile(filename,nlines) result(stringarray)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                                  :: filename
+integer(kind=irg),INTENT(OUT)                                :: nlines
+character(len=fnlen, KIND=c_char), allocatable               :: stringarray(:) 
+
+integer(kind=irg)                                            :: i, j, dt
+character(len=fnlen, KIND=c_char), DIMENSION(1)              :: line 
+
+dt = 30
+! read the file first to determine the number of lines
+open(unit=dt,file=trim(filename),form='formatted',status='old')
+nlines = 0
+do
+  read (dt,"(A)",end=10) line(1)
+  nlines = nlines + 1
+end do
+10 close(unit=dt,status='keep')
+
+! then re-read the file and store all the lines in the wdata array
+allocate(stringarray(1:nlines))
+open(unit=dt,file=trim(filename),form='formatted',status='old')
+do i=1,nlines
+! initialize the line to null characters before each read
+  do j=1,fnlen
+    line(1)(j:j) = char(0)
+  end do
+! read the line
+  read (dt,"(A)") line(1)
+! find the string length and put the next character equal to C_NULL_CHAR
+  j = len(trim(line(1)))+1
+  line(1)(j:j) = C_NULL_CHAR
+! store the line in the array
+  stringarray(i) = line(1)
+end do
+close(unit=dt,status='keep')
+
+end function HDF_readfromTextfile
+
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readDatasetStringArray
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read a string array from a data set 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param nlines number of lines read from file
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readDatasetStringArray(dataname, nlines, HDF_head, HDF_tail) result(stringarray)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(kind=irg),INTENT(OUT)                           :: nlines
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+character(len=fnlen, KIND=c_char),allocatable, TARGET   :: stringarray(:) 
+
+integer(HID_T)                                          :: filetype, space ! Handles
+integer                                                 :: hdferr, i, length
+integer(HSIZE_T), DIMENSION(1:1)                        :: dims
+integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+
+character(len = fnlen, kind=c_char),  POINTER           :: pfstr ! A pointer to a Fortran string
+TYPE(C_PTR), DIMENSION(:), ALLOCATABLE, TARGET          :: rdata ! Read buffer
+TYPE(C_PTR)                                             :: f_ptr
+
+
+! we'll assume that the file is opened by the calling program
+
+!
+! Open dataset.
+!
+hdferr = HDF_openDataset(dataname, HDF_head, HDF_tail)
+
+!
+! Get the datatype.
+!
+CALL H5Dget_type_f(HDF_head%objectID, filetype, hdferr)
+
+!
+! Get dataspace and allocate memory for read buffer.
+!
+CALL H5Dget_space_f(HDF_head%objectID, space, hdferr)
+CALL H5Sget_simple_extent_dims_f(space, dims, maxdims, hdferr)
+
+ALLOCATE(rdata(1:dims(1)), stringarray(1:dims(1)))
+!
+! Read the data.
+!
+f_ptr = C_LOC(rdata(1))
+CALL h5dread_f(HDF_head%objectID, H5T_STRING, f_ptr, hdferr)
+!
+! convert the data to a string array
+!
+DO i = 1, dims(1)
+  CALL C_F_POINTER(rdata(i), pfstr)
+  length = 0
+  DO
+     IF(pfstr(length+1:length+1).EQ.C_NULL_CHAR.OR.length.GE.fnlen) EXIT
+     length = length + 1
+  ENDDO
+  stringarray(i) = pfstr(1:length)
+!     WRITE(*,'(A,"(",I0,"): ",I4," characters : ",A)') trim(DATASET), i, length, data(1:length)
+END DO
+
+nlines = dims(1)
+
+DEALLOCATE(rdata)
+
+CALL h5sclose_f(space, hdferr)
+CALL H5Tclose_f(filetype, hdferr)
+! close the dataset
+call HDF_pop(HDF_head)
+
+
+end function HDF_readDatasetStringArray
 
 
 
