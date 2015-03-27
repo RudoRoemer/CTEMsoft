@@ -710,7 +710,7 @@ end do
 ! then we write this C_ptr to the HDF file in the proper data set
 
 ! first create the memory data type (filetype)
-CALL H5Tcopy_f(H5T_STRING, filetype, hdferr)
+call H5Tcopy_f(H5T_STRING, filetype, hdferr)
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetStringArray',.TRUE.)
   success = -1
@@ -719,17 +719,17 @@ end if
 ! Create dataspace.
 !
 rnk = 1
-CALL h5screate_simple_f(rnk, dims, space, hdferr)
+call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-CALL h5dcreate_f(HDF_head%objectID, trim(dataname), filetype, space, dset, hdferr)
+call h5dcreate_f(HDF_head%objectID, trim(dataname), filetype, space, dset, hdferr)
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetStringArray:hd5create_f',.TRUE.)
   success = -1
 end if
 f_ptr = C_LOC(wdata(1))
-CALL h5dwrite_f(dset, filetype, f_ptr, hdferr )
+call h5dwrite_f(dset, filetype, f_ptr, hdferr )
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetStringArray:hd5write_f',.TRUE.)
   success = -1
@@ -737,8 +737,8 @@ end if
 !
 ! Close and release resources.
 !
-CALL h5dclose_f(dset , hdferr)
-CALL h5sclose_f(space, hdferr)
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
 deallocate(wdata)
 
 ! that's it
@@ -852,25 +852,25 @@ hdferr = HDF_openDataset(dataname, HDF_head, HDF_tail)
 !
 ! Get the datatype.
 !
-CALL H5Dget_type_f(HDF_head%objectID, filetype, hdferr)
+call H5Dget_type_f(HDF_head%objectID, filetype, hdferr)
 
 !
 ! Get dataspace and allocate memory for read buffer.
 !
-CALL H5Dget_space_f(HDF_head%objectID, space, hdferr)
-CALL H5Sget_simple_extent_dims_f(space, dims, maxdims, hdferr)
+call H5Dget_space_f(HDF_head%objectID, space, hdferr)
+call H5Sget_simple_extent_dims_f(space, dims, maxdims, hdferr)
 
 ALLOCATE(rdata(1:dims(1)), stringarray(1:dims(1)))
 !
 ! Read the data.
 !
 f_ptr = C_LOC(rdata(1))
-CALL h5dread_f(HDF_head%objectID, H5T_STRING, f_ptr, hdferr)
+call h5dread_f(HDF_head%objectID, H5T_STRING, f_ptr, hdferr)
 !
 ! convert the data to a string array
 !
 DO i = 1, dims(1)
-  CALL C_F_POINTER(rdata(i), pfstr)
+  call C_F_POINTER(rdata(i), pfstr)
   length = 0
   DO
      IF(pfstr(length+1:length+1).EQ.C_NULL_CHAR.OR.length.GE.fnlen) EXIT
@@ -884,8 +884,8 @@ nlines = dims(1)
 
 DEALLOCATE(rdata)
 
-CALL h5sclose_f(space, hdferr)
-CALL H5Tclose_f(filetype, hdferr)
+call h5sclose_f(space, hdferr)
+call H5Tclose_f(filetype, hdferr)
 ! close the dataset
 call HDF_pop(HDF_head)
 
@@ -958,7 +958,7 @@ wdata(1) = C_LOC(stringarray)
 ! then we write this C_ptr to the HDF file in the proper data set
 
 ! first create the memory data type (filetype)
-CALL H5Tcopy_f(H5T_STRING, filetype, hdferr)
+call H5Tcopy_f(H5T_STRING, filetype, hdferr)
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetString',.TRUE.)
   success = -1
@@ -968,18 +968,18 @@ end if
 !
 rnk = 1
 dims(1) = 1
-CALL h5screate_simple_f(rnk, dims, space, hdferr)
+call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-CALL h5dcreate_f(HDF_head%objectID, trim(dataname), filetype, space, dset, hdferr)
+call h5dcreate_f(HDF_head%objectID, trim(dataname), filetype, space, dset, hdferr)
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetString:hd5create_f',.TRUE.)
   success = -1
 end if
 
 f_ptr = C_LOC(wdata(1))
-CALL h5dwrite_f(dset, filetype, f_ptr, hdferr )
+call h5dwrite_f(dset, filetype, f_ptr, hdferr )
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetString:hd5write_f',.TRUE.)
   success = -1
@@ -987,8 +987,8 @@ end if
 !
 ! Close and release resources.
 !
-CALL h5dclose_f(dset , hdferr)
-CALL h5sclose_f(space, hdferr)
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
 
 ! that's it
 
@@ -1044,17 +1044,17 @@ f_ptr = C_LOC(wdata(1))
 ! Create dataspace.
 !
 rnk = 1
-CALL h5screate_simple_f(rnk, dims, space, hdferr)
+call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-CALL h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
+call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetIntegerArray1D:hd5create_f',.TRUE.)
   success = -1
 end if
 
-CALL h5dwrite_f(dset, H5T_NATIVE_INTEGER, f_ptr, hdferr )
+call h5dwrite_f(dset, H5T_NATIVE_INTEGER, f_ptr, hdferr )
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetIntegerArray1D:hd5write_f',.TRUE.)
   success = -1
@@ -1062,8 +1062,8 @@ end if
 !
 ! Close and release resources.
 !
-CALL h5dclose_f(dset , hdferr)
-CALL h5sclose_f(space, hdferr)
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
 
 ! that's it
 
@@ -1118,17 +1118,17 @@ f_ptr = C_LOC(wdata(1,1))
 ! Create dataspace.
 !
 rnk = 2
-CALL h5screate_simple_f(rnk, dims, space, hdferr)
+call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-CALL h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
+call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetIntegerArray2D:hd5create_f',.TRUE.)
   success = -1
 end if
 
-CALL h5dwrite_f(dset, H5T_NATIVE_INTEGER, f_ptr, hdferr )
+call h5dwrite_f(dset, H5T_NATIVE_INTEGER, f_ptr, hdferr )
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetIntegerArray2D:hd5write_f',.TRUE.)
   success = -1
@@ -1136,8 +1136,8 @@ end if
 !
 ! Close and release resources.
 !
-CALL h5dclose_f(dset , hdferr)
-CALL h5sclose_f(space, hdferr)
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
 
 ! that's it
 
@@ -1194,17 +1194,17 @@ f_ptr = C_LOC(wdata(1,1,1))
 ! Create dataspace.
 !
 rnk = 3
-CALL h5screate_simple_f(rnk, dims, space, hdferr)
+call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-CALL h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
+call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetIntegerArray3D:hd5create_f',.TRUE.)
   success = -1
 end if
 
-CALL h5dwrite_f(dset, H5T_NATIVE_INTEGER, f_ptr, hdferr )
+call h5dwrite_f(dset, H5T_NATIVE_INTEGER, f_ptr, hdferr )
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetIntegerArray3D:hd5write_f',.TRUE.)
   success = -1
@@ -1212,8 +1212,8 @@ end if
 !
 ! Close and release resources.
 !
-CALL h5dclose_f(dset , hdferr)
-CALL h5sclose_f(space, hdferr)
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
 
 ! that's it
 
@@ -1270,17 +1270,17 @@ f_ptr = C_LOC(wdata(1,1,1,1))
 ! Create dataspace.
 !
 rnk = 4
-CALL h5screate_simple_f(rnk, dims, space, hdferr)
+call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-CALL h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
+call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetIntegerArray4D:hd5create_f',.TRUE.)
   success = -1
 end if
 
-CALL h5dwrite_f(dset, H5T_NATIVE_INTEGER, f_ptr, hdferr )
+call h5dwrite_f(dset, H5T_NATIVE_INTEGER, f_ptr, hdferr )
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetIntegerArray4D:hd5write_f',.TRUE.)
   success = -1
@@ -1288,8 +1288,8 @@ end if
 !
 ! Close and release resources.
 !
-CALL h5dclose_f(dset , hdferr)
-CALL h5sclose_f(space, hdferr)
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
 
 ! that's it
 
@@ -1345,17 +1345,17 @@ f_ptr = C_LOC(wdata(1))
 ! Create dataspace.
 !
 rnk = 1
-CALL h5screate_simple_f(rnk, dims, space, hdferr)
+call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-CALL h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
+call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5create_f',.TRUE.)
   success = -1
 end if
 
-CALL h5dwrite_f(dset, H5T_NATIVE_REAL, f_ptr, hdferr )
+call h5dwrite_f(dset, H5T_NATIVE_REAL, f_ptr, hdferr )
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5write_f',.TRUE.)
   success = -1
@@ -1363,8 +1363,8 @@ end if
 !
 ! Close and release resources.
 !
-CALL h5dclose_f(dset , hdferr)
-CALL h5sclose_f(space, hdferr)
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
 
 ! that's it
 
@@ -1421,17 +1421,17 @@ f_ptr = C_LOC(wdata(1,1))
 ! Create dataspace.
 !
 rnk = 2
-CALL h5screate_simple_f(rnk, dims, space, hdferr)
+call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-CALL h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
+call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5create_f',.TRUE.)
   success = -1
 end if
 
-CALL h5dwrite_f(dset, H5T_NATIVE_REAL, f_ptr, hdferr )
+call h5dwrite_f(dset, H5T_NATIVE_REAL, f_ptr, hdferr )
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5write_f',.TRUE.)
   success = -1
@@ -1439,8 +1439,8 @@ end if
 !
 ! Close and release resources.
 !
-CALL h5dclose_f(dset , hdferr)
-CALL h5sclose_f(space, hdferr)
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
 
 ! that's it
 
@@ -1497,17 +1497,17 @@ f_ptr = C_LOC(wdata(1,1,1))
 ! Create dataspace.
 !
 rnk = 3
-CALL h5screate_simple_f(rnk, dims, space, hdferr)
+call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-CALL h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
+call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5create_f',.TRUE.)
   success = -1
 end if
 
-CALL h5dwrite_f(dset, H5T_NATIVE_REAL, f_ptr, hdferr )
+call h5dwrite_f(dset, H5T_NATIVE_REAL, f_ptr, hdferr )
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5write_f',.TRUE.)
   success = -1
@@ -1515,8 +1515,8 @@ end if
 !
 ! Close and release resources.
 !
-CALL h5dclose_f(dset , hdferr)
-CALL h5sclose_f(space, hdferr)
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
 
 ! that's it
 
@@ -1574,17 +1574,17 @@ f_ptr = C_LOC(wdata(1,1,1,1))
 ! Create dataspace.
 !
 rnk = 4
-CALL h5screate_simple_f(rnk, dims, space, hdferr)
+call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-CALL h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
+call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5create_f',.TRUE.)
   success = -1
 end if
 
-CALL h5dwrite_f(dset, H5T_NATIVE_REAL, f_ptr, hdferr )
+call h5dwrite_f(dset, H5T_NATIVE_REAL, f_ptr, hdferr )
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5write_f',.TRUE.)
   success = -1
@@ -1592,8 +1592,8 @@ end if
 !
 ! Close and release resources.
 !
-CALL h5dclose_f(dset , hdferr)
-CALL h5sclose_f(space, hdferr)
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
 
 ! that's it
 
@@ -1648,17 +1648,17 @@ f_ptr = C_LOC(wdata(1))
 ! Create dataspace.
 !
 rnk = 1
-CALL h5screate_simple_f(rnk, dims, space, hdferr)
+call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-CALL h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
+call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5create_f',.TRUE.)
   success = -1
 end if
 
-CALL h5dwrite_f(dset, H5T_NATIVE_DOUBLE, f_ptr, hdferr )
+call h5dwrite_f(dset, H5T_NATIVE_DOUBLE, f_ptr, hdferr )
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5write_f',.TRUE.)
   success = -1
@@ -1666,8 +1666,8 @@ end if
 !
 ! Close and release resources.
 !
-CALL h5dclose_f(dset , hdferr)
-CALL h5sclose_f(space, hdferr)
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
 
 ! that's it
 
@@ -1723,17 +1723,17 @@ f_ptr = C_LOC(wdata(1,1))
 ! Create dataspace.
 !
 rnk = 2
-CALL h5screate_simple_f(rnk, dims, space, hdferr)
+call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-CALL h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
+call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5create_f',.TRUE.)
   success = -1
 end if
 
-CALL h5dwrite_f(dset, H5T_NATIVE_DOUBLE, f_ptr, hdferr )
+call h5dwrite_f(dset, H5T_NATIVE_DOUBLE, f_ptr, hdferr )
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5write_f',.TRUE.)
   success = -1
@@ -1741,8 +1741,8 @@ end if
 !
 ! Close and release resources.
 !
-CALL h5dclose_f(dset , hdferr)
-CALL h5sclose_f(space, hdferr)
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
 
 ! that's it
 
@@ -1799,17 +1799,17 @@ f_ptr = C_LOC(wdata(1,1,1))
 ! Create dataspace.
 !
 rnk = 3
-CALL h5screate_simple_f(rnk, dims, space, hdferr)
+call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-CALL h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
+call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5create_f',.TRUE.)
   success = -1
 end if
 
-CALL h5dwrite_f(dset, H5T_NATIVE_DOUBLE, f_ptr, hdferr )
+call h5dwrite_f(dset, H5T_NATIVE_DOUBLE, f_ptr, hdferr )
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5write_f',.TRUE.)
   success = -1
@@ -1817,8 +1817,8 @@ end if
 !
 ! Close and release resources.
 !
-CALL h5dclose_f(dset , hdferr)
-CALL h5sclose_f(space, hdferr)
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
 
 ! that's it
 
@@ -1876,17 +1876,17 @@ f_ptr = C_LOC(wdata(1,1,1,1))
 ! Create dataspace.
 !
 rnk = 4
-CALL h5screate_simple_f(rnk, dims, space, hdferr)
+call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-CALL h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
+call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5create_f',.TRUE.)
   success = -1
 end if
 
-CALL h5dwrite_f(dset, H5T_NATIVE_DOUBLE, f_ptr, hdferr )
+call h5dwrite_f(dset, H5T_NATIVE_DOUBLE, f_ptr, hdferr )
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5write_f',.TRUE.)
   success = -1
@@ -1894,13 +1894,714 @@ end if
 !
 ! Close and release resources.
 !
-CALL h5dclose_f(dset , hdferr)
-CALL h5sclose_f(space, hdferr)
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
 
 ! that's it
 
 end function HDF_writeDatasetDoubleArray4D
 
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readDatasetIntegerArray1D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 1D integer array data set from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param dims dimensions of the array
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readDatasetIntegerArray1D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(OUT)                            :: dims(1)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer, dimension(:), allocatable, TARGET              :: rdata
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+
+TYPE(C_PTR)                                             :: f_ptr
+
+! open the data set
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+! get dataspace and allocate memory for read buffer 
+call h5dget_space_f(dset,space, hdferr)
+call h5sget_simple_extent_dims_f(space, dims, maxdims, hdferr)
+
+allocate(rdata(1:dims(1)))
+!
+! Read the data.
+!
+f_ptr = C_LOC(rdata(1))
+call h5dread_f( dset, H5T_NATIVE_INTEGER, f_ptr, hdferr)
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_readDatasetIntegerArray1D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readDatasetIntegerArray2D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 2D integer array data set from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param dims dimensions of the array
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readDatasetIntegerArray2D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(OUT)                            :: dims(2)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer, dimension(:,:), allocatable, TARGET            :: rdata
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+
+TYPE(C_PTR)                                             :: f_ptr
+
+! open the data set
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+! get dataspace and allocate memory for read buffer 
+call h5dget_space_f(dset,space, hdferr)
+call h5sget_simple_extent_dims_f(space, dims, maxdims, hdferr)
+
+allocate(rdata(1:dims(1),1:dims(2)))
+!
+! Read the data.
+!
+f_ptr = C_LOC(rdata(1,1))
+call h5dread_f( dset, H5T_NATIVE_INTEGER, f_ptr, hdferr)
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_readDatasetIntegerArray2D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readDatasetIntegerArray3D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 3D integer array data set from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param dims dimensions of the array
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readDatasetIntegerArray3D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(OUT)                            :: dims(3)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer, dimension(:,:,:), allocatable, TARGET          :: rdata
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+
+TYPE(C_PTR)                                             :: f_ptr
+
+! open the data set
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+! get dataspace and allocate memory for read buffer 
+call h5dget_space_f(dset,space, hdferr)
+call h5sget_simple_extent_dims_f(space, dims, maxdims, hdferr)
+
+allocate(rdata(1:dims(1),1:dims(2),1:dims(3)))
+!
+! Read the data.
+!
+f_ptr = C_LOC(rdata(1,1,1))
+call h5dread_f( dset, H5T_NATIVE_INTEGER, f_ptr, hdferr)
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_readDatasetIntegerArray3D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readDatasetIntegerArray4D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 4D integer array data set from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param dims dimensions of the array
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readDatasetIntegerArray4D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(OUT)                            :: dims(4)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer, dimension(:,:,:,:), allocatable, TARGET        :: rdata
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+
+TYPE(C_PTR)                                             :: f_ptr
+
+! open the data set
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+! get dataspace and allocate memory for read buffer 
+call h5dget_space_f(dset,space, hdferr)
+call h5sget_simple_extent_dims_f(space, dims, maxdims, hdferr)
+
+allocate(rdata(1:dims(1),1:dims(2),1:dims(3),1:dims(4)))
+!
+! Read the data.
+!
+f_ptr = C_LOC(rdata(1,1,1,1))
+call h5dread_f( dset, H5T_NATIVE_INTEGER, f_ptr, hdferr)
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_readDatasetIntegerArray4D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readDatasetFloatArray1D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 1D float array data set from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param dims dimensions of the array
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readDatasetFloatArray1D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(OUT)                            :: dims(1)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+real(real_kind), dimension(:), allocatable, TARGET      :: rdata
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+
+TYPE(C_PTR)                                             :: f_ptr
+
+! open the data set
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+! get dataspace and allocate memory for read buffer 
+call h5dget_space_f(dset,space, hdferr)
+call h5sget_simple_extent_dims_f(space, dims, maxdims, hdferr)
+
+allocate(rdata(1:dims(1)))
+!
+! Read the data.
+!
+f_ptr = C_LOC(rdata(1))
+call h5dread_f( dset, H5T_NATIVE_REAL, f_ptr, hdferr)
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_readDatasetFloatArray1D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readDatasetFloatArray2D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 2D float array data set from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param dims dimensions of the array
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readDatasetFloatArray2D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(OUT)                            :: dims(2)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+real(real_kind), dimension(:,:), allocatable, TARGET    :: rdata
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+
+TYPE(C_PTR)                                             :: f_ptr
+
+! open the data set
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+! get dataspace and allocate memory for read buffer 
+call h5dget_space_f(dset,space, hdferr)
+call h5sget_simple_extent_dims_f(space, dims, maxdims, hdferr)
+
+allocate(rdata(1:dims(1),1:dims(2)))
+!
+! Read the data.
+!
+f_ptr = C_LOC(rdata(1,1))
+call h5dread_f( dset, H5T_NATIVE_REAL, f_ptr, hdferr)
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_readDatasetFloatArray2D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readDatasetFloatArray3D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 3D float array data set from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param dims dimensions of the array
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readDatasetFloatArray3D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(OUT)                            :: dims(3)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+real(real_kind), dimension(:,:,:), allocatable, TARGET  :: rdata
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+
+TYPE(C_PTR)                                             :: f_ptr
+
+! open the data set
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+! get dataspace and allocate memory for read buffer 
+call h5dget_space_f(dset,space, hdferr)
+call h5sget_simple_extent_dims_f(space, dims, maxdims, hdferr)
+
+allocate(rdata(1:dims(1),1:dims(2),1:dims(3)))
+!
+! Read the data.
+!
+f_ptr = C_LOC(rdata(1,1,1))
+call h5dread_f( dset, H5T_NATIVE_REAL, f_ptr, hdferr)
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_readDatasetFloatArray3D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readDatasetFloatArray4D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 4D float array data set from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param dims dimensions of the array
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readDatasetFloatArray4D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(OUT)                            :: dims(4)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+real(real_kind), dimension(:,:,:,:), allocatable, TARGET:: rdata
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+
+TYPE(C_PTR)                                             :: f_ptr
+
+! open the data set
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+! get dataspace and allocate memory for read buffer 
+call h5dget_space_f(dset,space, hdferr)
+call h5sget_simple_extent_dims_f(space, dims, maxdims, hdferr)
+
+allocate(rdata(1:dims(1),1:dims(2),1:dims(3),1:dims(4)))
+!
+! Read the data.
+!
+f_ptr = C_LOC(rdata(1,1,1,1))
+call h5dread_f( dset, H5T_NATIVE_REAL, f_ptr, hdferr)
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_readDatasetFloatArray4D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readDatasetDoubleArray1D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 1D double array data set from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param dims dimensions of the array
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readDatasetDoubleArray1D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(OUT)                            :: dims(1)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+real(real_kind), dimension(:), allocatable, TARGET      :: rdata
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+
+TYPE(C_PTR)                                             :: f_ptr
+
+! open the data set
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+! get dataspace and allocate memory for read buffer 
+call h5dget_space_f(dset,space, hdferr)
+call h5sget_simple_extent_dims_f(space, dims, maxdims, hdferr)
+
+allocate(rdata(1:dims(1)))
+!
+! Read the data.
+!
+f_ptr = C_LOC(rdata(1))
+call h5dread_f( dset, H5T_NATIVE_DOUBLE, f_ptr, hdferr)
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_readDatasetDoubleArray1D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readDatasetDoubleArray2D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 2D double array data set from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param dims dimensions of the array
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readDatasetDoubleArray2D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(OUT)                            :: dims(2)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+real(real_kind), dimension(:,:), allocatable, TARGET    :: rdata
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+
+TYPE(C_PTR)                                             :: f_ptr
+
+! open the data set
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+! get dataspace and allocate memory for read buffer 
+call h5dget_space_f(dset,space, hdferr)
+call h5sget_simple_extent_dims_f(space, dims, maxdims, hdferr)
+
+allocate(rdata(1:dims(1),1:dims(2)))
+!
+! Read the data.
+!
+f_ptr = C_LOC(rdata(1,1))
+call h5dread_f( dset, H5T_NATIVE_DOUBLE, f_ptr, hdferr)
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_readDatasetDoubleArray2D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readDatasetDoubleArray3D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 3D double array data set from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param dims dimensions of the array
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readDatasetDoubleArray3D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(OUT)                            :: dims(3)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+real(real_kind), dimension(:,:,:), allocatable, TARGET  :: rdata
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+
+TYPE(C_PTR)                                             :: f_ptr
+
+! open the data set
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+! get dataspace and allocate memory for read buffer 
+call h5dget_space_f(dset,space, hdferr)
+call h5sget_simple_extent_dims_f(space, dims, maxdims, hdferr)
+
+allocate(rdata(1:dims(1),1:dims(2),1:dims(3)))
+!
+! Read the data.
+!
+f_ptr = C_LOC(rdata(1,1,1))
+call h5dread_f( dset, H5T_NATIVE_DOUBLE, f_ptr, hdferr)
+
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_readDatasetDoubleArray3D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readDatasetDoubleArray4D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 4D double array data set from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param dims dimensions of the array
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readDatasetDoubleArray4D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(OUT)                            :: dims(4)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+real(real_kind), dimension(:,:,:,:), allocatable, TARGET:: rdata
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+
+TYPE(C_PTR)                                             :: f_ptr
+
+! open the data set
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+! get dataspace and allocate memory for read buffer 
+call h5dget_space_f(dset,space, hdferr)
+call h5sget_simple_extent_dims_f(space, dims, maxdims, hdferr)
+
+allocate(rdata(1:dims(1),1:dims(2),1:dims(3),1:dims(4)))
+!
+! Read the data.
+!
+f_ptr = C_LOC(rdata(1,1,1,1))
+call h5dread_f( dset, H5T_NATIVE_DOUBLE, f_ptr, hdferr)
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_readDatasetDoubleArray4D
 
 
 

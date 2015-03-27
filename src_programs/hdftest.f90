@@ -34,6 +34,9 @@ program hdftest
   integer(kind=irg)                 :: intarr(8), dim0, dim1, intarr2(3,3)
   real(kind=sgl)                    :: fltarr(8)
   real(kind=dbl)                    :: dblarr(8)
+  integer(kind=irg),allocatable     :: rdintarr(:), rdintarr2(:,:)
+  real(kind=sgl),allocatable        :: rdfltarr(:)
+  real(kind=dbl),allocatable        :: rddblarr(:)
 
   type(HDFobjectStackType),pointer  :: HDF_head
   type(HDFobjectStackType),pointer  :: HDF_tail
@@ -178,6 +181,40 @@ do i=1,nlines
   write (*,*) lines(i)
 end do
 deallocate(lines)
+
+call HDF_pop(HDF_head)
+
+! next, read one of the integer string arrays
+
+! open the EMData group
+groupname = 'EMData'
+hdferr = HDF_OpenGroup(groupname, HDF_head, HDF_tail)
+
+dataname = 'intarr1D'
+rdintarr = HDF_readDatasetIntegerArray1D(dataname, dims, HDF_head, HDF_tail)
+
+write (*,*) 'shape of read intarr = ',shape(rdintarr)
+write (*,*) rdintarr
+
+dataname = 'intarr2D'
+rdintarr2 = HDF_readDatasetIntegerArray2D(dataname, dims2, HDF_head, HDF_tail)
+
+write (*,*) 'shape of read intarr2 = ',shape(rdintarr2)
+write (*,*) rdintarr2
+
+dataname = 'fltarr1D'
+rdfltarr = HDF_readDatasetFloatArray1D(dataname, dims, HDF_head, HDF_tail)
+
+write (*,*) 'shape of read fltarr = ',shape(rdfltarr)
+write (*,*) rdfltarr
+
+dataname = 'dblarr1D'
+rddblarr = HDF_readDatasetDoubleArray1D(dataname, dims, HDF_head, HDF_tail)
+
+write (*,*) 'shape of read dblarr = ',shape(rddblarr)
+write (*,*) rddblarr
+
+
 
 ! and close all resources
 call HDF_pop(HDF_head,.TRUE.)
