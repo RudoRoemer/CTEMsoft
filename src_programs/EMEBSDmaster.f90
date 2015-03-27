@@ -86,10 +86,10 @@ call Interpret_Program_Arguments(nmldeffile,1,(/ 21 /), progname)
 call GetEBSDMasterNameList(nmldeffile,emnl)
 
 ! print some information
-call EMsoft(progname, progdesc, nmldeffile)
+call EMsoft(progname, progdesc)
 
 ! generate a set of master EBSD patterns
- call ComputeMasterPattern(emnl, progname)
+ call ComputeMasterPattern(emnl, progname, nmldeffile)
 
 end program EMEBSDmaster
 
@@ -140,9 +140,9 @@ use ISO_C_BINDING
  
 IMPLICIT NONE
 
-type(EBSDMasterNameListType),INTENT(IN) :: emnl
-character(fnlen),INTENT(IN)             :: progname
-character(fnlen),INTENT(IN)             :: nmldeffile
+type(EBSDMasterNameListType),INTENT(INOUT) :: emnl
+character(fnlen),INTENT(IN)                :: progname
+character(fnlen),INTENT(IN)                :: nmldeffile
 
 real(kind=dbl)          :: ctmp(192,3), arg, sig, omega
 integer(kind=irg)      :: isym,i,j,ik,npy,ipx,ipy,debug,iE,izz, izzmax, iequiv(2,12), nequiv, num_el, MCnthreads, & ! counters
@@ -161,7 +161,7 @@ character(fnlen)        :: xtalname
 integer(kind=irg),parameter     :: LaueTest(11) = (/ 149, 151, 153, 156, 158, 160, 161, 164, 165, 166, 167 /)  ! space groups with 2 or mirror at 30 degrees
 
 ! Monte Carlo derived quantities
-integer(kind=irg)       :: numEbins, numzbins, nsx, nsy    ! variables used in MC energy file
+integer(kind=irg)       :: numEbins, numzbins, nsx, nsy, hdferr    ! variables used in MC energy file
 real(kind=dbl)          :: EkeV, Ehistmin, Ebinsize, depthmax, depthstep, etotal ! enery variables from MC program
 integer(kind=irg),allocatable :: accum_e(:,:,:), accum_z(:,:,:,:), thick(:)
 real(kind=sgl),allocatable :: lambdaE(:,:)
@@ -171,6 +171,7 @@ character(4)            :: MCmode
 character(11)           :: dstr
 character(15)           :: tstrb
 character(15)           :: tstre
+logical                 :: f_exists
 
 type(unitcell),pointer          :: cell
 type(DynType),save              :: Dyn
@@ -181,17 +182,18 @@ type(kvectorlist),pointer       :: khead, ktmp
 real(kind=sgl),allocatable      :: karray(:,:)
 integer(kind=irg),allocatable   :: kij(:,:)
 complex(kind=dbl),allocatable   :: DynMat(:,:)
+character(fnlen)                :: dataset, instring
 
 type(HDFobjectStackType),pointer  :: HDF_head
 type(HDFobjectStackType),pointer  :: HDF_tail
 
+!$OMP THREADPRIVATE(rlp) 
 
 nullify(HDF_head)
 nullify(HDF_tail)
 
 call timestamp(datestring=dstr, timestring=tstrb)
 
-!$OMP THREADPRIVATE(rlp) 
 
 ! note that the EMMC.f90 program creates a statistical output file that 
 ! must be read by the present program, so that things like energy etc are 
@@ -642,16 +644,13 @@ energyloop: do iE=numEbins,1,-1
 call h5open_f(hdferr)
 call timestamp(timestring=tstre)
 
-!       integer(kind=irg)       :: stdout
-!       integer(kind=irg)       :: npx
-!       integer(kind=irg)       :: Esel
-!       integer(kind=irg)       :: nthreads
-!       real(kind=sgl)          :: dmin
-!       character(fnlen)        :: energyfile
-!       character(fnlen)        :: outname
-
 ! first of all, if the file exists, then delete it and rewrite it on each energyloop
+inquire(file=trim(emnl%outname), exist=f_exists)
 
+if (f_exists) then
+  open(unit=dataunit, file=trim(emnl%outname), status='old',form='unformatted')
+  close(unit=dataunit, status='delete')
+end if
 
 ! Create a new file using the default properties.
 hdferr =  HDF_createFile(emnl%outname, HDF_head, HDF_tail)
@@ -667,42 +666,92 @@ hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
 dataset = 'EBSDmasterNML'
 hdferr = HDF_writeDatasetTextFile(dataset, nmldeffile, HDF_head, HDF_tail)
 
+! leave this group
+call HDF_pop(HDF_head)
+
+! create a namelist group to write all the namelist files into
+groupname = "NMLparameters"
+hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+call HDFwriteEBSDMasterNameList(HDF_head, HDF_tail, emnl)
+
+! leave this group
+call HDF_pop(HDF_head)
+
 ! then the remainder of the data in a EMData group
 groupname = 'EMData'
 hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
 
+dataset = 'xtalname'
+instring = xtalname
+hdferr = HDF_writeDatasetString(dataset, instring, HDF_head, HDF_tail)
+
+dataset = 'numset'
+hdferr = HDF_writeDatasetInteger(dataset, numset, HDF_head, HDF_tail)
+
+if (emnl%Esel.eq.-1) then
+  dataset = 'numEbins'
+  hdferr = HDF_writeDatasetInteger(dataset, numEbins, HDF_head, HDF_tail)
+
+  dataset = 'EkeVs'
+  hdferr = HDF_writeDatasetFloatArray1D(dataset, EkeVs, numEbins, HDF_head, HDF_tail)
+else
+  dataset = 'numEbins'
+  hdferr = HDF_writeDatasetInteger(dataset, one, HDF_head, HDF_tail)
+
+  dataset = 'selE'
+  hdferr = HDF_writeDatasetFloat(dataset, selE, HDF_head, HDF_tail)
+end if 
+
+dataset = 'cell%ATOM_type'
+hdferr = HDF_writeDatasetIntegerArray1D(dataset, cell%ATOM_type(1:numset), numset, HDF_head, HDF_tail)
+
+dataset = 'squhex'
+if (usehex) then 
+  instring = 'hexago'
+  hdferr = HDF_writeDatasetString(dataset, instring, HDF_head, HDF_tail)
+else
+  instring = 'square'
+  hdferr = HDF_writeDatasetString(dataset, instring, HDF_head, HDF_tail)
+end if  
+
+dataset = 'sr'
+hdferr = HDF_writeDatasetFloatArray4D(dataset, sr, 2*emnl%npx+1, 2*emnl%npx+1, numEbins, numset, HDF_head, HDF_tail)
+
+call HDF_pop(HDF_head,.TRUE.)
+
+! and close the fortran hdf interface
+call h5close_f(hdferr)
 
 
-
-  open(unit=dataunit,file=trim(emnl%outname),status='unknown',action='write',form = 'unformatted')
+! open(unit=dataunit,file=trim(emnl%outname),status='unknown',action='write',form = 'unformatted')
 ! write the program identifier
 ! write (dataunit) progname
 ! write the version number
 ! write (dataunit) scversion
 ! then the name of the crystal data file
-  write (dataunit) xtalname
+! write (dataunit) xtalname
 ! then the name of the corresponding Monte Carlo data file
 ! write (dataunit) emnl%energyfile
 ! energy information and array size    
-  if (emnl%Esel.eq.-1) then
-    write (dataunit) emnl%npx,npy,numEbins,numset
-    write (dataunit) EkeVs
-  else
-    one = 1
-    write (dataunit) emnl%npx,npy,one,numset 
-    write (dataunit) selE
-  end if
+! if (emnl%Esel.eq.-1) then
+!   write (dataunit) emnl%npx,npy,numEbins,numset
+!   write (dataunit) EkeVs
+! else
+!   one = 1
+!   write (dataunit) emnl%npx,npy,one,numset 
+!   write (dataunit) selE
+! end if
 ! atom type array for asymmetric unit  
-  write (dataunit) cell%ATOM_type(1:numset)
+!  write (dataunit) cell%ATOM_type(1:numset)
 ! is this a regular (square) or hexagonal projection ?
-  if (usehex) then 
-    write (dataunit) 'hexago'
-  else
-    write (dataunit) 'square'
-  end if
+! if (usehex) then 
+!   write (dataunit) 'hexago'
+! else
+!   write (dataunit) 'square'
+! end if
 ! and finally the results array
-  write (dataunit) sr
-  close(unit=dataunit,status='keep')
+! write (dataunit) sr
+! close(unit=dataunit,status='keep')
 
  if ((emnl%Esel.eq.-1).and.(iE.ne.1)) then 
   call Message('Intermediate data stored in file '//trim(emnl%outname), frm = "(A/)")

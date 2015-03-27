@@ -994,6 +994,78 @@ call h5sclose_f(space, hdferr)
 
 end function HDF_writeDatasetString
 
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_writeDatasetInteger
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief write an integer data set to the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param intval  integer 
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_writeDatasetInteger(dataname, intval, HDF_head, HDF_tail) result(success)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(kind=irg),INTENT(IN)                            :: intval
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer(kind=irg)                                       :: success
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T), DIMENSION(1:1)                        :: dims
+
+integer, dimension(1:1), TARGET                         :: wdata
+TYPE(C_PTR)                                             :: f_ptr
+
+success = 0
+
+dims(1) = 1
+wdata(1) = intval
+
+! get a C pointer to the integer array
+f_ptr = C_LOC(wdata(1))
+
+! Create dataspace.
+!
+rnk = 1
+call h5screate_simple_f(rnk, dims, space, hdferr)
+!
+! Create the dataset and write the variable-length string data to it.
+!
+call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
+if (hdferr.ne.0) then
+  call HDF_handleError(hdferr,'HDF_writeDatasetIntegerArray1D:hd5create_f',.TRUE.)
+  success = -1
+end if
+
+call h5dwrite_f(dset, H5T_NATIVE_INTEGER, f_ptr, hdferr )
+if (hdferr.ne.0) then
+  call HDF_handleError(hdferr,'HDF_writeDatasetIntegerArray1D:hd5write_f',.TRUE.)
+  success = -1
+end if
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_writeDatasetInteger
+
 
 
 !--------------------------------------------------------------------------
@@ -1294,6 +1366,80 @@ call h5sclose_f(space, hdferr)
 ! that's it
 
 end function HDF_writeDatasetIntegerArray4D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_writeDatasetFloat
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief write a single precision array data set to the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param fltval real 
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_writeDatasetFloat(dataname, fltval, HDF_head, HDF_tail) result(success)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+real(kind=sgl),INTENT(IN)                               :: fltval
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer(kind=irg)                                       :: success
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T), DIMENSION(1:1)                        :: dims
+
+real(real_kind), dimension(1:1), TARGET                 :: wdata
+TYPE(C_PTR)                                             :: f_ptr
+
+success = 0
+
+dims(1) = 1
+wdata(1) = fltval
+
+! get a C pointer to the integer array
+f_ptr = C_LOC(wdata(1))
+
+! Create dataspace.
+!
+rnk = 1
+call h5screate_simple_f(rnk, dims, space, hdferr)
+!
+! Create the dataset and write the variable-length string data to it.
+!
+call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
+if (hdferr.ne.0) then
+  call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5create_f',.TRUE.)
+  success = -1
+end if
+
+call h5dwrite_f(dset, H5T_NATIVE_REAL, f_ptr, hdferr )
+if (hdferr.ne.0) then
+  call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5write_f',.TRUE.)
+  success = -1
+end if
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_writeDatasetFloat
+
 
 
 !--------------------------------------------------------------------------
