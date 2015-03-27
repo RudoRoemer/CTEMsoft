@@ -60,6 +60,7 @@
 !>		   	     with updated routines; changed program name to EMEBSDmaster.
 !> @date  05/03/14  MDG 4.2 test version to resolve bug in the Sgh matrix part (solved)
 !> @date  06/19/14  MDG 4.3 rewrite, removal of all globals, split of namelist handling from computation; add OpenMP
+!> @date  03/26/15  MDG 5.0 all output now in HDF5 format (this is the first converted program)
 !--------------------------------------------------------------------------
 program EMEBSDmaster
 
@@ -85,7 +86,7 @@ call Interpret_Program_Arguments(nmldeffile,1,(/ 21 /), progname)
 call GetEBSDMasterNameList(nmldeffile,emnl)
 
 ! print some information
-call EMsoft(progname, progdesc)
+call EMsoft(progname, progdesc, nmldeffile)
 
 ! generate a set of master EBSD patterns
  call ComputeMasterPattern(emnl, progname)
@@ -100,7 +101,9 @@ end program EMEBSDmaster
 !
 !> @brief compute an EBSD master pattern as a function of energy
 !
-!> @param nmlfile namelist file name
+!> @param emnl namelist 
+!> @param progname program name
+!> @param nmldeffile namelist file name (so that the entire file can be stored inside the HDF5 file)
 !
 !> @date 11/29/01  MDG 1.0 original
 !> @date 04/08/13  MDG 2.0 rewrite
@@ -108,8 +111,9 @@ end program EMEBSDmaster
 !> @date 08/01/13  MDG 3.0 complete rewrite, eliminated old Lambert projection
 !> @date 09/25/13  MDG 3.1 replaced k-vector code by kvectors module
 !> @date 06/19/14  MDG 4.0 no more globals, nml split, added OpenMP
+!> @date 03/26/15  MDG 5.0 all output now in HDF5 format (this is the first converted program)
 !--------------------------------------------------------------------------
-subroutine ComputeMasterPattern(emnl, progname)
+subroutine ComputeMasterPattern(emnl, progname, nmldeffile)
 
 use typedefs
 use NameListTypedefs
@@ -129,12 +133,16 @@ use multibeams
 use timing
 use Lambert
 use omp_lib
-
+use HDF5
+use NameListHDFwriters
+use HDFsupport
+use ISO_C_BINDING
+ 
 IMPLICIT NONE
 
 type(EBSDMasterNameListType),INTENT(IN) :: emnl
 character(fnlen),INTENT(IN)             :: progname
-
+character(fnlen),INTENT(IN)             :: nmldeffile
 
 real(kind=dbl)          :: ctmp(192,3), arg, sig, omega
 integer(kind=irg)      :: isym,i,j,ik,npy,ipx,ipy,debug,iE,izz, izzmax, iequiv(2,12), nequiv, num_el, MCnthreads, & ! counters
@@ -157,9 +165,12 @@ integer(kind=irg)       :: numEbins, numzbins, nsx, nsy    ! variables used in M
 real(kind=dbl)          :: EkeV, Ehistmin, Ebinsize, depthmax, depthstep, etotal ! enery variables from MC program
 integer(kind=irg),allocatable :: accum_e(:,:,:), accum_z(:,:,:,:), thick(:)
 real(kind=sgl),allocatable :: lambdaE(:,:)
-character(fnlen)        :: oldprogname
+character(fnlen)        :: oldprogname, groupname
 character(8)            :: MCscversion
 character(4)            :: MCmode
+character(11)           :: dstr
+character(15)           :: tstrb
+character(15)           :: tstre
 
 type(unitcell),pointer          :: cell
 type(DynType),save              :: Dyn
@@ -170,6 +181,15 @@ type(kvectorlist),pointer       :: khead, ktmp
 real(kind=sgl),allocatable      :: karray(:,:)
 integer(kind=irg),allocatable   :: kij(:,:)
 complex(kind=dbl),allocatable   :: DynMat(:,:)
+
+type(HDFobjectStackType),pointer  :: HDF_head
+type(HDFobjectStackType),pointer  :: HDF_tail
+
+
+nullify(HDF_head)
+nullify(HDF_tail)
+
+call timestamp(datestring=dstr, timestring=tstrb)
 
 !$OMP THREADPRIVATE(rlp) 
 
@@ -189,7 +209,7 @@ czero = dcmplx(0.D0,0.D0)
 !=============================================
 !=============================================
 ! ---------- read Monte Carlo output file and extract necessary parameters
-! first, we need to load the data from the MC program.  
+! first, we need to load the data from the MC program. [This will need to be converted to HDF5] 
 call Message('opening '//trim(emnl%energyfile), frm = "(A)" )
 
 open(dataunit,file=trim(emnl%energyfile),status='unknown',form='unformatted')
@@ -615,15 +635,54 @@ energyloop: do iE=numEbins,1,-1
   call WriteValue(' -> Average number of weak reflections   = ',io_int, 1, "(I5)")
 
 
+! and here is where the major changes are for this version 5.0: all output now in HDF5 format
+!
+! Initialize FORTRAN interface.
+!
+call h5open_f(hdferr)
+call timestamp(timestring=tstre)
+
+!       integer(kind=irg)       :: stdout
+!       integer(kind=irg)       :: npx
+!       integer(kind=irg)       :: Esel
+!       integer(kind=irg)       :: nthreads
+!       real(kind=sgl)          :: dmin
+!       character(fnlen)        :: energyfile
+!       character(fnlen)        :: outname
+
+! first of all, if the file exists, then delete it and rewrite it on each energyloop
+
+
+! Create a new file using the default properties.
+hdferr =  HDF_createFile(emnl%outname, HDF_head, HDF_tail)
+
+! write the EMheader to the file
+call HDF_writeEMheader(HDF_head, HDF_tail, dstr, tstrb, tstre, progname)
+
+! create a namelist group to write all the namelist files into
+groupname = "NMLfiles"
+hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+
+! read the text file and write the array to the file
+dataset = 'EBSDmasterNML'
+hdferr = HDF_writeDatasetTextFile(dataset, nmldeffile, HDF_head, HDF_tail)
+
+! then the remainder of the data in a EMData group
+groupname = 'EMData'
+hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+
+
+
+
   open(unit=dataunit,file=trim(emnl%outname),status='unknown',action='write',form = 'unformatted')
 ! write the program identifier
-  write (dataunit) progname
+! write (dataunit) progname
 ! write the version number
-  write (dataunit) scversion
+! write (dataunit) scversion
 ! then the name of the crystal data file
   write (dataunit) xtalname
 ! then the name of the corresponding Monte Carlo data file
-  write (dataunit) emnl%energyfile
+! write (dataunit) emnl%energyfile
 ! energy information and array size    
   if (emnl%Esel.eq.-1) then
     write (dataunit) emnl%npx,npy,numEbins,numset
