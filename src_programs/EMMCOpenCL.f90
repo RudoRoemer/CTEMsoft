@@ -55,42 +55,9 @@ call EMsoft(progname, progdesc)
 ! perform a Monte Carlo simulation
 write (*,*) 'namelist contents : ',mcnl
 
-write (*,*) 'calling DoMCSimulation'
-call DoMC(mcnl, progname)
-write (*,*) 'returned from DoMC'
-
-call DoMCsimulation(mcnl, progname)
+call DoMCsimulation(mcnl, progname, nmldeffile)
 
 end program EMMCOpenCL
-
-
-
-
-subroutine DoMC(mcnl, progname)
-
-use local
-use typedefs
-use NameListTypedefs
-use initializers
-use crystal
-use constants
-use symmetry
-use error
-use io
-use files
-use diffraction, only:CalcWaveLength
-use Lambert
-use cl
-
-IMPLICIT NONE
-
-type(MCCLNameListType),INTENT(IN)       :: mcnl
-character(fnlen),INTENT(IN)             :: progname
-
-write (*,*) 'inside DoMC'
-
-end subroutine
-
 
 !--------------------------------------------------------------------------
 !
@@ -111,8 +78,9 @@ end subroutine
 !> @date 03/17/14  MDG 3.3 added a few more for the IDL visualization program
 !> @date 06/19/14  MDG 4.0 rewrite with name list handling removed
 !> @date 07/23/14  SS  4.1 conversion to OpenCL
+!> @date 03/26/15  MDG 5.0 all output now in HDF5 format 
 !--------------------------------------------------------------------------
-subroutine DoMCsimulation(mcnl, progname)
+subroutine DoMCsimulation(mcnl, progname, nmldeffile)
 
 use local
 use typedefs
@@ -127,11 +95,16 @@ use files
 use diffraction, only:CalcWaveLength
 use Lambert
 use cl
+use HDF5
+use NameListHDFwriters
+use HDFsupport
+use ISO_C_BINDING
 
 IMPLICIT NONE
 
-type(MCCLNameListType),INTENT(IN)       :: mcnl
+type(MCCLNameListType),INTENT(INOUT)    :: mcnl
 character(fnlen),INTENT(IN)             :: progname
+character(fnlen),INTENT(IN)             :: nmldeffile
 
 
 type(unitcell),pointer  :: cell
@@ -162,10 +135,13 @@ real(kind=4),allocatable:: Lamresx(:), Lamresy(:), depthres(:), energyres(:)
 
 ! final results stored here
 integer(kind=4),allocatable :: accum_e(:,:,:), accum_z(:,:,:,:), rnseeds(:), init_seeds(:)
-integer(kind=4)         :: idxy(2), iE, px, py, iz, nseeds ! auxiliary variables
+integer(kind=4)         :: idxy(2), iE, px, py, iz, nseeds, hdferr ! auxiliary variables
 real(kind=4)            :: cxyz(3), edis, bse, xy(2) ! auxiliary variables
 real(kind=8)            :: delta,rand
-
+character(11)           :: dstr
+character(15)           :: tstrb
+character(15)           :: tstre
+logical                 :: f_exists
 
 ! OpenCL variables
 type(cl_platform_id)    :: platform
@@ -182,16 +158,20 @@ integer, parameter      :: iunit = 10
 integer, parameter      :: source_length = 10000000
 character(len = source_length)  :: source
 integer(kind=4)         :: num, ierr, irec, io_int(1), val,val1 ! auxiliary variables
+character(fnlen)        :: groupname, dataset, instring
 
-write (*,*) 'Entering routine'
 
-! STOP
+type(HDFobjectStackType),pointer  :: HDF_head
+type(HDFobjectStackType),pointer  :: HDF_tail
+
+nullify(HDF_head)
+nullify(HDF_tail)
+
+call timestamp(datestring=dstr, timestring=tstrb)
 
 numsy = mcnl%numsx
 nullify(cell)
 allocate(cell)
-
-write (*,*) mcnl
 
 ! get the crystal strucutre from the *.xtal file
 verbose = .TRUE.
@@ -199,6 +179,7 @@ dmin = 0.05
 val = 0
 val1 = 0
 call Initialize_Cell(cell,Dyn,rlp,mcnl%xtalname, dmin, sngl(1000.D0*mcnl%EkeV), verbose)
+
 ! then calculate density, average atomic number and average atomic weight
 call CalcDensity(cell, dens, avZ, avA)
 density = dble(dens)
@@ -459,33 +440,79 @@ i = totnum_el/num_max
 
 totnum_el = (i+1)*num_max
 
-open(dataunit,file=trim(mcnl%dataname),status='unknown',form='unformatted')
+! output in .h5 format.
 
-! and here we create the output file
-call Message(' ',"(A)")
-! write the program identifier
-write (dataunit) progname
-! write the version number
-write (dataunit) scversion
-! then the name of the crystal data file
-write (dataunit) mcnl%xtalname
-! energy information etc...
-write (dataunit) numEbins, numzbins, mcnl%numsx, numsy, totnum_el
-write (dataunit) mcnl%EkeV, mcnl%Ehistmin, mcnl%Ebinsize, mcnl%depthmax, mcnl%depthstep
-write (dataunit) mcnl%sig, mcnl%omega
-write (dataunit) mcnl%MCmode
-! and here are the actual results
-write (dataunit) accum_e
-write (dataunit) accum_z
+! Initialize FORTRAN interface.
+!
+call h5open_f(hdferr)
+call timestamp(timestring=tstre)
 
-close(dataunit,status='keep')
+! first of all, if the file exists, then delete it and rewrite it on each energyloop
+inquire(file=trim(mcnl%dataname), exist=f_exists)
 
+if (f_exists) then
+  open(unit=dataunit, file=trim(mcnl%dataname), status='old',form='unformatted')
+  close(unit=dataunit, status='delete')
+end if
+
+! Create a new file using the default properties.
+hdferr =  HDF_createFile(mcnl%dataname, HDF_head, HDF_tail)
+
+! write the EMheader to the file
+call HDF_writeEMheader(HDF_head, HDF_tail, dstr, tstrb, tstre, progname)
+
+! create a namelist group to write all the namelist files into
+groupname = "NMLfiles"
+hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+
+! read the text file and write the array to the file
+dataset = 'MCOpenCLNML'
+hdferr = HDF_writeDatasetTextFile(dataset, nmldeffile, HDF_head, HDF_tail)
+
+! leave this group
+call HDF_pop(HDF_head)
+
+! create a namelist group to write all the namelist files into
+groupname = "NMLparameters"
+hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+call HDFwriteMCCLNameList(HDF_head, HDF_tail, mcnl)
+
+! leave this group
+call HDF_pop(HDF_head)
+
+! then the remainder of the data in a EMData group
+groupname = 'EMData'
+hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+
+dataset = 'numEbins'
+hdferr = HDF_writeDatasetInteger(dataset, numEbins, HDF_head, HDF_tail)
+
+dataset = 'numzbins'
+hdferr = HDF_writeDatasetInteger(dataset, numzbins, HDF_head, HDF_tail)
+
+dataset = 'totnum_el'
+hdferr = HDF_writeDatasetInteger(dataset, totnum_el, HDF_head, HDF_tail)
+
+!allocate(accum_e(numEbins,-nx:nx,-nx:nx),accum_z(numEbins,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
+
+dataset = 'accum_e'
+hdferr = HDF_writeDatasetIntegerArray3D(dataset, accum_e, numEbins, 2*nx+1, 2*nx+1, HDF_head, HDF_tail)
+
+dataset = 'accum_z'
+hdferr = HDF_writeDatasetIntegerArray4D(dataset, accum_z, numEbins, numzbins, 2*(nx/10)+1, 2*(nx/10)+1, HDF_head, HDF_tail)
+
+call HDF_pop(HDF_head,.TRUE.)
+
+! and close the fortran hdf interface
+call h5close_f(hdferr)
+
+! and write some infgormation to the console
 bse = real(val)/real(totnum_el)
 print*, "Backscatter yield          = ",bse
 print*, "Total number of incident electrons = ",totnum_el
 print*, "Number of electrons on detector = ",sum(accum_e)
 print*, "Maximum electron in depth and energy bin resp. = ",maxval(accum_z),maxval(accum_e)
-!print*,sum(accum_e(:,0,0)),maxval(sum(accum_e,1))
+!
 !=====================
 ! RELEASE EVERYTHING
 !=====================

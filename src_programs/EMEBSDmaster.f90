@@ -112,6 +112,7 @@ end program EMEBSDmaster
 !> @date 09/25/13  MDG 3.1 replaced k-vector code by kvectors module
 !> @date 06/19/14  MDG 4.0 no more globals, nml split, added OpenMP
 !> @date 03/26/15  MDG 5.0 all output now in HDF5 format (this is the first converted program)
+!> @date 03/28/15  MDG 5.1 converted Monte Carlo input to HDF5 format and tested
 !--------------------------------------------------------------------------
 subroutine ComputeMasterPattern(emnl, progname, nmldeffile)
 
@@ -144,7 +145,8 @@ type(EBSDMasterNameListType),INTENT(INOUT) :: emnl
 character(fnlen),INTENT(IN)                :: progname
 character(fnlen),INTENT(IN)                :: nmldeffile
 
-real(kind=dbl)          :: ctmp(192,3), arg, sig, omega
+real(kind=dbl)          :: ctmp(192,3), arg
+integer(HSIZE_T)        :: dims4(4)
 integer(kind=irg)      :: isym,i,j,ik,npy,ipx,ipy,debug,iE,izz, izzmax, iequiv(2,12), nequiv, num_el, MCnthreads, & ! counters
                         numk, & ! number of independent incident beam directions
                         ir,nat(100),kk(3), npyhex, skip, ijmax, one, NUMTHREADS, TID, &
@@ -161,17 +163,17 @@ character(fnlen)        :: xtalname
 integer(kind=irg),parameter     :: LaueTest(11) = (/ 149, 151, 153, 156, 158, 160, 161, 164, 165, 166, 167 /)  ! space groups with 2 or mirror at 30 degrees
 
 ! Monte Carlo derived quantities
-integer(kind=irg)       :: numEbins, numzbins, nsx, nsy, hdferr    ! variables used in MC energy file
+integer(kind=irg)       :: numEbins, numzbins, nsx, nsy, hdferr, nlines    ! variables used in MC energy file
 real(kind=dbl)          :: EkeV, Ehistmin, Ebinsize, depthmax, depthstep, etotal ! enery variables from MC program
 integer(kind=irg),allocatable :: accum_e(:,:,:), accum_z(:,:,:,:), thick(:)
 real(kind=sgl),allocatable :: lambdaE(:,:)
 character(fnlen)        :: oldprogname, groupname
 character(8)            :: MCscversion
-character(4)            :: MCmode
 character(11)           :: dstr
 character(15)           :: tstrb
 character(15)           :: tstre
-logical                 :: f_exists
+logical                 :: f_exists, readonly
+character(fnlen, KIND=c_char),allocatable,TARGET :: stringarray(:)
 
 type(unitcell),pointer          :: cell
 type(DynType),save              :: Dyn
@@ -210,57 +212,100 @@ czero = dcmplx(0.D0,0.D0)
 
 !=============================================
 !=============================================
-! ---------- read Monte Carlo output file and extract necessary parameters
-! first, we need to load the data from the MC program. [This will need to be converted to HDF5] 
+! ---------- read Monte Carlo .h5 output file and extract necessary parameters
 call Message('opening '//trim(emnl%energyfile), frm = "(A)" )
 
-open(dataunit,file=trim(emnl%energyfile),status='unknown',form='unformatted')
+! this is now an HDF5 file as of version 5.1
+! [since this is no longer a sequential access file, we do not need to read everything, just
+! the quantities that we need...]
 
-! lines from EMMC.f90... these are the things we need to read in...
-! write (dataunit) progname
-!! write the version number
-! write (dataunit) scversion
-!! then the name of the crystal data file
-! write (dataunit) xtalname
-!! energy information etc...
-! write (dataunit) numEbins, numzbins, numsx, numsy, num_el*NUMTHREADS, NUMTHREADS
-! write (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
-! write (dataunit) sig, omega
-! write (dataunit) MCmode
-!! and here are the actual results
-! write (dataunit) accum_e
-! write (dataunit) accum_z
+!
+! Initialize FORTRAN interface.
+!
+call h5open_f(hdferr)
 
-read (dataunit) oldprogname
-read (dataunit) MCscversion
-read (dataunit) xtalname
+! first of all, if the file exists, then delete it and rewrite it on each energyloop
+inquire(file=trim(emnl%energyfile), exist=f_exists)
 
-read(dataunit) numEbins, numzbins, nsx, nsy, num_el ! , MCnthreads
+if (.not.f_exists) then
+  call FatalError('ComputeMasterPattern','Monte Carlo input file does not exist')
+end if
+
+! open the MC file using the default properties.
+readonly = .TRUE.
+hdferr =  HDF_openFile(emnl%energyfile, HDF_head, HDF_tail, readonly)
+
+! open the namelist group
+groupname = 'NMLparameters'
+hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
+
+groupname = 'MCCLNameList'
+hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
+
+! read all the necessary variables from the namelist group
+dataset = 'xtalname'
+stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head, HDF_tail)
+xtalname = trim(stringarray(1))
+
+dataset = 'numsx'
+nsx = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
 nsx = (nsx - 1)/2
-nsy = (nsy - 1)/2
+nsy = nsx
 
-! MCnthreads = 8
+dataset = 'EkeV'
+EkeV = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+
+dataset = 'Ehistmin'
+Ehistmin = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+
+dataset = 'Ebinsize'
+Ebinsize = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+
+dataset = 'depthmax'
+depthmax = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+
+dataset = 'depthstep'
+depthstep = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+
+! close the name list group
+call HDF_pop(HDF_head)
+call HDF_pop(HDF_head)
+
+! open the Data group
+groupname = 'EMData'
+hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
+
+! read data items 
+dataset = 'numEbins'
+numEbins = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+
+dataset = 'numzbins'
+numzbins = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+
+dataset = 'totnum_el'
+num_el = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+
+allocate(accum_z(numEbins,numzbins,-nsx/10:nsx/10,-nsy/10:nsy/10),stat=istat)
+
+dataset = 'accum_z'
+dims4 =  (/ numEbins, numzbins, 2*(nsx/10)+1,2*(nsy/10)+1 /)
+accum_z = HDF_readDatasetIntegerArray4D(dataset, dims4, HDF_head, HDF_tail)
+
+! and close everything
+call HDF_pop(HDF_head,.TRUE.)
+
+! close the fortran interface
+call h5close_f(hdferr)
+
+! print some information to the console
 io_int(1:5) = (/ numEbins, numzbins, nsx, nsy, num_el /)
-call WriteValue(' NumEbins, numzbins, nsx, nsy, num_el',io_int,5,"(4I8,',',I8)")
+call WriteValue(' NumEbins, numzbins, nsx, nsy, num_el',io_int,5,"(4I8,', ',I14)")
 etotal = num_el 
 
-read (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
 io_real(1:5) = (/ EkeV, Ehistmin, Ebinsize, depthmax, depthstep /)
 call WriteValue(' EkeV, Ehistmin, Ebinsize, depthmax, depthstep ',io_real,5,"(4F10.5,',',F10.5)")
 
-read (dataunit) sig, omega
-read (dataunit) MCmode
-
-allocate(accum_e(numEbins,-nsx:nsx,-nsy:nsy),accum_z(numEbins,numzbins,-nsx/10:nsx/10,-nsy/10:nsy/10),stat=istat)
-read(dataunit) accum_e
-! actually, we do not yet need the accum_e array; that is for the actual EBSD image computation program
-! but we need to skip it in this unformatted file so that we can read the accum_z array ...
-deallocate(accum_e)
-
-read(dataunit) accum_z    ! we only need this array for the depth integrations
-
-close(dataunit,status='keep')
-call Message(' -> completed reading '//trim(emnl%energyfile), frm = "(A)")
+call Message(' -> completed reading '//trim(emnl%energyfile), frm = "(A//)")
 
 !=============================================
 !=============================================
@@ -682,8 +727,8 @@ groupname = 'EMData'
 hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
 
 dataset = 'xtalname'
-instring = xtalname
-hdferr = HDF_writeDatasetString(dataset, instring, HDF_head, HDF_tail)
+stringarray(1)= trim(xtalname)
+hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head, HDF_tail)
 
 dataset = 'numset'
 hdferr = HDF_writeDatasetInteger(dataset, numset, HDF_head, HDF_tail)
@@ -707,11 +752,11 @@ hdferr = HDF_writeDatasetIntegerArray1D(dataset, cell%ATOM_type(1:numset), numse
 
 dataset = 'squhex'
 if (usehex) then 
-  instring = 'hexago'
-  hdferr = HDF_writeDatasetString(dataset, instring, HDF_head, HDF_tail)
+  stringarray(1)= 'hexago'
+  hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head, HDF_tail)
 else
-  instring = 'square'
-  hdferr = HDF_writeDatasetString(dataset, instring, HDF_head, HDF_tail)
+  stringarray(1)= 'square'
+  hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head, HDF_tail)
 end if  
 
 dataset = 'sr'

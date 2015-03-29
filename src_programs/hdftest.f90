@@ -122,6 +122,14 @@ call HDF_pop(HDF_head)
 groupname = 'EMData'
 hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
 
+allocate(lines(1))
+lines(1) = 'This is line 1'
+!lines(2) = 'and this is line 2'
+dataset = 'StringTest'
+hdferr = HDF_writeDatasetStringArray(dataset, lines, 1, HDF_head, HDF_tail)
+deallocate(lines)
+
+
 intarr = (/ 1, 2, 3, 4, 5, 6, 7, 8 /)
 dataset = 'intarr1D'
 dims = shape(intarr)
@@ -189,6 +197,14 @@ call HDF_pop(HDF_head)
 ! open the EMData group
 groupname = 'EMData'
 hdferr = HDF_OpenGroup(groupname, HDF_head, HDF_tail)
+
+dataset = 'StringTest'
+lines = HDF_readDatasetStringArray(dataset, nlines, HDF_head, HDF_tail)
+do i=1,nlines
+  write (*,*) lines(i)
+end do
+deallocate(lines)
+
 
 dataname = 'intarr1D'
 rdintarr = HDF_readDatasetIntegerArray1D(dataname, dims, HDF_head, HDF_tail)

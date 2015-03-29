@@ -113,7 +113,8 @@ character(fnlen),INTENT(IN)                           :: prn
 integer                                               :: error, istat  ! error flag
 integer                                               :: i,ic,nlen 
 character(100)                                        :: c
-character(fnlen)                                      :: line, line2
+character(fnlen)                                      :: line 
+character(fnlen,kind=c_char)                          :: line2(1)
 
 
 ! create and open the EMheader group
@@ -121,43 +122,43 @@ istat = HDF_createGroup('EMheader', HDF_head, HDF_tail)
 
 ! version number /EMheader/Version 'character'
 line = 'Version'
-line2 = scversion
-error = HDF_writeDatasetString(line, line2, HDF_head, HDF_tail)
+line2(1) = scversion
+error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head, HDF_tail)
 
 ! execution data /EMheader/Date 'character'
 line = 'Date'
-line2 = dstr
-error = HDF_writeDatasetString(line, line2, HDF_head, HDF_tail)
+line2(1) = dstr
+error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head, HDF_tail)
 
 ! start time /EMheader/StartTime 'character'
 line = 'StartTime'
-line2 = tstrb
-error = HDF_writeDatasetString(line, line2, HDF_head, HDF_tail)
+line2(1) = tstrb
+error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head, HDF_tail)
 
 ! stop time /EMheader/StopTime 'character'
 line = 'StopTime'
-line2 = tstre
-error = HDF_writeDatasetString(line, line2, HDF_head, HDF_tail)
+line2(1) = tstre
+error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head, HDF_tail)
 
 ! program name /EMheader/ProgramName 'character'
 line = 'ProgramName'
-line2 = prn 
-error = HDF_writeDatasetString(line, line2, HDF_head, HDF_tail)
+line2(1) = prn 
+error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head, HDF_tail)
 
 ! user name /EMheader/UserName 'character'
 line = 'UserName'
-line2 = username
-error = HDF_writeDatasetString(line, line2, HDF_head, HDF_tail)
+line2(1) = username
+error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head, HDF_tail)
 
 ! user location /EMheader/UserLocation 'character'
 line = 'UserLocation'
-line2 = userlocn
-error = HDF_writeDatasetString(line, line2, HDF_head, HDF_tail)
+line2(1) = userlocn
+error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head, HDF_tail)
 
 ! user email /EMheader/UserEmail 'character'
 line = 'UserEmail'
-line2 = useremail
-error = HDF_writeDatasetString(line, line2, HDF_head, HDF_tail)
+line2(1) = useremail
+error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head, HDF_tail)
 
 ! hostname /EMheader/HostName 'character'
 call hostnm(c)
@@ -168,8 +169,8 @@ do i=1,nlen
    if (ic >= 65 .and. ic < 90) c(i:i) = char(ic+32) 
 end do 
 line = 'HostName'
-line2 = c
-error = HDF_writeDatasetString(line, line2, HDF_head, HDF_tail)
+line2(1) = c
+error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head, HDF_tail)
 if (error.ne.0) call HDF_handleError(error,'HDF_writeEMheader: unable to write HostName',.TRUE.)
 
 ! and close this group
@@ -466,10 +467,11 @@ end function HDF_createFile
 !> @param HDFname filename string
 !> @param HDF_head
 !> @param HDF_tail
+!> @param readonly (optional) file open mode
 !
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_openFile(HDFname, HDF_head, HDF_tail) result(success)
+function HDF_openFile(HDFname, HDF_head, HDF_tail, readonly) result(success)
 
 use local
 
@@ -478,14 +480,18 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: HDFname
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+logical,INTENT(IN),OPTIONAL                             :: readonly
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: file_id ! file identifier
 integer                                                 :: error  ! error flag
 
 success = 0
-
-call H5Fopen_f(HDFname, H5F_ACC_RDWR_F, file_id, error);
+if (present(readonly)) then 
+  call H5Fopen_f(trim(HDFname), H5F_ACC_RDONLY_F, file_id, error)
+else
+  call H5Fopen_f(trim(HDFname), H5F_ACC_RDWR_F, file_id, error)
+end if
 if (error.ne.0) then 
   call HDF_handleError(error,'HDF_openFile')
   success = -1
@@ -772,9 +778,9 @@ character(len=fnlen, KIND=c_char), allocatable               :: stringarray(:)
 integer(kind=irg)                                            :: i, j, dt
 character(len=fnlen, KIND=c_char), DIMENSION(1)              :: line 
 
-dt = 30
+dt = 55
 ! read the file first to determine the number of lines
-open(unit=dt,file=trim(filename),form='formatted',status='old')
+open(unit=dt,file=trim(filename),action='read',form='formatted',status='old')
 nlines = 0
 do
   read (dt,"(A)",end=10) line(1)
@@ -784,7 +790,7 @@ end do
 
 ! then re-read the file and store all the lines in the wdata array
 allocate(stringarray(1:nlines))
-open(unit=dt,file=trim(filename),form='formatted',status='old')
+open(unit=dt,file=trim(filename),action='read',form='formatted',status='old')
 do i=1,nlines
 ! initialize the line to null characters before each read
   do j=1,fnlen
@@ -794,6 +800,8 @@ do i=1,nlines
   read (dt,"(A)") line(1)
 ! find the string length and put the next character equal to C_NULL_CHAR
   j = len(trim(line(1)))+1
+! truncate a line if it has more than fnlen characters
+  if (j.gt.fnlen) j = fnlen
   line(1)(j:j) = C_NULL_CHAR
 ! store the line in the array
   stringarray(i) = line(1)
@@ -814,7 +822,7 @@ end function HDF_readfromTextfile
 !> @note Note that this routine uses fortran-2003 options
 !
 !> @param dataname dataset name (string)
-!> @param nlines number of lines read from file
+!> @param nlines number of lines in string array
 !> @param HDF_head
 !> @param HDF_tail
 !
@@ -841,19 +849,13 @@ character(len = fnlen, kind=c_char),  POINTER           :: pfstr ! A pointer to 
 TYPE(C_PTR), DIMENSION(:), ALLOCATABLE, TARGET          :: rdata ! Read buffer
 TYPE(C_PTR)                                             :: f_ptr
 
-
-! we'll assume that the file is opened by the calling program
-
-!
 ! Open dataset.
 !
 hdferr = HDF_openDataset(dataname, HDF_head, HDF_tail)
-
 !
 ! Get the datatype.
 !
 call H5Dget_type_f(HDF_head%objectID, filetype, hdferr)
-
 !
 ! Get dataspace and allocate memory for read buffer.
 !
@@ -877,7 +879,6 @@ DO i = 1, dims(1)
      length = length + 1
   ENDDO
   stringarray(i) = pfstr(1:length)
-!     WRITE(*,'(A,"(",I0,"): ",I4," characters : ",A)') trim(DATASET), i, length, data(1:length)
 END DO
 
 nlines = dims(1)
@@ -892,14 +893,13 @@ call HDF_pop(HDF_head)
 
 end function HDF_readDatasetStringArray
 
-
 !--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_writeDatasetString
+! FUNCTION:HDF_writeDatasetStringArray
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief write a text file data set to the current file or group ID 
+!> @brief write a string array
 !
 !> @note Note that this routine uses fortran-2003 options
 !
@@ -910,78 +910,66 @@ end function HDF_readDatasetStringArray
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetString(dataname, instring, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetStringArray(dataname, stringarray, nlines, HDF_head, HDF_tail) result(success)
 
 use ISO_C_BINDING
 
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-character(fnlen),INTENT(IN)                             :: instring
+character(len=fnlen, KIND=c_char),TARGET                :: stringarray(nlines) 
+integer(kind=irg),INTENT(IN)                            :: nlines
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
-character(len=fnlen, KIND=c_char),dimension(1), TARGET  :: stringarray 
-integer(kind=irg)                                       :: nlines
-
 integer(HSIZE_T)                                        :: dim0 
 integer(SIZE_T)                                         :: sdim 
 integer(HID_T)                                          :: filetype, space, dset ! Handles
-integer                                                 :: hdferr, i, j, rnk
+integer                                                 :: hdferr, i, rnk, l
 integer(HSIZE_T), DIMENSION(1:1)                        :: dims
 integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
 
-TYPE(C_PTR), dimension(1), TARGET                       :: wdata
+TYPE(C_PTR), ALLOCATABLE, TARGET                        :: wdata(:)
 TYPE(C_PTR)                                             :: f_ptr
 
 success = 0
 
-! insert a C_NULL_CHAR at the right place
-! (need to deal with variable length)
-dims(1) = len(trim(instring))
-
-do j=1,fnlen
-  if (j.le.dims(1)) then
-    stringarray(1)(j:j) = instring(j:j)
-  else
-    stringarray(1)(j:j) = char(0)
-  end if
-end do
-j = dims(1)+1
-stringarray(1)(j:j) = C_NULL_CHAR
-
 ! first, convert the stringarray to an array of C-pointers, with each string
 ! terminated by a C_NULL_CHAR.
-wdata(1) = C_LOC(stringarray)
+dims(1) = nlines
+allocate(wdata(1:dims(1)))
+do i=1,dims(1)
+  l = len(trim(stringarray(i)))+1
+  stringarray(i)(l:l) = C_NULL_CHAR
+  wdata(i) = C_LOC(stringarray(i)(1:1))
+end do
 
 ! then we write this C_ptr to the HDF file in the proper data set
 
 ! first create the memory data type (filetype)
 call H5Tcopy_f(H5T_STRING, filetype, hdferr)
 if (hdferr.ne.0) then
-  call HDF_handleError(hdferr,'HDF_writeDatasetString',.TRUE.)
+  call HDF_handleError(hdferr,'HDF_writeDatasetStringArray',.TRUE.)
   success = -1
 end if
 !
 ! Create dataspace.
 !
 rnk = 1
-dims(1) = 1
 call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
 call h5dcreate_f(HDF_head%objectID, trim(dataname), filetype, space, dset, hdferr)
 if (hdferr.ne.0) then
-  call HDF_handleError(hdferr,'HDF_writeDatasetString:hd5create_f',.TRUE.)
+  call HDF_handleError(hdferr,'HDF_writeDatasetStringArray:hd5create_f',.TRUE.)
   success = -1
 end if
-
 f_ptr = C_LOC(wdata(1))
 call h5dwrite_f(dset, filetype, f_ptr, hdferr )
 if (hdferr.ne.0) then
-  call HDF_handleError(hdferr,'HDF_writeDatasetString:hd5write_f',.TRUE.)
+  call HDF_handleError(hdferr,'HDF_writeDatasetStringArray:hd5write_f',.TRUE.)
   success = -1
 end if
 !
@@ -989,10 +977,11 @@ end if
 !
 call h5dclose_f(dset , hdferr)
 call h5sclose_f(space, hdferr)
+deallocate(wdata)
 
 ! that's it
 
-end function HDF_writeDatasetString
+end function HDF_writeDatasetStringArray
 
 !--------------------------------------------------------------------------
 !
@@ -1439,6 +1428,79 @@ call h5sclose_f(space, hdferr)
 ! that's it
 
 end function HDF_writeDatasetFloat
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_writeDatasetDouble
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief write a single precision array data set to the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param fltval real 
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_writeDatasetDouble(dataname, dblval, HDF_head, HDF_tail) result(success)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+real(kind=dbl),INTENT(IN)                               :: dblval
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer(kind=irg)                                       :: success
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T), DIMENSION(1:1)                        :: dims
+
+real(real_kind), dimension(1:1), TARGET                 :: wdata
+TYPE(C_PTR)                                             :: f_ptr
+
+success = 0
+
+dims(1) = 1
+wdata(1) = dblval
+
+! get a C pointer to the integer array
+f_ptr = C_LOC(wdata(1))
+
+! Create dataspace.
+!
+rnk = 1
+call h5screate_simple_f(rnk, dims, space, hdferr)
+!
+! Create the dataset and write the variable-length string data to it.
+!
+call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
+if (hdferr.ne.0) then
+  call HDF_handleError(hdferr,'HDF_writeDatasetDouble:hd5create_f',.TRUE.)
+  success = -1
+end if
+
+call h5dwrite_f(dset, H5T_NATIVE_DOUBLE, f_ptr, hdferr )
+if (hdferr.ne.0) then
+  call HDF_handleError(hdferr,'HDF_writeDatasetDouble:hd5write_f',.TRUE.)
+  success = -1
+end if
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_writeDatasetDouble
 
 
 
@@ -2047,6 +2109,57 @@ call h5sclose_f(space, hdferr)
 
 end function HDF_writeDatasetDoubleArray4D
 
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readDatasetInteger
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns an integer data set from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readDatasetInteger(dataname, HDF_head, HDF_tail) result(rdata)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer,  TARGET                                        :: rdata
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr
+
+TYPE(C_PTR)                                             :: f_ptr
+
+! open the data set
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+! get dataspace and allocate memory for read buffer 
+call h5dget_space_f(dset,space, hdferr)
+!
+! Read the data.
+!
+f_ptr = C_LOC(rdata)
+call h5dread_f( dset, H5T_NATIVE_INTEGER, f_ptr, hdferr)
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_readDatasetInteger
+
 
 !--------------------------------------------------------------------------
 !
@@ -2275,6 +2388,59 @@ call h5sclose_f(space, hdferr)
 ! that's it
 
 end function HDF_readDatasetIntegerArray4D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readDatasetFloat
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a float data set from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readDatasetFloat(dataname, HDF_head, HDF_tail) result(rdata)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
+
+character(fnlen),INTENT(IN)                             :: dataname
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+real(real_kind), TARGET                                 :: rdata
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr
+
+TYPE(C_PTR)                                             :: f_ptr
+
+! open the data set
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+! get dataspace and allocate memory for read buffer 
+call h5dget_space_f(dset,space, hdferr)
+
+! Read the data.
+!
+f_ptr = C_LOC(rdata)
+call h5dread_f( dset, H5T_NATIVE_REAL, f_ptr, hdferr)
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_readDatasetFloat
 
 !--------------------------------------------------------------------------
 !
@@ -2511,6 +2677,60 @@ call h5sclose_f(space, hdferr)
 ! that's it
 
 end function HDF_readDatasetFloatArray4D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readDatasetDouble
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a double data set from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readDatasetDouble(dataname, HDF_head, HDF_tail) result(rdata)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
+
+character(fnlen),INTENT(IN)                             :: dataname
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+real(real_kind), TARGET                                 :: rdata
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr
+
+TYPE(C_PTR)                                             :: f_ptr
+
+! open the data set
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+! get dataspace and allocate memory for read buffer 
+call h5dget_space_f(dset,space, hdferr)
+
+! Read the data.
+!
+f_ptr = C_LOC(rdata)
+call h5dread_f( dset, H5T_NATIVE_DOUBLE, f_ptr, hdferr)
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_readDatasetDouble
+
 
 !--------------------------------------------------------------------------
 !
