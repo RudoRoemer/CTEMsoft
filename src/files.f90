@@ -43,8 +43,8 @@
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
 !> @date   01/10/14 MDG 4.0 update after new cell type
+!> @date   03/29/15 MDg 5.0 reformatted xtal files in HDF5 format; removed obsolete routines
 !--------------------------------------------------------------------------
-
 
 module files
 
@@ -153,8 +153,9 @@ end subroutine DumpXtalInfo
 !> @date   03/25/13 MDG 3.0 updated IO
 !> @date   01/10/14 MDG 4.0 update after new cell type
 !> @date   06/06/14 MDG 4.1 added cell pointer and loadingfile arguments
+!> @date   03/30/15 MDG 5.0 changed file format to HDF; always assume that the file exists
 !--------------------------------------------------------------------------
-subroutine CrystalData(cell, loadingfile, fname, stdout)
+subroutine CrystalData(cell)
 
 use io
 use crystal
@@ -163,145 +164,11 @@ use symmetry
 IMPLICIT NONE
 
 type(unitcell), pointer                 :: cell
-logical, INTENT(INOUT)                  :: loadingfile
-character(fnlen),OPTIONAL,INTENT(IN)    :: fname        !< optional file name
-integer(kind=irg),INTENT(IN),OPTIONAL   :: stdout
 
-integer(kind=irg)                       :: io_int(1), std
-logical                                 :: fr = .TRUE.
+integer(kind=irg)                       :: i, ipg, isave
 
- std = 6
- if (PRESENT(stdout)) std = stdout
+call ReadDataHDF(cell)
 
- loadingfile = .FALSE.
- if (PRESENT(fname)) then 
-  cell%fname = fname
-  loadingfile = .TRUE.
-  call ReadDataFile(cell,fr)
- else
-  call ReadValue(' Load file (0) or new data (1) ? ', io_int, 1)
-  call Message('', frm = "(A/)", stdout = std)
-  if (io_int(1).ne.0) then
-   cell%SYM_SGset=0
-   call GetLatParm(cell)
-   call CalcMatrices(cell)
-   call GetSpaceGroup(cell)
-   call GenerateSymmetry(cell,.TRUE.)
-   call GetAsymPos(cell)
-   call SaveData(cell)
-  else
-   loadingfile = .TRUE.
-   call ReadDataFile(cell)
-  end if
- end if
-
-end subroutine CrystalData
-
-!--------------------------------------------------------------------------
-!
-! SUBROUTINE: SaveData
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief save crystal structure data to file
-! 
-!> @todo This should be replaced with a text-based editable file format (.txt. or .xml)
-!
-!> @param cell unit cell pointer
-!
-!> @date    1/ 5/99 MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90 version
-!> @date   11/27/01 MDG 2.1 added kind support
-!> @date   03/25/13 MDG 3.0 updated IO
-!> @date   01/10/14 MDG 4.0 update after new cell type
-!> @date   06/06/14 MDG 4.1 added cell pointer argument
-!--------------------------------------------------------------------------
-subroutine SaveData(cell)
-
-use io
-use crystal
- 
-IMPLICIT NONE
-
-type(unitcell), pointer :: cell
-
-! call SafeOpenFile('xt','unformatted',cell%fname)
- open (dataunit,file=trim(cell%fname),status='unknown',form='unformatted')
-! save lattice parameters, crystal system, space group number and contents
-! of the asymmetric unit.
- write (dataunit) cell%xtal_system, cell%a,cell%b,cell%c,cell%alpha,cell%beta,cell%gamma
- write (dataunit) cell%ATOM_type, cell%ATOM_pos, cell%ATOM_ntype, cell%SYM_SGnum, cell%SYM_SGset
- call SafeCloseFile('xt','keep', cell%fname)
-
-end subroutine
-
-!--------------------------------------------------------------------------
-!
-! SUBROUTINE: ReadDataFile
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief  load crystal data in memory
-!
-!> @details Also converts the older file format to the current one.
-!
-!> @param cell unit cell pointer
-!> @param fr optional logical, passed on to SafeOpenFile routine
-! 
-!> @todo This should be replaced with a text-based editable file format (.txt. or .xml)
-!
-!> @date    1/ 5/99 MDG 1.0 original
-!> @date    5/19/01 MDG 2.0 f90 version
-!> @date   11/27/01 MDG 2.1 added kind support
-!> @date   03/25/13 MDG 3.0 updated IO
-!> @date   01/10/14 MDG 4.0 update after new cell type
-!> @date   06/06/14 MDG 4.1 added cell pointer argument
-!--------------------------------------------------------------------------
-subroutine ReadDataFile(cell,fr)
-
-use io
-use crystal
-use symmetry
-
-IMPLICIT NONE
-
-type(unitcell), pointer                 :: cell
-logical,optional,INTENT(IN)             :: fr                   !< logical 
-
-integer(kind=irg)                       :: i,ipg,isave,iost
-logical                                 :: fread = .TRUE.
-
-! the following variables are used for the older (smaller) xtal file format
-integer                                 :: ATOM_type(50),ATOM_ntype,SYM_SGnum,SYM_SGset
-real                                    :: ATOM_pos(50,5)
-
-
- if (present(fr)) fread=.FALSE.
-  
- call SafeOpenFile('xt','unformatted',cell%fname,fread)
- read (dataunit) cell%xtal_system, cell%a,cell%b,cell%c,cell%alpha,cell%beta,cell%gamma
- read (dataunit,iostat=iost) cell%ATOM_type, cell%ATOM_pos, cell%ATOM_ntype, cell%SYM_SGnum, cell%SYM_SGset
-
- if (iost.eq.0) then 
-   call SafeCloseFile('xt','keep',cell%fname,.TRUE.)   ! ok, this is a modern file with 100 max atom positions in asymmetric unit
- else ! this a legacy input file with only 50 maximum atom positions in the asymmetric unit cell... conversion is needed
-! close the file first, then re-open it and read with alternative variables
-   call Message('Found a data file of the old format; converting to new format', frm = "(A)")
-   call SafeCloseFile('xt','keep',cell%fname,.TRUE.)     
-   call SafeOpenFile('xt','unformatted',cell%fname,.FALSE.)
-   read (dataunit) cell%xtal_system, cell%a,cell%b,cell%c,cell%alpha,cell%beta,cell%gamma
-   read (dataunit,iostat=iost) ATOM_type, ATOM_pos, ATOM_ntype, SYM_SGnum, SYM_SGset
-   call SafeCloseFile('xt','keep',cell%fname)     
-! and copy them into the new arrays
-   cell%ATOM_type(1:50) = ATOM_type(1:50)
-   cell%ATOM_pos(1:50,1:5) = ATOM_pos(1:50,1:5)
-   cell%ATOM_ntype = ATOM_ntype
-   cell%SYM_SGnum = SYM_SGnum
-   cell%SYM_SGset = SYM_SGset
-   call SaveData(cell)
-   call Message('Conversion complete', frm = "(A)")
- end if
- 
 ! strucdef = .TRUE.
  cell%hexset = .FALSE.
  if (cell%xtal_system.eq.4) cell%hexset = .TRUE.
@@ -334,166 +201,215 @@ real                                    :: ATOM_pos(50,5)
 ! and print the information on the screen
  call DumpXtalInfo(cell)
 
-end subroutine
+end subroutine CrystalData
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE: SafeOpenFile
+! SUBROUTINE: SaveDataHDF
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief  open a data file
-!
-!> @details based on example 10-1 in Stephen Chapman''s Fortran 90/95 book.
-!
-!> @param ftyp file type identifier
-!> @param frm string to indicate file format (formatted, unformatted)
-!> @param fname file name
-!> @param fread optional logical
-!> @param stdout optional output unit identifier
+!> @brief save crystal structure data to an HDF file
 ! 
-!> @todo This should be replaced with a text-based editable file format (.txt. or .xml)
+!> @param cell unit cell pointer
 !
-!> @date 1/5/99   MDG 1.0 original
+!> @date    1/ 5/99 MDG 1.0 original
 !> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
-!> @date   06/06/14 MDG 4.0 added stdout argument
+!> @date   01/10/14 MDG 4.0 update after new cell type
+!> @date   06/06/14 MDG 4.1 added cell pointer argument
+!> @date   03/29/15 MDG 5.0 branched from old version; HDF support 
 !--------------------------------------------------------------------------
-subroutine SafeOpenFile(ftyp,frm,fname,fread, loadingfile, stdout)
+subroutine SaveDataHDF(cell)
 
-use error
 use io
-
+use crystal
+use HDF5
+use HDFsupport
+ 
 IMPLICIT NONE
 
-character(2),INTENT(IN)                 :: ftyp         !< selects the logical unit
-character(fnlen),INTENT(INOUT)          :: fname        !< file name string
-character(*),INTENT(IN)                 :: frm          !< formatting option
-logical,OPTIONAL,INTENT(IN)             :: fread        !< read if .TRUE., write if .FALSE.
-logical,INTENT(INOUT),OPTIONAL          :: loadingfile
-integer(kind=irg),INTENT(IN),OPTIONAL	  :: stdout
+type(unitcell), pointer, INTENT(IN)     :: cell
 
-character(1)                            :: ans
-logical                                 :: lexist,lopen 
-integer(kind=irg)                       :: iunit, std
+type(HDFobjectStackType),pointer        :: HDF_head
+type(HDFobjectStackType),pointer        :: HDF_tail
 
- std = 6
- if (PRESENT(stdout)) std = stdout
+character(11)                           :: dstr
+character(15)                           :: tstr
+character(fnlen)                        :: progname = 'EMmkxtal.f90', groupname, dataset, fname
+integer(kind=irg)                       :: hdferr
+real(kind=dbl)                          :: cellparams(6)
+integer(kind=irg),allocatable           :: atomtypes(:)
+real(kind=sgl),allocatable              :: atompos(:,:)
 
- select case (ftyp)
-  case('xt'); iunit = dataunit
-  case('d1'); iunit = dataunit
-  case('d2'); iunit = dataunit2
-  case('d3'); iunit = dataunit3
-  case('ps'); iunit = psunit
- end select
+nullify(HDF_head)
+nullify(HDF_tail)
 
- lopen = .FALSE.
- openfile: do while(.not.lopen)  ! repeat this attempt until we have an open file
+! Initialize FORTRAN interface.
+!
+CALL h5open_f(hdferr)
 
-! get filename
-  if (PRESENT(fread)) then
-   if (fread.eqv..TRUE.) then ! get the input filename 
-    call ReadValue(' Enter input file name : ', fname,"(A)", stdout = std)
-   end if
-  else
-   call ReadValue(' Enter output file name : ', fname, "(A)", stdout = std)
-  end if
+call timestamp(datestring=dstr, timestring=tstr)
 
-! does file already exist ?
-  inquire(file=trim(fname),exist=lexist)
-  if ((.not.lexist).and.(loadingfile)) call FatalError('SafeOpenFile ',' input file does not exist ')
-  
-  exists: if (.not.lexist) then
-! ok, file does not already exist, so open it
-    open(unit=iunit,file=trim(fname),status='new',action='write',form=frm)
-    lopen = .TRUE.
-  else
-! file exists.  Should we replace it or read it ?
-   if (PRESENT(fread)) then  ! file exists and we op to read it
-     open(unit=iunit,file=trim(fname),status='old',action='read',form = frm)
-     lopen = .TRUE.
-   else  ! file exists and we need to write, so ask what to do
-    call ReadValue(' Output file exists.  Overwrite it ? (y/n) ', ans,"(A1)", stdout = std)
-    replace: if ((ans == 'Y').or.(ans == 'y')) then
-! open file for writing 
-     open(unit=iunit,file=trim(fname),status='replace',action='write',form = frm)
-     lopen = .TRUE.
-    end if replace
-   end if
-  end if exists
+call getenv("EMsoftxtalpath",xtalpathname)
+fname = trim(xtalpathname)//'/'//trim(cell%fname)
+hdferr =  HDF_createFile(fname, HDF_head, HDF_tail)
 
- end do openfile
+groupname = 'CrystalData'
+hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+dataset = 'ProgramName'
+hdferr = HDF_writeDatasetStringArray(dataset, progname, 1, HDF_head, HDF_tail)
 
+dataset = 'CreationDate'
+hdferr = HDF_writeDatasetStringArray(dataset, dstr, 1, HDF_head, HDF_tail)
 
- if (lopen) then ! ok, file is open, so we print a message
-  if (PRESENT(fread)) then
-   call Message('  File '//trim(fname)//' open for input ', frm = "(A)", stdout = std)
-  else
-   call Message('  File '//trim(fname)//' open for output ', frm = "(A)", stdout = std)
-  end if
- end if
+dataset = 'CreationTime'
+hdferr = HDF_writeDatasetStringArray(dataset, tstr, 1, HDF_head, HDF_tail)
 
-end subroutine SafeOpenFile
+dataset = 'Creator'
+hdferr = HDF_writeDatasetStringArray(dataset, username, 1, HDF_head, HDF_tail)
+
+dataset = 'CrystalSystem'
+hdferr = HDF_writeDatasetInteger(dataset, cell%xtal_system, HDF_head, HDF_tail)
+
+dataset = 'LatticeParameters'
+cellparams = (/ cell%a, cell%b, cell%c, cell%alpha, cell%beta, cell%gamma /)
+hdferr = HDF_writeDatasetDoubleArray1D(dataset, cellparams, 6, HDF_head, HDF_tail)
+
+dataset = 'SpaceGroupNumber'
+hdferr = HDF_writeDatasetInteger(dataset, cell%SYM_SGnum, HDF_head, HDF_tail)
+
+dataset = 'SpaceGroupSetting'
+hdferr = HDF_writeDatasetInteger(dataset, cell%SYM_SGset, HDF_head, HDF_tail)
+
+dataset = 'Natomtypes'
+hdferr = HDF_writeDatasetInteger(dataset, cell%ATOM_ntype, HDF_head, HDF_tail)
+
+allocate(atomtypes(cell%ATOM_ntype))
+atomtypes(1:cell%ATOM_ntype) = cell%ATOM_type(1:cell%ATOM_ntype)
+dataset = 'Atomtypes'
+hdferr = HDF_writeDatasetIntegerArray1D(dataset, atomtypes, cell%ATOM_ntype, HDF_head, HDF_tail)
+deallocate(atomtypes)
+
+allocate(atompos(cell%ATOM_ntype,5))
+atompos(1:cell%ATOM_ntype,1:5) = cell%ATOM_pos(1:cell%ATOM_ntype,1:5)
+dataset = 'AtomData'
+hdferr = HDF_writeDatasetFloatArray2D(dataset, atompos, cell%ATOM_ntype, 5, HDF_head, HDF_tail)
+deallocate(atompos)
+
+call HDF_pop(HDF_head,.TRUE.)
+
+call h5close_f(hdferr)
+
+end subroutine SaveDataHDF
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE: SafeCloseFile
+! SUBROUTINE: ReadDataHDF
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief  close a data file
-!
-!> @param ftyp file type identifier
-!> @param stt string to indicate file status (discard or keep)
-!> @param fname file name
-!> @param quiet optional logical to prevent output
-!> @param stdout output unit identifier
+!> @brief read crystal structure data from an HDF file
 ! 
-!> @todo This should be replaced with a text-based editable file format (.txt. or .xml)
+!> @param cell unit cell pointer
 !
-!> @date   01/05/99 MDG 1.0 original
-!> @date   05/19/01 MDG 2.0 f90 version
+!> @date    1/ 5/99 MDG 1.0 original
+!> @date    5/19/01 MDG 2.0 f90 version
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
-!> @date   06/08/14 MDG 4.0 added stdout argument
+!> @date   01/10/14 MDG 4.0 update after new cell type
+!> @date   06/06/14 MDG 4.1 added cell pointer argument
+!> @date   03/29/15 MDG 5.0 branched from old version; HDF support 
 !--------------------------------------------------------------------------
-subroutine SafeCloseFile(ftyp,stt,fname,quiet,stdout)
+subroutine ReadDataHDF(cell)
 
 use io
-use error
-
+use crystal
+use HDF5
+use HDFsupport
+ 
 IMPLICIT NONE
 
-character(2),INTENT(IN)                 :: ftyp         !< file type identifier
-character(*),INTENT(IN)                 :: stt          !< status string
-character(fnlen),INTENT(IN)             :: fname        !< file name
-logical,OPTIONAL,INTENT(IN)             :: quiet        !< logical verbose or not
-integer(kind=irg),OPTIONAL,INTENT(IN)   :: stdout       !< output unit identifier 
+type(unitcell), pointer, INTENT(IN)     :: cell
 
-integer(kind=irg)                       :: iunit,ier,std
+type(HDFobjectStackType),pointer        :: HDF_head
+type(HDFobjectStackType),pointer        :: HDF_tail
 
-std = 6
-if (PRESENT(stdout)) std = stdout
+character(fnlen)                        :: dataset, groupname, fname
+integer(HSIZE_T)                        :: dims(1), dims2(2)
+integer(kind=irg)                       :: hdferr
+real(kind=dbl)                          :: cellparams(6)
+integer(kind=irg),allocatable           :: atomtypes(:)
+real(kind=sgl),allocatable              :: atompos(:,:)
 
- select case (ftyp)
-  case('xt'); iunit = dataunit
-  case('d1'); iunit = dataunit
-  case('d2'); iunit = dataunit2
-  case('d3'); iunit = dataunit3
-  case('ps'); iunit = psunit
- end select
+nullify(HDF_head)
+nullify(HDF_tail)
 
- close(unit=iunit,status=stt,iostat=ier)
+call h5open_f(hdferr)
 
- if (ier.ne.0) call FatalError('SafeCloseFile',' data file NOT saved', stdout = std)
+call getenv("EMsoftxtalpath",xtalpathname)
+fname = trim(xtalpathname)//'/'//trim(cell%fname)
+hdferr =  HDF_openFile(fname, HDF_head, HDF_tail)
 
- if (.not.present(quiet)) then
-  call Message(' Data has been stored in file '//trim(fname), frm = "(A)", stdout = std)
- end if
- 
-end subroutine SafeCloseFile
+groupname = 'CrystalData'
+hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
+
+dataset = 'CrystalSystem'
+cell%xtal_system = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+
+dataset = 'LatticeParameters'
+cellparams = HDF_readDatasetDoubleArray1D(dataset, dims, HDF_head, HDF_tail)
+cell%a = cellparams(1)
+cell%b = cellparams(2)
+cell%c = cellparams(3)
+cell%alpha = cellparams(4)
+cell%beta = cellparams(5)
+cell%gamma = cellparams(6)
+
+dataset = 'SpaceGroupNumber'
+cell%SYM_SGnum = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+
+dataset = 'SpaceGroupSetting'
+cell%SYM_SGset = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+
+dataset = 'Natomtypes'
+cell%ATOM_ntype = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+
+dataset = 'Atomtypes'
+atomtypes = HDF_readDatasetIntegerArray1D(dataset, dims, HDF_head, HDF_tail)
+cell%ATOM_type(1:cell%ATOM_ntype) = atomtypes(1:cell%ATOM_ntype) 
+deallocate(atomtypes)
+
+dataset = 'AtomData'
+atompos = HDF_readDatasetFloatArray2D(dataset, dims2, HDF_head, HDF_tail)
+cell%ATOM_pos(1:cell%ATOM_ntype,1:5) = atompos(1:cell%ATOM_ntype,1:5) 
+deallocate(atompos)
+
+call HDF_pop(HDF_head,.TRUE.)
+
+call h5close_f(hdferr)
+
+end subroutine ReadDataHDF
+
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: ReadDataFile ---> obsolete and removed 03/30/15
+!
+!--------------------------------------------------------------------------
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: SafeOpenFile  ---> obsolete and removed 03/30/15
+!
+!--------------------------------------------------------------------------
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: SafeCloseFile ---> obsolete and removed 03/30/15
+!
+!--------------------------------------------------------------------------
 
 !--------------------------------------------------------------------------
 !

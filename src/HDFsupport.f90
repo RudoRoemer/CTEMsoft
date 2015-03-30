@@ -48,14 +48,16 @@
 !
 !> @date  03/17/15 MDG 1.0 original
 !> @date  03/27/15 MDG 1.1 added integer and real write routines
+!> @date  03/29/15 MDG 1.2 removed all h5lt routines
 !--------------------------------------------------------------------------
 module HDFsupport
 
 use local
 use typedefs
 use HDF5
-use h5lt
 
+
+private :: HDF_readfromTextfile, HDF_push, HDF_stackdump
 
 contains
 
@@ -181,7 +183,10 @@ end subroutine HDF_writeEMheader
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
-! from here on, we have basic HDF support routines
+! to avoid user usage of file, group, dataset, etc, IDs, we use a push-pop
+! stack to keep track of the open items and close them again.  The only 
+! price to pay for doing things this way, is that the output must be written
+! in a particular order at first.
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------
@@ -415,6 +420,15 @@ if (.not.present(NonFatal)) STOP  ! this is not very graceful, but it'll do the 
 end subroutine HDF_handleError
 
 !--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+! from here on, we have basic HDF support routines
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+
+!--------------------------------------------------------------------------
 !
 ! SUBROUTINE:HDF_createFile
 !
@@ -594,30 +608,31 @@ end function HDF_openGroup
 !
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-!function HDF_createDataset(dataname, HDF_head, HDF_tail) result(success)
+function HDF_createDataset(dataname, HDF_head, HDF_tail) result(success)
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer(kind=irg)                                       :: success
 !
-!IMPLICIT NONE
+integer(HID_T)                                          :: data_id!  identifier
+integer                                                 :: error  ! error flag
 !
-!character(fnlen),INTENT(IN)                             :: dataname
-!type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-!type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
-!integer(kind=irg)                                       :: success
-!
-!integer(HID_T)                                          :: data_id!  identifier
-!integer                                                 :: error  ! error flag
-!
-!success = 0
+success = 0
 !
 !call H5dcreate_f(HDF_head%objectID, dataname, data_id, error)
-!if (error.ne.0) then
-!  call HDF_handleError(error,'HDF_createDataset')
-!  success = -1
-!else
-!! and put the data_id onto the HDF_stack
-!  call HDF_push(HDF_head, HDF_tail, 'd', data_id)
-!end if
-!
-!end function HDF_createDataset
+error = -1
+if (error.ne.0) then
+  call HDF_handleError(error,'HDF_createDataset')
+  success = -1
+else
+! and put the data_id onto the HDF_stack
+  call HDF_push(HDF_head, HDF_tail, 'd', data_id)
+end if
+
+end function HDF_createDataset
 
 !--------------------------------------------------------------------------
 !
@@ -753,7 +768,7 @@ end function HDF_writeDatasetTextFile
 
 !--------------------------------------------------------------------------
 !
-! F?UNCTION:HDF_readfromTextfile
+! FUNCTION:HDF_readfromTextfile
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -892,6 +907,90 @@ call HDF_pop(HDF_head)
 
 
 end function HDF_readDatasetStringArray
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_extractDatasetTextfile
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read a string array from a data set and stores it as a text file 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param textfile name of output text file
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_extractDatasetTextfile(dataname, textfile, HDF_head, HDF_tail) result(success)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+character(fnlen),INTENT(IN)                             :: textfile
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer(kind=irg)                                       :: success
+
+integer(HID_T)                                          :: filetype, space ! Handles
+integer                                                 :: hdferr, i, length, dt
+integer(HSIZE_T), DIMENSION(1:1)                        :: dims
+integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+
+character(len = fnlen, kind=c_char),  POINTER           :: pfstr ! A pointer to a Fortran string
+TYPE(C_PTR), DIMENSION(:), ALLOCATABLE, TARGET          :: rdata ! Read buffer
+TYPE(C_PTR)                                             :: f_ptr
+
+! Open dataset.
+!
+hdferr = HDF_openDataset(dataname, HDF_head, HDF_tail)
+!
+! Get the datatype.
+!
+call H5Dget_type_f(HDF_head%objectID, filetype, hdferr)
+!
+! Get dataspace and allocate memory for read buffer.
+!
+call H5Dget_space_f(HDF_head%objectID, space, hdferr)
+call H5Sget_simple_extent_dims_f(space, dims, maxdims, hdferr)
+
+ALLOCATE(rdata(1:dims(1)))
+!
+! Read the data.
+!
+f_ptr = C_LOC(rdata(1))
+call h5dread_f(HDF_head%objectID, H5T_STRING, f_ptr, hdferr)
+!
+! store the datain a textfile
+!
+dt = 55
+open(unit=dt, file=trim(textfile), status='unknown', form='formatted')
+DO i = 1, dims(1)
+  call C_F_POINTER(rdata(i), pfstr)
+  length = 0
+  DO
+     IF(pfstr(length+1:length+1).EQ.C_NULL_CHAR.OR.length.GE.fnlen) EXIT
+     length = length + 1
+  ENDDO
+  write(dt,"(A)") pfstr(1:length)
+END DO
+close(unit=dt,status='keep')
+
+DEALLOCATE(rdata)
+
+call h5sclose_f(space, hdferr)
+call H5Tclose_f(filetype, hdferr)
+! close the dataset
+call HDF_pop(HDF_head)
+
+success = 0
+
+end function HDF_extractDatasetTextfile
 
 !--------------------------------------------------------------------------
 !

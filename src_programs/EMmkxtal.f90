@@ -38,6 +38,7 @@
 !
 !> @date   11/23/13 MDG 1.0 original
 !> @date   08/10/14 MDG 1.1 added GenerateSymmetry call
+!> @date   03/30/15 MDG 2.0 modified output to HDF format
 !--------------------------------------------------------------------------
 program EMmkxtal
 
@@ -54,7 +55,7 @@ type(unitcell), pointer         :: cell
 character(fnlen)                :: progname, progdesc, fname
 
  progname = 'EMmkxtal.f90'
- progdesc = 'Create a crystal structure file'
+ progdesc = 'Create an HDF crystal structure file'
  call EMsoft(progname, progdesc)
 
  allocate(cell)
@@ -66,12 +67,6 @@ character(fnlen)                :: progname, progdesc, fname
  call GetAsymPos(cell)
  call ReadValue('Enter output file name (*.xtal) ', fname)
  cell%fname = fname
- call SaveData(cell)
-
-
+ call SaveDataHDF(cell)
 
 end program EMmkxtal
-       
-
-
-

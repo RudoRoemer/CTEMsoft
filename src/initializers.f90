@@ -100,8 +100,8 @@ logical                                    :: loadingfile
 ! load the crystal structure file, which also computes all the important 
 ! matrices as well as all the symmetry arrays
  cell%SG%SYM_reduce=.TRUE.
- loadingfile = .FALSE.
- call CrystalData(cell,loadingfile,xtalname)
+ cell%fname = xtalname
+ call CrystalData(cell)
  cell%voltage = dble(voltage)
 
  skip = 3        ! always use Weickenmeier&Kohl scattering coefficients, including absorptive form factors

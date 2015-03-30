@@ -12,7 +12,7 @@ program hdftest
   IMPLICIT NONE
 
   CHARACTER(fnlen)             :: filename, groupname, dataname
-  CHARACTER(fnlen)             :: dataset
+  CHARACTER(fnlen)             :: dataset, textfile
   CHARACTER(fnlen)             :: nmlname = "CTEMKossel.nml"
 
   INTEGER(SIZE_T)              :: sdim 
@@ -31,12 +31,13 @@ program hdftest
   TYPE(C_PTR) :: f_ptr
 
   INTEGER                           :: i, j, length, nlines
-  integer(kind=irg)                 :: intarr(8), dim0, dim1, intarr2(3,3)
+  integer(kind=irg)                 :: intarr(8), dim0, dim1, intarr2(3,3), printflag
   real(kind=sgl)                    :: fltarr(8)
   real(kind=dbl)                    :: dblarr(8)
   integer(kind=irg),allocatable     :: rdintarr(:), rdintarr2(:,:)
   real(kind=sgl),allocatable        :: rdfltarr(:)
   real(kind=dbl),allocatable        :: rddblarr(:)
+  logical                           :: HDFstatus
 
   type(HDFobjectStackType),pointer  :: HDF_head
   type(HDFobjectStackType),pointer  :: HDF_tail
@@ -76,13 +77,30 @@ program hdftest
 !
 CALL h5open_f(hdferr)
 
+printflag = 0
+call h5eset_auto_f(printflag, hdferr)
+
+filename = 'doesnotexist.h5'
+call h5fis_hdf5_f(trim(filename), HDFstatus, hdferr) 
+write (*,*) filename,' HDF5 ? ',HDFstatus, hdferr
+
+filename = 'EMKossel.nml'
+call h5fis_hdf5_f(trim(filename), HDFstatus, hdferr) 
+write (*,*) filename,' HDF5 ? ',HDFstatus, hdferr
+
+filename = 'test.h5'
+call h5fis_hdf5_f(trim(filename), HDFstatus, hdferr) 
+write (*,*) filename,' HDF5 ? ',HDFstatus, hdferr
+
+stop
+
+
 call timestamp(datestring=dstr, timestring=tstrb)
 tstre = tstrb
 
 write (*,*) 'date = ', dstr
 
 ! Create a new file using the default properties.
-filename = 'test.h5'
 hdferr =  HDF_createFile(filename, HDF_head, HDF_tail)
 write (*,*) 'file created ',hdferr
 
@@ -190,6 +208,9 @@ do i=1,nlines
 end do
 deallocate(lines)
 
+textfile = './testtext.txt'
+hdferr = HDF_extractDatasetTextfile(dataname, textfile, HDF_head, HDF_tail)
+
 call HDF_pop(HDF_head)
 
 ! next, read one of the integer string arrays
@@ -204,7 +225,6 @@ do i=1,nlines
   write (*,*) lines(i)
 end do
 deallocate(lines)
-
 
 dataname = 'intarr1D'
 rdintarr = HDF_readDatasetIntegerArray1D(dataname, dims, HDF_head, HDF_tail)
@@ -241,4 +261,3 @@ call h5close_f(hdferr)
 
 
 end program hdftest
-

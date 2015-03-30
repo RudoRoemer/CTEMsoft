@@ -51,6 +51,7 @@
 !> @date 05/16/13 MDG 3.1 added stdout
 !> @date 01/10/14 MDG 4.0 new version
 !> @date 06/05/14 MDG 4.1 added comments about global variables in Release 3.0
+!> @date 03/29/14 MDG 4.2 added path variable for .xtal files (which are now HDF5 files)
 !--------------------------------------------------------------------------
 
 !---------------------------
@@ -117,6 +118,7 @@ module local
   character(fnlen)                      :: templatepathname 
   character(fnlen)                      :: resourcepathname
   character(fnlen)                      :: openclpathname
+  character(fnlen)                      :: xtalpathname
   character(17)                         :: templatecodefilename = 'templatecodes.txt'
 
 contains
