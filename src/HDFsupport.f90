@@ -49,13 +49,13 @@
 !> @date  03/17/15 MDG 1.0 original
 !> @date  03/27/15 MDG 1.1 added integer and real write routines
 !> @date  03/29/15 MDG 1.2 removed all h5lt routines
+!> @date  03/31/15 MDG 1.3 added support for arrays of c_chars
 !--------------------------------------------------------------------------
 module HDFsupport
 
 use local
 use typedefs
 use HDF5
-
 
 private :: HDF_readfromTextfile, HDF_push, HDF_stackdump
 
@@ -1081,6 +1081,296 @@ deallocate(wdata)
 ! that's it
 
 end function HDF_writeDatasetStringArray
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_writeDatasetCharArray1D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief write a 1D array of c_chars    [variable type H5T_STD_U8LE]
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param filename of the text file
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/31/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_writeDatasetCharArray1D(dataname, chararray, dim0, HDF_head, HDF_tail) result(success)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+!character(len=1, KIND=c_char),TARGET                    :: chararray(dim0) 
+character(len=1),TARGET                                 :: chararray(dim0) 
+integer(kind=irg),INTENT(IN)                            :: dim0
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer(kind=irg)                                       :: success
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, i, rnk, l
+integer(HSIZE_T), DIMENSION(1:1)                        :: dims
+
+TYPE(C_PTR), dimension(1:1), TARGET                     :: wdata
+TYPE(C_PTR)                                             :: f_ptr
+
+success = 0
+
+wdata(1) = C_LOC(chararray(1))
+dims(1) = dim0
+
+! then we write this C_ptr to the HDF file in the proper data set
+
+! Create dataspace.
+rnk = 1
+call h5screate_simple_f(rnk, dims, space, hdferr)
+!
+! Create the dataset and write the c_char data to it.
+!
+call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_U8LE, space, dset, hdferr)
+if (hdferr.ne.0) then
+  call HDF_handleError(hdferr,'HDF_writeDatasetCharArray1D:hd5create_f',.TRUE.)
+  success = -1
+end if
+
+call h5dwrite_f(dset, H5T_STD_U8LE, wdata(1), hdferr )
+if (hdferr.ne.0) then
+  call HDF_handleError(hdferr,'HDF_writeDatasetCharArray1D:hd5write_f',.TRUE.)
+  success = -1
+end if
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_writeDatasetCharArray1D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_writeDatasetCharArray2D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief write a 2D array of c_chars    [variable type H5T_STD_U8LE]
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param filename of the text file
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/31/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_writeDatasetCharArray2D(dataname, chararray, dim0, dim1, HDF_head, HDF_tail) result(success)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+character(len=1),TARGET                                 :: chararray(dim0, dim1) 
+integer(kind=irg),INTENT(IN)                            :: dim0
+integer(kind=irg),INTENT(IN)                            :: dim1
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer(kind=irg)                                       :: success
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, i, rnk, l
+integer(HSIZE_T), DIMENSION(1:2)                        :: dims
+
+TYPE(C_PTR), dimension(1:1), TARGET                     :: wdata
+
+success = 0
+
+wdata(1) = C_LOC(chararray(1,1))
+dims(1:2) = (/ dim0, dim1 /)
+
+! then we write this C_ptr to the HDF file in the proper data set
+
+! Create dataspace.
+rnk = 2
+call h5screate_simple_f(rnk, dims, space, hdferr)
+!
+! Create the dataset and write the c_char data to it.
+!
+call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_U8LE, space, dset, hdferr)
+if (hdferr.ne.0) then
+  call HDF_handleError(hdferr,'HDF_writeDatasetCharArray1D:hd5create_f',.TRUE.)
+  success = -1
+end if
+
+call h5dwrite_f(dset, H5T_STD_U8LE, wdata(1), hdferr )
+if (hdferr.ne.0) then
+  call HDF_handleError(hdferr,'HDF_writeDatasetCharArray1D:hd5write_f',.TRUE.)
+  success = -1
+end if
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_writeDatasetCharArray2D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_writeDatasetCharArray3D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief write a 3D array of c_chars    [variable type H5T_STD_U8LE]
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param filename of the text file
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/31/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_writeDatasetCharArray3D(dataname, chararray, dim0, dim1, dim2, HDF_head, HDF_tail) result(success)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+character(len=1),TARGET                                 :: chararray(dim0, dim1, dim2) 
+integer(kind=irg),INTENT(IN)                            :: dim0
+integer(kind=irg),INTENT(IN)                            :: dim1
+integer(kind=irg),INTENT(IN)                            :: dim2
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer(kind=irg)                                       :: success
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, i, rnk, l
+integer(HSIZE_T), DIMENSION(1:3)                        :: dims
+
+TYPE(C_PTR), dimension(1:3), TARGET                     :: wdata
+
+success = 0
+
+wdata(1) = C_LOC(chararray(1,1,1))
+dims(1:3) = (/ dim0, dim1, dim2 /)
+
+! then we write this C_ptr to the HDF file in the proper data set
+
+! Create dataspace.
+rnk = 3
+call h5screate_simple_f(rnk, dims, space, hdferr)
+!
+! Create the dataset and write the c_char data to it.
+!
+call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_U8LE, space, dset, hdferr)
+if (hdferr.ne.0) then
+  call HDF_handleError(hdferr,'HDF_writeDatasetCharArray1D:hd5create_f',.TRUE.)
+  success = -1
+end if
+
+call h5dwrite_f(dset, H5T_STD_U8LE, wdata(1), hdferr )
+if (hdferr.ne.0) then
+  call HDF_handleError(hdferr,'HDF_writeDatasetCharArray1D:hd5write_f',.TRUE.)
+  success = -1
+end if
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_writeDatasetCharArray3D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_writeDatasetCharArray4D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief write a 4D array of c_chars    [variable type H5T_STD_U8LE]
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param filename of the text file
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/31/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_writeDatasetCharArray4D(dataname, chararray, dim0, dim1, dim2, dim3, HDF_head, HDF_tail) result(success)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+character(len=1),TARGET                                 :: chararray(dim0, dim1, dim2, dim3) 
+integer(kind=irg),INTENT(IN)                            :: dim0
+integer(kind=irg),INTENT(IN)                            :: dim1
+integer(kind=irg),INTENT(IN)                            :: dim2
+integer(kind=irg),INTENT(IN)                            :: dim3
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer(kind=irg)                                       :: success
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, i, rnk, l
+integer(HSIZE_T), DIMENSION(1:4)                        :: dims
+
+TYPE(C_PTR), dimension(1:4), TARGET                     :: wdata
+
+success = 0
+
+wdata(1) = C_LOC(chararray(1,1,1,1))
+dims(1:4) = (/ dim0, dim1, dim2, dim3 /)
+
+! then we write this C_ptr to the HDF file in the proper data set
+
+! Create dataspace.
+rnk = 4
+call h5screate_simple_f(rnk, dims, space, hdferr)
+!
+! Create the dataset and write the c_char data to it.
+!
+call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_U8LE, space, dset, hdferr)
+if (hdferr.ne.0) then
+  call HDF_handleError(hdferr,'HDF_writeDatasetCharArray1D:hd5create_f',.TRUE.)
+  success = -1
+end if
+
+call h5dwrite_f(dset, H5T_STD_U8LE, wdata(1), hdferr )
+if (hdferr.ne.0) then
+  call HDF_handleError(hdferr,'HDF_writeDatasetCharArray1D:hd5write_f',.TRUE.)
+  success = -1
+end if
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_writeDatasetCharArray4D
+
+
 
 !--------------------------------------------------------------------------
 !
@@ -2207,6 +2497,238 @@ call h5sclose_f(space, hdferr)
 ! that's it
 
 end function HDF_writeDatasetDoubleArray4D
+
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readDatasetCharArray1D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 1D char array data set from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param dims dimensions of the array
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readDatasetCharArray1D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(OUT)                            :: dims(1)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+character(len=1), dimension(:), allocatable, TARGET     :: rdata
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+
+TYPE(C_PTR)                                             :: f_ptr
+
+! open the data set
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+! get dataspace and allocate memory for read buffer 
+call h5dget_space_f(dset,space, hdferr)
+call h5sget_simple_extent_dims_f(space, dims, maxdims, hdferr)
+
+allocate(rdata(1:dims(1)))
+!
+! Read the data.
+!
+f_ptr = C_LOC(rdata(1))
+call h5dread_f( dset, H5T_STD_U8LE, f_ptr, hdferr)
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_readDatasetCharArray1D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readDatasetCharArray2D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 2D char array data set from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param dims dimensions of the array
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readDatasetCharArray2D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(OUT)                            :: dims(2)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+character(len=1), dimension(:,:), allocatable, TARGET   :: rdata
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+
+TYPE(C_PTR)                                             :: f_ptr
+
+! open the data set
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+! get dataspace and allocate memory for read buffer 
+call h5dget_space_f(dset,space, hdferr)
+call h5sget_simple_extent_dims_f(space, dims, maxdims, hdferr)
+
+allocate(rdata(1:dims(1),1:dims(2)))
+!
+! Read the data.
+!
+f_ptr = C_LOC(rdata(1,1))
+call h5dread_f( dset, H5T_STD_U8LE, f_ptr, hdferr)
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_readDatasetCharArray2D
+
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readDatasetCharArray3D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 3D char array data set from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param dims dimensions of the array
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readDatasetCharArray3D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(OUT)                            :: dims(3)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+character(len=1), dimension(:,:,:), allocatable, TARGET :: rdata
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+
+TYPE(C_PTR)                                             :: f_ptr
+
+! open the data set
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+! get dataspace and allocate memory for read buffer 
+call h5dget_space_f(dset,space, hdferr)
+call h5sget_simple_extent_dims_f(space, dims, maxdims, hdferr)
+
+allocate(rdata(1:dims(1),1:dims(2),1:dims(3)))
+!
+! Read the data.
+!
+f_ptr = C_LOC(rdata(1,1,1))
+call h5dread_f( dset, H5T_STD_U8LE, f_ptr, hdferr)
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_readDatasetCharArray3D
+
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readDatasetCharArray4D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 4D char array data set from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param dims dimensions of the array
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 03/26/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readDatasetCharArray4D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(OUT)                            :: dims(4)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+character(len=1), dimension(:,:,:,:), allocatable, TARGET :: rdata
+
+integer(HID_T)                                          :: space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+
+TYPE(C_PTR)                                             :: f_ptr
+
+! open the data set
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+! get dataspace and allocate memory for read buffer 
+call h5dget_space_f(dset,space, hdferr)
+call h5sget_simple_extent_dims_f(space, dims, maxdims, hdferr)
+
+allocate(rdata(1:dims(1),1:dims(2),1:dims(3),1:dims(4)))
+!
+! Read the data.
+!
+f_ptr = C_LOC(rdata(1,1,1,1))
+call h5dread_f( dset, H5T_STD_U8LE, f_ptr, hdferr)
+!
+! Close and release resources.
+!
+call h5dclose_f(dset , hdferr)
+call h5sclose_f(space, hdferr)
+
+! that's it
+
+end function HDF_readDatasetCharArray4D
+
 
 !--------------------------------------------------------------------------
 !

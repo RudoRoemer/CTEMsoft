@@ -22,6 +22,12 @@ program hdftest
   INTEGER(HSIZE_T), DIMENSION(1:2) :: dims2
   INTEGER(HSIZE_T), DIMENSION(1:2) :: maxdims
   
+! character(len=1,kind=c_char)          :: chararr(256)
+  character(len=1)          :: chararr(256)
+  character(len=1)          :: chararr2(256,256)
+
+  character(len=1),allocatable :: rdchararr(:)
+
   TYPE(C_PTR), ALLOCATABLE, TARGET :: wdata(:)
   CHARACTER(len=fnlen, KIND=c_char), DIMENSION(1), TARGET  :: line 
   CHARACTER(len=fnlen, KIND=c_char), ALLOCATABLE, TARGET  :: lines(:) 
@@ -32,6 +38,7 @@ program hdftest
 
   INTEGER                           :: i, j, length, nlines
   integer(kind=irg)                 :: intarr(8), dim0, dim1, intarr2(3,3), printflag
+  integer*4                         :: i1, i2
   real(kind=sgl)                    :: fltarr(8)
   real(kind=dbl)                    :: dblarr(8)
   integer(kind=irg),allocatable     :: rdintarr(:), rdintarr2(:,:)
@@ -92,7 +99,6 @@ filename = 'test.h5'
 call h5fis_hdf5_f(trim(filename), HDFstatus, hdferr) 
 write (*,*) filename,' HDF5 ? ',HDFstatus, hdferr
 
-stop
 
 
 call timestamp(datestring=dstr, timestring=tstrb)
@@ -115,7 +121,7 @@ groupname = "NMLfiles"
 hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
 
 ! read the text file and write the array to the file
-nmlname = "CTEMKossel.nml"
+nmlname = "EMKossel.nml"
 dataset = 'KosselNML'
 hdferr = HDF_writeDatasetTextFile(dataset, nmlname, HDF_head, HDF_tail)
 
@@ -147,7 +153,6 @@ dataset = 'StringTest'
 hdferr = HDF_writeDatasetStringArray(dataset, lines, 1, HDF_head, HDF_tail)
 deallocate(lines)
 
-
 intarr = (/ 1, 2, 3, 4, 5, 6, 7, 8 /)
 dataset = 'intarr1D'
 dims = shape(intarr)
@@ -172,6 +177,26 @@ dataset = 'dblarr1D'
 dims = shape(dblarr)
 dim0 = dims(1)
 hdferr = HDF_writeDatasetDoubleArray1D(dataset, dblarr, dim0, HDF_head, HDF_tail)
+
+do i1=0,255
+  chararr(i1+1) = char(i1)
+end do
+
+dataset = 'chararray1D'
+dim0 = 256
+write (*,*) 'about to write chararray'
+hdferr = HDF_writeDatasetCharArray1D(dataset, chararr, dim0, HDF_head, HDF_tail)
+
+do i1=0,255
+ do i2=0,255
+  chararr2(i1+1,i2+1) = char(mod(i1+i2,256))
+ end do
+end do
+
+dataset = 'chararray2D'
+dim0 = 256
+write (*,*) 'about to write chararray2'
+hdferr = HDF_writeDatasetCharArray2D(dataset, chararr2, dim0, dim0, HDF_head, HDF_tail)
 
 
 call HDF_pop(HDF_head,.TRUE.)
@@ -249,6 +274,12 @@ rddblarr = HDF_readDatasetDoubleArray1D(dataname, dims, HDF_head, HDF_tail)
 
 write (*,*) 'shape of read dblarr = ',shape(rddblarr)
 write (*,*) rddblarr
+
+dataname = 'chararray1D'
+rdchararr = HDF_readDatasetCharArray1D(dataname, dims, HDF_head, HDF_tail)
+
+write (*,*) 'shape of chararray = ',shape(rdchararr)
+write (*,*) rdchararr
 
 
 
