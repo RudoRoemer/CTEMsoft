@@ -174,7 +174,8 @@ integer(kind=irg) 		        :: i			!< loop counter
    call Message('Opening temporary file for PostScript output', frm = "(A)")
  else
    loadingfile = .FALSE.
-   call SafeOpenFile('ps','formatted',PS%psname, loadingfile = loadingfile)
+!   call SafeOpenFile('ps','formatted',PS%psname, loadingfile = loadingfile)
+   open(unit=psunit,file=trim(PS%psname),status='unknown',form='formatted')
  end if
 
 ! write the preamble
@@ -227,7 +228,8 @@ type(postscript_type),INTENT(INOUT)    :: PS
  write (psunit,"(' %%EOF')")
  
 ! and close it
- call SafeCloseFile('ps','keep',PS%psname)
+! call SafeCloseFile('ps','keep',PS%psname)
+  close(unit=psunit,status='keep')
 
 end subroutine
 

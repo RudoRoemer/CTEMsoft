@@ -55,8 +55,8 @@ use diffraction
 
 logical                 :: topbot, loadingfile
 real(kind=sgl)          :: io_real(1), camlen
-integer(kind=irg)       :: imanum
-character(fnlen)        :: progname, progdesc
+integer(kind=irg)       :: imanum, io_int(1)
+character(fnlen)        :: progname, progdesc, gname
 type(unitcell),pointer  :: cell
 type(postscript_type)   :: PS
 type(gnode)             :: rlp
@@ -120,8 +120,9 @@ end interface
  topbot=.FALSE.
 
 ! read crystal information
- loadingfile = .TRUE.
- call CrystalData(cell, loadingfile)
+ call ReadValue(' Enter xtal file name : ', gname,"(A)")
+ cell%fname = gname
+ call CrystalData(cell)
  call GetVoltage(cell, rlp)
  call ReadValue(' Camera Length [mm, R] : ', io_real, 1)
  camlen = io_real(1)

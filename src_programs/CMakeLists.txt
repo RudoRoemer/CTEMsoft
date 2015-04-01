@@ -3,7 +3,7 @@ project(Apps)
 
 macro (Create_exe_and_tll INPUT)
 	ADD_EXECUTABLE(${INPUT} ${Apps_SOURCE_DIR}/${INPUT}.f90)
- 	TARGET_LINK_LIBRARIES(${INPUT} EMSoftLib gomp)
+ 	TARGET_LINK_LIBRARIES(${INPUT} EMSoftLib gomp gcc_eh)
 	
 	
 	set(install_dir "bin")

@@ -51,6 +51,7 @@
 !> @date 05/16/13 MDG 3.1 added stdout
 !> @date 01/10/14 MDG 4.0 new version
 !> @date 06/05/14 MDG 4.1 added comments about global variables in Release 3.0
+!> @date 03/29/14 MDG 4.2 added path variable for .xtal files (which are now HDF5 files)
 !--------------------------------------------------------------------------
 
 !---------------------------
@@ -88,13 +89,13 @@ module local
 ! in Release 3.0 and beyond, this parameter has been replaced by a more flexible
 ! mechanism for source code version numbering using the CMake facilities.
 !> source code version number
-  character(8), parameter               :: scversion="@EMsoft_VER_MAJOR@_@EMsoft_VER_MINOR@_@EMsoft_VER_PATCH@"
+  character(8)                          :: scversion="@EMsoft_VER_MAJOR@_@EMsoft_VER_MINOR@_@EMsoft_VER_PATCH@"
 !> code user name
-  character(fnlen), parameter           :: username="Marc De Graef"     
+  character(fnlen)                      :: username="Marc De Graef"     
 !> code user location
-  character(fnlen), parameter           :: userlocn="Carnegie Mellon University"
+  character(fnlen)                      :: userlocn="Carnegie Mellon University"
 !> code user email
-  character(fnlen), parameter           :: useremail="degraef@cmu.edu"
+  character(fnlen)                      :: useremail="degraef@cmu.edu"
 
   
 !> reserved IO unit identifiers for postscript (20) and data (21-23)
@@ -117,6 +118,7 @@ module local
   character(fnlen)                      :: templatepathname 
   character(fnlen)                      :: resourcepathname
   character(fnlen)                      :: openclpathname
+  character(fnlen)                      :: xtalpathname
   character(17)                         :: templatecodefilename = 'templatecodes.txt'
 
 contains
