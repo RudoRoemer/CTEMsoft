@@ -159,6 +159,7 @@ logical	                                :: loadingfile
 
 real(kind=sgl)    		        :: fw, fh		!< page format parameters
 integer(kind=irg) 		        :: i			!< loop counter
+character(fnlen)                        :: gname
 
 ! define the writeable portion of the page (should be made more user-friendly for A4 format...)
  imanum = 0
@@ -173,8 +174,8 @@ integer(kind=irg) 		        :: i			!< loop counter
    open(unit=psunit,file=PS%psname,status='unknown',action='write',form='formatted')
    call Message('Opening temporary file for PostScript output', frm = "(A)")
  else
-   loadingfile = .FALSE.
-!   call SafeOpenFile('ps','formatted',PS%psname, loadingfile = loadingfile)
+   call ReadValue(' Enter Postscript file name : ', gname,"(A)")
+   PS%psname = gname
    open(unit=psunit,file=trim(PS%psname),status='unknown',form='formatted')
  end if
 

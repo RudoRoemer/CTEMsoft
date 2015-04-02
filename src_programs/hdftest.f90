@@ -4,6 +4,8 @@ program hdftest
   use local
   use HDF5
   use typedefs
+use quaternions
+use rotations
   use HDFsupport
   use NameListTypedefs
   use NameListHDFwriters
@@ -39,7 +41,7 @@ program hdftest
   INTEGER                           :: i, j, length, nlines
   integer(kind=irg)                 :: intarr(8), dim0, dim1, intarr2(3,3), printflag
   integer*4                         :: i1, i2
-  real(kind=sgl)                    :: fltarr(8)
+  real(kind=sgl)                    :: fltarr(8), dc(3)
   real(kind=dbl)                    :: dblarr(8)
   integer(kind=irg),allocatable     :: rdintarr(:), rdintarr2(:,:)
   real(kind=sgl),allocatable        :: rdfltarr(:)

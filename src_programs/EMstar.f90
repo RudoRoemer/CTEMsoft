@@ -57,13 +57,13 @@ use diffraction
 
 IMPLICIT NONE
 
-integer(kind=irg) 	:: g(3),gg(3),ans,n,i, io_int(3)
-real(kind=dbl)    	:: kk(3),stmp(0:47,3)
-logical           	:: first, loadingfile
-character(1)      	:: space
-character(fnlen)	:: progname, progdesc
-type(unitcell),pointer	:: cell
-type(gnode)		:: rlp
+integer(kind=irg)       :: g(3),gg(3),ans,n,i, io_int(3)
+real(kind=dbl)          :: kk(3),stmp(0:47,3)
+logical                 :: first, loadingfile
+character(1)            :: space
+character(fnlen)        :: progname, progdesc, gname
+type(unitcell),pointer  :: cell
+type(gnode)             :: rlp
 
  progname = 'EMstar.f90'
  progdesc = 'Computes the star of a reciprocal lattice vector'
@@ -74,8 +74,9 @@ type(gnode)		:: rlp
 ! initialize crystal
  cell % SG % SYM_reduce=.FALSE.
  space = 'r'
- loadingfile = .TRUE.
- call CrystalData(cell, loadingfile)
+ call ReadValue(' Enter xtal file name : ', gname,"(A)")
+ cell%fname = gname
+ call CrystalData(cell)
  call GetVoltage(cell, rlp)
  call CalcPositions(cell,'v')
 

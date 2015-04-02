@@ -1,6 +1,7 @@
 @EBSDDisplay_event    		; EBSD event handler
 @EBSDgetfilename		; select a geometry file
 @EBSDreaddatafile		; read geometry and data files
+@EBSDreadHDFdatafile		; read geometry and HDF data files
 @EBSDMCDisplayWidget		; MC display widget
 @EBSDMCDisplayWidget_event	; MC display widget event handler
 @EBSDDetectorWidget		; detector widget

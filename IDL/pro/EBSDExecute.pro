@@ -154,15 +154,15 @@ spawn,cmd
 
 ; and finally run the CTEMEBSD program
   ;cmd = EBSDdata.f90exepath+'CTEMEBSD '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
-  cmd = '/Users/mdg/Files/OSU/Software/CTEMsoft2013/Build/Bin/CTEMEBSD '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
+  cmd = '/Users/mdg/Files/EMsoft/Build/Bin/EMEBSD '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
   spawn,cmd, cmdoutput, cmderroutput
 
-  Core_Print,'CTEMEBSD program reported the following output '
+  Core_Print,'EMEBSD program reported the following output '
   len = size(cmdoutput,/dimensions)
   for i=0,len[0]-1 do Core_Print,cmdoutput[i]
 
   if (cmderroutput[0] ne '') then begin
-    Core_Print,'CTEMEBSD program reported an error !!!'
+    Core_Print,'EMEBSD program reported an error !!!'
     len = size(cmderroutput,/dimensions)
     for i=0,len[0]-1 do Core_Print,cmderroutput[i]
   end else status = 1 

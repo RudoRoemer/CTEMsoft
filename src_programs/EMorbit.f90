@@ -50,12 +50,11 @@ use io
 
 IMPLICIT NONE
 
-real(kind=dbl)           	:: ctmp(192,3)
-integer(kind=irg)        	:: i,m,n,ans, io_int(1) 
-real(kind=sgl)			:: io_real(3)
-character(fnlen)		:: progname, progdesc
-type(unitcell),pointer		:: cell
-logical                        :: loadingfile
+real(kind=dbl)                  :: ctmp(192,3)
+integer(kind=irg)               :: i,m,n,ans, io_int(1) 
+real(kind=sgl)                  :: io_real(3)
+character(fnlen)                :: progname, progdesc, gname
+type(unitcell),pointer          :: cell
 
  progname = 'EMorbit.f90'
  progdesc = 'List the orbit of a given position'
@@ -63,8 +62,9 @@ logical                        :: loadingfile
  
  allocate(cell)
  cell % SG % SYM_reduce=.TRUE.
- loadingfile=.TRUE.
- call CrystalData(cell,loadingfile)
+ call ReadValue(' Enter xtal file name : ', gname,"(A)")
+ cell%fname = gname
+ call CrystalData(cell)
  ans = 1
 
  do while (ans.eq.1)

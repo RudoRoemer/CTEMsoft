@@ -64,13 +64,13 @@ common EBSD_data_common, EBSDdata
 ; check to make sure that this file is of the correct type
 ; read the first fnlen=132 characters and compare the non-null characters to
 ; the program name 'CTEMMC.f90'
-    openu,1,res,/f77
-    progname = bytarr(132)   
-    readu,1,progname
-    progname = strtrim(string(progname))
-    close,1
-print,progname
-    if ((progname eq 'CTEMMC.f90') or (progname eq 'CTEMMCOpenCL.f90')) then begin
+;   openu,1,res,/f77
+;   progname = bytarr(132)   
+;   readu,1,progname
+;   progname = strtrim(string(progname))
+;   close,1
+;print,progname
+;    if ((progname eq 'CTEMMC.f90') or (progname eq 'CTEMMCOpenCL.f90')) then begin
 	validfile = 1
   	finfo = file_info(res)
 	EBSDdata.mcfilesize = finfo.size
@@ -90,10 +90,10 @@ print,progname
   	Core_Print,' path '+EBSDdata.mcpathname
   	Core_Print,' data file '+EBSDdata.mcfilename
   	Core_Print,' suffix '+EBSDdata.suffix
-    end else begin
-  	Core_Print,' This file is not of the correct Monte Carlo data type ',/blank
-        goto, skip
-    endelse
+;    end else begin
+;  	Core_Print,' This file is not of the correct Monte Carlo data type ',/blank
+;        goto, skip
+;    endelse
   end else begin
     res=dialog_pickfile(title='Select a valid Master Pattern data file',path=rootpath,filter='*Master*.*;*master*.*;*MASTER*.*')
     if (res eq '') then begin
@@ -103,12 +103,12 @@ print,progname
 ; check to make sure that this file is of the correct type
 ; read the first fnlen=132 characters and compare the non-null characters to
 ; the program name 'CTEMEBSDmaster.f90'
-    openu,1,res,/f77
-    progname = bytarr(132)   
-    readu,1,progname
-    progname = strtrim(string(progname))
-    close,1
-    if (progname eq 'CTEMEBSDmaster.f90') then begin
+;    openu,1,res,/f77
+;    progname = bytarr(132)   
+;    readu,1,progname
+;    progname = strtrim(string(progname))
+;    close,1
+;    if (progname eq 'CTEMEBSDmaster.f90') then begin
 	validfile = 1
   	finfo = file_info(res)
 	EBSDdata.mpfilesize = finfo.size
@@ -128,10 +128,10 @@ print,progname
   	Core_Print,' path '+EBSDdata.pathname
   	Core_Print,' data file '+EBSDdata.mpfilename
   	Core_Print,' suffix '+EBSDdata.suffix
-    end else begin
-  	Core_Print,' This file is not of the correct Master Pattern data type ',/blank
-        goto, skip
-    endelse
+;    end else begin
+;  	Core_Print,' This file is not of the correct Master Pattern data type ',/blank
+;        goto, skip
+;    endelse
   endelse
 
 skip:

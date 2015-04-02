@@ -69,7 +69,11 @@ end else begin
 ; ask the user to select the data file
 		EBSDgetfilename,validfile,/MCFILE
 ; read the data file and populate all the relevant fields
-		if (validfile eq 1) then EBSDreaddatafile,/MCFILE
+		if (validfile eq 1) then begin
+                   res = HDF_ISHDF(EBSDdata.mcpathname+'/'+EBSDdata.mcfilename)
+                   if (res eq -1L) then EBSDreaddatafile,/MCFILE else EBSDreadHDFdatafile,/MCFILE
+                endif
+
 ; activate the MC Display button
 
 ; and close any other open widgets
@@ -79,7 +83,11 @@ end else begin
 ; ask the user to select the data file
 		EBSDgetfilename,validfile,/MPFILE
 ; read the data file and populate all the relevant fields
-		if (validfile eq 1) then EBSDreaddatafile,/MPFILE
+		if (validfile eq 1) then begin
+                   res = HDF_ISHDF(EBSDdata.pathname+'/'+EBSDdata.mpfilename)
+                   if (res eq -1L) then EBSDreaddatafile,/MPFILE else EBSDreadHDFdatafile,/MPFILE
+                endif
+
 ; activate both the MC and MP Display buttons
 
 ; and close any other open widgets
