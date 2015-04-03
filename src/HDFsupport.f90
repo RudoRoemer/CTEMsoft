@@ -57,7 +57,7 @@ use local
 use typedefs
 use HDF5
 
-private :: HDF_readfromTextfile, HDF_push, HDF_stackdump
+private :: HDF_readfromTextfile, HDF_push !, HDF_stackdump
 
 contains
 
@@ -204,11 +204,12 @@ end subroutine HDF_writeEMheader
 !> @param HDF_tail bottom of the current stack
 !> @param oT object type character
 !> @param oID object identifier
+!> @param oName name
 !> @param verbose (optional) 
 !
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-subroutine HDF_push(HDF_head, HDF_tail, oT, oID, verbose)
+subroutine HDF_push(HDF_head, HDF_tail, oT, oID, oName, verbose)
 
 use local
 use io
@@ -219,6 +220,7 @@ type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
 type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_tail
 character(LEN=1),INTENT(IN)                           :: oT
 integer(HID_T),INTENT(IN)                             :: oID 
+character(fnlen),INTENT(IN)                           :: oName
 logical,INTENT(IN),OPTIONAL                           :: verbose
 
 type(HDFobjectStackType),pointer                      :: node
@@ -243,6 +245,7 @@ end if
 ! set the values
 HDF_head % objectType = oT
 HDF_head % objectID = oID
+HDF_head % objectname = trim(oName)
 
 if (present(verbose)) call HDF_stackdump(HDF_head)
 
@@ -291,6 +294,7 @@ if (PRESENT(closeall)) then
 ! delete the old entry
     deallocate(tmp)
   end do
+  nullify(HDF_head)
 else
 ! close the current object 
   error = HDF_close_level(HDF_head % objectType, HDF_head % objectID)
@@ -375,7 +379,7 @@ else
   call WriteValue('HDF stack entries','')
   do
     if (.not.associated(tmp)) EXIT
-    call WriteValue('',tmp%objectType//'  '//tmp%objectName, frm = "(A$)") 
+    call WriteValue('','>'//tmp%objectType//'<  >'//trim(tmp%objectName)//'<', frm = "(A$)") 
     io_int(1) = tmp%objectID
     call WriteValue('',io_int,1,frm="(I12)")
     tmp => tmp%next
@@ -464,7 +468,7 @@ if (error.ne.0) then
   call HDF_handleError(error,'HDF_createFile: error creating file')
   success = -1
 else
-  call HDF_push(HDF_head, HDF_tail, 'f',file_id)
+  call HDF_push(HDF_head, HDF_tail, 'f', file_id, HDFname)
 end if
 
 end function HDF_createFile
@@ -510,7 +514,7 @@ if (error.ne.0) then
   call HDF_handleError(error,'HDF_openFile')
   success = -1
 else
-  call HDF_push(HDF_head, HDF_tail, 'f',file_id)
+  call HDF_push(HDF_head, HDF_tail, 'f', file_id, HDFname)
 end if
 
 end function HDF_openFile
@@ -550,7 +554,7 @@ if (error.ne.0) then
   success = -1
 else
 ! and put the group_id onto the HDF_stack
-  call HDF_push(HDF_head, HDF_tail, 'g', group_id)
+  call HDF_push(HDF_head, HDF_tail, 'g', group_id, groupname)
 end if
 
 end function HDF_createGroup
@@ -589,7 +593,7 @@ if (error.ne.0) then
   success = -1
 else
 ! put the group_id onto the HDF_stack
-  call HDF_push(HDF_head, HDF_tail, 'g', group_id)
+  call HDF_push(HDF_head, HDF_tail, 'g', group_id, groupname)
 end if
 
 end function HDF_openGroup
@@ -629,7 +633,7 @@ if (error.ne.0) then
   success = -1
 else
 ! and put the data_id onto the HDF_stack
-  call HDF_push(HDF_head, HDF_tail, 'd', data_id)
+  call HDF_push(HDF_head, HDF_tail, 'd', data_id, dataname)
 end if
 
 end function HDF_createDataset
@@ -668,7 +672,7 @@ if (error.ne.0) then
   success = -1
 else
 ! put the data_id onto the HDF_stack
-  call HDF_push(HDF_head, HDF_tail, 'd', data_id)
+  call HDF_push(HDF_head, HDF_tail, 'd', data_id, dataname)
 end if
 
 end function HDF_openDataset

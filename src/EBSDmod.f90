@@ -164,6 +164,8 @@ if (enl%axisangle(4).ne.0.0) then
   end do 
 end if
 
+write (*,*) 'completed reading Euler angles'
+
 end subroutine EBSDreadangles
 
 
@@ -182,12 +184,15 @@ end subroutine EBSDreadangles
 !
 !> @date 06/24/14  MDG 1.0 original
 !> @date 11/18/14  MDG 1.1 removed enl%MCnthreads from file read
+!> @date 04/02/15  MDG 2.0 changed program input & output to HDF format
 !--------------------------------------------------------------------------
 subroutine EBSDreadMCfile(enl,acc,verbose)
 
 use NameListTypedefs
 use files
 use io
+use HDF5
+use HDFsupport
 
 IMPLICIT NONE
 
@@ -195,50 +200,149 @@ type(EBSDNameListType),INTENT(INOUT)    :: enl
 type(EBSDLargeAccumType),pointer        :: acc
 logical,INTENT(IN),OPTIONAL             :: verbose
 
-integer(kind=irg)                       :: istat
+integer(kind=irg)                       :: istat, hdferr, nlines
+logical                                 :: stat, readonly
+integer(HSIZE_T)                        :: dims3(3)
+character(fnlen)                        :: groupname, dataset 
+character(fnlen),allocatable            :: stringarray(:)
 
-!====================================
-! ------ read Monte Carlo data file
-!====================================
-! first, we need to load the data from the MC program.  This is an array of integers, which
-! has an energy histogram for each sampled exit direction.  These are integer values to minimize
-! storage, but they should all be divided by the total number of counts, which can be done 
-! at the end of the computation.  We will then need to multiply by the beam current and by
-! the dwell time to get units of electron counts.
+type(HDFobjectStackType),pointer        :: HDF_head
+type(HDFobjectStackType),pointer        :: HDF_tail
+
+
+! first, we need to check whether or not the input file is of the HDF5 forat type; if
+! it is, we read it accordingly, otherwise we use the old binary format.
 !
-! the datafile format is written by EBSDMC.f90 as follows (all in Lambert projections)
-! write(dataunit) numEbins, numzbins, numsx, numsy, num_el, nthreads
-! write (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
-! write(dataunit) accum_e
-! write (dataunit) accum_z
+call h5fis_hdf5_f(trim(enl%energyfile), stat, hdferr)
 
-if (present(verbose)) call Message('opening '//trim(enl%energyfile), frm = "(A)")
+if (stat) then 
+! open the fortran HDF interface
+  call h5open_f(hdferr)
 
-open(dataunit,file=trim(enl%energyfile),status='unknown',form='unformatted')
+  nullify(HDF_head, HDF_tail)
+
+! open the MC file using the default properties.
+  readonly = .TRUE.
+  hdferr =  HDF_openFile(enl%energyfile, HDF_head, HDF_tail, readonly)
+
+! open the namelist group
+  groupname = 'NMLparameters'
+  hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
+
+  groupname = 'MCCLNameList'
+  hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
+
+! read all the necessary variables from the namelist group
+  dataset = 'xtalname'
+  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head, HDF_tail)
+  enl%MCxtalname = trim(stringarray(1))
+  deallocate(stringarray)
+
+  dataset = 'MCmode'
+  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head, HDF_tail)
+  enl%MCmode = trim(stringarray(1))
+  deallocate(stringarray)
+
+  dataset = 'numsx'
+  enl%nsx = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+  enl%nsx = (enl%nsx - 1)/2
+  enl%nsy = enl%nsx
+
+  dataset = 'EkeV'
+  enl%EkeV = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+
+  dataset = 'Ehistmin'
+  enl%Ehistmin = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+
+  dataset = 'Ebinsize'
+  enl%Ebinsize = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+
+  dataset = 'depthmax'
+  enl%depthmax = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+
+  dataset = 'depthstep'
+  enl%depthstep = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+
+  dataset = 'sig'
+  enl%MCsig = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+
+  dataset = 'omega'
+  enl%MComega = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+
+! close the name list group
+  call HDF_pop(HDF_head)
+  call HDF_pop(HDF_head)
+
+! read from the EMheader
+  groupname = 'EMheader'
+  hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
+
+  dataset = 'ProgramName'
+  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head, HDF_tail)
+  enl%MCprogname = trim(stringarray(1))
+  deallocate(stringarray)
+
+  dataset = 'Version'
+  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head, HDF_tail)
+  enl%MCscversion = trim(stringarray(1))
+  deallocate(stringarray)
+
+  call HDF_pop(HDF_head)
+
+! open the Data group
+  groupname = 'EMData'
+  hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
+
+! read data items 
+  dataset = 'numEbins'
+  enl%numEbins = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+
+  dataset = 'numzbins'
+  enl%numzbins = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+
+  dataset = 'accum_e'
+  acc%accum_e = HDF_readDatasetIntegerArray3D(dataset, dims3, HDF_head, HDF_tail)
+  enl%num_el = sum(acc%accum_e)
+
+! and close everything
+  call HDF_pop(HDF_head,.TRUE.)
+
+! close the fortran HDF interface
+  call h5close_f(hdferr)
+
+else
+!====================================
+! ------ read old format Monte Carlo data file
+!====================================
+  if (present(verbose)) call Message('opening '//trim(enl%energyfile), frm = "(A)")
+
+  open(dataunit,file=trim(enl%energyfile),status='unknown',form='unformatted')
 
 ! read the program identifier
- read (dataunit) enl%MCprogname
+   read (dataunit) enl%MCprogname
 ! read the version number
- read (dataunit) enl%MCscversion
+   read (dataunit) enl%MCscversion
 ! then the name of the crystal data file
- read (dataunit) enl%MCxtalname
+   read (dataunit) enl%MCxtalname
 ! energy information etc...
- read(dataunit) enl%numEbins, enl%numzbins, enl%nsx, enl%nsy, enl%num_el ! , enl%MCnthreads
- enl%nsx = (enl%nsx - 1)/2
- enl%nsy = (enl%nsy - 1)/2
+   read(dataunit) enl%numEbins, enl%numzbins, enl%nsx, enl%nsy, enl%num_el ! , enl%MCnthreads
+   enl%nsx = (enl%nsx - 1)/2
+   enl%nsy = (enl%nsy - 1)/2
 ! more energy information
- read (dataunit) enl%EkeV, enl%Ehistmin, enl%Ebinsize, enl%depthmax, enl%depthstep
+   read (dataunit) enl%EkeV, enl%Ehistmin, enl%Ebinsize, enl%depthmax, enl%depthstep
 ! angular information
- read (dataunit) enl%MCsig, enl%MComega
+   read (dataunit) enl%MCsig, enl%MComega
 ! Monte Carlo mode ('CSDA' or other)
- read (dataunit) enl%MCmode
+   read (dataunit) enl%MCmode
 ! and finally the actual energy histogram (in square Lambert projection format)
- allocate(acc%accum_e(enl%numEbins,-enl%nsx:enl%nsx,-enl%nsy:enl%nsy),stat=istat)
- read(dataunit) acc%accum_e
- enl%num_el = sum(acc%accum_e)
+   allocate(acc%accum_e(enl%numEbins,-enl%nsx:enl%nsx,-enl%nsy:enl%nsy),stat=istat)
+   read(dataunit) acc%accum_e
+   enl%num_el = sum(acc%accum_e)
 ! we do not need the other array in this energyfile
 ! read(dataunit) accum_z    ! we only need this array for the depth integrations in EMEBSDmaster.f90
-close(dataunit,status='keep')
+  close(dataunit,status='keep')
+end if
+
 
 if (present(verbose)) call Message(' -> completed reading '//trim(enl%energyfile), frm = "(A)")
 
@@ -258,12 +362,16 @@ end subroutine EBSDreadMCfile
 !> @param quatang array of unit quaternions (output)
 !
 !> @date 06/24/14  MDG 1.0 original
+!> @date 04/02/15  MDG 2.0 changed program input & output to HDF format
 !--------------------------------------------------------------------------
 subroutine EBSDreadMasterfile(enl, master, verbose)
 
 use NameListTypedefs
 use files
 use io
+use HDF5
+use HDFsupport
+
 
 IMPLICIT NONE
 
@@ -278,13 +386,107 @@ integer(kind=irg),allocatable           :: atomtype(:)
 real(kind=sgl),allocatable              :: srtmp(:,:,:,:)
 integer(kind=irg)                       :: istat
 
+logical                                 :: stat, readonly
+integer(kind=irg)                       :: hdferr, nlines
+integer(HSIZE_T)                        :: dims(1), dims4(4)
+character(fnlen)                        :: groupname, dataset
+character(fnlen),allocatable            :: stringarray(:)
 
+type(HDFobjectStackType),pointer        :: HDF_head
+type(HDFobjectStackType),pointer        :: HDF_tail
+
+! open the fortran HDF interface
+call h5open_f(hdferr)
+
+nullify(HDF_head, HDF_head)
+
+! first, we need to check whether or not the input file is of the HDF5 forat type; if
+! it is, we read it accordingly, otherwise we use the old binary format.
+!
+call h5fis_hdf5_f(trim(enl%masterfile), stat, hdferr)
+
+if (stat) then 
+! open the master file 
+  readonly = .TRUE.
+  hdferr =  HDF_openFile(enl%masterfile, HDF_head, HDF_tail, readonly)
+
+! open the namelist group
+  groupname = 'NMLparameters'
+  hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
+
+  groupname = 'EBSDMasterNameList'
+  hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
+
+! read all the necessary variables from the namelist group
+  dataset = 'energyfile'
+  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head, HDF_tail)
+  enl%Masterenergyfile = trim(stringarray(1))
+  deallocate(stringarray)
+
+  dataset = 'npx'
+  enl%npx = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+  enl%npy = enl%npx
+
+  call HDF_pop(HDF_head)
+  call HDF_pop(HDF_head)
+
+  groupname = 'EMData'
+  hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
+
+  dataset = 'numEbins'
+  enl%nE = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+! make sure that MC and Master results are compatible
+  if (enl%numEbins.ne.enl%nE) then
+    call Message('Energy histogram and Lambert stack have different energy dimension; aborting program', frm = "(A)")
+    call HDF_pop(HDF_head,.TRUE.)
+    stop
+  end if
+
+  dataset = 'numset'
+  enl%numset = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+
+  dataset = 'squhex'
+  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head, HDF_tail)
+  enl%sqorhe = trim(stringarray(1))
+  deallocate(stringarray)
+
+  dataset = 'sr'
+  srtmp = HDF_readDatasetFloatArray4D(dataset, dims4, HDF_head, HDF_tail)
+  allocate(master%sr(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE),stat=istat)
+  master%sr = sum(srtmp,4)
+  deallocate(srtmp)
+
+  dataset = 'xtalname'
+  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head, HDF_tail)
+  enl%Masterxtalname = trim(stringarray(1))
+  deallocate(stringarray)
+
+  call HDF_pop(HDF_head)
+
+  groupname = 'EMheader'
+  hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
+
+  dataset = 'ProgramName'
+  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head, HDF_tail)
+  enl%Masterprogname = trim(stringarray(1))
+  deallocate(stringarray)
+  
+  dataset = 'Version'
+  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head, HDF_tail)
+  enl%Masterscversion = trim(stringarray(1))
+  deallocate(stringarray)
+  
+  call HDF_pop(HDF_head,.TRUE.)
+
+! close the fortran HDF interface
+  call h5close_f(hdferr)
+
+else
 !====================================
 ! ----- Read energy-dispersed Lambert projections (master pattern)
 ! this has been updated on 3/26/14 to accommodate the new EBSDmaster file format
-! but will need to be redone in HDF5 at a later time.
 !====================================
-open(unit=dataunit,file=trim(enl%masterfile),status='old',form='unformatted')
+  open(unit=dataunit,file=trim(enl%masterfile),status='old',form='unformatted')
   read (dataunit) enl%Masterprogname
 ! read the version number
   read (dataunit) enl%Masterscversion
@@ -315,10 +517,11 @@ open(unit=dataunit,file=trim(enl%masterfile),status='old',form='unformatted')
 ! user to request an element specific EBSD pattern calculation]
   master%sr = sum(srtmp,4)
   deallocate(srtmp)
-close(unit=dataunit,status='keep')
+  close(unit=dataunit,status='keep')
+end if
 !====================================
 
-if (present(verbose)) call Message(' -> completed reading Master EBSD pattern file', frm = "(A)")
+if (present(verbose)) call Message(' -> completed reading '//trim(enl%masterfile), frm = "(A)")
 
 end subroutine EBSDreadMasterfile
 

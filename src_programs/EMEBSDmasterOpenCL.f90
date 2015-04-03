@@ -36,7 +36,8 @@
 !
 !> @brief ebsd master pattern on using scattering matrix GPU
 !
-!> @date 03/11/15 SS 1.0 original
+!> @date 03/11/15 SS  1.0 original
+!> @date 04/03/15 MDG 2.0 converted input/output to HDF format
 !--------------------------------------------------------------------------
 
 program EMEBSDmaster
@@ -58,7 +59,7 @@ progname = 'EMEBSDmasterOpenCL.f90'
 progdesc = 'Master pattern generation for Electron backscatter diffraction using scattering matrix on a GPU'
 
 ! deal with the command line arguments, if any
-call Interpret_Program_Arguments(nmldeffile,2,(/ 0, 40 /), progname)
+call Interpret_Program_Arguments(nmldeffile,1,(/ 21 /), progname)
 
 ! deal with the namelist stuff
 call GetEBSDMasterNameList(nmldeffile,emnl)
@@ -67,13 +68,13 @@ call GetEBSDMasterNameList(nmldeffile,emnl)
 call EMsoft(progname, progdesc)
 
 ! perform the zone axis computations
-call EBSDmasterpatternOpenCL(emnl, progname)
+call EBSDmasterpatternOpenCL(emnl, progname, nmldeffile)
 
 end program EMEBSDmaster
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE:ECmasterpatternOpenCL
+! SUBROUTINE:EBSDmasterpatternOpenCL
 !
 !> @author Marc De Graef/Saransh Singh, Carnegie Mellon University
 !
@@ -88,7 +89,7 @@ end program EMEBSDmaster
 !
 !> @date 03/11/15  SS 1.0 original
 !--------------------------------------------------------------------------
-subroutine EBSDmasterpatternOpenCL(emnl, progname)
+subroutine EBSDmasterpatternOpenCL(emnl, progname, nmldeffile)
 
 use local
 use typedefs
@@ -102,15 +103,20 @@ use gvectors
 use kvectors
 use error
 use io
+use NameListHDFwriters
 use files
 use diffraction
 use MBModule
+use HDF5
+use HDFsupport
+use ISO_C_BINDING
 use cl
 
 IMPLICIT NONE
 
-type(EBSDMasterNameListType),INTENT(IN)         :: emnl
+type(EBSDMasterNameListType),INTENT(INOUT)      :: emnl
 character(fnlen),INTENT(IN)                     :: progname
+character(fnlen),INTENT(IN)                     :: nmldeffile
 
 real(kind=dbl)                                  :: frac
 integer(kind=irg)                               :: gzero, istat
@@ -183,8 +189,25 @@ type(cl_program)                                :: prog
 type(cl_kernel)                                 :: kernel
 type(cl_event)                                  :: event
 type(cl_mem)                                    :: cl_expA,cl_A,cl_AA,cl_AAA,cl_coeff,cl_T1,cl_T2,&
-cl_wavefncoeff,cl_wavefncoeffintd,&
-cl_offset,cl_arrsize,cl_arrsizesum,cl_sqrsize,cl_lambdas
+                                                   cl_wavefncoeff,cl_wavefncoeffintd,&
+                                                   cl_offset,cl_arrsize,cl_arrsizesum,cl_sqrsize,cl_lambdas
+
+character(11)                                   :: dstr
+character(15)                                   :: tstrb
+character(15)                                   :: tstre
+integer(HSIZE_T)                                :: dims4(4)
+logical                                         :: f_exists, readonly
+character(fnlen, KIND=c_char),allocatable,TARGET:: stringarray(:)
+character(fnlen)                                :: dataset, groupname
+integer                                         :: hdferr, nlines, nsx, nsy, num_el
+
+type(HDFobjectStackType),pointer                :: HDF_head
+type(HDFobjectStackType),pointer                :: HDF_tail
+
+nullify(HDF_head)
+nullify(HDF_tail)
+
+call timestamp(datestring=dstr, timestring=tstrb)
 
 
 gzero = 1
@@ -192,7 +215,7 @@ frac = 0.05
 eps = 1.0
 !dataunit = 10
 
-globalsize = (/ 32, 32 /)
+globalsize = (/ 48, 48 /)
 localsize = (/ 4, 4 /)
 
 npiximgx = emnl%npx
@@ -227,9 +250,6 @@ coef(1,3) = cvals(7)+cvals(8)+cvals(9)
 coef(2,3) = cvals(7)*cvals(8)+cvals(8)*cvals(9)+cvals(9)*cvals(7)
 coef(3,3) = cvals(7)*cvals(8)*cvals(9)
 
-
-allocate(cell)
-
 !=============================================================
 !read Monte Carlo output file and extract necessary parameters
 ! first, we need to load the data from the MC program.
@@ -237,47 +257,87 @@ allocate(cell)
 
 call Message('opening '//trim(emnl%energyfile), frm = "(A)" )
 
-open(dataunit,file=trim(emnl%energyfile),status='unknown',form='unformatted')
+! [since this is no longer a sequential access file, we do not need to read everything, just
+! the quantities that we need...]
 
-! lines from EMMCCL.f90... these are the things we need to read in...
-! write (dataunit) progname
-!! write the version number
-! write (dataunit) MCscversion
-!! then the name of the crystal data file
-! write (dataunit) xtalname
-!! energy information etc...
-! write (dataunit) numEbins, numzbins, numsx, numsy, , totnum_el
-! write (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
-! write (dataunit) sig, omega
-! write (dataunit) MCmode
-!! and here are the actual results
-! write (dataunit) accum_e
-! write (dataunit) accum_z
+!
+! Initialize FORTRAN interface.
+!
+call h5open_f(hdferr)
 
-read (dataunit) oldprogname
-read (dataunit) MCscversion
-read (dataunit) xtalname
+! first of all, if the file exists, then delete it and rewrite it on each energyloop
+inquire(file=trim(emnl%energyfile), exist=f_exists)
 
-read(dataunit) numEbins, numzbins, nx, ny, totnum_el
-nx = (nx - 1)/2
-ny = (ny - 1)/2
+if (.not.f_exists) then
+  call FatalError('ComputeMasterPattern','Monte Carlo input file does not exist')
+end if
 
-read (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
-io_real(1:5) = (/ EkeV, Ehistmin, Ebinsize, depthmax, depthstep /)
-call WriteValue(' EkeV, Ehistmin, Ebinsize, depthmax, depthstep ',io_real,5,"(4F10.5,',',F10.5)")
+! open the MC file using the default properties.
+readonly = .TRUE.
+hdferr =  HDF_openFile(emnl%energyfile, HDF_head, HDF_tail, readonly)
 
-read (dataunit) sig, omega
-read (dataunit) MCmode
+! open the namelist group
+groupname = 'NMLparameters'
+hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
 
-allocate(accum_e(numEbins,-nx:nx,-nx:nx),accum_z(numEbins,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
+groupname = 'MCCLNameList'
+hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
 
-read(dataunit) accum_e
-! actually, we do not yet need the accum_e array for ECP. This will be removed with an updated version of the MC code
-! but we need to skip it in this unformatted file so that we can read the accum_z array ...
-!deallocate(accum_e)
+! read all the necessary variables from the namelist group
+dataset = 'xtalname'
+stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head, HDF_tail)
+xtalname = trim(stringarray(1))
 
-read(dataunit) accum_z    ! we only need this array for the depth integrations
-close(dataunit,status='keep')
+dataset = 'numsx'
+nsx = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+nsx = (nsx - 1)/2
+nsy = nsx
+
+dataset = 'EkeV'
+EkeV = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+
+dataset = 'Ehistmin'
+Ehistmin = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+
+dataset = 'Ebinsize'
+Ebinsize = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+
+dataset = 'depthmax'
+depthmax = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+
+dataset = 'depthstep'
+depthstep = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+
+! close the name list group
+call HDF_pop(HDF_head)
+call HDF_pop(HDF_head)
+
+! open the Data group
+groupname = 'EMData'
+hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
+
+! read data items 
+dataset = 'numEbins'
+numEbins = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+
+dataset = 'numzbins'
+numzbins = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+
+dataset = 'totnum_el'
+num_el = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+
+!allocate(accum_z(numEbins,numzbins,-nsx/10:nsx/10,-nsy/10:nsy/10),stat=istat)
+
+dataset = 'accum_z'
+!dims4 =  (/ numEbins, numzbins, 2*(nsx/10)+1,2*(nsy/10)+1 /)
+accum_z = HDF_readDatasetIntegerArray4D(dataset, dims4, HDF_head, HDF_tail)
+
+! and close everything
+call HDF_pop(HDF_head,.TRUE.)
+
+! close the fortran interface
+call h5close_f(hdferr)
+
 call Message(' -> completed reading '//trim(emnl%energyfile), frm = "(A)")
 !=============================================
 ! completed reading monte carlo file
@@ -388,32 +448,6 @@ open(unit=11,file="test.txt",action="write")
 nat = 0
 fnat = 1.0/float(sum(cell%numat(1:numset)))
 intthick = dble(depthmax)
-
-
-open(unit=dataunit,file=trim(emnl%outname),status='unknown',action='write',form = 'unformatted')
-! write the program identifier
-write (dataunit) progname
-! write the version number
-write (dataunit) scversion
-! then the name of the crystal data file
-write (dataunit) xtalname
-! then the name of the corresponding Monte Carlo data file
-write (dataunit) emnl%energyfile
-! energy information and array size
-write (dataunit) emnl%npx,emnl%npx,numset
-write (dataunit) EkeV
-write (dataunit) emnl%dmin
-! atom type array for asymmetric unit
-write (dataunit) cell%ATOM_type(1:numset)
-! is this a regular (square) or hexagonal projection ?
-!if (usehex) then
- !   projtype = 'hexago'
- !  write (dataunit) projtype
-!else
- !   projtype = 'square'
- !   write (dataunit) projtype
-!end if
-
 
 !==========================
 ! INITIALIZATION OF GPU
@@ -542,6 +576,7 @@ beamloop : do ii = 1,ceiling(float(numk)/float(npx*npy))
 ! determine strong and weak reflections
                 call Apply_BethePotentials(cell, reflist, firstw, BetheParameters, nref, nns, nnw)
                 arrsize((kk-1)*npy+ll) = nns
+write (*,*) 'nns = ',nns
 
                 if ((kk-1)*npy+ll .lt. npx*npy) then
                     arrsizesum((kk-1)*npy+ll+1) = sum(arrsize)
@@ -557,6 +592,7 @@ beamloop : do ii = 1,ceiling(float(numk)/float(npx*npy))
         if (allocated(A)) deallocate(A)
 
         allocate(SghCumulative(1:offset(npx*npy)+arrsize(npx*npy)**2),A(1:offset(npx*npy)+arrsize(npx*npy)**2),stat=istat)
+write (*,*) 'starting dynmat generation'
 
         do kk = 1,npx
             do ll = 1,npy
@@ -617,6 +653,8 @@ beamloop : do ii = 1,ceiling(float(numk)/float(npx*npy))
             end do
         end do
         kheadtmp => ktmp
+
+write (*,*) 'creating GPU buffers'
 
 ! allocate device memory
         size_in_bytes = (offset(npx*npy)+arrsize(npx*npy)**2)*sizeof(A(1))
@@ -737,6 +775,7 @@ beamloop : do ii = 1,ceiling(float(numk)/float(npx*npy))
         if(ierr /= CL_SUCCESS) stop 'Error: cannot set fourteenth kernel argument.'
 
 
+write (*,*) 'executing kernel'
 
 !execute the kernel
 
@@ -750,6 +789,8 @@ beamloop : do ii = 1,ceiling(float(numk)/float(npx*npy))
 
 ! divide by integration depth explicitly (OpenCL kernel giving some problems)
         LghCumulative = LghCumulative/float(izz-1)
+write (*,*) LghCumulative(1:10)
+
         do pp = 1,npx
             do qq = 1,npy
                 ipx = locpix((pp-1)*npy+qq,1)
@@ -772,9 +813,9 @@ beamloop : do ii = 1,ceiling(float(numk)/float(npx*npy))
             end do
         end do
 
-        if (mod(ii,4) .eq. 0) then
+      ! if (mod(ii,4) .eq. 0) then
             write(6,'(A,I8,A)') 'Completed ',(ii*npx*npy),' beams.'
-        end if
+      ! end if
 
         call clReleaseMemObject(cl_expA, ierr)
         call clReleaseMemObject(cl_A, ierr)
@@ -856,24 +897,94 @@ beamloop : do ii = 1,ceiling(float(numk)/float(npx*npy))
     !end do
 end do beamloop
 
-do i=1,2*emnl%npx+1
-    do j=1,2*emnl%npx+1
-        write(11, '(F15.6)', advance='no') sr(i,j)
-    end do
-    write(11, *) ''  ! this gives you the line break
-end do
-close(unit=11,status='keep')
-
-
 call Delete_kvectorlist(khead)
+
+! Initialize FORTRAN interface.
+!
+call h5open_f(hdferr)
+call timestamp(timestring=tstre)
+
+! first of all, if the file exists, then delete it and rewrite it on each energyloop
+inquire(file=trim(emnl%outname), exist=f_exists)
+
+if (f_exists) then
+  open(unit=dataunit, file=trim(emnl%outname), status='old',form='unformatted')
+  close(unit=dataunit, status='delete')
+end if
+
+! Create a new file using the default properties.
+hdferr =  HDF_createFile(emnl%outname, HDF_head, HDF_tail)
+
+! write the EMheader to the file
+call HDF_writeEMheader(HDF_head, HDF_tail, dstr, tstrb, tstre, progname)
+
+! create a namelist group to write all the namelist files into
+groupname = "NMLfiles"
+hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+
+! read the text file and write the array to the file
+dataset = 'EBSDmasterNML'
+hdferr = HDF_writeDatasetTextFile(dataset, nmldeffile, HDF_head, HDF_tail)
+
+! leave this group
+call HDF_pop(HDF_head)
+
+! create a namelist group to write all the namelist files into
+groupname = "NMLparameters"
+hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+call HDFwriteEBSDMasterNameList(HDF_head, HDF_tail, emnl)
+
+! leave this group
+call HDF_pop(HDF_head)
+
+! then the remainder of the data in a EMData group
+groupname = 'EMData'
+hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+
+dataset = 'xtalname'
+stringarray(1)= trim(xtalname)
+hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head, HDF_tail)
+
+dataset = 'numset'
+hdferr = HDF_writeDatasetInteger(dataset, numset, HDF_head, HDF_tail)
+
+if (emnl%Esel.eq.-1) then
+  dataset = 'numEbins'
+  hdferr = HDF_writeDatasetInteger(dataset, numEbins, HDF_head, HDF_tail)
+
+  dataset = 'EkeVs'
+  hdferr = HDF_writeDatasetFloatArray1D(dataset, EkeVs, numEbins, HDF_head, HDF_tail)
+else
+  dataset = 'numEbins'
+  hdferr = HDF_writeDatasetInteger(dataset, one, HDF_head, HDF_tail)
+
+  dataset = 'selE'
+  hdferr = HDF_writeDatasetFloat(dataset, sngl(selE), HDF_head, HDF_tail)
+end if 
+
+dataset = 'cell%ATOM_type'
+hdferr = HDF_writeDatasetIntegerArray1D(dataset, cell%ATOM_type(1:numset), numset, HDF_head, HDF_tail)
+
+dataset = 'squhex'
+if (usehex) then 
+  stringarray(1)= 'hexago'
+  hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head, HDF_tail)
+else
+  stringarray(1)= 'square'
+  hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head, HDF_tail)
+end if  
+
+dataset = 'sr'
+hdferr = HDF_writeDatasetFloatArray4D(dataset, sr, 2*emnl%npx+1, 2*emnl%npx+1, numEbins, numset, HDF_head, HDF_tail)
+
+call HDF_pop(HDF_head,.TRUE.)
+
+! and close the fortran hdf interface
+call h5close_f(hdferr)
 
 end do energyloop
 
-write(6,'(A)')'Finished computation...quitting now'
+call Message('Final data stored in file '//trim(emnl%outname), frm = "(A/)")
 
-write (dataunit) sr
-!deallocate(sr)
-
-close(unit=dataunit,status='keep')
 
 end subroutine EBSDmasterpatternOpenCL
