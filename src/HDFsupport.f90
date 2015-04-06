@@ -3594,6 +3594,1039 @@ call h5sclose_f(space, hdferr)
 
 end function HDF_readDatasetDoubleArray4D
 
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+! hyperslab read and write routines
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_writeHyperslabIntegerArray2D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief writes a 2D hyperslab to the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param wdata data to be written 
+!> @param hdims original dimensions of complete dataset
+!> @param offset offset of the hyperslab
+!> @param dim0 ...  dimensions of the hyperslab
+!> @param HDF_head
+!> @param HDF_tail
+!> @param extend (optional) if present, add to existing dataset
+!
+!> @date 04/06/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_writeHyperslabIntegerArray2D(dataname, wdata, hdims, offset, &
+                                          dim0, dim1, HDF_head, HDF_tail, extend) result(success)
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(kind=irg),INTENT(IN)                            :: wdata(dim0,dim1)
+integer(HSIZE_T),INTENT(IN)                             :: hdims(2)
+integer(HSIZE_T),INTENT(IN)                             :: offset(2)
+integer(HSIZE_T),INTENT(IN)                             :: dim0
+integer(HSIZE_T),INTENT(IN)                             :: dim1
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+logical, OPTIONAL, INTENT(IN)                           :: extend
+integer(kind=irg)                                       :: success
+
+integer(HID_T)                                          :: memspace, space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T)                                        :: dims(2)
+
+success = 0
+
+dims = (/ dim0, dim1 /)
+rnk = 2
+call h5screate_simple_f(rnk, hdims, space, hdferr)
+
+if (present(extend)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
+end if
+
+call h5sselect_hyperslab_f(space, H5S_SELECT_SET_F, offset, dims, hdferr)
+call h5screate_simple_f(rnk, dims, memspace, hdferr)
+call h5dwrite_f(dset, H5T_NATIVE_INTEGER, wdata, dims, hdferr, memspace, space)
+
+call h5dclose_f(dset, hdferr)
+
+end function HDF_writeHyperslabIntegerArray2D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_writeHyperslabIntegerArray3D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief writes a 3D hyperslab to the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param wdata data to be written 
+!> @param hdims original dimensions of complete dataset
+!> @param offset offset of the hyperslab
+!> @param dim0 ...  dimensions of the hyperslab
+!> @param HDF_head
+!> @param HDF_tail
+!> @param extend (optional) if present, add to existing dataset
+!
+!> @date 04/06/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_writeHyperslabIntegerArray3D(dataname, wdata, hdims, offset, &
+                                          dim0, dim1, dim2, HDF_head, HDF_tail, extend) result(success)
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(kind=irg),INTENT(IN)                            :: wdata(dim0,dim1,dim2)
+integer(HSIZE_T),INTENT(IN)                             :: hdims(3)
+integer(HSIZE_T),INTENT(IN)                             :: offset(3)
+integer(HSIZE_T),INTENT(IN)                             :: dim0
+integer(HSIZE_T),INTENT(IN)                             :: dim1
+integer(HSIZE_T),INTENT(IN)                             :: dim2
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+logical, OPTIONAL, INTENT(IN)                           :: extend
+integer(kind=irg)                                       :: success
+
+integer(HID_T)                                          :: memspace, space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T)                                        :: dims(3)
+
+success = 0
+
+dims = (/ dim0, dim1, dim2 /)
+rnk = 3
+call h5screate_simple_f(rnk, hdims, space, hdferr)
+
+if (present(extend)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
+end if
+
+call h5sselect_hyperslab_f(space, H5S_SELECT_SET_F, offset, dims, hdferr)
+call h5screate_simple_f(rnk, dims, memspace, hdferr)
+call h5dwrite_f(dset, H5T_NATIVE_INTEGER, wdata, dims, hdferr, memspace, space)
+
+call h5dclose_f(dset, hdferr)
+
+end function HDF_writeHyperslabIntegerArray3D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_writeHyperslabIntegerArray4D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief writes a 4D hyperslab to the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param wdata data to be written 
+!> @param hdims original dimensions of complete dataset
+!> @param offset offset of the hyperslab
+!> @param dim0 ...  dimensions of the hyperslab
+!> @param HDF_head
+!> @param HDF_tail
+!> @param extend (optional) if present, add to existing dataset
+!
+!> @date 04/06/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_writeHyperslabIntegerArray4D(dataname, wdata, hdims, offset, &
+                                          dim0, dim1, dim2, dim3, HDF_head, HDF_tail, extend) result(success)
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(kind=irg),INTENT(IN)                            :: wdata(dim0,dim1,dim2,dim3)
+integer(HSIZE_T),INTENT(IN)                             :: hdims(4)
+integer(HSIZE_T),INTENT(IN)                             :: offset(4)
+integer(HSIZE_T),INTENT(IN)                             :: dim0
+integer(HSIZE_T),INTENT(IN)                             :: dim1
+integer(HSIZE_T),INTENT(IN)                             :: dim2
+integer(HSIZE_T),INTENT(IN)                             :: dim3
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+logical, OPTIONAL, INTENT(IN)                           :: extend
+integer(kind=irg)                                       :: success
+
+integer(HID_T)                                          :: memspace, space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T)                                        :: dims(4)
+
+success = 0
+
+dims = (/ dim0, dim1, dim2, dim3 /)
+rnk = 4
+call h5screate_simple_f(rnk, hdims, space, hdferr)
+
+if (present(extend)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
+end if
+
+call h5sselect_hyperslab_f(space, H5S_SELECT_SET_F, offset, dims, hdferr)
+call h5screate_simple_f(rnk, dims, memspace, hdferr)
+call h5dwrite_f(dset, H5T_NATIVE_INTEGER, wdata, dims, hdferr, memspace, space)
+
+call h5dclose_f(dset, hdferr)
+
+end function HDF_writeHyperslabIntegerArray4D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_writeHyperslabFloatArray2D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief writes a 2D hyperslab to the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param wdata data to be written 
+!> @param hdims original dimensions of complete dataset
+!> @param offset offset of the hyperslab
+!> @param dim0 ...  dimensions of the hyperslab
+!> @param HDF_head
+!> @param HDF_tail
+!> @param extend (optional) if present, add to existing dataset
+!
+!> @date 04/06/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_writeHyperslabFloatArray2D(dataname, wdata, hdims, offset, &
+                                          dim0, dim1, HDF_head, HDF_tail, extend) result(success)
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
+
+character(fnlen),INTENT(IN)                             :: dataname
+real(real_kind),INTENT(IN)                              :: wdata(dim0,dim1)
+integer(HSIZE_T),INTENT(IN)                             :: hdims(2)
+integer(HSIZE_T),INTENT(IN)                             :: offset(2)
+integer(HSIZE_T),INTENT(IN)                             :: dim0
+integer(HSIZE_T),INTENT(IN)                             :: dim1
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+logical, OPTIONAL, INTENT(IN)                           :: extend
+integer(kind=irg)                                       :: success
+
+integer(HID_T)                                          :: memspace, space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T)                                        :: dims(2)
+
+success = 0
+
+dims = (/ dim0, dim1 /)
+rnk = 2
+call h5screate_simple_f(rnk, hdims, space, hdferr)
+
+if (present(extend)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
+end if
+
+call h5sselect_hyperslab_f(space, H5S_SELECT_SET_F, offset, dims, hdferr)
+call h5screate_simple_f(rnk, dims, memspace, hdferr)
+call h5dwrite_f(dset, H5T_NATIVE_REAL, wdata, dims, hdferr, memspace, space)
+
+call h5dclose_f(dset, hdferr)
+
+end function HDF_writeHyperslabFloatArray2D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_writeHyperslabFloatArray3D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief writes a 3D hyperslab to the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param wdata data to be written 
+!> @param hdims original dimensions of complete dataset
+!> @param offset offset of the hyperslab
+!> @param dim0 ...  dimensions of the hyperslab
+!> @param HDF_head
+!> @param HDF_tail
+!> @param extend (optional) if present, add to existing dataset
+!
+!> @date 04/06/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_writeHyperslabFloatArray3D(dataname, wdata, hdims, offset, &
+                                          dim0, dim1, dim2, HDF_head, HDF_tail, extend) result(success)
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
+
+character(fnlen),INTENT(IN)                             :: dataname
+real(real_kind),INTENT(IN)                              :: wdata(dim0,dim1,dim2)
+integer(HSIZE_T),INTENT(IN)                             :: hdims(3)
+integer(HSIZE_T),INTENT(IN)                             :: offset(3)
+integer(HSIZE_T),INTENT(IN)                             :: dim0
+integer(HSIZE_T),INTENT(IN)                             :: dim1
+integer(HSIZE_T),INTENT(IN)                             :: dim2
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+logical, OPTIONAL, INTENT(IN)                           :: extend
+integer(kind=irg)                                       :: success
+
+integer(HID_T)                                          :: memspace, space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T)                                        :: dims(3)
+
+success = 0
+
+dims = (/ dim0, dim1, dim2 /)
+rnk = 3
+call h5screate_simple_f(rnk, hdims, space, hdferr)
+
+if (present(extend)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
+end if
+
+call h5sselect_hyperslab_f(space, H5S_SELECT_SET_F, offset, dims, hdferr)
+call h5screate_simple_f(rnk, dims, memspace, hdferr)
+call h5dwrite_f(dset, H5T_NATIVE_REAL, wdata, dims, hdferr, memspace, space)
+
+call h5dclose_f(dset, hdferr)
+
+end function HDF_writeHyperslabFloatArray3D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_writeHyperslabFloatArray4D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief writes a 4D hyperslab to the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param wdata data to be written 
+!> @param hdims original dimensions of complete dataset
+!> @param offset offset of the hyperslab
+!> @param dim0 ...  dimensions of the hyperslab
+!> @param HDF_head
+!> @param HDF_tail
+!> @param extend (optional) if present, add to existing dataset
+!
+!> @date 04/06/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_writeHyperslabFloatArray4D(dataname, wdata, hdims, offset, &
+                                          dim0, dim1, dim2, dim3, HDF_head, HDF_tail, extend) result(success)
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
+
+character(fnlen),INTENT(IN)                             :: dataname
+real(real_kind),INTENT(IN)                              :: wdata(dim0,dim1,dim2,dim3)
+integer(HSIZE_T),INTENT(IN)                             :: hdims(4)
+integer(HSIZE_T),INTENT(IN)                             :: offset(4)
+integer(HSIZE_T),INTENT(IN)                             :: dim0
+integer(HSIZE_T),INTENT(IN)                             :: dim1
+integer(HSIZE_T),INTENT(IN)                             :: dim2
+integer(HSIZE_T),INTENT(IN)                             :: dim3
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+logical, OPTIONAL, INTENT(IN)                           :: extend
+integer(kind=irg)                                       :: success
+
+integer(HID_T)                                          :: memspace, space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T)                                        :: dims(4)
+
+success = 0
+
+dims = (/ dim0, dim1, dim2, dim3 /)
+rnk = 4
+call h5screate_simple_f(rnk, hdims, space, hdferr)
+
+if (present(extend)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
+end if
+
+call h5sselect_hyperslab_f(space, H5S_SELECT_SET_F, offset, dims, hdferr)
+call h5screate_simple_f(rnk, dims, memspace, hdferr)
+call h5dwrite_f(dset, H5T_NATIVE_REAL, wdata, dims, hdferr, memspace, space)
+
+call h5dclose_f(dset, hdferr)
+
+end function HDF_writeHyperslabFloatArray4D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_writeHyperslabDoubleArray2D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief writes a 2D hyperslab to the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param wdata data to be written 
+!> @param hdims original dimensions of complete dataset
+!> @param offset offset of the hyperslab
+!> @param dim0 ...  dimensions of the hyperslab
+!> @param HDF_head
+!> @param HDF_tail
+!> @param extend (optional) if present, add to existing dataset
+!
+!> @date 04/06/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_writeHyperslabDoubleArray2D(dataname, wdata, hdims, offset, &
+                                          dim0, dim1, HDF_head, HDF_tail, extend) result(success)
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
+
+character(fnlen),INTENT(IN)                             :: dataname
+real(real_kind),INTENT(IN)                              :: wdata(dim0,dim1)
+integer(HSIZE_T),INTENT(IN)                             :: hdims(2)
+integer(HSIZE_T),INTENT(IN)                             :: offset(2)
+integer(HSIZE_T),INTENT(IN)                             :: dim0
+integer(HSIZE_T),INTENT(IN)                             :: dim1
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+logical, OPTIONAL, INTENT(IN)                           :: extend
+integer(kind=irg)                                       :: success
+
+integer(HID_T)                                          :: memspace, space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T)                                        :: dims(2)
+
+success = 0
+
+dims = (/ dim0, dim1 /)
+rnk = 2
+call h5screate_simple_f(rnk, hdims, space, hdferr)
+
+if (present(extend)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
+end if
+
+call h5sselect_hyperslab_f(space, H5S_SELECT_SET_F, offset, dims, hdferr)
+call h5screate_simple_f(rnk, dims, memspace, hdferr)
+call h5dwrite_f(dset, H5T_NATIVE_REAL, wdata, dims, hdferr, memspace, space)
+
+call h5dclose_f(dset, hdferr)
+
+end function HDF_writeHyperslabDoubleArray2D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_writeHyperslabDoubleArray3D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief writes a 3D hyperslab to the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param wdata data to be written 
+!> @param hdims original dimensions of complete dataset
+!> @param offset offset of the hyperslab
+!> @param dim0 ...  dimensions of the hyperslab
+!> @param HDF_head
+!> @param HDF_tail
+!> @param extend (optional) if present, add to existing dataset
+!
+!> @date 04/06/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_writeHyperslabDoubleArray3D(dataname, wdata, hdims, offset, &
+                                          dim0, dim1, dim2, HDF_head, HDF_tail, extend) result(success)
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
+
+character(fnlen),INTENT(IN)                             :: dataname
+real(real_kind),INTENT(IN)                              :: wdata(dim0,dim1,dim2)
+integer(HSIZE_T),INTENT(IN)                             :: hdims(3)
+integer(HSIZE_T),INTENT(IN)                             :: offset(3)
+integer(HSIZE_T),INTENT(IN)                             :: dim0
+integer(HSIZE_T),INTENT(IN)                             :: dim1
+integer(HSIZE_T),INTENT(IN)                             :: dim2
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+logical, OPTIONAL, INTENT(IN)                           :: extend
+integer(kind=irg)                                       :: success
+
+integer(HID_T)                                          :: memspace, space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T)                                        :: dims(3)
+
+success = 0
+
+dims = (/ dim0, dim1, dim2 /)
+rnk = 3
+call h5screate_simple_f(rnk, hdims, space, hdferr)
+
+if (present(extend)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
+end if
+
+call h5sselect_hyperslab_f(space, H5S_SELECT_SET_F, offset, dims, hdferr)
+call h5screate_simple_f(rnk, dims, memspace, hdferr)
+call h5dwrite_f(dset, H5T_NATIVE_REAL, wdata, dims, hdferr, memspace, space)
+
+call h5dclose_f(dset, hdferr)
+
+end function HDF_writeHyperslabDoubleArray3D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_writeHyperslabDoubleArray4D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief writes a 4D hyperslab to the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param wdata data to be written 
+!> @param hdims original dimensions of complete dataset
+!> @param offset offset of the hyperslab
+!> @param dim0 ...  dimensions of the hyperslab
+!> @param HDF_head
+!> @param HDF_tail
+!> @param extend (optional) if present, add to existing dataset
+!
+!> @date 04/06/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_writeHyperslabDoubleArray4D(dataname, wdata, hdims, offset, &
+                                          dim0, dim1, dim2, dim3, HDF_head, HDF_tail, extend) result(success)
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
+
+character(fnlen),INTENT(IN)                             :: dataname
+real(real_kind),INTENT(IN)                              :: wdata(dim0,dim1,dim2,dim3)
+integer(HSIZE_T),INTENT(IN)                             :: hdims(4)
+integer(HSIZE_T),INTENT(IN)                             :: offset(4)
+integer(HSIZE_T),INTENT(IN)                             :: dim0
+integer(HSIZE_T),INTENT(IN)                             :: dim1
+integer(HSIZE_T),INTENT(IN)                             :: dim2
+integer(HSIZE_T),INTENT(IN)                             :: dim3
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+logical, OPTIONAL, INTENT(IN)                           :: extend
+integer(kind=irg)                                       :: success
+
+integer(HID_T)                                          :: memspace, space, dset ! Handles
+integer                                                 :: hdferr, rnk
+integer(HSIZE_T)                                        :: dims(4)
+
+success = 0
+
+dims = (/ dim0, dim1, dim2, dim3 /)
+rnk = 4
+call h5screate_simple_f(rnk, hdims, space, hdferr)
+
+if (present(extend)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
+end if
+
+call h5sselect_hyperslab_f(space, H5S_SELECT_SET_F, offset, dims, hdferr)
+call h5screate_simple_f(rnk, dims, memspace, hdferr)
+call h5dwrite_f(dset, H5T_NATIVE_REAL, wdata, dims, hdferr, memspace, space)
+
+call h5dclose_f(dset, hdferr)
+
+end function HDF_writeHyperslabDoubleArray4D
+
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readHyperslabIntegerArray2D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 2D hyperslab from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param offset offset of the hyperslab
+!> @param dims dimensions of the hyperslab
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 04/06/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readHyperslabIntegerArray2D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(IN)                             :: offset(2)
+integer(HSIZE_T),INTENT(IN)                             :: dims(2)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer, dimension(:,:), allocatable, TARGET            :: rdata
+
+integer(HID_T)                                          :: memspace, space, dset ! Handles
+integer(HSIZE_T)                                        :: hdims(2), max_dims(2)
+integer                                                 :: hdferr, rnk
+
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+call h5dget_space_f(dset, space, hdferr)
+call h5sget_simple_extent_dims_f(space, hdims, max_dims, hdferr)
+
+rnk = 2
+call h5sselect_hyperslab_f(space, H5S_SELECT_SET_F, offset, dims, hdferr) 
+call h5screate_simple_f(rnk, dims, memspace, hdferr)
+
+allocate(rdata(dims(1),dims(2)))
+call h5dread_f(dset, H5T_NATIVE_INTEGER, rdata, hdims, hdferr, memspace, space)
+
+call h5sclose_f(space, hdferr)
+call h5dclose_f(dset, hdferr)
+
+end function HDF_readHyperslabIntegerArray2D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readHyperslabIntegerArray3D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 3D hyperslab from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param offset offset of the hyperslab
+!> @param dims dimensions of the hyperslab
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 04/06/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readHyperslabIntegerArray3D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(IN)                             :: offset(3)
+integer(HSIZE_T),INTENT(IN)                             :: dims(3)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer, dimension(:,:,:), allocatable, TARGET          :: rdata
+
+integer(HID_T)                                          :: memspace, space, dset ! Handles
+integer(HSIZE_T)                                        :: hdims(2), max_dims(2)
+integer                                                 :: hdferr, rnk
+
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+call h5dget_space_f(dset, space, hdferr)
+call h5sget_simple_extent_dims_f(space, hdims, max_dims, hdferr)
+
+rnk = 3
+call h5sselect_hyperslab_f(space, H5S_SELECT_SET_F, offset, dims, hdferr) 
+call h5screate_simple_f(rnk, dims, memspace, hdferr)
+
+allocate(rdata(dims(1),dims(2),dims(3)))
+call h5dread_f(dset, H5T_NATIVE_INTEGER, rdata, hdims, hdferr, memspace, space)
+
+call h5sclose_f(space, hdferr)
+call h5dclose_f(dset, hdferr)
+
+end function HDF_readHyperslabIntegerArray3D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readHyperslabIntegerArray4D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 4D hyperslab from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param offset offset of the hyperslab
+!> @param dims dimensions of the hyperslab
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 04/06/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readHyperslabIntegerArray4D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(IN)                             :: offset(4)
+integer(HSIZE_T),INTENT(IN)                             :: dims(4)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+integer, dimension(:,:,:,:), allocatable, TARGET        :: rdata
+
+integer(HID_T)                                          :: memspace, space, dset ! Handles
+integer(HSIZE_T)                                        :: hdims(2), max_dims(2)
+integer                                                 :: hdferr, rnk
+
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+call h5dget_space_f(dset, space, hdferr)
+call h5sget_simple_extent_dims_f(space, hdims, max_dims, hdferr)
+
+rnk = 4
+call h5sselect_hyperslab_f(space, H5S_SELECT_SET_F, offset, dims, hdferr) 
+call h5screate_simple_f(rnk, dims, memspace, hdferr)
+
+allocate(rdata(dims(1),dims(2),dims(3),dims(4)))
+call h5dread_f(dset, H5T_NATIVE_INTEGER, rdata, hdims, hdferr, memspace, space)
+
+call h5sclose_f(space, hdferr)
+call h5dclose_f(dset, hdferr)
+
+end function HDF_readHyperslabIntegerArray4D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readHyperslabFloatArray2D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 2D hyperslab from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param offset offset of the hyperslab
+!> @param dims dimensions of the hyperslab
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 04/06/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readHyperslabFloatArray2D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(IN)                             :: offset(2)
+integer(HSIZE_T),INTENT(IN)                             :: dims(2)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+real(real_kind), dimension(:,:), allocatable, TARGET    :: rdata
+
+integer(HID_T)                                          :: memspace, space, dset ! Handles
+integer(HSIZE_T)                                        :: hdims(2), max_dims(2)
+integer                                                 :: hdferr, rnk
+
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+call h5dget_space_f(dset, space, hdferr)
+call h5sget_simple_extent_dims_f(space, hdims, max_dims, hdferr)
+
+rnk = 2
+call h5sselect_hyperslab_f(space, H5S_SELECT_SET_F, offset, dims, hdferr) 
+call h5screate_simple_f(rnk, dims, memspace, hdferr)
+
+allocate(rdata(dims(1),dims(2)))
+call h5dread_f(dset, H5T_NATIVE_REAL, rdata, hdims, hdferr, memspace, space)
+
+call h5sclose_f(space, hdferr)
+call h5dclose_f(dset, hdferr)
+
+end function HDF_readHyperslabFloatArray2D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readHyperslabFloatArray3D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 3D hyperslab from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param offset offset of the hyperslab
+!> @param dims dimensions of the hyperslab
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 04/06/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readHyperslabFloatArray3D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(IN)                             :: offset(3)
+integer(HSIZE_T),INTENT(IN)                             :: dims(3)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+real(real_kind), dimension(:,:,:), allocatable, TARGET  :: rdata
+
+integer(HID_T)                                          :: memspace, space, dset ! Handles
+integer(HSIZE_T)                                        :: hdims(2), max_dims(2)
+integer                                                 :: hdferr, rnk
+
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+call h5dget_space_f(dset, space, hdferr)
+call h5sget_simple_extent_dims_f(space, hdims, max_dims, hdferr)
+
+rnk = 3
+call h5sselect_hyperslab_f(space, H5S_SELECT_SET_F, offset, dims, hdferr) 
+call h5screate_simple_f(rnk, dims, memspace, hdferr)
+
+allocate(rdata(dims(1),dims(2),dims(3)))
+call h5dread_f(dset, H5T_NATIVE_REAL, rdata, hdims, hdferr, memspace, space)
+
+call h5sclose_f(space, hdferr)
+call h5dclose_f(dset, hdferr)
+
+end function HDF_readHyperslabFloatArray3D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readHyperslabFloatArray4D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 4D hyperslab from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param offset offset of the hyperslab
+!> @param dims dimensions of the hyperslab
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 04/06/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readHyperslabFloatArray4D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(IN)                             :: offset(4)
+integer(HSIZE_T),INTENT(IN)                             :: dims(4)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+real(real_kind), dimension(:,:,:,:), allocatable, TARGET:: rdata
+
+integer(HID_T)                                          :: memspace, space, dset ! Handles
+integer(HSIZE_T)                                        :: hdims(2), max_dims(2)
+integer                                                 :: hdferr, rnk
+
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+call h5dget_space_f(dset, space, hdferr)
+call h5sget_simple_extent_dims_f(space, hdims, max_dims, hdferr)
+
+rnk = 4
+call h5sselect_hyperslab_f(space, H5S_SELECT_SET_F, offset, dims, hdferr) 
+call h5screate_simple_f(rnk, dims, memspace, hdferr)
+
+allocate(rdata(dims(1),dims(2),dims(3),dims(4)))
+call h5dread_f(dset, H5T_NATIVE_REAL, rdata, hdims, hdferr, memspace, space)
+
+call h5sclose_f(space, hdferr)
+call h5dclose_f(dset, hdferr)
+
+end function HDF_readHyperslabFloatArray4D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readHyperslabDoubleArray2D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 2D hyperslab from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param offset offset of the hyperslab
+!> @param dims dimensions of the hyperslab
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 04/06/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readHyperslabDoubleArray2D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(IN)                             :: offset(2)
+integer(HSIZE_T),INTENT(IN)                             :: dims(2)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+real(real_kind), dimension(:,:), allocatable, TARGET    :: rdata
+
+integer(HID_T)                                          :: memspace, space, dset ! Handles
+integer(HSIZE_T)                                        :: hdims(2), max_dims(2)
+integer                                                 :: hdferr, rnk
+
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+call h5dget_space_f(dset, space, hdferr)
+call h5sget_simple_extent_dims_f(space, hdims, max_dims, hdferr)
+
+rnk = 2
+call h5sselect_hyperslab_f(space, H5S_SELECT_SET_F, offset, dims, hdferr) 
+call h5screate_simple_f(rnk, dims, memspace, hdferr)
+
+allocate(rdata(dims(1),dims(2)))
+call h5dread_f(dset, H5T_NATIVE_DOUBLE, rdata, hdims, hdferr, memspace, space)
+
+call h5sclose_f(space, hdferr)
+call h5dclose_f(dset, hdferr)
+
+end function HDF_readHyperslabDoubleArray2D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readHyperslabDoubleArray3D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 3D hyperslab from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param offset offset of the hyperslab
+!> @param dims dimensions of the hyperslab
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 04/06/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readHyperslabDoubleArray3D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(IN)                             :: offset(3)
+integer(HSIZE_T),INTENT(IN)                             :: dims(3)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+real(real_kind), dimension(:,:,:), allocatable, TARGET  :: rdata
+
+integer(HID_T)                                          :: memspace, space, dset ! Handles
+integer(HSIZE_T)                                        :: hdims(2), max_dims(2)
+integer                                                 :: hdferr, rnk
+
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+call h5dget_space_f(dset, space, hdferr)
+call h5sget_simple_extent_dims_f(space, hdims, max_dims, hdferr)
+
+rnk = 3
+call h5sselect_hyperslab_f(space, H5S_SELECT_SET_F, offset, dims, hdferr) 
+call h5screate_simple_f(rnk, dims, memspace, hdferr)
+
+allocate(rdata(dims(1),dims(2),dims(3)))
+call h5dread_f(dset, H5T_NATIVE_DOUBLE, rdata, hdims, hdferr, memspace, space)
+
+call h5sclose_f(space, hdferr)
+call h5dclose_f(dset, hdferr)
+
+end function HDF_readHyperslabDoubleArray3D
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION:HDF_readHyperslabDoubleArray4D
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief reads and returns a 4D hyperslab from the current file or group ID 
+!
+!> @note Note that this routine uses fortran-2003 options
+!
+!> @param dataname dataset name (string)
+!> @param offset offset of the hyperslab
+!> @param dims dimensions of the hyperslab
+!> @param HDF_head
+!> @param HDF_tail
+!
+!> @date 04/06/15  MDG 1.0 original
+!--------------------------------------------------------------------------
+function HDF_readHyperslabDoubleArray4D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+
+IMPLICIT NONE
+
+integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
+
+character(fnlen),INTENT(IN)                             :: dataname
+integer(HSIZE_T),INTENT(IN)                             :: offset(4)
+integer(HSIZE_T),INTENT(IN)                             :: dims(4)
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+real(real_kind), dimension(:,:,:,:), allocatable, TARGET:: rdata
+
+integer(HID_T)                                          :: memspace, space, dset ! Handles
+integer(HSIZE_T)                                        :: hdims(2), max_dims(2)
+integer                                                 :: hdferr, rnk
+
+call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+call h5dget_space_f(dset, space, hdferr)
+call h5sget_simple_extent_dims_f(space, hdims, max_dims, hdferr)
+
+rnk = 4
+call h5sselect_hyperslab_f(space, H5S_SELECT_SET_F, offset, dims, hdferr) 
+call h5screate_simple_f(rnk, dims, memspace, hdferr)
+
+allocate(rdata(dims(1),dims(2),dims(3),dims(4)))
+call h5dread_f(dset, H5T_NATIVE_DOUBLE, rdata, hdims, hdferr, memspace, space)
+
+call h5sclose_f(space, hdferr)
+call h5dclose_f(dset, hdferr)
+
+end function HDF_readHyperslabDoubleArray4D
+
+
 
 
 end module HDFsupport

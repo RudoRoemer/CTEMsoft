@@ -18,10 +18,10 @@ use rotations
   CHARACTER(fnlen)             :: nmlname = "CTEMKossel.nml"
 
   INTEGER(SIZE_T)              :: sdim 
-  INTEGER(HID_T)               :: file, filetype, space, dset ! Handles
-  INTEGER                      :: hdferr
+  INTEGER(HID_T)               :: file, filetype, space, dset, memspace ! Handles
+  INTEGER                      :: hdferr, rnk
   INTEGER(HSIZE_T), DIMENSION(1:1) :: dims
-  INTEGER(HSIZE_T), DIMENSION(1:2) :: dims2
+  INTEGER(HSIZE_T), DIMENSION(1:2) :: dims2, offset, cnt, dimsm
   INTEGER(HSIZE_T), DIMENSION(1:2) :: maxdims
   
 ! character(len=1,kind=c_char)          :: chararr(256)
@@ -39,14 +39,14 @@ use rotations
   TYPE(C_PTR) :: f_ptr
 
   INTEGER                           :: i, j, length, nlines
-  integer(kind=irg)                 :: intarr(8), dim0, dim1, intarr2(3,3), printflag
+  integer(kind=irg)                 :: intarr(8), dim0, dim1, intarr2(3,3), printflag, intdata(100,100), sdata(10,10)
   integer*4                         :: i1, i2
   real(kind=sgl)                    :: fltarr(8), dc(3)
   real(kind=dbl)                    :: dblarr(8)
-  integer(kind=irg),allocatable     :: rdintarr(:), rdintarr2(:,:)
-  real(kind=sgl),allocatable        :: rdfltarr(:)
+  integer(kind=irg),allocatable     :: rdintarr(:), rdintarr2(:,:), intarr10(:,:)
+  real(kind=sgl),allocatable        :: rdfltarr(:), realdata(:,:), realarr10(:,:)
   real(kind=dbl),allocatable        :: rddblarr(:)
-  logical                           :: HDFstatus
+  logical                           :: HDFstatus, extend
 
   type(HDFobjectStackType),pointer  :: HDF_head
   type(HDFobjectStackType),pointer  :: HDF_tail
@@ -61,6 +61,14 @@ use rotations
 
   nullify(HDF_head)
   nullify(HDF_tail)
+
+
+do i = 1, 100
+  do j = 1, 100
+    intdata(i,j) = (i-1) + (j-1);
+  end do
+end do
+
 
   rnl%pgnum = 32
   rnl%nsteps = 100
@@ -200,6 +208,33 @@ dim0 = 256
 write (*,*) 'about to write chararray2'
 hdferr = HDF_writeDatasetCharArray2D(dataset, chararr2, dim0, dim0, HDF_head, HDF_tail)
 
+dataset = 'hyperslab'
+sdata = intdata(1:10,1:10)
+dims2 = (/ 1000, 1000 /)
+cnt = (/ 10, 10 /)
+offset = (/ 3, 3 /)
+extend = .TRUE.
+hdferr = HDF_writeHyperslabIntegerArray2D(dataset, sdata, dims2, offset, cnt(1), cnt(2), HDF_head, HDF_tail)
+offset = (/ 0, 0 /)
+hdferr = HDF_writeHyperslabIntegerArray2D(dataset, sdata, dims2, offset, cnt(1), cnt(2), HDF_head, HDF_tail, extend)
+offset = (/33,13 /)
+hdferr = HDF_writeHyperslabIntegerArray2D(dataset, sdata, dims2, offset, cnt(1), cnt(2), HDF_head, HDF_tail, extend)
+offset = (/33,33 /)
+hdferr = HDF_writeHyperslabIntegerArray2D(dataset, sdata, dims2, offset, cnt(1), cnt(2), HDF_head, HDF_tail, extend)
+
+allocate(realdata(20,20))
+do i=1,20
+  do j=1,20
+    realdata(i,j) = float(i-1) + float(j+1)
+  end do
+end do
+
+dataset = 'realhyperslab'
+dims2 = (/ 100, 100 /)
+cnt = (/ 20, 20 /)
+offset = (/ 2, 2 /)
+extend = .TRUE.
+hdferr = HDF_writeHyperslabFloatArray2D(dataset, realdata, dims2, offset, cnt(1), cnt(2), HDF_head, HDF_tail)
 
 call HDF_pop(HDF_head,.TRUE.)
 
@@ -209,7 +244,7 @@ call HDF_pop(HDF_head,.TRUE.)
 
 ! Open the file using the default properties.
 filename = 'test.h5'
-hdferr =  HDF_openFile(filename, HDF_head, HDF_tail)
+hdferr =  HDF_openFile(filename, HDF_head, HDF_tail, .TRUE.)
 
 ! open the NMLfiles group
 groupname = 'NMLfiles'
@@ -283,7 +318,29 @@ rdchararr = HDF_readDatasetCharArray1D(dataname, dims, HDF_head, HDF_tail)
 write (*,*) 'shape of chararray = ',shape(rdchararr)
 write (*,*) rdchararr
 
+! and finally, read a hyperslab from the hyperslab dataset
+dataname = 'hyperslab'
+offset = (/ 3, 3 /)
+cnt = (/ 10, 10 /)
+intarr10 = HDF_readHyperslabIntegerArray2D(dataname, offset, cnt, HDF_head, HDF_tail)
 
+write (*,*) 'hyperslab read : '
+do i=1,10
+  write (*,"(10I3)") (intarr10(i,j),j=1,10)
+end do
+deallocate(intarr10)
+
+dataname = 'realhyperslab'
+offset = (/ 2, 2 /)
+cnt = (/ 20, 20 /)
+realarr10 = HDF_readHyperslabFloatArray2D(dataname, offset, cnt, HDF_head, HDF_tail)
+
+write (*,*) 'real hyperslab read : '
+do i=1,10
+  write (*,"(20F6.1)") (realarr10(i,j),j=1,20)
+end do
+
+call h5dclose_f(dset, hdferr)
 
 ! and close all resources
 call HDF_pop(HDF_head,.TRUE.)
