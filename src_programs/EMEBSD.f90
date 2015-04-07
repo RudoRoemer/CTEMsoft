@@ -44,8 +44,8 @@
 !> @date  03/26/14  MDG 3.1 modification of file formats; made compatible with IDL visualization interface
 !> @date  06/24/14  MDG 4.0 removal of all global variables; separation of nml from computation; OpenMP
 !> @date  03/10/15  MDG 4.1 added output format selector
+!> @date  04/02/15  MDG 5.0 changed program input & output to HDF format
 ! ###################################################################
-! 
 
 program EMEBSD
 
@@ -71,7 +71,7 @@ integer(kind=irg)                      :: istat
 logical                                :: verbose
 
 interface
-        subroutine ComputeEBSDPatterns(enl, angles, acc, master, progname)
+        subroutine ComputeEBSDPatterns(enl, angles, acc, master, progname, nmldeffile)
         
         use local
         use typedefs
@@ -90,11 +90,12 @@ interface
         
         IMPLICIT NONE
         
-        type(EBSDNameListType),INTENT(IN)       :: enl
+        type(EBSDNameListType),INTENT(INOUT)    :: enl
         type(EBSDAngleType),pointer             :: angles
         type(EBSDLargeAccumType),pointer        :: acc
         type(EBSDMasterType),pointer            :: master
         character(fnlen),INTENT(IN)             :: progname
+        character(fnlen),INTENT(IN)             :: nmldeffile
         end subroutine ComputeEBSDPatterns
 end interface
 
@@ -122,11 +123,11 @@ verbose = .TRUE.
 allocate(angles)
 call EBSDreadangles(enl, angles, verbose)
 
-! 2. read the Monte Carlo data file
+! 2. read the Monte Carlo data file (including HDF format)
 allocate(acc)
 call EBSDreadMCfile(enl, acc, verbose)
 
-! 3. read EBSD master pattern file
+! 3. read EBSD master pattern file (including HDF format)
 allocate(master)
 call EBSDreadMasterfile(enl, master, verbose)
 
@@ -137,7 +138,7 @@ call EBSDGenerateDetector(enl, acc, master, verbose)
 deallocate(acc%accum_e)
 
 ! perform the zone axis computations for the knl input parameters
-call ComputeEBSDpatterns(enl, angles, acc, master, progname)
+call ComputeEBSDpatterns(enl, angles, acc, master, progname, nmldeffile)
 
 deallocate(master, acc, angles)
 
@@ -156,6 +157,7 @@ end program EMEBSD
 !> @param acc energy accumulator arrays
 !> @param master structure with master and detector arrays
 !> @param progname program name string
+!> @param nmldeffile name of nml file
 !
 !> @date 11/29/01  MDG 1.0 original
 !> @date 04/08/13  MDG 2.0 rewrite
@@ -170,12 +172,14 @@ end program EMEBSD
 !> @date 03/10/15  MDG 5.2 added 'bin' and 'gui' outputformat; added mask support for 'bin' outputformat
 !> @date 03/14/15  MDG 5.3 attempt at speeding up the program by performing approximate energy sums (energyaverage = 1)
 !> @date 03/20/15  MDG 5.4 corrected out-of-bounds error in EBSDpattern array
+!> @date 04/07/15  MDG 5.5 added HDF-formatted output
 !--------------------------------------------------------------------------
-subroutine ComputeEBSDPatterns(enl, angles, acc, master, progname)
+subroutine ComputeEBSDPatterns(enl, angles, acc, master, progname, nmldeffile)
 
 use local
 use typedefs
 use NameListTypedefs
+use NameListHDFwriters
 use symmetry
 use crystal
 use constants
@@ -187,15 +191,19 @@ use Lambert
 use quaternions
 use rotations
 use noise
+use HDF5
+use HDFsupport
+use ISO_C_BINDING
 use omp_lib
 
 IMPLICIT NONE
 
-type(EBSDNameListType),INTENT(IN)       :: enl
+type(EBSDNameListType),INTENT(INOUT)    :: enl
 type(EBSDAngleType),pointer             :: angles
 type(EBSDLargeAccumType),pointer        :: acc
 type(EBSDMasterType),pointer            :: master
 character(fnlen),INTENT(IN)             :: progname
+character(fnlen),INTENT(IN)             :: nmldeffile
 
 
 ! all geometrical parameters and filenames
@@ -209,7 +217,7 @@ real(kind=sgl),allocatable              :: z(:,:)               ! used to store 
 real(kind=dbl)                          :: qq(4), qq1(4), qq2(4), qq3(4)
 
 ! various items
-integer(kind=irg)                       :: i, j, iang, jang, k, io_int(6), etotal          ! various counters
+integer(kind=irg)                       :: i, j, iang, jang, k, io_int(6), etotal, hdferr          ! various counters
 integer(kind=irg)                       :: istat                ! status for allocate operations
 integer(kind=irg)                       :: nix, niy, binx, biny,num_el, nixp, niyp       ! various parameters
 integer(kind=irg)                       :: NUMTHREADS, TID   ! number of allocated threads, thread ID
@@ -233,6 +241,21 @@ character(len=3)                        :: outputformat
 ! parameter for random number generator
 integer, parameter                      :: K4B=selected_int_kind(9)      ! used by ran function in math.f90
 integer(K4B)                            :: idum
+
+type(HDFobjectStackType),pointer        :: HDF_head
+type(HDFobjectStackType),pointer        :: HDF_tail
+
+integer(HSIZE_T), dimension(1:3)        :: hdims, offset 
+integer(HSIZE_T)                        :: dim0, dim1, dim2
+character(fnlen,kind=c_char)            :: line2(1)
+character(fnlen)                        :: groupname, dataset
+character(11)                           :: dstr
+character(15)                           :: tstrb
+character(15)                           :: tstre
+logical                                 :: overwrite = .TRUE.
+
+nullify(HDF_head)
+nullify(HDF_tail)
 
 !====================================
 ! what is the output format?  GUI or BIN ?
@@ -276,37 +299,80 @@ num_el = nint(sum(acc%accum_e_detector))
 !====================================
 ! ------ and open the output file for IDL visualization (only thread 0 can write to this file)
 !====================================
-open(unit=dataunit,file=trim(enl%datafile),status='unknown',form='unformatted',action='write')
 ! we need to write the image dimensions, and also how many of those there are...
-if (enl%binning.eq.1) then 
-  write (dataunit) enl%numsx, enl%numsy, enl%numangles
-else 
-  write (dataunit) binx, biny, enl%numangles
-end if
+
+! Initialize FORTRAN interface.
+!
+CALL h5open_f(hdferr)
+
+call timestamp(datestring=dstr, timestring=tstrb)
+tstre = tstrb
+
+! Create a new file using the default properties.
+hdferr =  HDF_createFile(enl%datafile, HDF_head, HDF_tail)
+
+! write the EMheader to the file
+call HDF_writeEMheader(HDF_head, HDF_tail, dstr, tstrb, tstre, progname)
+
+! create a namelist group to write all the namelist files into
+groupname = "NMLfiles"
+hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+
+! read the text file and write the array to the file
+dataset = 'EMEBSDNML'
+hdferr = HDF_writeDatasetTextFile(dataset, nmldeffile, HDF_head, HDF_tail)
+
+call HDF_pop(HDF_head)
+
+! create a NMLparameters group to write all the namelist entries into
+groupname = "NMLparameters"
+hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+
+call HDFwriteEBSDNameList(HDF_head, HDF_tail, enl)
+
+! and leave this group
+call HDF_pop(HDF_head)
+
+! then the remainder of the data in a EMData group
+groupname = 'EMData'
+hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+
+! we need to write the image dimensions
+dataset = 'binx'
+hdferr = HDF_writeDatasetInteger(dataset, binx, HDF_head, HDF_tail) 
+
+dataset = 'biny'
+hdferr = HDF_writeDatasetInteger(dataset, biny, HDF_head, HDF_tail) 
+
+dataset = 'enl%numangles'
+hdferr = HDF_writeDatasetInteger(dataset, enl%numangles, HDF_head, HDF_tail) 
+
+! and we leave this group open for further data output ... 
 
 !====================================
 ! ------ start the actual image computation loop
 !====================================
 
 !====================================
-! to speed things up, we'll split the computation into batches of 1,000 patterns per thread; once those 
-! are computed, we leave the OpenMP part to write them to a file (will be replaced with HDF5 output
-! at a later stage)
+! to speed things up, we'll split the computation into batches of 1,024 patterns per thread; once those 
+! are computed, we leave the OpenMP part to write them to a file 
 !====================================
 
 
 ! and allocate space to store each batch
 if (outputformat.eq.'gui') then
   nthreads = 1
-  ninbatch = 1000
+  ninbatch = 1024
   nbatches = 0
   nremainder = mod(enl%numangles,ninbatch)
 else
   nthreads = enl%nthreads
-  ninbatch = 1000
+  ninbatch = 1024
   nbatches = enl%numangles/(ninbatch*nthreads)
   nremainder = mod(enl%numangles,ninbatch*nthreads)
   allocate(batchpatterns(enl%numsx,enl%numsy,ninbatch*nthreads),stat=istat)
+! this is also the size of the hyperslabs that we will write to the HDF output file
+
 ! here we also create a mask if necessary
   allocate(mask(binx,biny),stat=istat)
   mask = 1.0
@@ -385,6 +451,7 @@ do ibatch=1,nbatches+1
 ! sample quaternion orientation, and then back to direction cosines...
 ! then convert these individually to the correct EBSD pattern location
         jang = (ibatch-1)*ninbatch*nthreads + iang
+
         EBSDpattern = 0.0
         binned = 0.0
         bpat = ' '
@@ -392,7 +459,8 @@ do ibatch=1,nbatches+1
         do i=1,enl%numsx
             do j=1,enl%numsy
 !  do the active coordinate transformation for this euler angle
-              dc = sngl(quat_Lp(conjg(angles%quatang(1:4,jang)),  (/ master%rgx(i,j),master%rgy(i,j),master%rgz(i,j) /) )) 
+             !dc = sngl(quat_Lp(conjg(angles%quatang(1:4,jang)),  (/ master%rgx(i,j),master%rgy(i,j),master%rgz(i,j) /) )) 
+              dc = sngl(quat_Lp(angles%quatang(1:4,jang),  (/ master%rgx(i,j),master%rgy(i,j),master%rgz(i,j) /) )) 
 ! make sure the third one is positive; if not, switch all 
               dc = dc/sqrt(sum(dc**2))
               if (dc(3).lt.0.0) dc = -dc
@@ -438,7 +506,19 @@ do ibatch=1,nbatches+1
 ! if this is a GUI-computation, then we can directly store the current pattern in the output file;
 ! otherwise, we process it and turn it into a byte array of the right binning level.
         if (outputformat.eq.'gui') then 
-          write (dataunit) EBSDpattern
+          dataset = 'EBSDpatterns'
+          offset = (/ 0, 0, ibatch-1 /)
+          hdims = (/ enl%numsx, enl%numsy, enl%numangles /)
+          dim0 = enl%numsx
+          dim1 = enl%numsy
+          dim2 = 1
+          if (ibatch.eq.1) then
+            hdferr = HDF_writeHyperslabFloatArray3D(dataset, EBSDpattern, hdims, offset, dim0, dim1, dim2, &
+                                          HDF_head, HDF_tail)
+          else
+            hdferr = HDF_writeHyperslabFloatArray3D(dataset, EBSDpattern, hdims, offset, dim0, dim1, dim2, &
+                                          HDF_head, HDF_tail,.TRUE.)
+          end if
         else
 
 ! we may need to deal with the energy sensitivity of the scintillator as well...
@@ -502,28 +582,59 @@ do ibatch=1,nbatches+1
 
 !$OMP END PARALLEL
 
-! here we write all the entries in the batchpatterns array to a file, one at a time for now...
+! here we write all the entries in the batchpatterns array to the HDF file as a hyperslab
+dataset = 'EBSDpatterns'
+
  if (outputformat.eq.'bin') then
   if (ibatch.le.nbatches) then 
-    do iang=1,ninbatch*enl%nthreads 
-      bpat = batchpatterns(1:binx,1:biny,iang)
-      write (dataunit) bpat
-    end do
+   offset = (/ 0, 0, (ibatch-1)*ninbatch*enl%nthreads /)
+   hdims = (/ binx, biny, enl%numangles /)
+   dim0 = binx
+   dim1 = biny
+   dim2 = ninbatch*enl%nthreads
+   if (ibatch.eq.1) then
+     hdferr = HDF_writeHyperslabCharArray3D(dataset, batchpatterns, hdims, offset, dim0, dim1, dim2, &
+                                          HDF_head, HDF_tail)
+   else
+     hdferr = HDF_writeHyperslabCharArray3D(dataset, batchpatterns, hdims, offset, dim0, dim1, dim2, &
+                                          HDF_head, HDF_tail,.TRUE.)
+   end if
   else
-    do iang=1,nremainder
-      bpat = batchpatterns(1:binx,1:biny,iang)
-      write (dataunit) bpat
-    end do
+   offset = (/ 0, 0, (ibatch-1)*ninbatch*enl%nthreads /)
+   hdims = (/ binx, biny, enl%numangles /)
+   dim0 = binx
+   dim1 = biny
+   dim2 = nremainder
+   if (ibatch.eq.1) then
+     hdferr = HDF_writeHyperslabCharArray3D(dataset, batchpatterns(1:binx,1:biny,1:nremainder), hdims, offset, dim0, dim1, dim2, &
+                                          HDF_head, HDF_tail)
+   else
+     hdferr = HDF_writeHyperslabCharArray3D(dataset, batchpatterns(1:binx,1:biny,1:nremainder), hdims, offset, dim0, dim1, dim2, &
+                                          HDF_head, HDF_tail,.TRUE.)
+   end if
   end if
  end if
   write (*,*) 'completed cycle ',ibatch,' of ',nbatches+1
 end do
 
+call HDF_pop(HDF_head)
 
-close(unit=dataunit,status='keep')
+! and update the end time
+call timestamp(datestring=dstr, timestring=tstre)
+groupname = "EMheader"
+hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
 
-i=6
-call timestamp(i)
+! stop time /EMheader/StopTime 'character'
+dataset = 'StopTime'
+line2(1) = tstre
+hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head, HDF_tail,overwrite)
+
+! close the datafile
+call HDF_pop(HDF_head,.TRUE.)
+
+! close the Fortran interface
+call h5close_f(hdferr)
+
 
 end subroutine ComputeEBSDPatterns
 

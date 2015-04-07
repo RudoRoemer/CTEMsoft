@@ -1014,7 +1014,7 @@ end function HDF_extractDatasetTextfile
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetStringArray(dataname, stringarray, nlines, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetStringArray(dataname, stringarray, nlines, HDF_head, HDF_tail, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -1025,6 +1025,7 @@ character(len=fnlen, KIND=c_char),TARGET                :: stringarray(nlines)
 integer(kind=irg),INTENT(IN)                            :: nlines
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
+logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
 integer(HSIZE_T)                                        :: dim0 
@@ -1065,7 +1066,11 @@ call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-call h5dcreate_f(HDF_head%objectID, trim(dataname), filetype, space, dset, hdferr)
+if (present(overwrite)) then 
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), filetype, space, dset, hdferr)
+end if
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetStringArray:hd5create_f',.TRUE.)
   success = -1
