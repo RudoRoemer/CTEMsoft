@@ -29,10 +29,12 @@ use rotations
   character(len=1)          :: chararr2(256,256)
 
   character(len=1),allocatable :: rdchararr(:)
+  character(len=1),allocatable :: rdchararr2(:,:)
 
   TYPE(C_PTR), ALLOCATABLE, TARGET :: wdata(:)
   CHARACTER(len=fnlen, KIND=c_char), DIMENSION(1), TARGET  :: line 
-  CHARACTER(len=fnlen, KIND=c_char), ALLOCATABLE, TARGET  :: lines(:) 
+  CHARACTER(len=fnlen, KIND=c_char), ALLOCATABLE, TARGET   :: lines(:)
+  character(len=1),allocatable                             :: char2D(:,:),chars(:,:) 
 
   TYPE(C_PTR), DIMENSION(:), ALLOCATABLE, TARGET :: rdata ! Read buffer
   CHARACTER(len = fnlen, kind=c_char),  POINTER  :: data ! A pointer to a Fortran string
@@ -46,7 +48,7 @@ use rotations
   integer(kind=irg),allocatable     :: rdintarr(:), rdintarr2(:,:), intarr10(:,:)
   real(kind=sgl),allocatable        :: rdfltarr(:), realdata(:,:), realarr10(:,:)
   real(kind=dbl),allocatable        :: rddblarr(:)
-  logical                           :: HDFstatus, extend
+  logical                           :: HDFstatus, insert
 
   type(HDFobjectStackType),pointer  :: HDF_head
   type(HDFobjectStackType),pointer  :: HDF_tail
@@ -213,14 +215,14 @@ sdata = intdata(1:10,1:10)
 dims2 = (/ 1000, 1000 /)
 cnt = (/ 10, 10 /)
 offset = (/ 3, 3 /)
-extend = .TRUE.
+insert = .TRUE.
 hdferr = HDF_writeHyperslabIntegerArray2D(dataset, sdata, dims2, offset, cnt(1), cnt(2), HDF_head, HDF_tail)
 offset = (/ 0, 0 /)
-hdferr = HDF_writeHyperslabIntegerArray2D(dataset, sdata, dims2, offset, cnt(1), cnt(2), HDF_head, HDF_tail, extend)
+hdferr = HDF_writeHyperslabIntegerArray2D(dataset, sdata, dims2, offset, cnt(1), cnt(2), HDF_head, HDF_tail, insert)
 offset = (/33,13 /)
-hdferr = HDF_writeHyperslabIntegerArray2D(dataset, sdata, dims2, offset, cnt(1), cnt(2), HDF_head, HDF_tail, extend)
+hdferr = HDF_writeHyperslabIntegerArray2D(dataset, sdata, dims2, offset, cnt(1), cnt(2), HDF_head, HDF_tail, insert)
 offset = (/33,33 /)
-hdferr = HDF_writeHyperslabIntegerArray2D(dataset, sdata, dims2, offset, cnt(1), cnt(2), HDF_head, HDF_tail, extend)
+hdferr = HDF_writeHyperslabIntegerArray2D(dataset, sdata, dims2, offset, cnt(1), cnt(2), HDF_head, HDF_tail, insert)
 
 allocate(realdata(20,20))
 do i=1,20
@@ -233,8 +235,30 @@ dataset = 'realhyperslab'
 dims2 = (/ 100, 100 /)
 cnt = (/ 20, 20 /)
 offset = (/ 2, 2 /)
-extend = .TRUE.
+insert = .TRUE.
 hdferr = HDF_writeHyperslabFloatArray2D(dataset, realdata, dims2, offset, cnt(1), cnt(2), HDF_head, HDF_tail)
+
+allocate(char2D(100,100),chars(10,10))
+
+char2D=char(0)
+
+do i=1,10
+  do j=1,10
+    chars(i,j) = char(20+i*10+j)
+  end do
+end do
+
+
+dataset = 'charslab'
+dims2 = (/ 100, 100 /)
+cnt = (/ 10, 10 /)
+offset = (/ 5, 10 /)
+hdferr = HDF_writeHyperslabCharArray2D(dataset, chars, dims2, offset, cnt(1), cnt(2), HDF_head, HDF_tail)
+
+do i=1,10
+  write (*,*) '>',(chars(i,j),j=1,10),'<'
+end do
+
 
 call HDF_pop(HDF_head,.TRUE.)
 
@@ -245,6 +269,8 @@ call HDF_pop(HDF_head,.TRUE.)
 ! Open the file using the default properties.
 filename = 'test.h5'
 hdferr =  HDF_openFile(filename, HDF_head, HDF_tail, .TRUE.)
+
+goto 200 
 
 ! open the NMLfiles group
 groupname = 'NMLfiles'
@@ -319,7 +345,7 @@ write (*,*) 'shape of chararray = ',shape(rdchararr)
 write (*,*) rdchararr
 
 ! and finally, read a hyperslab from the hyperslab dataset
-dataname = 'hyperslab'
+
 offset = (/ 3, 3 /)
 cnt = (/ 10, 10 /)
 intarr10 = HDF_readHyperslabIntegerArray2D(dataname, offset, cnt, HDF_head, HDF_tail)
@@ -338,6 +364,21 @@ realarr10 = HDF_readHyperslabFloatArray2D(dataname, offset, cnt, HDF_head, HDF_t
 write (*,*) 'real hyperslab read : '
 do i=1,10
   write (*,"(20F6.1)") (realarr10(i,j),j=1,20)
+end do
+
+200 dataname = 'hyperslab'
+groupname = 'EMData'
+hdferr = HDF_OpenGroup(groupname, HDF_head, HDF_tail)
+
+write (*,*) 'character hyperslab read : '
+dataname = 'charslab'
+cnt = (/ 10, 10 /)
+offset = (/ 5, 10 /)
+rdchararr2 = HDF_readHyperslabCharArray2D(dataset, offset, cnt, HDF_head, HDF_tail)
+
+write (*,*) shape(rdchararr2)
+do i=1,10
+  write (*,*) '>',(rdchararr2(i,j),j=1,10),'<'
 end do
 
 call h5dclose_f(dset, hdferr)

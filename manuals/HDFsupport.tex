@@ -336,34 +336,40 @@ contain the dimensions of the array.
 
 \subsubsection{Writing and reading hyperslabs}
 In many cases, we do not need to write or read an entire large dataset, but we may want to 
-write it in segments.  In HDF parlance, these segments are called ``hyperslabs''.  The $9$ routines 
+write it in segments.  In HDF parlance, these segments are called ``hyperslabs''.  The $12$ routines 
 below create a data space of dimensions \textsf{hdims} (which is an \textsf{HSIZE\_T}-type array
 of $2$, $3$, or $4$ entries), and write the hyperslab \textsf{wdata} of dimensions \textsf{dim0, dim1, \ldots}
 at an offset of \textsf{offset} (again an \textsf{HSIZE\_T}-type array
 of $2$, $3$, or $4$ entries) into the larger dataset.  It is up to the user to make sure that 
-the dimensions are consistent and will fit in the available space.  The final argument \textsf{extend} is
+the dimensions are consistent and will fit in the available space.  The final argument \textsf{insert} is
 an optional logical argument; when present, the hyperslab will be written to an already existing dataset.
-So, the first time thiese functions would be called without the \textsf{extend} argument, and for every
+So, the first time these functions would be called without the \textsf{insert} argument, and for every
 additional write to the dataset, the keyword must be present.
 
 {\footnotesize
 \begin{verbatim}
-hdferr = HDF_writeHyperslabIntegerArray2D(dataname, wdata, hdims, offset, dim0, dim1, ..., [extend])
-hdferr = HDF_writeHyperslabIntegerArray3D(dataname, wdata, hdims, offset, dim0, dim1, dim2, ..., [extend])
-hdferr = HDF_writeHyperslabIntegerArray4D(dataname, wdata, hdims, offset, dim0, dim1, dim2, dim3, ..., [extend])
-hdferr = HDF_writeHyperslabFloatArray2D(dataname, wdata, hdims, offset, dim0, dim1, ..., [extend])
-hdferr = HDF_writeHyperslabFloatArray3D(dataname, wdata, hdims, offset, dim0, dim1, dim2, ..., [extend])
-hdferr = HDF_writeHyperslabFloatArray4D(dataname, wdata, hdims, offset, dim0, dim1, dim2, dim3, ..., [extend])
-hdferr = HDF_writeHyperslabDoubleArray2D(dataname, wdata, hdims, offset, dim0, dim1, ..., [extend])
-hdferr = HDF_writeHyperslabDoubleArray3D(dataname, wdata, hdims, offset, dim0, dim1, dim2, ..., [extend])
-hdferr = HDF_writeHyperslabDoubleArray4D(dataname, wdata, hdims, offset, dim0, dim1, dim2, dim3, ..., [extend])
+hdferr = HDF_writeHyperslabCharArray2D(dataname, wdata, hdims, offset, dim0, dim1, ..., [insert])
+hdferr = HDF_writeHyperslabCharArray3D(dataname, wdata, hdims, offset, dim0, dim1, dim2, ..., [insert])
+hdferr = HDF_writeHyperslabCharArray4D(dataname, wdata, hdims, offset, dim0, dim1, dim2, dim3, ..., [insert])
+hdferr = HDF_writeHyperslabIntegerArray2D(dataname, wdata, hdims, offset, dim0, dim1, ..., [insert])
+hdferr = HDF_writeHyperslabIntegerArray3D(dataname, wdata, hdims, offset, dim0, dim1, dim2, ..., [insert])
+hdferr = HDF_writeHyperslabIntegerArray4D(dataname, wdata, hdims, offset, dim0, dim1, dim2, dim3, ..., [insert])
+hdferr = HDF_writeHyperslabFloatArray2D(dataname, wdata, hdims, offset, dim0, dim1, ..., [insert])
+hdferr = HDF_writeHyperslabFloatArray3D(dataname, wdata, hdims, offset, dim0, dim1, dim2, ..., [insert])
+hdferr = HDF_writeHyperslabFloatArray4D(dataname, wdata, hdims, offset, dim0, dim1, dim2, dim3, ..., [insert])
+hdferr = HDF_writeHyperslabDoubleArray2D(dataname, wdata, hdims, offset, dim0, dim1, ..., [insert])
+hdferr = HDF_writeHyperslabDoubleArray3D(dataname, wdata, hdims, offset, dim0, dim1, dim2, ..., [insert])
+hdferr = HDF_writeHyperslabDoubleArray4D(dataname, wdata, hdims, offset, dim0, dim1, dim2, dim3, ..., [insert])
 \end{verbatim}
 }
 
-The hyperslabs can be read from the file using the following $9$ functions, with arguments already explained above; the
+The hyperslabs can be read from the file using the following $12$ functions, with arguments already explained above; the
 functions return a complete array, which must have the status \textsf{allocatable} in the calling program, but must
 not already be allocated.
 \begin{verbatim}
+chararr2D = HDF_readHyperslabCharArray2D(dataname, offset, dims, ...)
+chararr3D = HDF_readHyperslabCharArray3D(dataname, offset, dims, ...)
+chararr4D = HDF_readHyperslabCharArray4D(dataname, offset, dims, ...)
 intarr2D = HDF_readHyperslabIntegerArray2D(dataname, offset, dims, ...)
 intarr3D = HDF_readHyperslabIntegerArray3D(dataname, offset, dims, ...)
 intarr4D = HDF_readHyperslabIntegerArray4D(dataname, offset, dims, ...)
@@ -533,9 +539,9 @@ dims2 = (/ 1000, 1000 /)
 cnt = (/ 10, 10 /)
 offset = (/ 5, 5 /)
 hdferr = HDF_writeHyperslabIntegerArray2D(dataset, sdata, dims2, offset, cnt(1), cnt(2), HDF_head, HDF_tail)
-extend = .TRUE.
+insert = .TRUE.
 offset = (/ 0, 0 /)  ! this will partially overwrite the previous hyperslab
-hdferr = HDF_writeHyperslabIntegerArray2D(dataset, sdata, dims2, offset, cnt(1), cnt(2), HDF_head, HDF_tail, extend)
+hdferr = HDF_writeHyperslabIntegerArray2D(dataset, sdata, dims2, offset, cnt(1), cnt(2), HDF_head, HDF_tail, insert)
 
 do i=1,20
   do j=1,20
@@ -737,7 +743,7 @@ The environmental variable should be set as follows:
 \begin{figure}[h]
 \leavevmode\centering
 \epsfysize=4in\epsffile{figs/XtalFile}
-\caption{\label{fig:HXtalFile}Internal layout of a typical \textsf{*.xtal} structure file as represented by the Java \textsf{HDFView} program.}
+\caption{\label{fig:XtalFile}Internal layout of a typical \textsf{*.xtal} structure file as represented by the Java \textsf{HDFView} program.}
 \end{figure}
 
 New structure files are generated with the \textsf{EMmkxtal} program.  In contrast with earlier versions
