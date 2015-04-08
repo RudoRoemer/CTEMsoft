@@ -1,0 +1,123 @@
+
+\documentclass[DIV=calc, paper=letter, fontsize=11pt]{scrartcl}	 % A4 paper and 11pt font size
+
+\usepackage[body={6.5in,9.0in},
+  top=1.0in, left=1.0in]{geometry}
+  
+\usepackage[english]{babel} % English language/hyphenation
+\usepackage[protrusion=true,expansion=true]{microtype} % Better typography
+\usepackage{amsmath,amsfonts,amsthm} % Math packages
+\usepackage[svgnames]{xcolor} % Enabling colors by their 'svgnames'
+\usepackage[hang, small,labelfont=bf,up,textfont=it,up]{caption} % Custom captions under/above floats in tables or figures
+\usepackage{booktabs} % Horizontal rules in tables
+\usepackage{fix-cm}	 % Custom font sizes - used for the initial letter in the document
+\usepackage{epsfig}
+\usepackage{sectsty} % Enables custom section titles
+\allsectionsfont{\usefont{OT1}{phv}{b}{n}} % Change the font of all section commands
+
+\usepackage{fancyhdr} % Needed to define custom headers/footers
+\pagestyle{fancy} % Enables the custom headers/footers
+\usepackage{lastpage} % Used to determine the number of pages in the document (for "Page X of Total")
+\usepackage{color}
+
+\usepackage{fancyvrb}% used to include files verbatim
+%\usepackage{chemsym}
+
+\usepackage{hyperref}
+
+\usepackage[backend=bibtex,style=numeric,sorting=ydnt,maxnames=15]{biblatex}
+\renewbibmacro{in:}{}
+
+% Count total number of entries in each refsection
+\AtDataInput{%
+  \csnumgdef{entrycount:\therefsection}{%
+    \csuse{entrycount:\therefsection}+1}}
+
+% Print the labelnumber as the total number of entries in the
+% current refsection, minus the actual labelnumber, plus one
+\DeclareFieldFormat{labelnumber}{\mkbibdesc{#1}}    
+\newrobustcmd*{\mkbibdesc}[1]{%
+  \number\numexpr\csuse{entrycount:\therefsection}+1-#1\relax}
+
+
+%\addbibresource[label=papers]{mypubs.bib}
+%\addbibresource[label=books]{mypubs.bib}
+%\addbibresource[label=edited]{mypubs.bib}
+%\addbibresource[label=chapters]{mypubs.bib}
+
+
+% Headers - all currently empty
+\lhead{}
+\chead{}
+\rhead{}
+
+% Footers
+\lfoot{\textsf{Various Thoughts}, \today}
+\cfoot{}
+\rfoot{\footnotesize Page \thepage\ of \pageref{LastPage}} % "Page 1 of 2"
+
+\renewcommand{\headrulewidth}{0.0pt} % No header rule
+\renewcommand{\footrulewidth}{0.4pt} % Thin footer rule
+
+\usepackage{lettrine} % Package to accentuate the first letter of the text
+\newcommand{\initial}[1]{ % Defines the command and style for the first letter
+\lettrine[lines=3,lhang=0.3,nindent=0em]{
+\color{DarkGoldenrod}
+{\textsf{#1}}}{}}
+
+\usepackage{titling} % Allows custom title configuration
+
+\newcommand{\HorRule}{\color{DarkGoldenrod} \rule{\linewidth}{1pt}} % Defines the gold horizontal rule around the title
+
+\pretitle{\vspace{-1.5in} \begin{center} \HorRule \fontsize{25}{25} \usefont{OT1}{phv}{b}{n} \color{DarkRed} \selectfont} % Horizontal rule before the title
+
+\title{Various Thoughts} % Your article title
+
+\posttitle{\par\end{center}\vskip 0.5em} % Whitespace under the title
+
+\preauthor{\begin{center}\large \lineskip 0.5em \usefont{OT1}{phv}{b}{sl} \color{DarkRed}} % Author font configuration
+
+\author{\vspace*{-0.7in}} % Your name
+
+\postauthor{\footnotesize \usefont{OT1}{phv}{m}{sl} \color{Black} % Configuration for the institution name
+
+\par\end{center}\HorRule} % Horizontal rule after the title
+\date{\today\protect\footnote{This document will list thoughts, ideas, and descriptions of things that need to be done in terms of improving the CTEMsoft package.}}
+
+\newcommand{\ctp}{\textsf{CTEMsoft-2013}}
+%
+
+\begin{document}
+\maketitle
+%\renewcommand{\contentsname}{Table of Contents}
+%{\small\tableofcontents}
+
+\section{Improved Monte Carlo model}
+Our current Monte Carlo (MC) model, whether it uses the continuous slowing down approximation (CSDA) or the more detailed discrete losses model,
+suffers from one drawback: it does not take into account the fact that the incident electrons may channel through the lattice, and hence reach a 
+much larger depth than would be predicted on the basis of a regular mean free path model.  Of course, it is a very difficult problem to model this channeling 
+at the same time as performing the MC algorithm.  
+
+There may be an ``in-between'' approach, in which we perform a dynamical simulation to get an estimate of the anisotropy of the mean free path length.  The idea is
+then to perform a Kossel pattern simulation for the crystal structure and the correct microscope acceleration voltage, and then to modulate the nominal 
+mean free path length by the channeling information from the Kossel pattern.  We've added an option to the Kossel master pattern program to create, instead of the regular master pattern as a function of thickness, an alternative map that shows the thickness at which the integrated intensity drops below a given threshold value, say
+$10^{-5}$ or so.  The resulting map, which is essentially a thickness map as a function of incident beam direction, can then be used to modify the mean
+free path length of the Monte Carlo simulation program.  The drawback of this approach is that the MC simulation will then only be valid for a given crystal
+orientation with respect to the incident beam, but that is at the same time a good thing, because that's what we have in reality. In our published approach, we've
+effectively averaged out these effects by using only a single master pattern for both MC and dynamical simulations.  The computation time for the MC will likely become significantly larger, but, on the other hand, there may be ways to still come up with a kind of master pattern that can be sampled or interpolated.
+
+The modified MC code would not be all that different from the current CSDA code; all that is required is 
+\begin{itemize}
+\item at the start of the program the crystal orientation should be defined, so that the master pattern transformation can be set up;
+\item whenever the mean free path length is sampled, the resulting number should be multiplied by a scale factor for the current travel direction, derived from the Kossel master pattern.
+\end{itemize}
+Everything else should really remain the same as before.  The difficult question of course is: what should be the criterion for setting the depth multiplier scale? When the 
+threshold level is set for the electron attenuation factor, which value should be used?  
+
+
+
+
+\end{document}
+
+
+

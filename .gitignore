@@ -9,6 +9,10 @@
 
 *.sav
 *.psd
+*.save
+*.txt
+*.nb
+*.pl
 
 IDL/**/*.sav
 IDL/various
