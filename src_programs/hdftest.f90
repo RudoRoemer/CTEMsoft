@@ -4,10 +4,11 @@ program hdftest
   use local
   use HDF5
   use typedefs
-use quaternions
-use rotations
+  use quaternions
+  use rotations
   use HDFsupport
   use NameListTypedefs
+  use NameListHandlers
   use NameListHDFwriters
   use ISO_C_BINDING
   
@@ -58,8 +59,7 @@ use rotations
   character(15)                     :: tstre
   character(fnlen)                  :: prn
 
-  type(KosselNameListType)          :: knl
-  type(RFZNameListType)             :: rnl
+  type(EBSDNameListType)            :: enl
 
   nullify(HDF_head)
   nullify(HDF_tail)
@@ -72,26 +72,6 @@ do i = 1, 100
 end do
 
 
-  rnl%pgnum = 32
-  rnl%nsteps = 100
-  rnl%outname = 'RFZtest.data'
-
-  knl%stdout = 6
-  knl%numthick = 10
-  knl%npix = 401
-  knl%maxHOLZ = 1
-  knl%nthreads = 8
-  knl%k = (/ 1, 1, 2 /)
-  knl%fn = (/ 1, 2, 2 /)
-  knl%voltage = 30.0
-  knl%dmin = 0.05
-  knl%convergence = 0.5
-  knl%startthick = 5.0
-  knl%thickinc = 5.0
-  knl%minten = 0.2
-  knl%xtalname = 'Cu.xtal'
-  knl%outname = 'Kosseltest.data'
-!
 ! Initialize FORTRAN interface.
 !
 CALL h5open_f(hdferr)
@@ -133,13 +113,11 @@ groupname = "NMLfiles"
 hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
 
 ! read the text file and write the array to the file
-nmlname = "EMKossel.nml"
-dataset = 'KosselNML'
-hdferr = HDF_writeDatasetTextFile(dataset, nmlname, HDF_head, HDF_tail)
+nmlname = "CTEMEBSDtest.nml"
 
-! read the text file and write the array to the file
-nmlname = "CTEMsampleRFZ.nml"
-dataset = 'sampleRFZNML'
+call GetEBSDNameList(nmlname,enl)
+
+dataset = 'EBSDNML'
 hdferr = HDF_writeDatasetTextFile(dataset, nmlname, HDF_head, HDF_tail)
 
 call HDF_pop(HDF_head)
@@ -148,8 +126,7 @@ call HDF_pop(HDF_head)
 groupname = "NMLparameters"
 hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
 
-call HDFwriteKosselNameList(HDF_head, HDF_tail, knl)
-call HDFwriteRFZNameList(HDF_head, HDF_tail, rnl)
+call HDFwriteEBSDNameList(HDF_head, HDF_tail, enl)
 
 ! and leave this group
 call HDF_pop(HDF_head)

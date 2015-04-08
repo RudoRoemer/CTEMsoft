@@ -1014,20 +1014,21 @@ end function HDF_extractDatasetTextfile
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetStringArray(dataname, stringarray, nlines, HDF_head, HDF_tail, overwrite) result(success)
+function HDF_writeDatasetStringArray(dataname, inputarray, nlines, HDF_head, HDF_tail, overwrite) result(success)
 
 use ISO_C_BINDING
 
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-character(len=fnlen, KIND=c_char),TARGET                :: stringarray(nlines) 
+character(len=fnlen),INTENT(IN)                         :: inputarray(nlines) 
 integer(kind=irg),INTENT(IN)                            :: nlines
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
+character(len=fnlen, KIND=c_char),TARGET                :: stringarray(nlines) 
 integer(HSIZE_T)                                        :: dim0 
 integer(SIZE_T)                                         :: sdim 
 integer(HID_T)                                          :: filetype, space, dset ! Handles
@@ -1040,12 +1041,14 @@ TYPE(C_PTR)                                             :: f_ptr
 
 success = 0
 
+stringarray = ''
 ! first, convert the stringarray to an array of C-pointers, with each string
 ! terminated by a C_NULL_CHAR.
 dims(1) = nlines
 allocate(wdata(1:dims(1)))
 do i=1,dims(1)
-  l = len(trim(stringarray(i)))+1
+  l = len(trim(inputarray(i)))+1
+  stringarray(i) = trim(inputarray(i))
   stringarray(i)(l:l) = C_NULL_CHAR
   wdata(i) = C_LOC(stringarray(i)(1:1))
 end do
@@ -1086,6 +1089,7 @@ end if
 !
 call h5dclose_f(dset , hdferr)
 call h5sclose_f(space, hdferr)
+
 deallocate(wdata)
 
 ! that's it
