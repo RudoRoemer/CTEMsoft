@@ -133,17 +133,15 @@ type HDFobjectStackType   ! this is a push-pop stack to keep track of the open o
 end type HDFobjectStackType
 \end{verbatim}
 If a routine wants to make use of the \textsf{HDFsupport} module, it must first declare
-and nullify two variables of this type:
+and nullify a variable of this type:
 \begin{verbatim}
   type(HDFobjectStackType),pointer  :: HDF_head
-  type(HDFobjectStackType),pointer  :: HDF_tail
 
   nullify(HDF_head)
-  nullify(HDF_tail)
 \end{verbatim}
 Failure to \textsf{nullify(\,)} the pointers may result in unpredictable program behavior.  The two 
 pointers are arguments to every \textsf{HDFsupport} call and should never be modified by the user 
-program.  Note that the \textsf{HEAD\_tail} variable may be removed in a later version.
+program. 
 
 The HDF stack must be used by the calling program to close HDF objects; when an object is opened 
 by an textsf{HDFsupport} routine, its information will be automatically pushed onto the stack, and the 
@@ -195,8 +193,8 @@ In the remainder of this document, we will suppress any further statements of er
 \subsection{File level operations}
 The following two function calls can be used to create a new file, and to open an existing file in readonly mode (optional):
 \begin{verbatim}
-hdferr = HDF_createFile(HDFname, HDF_head, HDF_tail)
-hdferr = HDF_openFile(HDFname, HDF_head, HDF_tail, readonly)
+hdferr = HDF_createFile(HDFname, HDF_head)
+hdferr = HDF_openFile(HDFname, HDF_head, readonly)
 \end{verbatim}
 where \textsf{HDFname} is of the type \textsf{character(fnlen)} and is the filename, either the file itself or the full path.
 Note that the \textsf{fnlen} parameter is defined in the \textsf{local.f90.in} file in the \textsf{src} folder and is currently set
@@ -211,8 +209,8 @@ Its value (.TRUE. or .FALSE.) is not important; when it is present, file access 
 There are two group level operations, one to create a new group, the other to open an existing group. In both cases, the group object ID will
 be pushed onto the stack.  The routines are:
 \begin{verbatim}
-hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
-hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
+hdferr = HDF_createGroup(groupname, HDF_head)
+hdferr = HDF_openGroup(groupname, HDF_head)
 \end{verbatim}
 where \textsf{groupname} is of type \textsf{character(fnlen)}.
 
@@ -222,16 +220,16 @@ where \textsf{groupname} is of type \textsf{character(fnlen)}.
 There are two dataset level operations, one to create a new dataset, the other to open an existing dataset. In both cases, the dataset object ID will
 be pushed onto the stack.  The routines are:
 \begin{verbatim}
-hdferr = HDF_createDataset(dataname, HDF_head, HDF_tail)
-hdferr = HDF_openDataset(dataname, HDF_head, HDF_tail)
+hdferr = HDF_createDataset(dataname, HDF_head)
+hdferr = HDF_openDataset(dataname, HDF_head)
 \end{verbatim}
 where \textsf{dataname} is of type \textsf{character(fnlen)}.
 
 \subsubsection{Writing to a dataset}
 There are $21$ write routines, grouped by the type of the dataset that is being written.
-For strings, we have the following general routine (for brevity, note that the ... are shorthand for \textsf{HDF\_head, HDF\_tail}):
+For strings, we have the following general routine (for brevity, note that the ... are shorthand for \textsf{HDF\_head}):
 \begin{verbatim}
-hdferr = HDF_writeDatasetStringArray(dataname, stringarray, nlines, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetStringArray(dataname, stringarray, nlines, HDF_head)
 hdferr = HDF_writeDatasetCharArray1D(dataname, chararr, dim0, ...)
 hdferr = HDF_writeDatasetCharArray2D(dataname, chararr, dim0, dim1,  ...)
 hdferr = HDF_writeDatasetCharArray3D(dataname, chararr, dim0, dim1, dim2,  ...)
@@ -245,7 +243,7 @@ $1$ byte, representing the interval $[0\ldots 255]$) to the file.
 
 The module also provides a routine to write a complete text file to the HDF file:
 \begin{verbatim}
-hdferr = HDF_writeDatasetTextFile(dataname, filename, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetTextFile(dataname, filename, HDF_head)
 \end{verbatim}
 where \textsf{filename} is of type \textsf{character(fnlen)}.  This will copy the entire text file 
 into a variable length string array dataset, with each string terminated by the \textsf{C\_NULL\_CHAR}
@@ -254,9 +252,9 @@ character.  Note that currently the maximum string length is \textsf{fnlen}.
 There are three write routines for single variables of the \textsf{integer}, \textsf{float} (=real4),
 and \textsf{double} (=real8) formats:
 \begin{verbatim}
-hdferr = HDF_writeDatasetInteger(dataname, intval, HDF_head, HDF_tail)
-hdferr = HDF_writeDatasetFloat(dataname, fltval, HDF_head, HDF_tail)
-hdferr = HDF_writeDatasetDouble(dataname, dblval, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetInteger(dataname, intval, HDF_head)
+hdferr = HDF_writeDatasetFloat(dataname, fltval, HDF_head)
+hdferr = HDF_writeDatasetDouble(dataname, dblval, HDF_head)
 \end{verbatim}
 where the second argument in each call is the corresponding variable.
 
@@ -329,7 +327,7 @@ as follows:
 	
 ! after the dataset has been opened
 	dataname = 'MyArray'
-	vals = HDF_readDatasetFloatArray3D(dataname, dims, HDF_head, HDF_tail)
+	vals = HDF_readDatasetFloatArray3D(dataname, dims, HDF_head)
 \end{verbatim}
 The array \textsf{vals} then contains the values read from the file, and \textsf{dims} will
 contain the dimensions of the array.
@@ -445,67 +443,67 @@ CALL h5open_f(hdferr)
 
 ! Create a new HDF5 file
 filename = 'HDFtest.h5'
-hdferr =  HDF_createFile(filename, HDF_head, HDF_tail)
+hdferr =  HDF_createFile(filename, HDF_head)
 
 ! write the EMheader to the file
 programname = 'hdf_writetest.f90'
-call HDF_writeEMheader(HDF_head, HDF_tail, dstr, tstrb, tstre, programname)
+call HDF_writeEMheader(HDF_head, dstr, tstrb, tstre, programname)
 
 ! create a namelist group to write all the namelist files into
 groupname = "NMLfiles"
-hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+hdferr = HDF_createGroup(groupname, HDF_head)
 
 ! read the text file and write the array to the file
   dataset = 'KosselNML'
-  hdferr = HDF_writeDatasetTextFile(dataset, nmlname, HDF_head, HDF_tail)
+  hdferr = HDF_writeDatasetTextFile(dataset, nmlname, HDF_head)
 
 ! leave this group
 call HDF_pop(HDF_head)
 
 ! create a NMLparameters group to write all the namelist entries into
 groupname = "NMLparameters"
-hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+hdferr = HDF_createGroup(groupname, HDF_head)
 
-  call HDFwriteKosselNameList(HDF_head, HDF_tail, knl)
+  call HDFwriteKosselNameList(HDF_head, knl)
 
 ! and leave this group
 call HDF_pop(HDF_head)
 
 ! then the remainder of the data in a EMData group
 groupname = 'EMData'
-hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+hdferr = HDF_createGroup(groupname, HDF_head)
 
 allocate(lines(2))
 lines(1) = 'This is line 1'
 lines(2) = 'and this is line 2'
 dataset = 'StringTest'
-hdferr = HDF_writeDatasetStringArray(dataset, lines, 2, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetStringArray(dataset, lines, 2, HDF_head)
 deallocate(lines)
 
 intarr = (/ 1, 2, 3, 4, 5, 6, 7, 8 /)
 dataset = 'intarr1D'
 dims = shape(intarr)
 dim0 = dims(1)
-hdferr = HDF_writeDatasetIntegerArray1D(dataset, intarr, dim0, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetIntegerArray1D(dataset, intarr, dim0, HDF_head)
 
 intarr2 = reshape( (/ 1,2,3,4,5,6,7,8,9 /), (/3,3/))
 dataset = 'intarr2D'
 dims2 = shape(intarr2)
 dim0 = dims2(1)
 dim1 = dims2(2)
-hdferr = HDF_writeDatasetIntegerArray2D(dataset, intarr2, dim0, dim1, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetIntegerArray2D(dataset, intarr2, dim0, dim1, HDF_head)
 
 fltarr = (/ 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0 /)
 dataset = 'fltarr1D'
 dims = shape(fltarr)
 dim0 = dims(1)
-hdferr = HDF_writeDatasetFloatArray1D(dataset, fltarr, dim0, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetFloatArray1D(dataset, fltarr, dim0, HDF_head)
 
 dblarr = (/ 1.D0, 2.D0, 3.D0, 4.D0, 5.D0, 6.D0, 7.D0, 8.D0 /)
 dataset = 'dblarr1D'
 dims = shape(dblarr)
 dim0 = dims(1)
-hdferr = HDF_writeDatasetDoubleArray1D(dataset, dblarr, dim0, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetDoubleArray1D(dataset, dblarr, dim0, HDF_head)
 
 ! some character arrays
 do i1=0,255
@@ -514,7 +512,7 @@ end do
 
 dataset = 'chararray1D'
 dim0 = 256
-hdferr = HDF_writeDatasetCharArray1D(dataset, chararr, dim0, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetCharArray1D(dataset, chararr, dim0, HDF_head)
 
 do i1=0,255
  do i2=0,255
@@ -524,7 +522,7 @@ end do
 
 dataset = 'chararray2D'
 dim0 = 256
-hdferr = HDF_writeDatasetCharArray2D(dataset, chararr2, dim0, dim0, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetCharArray2D(dataset, chararr2, dim0, dim0, HDF_head)
 
 do i = 1, 100
   do j = 1, 100
@@ -538,10 +536,10 @@ sdata = intdata(1:10,1:10)
 dims2 = (/ 1000, 1000 /)
 cnt = (/ 10, 10 /)
 offset = (/ 5, 5 /)
-hdferr = HDF_writeHyperslabIntegerArray2D(dataset, sdata, dims2, offset, cnt(1), cnt(2), HDF_head, HDF_tail)
+hdferr = HDF_writeHyperslabIntegerArray2D(dataset, sdata, dims2, offset, cnt(1), cnt(2), HDF_head)
 insert = .TRUE.
 offset = (/ 0, 0 /)  ! this will partially overwrite the previous hyperslab
-hdferr = HDF_writeHyperslabIntegerArray2D(dataset, sdata, dims2, offset, cnt(1), cnt(2), HDF_head, HDF_tail, insert)
+hdferr = HDF_writeHyperslabIntegerArray2D(dataset, sdata, dims2, offset, cnt(1), cnt(2), HDF_head, insert)
 
 do i=1,20
   do j=1,20
@@ -553,7 +551,7 @@ dataset = 'realhyperslab'
 dims2 = (/ 100, 100 /)
 cnt = (/ 20, 20 /)
 offset = (/ 2, 2 /)
-hdferr = HDF_writeHyperslabFloatArray2D(dataset, realdata, dims2, offset, cnt(1), cnt(2), HDF_head, HDF_tail)
+hdferr = HDF_writeHyperslabFloatArray2D(dataset, realdata, dims2, offset, cnt(1), cnt(2), HDF_head)
 
 ! close all objects, including the file
 call HDF_pop(HDF_head,.TRUE.)
@@ -619,15 +617,15 @@ CALL h5open_f(hdferr)
 
 ! Open the file using the default properties.
 filename = 'HDFtest.h5'
-hdferr =  HDF_openFile(filename, HDF_head, HDF_tail)
+hdferr =  HDF_openFile(filename, HDF_head)
 
 ! open the NMLfiles group
 groupname = 'NMLfiles'
-hdferr = HDF_OpenGroup(groupname, HDF_head, HDF_tail)
+hdferr = HDF_OpenGroup(groupname, HDF_head)
 
 ! read a dataset
   dataset = 'KosselNML'
-  lines = HDF_readDatasetStringArray(dataset, nlines, HDF_head, HDF_tail) 
+  lines = HDF_readDatasetStringArray(dataset, nlines, HDF_head) 
   write (*,*) 'data set name : ',trim(dataset),':  number of lines read = ',nlines
 
   do i=1,nlines
@@ -637,7 +635,7 @@ hdferr = HDF_OpenGroup(groupname, HDF_head, HDF_tail)
 
 ! extract and write the KosselNML array to a test file 
   textfile = 'test.nml'
-  hdferr = HDF_extractDatasetTextfile(dataset, textfile, HDF_head, HDF_tail)
+  hdferr = HDF_extractDatasetTextfile(dataset, textfile, HDF_head)
 
 call HDF_pop(HDF_head)
 
@@ -645,46 +643,46 @@ call HDF_pop(HDF_head)
 
 ! open the EMData group
 groupname = 'EMData'
-hdferr = HDF_OpenGroup(groupname, HDF_head, HDF_tail)
+hdferr = HDF_OpenGroup(groupname, HDF_head)
 
 ! remember that the read routines do the allocations !
 dataset = 'StringTest'
-lines = HDF_readDatasetStringArray(dataset, nlines, HDF_head, HDF_tail)
+lines = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
 do i=1,nlines
   write (*,*) lines(i)
 end do
 deallocate(lines)
 
 dataset = 'intarr1D'
-rdintarr = HDF_readDatasetIntegerArray1D(dataset, dims, HDF_head, HDF_tail)
+rdintarr = HDF_readDatasetIntegerArray1D(dataset, dims, HDF_head)
 
 write (*,*) 'shape of read intarr = ',shape(rdintarr)
 write (*,*) rdintarr
 deallocate(rdintarr)
 
 dataset = 'intarr2D'
-rdintarr2 = HDF_readDatasetIntegerArray2D(dataset, dims2, HDF_head, HDF_tail)
+rdintarr2 = HDF_readDatasetIntegerArray2D(dataset, dims2, HDF_head)
 
 write (*,*) 'shape of read intarr2 = ',shape(rdintarr2)
 write (*,*) rdintarr2
 deallocate(rdintarr2)
 
 dataset = 'fltarr1D'
-rdfltarr = HDF_readDatasetFloatArray1D(dataset, dims, HDF_head, HDF_tail)
+rdfltarr = HDF_readDatasetFloatArray1D(dataset, dims, HDF_head)
 
 write (*,*) 'shape of read fltarr = ',shape(rdfltarr)
 write (*,*) rdfltarr
 deallocate(rdfltarr)
 
 dataset = 'dblarr1D'
-rddblarr = HDF_readDatasetDoubleArray1D(dataset, dims, HDF_head, HDF_tail)
+rddblarr = HDF_readDatasetDoubleArray1D(dataset, dims, HDF_head)
 
 write (*,*) 'shape of read dblarr = ',shape(rddblarr)
 write (*,*) rddblarr
 deallocate(rddblarr)
 
 dataname = 'chararray1D'
-rdchararr = HDF_readDatasetCharArray1D(dataname, dims, HDF_head, HDF_tail)
+rdchararr = HDF_readDatasetCharArray1D(dataname, dims, HDF_head)
 
 write (*,*) 'shape of chararray = ',shape(rdchararr)
 write (*,*) rdchararr
@@ -693,7 +691,7 @@ write (*,*) rdchararr
 dataname = 'hyperslab'
 offset = (/ 3, 3 /)
 cnt = (/ 10, 10 /)
-intarr10 = HDF_readHyperslabIntegerArray2D(dataname, offset, cnt, HDF_head, HDF_tail)
+intarr10 = HDF_readHyperslabIntegerArray2D(dataname, offset, cnt, HDF_head)
 
 write (*,*) 'hyperslab read : '
 do i=1,10
@@ -703,7 +701,7 @@ end do
 dataname = 'realhyperslab'
 offset = (/ 2, 2 /)
 cnt = (/ 20, 20 /)
-realarr10 = HDF_readHyperslabFloatArray2D(dataname, offset, cnt, HDF_head, HDF_tail)
+realarr10 = HDF_readHyperslabFloatArray2D(dataname, offset, cnt, HDF_head)
 
 write (*,*) 'real hyperslab read : '
 do i=1,10

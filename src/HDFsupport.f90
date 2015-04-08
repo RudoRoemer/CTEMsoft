@@ -51,6 +51,7 @@
 !> @date  03/29/15 MDG 1.2 removed all h5lt routines
 !> @date  03/31/15 MDG 1.3 added support for arrays of c_chars
 !> @date  04/07/15 MDG 1.4 added hyperslab routines for char, integer, float and double in 2, 3, and 4D
+!> @date  04/08/15 MDG 1.5 removed HDF_tail pointer as it was no longer needed
 !--------------------------------------------------------------------------
 module HDFsupport
 
@@ -89,7 +90,6 @@ contains
 !> flexible C-bindings.
 !>
 !> @param HDF_head pointer to top of push-pop stack
-!> @param HDF_tail pointer to bottom of push-pop stack
 !> @param dstr date string
 !> @param tstrb time start string
 !> @param tstre time end string
@@ -98,7 +98,7 @@ contains
 !> @date 03/20/15 MDG 1.0 original
 !> @date 03/26/15 MDG 2.0 modified with fortran2003 resources
 !--------------------------------------------------------------------------
-subroutine HDF_writeEMheader(HDF_head, HDF_tail, dstr, tstrb, tstre, prn)
+subroutine HDF_writeEMheader(HDF_head, dstr, tstrb, tstre, prn)
 
 use local
 use io
@@ -107,7 +107,6 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_tail
 character(11),INTENT(IN)                              :: dstr
 character(15),INTENT(IN)                              :: tstrb
 character(15),INTENT(IN)                              :: tstre
@@ -121,47 +120,47 @@ character(fnlen,kind=c_char)                          :: line2(1)
 
 
 ! create and open the EMheader group
-istat = HDF_createGroup('EMheader', HDF_head, HDF_tail)
+istat = HDF_createGroup('EMheader', HDF_head)
 
 ! version number /EMheader/Version 'character'
 line = 'Version'
 line2(1) = scversion
-error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head, HDF_tail)
+error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head)
 
 ! execution data /EMheader/Date 'character'
 line = 'Date'
 line2(1) = dstr
-error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head, HDF_tail)
+error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head)
 
 ! start time /EMheader/StartTime 'character'
 line = 'StartTime'
 line2(1) = tstrb
-error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head, HDF_tail)
+error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head)
 
 ! stop time /EMheader/StopTime 'character'
 line = 'StopTime'
 line2(1) = tstre
-error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head, HDF_tail)
+error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head)
 
 ! program name /EMheader/ProgramName 'character'
 line = 'ProgramName'
 line2(1) = prn 
-error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head, HDF_tail)
+error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head)
 
 ! user name /EMheader/UserName 'character'
 line = 'UserName'
 line2(1) = username
-error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head, HDF_tail)
+error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head)
 
 ! user location /EMheader/UserLocation 'character'
 line = 'UserLocation'
 line2(1) = userlocn
-error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head, HDF_tail)
+error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head)
 
 ! user email /EMheader/UserEmail 'character'
 line = 'UserEmail'
 line2(1) = useremail
-error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head, HDF_tail)
+error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head)
 
 ! hostname /EMheader/HostName 'character'
 call hostnm(c)
@@ -173,7 +172,7 @@ do i=1,nlen
 end do 
 line = 'HostName'
 line2(1) = c
-error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head, HDF_tail)
+error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head)
 if (error.ne.0) call HDF_handleError(error,'HDF_writeEMheader: unable to write HostName',.TRUE.)
 
 ! and close this group
@@ -202,7 +201,6 @@ end subroutine HDF_writeEMheader
 !> @brief push an HDF object to the stack
 !
 !> @param HDF_head top of the current stack
-!> @param HDF_tail bottom of the current stack
 !> @param oT object type character
 !> @param oID object identifier
 !> @param oName name
@@ -210,7 +208,7 @@ end subroutine HDF_writeEMheader
 !
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-subroutine HDF_push(HDF_head, HDF_tail, oT, oID, oName, verbose)
+subroutine HDF_push(HDF_head, oT, oID, oName, verbose)
 
 use local
 use io
@@ -218,7 +216,6 @@ use io
 IMPLICIT NONE
 
 type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_tail
 character(LEN=1),INTENT(IN)                           :: oT
 integer(HID_T),INTENT(IN)                             :: oID 
 character(fnlen),INTENT(IN)                           :: oName
@@ -228,13 +225,12 @@ type(HDFobjectStackType),pointer                      :: node
 integer(kind=irg)                                     :: istat
 
 ! if the stack doesn't exist yet, create it.
-if (.not.associated(HDF_tail)) then 
-   allocate(HDF_tail,stat=istat)                        ! allocate new value
-   if (istat.ne.0) call HDF_handleError(istat,'HDF_push: unable to allocate HDF_stack_tail pointer',.TRUE.)
-   nullify(HDF_tail%next)                               ! nullify next in tail value
-   HDF_head => HDF_tail                                 ! head points to new value
+if (.not.associated(HDF_head)) then 
+   allocate(HDF_head,stat=istat)                        ! allocate new value
+   if (istat.ne.0) call HDF_handleError(istat,'HDF_push: unable to allocate HDF_head pointer',.TRUE.)
+   nullify(HDF_head%next)                               ! nullify next in tail value
    if (PRESENT(verbose)) then 
-     if (verbose) call Message('  -> creating HDF_stack_tail linker list', frm = "(A)")
+     if (verbose) call Message('  -> creating HDF_head linked list', frm = "(A)")
    end if
 else
    allocate(node,stat=istat)                        ! allocate new value
@@ -443,11 +439,10 @@ end subroutine HDF_handleError
 !
 !> @param HDFname filename string
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_createFile(HDFname, HDF_head, HDF_tail) result(success)
+function HDF_createFile(HDFname, HDF_head) result(success)
  
 use local
 
@@ -455,7 +450,6 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: HDFname
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: file_id ! file identifier
@@ -469,7 +463,7 @@ if (error.ne.0) then
   call HDF_handleError(error,'HDF_createFile: error creating file')
   success = -1
 else
-  call HDF_push(HDF_head, HDF_tail, 'f', file_id, HDFname)
+  call HDF_push(HDF_head, 'f', file_id, HDFname)
 end if
 
 end function HDF_createFile
@@ -485,12 +479,11 @@ end function HDF_createFile
 !
 !> @param HDFname filename string
 !> @param HDF_head
-!> @param HDF_tail
 !> @param readonly (optional) file open mode
 !
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_openFile(HDFname, HDF_head, HDF_tail, readonly) result(success)
+function HDF_openFile(HDFname, HDF_head, readonly) result(success)
 
 use local
 
@@ -498,7 +491,6 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: HDFname
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 logical,INTENT(IN),OPTIONAL                             :: readonly
 integer(kind=irg)                                       :: success
 
@@ -515,7 +507,7 @@ if (error.ne.0) then
   call HDF_handleError(error,'HDF_openFile')
   success = -1
 else
-  call HDF_push(HDF_head, HDF_tail, 'f', file_id, HDFname)
+  call HDF_push(HDF_head, 'f', file_id, HDFname)
 end if
 
 end function HDF_openFile
@@ -531,17 +523,15 @@ end function HDF_openFile
 !
 !> @param groupname filename string
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_createGroup(groupname, HDF_head, HDF_tail) result(success)
+function HDF_createGroup(groupname, HDF_head) result(success)
 
 IMPLICIT NONE
 
 character(*),INTENT(IN)                                 :: groupname
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: group_id!  identifier
@@ -555,7 +545,7 @@ if (error.ne.0) then
   success = -1
 else
 ! and put the group_id onto the HDF_stack
-  call HDF_push(HDF_head, HDF_tail, 'g', group_id, groupname)
+  call HDF_push(HDF_head, 'g', group_id, groupname)
 end if
 
 end function HDF_createGroup
@@ -570,17 +560,15 @@ end function HDF_createGroup
 !
 !> @param groupname filename string
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_openGroup(groupname, HDF_head, HDF_tail) result(success)
+function HDF_openGroup(groupname, HDF_head) result(success)
 
 IMPLICIT NONE
 
 character(*),INTENT(IN)                                 :: groupname
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: group_id !  identifier
@@ -594,7 +582,7 @@ if (error.ne.0) then
   success = -1
 else
 ! put the group_id onto the HDF_stack
-  call HDF_push(HDF_head, HDF_tail, 'g', group_id, groupname)
+  call HDF_push(HDF_head, 'g', group_id, groupname)
 end if
 
 end function HDF_openGroup
@@ -609,17 +597,15 @@ end function HDF_openGroup
 !
 !> @param dataname string
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_createDataset(dataname, HDF_head, HDF_tail) result(success)
+function HDF_createDataset(dataname, HDF_head) result(success)
 
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 !
 integer(HID_T)                                          :: data_id!  identifier
@@ -634,7 +620,7 @@ if (error.ne.0) then
   success = -1
 else
 ! and put the data_id onto the HDF_stack
-  call HDF_push(HDF_head, HDF_tail, 'd', data_id, dataname)
+  call HDF_push(HDF_head, 'd', data_id, dataname)
 end if
 
 end function HDF_createDataset
@@ -649,17 +635,15 @@ end function HDF_createDataset
 !
 !> @param dataname string
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_openDataset(dataname, HDF_head, HDF_tail) result(success)
+function HDF_openDataset(dataname, HDF_head) result(success)
 
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: data_id !  identifier
@@ -673,7 +657,7 @@ if (error.ne.0) then
   success = -1
 else
 ! put the data_id onto the HDF_stack
-  call HDF_push(HDF_head, HDF_tail, 'd', data_id, dataname)
+  call HDF_push(HDF_head, 'd', data_id, dataname)
 end if
 
 end function HDF_openDataset
@@ -692,11 +676,10 @@ end function HDF_openDataset
 !> @param dataname dataset name (string)
 !> @param filename of the text file
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetTextFile(dataname, filename, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetTextFile(dataname, filename, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -705,7 +688,6 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 character(fnlen),INTENT(IN)                             :: filename
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 character(len=fnlen, KIND=c_char),allocatable, TARGET   :: stringarray(:) 
@@ -844,11 +826,10 @@ end function HDF_readfromTextfile
 !> @param dataname dataset name (string)
 !> @param nlines number of lines in string array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetStringArray(dataname, nlines, HDF_head, HDF_tail) result(stringarray)
+function HDF_readDatasetStringArray(dataname, nlines, HDF_head) result(stringarray)
 
 use ISO_C_BINDING
 
@@ -857,7 +838,6 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 integer(kind=irg),INTENT(OUT)                           :: nlines
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 character(len=fnlen, KIND=c_char),allocatable, TARGET   :: stringarray(:) 
 
 integer(HID_T)                                          :: filetype, space ! Handles
@@ -871,7 +851,7 @@ TYPE(C_PTR)                                             :: f_ptr
 
 ! Open dataset.
 !
-hdferr = HDF_openDataset(dataname, HDF_head, HDF_tail)
+hdferr = HDF_openDataset(dataname, HDF_head)
 !
 ! Get the datatype.
 !
@@ -926,11 +906,10 @@ end function HDF_readDatasetStringArray
 !> @param dataname dataset name (string)
 !> @param textfile name of output text file
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_extractDatasetTextfile(dataname, textfile, HDF_head, HDF_tail) result(success)
+function HDF_extractDatasetTextfile(dataname, textfile, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -939,7 +918,6 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 character(fnlen),INTENT(IN)                             :: textfile
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: filetype, space ! Handles
@@ -953,7 +931,7 @@ TYPE(C_PTR)                                             :: f_ptr
 
 ! Open dataset.
 !
-hdferr = HDF_openDataset(dataname, HDF_head, HDF_tail)
+hdferr = HDF_openDataset(dataname, HDF_head)
 !
 ! Get the datatype.
 !
@@ -1010,11 +988,10 @@ end function HDF_extractDatasetTextfile
 !> @param dataname dataset name (string)
 !> @param filename of the text file
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetStringArray(dataname, inputarray, nlines, HDF_head, HDF_tail, overwrite) result(success)
+function HDF_writeDatasetStringArray(dataname, inputarray, nlines, HDF_head, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -1024,7 +1001,6 @@ character(fnlen),INTENT(IN)                             :: dataname
 character(len=fnlen),INTENT(IN)                         :: inputarray(nlines) 
 integer(kind=irg),INTENT(IN)                            :: nlines
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
@@ -1109,11 +1085,10 @@ end function HDF_writeDatasetStringArray
 !> @param dataname dataset name (string)
 !> @param filename of the text file
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/31/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetCharArray1D(dataname, chararray, dim0, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetCharArray1D(dataname, chararray, dim0, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -1124,7 +1099,6 @@ character(fnlen),INTENT(IN)                             :: dataname
 character(len=1),TARGET                                 :: chararray(dim0) 
 integer(kind=irg),INTENT(IN)                            :: dim0
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -1181,11 +1155,10 @@ end function HDF_writeDatasetCharArray1D
 !> @param dataname dataset name (string)
 !> @param filename of the text file
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/31/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetCharArray2D(dataname, chararray, dim0, dim1, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetCharArray2D(dataname, chararray, dim0, dim1, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -1196,7 +1169,6 @@ character(len=1),TARGET                                 :: chararray(dim0, dim1)
 integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -1252,11 +1224,10 @@ end function HDF_writeDatasetCharArray2D
 !> @param dataname dataset name (string)
 !> @param filename of the text file
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/31/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetCharArray3D(dataname, chararray, dim0, dim1, dim2, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetCharArray3D(dataname, chararray, dim0, dim1, dim2, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -1268,7 +1239,6 @@ integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -1324,11 +1294,10 @@ end function HDF_writeDatasetCharArray3D
 !> @param dataname dataset name (string)
 !> @param filename of the text file
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/31/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetCharArray4D(dataname, chararray, dim0, dim1, dim2, dim3, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetCharArray4D(dataname, chararray, dim0, dim1, dim2, dim3, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -1341,7 +1310,6 @@ integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
 integer(kind=irg),INTENT(IN)                            :: dim3
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -1399,11 +1367,10 @@ end function HDF_writeDatasetCharArray4D
 !> @param dataname dataset name (string)
 !> @param intval  integer 
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetInteger(dataname, intval, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetInteger(dataname, intval, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -1412,7 +1379,6 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 integer(kind=irg),INTENT(IN)                            :: intval
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -1473,11 +1439,10 @@ end function HDF_writeDatasetInteger
 !> @param dataname dataset name (string)
 !> @param intarr 1D integer array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetIntegerArray1D(dataname, intarr, dim0, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetIntegerArray1D(dataname, intarr, dim0, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -1487,7 +1452,6 @@ character(fnlen),INTENT(IN)                             :: dataname
 integer(kind=irg),INTENT(IN)                            :: intarr(dim0)
 integer(kind=irg),INTENT(IN)                            :: dim0
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -1546,11 +1510,10 @@ end function HDF_writeDatasetIntegerArray1D
 !> @param dataname dataset name (string)
 !> @param intarr 1D integer array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetIntegerArray2D(dataname, intarr, dim0, dim1, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetIntegerArray2D(dataname, intarr, dim0, dim1, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -1561,7 +1524,6 @@ integer(kind=irg),INTENT(IN)                            :: intarr(dim0, dim1)
 integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -1621,11 +1583,10 @@ end function HDF_writeDatasetIntegerArray2D
 !> @param dataname dataset name (string)
 !> @param intarr 1D integer array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetIntegerArray3D(dataname, intarr, dim0, dim1, dim2, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetIntegerArray3D(dataname, intarr, dim0, dim1, dim2, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -1637,7 +1598,6 @@ integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -1696,11 +1656,10 @@ end function HDF_writeDatasetIntegerArray3D
 !> @param dataname dataset name (string)
 !> @param intarr 1D integer array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetIntegerArray4D(dataname, intarr, dim0, dim1, dim2, dim3, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetIntegerArray4D(dataname, intarr, dim0, dim1, dim2, dim3, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -1713,7 +1672,6 @@ integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
 integer(kind=irg),INTENT(IN)                            :: dim3
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -1772,11 +1730,10 @@ end function HDF_writeDatasetIntegerArray4D
 !> @param dataname dataset name (string)
 !> @param fltval real 
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetFloat(dataname, fltval, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetFloat(dataname, fltval, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -1785,7 +1742,6 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 real(kind=sgl),INTENT(IN)                               :: fltval
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
@@ -1845,11 +1801,10 @@ end function HDF_writeDatasetFloat
 !> @param dataname dataset name (string)
 !> @param fltval real 
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetDouble(dataname, dblval, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetDouble(dataname, dblval, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -1858,7 +1813,6 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 real(kind=dbl),INTENT(IN)                               :: dblval
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
@@ -1920,11 +1874,10 @@ end function HDF_writeDatasetDouble
 !> @param dataname dataset name (string)
 !> @param fltarr 1D real array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetFloatArray1D(dataname, fltarr, dim0, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetFloatArray1D(dataname, fltarr, dim0, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -1934,7 +1887,6 @@ character(fnlen),INTENT(IN)                             :: dataname
 real(kind=sgl),INTENT(IN)                               :: fltarr(dim0)
 integer(kind=irg),INTENT(IN)                            :: dim0
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
@@ -1995,11 +1947,10 @@ end function HDF_writeDatasetFloatArray1D
 !> @param dataname dataset name (string)
 !> @param fltarr 2D real array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetFloatArray2D(dataname, fltarr, dim0, dim1, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetFloatArray2D(dataname, fltarr, dim0, dim1, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -2010,7 +1961,6 @@ real(kind=sgl),INTENT(IN)                               :: fltarr(dim0, dim1)
 integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
@@ -2070,11 +2020,10 @@ end function HDF_writeDatasetFloatArray2D
 !> @param dataname dataset name (string)
 !> @param fltarr 3D real array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetFloatArray3D(dataname, fltarr, dim0, dim1, dim2, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetFloatArray3D(dataname, fltarr, dim0, dim1, dim2, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -2086,7 +2035,6 @@ integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
@@ -2146,11 +2094,10 @@ end function HDF_writeDatasetFloatArray3D
 !> @param dataname dataset name (string)
 !> @param fltarr 4D real array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetFloatArray4D(dataname, fltarr, dim0, dim1, dim2, dim3, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetFloatArray4D(dataname, fltarr, dim0, dim1, dim2, dim3, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -2163,7 +2110,6 @@ integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
 integer(kind=irg),INTENT(IN)                            :: dim3
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
@@ -2223,11 +2169,10 @@ end function HDF_writeDatasetFloatArray4D
 !> @param dataname dataset name (string)
 !> @param dblarr 1D double array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetDoubleArray1D(dataname, dblarr, dim0, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetDoubleArray1D(dataname, dblarr, dim0, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -2237,7 +2182,6 @@ character(fnlen),INTENT(IN)                             :: dataname
 real(kind=dbl),INTENT(IN)                               :: dblarr(dim0)
 integer(kind=irg),INTENT(IN)                            :: dim0
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
@@ -2297,11 +2241,10 @@ end function HDF_writeDatasetDoubleArray1D
 !> @param dataname dataset name (string)
 !> @param dblarr 2D double array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetDoubleArray2D(dataname, dblarr, dim0, dim1, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetDoubleArray2D(dataname, dblarr, dim0, dim1, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -2312,7 +2255,6 @@ real(kind=dbl),INTENT(IN)                               :: dblarr(dim0, dim1)
 integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
@@ -2372,11 +2314,10 @@ end function HDF_writeDatasetDoubleArray2D
 !> @param dataname dataset name (string)
 !> @param dblarr 3D double array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetDoubleArray3D(dataname, dblarr, dim0, dim1, dim2, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetDoubleArray3D(dataname, dblarr, dim0, dim1, dim2, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -2388,7 +2329,6 @@ integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
@@ -2448,11 +2388,10 @@ end function HDF_writeDatasetDoubleArray3D
 !> @param dataname dataset name (string)
 !> @param dblarr 4D double array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetDoubleArray4D(dataname, dblarr, dim0, dim1, dim2, dim3, HDF_head, HDF_tail) result(success)
+function HDF_writeDatasetDoubleArray4D(dataname, dblarr, dim0, dim1, dim2, dim3, HDF_head) result(success)
 
 use ISO_C_BINDING
 
@@ -2465,7 +2404,6 @@ integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
 integer(kind=irg),INTENT(IN)                            :: dim3
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer(kind=irg)                                       :: success
 
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
@@ -2526,11 +2464,10 @@ end function HDF_writeDatasetDoubleArray4D
 !> @param dataname dataset name (string)
 !> @param dims dimensions of the array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetCharArray1D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readDatasetCharArray1D(dataname, dims, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -2539,7 +2476,6 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(1)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 character(len=1), dimension(:), allocatable, TARGET     :: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -2583,11 +2519,10 @@ end function HDF_readDatasetCharArray1D
 !> @param dataname dataset name (string)
 !> @param dims dimensions of the array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetCharArray2D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readDatasetCharArray2D(dataname, dims, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -2596,7 +2531,6 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(2)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 character(len=1), dimension(:,:), allocatable, TARGET   :: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -2641,11 +2575,10 @@ end function HDF_readDatasetCharArray2D
 !> @param dataname dataset name (string)
 !> @param dims dimensions of the array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetCharArray3D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readDatasetCharArray3D(dataname, dims, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -2654,7 +2587,6 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(3)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 character(len=1), dimension(:,:,:), allocatable, TARGET :: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -2699,11 +2631,10 @@ end function HDF_readDatasetCharArray3D
 !> @param dataname dataset name (string)
 !> @param dims dimensions of the array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetCharArray4D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readDatasetCharArray4D(dataname, dims, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -2712,7 +2643,6 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(4)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 character(len=1), dimension(:,:,:,:), allocatable, TARGET :: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -2756,11 +2686,10 @@ end function HDF_readDatasetCharArray4D
 !
 !> @param dataname dataset name (string)
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetInteger(dataname, HDF_head, HDF_tail) result(rdata)
+function HDF_readDatasetInteger(dataname, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -2768,7 +2697,6 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer,  TARGET                                        :: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -2809,11 +2737,10 @@ end function HDF_readDatasetInteger
 !> @param dataname dataset name (string)
 !> @param dims dimensions of the array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetIntegerArray1D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readDatasetIntegerArray1D(dataname, dims, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -2822,7 +2749,6 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(1)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer, dimension(:), allocatable, TARGET              :: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -2866,11 +2792,10 @@ end function HDF_readDatasetIntegerArray1D
 !> @param dataname dataset name (string)
 !> @param dims dimensions of the array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetIntegerArray2D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readDatasetIntegerArray2D(dataname, dims, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -2879,7 +2804,6 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(2)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer, dimension(:,:), allocatable, TARGET            :: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -2923,11 +2847,10 @@ end function HDF_readDatasetIntegerArray2D
 !> @param dataname dataset name (string)
 !> @param dims dimensions of the array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetIntegerArray3D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readDatasetIntegerArray3D(dataname, dims, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -2936,7 +2859,6 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(3)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer, dimension(:,:,:), allocatable, TARGET          :: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -2980,11 +2902,10 @@ end function HDF_readDatasetIntegerArray3D
 !> @param dataname dataset name (string)
 !> @param dims dimensions of the array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetIntegerArray4D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readDatasetIntegerArray4D(dataname, dims, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -2993,7 +2914,6 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(4)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer, dimension(:,:,:,:), allocatable, TARGET        :: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -3036,11 +2956,10 @@ end function HDF_readDatasetIntegerArray4D
 !
 !> @param dataname dataset name (string)
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetFloat(dataname, HDF_head, HDF_tail) result(rdata)
+function HDF_readDatasetFloat(dataname, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -3050,7 +2969,6 @@ integer,parameter                                       :: real_kind = SELECTED_
 
 character(fnlen),INTENT(IN)                             :: dataname
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 real(real_kind), TARGET                                 :: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -3090,11 +3008,10 @@ end function HDF_readDatasetFloat
 !> @param dataname dataset name (string)
 !> @param dims dimensions of the array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetFloatArray1D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readDatasetFloatArray1D(dataname, dims, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -3105,7 +3022,6 @@ integer,parameter                                       :: real_kind = SELECTED_
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(1)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 real(real_kind), dimension(:), allocatable, TARGET      :: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -3149,11 +3065,10 @@ end function HDF_readDatasetFloatArray1D
 !> @param dataname dataset name (string)
 !> @param dims dimensions of the array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetFloatArray2D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readDatasetFloatArray2D(dataname, dims, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -3164,7 +3079,6 @@ integer,parameter                                       :: real_kind = SELECTED_
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(2)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 real(real_kind), dimension(:,:), allocatable, TARGET    :: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -3208,11 +3122,10 @@ end function HDF_readDatasetFloatArray2D
 !> @param dataname dataset name (string)
 !> @param dims dimensions of the array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetFloatArray3D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readDatasetFloatArray3D(dataname, dims, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -3223,7 +3136,6 @@ integer,parameter                                       :: real_kind = SELECTED_
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(3)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 real(real_kind), dimension(:,:,:), allocatable, TARGET  :: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -3267,11 +3179,10 @@ end function HDF_readDatasetFloatArray3D
 !> @param dataname dataset name (string)
 !> @param dims dimensions of the array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetFloatArray4D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readDatasetFloatArray4D(dataname, dims, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -3282,7 +3193,6 @@ integer,parameter                                       :: real_kind = SELECTED_
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(4)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 real(real_kind), dimension(:,:,:,:), allocatable, TARGET:: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -3325,11 +3235,10 @@ end function HDF_readDatasetFloatArray4D
 !
 !> @param dataname dataset name (string)
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetDouble(dataname, HDF_head, HDF_tail) result(rdata)
+function HDF_readDatasetDouble(dataname, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -3339,7 +3248,6 @@ integer,parameter                                       :: real_kind = SELECTED_
 
 character(fnlen),INTENT(IN)                             :: dataname
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 real(real_kind), TARGET                                 :: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -3380,11 +3288,10 @@ end function HDF_readDatasetDouble
 !> @param dataname dataset name (string)
 !> @param dims dimensions of the array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetDoubleArray1D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readDatasetDoubleArray1D(dataname, dims, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -3395,7 +3302,6 @@ integer,parameter                                       :: real_kind = SELECTED_
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(1)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 real(real_kind), dimension(:), allocatable, TARGET      :: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -3439,11 +3345,10 @@ end function HDF_readDatasetDoubleArray1D
 !> @param dataname dataset name (string)
 !> @param dims dimensions of the array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetDoubleArray2D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readDatasetDoubleArray2D(dataname, dims, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -3454,7 +3359,6 @@ integer,parameter                                       :: real_kind = SELECTED_
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(2)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 real(real_kind), dimension(:,:), allocatable, TARGET    :: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -3498,11 +3402,10 @@ end function HDF_readDatasetDoubleArray2D
 !> @param dataname dataset name (string)
 !> @param dims dimensions of the array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetDoubleArray3D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readDatasetDoubleArray3D(dataname, dims, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -3513,7 +3416,6 @@ integer,parameter                                       :: real_kind = SELECTED_
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(3)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 real(real_kind), dimension(:,:,:), allocatable, TARGET  :: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -3558,11 +3460,10 @@ end function HDF_readDatasetDoubleArray3D
 !> @param dataname dataset name (string)
 !> @param dims dimensions of the array
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetDoubleArray4D(dataname, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readDatasetDoubleArray4D(dataname, dims, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -3573,7 +3474,6 @@ integer,parameter                                       :: real_kind = SELECTED_
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(4)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 real(real_kind), dimension(:,:,:,:), allocatable, TARGET:: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -3628,13 +3528,12 @@ end function HDF_readDatasetDoubleArray4D
 !> @param offset offset of the hyperslab
 !> @param dim0 ...  dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !> @param insert (optional) if present, add to existing dataset
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabCharArray2D(dataname, wdata, hdims, offset, &
-                                       dim0, dim1, HDF_head, HDF_tail, insert) result(success)
+                                       dim0, dim1, HDF_head, insert) result(success)
 
 use ISO_C_BINDING
 
@@ -3647,7 +3546,6 @@ integer(HSIZE_T),INTENT(IN)                             :: offset(2)
 integer(HSIZE_T),INTENT(IN)                             :: dim0
 integer(HSIZE_T),INTENT(IN)                             :: dim1
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
 
@@ -3695,13 +3593,12 @@ end function HDF_writeHyperslabCharArray2D
 !> @param offset offset of the hyperslab
 !> @param dim0 ...  dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !> @param insert (optional) if present, add to existing dataset
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabCharArray3D(dataname, wdata, hdims, offset, &
-                                       dim0, dim1, dim2, HDF_head, HDF_tail, insert) result(success)
+                                       dim0, dim1, dim2, HDF_head, insert) result(success)
 
 use ISO_C_BINDING
 
@@ -3715,7 +3612,6 @@ integer(HSIZE_T),INTENT(IN)                             :: dim0
 integer(HSIZE_T),INTENT(IN)                             :: dim1
 integer(HSIZE_T),INTENT(IN)                             :: dim2
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
 
@@ -3760,13 +3656,12 @@ end function HDF_writeHyperslabCharArray3D
 !> @param offset offset of the hyperslab
 !> @param dim0 ...  dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !> @param insert (optional) if present, add to existing dataset
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabCharArray4D(dataname, wdata, hdims, offset, &
-                                       dim0, dim1, dim2, dim3, HDF_head, HDF_tail, insert) result(success)
+                                       dim0, dim1, dim2, dim3, HDF_head, insert) result(success)
 
 use ISO_C_BINDING
 
@@ -3781,7 +3676,6 @@ integer(HSIZE_T),INTENT(IN)                             :: dim1
 integer(HSIZE_T),INTENT(IN)                             :: dim2
 integer(HSIZE_T),INTENT(IN)                             :: dim3
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
 
@@ -3825,13 +3719,12 @@ end function HDF_writeHyperslabCharArray4D
 !> @param offset offset of the hyperslab
 !> @param dim0 ...  dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !> @param insert (optional) if present, add to existing dataset
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabIntegerArray2D(dataname, wdata, hdims, offset, &
-                                          dim0, dim1, HDF_head, HDF_tail, insert) result(success)
+                                          dim0, dim1, HDF_head, insert) result(success)
 
 IMPLICIT NONE
 
@@ -3842,7 +3735,6 @@ integer(HSIZE_T),INTENT(IN)                             :: offset(2)
 integer(HSIZE_T),INTENT(IN)                             :: dim0
 integer(HSIZE_T),INTENT(IN)                             :: dim1
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
 
@@ -3886,13 +3778,12 @@ end function HDF_writeHyperslabIntegerArray2D
 !> @param offset offset of the hyperslab
 !> @param dim0 ...  dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !> @param insert (optional) if present, add to existing dataset
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabIntegerArray3D(dataname, wdata, hdims, offset, &
-                                          dim0, dim1, dim2, HDF_head, HDF_tail, insert) result(success)
+                                          dim0, dim1, dim2, HDF_head, insert) result(success)
 
 IMPLICIT NONE
 
@@ -3904,7 +3795,6 @@ integer(HSIZE_T),INTENT(IN)                             :: dim0
 integer(HSIZE_T),INTENT(IN)                             :: dim1
 integer(HSIZE_T),INTENT(IN)                             :: dim2
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
 
@@ -3948,13 +3838,12 @@ end function HDF_writeHyperslabIntegerArray3D
 !> @param offset offset of the hyperslab
 !> @param dim0 ...  dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !> @param insert (optional) if present, add to existing dataset
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabIntegerArray4D(dataname, wdata, hdims, offset, &
-                                          dim0, dim1, dim2, dim3, HDF_head, HDF_tail, insert) result(success)
+                                          dim0, dim1, dim2, dim3, HDF_head, insert) result(success)
 
 IMPLICIT NONE
 
@@ -3967,7 +3856,6 @@ integer(HSIZE_T),INTENT(IN)                             :: dim1
 integer(HSIZE_T),INTENT(IN)                             :: dim2
 integer(HSIZE_T),INTENT(IN)                             :: dim3
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
 
@@ -4011,13 +3899,12 @@ end function HDF_writeHyperslabIntegerArray4D
 !> @param offset offset of the hyperslab
 !> @param dim0 ...  dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !> @param insert (optional) if present, add to existing dataset
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabFloatArray2D(dataname, wdata, hdims, offset, &
-                                          dim0, dim1, HDF_head, HDF_tail, insert) result(success)
+                                          dim0, dim1, HDF_head, insert) result(success)
 
 IMPLICIT NONE
 
@@ -4030,7 +3917,6 @@ integer(HSIZE_T),INTENT(IN)                             :: offset(2)
 integer(HSIZE_T),INTENT(IN)                             :: dim0
 integer(HSIZE_T),INTENT(IN)                             :: dim1
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
 
@@ -4074,13 +3960,12 @@ end function HDF_writeHyperslabFloatArray2D
 !> @param offset offset of the hyperslab
 !> @param dim0 ...  dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !> @param insert (optional) if present, add to existing dataset
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabFloatArray3D(dataname, wdata, hdims, offset, &
-                                          dim0, dim1, dim2, HDF_head, HDF_tail, insert) result(success)
+                                          dim0, dim1, dim2, HDF_head, insert) result(success)
 
 IMPLICIT NONE
 
@@ -4094,7 +3979,6 @@ integer(HSIZE_T),INTENT(IN)                             :: dim0
 integer(HSIZE_T),INTENT(IN)                             :: dim1
 integer(HSIZE_T),INTENT(IN)                             :: dim2
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
 
@@ -4138,13 +4022,12 @@ end function HDF_writeHyperslabFloatArray3D
 !> @param offset offset of the hyperslab
 !> @param dim0 ...  dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !> @param insert (optional) if present, add to existing dataset
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabFloatArray4D(dataname, wdata, hdims, offset, &
-                                          dim0, dim1, dim2, dim3, HDF_head, HDF_tail, insert) result(success)
+                                          dim0, dim1, dim2, dim3, HDF_head, insert) result(success)
 
 IMPLICIT NONE
 
@@ -4159,7 +4042,6 @@ integer(HSIZE_T),INTENT(IN)                             :: dim1
 integer(HSIZE_T),INTENT(IN)                             :: dim2
 integer(HSIZE_T),INTENT(IN)                             :: dim3
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
 
@@ -4203,13 +4085,12 @@ end function HDF_writeHyperslabFloatArray4D
 !> @param offset offset of the hyperslab
 !> @param dim0 ...  dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !> @param insert (optional) if present, add to existing dataset
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabDoubleArray2D(dataname, wdata, hdims, offset, &
-                                          dim0, dim1, HDF_head, HDF_tail, insert) result(success)
+                                          dim0, dim1, HDF_head, insert) result(success)
 
 IMPLICIT NONE
 
@@ -4222,7 +4103,6 @@ integer(HSIZE_T),INTENT(IN)                             :: offset(2)
 integer(HSIZE_T),INTENT(IN)                             :: dim0
 integer(HSIZE_T),INTENT(IN)                             :: dim1
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
 
@@ -4266,13 +4146,12 @@ end function HDF_writeHyperslabDoubleArray2D
 !> @param offset offset of the hyperslab
 !> @param dim0 ...  dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !> @param insert (optional) if present, add to existing dataset
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabDoubleArray3D(dataname, wdata, hdims, offset, &
-                                          dim0, dim1, dim2, HDF_head, HDF_tail, insert) result(success)
+                                          dim0, dim1, dim2, HDF_head, insert) result(success)
 
 IMPLICIT NONE
 
@@ -4286,7 +4165,6 @@ integer(HSIZE_T),INTENT(IN)                             :: dim0
 integer(HSIZE_T),INTENT(IN)                             :: dim1
 integer(HSIZE_T),INTENT(IN)                             :: dim2
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
 
@@ -4330,13 +4208,12 @@ end function HDF_writeHyperslabDoubleArray3D
 !> @param offset offset of the hyperslab
 !> @param dim0 ...  dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !> @param insert (optional) if present, add to existing dataset
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabDoubleArray4D(dataname, wdata, hdims, offset, &
-                                          dim0, dim1, dim2, dim3, HDF_head, HDF_tail, insert) result(success)
+                                          dim0, dim1, dim2, dim3, HDF_head, insert) result(success)
 
 IMPLICIT NONE
 
@@ -4351,7 +4228,6 @@ integer(HSIZE_T),INTENT(IN)                             :: dim1
 integer(HSIZE_T),INTENT(IN)                             :: dim2
 integer(HSIZE_T),INTENT(IN)                             :: dim3
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
 
@@ -4393,11 +4269,10 @@ end function HDF_writeHyperslabDoubleArray4D
 !> @param offset offset of the hyperslab
 !> @param dims dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readHyperslabCharArray2D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readHyperslabCharArray2D(dataname, offset, dims, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -4407,7 +4282,6 @@ character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(IN)                             :: offset(2)
 integer(HSIZE_T),INTENT(IN)                             :: dims(2)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 character(len=1,kind=c_char), dimension(:,:), allocatable, TARGET   :: rdata
 
 integer(HID_T)                                          :: memspace, space, dset ! Handles
@@ -4446,11 +4320,10 @@ end function HDF_readHyperslabCharArray2D
 !> @param offset offset of the hyperslab
 !> @param dims dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readHyperslabCharArray3D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readHyperslabCharArray3D(dataname, offset, dims, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -4460,7 +4333,6 @@ character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(IN)                             :: offset(3)
 integer(HSIZE_T),INTENT(IN)                             :: dims(3)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 character(len=1,kind=c_char), dimension(:,:,:), allocatable, TARGET   :: rdata
 
 integer(HID_T)                                          :: memspace, space, dset ! Handles
@@ -4499,11 +4371,10 @@ end function HDF_readHyperslabCharArray3D
 !> @param offset offset of the hyperslab
 !> @param dims dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readHyperslabCharArray4D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readHyperslabCharArray4D(dataname, offset, dims, HDF_head) result(rdata)
 
 use ISO_C_BINDING
 
@@ -4513,7 +4384,6 @@ character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(IN)                             :: offset(4)
 integer(HSIZE_T),INTENT(IN)                             :: dims(4)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 character(len=1,kind=c_char), dimension(:,:,:,:), allocatable, TARGET   :: rdata
 
 integer(HID_T)                                          :: memspace, space, dset ! Handles
@@ -4553,11 +4423,10 @@ end function HDF_readHyperslabCharArray4D
 !> @param offset offset of the hyperslab
 !> @param dims dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readHyperslabIntegerArray2D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readHyperslabIntegerArray2D(dataname, offset, dims, HDF_head) result(rdata)
 
 IMPLICIT NONE
 
@@ -4565,7 +4434,6 @@ character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(IN)                             :: offset(2)
 integer(HSIZE_T),INTENT(IN)                             :: dims(2)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer, dimension(:,:), allocatable, TARGET            :: rdata
 
 integer(HID_T)                                          :: memspace, space, dset ! Handles
@@ -4602,11 +4470,10 @@ end function HDF_readHyperslabIntegerArray2D
 !> @param offset offset of the hyperslab
 !> @param dims dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readHyperslabIntegerArray3D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readHyperslabIntegerArray3D(dataname, offset, dims, HDF_head) result(rdata)
 
 IMPLICIT NONE
 
@@ -4614,7 +4481,6 @@ character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(IN)                             :: offset(3)
 integer(HSIZE_T),INTENT(IN)                             :: dims(3)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer, dimension(:,:,:), allocatable, TARGET          :: rdata
 
 integer(HID_T)                                          :: memspace, space, dset ! Handles
@@ -4651,11 +4517,10 @@ end function HDF_readHyperslabIntegerArray3D
 !> @param offset offset of the hyperslab
 !> @param dims dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readHyperslabIntegerArray4D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readHyperslabIntegerArray4D(dataname, offset, dims, HDF_head) result(rdata)
 
 IMPLICIT NONE
 
@@ -4663,7 +4528,6 @@ character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(IN)                             :: offset(4)
 integer(HSIZE_T),INTENT(IN)                             :: dims(4)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 integer, dimension(:,:,:,:), allocatable, TARGET        :: rdata
 
 integer(HID_T)                                          :: memspace, space, dset ! Handles
@@ -4700,11 +4564,10 @@ end function HDF_readHyperslabIntegerArray4D
 !> @param offset offset of the hyperslab
 !> @param dims dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readHyperslabFloatArray2D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readHyperslabFloatArray2D(dataname, offset, dims, HDF_head) result(rdata)
 
 IMPLICIT NONE
 
@@ -4714,7 +4577,6 @@ character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(IN)                             :: offset(2)
 integer(HSIZE_T),INTENT(IN)                             :: dims(2)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 real(real_kind), dimension(:,:), allocatable, TARGET    :: rdata
 
 integer(HID_T)                                          :: memspace, space, dset ! Handles
@@ -4751,11 +4613,10 @@ end function HDF_readHyperslabFloatArray2D
 !> @param offset offset of the hyperslab
 !> @param dims dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readHyperslabFloatArray3D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readHyperslabFloatArray3D(dataname, offset, dims, HDF_head) result(rdata)
 
 IMPLICIT NONE
 
@@ -4765,7 +4626,6 @@ character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(IN)                             :: offset(3)
 integer(HSIZE_T),INTENT(IN)                             :: dims(3)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 real(real_kind), dimension(:,:,:), allocatable, TARGET  :: rdata
 
 integer(HID_T)                                          :: memspace, space, dset ! Handles
@@ -4802,11 +4662,10 @@ end function HDF_readHyperslabFloatArray3D
 !> @param offset offset of the hyperslab
 !> @param dims dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readHyperslabFloatArray4D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readHyperslabFloatArray4D(dataname, offset, dims, HDF_head) result(rdata)
 
 IMPLICIT NONE
 
@@ -4816,7 +4675,6 @@ character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(IN)                             :: offset(4)
 integer(HSIZE_T),INTENT(IN)                             :: dims(4)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 real(real_kind), dimension(:,:,:,:), allocatable, TARGET:: rdata
 
 integer(HID_T)                                          :: memspace, space, dset ! Handles
@@ -4853,11 +4711,10 @@ end function HDF_readHyperslabFloatArray4D
 !> @param offset offset of the hyperslab
 !> @param dims dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readHyperslabDoubleArray2D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readHyperslabDoubleArray2D(dataname, offset, dims, HDF_head) result(rdata)
 
 IMPLICIT NONE
 
@@ -4867,7 +4724,6 @@ character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(IN)                             :: offset(2)
 integer(HSIZE_T),INTENT(IN)                             :: dims(2)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 real(real_kind), dimension(:,:), allocatable, TARGET    :: rdata
 
 integer(HID_T)                                          :: memspace, space, dset ! Handles
@@ -4904,11 +4760,10 @@ end function HDF_readHyperslabDoubleArray2D
 !> @param offset offset of the hyperslab
 !> @param dims dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readHyperslabDoubleArray3D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readHyperslabDoubleArray3D(dataname, offset, dims, HDF_head) result(rdata)
 
 IMPLICIT NONE
 
@@ -4918,7 +4773,6 @@ character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(IN)                             :: offset(3)
 integer(HSIZE_T),INTENT(IN)                             :: dims(3)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 real(real_kind), dimension(:,:,:), allocatable, TARGET  :: rdata
 
 integer(HID_T)                                          :: memspace, space, dset ! Handles
@@ -4955,11 +4809,10 @@ end function HDF_readHyperslabDoubleArray3D
 !> @param offset offset of the hyperslab
 !> @param dims dimensions of the hyperslab
 !> @param HDF_head
-!> @param HDF_tail
 !
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readHyperslabDoubleArray4D(dataname, offset, dims, HDF_head, HDF_tail) result(rdata)
+function HDF_readHyperslabDoubleArray4D(dataname, offset, dims, HDF_head) result(rdata)
 
 IMPLICIT NONE
 
@@ -4969,7 +4822,6 @@ character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(IN)                             :: offset(4)
 integer(HSIZE_T),INTENT(IN)                             :: dims(4)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_tail
 real(real_kind), dimension(:,:,:,:), allocatable, TARGET:: rdata
 
 integer(HID_T)                                          :: memspace, space, dset ! Handles

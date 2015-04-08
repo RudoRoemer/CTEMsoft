@@ -331,9 +331,9 @@ type(reflisttype),pointer       :: reflist, firstw,rltmp
   call WriteValue('Total computation time [s] ' , io_real, 1, "(F10.3)")
   
 ! create the HDF5 output file
-  call HDF_createFile(knl%outname, HDF_head, HDF_tail)
+  call HDF_createFile(knl%outname, HDF_head)
 
-  call HDF_writeEMheader(HDF_head, HDF_tail, dstr, tstrb, tstre, prn)
+  call HDF_writeEMheader(HDF_head, dstr, tstrb, tstre, prn)
 
   
 ! store additional information for the IDL interface  

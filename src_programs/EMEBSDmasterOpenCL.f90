@@ -202,10 +202,8 @@ character(fnlen)                                :: dataset, groupname
 integer                                         :: hdferr, nlines, nsx, nsy, num_el
 
 type(HDFobjectStackType),pointer                :: HDF_head
-type(HDFobjectStackType),pointer                :: HDF_tail
 
 nullify(HDF_head)
-nullify(HDF_tail)
 
 call timestamp(datestring=dstr, timestring=tstrb)
 
@@ -274,39 +272,39 @@ end if
 
 ! open the MC file using the default properties.
 readonly = .TRUE.
-hdferr =  HDF_openFile(emnl%energyfile, HDF_head, HDF_tail, readonly)
+hdferr =  HDF_openFile(emnl%energyfile, HDF_head, readonly)
 
 ! open the namelist group
 groupname = 'NMLparameters'
-hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
+hdferr = HDF_openGroup(groupname, HDF_head)
 
 groupname = 'MCCLNameList'
-hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
+hdferr = HDF_openGroup(groupname, HDF_head)
 
 ! read all the necessary variables from the namelist group
 dataset = 'xtalname'
-stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head, HDF_tail)
+stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
 xtalname = trim(stringarray(1))
 
 dataset = 'numsx'
-nsx = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+nsx = HDF_readDatasetInteger(dataset, HDF_head)
 nsx = (nsx - 1)/2
 nsy = nsx
 
 dataset = 'EkeV'
-EkeV = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+EkeV = HDF_readDatasetDouble(dataset, HDF_head)
 
 dataset = 'Ehistmin'
-Ehistmin = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+Ehistmin = HDF_readDatasetDouble(dataset, HDF_head)
 
 dataset = 'Ebinsize'
-Ebinsize = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+Ebinsize = HDF_readDatasetDouble(dataset, HDF_head)
 
 dataset = 'depthmax'
-depthmax = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+depthmax = HDF_readDatasetDouble(dataset, HDF_head)
 
 dataset = 'depthstep'
-depthstep = HDF_readDatasetDouble(dataset, HDF_head, HDF_tail)
+depthstep = HDF_readDatasetDouble(dataset, HDF_head)
 
 ! close the name list group
 call HDF_pop(HDF_head)
@@ -314,23 +312,23 @@ call HDF_pop(HDF_head)
 
 ! open the Data group
 groupname = 'EMData'
-hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
+hdferr = HDF_openGroup(groupname, HDF_head)
 
 ! read data items 
 dataset = 'numEbins'
-numEbins = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+numEbins = HDF_readDatasetInteger(dataset, HDF_head)
 
 dataset = 'numzbins'
-numzbins = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+numzbins = HDF_readDatasetInteger(dataset, HDF_head)
 
 dataset = 'totnum_el'
-num_el = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+num_el = HDF_readDatasetInteger(dataset, HDF_head)
 
 !allocate(accum_z(numEbins,numzbins,-nsx/10:nsx/10,-nsy/10:nsy/10),stat=istat)
 
 dataset = 'accum_z'
 !dims4 =  (/ numEbins, numzbins, 2*(nsx/10)+1,2*(nsy/10)+1 /)
-accum_z = HDF_readDatasetIntegerArray4D(dataset, dims4, HDF_head, HDF_tail)
+accum_z = HDF_readDatasetIntegerArray4D(dataset, dims4, HDF_head)
 
 ! and close everything
 call HDF_pop(HDF_head,.TRUE.)
@@ -576,7 +574,6 @@ beamloop : do ii = 1,ceiling(float(numk)/float(npx*npy))
 ! determine strong and weak reflections
                 call Apply_BethePotentials(cell, reflist, firstw, BetheParameters, nref, nns, nnw)
                 arrsize((kk-1)*npy+ll) = nns
-write (*,*) 'nns = ',nns
 
                 if ((kk-1)*npy+ll .lt. npx*npy) then
                     arrsizesum((kk-1)*npy+ll+1) = sum(arrsize)
@@ -913,69 +910,69 @@ if (f_exists) then
 end if
 
 ! Create a new file using the default properties.
-hdferr =  HDF_createFile(emnl%outname, HDF_head, HDF_tail)
+hdferr =  HDF_createFile(emnl%outname, HDF_head)
 
 ! write the EMheader to the file
-call HDF_writeEMheader(HDF_head, HDF_tail, dstr, tstrb, tstre, progname)
+call HDF_writeEMheader(HDF_head, dstr, tstrb, tstre, progname)
 
 ! create a namelist group to write all the namelist files into
 groupname = "NMLfiles"
-hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+hdferr = HDF_createGroup(groupname, HDF_head)
 
 ! read the text file and write the array to the file
 dataset = 'EBSDmasterNML'
-hdferr = HDF_writeDatasetTextFile(dataset, nmldeffile, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetTextFile(dataset, nmldeffile, HDF_head)
 
 ! leave this group
 call HDF_pop(HDF_head)
 
 ! create a namelist group to write all the namelist files into
 groupname = "NMLparameters"
-hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
-call HDFwriteEBSDMasterNameList(HDF_head, HDF_tail, emnl)
+hdferr = HDF_createGroup(groupname, HDF_head)
+call HDFwriteEBSDMasterNameList(HDF_head, emnl)
 
 ! leave this group
 call HDF_pop(HDF_head)
 
 ! then the remainder of the data in a EMData group
 groupname = 'EMData'
-hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+hdferr = HDF_createGroup(groupname, HDF_head)
 
 dataset = 'xtalname'
 stringarray(1)= trim(xtalname)
-hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
 
 dataset = 'numset'
-hdferr = HDF_writeDatasetInteger(dataset, numset, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetInteger(dataset, numset, HDF_head)
 
 if (emnl%Esel.eq.-1) then
   dataset = 'numEbins'
-  hdferr = HDF_writeDatasetInteger(dataset, numEbins, HDF_head, HDF_tail)
+  hdferr = HDF_writeDatasetInteger(dataset, numEbins, HDF_head)
 
   dataset = 'EkeVs'
-  hdferr = HDF_writeDatasetFloatArray1D(dataset, EkeVs, numEbins, HDF_head, HDF_tail)
+  hdferr = HDF_writeDatasetFloatArray1D(dataset, EkeVs, numEbins, HDF_head)
 else
   dataset = 'numEbins'
-  hdferr = HDF_writeDatasetInteger(dataset, one, HDF_head, HDF_tail)
+  hdferr = HDF_writeDatasetInteger(dataset, one, HDF_head)
 
   dataset = 'selE'
-  hdferr = HDF_writeDatasetFloat(dataset, sngl(selE), HDF_head, HDF_tail)
+  hdferr = HDF_writeDatasetFloat(dataset, sngl(selE), HDF_head)
 end if 
 
 dataset = 'cell%ATOM_type'
-hdferr = HDF_writeDatasetIntegerArray1D(dataset, cell%ATOM_type(1:numset), numset, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetIntegerArray1D(dataset, cell%ATOM_type(1:numset), numset, HDF_head)
 
 dataset = 'squhex'
 if (usehex) then 
   stringarray(1)= 'hexago'
-  hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head, HDF_tail)
+  hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
 else
   stringarray(1)= 'square'
-  hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head, HDF_tail)
+  hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
 end if  
 
 dataset = 'sr'
-hdferr = HDF_writeDatasetFloatArray4D(dataset, sr, 2*emnl%npx+1, 2*emnl%npx+1, numEbins, numset, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetFloatArray4D(dataset, sr, 2*emnl%npx+1, 2*emnl%npx+1, numEbins, numset, HDF_head)
 
 call HDF_pop(HDF_head,.TRUE.)
 

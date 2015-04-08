@@ -243,7 +243,6 @@ integer, parameter                      :: K4B=selected_int_kind(9)      ! used 
 integer(K4B)                            :: idum
 
 type(HDFobjectStackType),pointer        :: HDF_head
-type(HDFobjectStackType),pointer        :: HDF_tail
 
 integer(HSIZE_T), dimension(1:3)        :: hdims, offset 
 integer(HSIZE_T)                        :: dim0, dim1, dim2
@@ -255,7 +254,6 @@ character(15)                           :: tstre
 logical                                 :: overwrite = .TRUE.
 
 nullify(HDF_head)
-nullify(HDF_tail)
 
 !====================================
 ! what is the output format?  GUI or BIN ?
@@ -309,43 +307,43 @@ call timestamp(datestring=dstr, timestring=tstrb)
 tstre = tstrb
 
 ! Create a new file using the default properties.
-hdferr =  HDF_createFile(enl%datafile, HDF_head, HDF_tail)
+hdferr =  HDF_createFile(enl%datafile, HDF_head)
 
 ! write the EMheader to the file
-call HDF_writeEMheader(HDF_head, HDF_tail, dstr, tstrb, tstre, progname)
+call HDF_writeEMheader(HDF_head, dstr, tstrb, tstre, progname)
 
 ! create a namelist group to write all the namelist files into
 groupname = "NMLfiles"
-hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+hdferr = HDF_createGroup(groupname, HDF_head)
 
 ! read the text file and write the array to the file
 dataset = 'EMEBSDNML'
-hdferr = HDF_writeDatasetTextFile(dataset, nmldeffile, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetTextFile(dataset, nmldeffile, HDF_head)
 
 call HDF_pop(HDF_head)
 
 ! create a NMLparameters group to write all the namelist entries into
 groupname = "NMLparameters"
-hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+hdferr = HDF_createGroup(groupname, HDF_head)
 
-call HDFwriteEBSDNameList(HDF_head, HDF_tail, enl)
+call HDFwriteEBSDNameList(HDF_head, enl)
 
 ! and leave this group
 call HDF_pop(HDF_head)
 
 ! then the remainder of the data in a EMData group
 groupname = 'EMData'
-hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+hdferr = HDF_createGroup(groupname, HDF_head)
 
 ! we need to write the image dimensions
 dataset = 'binx'
-hdferr = HDF_writeDatasetInteger(dataset, binx, HDF_head, HDF_tail) 
+hdferr = HDF_writeDatasetInteger(dataset, binx, HDF_head) 
 
 dataset = 'biny'
-hdferr = HDF_writeDatasetInteger(dataset, biny, HDF_head, HDF_tail) 
+hdferr = HDF_writeDatasetInteger(dataset, biny, HDF_head) 
 
 dataset = 'enl%numangles'
-hdferr = HDF_writeDatasetInteger(dataset, enl%numangles, HDF_head, HDF_tail) 
+hdferr = HDF_writeDatasetInteger(dataset, enl%numangles, HDF_head) 
 
 ! and we leave this group open for further data output ... 
 
@@ -514,10 +512,10 @@ do ibatch=1,nbatches+1
           dim2 = 1
           if (ibatch.eq.1) then
             hdferr = HDF_writeHyperslabFloatArray3D(dataset, EBSDpattern, hdims, offset, dim0, dim1, dim2, &
-                                          HDF_head, HDF_tail)
+                                          HDF_head)
           else
             hdferr = HDF_writeHyperslabFloatArray3D(dataset, EBSDpattern, hdims, offset, dim0, dim1, dim2, &
-                                          HDF_head, HDF_tail,.TRUE.)
+                                          HDF_head,.TRUE.)
           end if
         else
 
@@ -594,10 +592,10 @@ dataset = 'EBSDpatterns'
    dim2 = ninbatch*enl%nthreads
    if (ibatch.eq.1) then
      hdferr = HDF_writeHyperslabCharArray3D(dataset, batchpatterns, hdims, offset, dim0, dim1, dim2, &
-                                          HDF_head, HDF_tail)
+                                          HDF_head)
    else
      hdferr = HDF_writeHyperslabCharArray3D(dataset, batchpatterns, hdims, offset, dim0, dim1, dim2, &
-                                          HDF_head, HDF_tail,.TRUE.)
+                                          HDF_head,.TRUE.)
    end if
   else
    offset = (/ 0, 0, (ibatch-1)*ninbatch*enl%nthreads /)
@@ -607,10 +605,10 @@ dataset = 'EBSDpatterns'
    dim2 = nremainder
    if (ibatch.eq.1) then
      hdferr = HDF_writeHyperslabCharArray3D(dataset, batchpatterns(1:binx,1:biny,1:nremainder), hdims, offset, dim0, dim1, dim2, &
-                                          HDF_head, HDF_tail)
+                                          HDF_head)
    else
      hdferr = HDF_writeHyperslabCharArray3D(dataset, batchpatterns(1:binx,1:biny,1:nremainder), hdims, offset, dim0, dim1, dim2, &
-                                          HDF_head, HDF_tail,.TRUE.)
+                                          HDF_head,.TRUE.)
    end if
   end if
  end if
@@ -622,12 +620,12 @@ call HDF_pop(HDF_head)
 ! and update the end time
 call timestamp(datestring=dstr, timestring=tstre)
 groupname = "EMheader"
-hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
+hdferr = HDF_openGroup(groupname, HDF_head)
 
 ! stop time /EMheader/StopTime 'character'
 dataset = 'StopTime'
 line2(1) = tstre
-hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head, HDF_tail,overwrite)
+hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head,overwrite)
 
 ! close the datafile
 call HDF_pop(HDF_head,.TRUE.)

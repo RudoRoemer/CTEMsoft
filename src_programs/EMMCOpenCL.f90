@@ -162,10 +162,8 @@ character(fnlen)        :: groupname, dataset, instring
 
 
 type(HDFobjectStackType),pointer  :: HDF_head
-type(HDFobjectStackType),pointer  :: HDF_tail
 
 nullify(HDF_head)
-nullify(HDF_tail)
 
 call timestamp(datestring=dstr, timestring=tstrb)
 
@@ -456,50 +454,50 @@ if (f_exists) then
 end if
 
 ! Create a new file using the default properties.
-hdferr =  HDF_createFile(mcnl%dataname, HDF_head, HDF_tail)
+hdferr =  HDF_createFile(mcnl%dataname, HDF_head)
 
 ! write the EMheader to the file
-call HDF_writeEMheader(HDF_head, HDF_tail, dstr, tstrb, tstre, progname)
+call HDF_writeEMheader(HDF_head, dstr, tstrb, tstre, progname)
 
 ! create a namelist group to write all the namelist files into
 groupname = "NMLfiles"
-hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+hdferr = HDF_createGroup(groupname, HDF_head)
 
 ! read the text file and write the array to the file
 dataset = 'MCOpenCLNML'
-hdferr = HDF_writeDatasetTextFile(dataset, nmldeffile, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetTextFile(dataset, nmldeffile, HDF_head)
 
 ! leave this group
 call HDF_pop(HDF_head)
 
 ! create a namelist group to write all the namelist files into
 groupname = "NMLparameters"
-hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
-call HDFwriteMCCLNameList(HDF_head, HDF_tail, mcnl)
+hdferr = HDF_createGroup(groupname, HDF_head)
+call HDFwriteMCCLNameList(HDF_head, mcnl)
 
 ! leave this group
 call HDF_pop(HDF_head)
 
 ! then the remainder of the data in a EMData group
 groupname = 'EMData'
-hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+hdferr = HDF_createGroup(groupname, HDF_head)
 
 dataset = 'numEbins'
-hdferr = HDF_writeDatasetInteger(dataset, numEbins, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetInteger(dataset, numEbins, HDF_head)
 
 dataset = 'numzbins'
-hdferr = HDF_writeDatasetInteger(dataset, numzbins, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetInteger(dataset, numzbins, HDF_head)
 
 dataset = 'totnum_el'
-hdferr = HDF_writeDatasetInteger(dataset, totnum_el, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetInteger(dataset, totnum_el, HDF_head)
 
 !allocate(accum_e(numEbins,-nx:nx,-nx:nx),accum_z(numEbins,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
 
 dataset = 'accum_e'
-hdferr = HDF_writeDatasetIntegerArray3D(dataset, accum_e, numEbins, 2*nx+1, 2*nx+1, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetIntegerArray3D(dataset, accum_e, numEbins, 2*nx+1, 2*nx+1, HDF_head)
 
 dataset = 'accum_z'
-hdferr = HDF_writeDatasetIntegerArray4D(dataset, accum_z, numEbins, numzbins, 2*(nx/10)+1, 2*(nx/10)+1, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetIntegerArray4D(dataset, accum_z, numEbins, numzbins, 2*(nx/10)+1, 2*(nx/10)+1, HDF_head)
 
 call HDF_pop(HDF_head,.TRUE.)
 

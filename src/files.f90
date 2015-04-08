@@ -233,7 +233,6 @@ IMPLICIT NONE
 type(unitcell), pointer, INTENT(IN)     :: cell
 
 type(HDFobjectStackType),pointer        :: HDF_head
-type(HDFobjectStackType),pointer        :: HDF_tail
 
 character(11)                           :: dstr
 character(15)                           :: tstr
@@ -244,7 +243,6 @@ integer(kind=irg),allocatable           :: atomtypes(:)
 real(kind=sgl),allocatable              :: atompos(:,:)
 
 nullify(HDF_head)
-nullify(HDF_tail)
 
 ! Initialize FORTRAN interface.
 !
@@ -254,48 +252,48 @@ call timestamp(datestring=dstr, timestring=tstr)
 
 call getenv("EMsoftxtalpath",xtalpathname)
 fname = trim(xtalpathname)//'/'//trim(cell%fname)
-hdferr =  HDF_createFile(fname, HDF_head, HDF_tail)
+hdferr =  HDF_createFile(fname, HDF_head)
 
 groupname = 'CrystalData'
-hdferr = HDF_createGroup(groupname, HDF_head, HDF_tail)
+hdferr = HDF_createGroup(groupname, HDF_head)
 dataset = 'ProgramName'
-hdferr = HDF_writeDatasetStringArray(dataset, progname, 1, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetStringArray(dataset, progname, 1, HDF_head)
 
 dataset = 'CreationDate'
-hdferr = HDF_writeDatasetStringArray(dataset, dstr, 1, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetStringArray(dataset, dstr, 1, HDF_head)
 
 dataset = 'CreationTime'
-hdferr = HDF_writeDatasetStringArray(dataset, tstr, 1, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetStringArray(dataset, tstr, 1, HDF_head)
 
 dataset = 'Creator'
-hdferr = HDF_writeDatasetStringArray(dataset, username, 1, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetStringArray(dataset, username, 1, HDF_head)
 
 dataset = 'CrystalSystem'
-hdferr = HDF_writeDatasetInteger(dataset, cell%xtal_system, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetInteger(dataset, cell%xtal_system, HDF_head)
 
 dataset = 'LatticeParameters'
 cellparams = (/ cell%a, cell%b, cell%c, cell%alpha, cell%beta, cell%gamma /)
-hdferr = HDF_writeDatasetDoubleArray1D(dataset, cellparams, 6, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetDoubleArray1D(dataset, cellparams, 6, HDF_head)
 
 dataset = 'SpaceGroupNumber'
-hdferr = HDF_writeDatasetInteger(dataset, cell%SYM_SGnum, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetInteger(dataset, cell%SYM_SGnum, HDF_head)
 
 dataset = 'SpaceGroupSetting'
-hdferr = HDF_writeDatasetInteger(dataset, cell%SYM_SGset, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetInteger(dataset, cell%SYM_SGset, HDF_head)
 
 dataset = 'Natomtypes'
-hdferr = HDF_writeDatasetInteger(dataset, cell%ATOM_ntype, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetInteger(dataset, cell%ATOM_ntype, HDF_head)
 
 allocate(atomtypes(cell%ATOM_ntype))
 atomtypes(1:cell%ATOM_ntype) = cell%ATOM_type(1:cell%ATOM_ntype)
 dataset = 'Atomtypes'
-hdferr = HDF_writeDatasetIntegerArray1D(dataset, atomtypes, cell%ATOM_ntype, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetIntegerArray1D(dataset, atomtypes, cell%ATOM_ntype, HDF_head)
 deallocate(atomtypes)
 
 allocate(atompos(cell%ATOM_ntype,5))
 atompos(1:cell%ATOM_ntype,1:5) = cell%ATOM_pos(1:cell%ATOM_ntype,1:5)
 dataset = 'AtomData'
-hdferr = HDF_writeDatasetFloatArray2D(dataset, atompos, cell%ATOM_ntype, 5, HDF_head, HDF_tail)
+hdferr = HDF_writeDatasetFloatArray2D(dataset, atompos, cell%ATOM_ntype, 5, HDF_head)
 deallocate(atompos)
 
 call HDF_pop(HDF_head,.TRUE.)
@@ -334,7 +332,6 @@ IMPLICIT NONE
 type(unitcell), pointer, INTENT(IN)     :: cell
 
 type(HDFobjectStackType),pointer        :: HDF_head
-type(HDFobjectStackType),pointer        :: HDF_tail
 
 character(fnlen)                        :: dataset, groupname, fname
 integer(HSIZE_T)                        :: dims(1), dims2(2)
@@ -344,22 +341,21 @@ integer(kind=irg),allocatable           :: atomtypes(:)
 real(kind=sgl),allocatable              :: atompos(:,:)
 
 nullify(HDF_head)
-nullify(HDF_tail)
 
 call h5open_f(hdferr)
 
 call getenv("EMsoftxtalpath",xtalpathname)
 fname = trim(xtalpathname)//'/'//trim(cell%fname)
-hdferr =  HDF_openFile(fname, HDF_head, HDF_tail)
+hdferr =  HDF_openFile(fname, HDF_head)
 
 groupname = 'CrystalData'
-hdferr = HDF_openGroup(groupname, HDF_head, HDF_tail)
+hdferr = HDF_openGroup(groupname, HDF_head)
 
 dataset = 'CrystalSystem'
-cell%xtal_system = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+cell%xtal_system = HDF_readDatasetInteger(dataset, HDF_head)
 
 dataset = 'LatticeParameters'
-cellparams = HDF_readDatasetDoubleArray1D(dataset, dims, HDF_head, HDF_tail)
+cellparams = HDF_readDatasetDoubleArray1D(dataset, dims, HDF_head)
 cell%a = cellparams(1)
 cell%b = cellparams(2)
 cell%c = cellparams(3)
@@ -368,21 +364,21 @@ cell%beta = cellparams(5)
 cell%gamma = cellparams(6)
 
 dataset = 'SpaceGroupNumber'
-cell%SYM_SGnum = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+cell%SYM_SGnum = HDF_readDatasetInteger(dataset, HDF_head)
 
 dataset = 'SpaceGroupSetting'
-cell%SYM_SGset = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+cell%SYM_SGset = HDF_readDatasetInteger(dataset, HDF_head)
 
 dataset = 'Natomtypes'
-cell%ATOM_ntype = HDF_readDatasetInteger(dataset, HDF_head, HDF_tail)
+cell%ATOM_ntype = HDF_readDatasetInteger(dataset, HDF_head)
 
 dataset = 'Atomtypes'
-atomtypes = HDF_readDatasetIntegerArray1D(dataset, dims, HDF_head, HDF_tail)
+atomtypes = HDF_readDatasetIntegerArray1D(dataset, dims, HDF_head)
 cell%ATOM_type(1:cell%ATOM_ntype) = atomtypes(1:cell%ATOM_ntype) 
 deallocate(atomtypes)
 
 dataset = 'AtomData'
-atompos = HDF_readDatasetFloatArray2D(dataset, dims2, HDF_head, HDF_tail)
+atompos = HDF_readDatasetFloatArray2D(dataset, dims2, HDF_head)
 cell%ATOM_pos(1:cell%ATOM_ntype,1:5) = atompos(1:cell%ATOM_ntype,1:5) 
 deallocate(atompos)
 
