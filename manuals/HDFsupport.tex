@@ -277,6 +277,16 @@ hdferr = HDF_writeDatasetDoubleArray3D(dataname, dblarr, dim0, dim1, dim2,  ...)
 hdferr = HDF_writeDatasetDoubleArray4D(dataname, dblarr, dim0, dim1, dim2, dim3,  ...)
 \end{verbatim}
 
+Note that for each of the \textsf{HDF\_writeDataset...} routines described above, one can add an optional keyword 
+at the end of the argument list to indicate that an existing dataset should be overwritten rather than a new one created.
+This can be done by defining the logical \textsf{overwrite} to be \textsf{.TRUE.}, and then adding it as the last argument,
+e.g.:
+{\small\begin{verbatim}
+	hdferr = HDF_writeDatasetFloatArray3D(dataname, fltarr, dim0, dim1, dim2, HDF_head, overwrite)
+\end{verbatim}}
+In such cases, it is the user's responsibility to ensure that the new data set has exactly the same size as the one being overwritten.
+
+
 \subsubsection{Reading from a dataset}
 Every write routine from the previous section has a corresponding read version.  In 
 all cases, the result of calling these fuctions is directly written into an allocatable 
@@ -318,7 +328,7 @@ calling program.
 
 As an example of the use of these functions, consider a dataset named \textsf{MyArray}, which 
 is of type \textsf{float} (=real4) and has dimensions $400\times 400 \times 5$.  This array can
-then be read from the file (assuming that the dataset has been opened) into a variable named \textsf{vals}
+then be read from the file into an allocatable but not yet allocated variable named \textsf{vals}
 as follows:
 \begin{verbatim}
 ! in the variable declaration section

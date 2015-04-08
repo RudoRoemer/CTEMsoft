@@ -251,7 +251,7 @@ character(fnlen)                        :: groupname, dataset
 character(11)                           :: dstr
 character(15)                           :: tstrb
 character(15)                           :: tstre
-logical                                 :: overwrite = .TRUE.
+logical                                 :: overwrite = .TRUE., insert = .TRUE.
 
 nullify(HDF_head)
 
@@ -515,7 +515,7 @@ do ibatch=1,nbatches+1
                                           HDF_head)
           else
             hdferr = HDF_writeHyperslabFloatArray3D(dataset, EBSDpattern, hdims, offset, dim0, dim1, dim2, &
-                                          HDF_head,.TRUE.)
+                                          HDF_head, insert)
           end if
         else
 
@@ -595,7 +595,7 @@ dataset = 'EBSDpatterns'
                                           HDF_head)
    else
      hdferr = HDF_writeHyperslabCharArray3D(dataset, batchpatterns, hdims, offset, dim0, dim1, dim2, &
-                                          HDF_head,.TRUE.)
+                                          HDF_head, insert)
    end if
   else
    offset = (/ 0, 0, (ibatch-1)*ninbatch*enl%nthreads /)
@@ -608,7 +608,7 @@ dataset = 'EBSDpatterns'
                                           HDF_head)
    else
      hdferr = HDF_writeHyperslabCharArray3D(dataset, batchpatterns(1:binx,1:biny,1:nremainder), hdims, offset, dim0, dim1, dim2, &
-                                          HDF_head,.TRUE.)
+                                          HDF_head, insert)
    end if
   end if
  end if
@@ -625,7 +625,7 @@ hdferr = HDF_openGroup(groupname, HDF_head)
 ! stop time /EMheader/StopTime 'character'
 dataset = 'StopTime'
 line2(1) = tstre
-hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head,overwrite)
+hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head, overwrite)
 
 ! close the datafile
 call HDF_pop(HDF_head,.TRUE.)

@@ -52,6 +52,7 @@
 !> @date  03/31/15 MDG 1.3 added support for arrays of c_chars
 !> @date  04/07/15 MDG 1.4 added hyperslab routines for char, integer, float and double in 2, 3, and 4D
 !> @date  04/08/15 MDG 1.5 removed HDF_tail pointer as it was no longer needed
+!> @data  04/08/15 MDG 1.6 added optional overwrite keyword to all HDF_writeDataset... routines
 !--------------------------------------------------------------------------
 module HDFsupport
 
@@ -589,44 +590,6 @@ end function HDF_openGroup
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE:HDF_createDataset
-!
-!> @author Marc De Graef, Carnegie Mellon University
-!
-!> @brief create a new dataset (this also opens the dataset)
-!
-!> @param dataname string
-!> @param HDF_head
-!
-!> @date 03/17/15  MDG 1.0 original
-!--------------------------------------------------------------------------
-function HDF_createDataset(dataname, HDF_head) result(success)
-
-IMPLICIT NONE
-
-character(fnlen),INTENT(IN)                             :: dataname
-type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-integer(kind=irg)                                       :: success
-!
-integer(HID_T)                                          :: data_id!  identifier
-integer                                                 :: error  ! error flag
-!
-success = 0
-!
-!call H5dcreate_f(HDF_head%objectID, dataname, data_id, error)
-error = -1
-if (error.ne.0) then
-  call HDF_handleError(error,'HDF_createDataset')
-  success = -1
-else
-! and put the data_id onto the HDF_stack
-  call HDF_push(HDF_head, 'd', data_id, dataname)
-end if
-
-end function HDF_createDataset
-
-!--------------------------------------------------------------------------
-!
 ! SUBROUTINE:HDF_openDataset
 !
 !> @author Marc De Graef, Carnegie Mellon University
@@ -1088,7 +1051,7 @@ end function HDF_writeDatasetStringArray
 !
 !> @date 03/31/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetCharArray1D(dataname, chararray, dim0, HDF_head) result(success)
+function HDF_writeDatasetCharArray1D(dataname, chararray, dim0, HDF_head, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -1099,6 +1062,7 @@ character(fnlen),INTENT(IN)                             :: dataname
 character(len=1),TARGET                                 :: chararray(dim0) 
 integer(kind=irg),INTENT(IN)                            :: dim0
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -1121,7 +1085,11 @@ call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the c_char data to it.
 !
-call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_U8LE, space, dset, hdferr)
+if (present(overwrite)) then 
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_U8LE, space, dset, hdferr)
+end if
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetCharArray1D:hd5create_f',.TRUE.)
   success = -1
@@ -1158,7 +1126,7 @@ end function HDF_writeDatasetCharArray1D
 !
 !> @date 03/31/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetCharArray2D(dataname, chararray, dim0, dim1, HDF_head) result(success)
+function HDF_writeDatasetCharArray2D(dataname, chararray, dim0, dim1, HDF_head, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -1169,6 +1137,7 @@ character(len=1),TARGET                                 :: chararray(dim0, dim1)
 integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -1190,7 +1159,11 @@ call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the c_char data to it.
 !
-call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_U8LE, space, dset, hdferr)
+if (present(overwrite)) then 
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_U8LE, space, dset, hdferr)
+end if 
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetCharArray1D:hd5create_f',.TRUE.)
   success = -1
@@ -1227,7 +1200,7 @@ end function HDF_writeDatasetCharArray2D
 !
 !> @date 03/31/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetCharArray3D(dataname, chararray, dim0, dim1, dim2, HDF_head) result(success)
+function HDF_writeDatasetCharArray3D(dataname, chararray, dim0, dim1, dim2, HDF_head, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -1239,6 +1212,7 @@ integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -1260,7 +1234,11 @@ call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the c_char data to it.
 !
-call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_U8LE, space, dset, hdferr)
+if (present(overwrite)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_U8LE, space, dset, hdferr)
+end if
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetCharArray1D:hd5create_f',.TRUE.)
   success = -1
@@ -1297,7 +1275,7 @@ end function HDF_writeDatasetCharArray3D
 !
 !> @date 03/31/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetCharArray4D(dataname, chararray, dim0, dim1, dim2, dim3, HDF_head) result(success)
+function HDF_writeDatasetCharArray4D(dataname, chararray, dim0, dim1, dim2, dim3, HDF_head, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -1310,6 +1288,7 @@ integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
 integer(kind=irg),INTENT(IN)                            :: dim3
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -1331,7 +1310,11 @@ call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the c_char data to it.
 !
-call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_U8LE, space, dset, hdferr)
+if (present(overwrite)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_U8LE, space, dset, hdferr)
+end if 
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetCharArray1D:hd5create_f',.TRUE.)
   success = -1
@@ -1370,7 +1353,7 @@ end function HDF_writeDatasetCharArray4D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetInteger(dataname, intval, HDF_head) result(success)
+function HDF_writeDatasetInteger(dataname, intval, HDF_head, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -1379,6 +1362,7 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 integer(kind=irg),INTENT(IN)                            :: intval
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -1403,7 +1387,11 @@ call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
+if (present(overwrite)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
+end if 
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetIntegerArray1D:hd5create_f',.TRUE.)
   success = -1
@@ -1442,7 +1430,7 @@ end function HDF_writeDatasetInteger
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetIntegerArray1D(dataname, intarr, dim0, HDF_head) result(success)
+function HDF_writeDatasetIntegerArray1D(dataname, intarr, dim0, HDF_head, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -1452,6 +1440,7 @@ character(fnlen),INTENT(IN)                             :: dataname
 integer(kind=irg),INTENT(IN)                            :: intarr(dim0)
 integer(kind=irg),INTENT(IN)                            :: dim0
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -1476,7 +1465,11 @@ call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
+if (present(overwrite)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
+end if
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetIntegerArray1D:hd5create_f',.TRUE.)
   success = -1
@@ -1513,7 +1506,7 @@ end function HDF_writeDatasetIntegerArray1D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetIntegerArray2D(dataname, intarr, dim0, dim1, HDF_head) result(success)
+function HDF_writeDatasetIntegerArray2D(dataname, intarr, dim0, dim1, HDF_head, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -1524,6 +1517,7 @@ integer(kind=irg),INTENT(IN)                            :: intarr(dim0, dim1)
 integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -1548,7 +1542,11 @@ call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
+if (present(overwrite)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
+end if
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetIntegerArray2D:hd5create_f',.TRUE.)
   success = -1
@@ -1586,7 +1584,7 @@ end function HDF_writeDatasetIntegerArray2D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetIntegerArray3D(dataname, intarr, dim0, dim1, dim2, HDF_head) result(success)
+function HDF_writeDatasetIntegerArray3D(dataname, intarr, dim0, dim1, dim2, HDF_head, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -1598,6 +1596,7 @@ integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -1622,7 +1621,11 @@ call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
+if (present(overwrite)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
+end if
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetIntegerArray3D:hd5create_f',.TRUE.)
   success = -1
@@ -1659,7 +1662,7 @@ end function HDF_writeDatasetIntegerArray3D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetIntegerArray4D(dataname, intarr, dim0, dim1, dim2, dim3, HDF_head) result(success)
+function HDF_writeDatasetIntegerArray4D(dataname, intarr, dim0, dim1, dim2, dim3, HDF_head, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -1672,6 +1675,7 @@ integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
 integer(kind=irg),INTENT(IN)                            :: dim3
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
 integer(HID_T)                                          :: space, dset ! Handles
@@ -1696,7 +1700,11 @@ call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
+if (present(overwrite)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_STD_I32LE, space, dset, hdferr)
+end if 
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetIntegerArray4D:hd5create_f',.TRUE.)
   success = -1
@@ -1733,7 +1741,7 @@ end function HDF_writeDatasetIntegerArray4D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetFloat(dataname, fltval, HDF_head) result(success)
+function HDF_writeDatasetFloat(dataname, fltval, HDF_head, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -1742,6 +1750,7 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 real(kind=sgl),INTENT(IN)                               :: fltval
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
@@ -1767,7 +1776,11 @@ call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
+if (present(overwrite)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
+end if
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5create_f',.TRUE.)
   success = -1
@@ -1804,7 +1817,7 @@ end function HDF_writeDatasetFloat
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetDouble(dataname, dblval, HDF_head) result(success)
+function HDF_writeDatasetDouble(dataname, dblval, HDF_head, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -1813,6 +1826,7 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 real(kind=dbl),INTENT(IN)                               :: dblval
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
@@ -1838,7 +1852,11 @@ call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
+if (present(overwrite)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
+end if
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetDouble:hd5create_f',.TRUE.)
   success = -1
@@ -1877,7 +1895,7 @@ end function HDF_writeDatasetDouble
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetFloatArray1D(dataname, fltarr, dim0, HDF_head) result(success)
+function HDF_writeDatasetFloatArray1D(dataname, fltarr, dim0, HDF_head, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -1887,6 +1905,7 @@ character(fnlen),INTENT(IN)                             :: dataname
 real(kind=sgl),INTENT(IN)                               :: fltarr(dim0)
 integer(kind=irg),INTENT(IN)                            :: dim0
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
@@ -1912,7 +1931,11 @@ call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
+if (present(overwrite)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
+end if
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5create_f',.TRUE.)
   success = -1
@@ -1950,7 +1973,7 @@ end function HDF_writeDatasetFloatArray1D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetFloatArray2D(dataname, fltarr, dim0, dim1, HDF_head) result(success)
+function HDF_writeDatasetFloatArray2D(dataname, fltarr, dim0, dim1, HDF_head, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -1961,6 +1984,7 @@ real(kind=sgl),INTENT(IN)                               :: fltarr(dim0, dim1)
 integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
@@ -1986,7 +2010,11 @@ call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
+if (present(overwrite)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
+end if
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5create_f',.TRUE.)
   success = -1
@@ -2023,7 +2051,7 @@ end function HDF_writeDatasetFloatArray2D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetFloatArray3D(dataname, fltarr, dim0, dim1, dim2, HDF_head) result(success)
+function HDF_writeDatasetFloatArray3D(dataname, fltarr, dim0, dim1, dim2, HDF_head, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -2035,6 +2063,7 @@ integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
@@ -2060,7 +2089,11 @@ call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
+if (present(overwrite)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
+end if
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5create_f',.TRUE.)
   success = -1
@@ -2097,7 +2130,7 @@ end function HDF_writeDatasetFloatArray3D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetFloatArray4D(dataname, fltarr, dim0, dim1, dim2, dim3, HDF_head) result(success)
+function HDF_writeDatasetFloatArray4D(dataname, fltarr, dim0, dim1, dim2, dim3, HDF_head, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -2110,6 +2143,7 @@ integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
 integer(kind=irg),INTENT(IN)                            :: dim3
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
@@ -2135,7 +2169,11 @@ call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
+if (present(overwrite)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F32LE, space, dset, hdferr)
+end if
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5create_f',.TRUE.)
   success = -1
@@ -2172,7 +2210,7 @@ end function HDF_writeDatasetFloatArray4D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetDoubleArray1D(dataname, dblarr, dim0, HDF_head) result(success)
+function HDF_writeDatasetDoubleArray1D(dataname, dblarr, dim0, HDF_head, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -2182,6 +2220,7 @@ character(fnlen),INTENT(IN)                             :: dataname
 real(kind=dbl),INTENT(IN)                               :: dblarr(dim0)
 integer(kind=irg),INTENT(IN)                            :: dim0
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
@@ -2207,7 +2246,11 @@ call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
+if (present(overwrite)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
+end if 
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5create_f',.TRUE.)
   success = -1
@@ -2244,7 +2287,7 @@ end function HDF_writeDatasetDoubleArray1D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetDoubleArray2D(dataname, dblarr, dim0, dim1, HDF_head) result(success)
+function HDF_writeDatasetDoubleArray2D(dataname, dblarr, dim0, dim1, HDF_head, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -2255,6 +2298,7 @@ real(kind=dbl),INTENT(IN)                               :: dblarr(dim0, dim1)
 integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
@@ -2280,7 +2324,11 @@ call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
+if (present(overwrite)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
+end if
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5create_f',.TRUE.)
   success = -1
@@ -2317,7 +2365,7 @@ end function HDF_writeDatasetDoubleArray2D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetDoubleArray3D(dataname, dblarr, dim0, dim1, dim2, HDF_head) result(success)
+function HDF_writeDatasetDoubleArray3D(dataname, dblarr, dim0, dim1, dim2, HDF_head, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -2329,6 +2377,7 @@ integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
@@ -2354,7 +2403,11 @@ call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
+if (present(overwrite)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
+end if
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5create_f',.TRUE.)
   success = -1
@@ -2391,7 +2444,7 @@ end function HDF_writeDatasetDoubleArray3D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_writeDatasetDoubleArray4D(dataname, dblarr, dim0, dim1, dim2, dim3, HDF_head) result(success)
+function HDF_writeDatasetDoubleArray4D(dataname, dblarr, dim0, dim1, dim2, dim3, HDF_head, overwrite) result(success)
 
 use ISO_C_BINDING
 
@@ -2404,6 +2457,7 @@ integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
 integer(kind=irg),INTENT(IN)                            :: dim3
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
+logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
 
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
@@ -2429,7 +2483,11 @@ call h5screate_simple_f(rnk, dims, space, hdferr)
 !
 ! Create the dataset and write the variable-length string data to it.
 !
-call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
+if (present(overwrite)) then
+  call h5dopen_f(HDF_head%objectID, trim(dataname), dset, hdferr)
+else
+  call h5dcreate_f(HDF_head%objectID, trim(dataname), H5T_IEEE_F64LE, space, dset, hdferr)
+end if
 if (hdferr.ne.0) then
   call HDF_handleError(hdferr,'HDF_writeDatasetFloatArray1D:hd5create_f',.TRUE.)
   success = -1
