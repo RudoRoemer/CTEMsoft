@@ -36,6 +36,7 @@
 ;> @brief main routine for creation of nml file and execution of CTEMEBSD code
 ;
 ;> @date 05/22/14 MDG 1.0 first version
+;> @date 04/14/15 MDG 1.1 added HDF5 support
 ;--------------------------------------------------------------------------
 pro EBSDExecute, status, single=single
 
@@ -168,24 +169,37 @@ spawn,cmd
   end else status = 1 
 
 if keyword_set(single) then begin
-;  cmd = '/bin/rm '+EBSDdata.pathname+'/'+'tmpangle.txt'
-;  spawn, cmd
+  cmd = '/bin/rm '+EBSDdata.pathname+'/'+'tmpangle.txt'
+  spawn, cmd
 end
 
-; cmd = '/bin/rm '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
-; spawn, cmd
+ cmd = '/bin/rm '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
+ spawn, cmd
 
 ; next, we need to load the pattern if we are in single mode
+; we check for HDF5 filetype first 
 if keyword_set(single) then begin
-  openu,1,EBSDdata.EBSDpatternfilename,/f77
-  nsx = 0L
-  nsy = 0L
-  neu = 0L
-  readu,1,nsx, nsy, neu
-  Core_Print,' Dimensions read from pattern file : '+string(nsx,FORMAT="(I5)")+string(nsy,FORMAT="(I5)")+string(neu,FORMAT="(I8)")
-  pattern = fltarr(nsx,nsy)
-  readu,1,pattern
-  close,1
+  res = H5F_IS_HDF5(EBSDdata.EBSDpatternfilename)
+  if (res eq 0) then begin
+    openu,1,EBSDdata.EBSDpatternfilename,/f77
+    nsx = 0L
+    nsy = 0L
+    neu = 0L
+    readu,1,nsx, nsy, neu
+    Core_Print,' Dimensions read from pattern file : '+string(nsx,FORMAT="(I5)")+string(nsy,FORMAT="(I5)")+string(neu,FORMAT="(I8)")
+    pattern = fltarr(nsx,nsy)
+    readu,1,pattern
+    close,1
+  end else begin  ; this is an HDF5 file
+    file_id = H5F_OPEN(EBSDdata.EBSDpatternfilename)
+    group_id = H5G_OPEN(file_id,'EMData')
+    dset_id = H5D_OPEN(group_id,'EBSDpatterns')
+    pattern = H5D_READ(dset_id)
+print,'read data from HDF5 file; shape = ',size(pattern,/dimensions)
+    H5D_CLOSE,dset_id
+    H5G_CLOSE,group_id
+    H5F_CLOSE,file_id
+  end
 end
 
 ; if we are not in single mode, then we need to load the angle file

@@ -55,8 +55,8 @@ if keyword_set(MPFILE) then begin
   Core_Print,'Reading data file '+EBSDdata.mpfilename
 
 ; first make sure that this is indeed an HDF file
-  res = HDF_ISHDF(EBSDdata.pathname+'/'+EBSDdata.mpfilename)
-  if (res eq -1L) then begin
+  res = H5F_IS_HDF5(EBSDdata.pathname+'/'+EBSDdata.mpfilename)
+  if (res eq 0) then begin
     Core_Print,'  This is not an HDF file ! ',/blank
     goto,skipall
   endif
@@ -202,8 +202,8 @@ if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
   EBSDdata.Esel = 0
 
 ; first make sure that this is indeed an HDF file
-  res = HDF_ISHDF(EBSDdata.mcpathname+'/'+EBSDdata.mcfilename)
-  if (res eq -1L) then begin
+  res = H5F_IS_HDF5(EBSDdata.mcpathname+'/'+EBSDdata.mcfilename)
+  if (res eq 0) then begin
     Core_Print,'  This is not an HDF file ! ',/blank
     goto,skipall
   endif

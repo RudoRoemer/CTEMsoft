@@ -71,7 +71,7 @@ end else begin
 ; read the data file and populate all the relevant fields
 		if (validfile eq 1) then begin
                    res = HDF_ISHDF(EBSDdata.mcpathname+'/'+EBSDdata.mcfilename)
-                   if (res eq -1L) then EBSDreaddatafile,/MCFILE else EBSDreadHDFdatafile,/MCFILE
+                   if (res eq 0) then EBSDreaddatafile,/MCFILE else EBSDreadHDFdatafile,/MCFILE
                 endif
 
 ; activate the MC Display button
@@ -85,7 +85,7 @@ end else begin
 ; read the data file and populate all the relevant fields
 		if (validfile eq 1) then begin
                    res = HDF_ISHDF(EBSDdata.pathname+'/'+EBSDdata.mpfilename)
-                   if (res eq -1L) then EBSDreaddatafile,/MPFILE else EBSDreadHDFdatafile,/MPFILE
+                   if (res eq 0) then EBSDreaddatafile,/MPFILE else EBSDreadHDFdatafile,/MPFILE
                 endif
 
 ; activate both the MC and MP Display buttons

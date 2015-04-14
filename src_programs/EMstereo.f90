@@ -59,7 +59,7 @@ IMPLICIT NONE
 character(1)                    :: sp
 logical                         :: topbot
 integer(kind=irg)               :: iview(3), io_int(3), imanum
-character(fnlen)                :: progname, progdesc
+character(fnlen)                :: progname, progdesc, gname
 type(unitcell),pointer          :: cell
 logical                         :: loadingfile
 type(postscript_type)           :: PS
@@ -74,8 +74,9 @@ type(postscript_type)           :: PS
  topbot=.FALSE.
 
 ! read crystal information
- loadingfile = .TRUE.
- call CrystalData(cell, loadingfile)
+ call ReadValue(' Enter xtal file name : ', gname,"(A)")
+ cell%fname = gname
+ call CrystalData(cell)
 
 ! real space or reciprocal space
  call GetDrawingSpace(sp)

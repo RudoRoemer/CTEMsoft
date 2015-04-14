@@ -76,13 +76,24 @@ end
 if not keyword_set(single) then begin
   dbin = 2^EBSDdata.detbinning
 ; we need to read the pattern from file
-  openr,1,EBSDdata.EBSDpatternfilename,/f77
-  q = assoc(1,lonarr(3),4)
-  dims = q[0]
-  offset = 24L + EBSDdata.currentpatternID * ( EBSDdata.detnumsx * EBSDdata.detnumsy / dbin^2 +2L ) * 4L 
-  q = assoc(1,fltarr(dims[0],dims[1]),offset)
-  pattern = q[0]
-  close,1
+  res = H5F_IS_HDF5(EBSDdata.EBSDpatternfilename)
+  if (res eq 0) then begin
+    openr,1,EBSDdata.EBSDpatternfilename,/f77
+    q = assoc(1,lonarr(3),4)
+    dims = q[0]
+    offset = 24L + EBSDdata.currentpatternID * ( EBSDdata.detnumsx * EBSDdata.detnumsy / dbin^2 +2L ) * 4L 
+    q = assoc(1,fltarr(dims[0],dims[1]),offset)
+    pattern = q[0]
+    close,1
+  end else begin  ; this is an HDF5 file
+    file_id = H5F_OPEN(EBSDdata.EBSDpatternfilename)
+    group_id = H5G_OPEN(file_id,'EMData')
+    dset_id = H5D_OPEN(group_id,'EBSDpatterns')
+    pattern = H5D_READ(dset_id)
+    H5D_CLOSE,dset_id
+    H5G_CLOSE,group_id
+    H5F_CLOSE,file_id
+  end
 end
 
 
