@@ -33,7 +33,7 @@
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief EMEBSDzE computes the energy-dependent master EBSD pattern for a given structure
+!> @brief EMEBSDmaster computes the energy-dependent master EBSD pattern for a given structure
 !
 !> @todo implement full symmetry use; implement multiple reflection output
 !> or, easier perhaps, selection of one reflection;
@@ -113,6 +113,8 @@ end program EMEBSDmaster
 !> @date 06/19/14  MDG 4.0 no more globals, nml split, added OpenMP
 !> @date 03/26/15  MDG 5.0 all output now in HDF5 format (this is the first converted program)
 !> @date 03/28/15  MDG 5.1 converted Monte Carlo input to HDF5 format and tested
+!> @date 04/14/15  MDG 5.2 modified HDF5 output using hyperslabs
+!> @date 04/15/15  MDG 5.3 debugged file closing problem, mostly in HDFsupport.f90
 !--------------------------------------------------------------------------
 subroutine ComputeMasterPattern(emnl, progname, nmldeffile)
 
@@ -133,11 +135,11 @@ use diffraction
 use multibeams
 use timing
 use Lambert
-use omp_lib
 use HDF5
 use NameListHDFwriters
 use HDFsupport
 use ISO_C_BINDING
+use omp_lib
  
 IMPLICIT NONE
 
@@ -146,7 +148,7 @@ character(fnlen),INTENT(IN)                :: progname
 character(fnlen),INTENT(IN)                :: nmldeffile
 
 real(kind=dbl)          :: ctmp(192,3), arg
-integer(HSIZE_T)        :: dims4(4)
+integer(HSIZE_T)        :: dims4(4), cnt4(4), offset4(4)
 integer(kind=irg)      :: isym,i,j,ik,npy,ipx,ipy,debug,iE,izz, izzmax, iequiv(2,12), nequiv, num_el, MCnthreads, & ! counters
                         numk, & ! number of independent incident beam directions
                         ir,nat(100),kk(3), npyhex, skip, ijmax, one, NUMTHREADS, TID, &
@@ -172,8 +174,9 @@ character(8)            :: MCscversion
 character(11)           :: dstr
 character(15)           :: tstrb
 character(15)           :: tstre
-logical                 :: f_exists, readonly
+logical                 :: f_exists, readonly, overwrite=.TRUE., insert=.TRUE.
 character(fnlen, KIND=c_char),allocatable,TARGET :: stringarray(:)
+character(fnlen,kind=c_char)                     :: line2(1)
 
 type(unitcell),pointer          :: cell
 type(DynType),save              :: Dyn
@@ -193,7 +196,6 @@ type(HDFobjectStackType),pointer  :: HDF_head
 nullify(HDF_head)
 
 call timestamp(datestring=dstr, timestring=tstrb)
-
 
 ! note that the EMMC.f90 program creates a statistical output file that 
 ! must be read by the present program, so that things like energy etc are 
@@ -416,11 +418,11 @@ deallocate(accum_z)
 ! which leads to 9 different shapes for the stereographic asymmetric unit for the 
 ! independent incident beam directions.  
 ! allocate space for the results (needs to be altered for general symmetry case)
-if (emnl%Esel.eq.-1) then
-  allocate(sr(-emnl%npx:emnl%npx,-npy:npy,1:numEbins,1:numset),stat=istat)
-else
+!if (emnl%Esel.eq.-1) then
+!  allocate(sr(-emnl%npx:emnl%npx,-npy:npy,1:numEbins,1:numset),stat=istat)
+!else
   allocate(sr(-emnl%npx:emnl%npx,-npy:npy,1,1:numset),stat=istat)
-end if 
+!end if 
 
 ! in the trigonal/hexagonal case, we need intermediate storage arrays
   if (usehex) then
@@ -440,6 +442,97 @@ end if
 ! force dynamical matrix routine to read new Bethe parameters from file
 ! this will all be changed with the new version of the Bethe potentials
 !  call Set_Bethe_Parameters(BetheParameters)
+
+
+!=============================================
+! create the HDF5 output file
+!=============================================
+! delete the file if it already exists
+! inquire(file=trim(emnl%outname), exist=f_exists)
+
+! if (f_exists) then
+!   open(unit=dataunit, file=trim(emnl%outname), status='old',form='unformatted')
+!   close(unit=dataunit, status='delete')
+!   call Message('Old HDF file deleted')
+! end if
+
+  nullify(HDF_head)
+! Initialize FORTRAN interface.
+  call h5open_f(hdferr)
+
+! Create a new file using the default properties.
+  hdferr =  HDF_createFile(emnl%outname, HDF_head)
+
+! write the EMheader to the file
+  call HDF_writeEMheader(HDF_head, dstr, tstrb, tstre, progname)
+
+! create a namelist group to write all the namelist files into
+  groupname = "NMLfiles"
+  hdferr = HDF_createGroup(groupname, HDF_head)
+
+! read the text file and write the array to the file
+  dataset = 'EBSDmasterNML'
+  hdferr = HDF_writeDatasetTextFile(dataset, nmldeffile, HDF_head)
+
+! leave this group
+  call HDF_pop(HDF_head)
+  
+! create a namelist group to write all the namelist files into
+  groupname = "NMLparameters"
+  hdferr = HDF_createGroup(groupname, HDF_head)
+  call HDFwriteEBSDMasterNameList(HDF_head, emnl)
+
+! leave this group
+  call HDF_pop(HDF_head)
+
+! then the remainder of the data in a EMData group
+  groupname = 'EMData'
+  hdferr = HDF_createGroup(groupname, HDF_head)
+
+  dataset = 'xtalname'
+  stringarray(1)= trim(xtalname)
+  hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
+
+  dataset = 'numset'
+  hdferr = HDF_writeDatasetInteger(dataset, numset, HDF_head)
+
+  if (emnl%Esel.eq.-1) then
+    dataset = 'numEbins'
+    hdferr = HDF_writeDatasetInteger(dataset, numEbins, HDF_head)
+  
+    dataset = 'EkeVs'
+    hdferr = HDF_writeDatasetFloatArray1D(dataset, EkeVs, numEbins, HDF_head)
+  else
+    dataset = 'numEbins'
+    hdferr = HDF_writeDatasetInteger(dataset, one, HDF_head)
+  
+    dataset = 'selE'
+    hdferr = HDF_writeDatasetFloat(dataset, selE, HDF_head)
+  end if 
+
+  dataset = 'cell%ATOM_type'
+  hdferr = HDF_writeDatasetIntegerArray1D(dataset, cell%ATOM_type(1:numset), numset, HDF_head)
+
+  dataset = 'squhex'
+  if (usehex) then 
+    stringarray(1)= 'hexago'
+    hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
+  else
+    stringarray(1)= 'square'
+    hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
+  end if  
+
+! create the hyperslab and write zeroes to it for now
+  dataset = 'sr'
+  dims4 = (/  2*emnl%npx+1, 2*emnl%npx+1, numEbins, numset /)
+  cnt4 = (/ 2*emnl%npx+1, 2*emnl%npx+1, 1, numset /)
+  offset4 = (/ 0, 0, 0, 0 /)
+  hdferr = HDF_writeHyperslabFloatArray4D(dataset, sr, dims4, offset4, cnt4(1), cnt4(2), cnt4(3), cnt4(4), HDF_head)
+
+  call HDF_pop(HDF_head,.TRUE.)
+
+! and close the fortran hdf interface
+ call h5close_f(hdferr)
 
 !=============================================
 !=============================================
@@ -590,12 +683,14 @@ energyloop: do iE=numEbins,1,-1
 !$OMP CRITICAL
      if (usehex) then
        do ix=1,nequiv
-         srhex(iequiv(1,ix),iequiv(2,ix),iE,1:numset) = svals(1:numset)
+!        srhex(iequiv(1,ix),iequiv(2,ix),iE,1:numset) = svals(1:numset)
+         srhex(iequiv(1,ix),iequiv(2,ix),1,1:numset) = svals(1:numset)
         end do
      else
         if (emnl%Esel.eq.-1) then
          do ix=1,nequiv
-           sr(iequiv(1,ix),iequiv(2,ix),iE,1:numset) = svals(1:numset)
+!          sr(iequiv(1,ix),iequiv(2,ix),iE,1:numset) = svals(1:numset)
+           sr(iequiv(1,ix),iequiv(2,ix),1,1:numset) = svals(1:numset)
           end do
         else
          do ix=1,nequiv
@@ -679,91 +774,40 @@ energyloop: do iE=numEbins,1,-1
   io_int(1) = nint(float(totweak)/float(numk))
   call WriteValue(' -> Average number of weak reflections   = ',io_int, 1, "(I5)")
 
-
 ! and here is where the major changes are for this version 5.0: all output now in HDF5 format
-!
-! Initialize FORTRAN interface.
-!
-call h5open_f(hdferr)
-call timestamp(timestring=tstre)
+  call timestamp(timestring=tstre)
 
-! first of all, if the file exists, then delete it and rewrite it on each energyloop
-inquire(file=trim(emnl%outname), exist=f_exists)
+  nullify(HDF_head)
+! Initialize FORTRAN HDF interface.
+  call h5open_f(hdferr)
 
-if (f_exists) then
-  open(unit=dataunit, file=trim(emnl%outname), status='old',form='unformatted')
-  close(unit=dataunit, status='delete')
-end if
+! open the existing file using the default properties.
+  hdferr =  HDF_openFile(emnl%outname, HDF_head)
 
-! Create a new file using the default properties.
-hdferr =  HDF_createFile(emnl%outname, HDF_head)
+! update the time string
+  groupname = 'EMheader'
+  hdferr = HDF_openGroup(groupname, HDF_head)
 
-! write the EMheader to the file
-call HDF_writeEMheader(HDF_head, dstr, tstrb, tstre, progname)
+  dataset = 'StopTime'
+  line2(1) = tstre
+  hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head, overwrite)
 
-! create a namelist group to write all the namelist files into
-groupname = "NMLfiles"
-hdferr = HDF_createGroup(groupname, HDF_head)
+  call HDF_pop(HDF_head)
+  
+  groupname = 'EMData'
+  hdferr = HDF_openGroup(groupname, HDF_head)
 
-! read the text file and write the array to the file
-dataset = 'EBSDmasterNML'
-hdferr = HDF_writeDatasetTextFile(dataset, nmldeffile, HDF_head)
+! add data to the hyperslab
+  dataset = 'sr'
+  dims4 = (/  2*emnl%npx+1, 2*emnl%npx+1, numEbins, numset /)
+  cnt4 = (/ 2*emnl%npx+1, 2*emnl%npx+1, 1, numset /)
+  offset4 = (/ 0, 0, iE-1, 0 /)
+  hdferr = HDF_writeHyperslabFloatArray4D(dataset, sr, dims4, offset4, cnt4(1), cnt4(2), cnt4(3), cnt4(4), HDF_head, insert)
 
-! leave this group
-call HDF_pop(HDF_head)
-
-! create a namelist group to write all the namelist files into
-groupname = "NMLparameters"
-hdferr = HDF_createGroup(groupname, HDF_head)
-call HDFwriteEBSDMasterNameList(HDF_head, emnl)
-
-! leave this group
-call HDF_pop(HDF_head)
-
-! then the remainder of the data in a EMData group
-groupname = 'EMData'
-hdferr = HDF_createGroup(groupname, HDF_head)
-
-dataset = 'xtalname'
-stringarray(1)= trim(xtalname)
-hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
-
-dataset = 'numset'
-hdferr = HDF_writeDatasetInteger(dataset, numset, HDF_head)
-
-if (emnl%Esel.eq.-1) then
-  dataset = 'numEbins'
-  hdferr = HDF_writeDatasetInteger(dataset, numEbins, HDF_head)
-
-  dataset = 'EkeVs'
-  hdferr = HDF_writeDatasetFloatArray1D(dataset, EkeVs, numEbins, HDF_head)
-else
-  dataset = 'numEbins'
-  hdferr = HDF_writeDatasetInteger(dataset, one, HDF_head)
-
-  dataset = 'selE'
-  hdferr = HDF_writeDatasetFloat(dataset, selE, HDF_head)
-end if 
-
-dataset = 'cell%ATOM_type'
-hdferr = HDF_writeDatasetIntegerArray1D(dataset, cell%ATOM_type(1:numset), numset, HDF_head)
-
-dataset = 'squhex'
-if (usehex) then 
-  stringarray(1)= 'hexago'
-  hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
-else
-  stringarray(1)= 'square'
-  hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
-end if  
-
-dataset = 'sr'
-hdferr = HDF_writeDatasetFloatArray4D(dataset, sr, 2*emnl%npx+1, 2*emnl%npx+1, numEbins, numset, HDF_head)
-
-call HDF_pop(HDF_head,.TRUE.)
+  call HDF_pop(HDF_head,.TRUE.)
 
 ! and close the fortran hdf interface
-call h5close_f(hdferr)
+  call h5close_f(hdferr)
 
 
 ! open(unit=dataunit,file=trim(emnl%outname),status='unknown',action='write',form = 'unformatted')

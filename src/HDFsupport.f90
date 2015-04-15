@@ -261,6 +261,7 @@ end subroutine HDF_push
 !> @param closeall (optional) close all open objects
 !
 !> @date 03/17/15  MDG 1.0 original
+!> @date 04/15/15  MDG 1.1 corrected off-by-one error in linked list, causing file to be improperly closed
 !--------------------------------------------------------------------------
 subroutine HDF_pop(HDF_head, closeall, verbose)
 
@@ -280,7 +281,7 @@ nullify(tmp)
 
 if (PRESENT(closeall)) then  
 ! this would be called if an error arises that forces a complete shutdown of the program, or at the end of a regular program
-  do while (associated(HDF_head % next)) 
+  do while (associated(HDF_head)) 
 ! close the current object 
     error = HDF_close_level(HDF_head % objectType, HDF_head % objectID)
     if (error.ne.0) then
@@ -292,7 +293,6 @@ if (PRESENT(closeall)) then
 ! delete the old entry
     deallocate(tmp)
   end do
-  nullify(HDF_head)
 else
 ! close the current object 
   error = HDF_close_level(HDF_head % objectType, HDF_head % objectID)
@@ -341,6 +341,8 @@ contains
 
   case DEFAULT
   end select
+
+! write (*,*) 'oT = ',oT,'; status = ',error
 
 end function HDF_close_level
 
