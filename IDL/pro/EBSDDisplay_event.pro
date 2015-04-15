@@ -70,7 +70,7 @@ end else begin
 		EBSDgetfilename,validfile,/MCFILE
 ; read the data file and populate all the relevant fields
 		if (validfile eq 1) then begin
-                   res = HDF_ISHDF(EBSDdata.mcpathname+'/'+EBSDdata.mcfilename)
+                   res = H5F_IS_HDF5(EBSDdata.mcpathname+'/'+EBSDdata.mcfilename)
                    if (res eq 0) then EBSDreaddatafile,/MCFILE else EBSDreadHDFdatafile,/MCFILE
                 endif
 
@@ -84,7 +84,7 @@ end else begin
 		EBSDgetfilename,validfile,/MPFILE
 ; read the data file and populate all the relevant fields
 		if (validfile eq 1) then begin
-                   res = HDF_ISHDF(EBSDdata.pathname+'/'+EBSDdata.mpfilename)
+                   res = H5F_IS_HDF5(EBSDdata.pathname+'/'+EBSDdata.mpfilename)
                    if (res eq 0) then EBSDreaddatafile,/MPFILE else EBSDreadHDFdatafile,/MPFILE
                 endif
 

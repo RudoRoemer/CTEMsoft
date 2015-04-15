@@ -200,11 +200,13 @@ type(EBSDNameListType),INTENT(INOUT)    :: enl
 type(EBSDLargeAccumType),pointer        :: acc
 logical,INTENT(IN),OPTIONAL             :: verbose
 
-integer(kind=irg)                       :: istat, hdferr, nlines
+integer(kind=irg)                       :: istat, hdferr, nlines, nx
 logical                                 :: stat, readonly
 integer(HSIZE_T)                        :: dims3(3)
 character(fnlen)                        :: groupname, dataset 
 character(fnlen),allocatable            :: stringarray(:)
+
+integer(kind=irg),allocatable           :: acc_e(:,:,:)
 
 type(HDFobjectStackType),pointer        :: HDF_head
 
@@ -300,8 +302,12 @@ if (stat) then
   enl%numzbins = HDF_readDatasetInteger(dataset, HDF_head)
 
   dataset = 'accum_e'
-  acc%accum_e = HDF_readDatasetIntegerArray3D(dataset, dims3, HDF_head)
-  enl%num_el = sum(acc%accum_e)
+  acc_e = HDF_readDatasetIntegerArray3D(dataset, dims3, HDF_head)
+  enl%num_el = sum(acc_e)
+  nx = (dims3(2)-1)/2
+  allocate(acc%accum_e(1:dims3(1),-nx:nx,-nx:nx))
+  acc%accum_e = acc_e
+  deallocate(acc_e)
 
 ! and close everything
   call HDF_pop(HDF_head,.TRUE.)

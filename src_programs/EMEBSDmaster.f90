@@ -115,6 +115,7 @@ end program EMEBSDmaster
 !> @date 03/28/15  MDG 5.1 converted Monte Carlo input to HDF5 format and tested
 !> @date 04/14/15  MDG 5.2 modified HDF5 output using hyperslabs
 !> @date 04/15/15  MDG 5.3 debugged file closing problem, mostly in HDFsupport.f90
+!> @date 04/15/15  MDG 5.4 corrected offset reading of accum_z array
 !--------------------------------------------------------------------------
 subroutine ComputeMasterPattern(emnl, progname, nmldeffile)
 
@@ -167,7 +168,7 @@ integer(kind=irg),parameter     :: LaueTest(11) = (/ 149, 151, 153, 156, 158, 16
 ! Monte Carlo derived quantities
 integer(kind=irg)       :: numEbins, numzbins, nsx, nsy, hdferr, nlines    ! variables used in MC energy file
 real(kind=dbl)          :: EkeV, Ehistmin, Ebinsize, depthmax, depthstep, etotal ! enery variables from MC program
-integer(kind=irg),allocatable :: accum_e(:,:,:), accum_z(:,:,:,:), thick(:)
+integer(kind=irg),allocatable :: accum_e(:,:,:), accum_z(:,:,:,:), thick(:), acc_z(:,:,:,:)
 real(kind=sgl),allocatable :: lambdaE(:,:)
 character(fnlen)        :: oldprogname, groupname
 character(8)            :: MCscversion
@@ -285,11 +286,12 @@ numzbins = HDF_readDatasetInteger(dataset, HDF_head)
 dataset = 'totnum_el'
 num_el = HDF_readDatasetInteger(dataset, HDF_head)
 
-allocate(accum_z(numEbins,numzbins,-nsx/10:nsx/10,-nsy/10:nsy/10),stat=istat)
-
 dataset = 'accum_z'
-dims4 =  (/ numEbins, numzbins, 2*(nsx/10)+1,2*(nsy/10)+1 /)
-accum_z = HDF_readDatasetIntegerArray4D(dataset, dims4, HDF_head)
+! dims4 =  (/ numEbins, numzbins, 2*(nsx/10)+1,2*(nsy/10)+1 /)
+acc_z = HDF_readDatasetIntegerArray4D(dataset, dims4, HDF_head)
+allocate(accum_z(numEbins,numzbins,-nsx/10:nsx/10,-nsy/10:nsy/10),stat=istat)
+accum_z = acc_z
+deallocate(acc_z)
 
 ! and close everything
 call HDF_pop(HDF_head,.TRUE.)
