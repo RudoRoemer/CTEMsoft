@@ -1610,4 +1610,158 @@ pednl%nnk = nnk
 
 end subroutine GetPEDIndxNameList
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:GetEBSDNameList
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read namelist file and fill enl structure (used by EMEBSD.f90)
+!
+!> @param nmlfile namelist file name
+!> @param enl EBSD name list structure
+!
+!> @date 06/23/14  MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine GetEBSDIndxNameList(nmlfile, enl)
+
+use error
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)               :: nmlfile
+type(EBSDIndxListType),INTENT(INOUT)      :: enl
+
+integer(kind=irg)       :: stdout
+integer(kind=irg)       :: numsx
+integer(kind=irg)       :: numsy
+integer(kind=irg)       :: binning
+integer(kind=irg)       :: nthreads
+integer(kind=irg)       :: energyaverage
+real(kind=sgl)          :: L
+real(kind=sgl)          :: thetac
+real(kind=sgl)          :: delta
+real(kind=sgl)          :: xpc
+real(kind=sgl)          :: ypc
+real(kind=sgl)          :: energymin
+real(kind=sgl)          :: energymax
+real(kind=sgl)          :: gammavalue
+real(kind=sgl)          :: axisangle(4)
+real(kind=dbl)          :: beamcurrent
+real(kind=dbl)          :: dwelltime
+character(1)            :: maskpattern
+character(3)            :: scalingmode
+character(3)            :: eulerconvention
+character(3)            :: outputformat
+character(fnlen)        :: anglefile
+character(fnlen)        :: masterfile
+character(fnlen)        :: energyfile
+character(fnlen)        :: datafile
+
+integer(kind=irg)       :: npix
+integer(kind=irg)       :: ncubochoric
+real(kind=sgl)          :: voltage
+integer(kind=irg)       :: numexptsingle
+integer(kind=irg)       :: numdictsingle
+integer(kind=irg)       :: totnumexpt
+integer(kind=irg)       :: imght
+integer(kind=irg)       :: imgwd
+integer(kind=irg)       :: nnk
+character(fnlen)        :: exptfile
+
+! define the IO namelist to facilitate passing variables to the program.
+namelist  / EBSDdata / stdout, L, thetac, delta, numsx, numsy, xpc, ypc, anglefile, eulerconvention, masterfile, &
+energyfile, datafile, beamcurrent, dwelltime, energymin, energymax, binning, gammavalue, &
+scalingmode, axisangle, nthreads, outputformat, maskpattern, energyaverage, &
+npix, ncubochoric, numexptsingle, numdictsingle, totnumexpt,imght,imgwd,nnk,exptfile
+
+! set the input parameters to default values (except for xtalname, which must be present)
+npix            = 0
+ncubochoric     = 50
+numexptsingle   = 1024
+numdictsingle   = 1024
+totnumexpt      = 0
+imght           = 0
+imgwd           = 0
+nnk             = 40
+exptfile        = 'undefined'
+
+stdout          = 6
+numsx           = 640           ! [dimensionless]
+numsy           = 480           ! [dimensionless]
+binning         = 1             ! binning mode  (1, 2, 4, or 8)
+L               = 20000.0       ! [microns]
+nthreads        = 1             ! number of OpenMP threads
+energyaverage   = 0             ! apply energy averaging (1) or not (0); useful for dictionary computations
+thetac          = 0.0           ! [degrees]
+delta           = 25.0          ! [microns]
+xpc             = 0.0           ! [pixels]
+ypc             = 0.0           ! [pixels]
+energymin       = 15.0          ! minimum energy to consider
+energymax       = 30.0          ! maximum energy to consider
+gammavalue      = 1.0           ! gamma factor
+axisangle       = (/0.0, 0.0, 1.0, 0.0/)        ! no additional axis angle rotation
+beamcurrent     = 14.513D0      ! beam current (actually emission current) in nano ampere
+dwelltime       = 100.0D0       ! in microseconds
+maskpattern     = 'n'           ! 'y' or 'n' to include a circular mask
+scalingmode     = 'not'         ! intensity selector ('lin', 'gam', or 'not')
+eulerconvention = 'tsl'         ! convention for the first Euler angle ['tsl' or 'hkl']
+outputformat    = 'gui'         ! output format for 'bin' or 'gui' use
+anglefile       = 'undefined'   ! filename
+masterfile      = 'undefined'   ! filename
+energyfile      = 'undefined'   ! name of file that contains energy histograms for all scintillator pixels (output from MC program)
+datafile        = 'undefined'   ! output file name
+
+
+! read the namelist file
+open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+read(UNIT=dataunit,NML=EBSDdata)
+close(UNIT=dataunit,STATUS='keep')
+
+! check for required entries
+if (trim(energyfile).eq.'undefined') then
+call FatalError('EMEBSD:',' energy file name is undefined in '//nmlfile)
+end if
+
+if (trim(anglefile).eq.'undefined') then
+call FatalError('EMEBSD:',' angle file name is undefined in '//nmlfile)
+end if
+
+if (trim(masterfile).eq.'undefined') then
+call FatalError('EMEBSD:',' master pattern file name is undefined in '//nmlfile)
+end if
+
+if (trim(datafile).eq.'undefined') then
+call FatalError('EMEBSD:',' output file name is undefined in '//nmlfile)
+end if
+
+! if we get here, then all appears to be ok, and we need to fill in the emnl fields
+enl%stdout = stdout
+enl%numsx = numsx
+enl%numsy = numsy
+enl%binning = binning
+enl%L = L
+enl%nthreads = nthreads
+enl%energyaverage = energyaverage
+enl%thetac = thetac
+enl%delta = delta
+enl%xpc = xpc
+enl%ypc = ypc
+enl%energymin = energymin
+enl%energymax = energymax
+enl%gammavalue = gammavalue
+enl%axisangle = axisangle
+enl%beamcurrent = beamcurrent
+enl%dwelltime = dwelltime
+enl%maskpattern = maskpattern
+enl%scalingmode = scalingmode
+enl%eulerconvention = eulerconvention
+enl%outputformat = outputformat
+enl%anglefile = anglefile
+enl%masterfile = masterfile
+enl%energyfile = energyfile
+enl%datafile = datafile
+
+end subroutine GetEBSDIndxNameList
+
 end module NameListHandlers
