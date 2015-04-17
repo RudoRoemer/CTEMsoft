@@ -104,6 +104,7 @@
 !> @date 03/11/15 MDG 3.7 removed the RotVec_q routine, since it is surpassed by the new quat_Lp and quat_Lpstar routines
 !> @date 03/12/15 MDG 3.8 correction of Rodrigues representation for identity rotation -> [0,0,epsijk,0]
 !> @date 03/16/15 MDG 3.9 added quat_average routine
+!> @date 04/17/15 MDG 3.91 simplification to qu2eu routines
 !--------------------------------------------------------------------------
 module rotations
 
@@ -2098,6 +2099,7 @@ end function ax2om_d
 !>  
 !
 !> @date 8/04/13   MDG 1.0 original
+!> @date 4/17/15   MDG 1.1 simplification based on M. Jackson question
 !--------------------------------------------------------------------------
 recursive function qu2eu(q) result(res)
 
@@ -2119,38 +2121,19 @@ chi = sqrt(q03*q12)
 
 if (chi.eq.0.0) then
   if (q12.eq.0.0) then 
-   if (epsijk.eq.1.0) then
     Phi = 0.0
     phi2 = 0.0                  ! arbitrarily due to degeneracy
-    phi1 = atan2(-2.0*qq(1)*qq(4),qq(1)**2-qq(4)**2)
-   else
-    Phi = 0.0
-    phi2 = 0.0                  ! arbitrarily due to degeneracy
-    phi1 = atan2( 2.0*qq(1)*qq(4),qq(1)**2-qq(4)**2)
-   end if
+    phi1 = atan2(-epsijk*2.0*qq(1)*qq(4),qq(1)**2-qq(4)**2)
   else
-   if (epsijk.eq.1.0) then
     Phi = sngl(cPi)
     phi2 = 0.0                  ! arbitrarily due to degeneracy
     phi1 = atan2(2.0*qq(2)*qq(3),qq(2)**2-qq(3)**2)
-   else
-    Phi = sngl(cPi)
-    phi2 = 0.0                  ! arbitrarily due to degeneracy
-    phi1 = atan2(2.0*qq(2)*qq(3),qq(2)**2-qq(3)**2)
-   end if
   end if
 else            ! this is not a special degenerate case
-  if (epsijk.eq.1.0) then
     Phi = atan2( 2.0*chi, q03-q12 )
     chi = 1.0/chi
-    phi1 = atan2( (-qq(1)*qq(3)+qq(2)*qq(4))*chi, (-qq(1)*qq(2)-qq(3)*qq(4))*chi )
-    phi2 = atan2( (qq(1)*qq(3)+qq(2)*qq(4))*chi, (-qq(1)*qq(2)+qq(3)*qq(4))*chi )
-  else
-    Phi = atan2( 2.0*chi, q03-q12 )
-    chi = 1.0/chi
-    phi1 = atan2( (qq(1)*qq(3)+qq(2)*qq(4))*chi, (qq(1)*qq(2)-qq(3)*qq(4))*chi )
-    phi2 = atan2( (-qq(1)*qq(3)+qq(2)*qq(4))*chi, (qq(1)*qq(2)+qq(3)*qq(4))*chi )
-  end if
+    phi1 = atan2( (-epsijk*qq(1)*qq(3)+qq(2)*qq(4))*chi, (-epsijk*qq(1)*qq(2)-qq(3)*qq(4))*chi )
+    phi2 = atan2( (epsijk*qq(1)*qq(3)+qq(2)*qq(4))*chi, (-epsijk*qq(1)*qq(2)+qq(3)*qq(4))*chi )
 end if
 
 res = (/ phi1, Phi, phi2 /)
@@ -2174,6 +2157,7 @@ end function qu2eu
 !>  
 !
 !> @date 8/04/13   MDG 1.0 original
+!> @date 4/17/15   MDG 1.1 simplification based on M. Jackson question
 !--------------------------------------------------------------------------
 recursive function qu2eu_d(q) result(res)
 
@@ -2195,38 +2179,19 @@ chi = dsqrt(q03*q12)
 
 if (chi.eq.0.D0) then
   if (q12.eq.0.D0) then 
-   if (epsijkd.eq.1.D0) then 
     Phi = 0.D0
-    phi2 = 0.D0                 ! arbitrarily due to degeneracy
-    phi1 = datan2(-2.D0*qq(1)*qq(4),qq(1)**2-qq(4)**2)
-   else
-    Phi = 0.D0
-    phi2 = 0.D0                 ! arbitrarily due to degeneracy
-    phi1 = datan2( 2.D0*qq(1)*qq(4),qq(1)**2-qq(4)**2)
-   end if
+    phi2 = 0.D0                  ! arbitrarily due to degeneracy
+    phi1 = datan2(-epsijk*2.D0*qq(1)*qq(4),qq(1)**2-qq(4)**2)
   else
-   if (epsijkd.eq.1.D0) then 
     Phi = cPi
-    phi2 = 0.D0                 ! arbitrarily due to degeneracy
+    phi2 = 0.D0                  ! arbitrarily due to degeneracy
     phi1 = datan2(2.D0*qq(2)*qq(3),qq(2)**2-qq(3)**2)
-   else
-    Phi = cPi
-    phi2 = 0.D0                 ! arbitrarily due to degeneracy
-    phi1 = datan2(2.D0*qq(2)*qq(3),qq(2)**2-qq(3)**2)
-   end if
   end if
 else            ! this is not a special degenerate case
-  if (epsijkd.eq.1.D0) then 
     Phi = datan2( 2.D0*chi, q03-q12 )
     chi = 1.D0/chi
-    phi1 = datan2( (-qq(1)*qq(3)+qq(2)*qq(4))*chi, (-qq(1)*qq(2)-qq(3)*qq(4))*chi )
-    phi2 = datan2( (qq(1)*qq(3)+qq(2)*qq(4))*chi, (-qq(1)*qq(2)+qq(3)*qq(4))*chi )
-  else
-    Phi = datan2( 2.D0*chi, q03-q12 )
-    chi = 1.D0/chi
-    phi1 = datan2( (qq(1)*qq(3)+qq(2)*qq(4))*chi, (qq(1)*qq(2)-qq(3)*qq(4))*chi )
-    phi2 = datan2( (-qq(1)*qq(3)+qq(2)*qq(4))*chi, (qq(1)*qq(2)+qq(3)*qq(4))*chi )
-  end if
+    phi1 = datan2( (-epsijk*qq(1)*qq(3)+qq(2)*qq(4))*chi, (-epsijk*qq(1)*qq(2)-qq(3)*qq(4))*chi )
+    phi2 = datan2( (epsijk*qq(1)*qq(3)+qq(2)*qq(4))*chi, (-epsijk*qq(1)*qq(2)+qq(3)*qq(4))*chi )
 end if
 
 res = (/ phi1, Phi, phi2 /)
