@@ -679,7 +679,79 @@ deallocate(z)
 !====================================
 end subroutine EBSDGenerateDetector
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:TwinCubicMasterPattern
+!
+!> @author Saransh Singh, Carnegie Mellon University
+!
+!> @brief Generate a master pattern with regular and twin master pattern overlapped, both with 50% weights
+!
+!> @param enl EBSD name list structure
+!> @param master  EBSDMasterType pointer
+!
+!> @date 04/16/15  SS 1.0 original
+!--------------------------------------------------------------------------
+subroutine TwinCubicMasterPattern(enl,master)
 
+use local
+use io
+use quaternions
+use Lambert
+use rotations
+use NameListTypedefs
+use NameListHandlers
+use constants
+
+IMPLICIT NONE
+
+type(EBSDNameListType),INTENT(INOUT)                :: enl
+type(EBSDMasterType),pointer                        :: master
+
+real(kind=dbl),allocatable                          :: master_twin(:,:,:)
+type(EBSDLargeAccumType),pointer                    :: acc
+logical                                             :: verbose
+real(kind=dbl)                                      :: q(4),Lamproj(2),dc(3),dc_new(3),dx,dy,dxm,dym,ixy(2),scl
+integer(kind=irg)                                   :: nix,niy
+integer(kind=irg)                                   :: ii,jj,kk,ierr,istat,pp,qq
+
+allocate(master_twin(-enl%npx:enl%npx,-enl%npy:enl%npy,1:enl%nE),stat=istat)
+
+q = (/ dsqrt(3.D0)/2.D0,1/dsqrt(3.D0)/2.D0,1/dsqrt(3.D0)/2.D0,1/dsqrt(3.D0)/2.D0 /)
+scl = float(enl%npx) / LPs%sPio2
+
+do ii = 1,enl%nE
+    master_twin = 0.0
+    do jj = -enl%npx,enl%npx
+        do kk = -enl%npy,enl%npy
+
+            Lamproj = (/ float(jj)/scl,float(kk)/scl /)
+            dc = LambertSquareToSphere(Lamproj,ierr)
+            dc_new = quat_Lp(conjg(q),dc)
+            dc_new = dc_new/sqrt(sum(dc_new**2))
+            if (dc_new(3) .lt. 0.0) dc_new = -dc_new
+
+! convert direction cosines to lambert projections
+            ixy = scl * LambertSphereToSquare( dc_new, istat )
+! interpolate intensity from the neighboring points
+
+            nix = floor(ixy(1))
+            niy = floor(ixy(2))
+            dx = ixy(1) - nix
+            dy = ixy(2) - niy
+            dxm = 1.0 - dx
+            dym = 1.0 - dy
+
+            master_twin(jj,kk,ii) = master%sr(nix,niy,ii)*dxm*dym + master%sr(nix+1,niy,ii)*dx*dym + &
+            master%sr(nix,niy+1,ii)*dxm*dy + master%sr(nix+1,niy+1,ii)*dx*dy
+        end do
+    end do
+    master%sr(:,:,ii) = 0.5D0 * (master_twin(:,:,ii) + master%sr(:,:,ii))
+end do
+
+call Message(' -> completed superimposing twin and regular master file', frm = "(A)")
+
+end subroutine TwinCubicMasterPattern
 
 
 end module EBSDmod

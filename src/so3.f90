@@ -52,7 +52,7 @@ use rotations
 IMPLICIT NONE
 
 ! sampler routine
-public :: SampleRFZ, IsinsideFZ
+public :: SampleRFZ, IsinsideFZ, CubochoricNeighbors
 
 ! logical functions to determine if point is inside specific FZ
 private :: insideCyclicFZ, insideDihedralFZ, insideCubicFZ
@@ -391,6 +391,62 @@ write (*,*) 'FZcnt = ',FZcnt
 
 end subroutine SampleRFZ
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: CubochoricNeighbors
+!
+!> @author Saransh Singh, Carnegie Mellon University
+!
+!> @brief find the nearest neighbors of a point in s03 space, given the point
+!> and the step size used in the previous meshing. to be used in multi resolution
+!> indexing programs, specifically the PED and EBSD indexing. we're not worrying
+!> about keeping the neighbors in the FZ. that can just be done later.
+!
+!> @param cub cubochoric coordinates  (double precision)
+!> @param stepsize stepsize of last mesh. the mesh will be stepsize/2
+!
+!> @date 04/07/15 SS 1.0 original
+!--------------------------------------------------------------------------
+recursive subroutine CubochoricNeighbors(cubneighbor,nn,cub,stepsize)
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(OUT)              :: cubneighbor(3,-(nn**3 - 1)/2:(nn**3 - 1)/2)
+integer(kind=irg),INTENT(IN)            :: nn ! number of nearest neighbor in each direction (should be an odd number for symmetric meshing)
+real(kind=dbl),INTENT(IN)               :: cub(3)
+real(kind=dbl),INTENT(INOUT)            :: stepsize
+
+integer(kind=irg)                       :: ii,jj,kk,ll,index
+
+if (mod(nn,2) .eq. 0) then
+    write(*,*) "ERROR in subroutine CubochoricNeighbors: Number of nearest neigbor should be odd to ensure symmetric meshing."
+    stop
+end if
+
+if (dabs(stepsize) .gt. LPs%ap) then
+    write(*,*) "ERROR in subroutine CubochoricNeighbors: Step size is larger than edge length of the cube"
+    stop
+end if
+
+do ii = -(nn-1)/2,(nn-1)/2
+    do jj = -(nn-1)/2,(nn-1)/2
+        do kk = -(nn-1)/2,(nn-1)/2
+            index = ii*nn*nn + jj*nn + kk
+            cubneighbor(1:3,index) = cub + stepsize/2.D0*(/ii,jj,kk/)
+            do ll = 1,3
+                if (cubneighbor(ll,index) .lt.  -0.5D0 * LPs%ap) then
+                    cubneighbor(ll,index) = cubneighbor(ll,index)+0.5D0 * LPs%ap
+                else if (cubneighbor(ll,index) .gt.  0.5D0 * LPs%ap) then
+                    cubneighbor(ll,index) = cubneighbor(ll,index)-0.5D0 * LPs%ap
+                end if
+            end do
+        end do
+    end do
+end do
+
+stepsize = stepsize/2.0
+
+end subroutine CubochoricNeighbors
 
 
 end module so3

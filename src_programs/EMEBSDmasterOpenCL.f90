@@ -133,7 +133,7 @@ integer(kind=irg),parameter                     :: LaueTest(11) = (/ 149, 151, 1
 integer(kind=irg)                               :: npyhex, ijmax, numk, skip ! parameters for calckvectors and calcwavelength subroutine
 
 integer(kind=irg)                               :: ga(3), gb(3) ! shortest reciprocal lattice vector for zone axis
-real(kind=sgl), allocatable                     :: thick(:), sr(:,:), lambdaE(:,:)
+real(kind=sgl), allocatable                     :: thick(:), sr(:,:,:,:), lambdaE(:,:)
 real(kind=dbl)                                  :: intthick
 complex(kind=dbl),allocatable                   :: Lgh(:,:),Sgh(:,:),Sghtmp(:,:,:)
 complex(kind=dbl),allocatable                   :: DynMat(:,:)
@@ -141,7 +141,7 @@ complex(kind=dbl)                               :: czero
 
 integer(kind=irg)                               :: nt, nns, nnw, tots, totw ! thickness array and BetheParameters strong and weak beams
 real(kind=sgl)                                  :: FN(3), k(3), fnat, kn
-integer(kind=irg)                               :: numset, nref, ipx, ipy, iequiv(2,12), nequiv, ip, jp, izz, iE, iz, one,ierr
+integer(kind=irg)                               :: numset, nref, ipx, ipy, iequiv(2,12), nequiv, ip, jp, izz, iE, iz, one,ierr,ss
 integer(kind=irg)                               :: izzmax
 integer(kind=irg),allocatable                   :: kij(:,:), nat(:)
 real(kind=dbl)                                  :: res(2),selE
@@ -177,7 +177,7 @@ complex(kind=4)                                 :: coef(3,3),cvals(9)
 integer(kind=4)                                 :: numdepth
 integer(kind=4),allocatable                     :: locpix(:,:)
 integer(kind=4),allocatable                     :: arrsize(:),arrsizesum(:),offset(:),ns(:)
-complex(kind=4),allocatable                     :: LghCumulative(:),SghCumulative(:),A(:)
+complex(kind=4),allocatable                     :: LghCumulative(:),SghCumulative(:,:),A(:)
 
 integer(kind=4)                                 :: size1,size2
 
@@ -213,7 +213,7 @@ frac = 0.05
 eps = 1.0
 !dataunit = 10
 
-globalsize = (/ 48, 48 /)
+globalsize = (/ 32, 32 /)
 localsize = (/ 4, 4 /)
 
 npiximgx = emnl%npx
@@ -441,8 +441,6 @@ end do
 
 size_in_bytes_lambda = izz*sizeof(lambdas(1))
 
-open(unit=11,file="test.txt",action="write")
-
 nat = 0
 fnat = 1.0/float(sum(cell%numat(1:numset)))
 intthick = dble(depthmax)
@@ -508,7 +506,7 @@ write(6,*) "Kernel Build Successful...."
 kernel = clCreateKernel(prog, 'CalcLgh', ierr)
 call clReleaseProgram(prog, ierr)
 
-allocate(sr(2*emnl%npx+1,2*emnl%npx+1),stat=istat)
+allocate(sr(2*emnl%npx+1,2*emnl%npx+1,numEbins,1:numset),stat=istat)
 sr = 0.0
 
 allocate(arrsize(npx*npy),arrsizesum(npx*npy),offset(npx*npy),ns(npx*npy),locpix(npx*npy,2),stat=istat)
@@ -516,17 +514,17 @@ allocate(arrsize(npx*npy),arrsizesum(npx*npy),offset(npx*npy),ns(npx*npy),locpix
 
 energyloop: do iE=numEbins,1,-1
 
-io_int(1)=iE
-call Message('Starting computation for energy bin', frm = "(/A$)")
-call WriteValue(' ',io_int,1,"(I4$)")
-io_real(1) = EkeVs(iE)
-call WriteValue('; energy [keV] = ',io_real,1,"(F6.2/)")
-selE = EkeVs(iE)
+    io_int(1)=iE
+    call Message('Starting computation for energy bin', frm = "(/A$)")
+    call WriteValue(' ',io_int,1,"(I4$)")
+    io_real(1) = EkeVs(iE)
+    call WriteValue('; energy [keV] = ',io_real,1,"(F6.2/)")
+    selE = EkeVs(iE)
 
 ! set the accelerating voltage
-skip = 3
-cell%voltage = dble(EkeVs(iE)*1000.0)
-call CalcWaveLength(cell, rlp, skip)
+    skip = 3
+    cell%voltage = dble(EkeVs(iE)*1000.0)
+    call CalcWaveLength(cell, rlp, skip)
 
 !=============================================
 ! generating list of incident wave vectors
@@ -534,65 +532,305 @@ call CalcWaveLength(cell, rlp, skip)
 
 ! determine all independent incident beam directions (use a linked list starting at khead)
 ! numk is the total number of k-vectors to be included in this computation;
-nullify(khead)
+    nullify(khead)
 
-if (usehex) then
-    call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,emnl%npx,npyhex,numk, &
-    isym,ijmax,'RoscaLambert',usehex)
-else
+    if (usehex) then
+        call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,emnl%npx,npyhex,numk, &
+        isym,ijmax,'RoscaLambert',usehex)
+    else
 ! Calckvectors(k,ga,ktmax,npx,npy,numk,isym,ijmax,mapmode,usehex)
     call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,emnl%npx,emnl%npx,numk, &
-    isym,ijmax,'RoscaLambert',usehex)
-end if
+        isym,ijmax,'RoscaLambert',usehex)
+    end if
 
-io_int_sgl(1)=numk
+    io_int_sgl(1)=numk
 
-call WriteValue('# independent beam directions to be considered = ', io_int_sgl, 1, "(I8)")
+    call WriteValue('# independent beam directions to be considered = ', io_int_sgl, 1, "(I8)")
 
-lambdas = 0.0
-lambdas(:) = lambdaE(iE,:)
-numdepth = thick(iE)
-ktmp => khead
-kheadtmp => khead
+    lambdas = 0.0
+    lambdas(:) = lambdaE(iE,:)
+    numdepth = thick(iE)
+    ktmp => khead
+    kheadtmp => khead
 
-beamloop : do ii = 1,ceiling(float(numk)/float(npx*npy))
-    arrsize = 0
-    arrsizesum = 0
-    offset = 0
-    ns = 0
-    locpix = 0
-    if (ii .le. floor(float(numk)/float(npx*npy))) then
-        do kk = 1,npx
-            do ll = 1,npy
-                k = ktmp%k
-                FN = k
-                locpix((kk-1)*npy+ll,1) = ktmp%i
-                locpix((kk-1)*npy+ll,2) = ktmp%j
+    beamloop : do ii = 1,ceiling(float(numk)/float(npx*npy))
+        arrsize = 0
+        arrsizesum = 0
+        offset = 0
+        ns = 0
+        locpix = 0
+        if (ii .le. floor(float(numk)/float(npx*npy))) then
+            do kk = 1,npx
+                do ll = 1,npy
+                    k = ktmp%k
+                    FN = k
+                    locpix((kk-1)*npy+ll,1) = ktmp%i
+                    locpix((kk-1)*npy+ll,2) = ktmp%j
 
-                call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, k, emnl%dmin, nref)
+                    call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, k, emnl%dmin, nref)
 
 ! determine strong and weak reflections
-                call Apply_BethePotentials(cell, reflist, firstw, BetheParameters, nref, nns, nnw)
-                arrsize((kk-1)*npy+ll) = nns
+                    call Apply_BethePotentials(cell, reflist, firstw, BetheParameters, nref, nns, nnw)
+                    arrsize((kk-1)*npy+ll) = nns
 
-                if ((kk-1)*npy+ll .lt. npx*npy) then
-                    arrsizesum((kk-1)*npy+ll+1) = sum(arrsize)
-                    offset((kk-1)*npy+ll+1) = sum(arrsize**2)
-                end if
-                ktmp => ktmp%next
+                    if ((kk-1)*npy+ll .lt. npx*npy) then
+                        arrsizesum((kk-1)*npy+ll+1) = sum(arrsize)
+                        offset((kk-1)*npy+ll+1) = sum(arrsize**2)
+                    end if
+                    ktmp => ktmp%next
+                end do
             end do
-        end do
 
-        ktmp => kheadtmp
+            ktmp => kheadtmp
 
-        if (allocated(SghCumulative)) deallocate(SghCumulative)
-        if (allocated(A)) deallocate(A)
+            if (allocated(SghCumulative)) deallocate(SghCumulative)
+            if (allocated(A)) deallocate(A)
 
-        allocate(SghCumulative(1:offset(npx*npy)+arrsize(npx*npy)**2),A(1:offset(npx*npy)+arrsize(npx*npy)**2),stat=istat)
-write (*,*) 'starting dynmat generation'
+            allocate(SghCumulative(1:offset(npx*npy)+arrsize(npx*npy)**2,numset),&
+            A(1:offset(npx*npy)+arrsize(npx*npy)**2),stat=istat)
 
-        do kk = 1,npx
-            do ll = 1,npy
+            do kk = 1,npx
+                do ll = 1,npy
+                    k = ktmp%k
+                    FN = k
+
+                    call Initialize_ReflectionList(cell, reflist, BetheParameters, FN,  k, emnl%dmin, nref)
+
+! determine strong and weak reflections
+                    call Apply_BethePotentials(cell, reflist, firstw, BetheParameters, nref, nns, nnw)
+
+                    if (allocated(DynMat)) deallocate(DynMat)
+
+                    allocate(DynMat(nns,nns),stat=istat)
+
+                    call GetDynMat(cell, reflist, firstw, rlp, DynMat, nns, nnw)
+
+                !if (allocated(Sgh)) deallocate(Sgh)
+                    if (allocated(Sghtmp)) deallocate(Sghtmp)
+
+                    allocate(Sghtmp(nns,nns,numset))
+
+                !Sgh = dcmplx(0.D0,0.D0)
+                    Sghtmp = dcmplx(0.D0,0.D0)
+                    nat = 0
+
+                    call CalcSgh(cell,reflist,nns,numset,Sghtmp,nat)
+! sum Sghtmp over the sites
+                    Sgh = sum(Sghtmp,3)
+                    do ss = 1,numset
+                        do pp = 1,nns
+                            do qq = 1,nns
+                                SghCumulative(offset((kk-1)*npy+ll)+(pp-1)*nns+qq,ss) = Sghtmp(pp,qq,ss)
+                            end do
+                        end do
+                    end do
+
+                    DynMat = DynMat*cmplx(0.0,cPi*cell%mLambda)
+                    DynMat = DynMat*cmplx(eps,0.0)
+
+                    absmax = maxval(abs(DynMat))
+                    e = ceiling(log(absmax)/log(2.0))
+                    ns((kk-1)*npy+ll) = e+1
+
+                    if (ns((kk-1)*npy+ll) .le. 0) then
+                        ns((kk-1)*npy+ll) = 1
+                    else
+                        DynMat = DynMat/2**ns((kk-1)*npy+ll)
+                    end if
+
+                    do pp = 1,nns
+                        do qq = 1,nns
+                            A(offset((kk-1)*npy+ll)+(pp-1)*nns+qq) = DynMat(pp,qq)
+                        end do
+                    end do
+                    ktmp => ktmp%next
+                end do
+            end do
+            kheadtmp => ktmp
+
+
+! allocate device memory
+            size_in_bytes = (offset(npx*npy)+arrsize(npx*npy)**2)*sizeof(A(1))
+            size_in_bytes_wavefn = (arrsizesum(npx*npy)+arrsize(npx*npy))*sizeof(A(1))
+
+            if (allocated(LghCumulative)) deallocate(LghCumulative)
+            allocate(LghCumulative(1:offset(npx*npy)+arrsize(npx*npy)**2),stat=istat)
+
+            cl_expA = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for exponential.'
+
+            cl_A = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for input matrix.'
+
+            cl_AA = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for square of A.'
+
+            cl_AAA = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for cube of A.'
+
+            cl_T1 = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for T1.'
+
+            cl_T2 = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for T2.'
+
+            cl_wavefncoeff = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_wavefn, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for fourier coefficients .'
+
+            cl_wavefncoeffintd = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_wavefn, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for intermediate array.'
+
+            cl_coeff = clCreateBuffer(context, CL_MEM_READ_ONLY, size_in_bytes_coeff, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for ceofficients.'
+
+            cl_arrsize = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_dynmatsz, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for array size information.'
+
+            cl_offset = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_dynmatsz, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for offset information.'
+
+            cl_arrsizesum = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_dynmatsz, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for wavefunction coefficient offset information.'
+
+            cl_sqrsize = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_dynmatsz, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for wavefunction coefficient offset information.'
+
+            cl_lambdas = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_dynmatsz, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for thickness of each pixel.'
+
+! write list of initial arrays to buffer
+            call clEnqueueWriteBuffer(command_queue, cl_A, cl_bool(.true.), 0_8, size_in_bytes, A(1), ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
+
+            call clEnqueueWriteBuffer(command_queue, cl_arrsize, cl_bool(.true.), 0_8, size_in_bytes_dynmatsz, arrsize(1), ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
+
+            call clEnqueueWriteBuffer(command_queue, cl_offset, cl_bool(.true.), 0_8, size_in_bytes_dynmatsz, offset(1), ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
+
+            call clEnqueueWriteBuffer(command_queue, cl_arrsizesum,&
+            cl_bool(.true.), 0_8, size_in_bytes_dynmatsz, arrsizesum(1), ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
+
+            call clEnqueueWriteBuffer(command_queue, cl_sqrsize, cl_bool(.true.), 0_8, size_in_bytes_dynmatsz, ns(1), ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
+
+            call clEnqueueWriteBuffer(command_queue, cl_coeff, cl_bool(.true.), 0_8, size_in_bytes_coeff, coef(1,1), ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
+
+            call clEnqueueWriteBuffer(command_queue, cl_lambdas, cl_bool(.true.), 0_8, size_in_bytes_lambda, lambdas(1), ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
+
+! set kernel arguments
+
+            call clSetKernelArg(kernel, 0, cl_expA, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot set first kernel argument.'
+
+            call clSetKernelArg(kernel, 1, cl_A, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot set second kernel argument.'
+
+            call clSetKernelArg(kernel, 2, cl_AA, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot set third kernel argument.'
+
+            call clSetKernelArg(kernel, 3, cl_AAA, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot set fourth kernel argument.'
+
+            call clSetKernelArg(kernel, 4, cl_arrsize, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot set fifth kernel argument.'
+
+            call clSetKernelArg(kernel, 5, cl_coeff, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot set sixth kernel argument.'
+
+            call clSetKernelArg(kernel, 6, cl_T1, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot set seventh kernel argument.'
+
+            call clSetKernelArg(kernel, 7, cl_T2, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot set eighth kernel argument.'
+
+            call clSetKernelArg(kernel, 8, cl_wavefncoeff, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot set nineth kernel argument.'
+
+            call clSetKernelArg(kernel, 9, cl_wavefncoeffintd, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot set eleventh kernel argument.'
+
+            call clSetKernelArg(kernel, 10, cl_sqrsize, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot set tenth kernel argument.'
+
+            call clSetKernelArg(kernel, 11, cl_offset, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot set eleventh kernel argument.'
+
+            call clSetKernelArg(kernel, 12, cl_arrsizesum, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot set twelveth kernel argument.'
+
+            call clSetKernelArg(kernel, 13, numdepth, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot set thirteenth kernel argument.'
+
+            call clSetKernelArg(kernel, 14, cl_lambdas, ierr)
+            if(ierr /= CL_SUCCESS) stop 'Error: cannot set fourteenth kernel argument.'
+
+
+
+!execute the kernel
+
+            call clEnqueueNDRangeKernel(command_queue, kernel, globalsize, localsize, event, ierr)
+! wait for the commands to finish
+
+            call clFinish(command_queue, ierr)
+! read the resulting vector from device memory
+
+            call clEnqueueReadBuffer(command_queue, cl_T1, cl_bool(.true.), 0_8, size_in_bytes, LghCumulative(1), ierr)
+
+! divide by integration depth explicitly (OpenCL kernel giving some problems)
+            LghCumulative = LghCumulative/float(izz-1)
+!print*,LghCumulative(1:10)
+            do pp = 1,npx
+                do qq = 1,npy
+                    ipx = locpix((pp-1)*npy+qq,1)
+                    ipy = locpix((pp-1)*npy+qq,2)
+                    size1 = arrsize((pp-1)*npy+qq)
+                    size2 = offset((pp-1)*npy+qq)
+                    if (isym.ne.1) then
+                        call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
+                        iequiv(1,1:nequiv) = iequiv(1,1:nequiv) + npiximgx + 1
+                        iequiv(2,1:nequiv) = iequiv(2,1:nequiv) + npiximgy + 1
+                        do ss = 1,numset
+                            do ip=1,nequiv
+                                sr(iequiv(1,ip),iequiv(2,ip),iE,ss) = real(sum(SghCumulative(size2+1:size2+size1**2,ss)*&
+                                LghCumulative(size2+1:size2+size1**2)))!/float(sum(nat))
+                            end do
+                        end do
+                    else
+                        do ss = 1,numset
+                            sr(ipx+npiximgx+1,ipy+npiximgy+1,iE,ss) = real(sum(SghCumulative(size2+1:size2+size1**2,ss)*&
+                            LghCumulative(size2+1:size2+size1**2)))!/float(sum(nat))
+                        end do
+                    end if
+
+                end do
+            end do
+
+      ! if (mod(ii,4) .eq. 0) then
+            write(6,'(A,I8,A)') 'Completed ',(ii*npx*npy),' beams.'
+      ! end if
+
+            call clReleaseMemObject(cl_expA, ierr)
+            call clReleaseMemObject(cl_A, ierr)
+            call clReleaseMemObject(cl_AA, ierr)
+            call clReleaseMemObject(cl_AAA, ierr)
+            call clReleaseMemObject(cl_T1, ierr)
+            call clReleaseMemObject(cl_T2, ierr)
+            call clReleaseMemObject(cl_wavefncoeff, ierr)
+            call clReleaseMemObject(cl_wavefncoeffintd, ierr)
+            call clReleaseMemObject(cl_coeff, ierr)
+            call clReleaseMemObject(cl_arrsize, ierr)
+            call clReleaseMemObject(cl_arrsizesum, ierr)
+            call clReleaseMemObject(cl_offset, ierr)
+            call clReleaseMemObject(cl_lambdas, ierr)
+
+        else if (ii .eq. ceiling(float(numk)/float(npx*npy))) then
+            write(6,'(A,I4,A)')'Performing computation of last ',MODULO(numk,npx*npy),' beams on the CPU'
+            do jj = 1,MODULO(numk,npx*npy)
+
                 k = ktmp%k
                 FN = k
 
@@ -607,264 +845,25 @@ write (*,*) 'starting dynmat generation'
 
                 call GetDynMat(cell, reflist, firstw, rlp, DynMat, nns, nnw)
 
-                if (allocated(Sgh)) deallocate(Sgh)
+                if (allocated(Lgh)) deallocate(Lgh)
+                !if (allocated(Sgh)) deallocate(Sgh)
                 if (allocated(Sghtmp)) deallocate(Sghtmp)
 
-                allocate(Sghtmp(nns,nns,numset),Sgh(nns,nns))
+                allocate(Sghtmp(nns,nns,numset),Lgh(nns,nns))
 
-                Sgh = dcmplx(0.D0,0.D0)
+                !Sgh = dcmplx(0.D0,0.D0)
                 Sghtmp = dcmplx(0.D0,0.D0)
                 nat = 0
 
                 call CalcSgh(cell,reflist,nns,numset,Sghtmp,nat)
 ! sum Sghtmp over the sites
-                Sgh = sum(Sghtmp,3)
-
-                do pp = 1,nns
-                    do qq = 1,nns
-                        SghCumulative(offset((kk-1)*npy+ll)+(pp-1)*nns+qq) = Sgh(pp,qq)
-                    end do
-                end do
-
-                DynMat = DynMat*cmplx(0.0,cPi*cell%mLambda)
-                DynMat = DynMat*cmplx(eps,0.0)
-
-                absmax = maxval(abs(DynMat))
-                e = ceiling(log(absmax)/log(2.0))
-                ns((kk-1)*npy+ll) = e+1
-
-                if (ns((kk-1)*npy+ll) .le. 0) then
-                    ns((kk-1)*npy+ll) = 1
-                else
-
-                DynMat = DynMat/2**ns((kk-1)*npy+ll)
-
-                end if
-
-                do pp = 1,nns
-                    do qq = 1,nns
-                        A(offset((kk-1)*npy+ll)+(pp-1)*nns+qq) = DynMat(pp,qq)
-                    end do
-                end do
-                ktmp => ktmp%next
-            end do
-        end do
-        kheadtmp => ktmp
-
-write (*,*) 'creating GPU buffers'
-
-! allocate device memory
-        size_in_bytes = (offset(npx*npy)+arrsize(npx*npy)**2)*sizeof(A(1))
-        size_in_bytes_wavefn = (arrsizesum(npx*npy)+arrsize(npx*npy))*sizeof(A(1))
-
-        if (allocated(LghCumulative)) deallocate(LghCumulative)
-        allocate(LghCumulative(1:offset(npx*npy)+arrsize(npx*npy)**2),stat=istat)
-
-        cl_expA = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for exponential.'
-
-        cl_A = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for input matrix.'
-
-        cl_AA = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for square of A.'
-
-        cl_AAA = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for cube of A.'
-
-        cl_T1 = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for T1.'
-
-        cl_T2 = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for T2.'
-
-        cl_wavefncoeff = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_wavefn, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for fourier coefficients .'
-
-        cl_wavefncoeffintd = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_wavefn, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for intermediate array.'
-
-        cl_coeff = clCreateBuffer(context, CL_MEM_READ_ONLY, size_in_bytes_coeff, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for ceofficients.'
-
-        cl_arrsize = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_dynmatsz, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for array size information.'
-
-        cl_offset = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_dynmatsz, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for offset information.'
-
-        cl_arrsizesum = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_dynmatsz, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for wavefunction coefficient offset information.'
-
-        cl_sqrsize = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_dynmatsz, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for wavefunction coefficient offset information.'
-
-        cl_lambdas = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_dynmatsz, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for thickness of each pixel.'
-
-! write list of initial arrays to buffer
-        call clEnqueueWriteBuffer(command_queue, cl_A, cl_bool(.true.), 0_8, size_in_bytes, A(1), ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
-
-        call clEnqueueWriteBuffer(command_queue, cl_arrsize, cl_bool(.true.), 0_8, size_in_bytes_dynmatsz, arrsize(1), ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
-
-        call clEnqueueWriteBuffer(command_queue, cl_offset, cl_bool(.true.), 0_8, size_in_bytes_dynmatsz, offset(1), ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
-
-        call clEnqueueWriteBuffer(command_queue, cl_arrsizesum, cl_bool(.true.), 0_8, size_in_bytes_dynmatsz, arrsizesum(1), ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
-
-        call clEnqueueWriteBuffer(command_queue, cl_sqrsize, cl_bool(.true.), 0_8, size_in_bytes_dynmatsz, ns(1), ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
-
-        call clEnqueueWriteBuffer(command_queue, cl_coeff, cl_bool(.true.), 0_8, size_in_bytes_coeff, coef(1,1), ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
-
-        call clEnqueueWriteBuffer(command_queue, cl_lambdas, cl_bool(.true.), 0_8, size_in_bytes_lambda, lambdas(1), ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
-
-! set kernel arguments
-
-        call clSetKernelArg(kernel, 0, cl_expA, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot set first kernel argument.'
-
-        call clSetKernelArg(kernel, 1, cl_A, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot set second kernel argument.'
-
-        call clSetKernelArg(kernel, 2, cl_AA, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot set third kernel argument.'
-
-        call clSetKernelArg(kernel, 3, cl_AAA, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot set fourth kernel argument.'
-
-        call clSetKernelArg(kernel, 4, cl_arrsize, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot set fifth kernel argument.'
-
-        call clSetKernelArg(kernel, 5, cl_coeff, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot set sixth kernel argument.'
-
-        call clSetKernelArg(kernel, 6, cl_T1, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot set seventh kernel argument.'
-
-        call clSetKernelArg(kernel, 7, cl_T2, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot set eighth kernel argument.'
-
-        call clSetKernelArg(kernel, 8, cl_wavefncoeff, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot set nineth kernel argument.'
-
-        call clSetKernelArg(kernel, 9, cl_wavefncoeffintd, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot set eleventh kernel argument.'
-
-        call clSetKernelArg(kernel, 10, cl_sqrsize, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot set tenth kernel argument.'
-
-        call clSetKernelArg(kernel, 11, cl_offset, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot set eleventh kernel argument.'
-
-        call clSetKernelArg(kernel, 12, cl_arrsizesum, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot set twelveth kernel argument.'
-
-        call clSetKernelArg(kernel, 13, numdepth, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot set thirteenth kernel argument.'
-
-        call clSetKernelArg(kernel, 14, cl_lambdas, ierr)
-        if(ierr /= CL_SUCCESS) stop 'Error: cannot set fourteenth kernel argument.'
-
-
-write (*,*) 'executing kernel'
-
-!execute the kernel
-
-        call clEnqueueNDRangeKernel(command_queue, kernel, globalsize, localsize, event, ierr)
-! wait for the commands to finish
-
-        call clFinish(command_queue, ierr)
-! read the resulting vector from device memory
-
-        call clEnqueueReadBuffer(command_queue, cl_T1, cl_bool(.true.), 0_8, size_in_bytes, LghCumulative(1), ierr)
-
-! divide by integration depth explicitly (OpenCL kernel giving some problems)
-        LghCumulative = LghCumulative/float(izz-1)
-write (*,*) LghCumulative(1:10)
-
-        do pp = 1,npx
-            do qq = 1,npy
-                ipx = locpix((pp-1)*npy+qq,1)
-                ipy = locpix((pp-1)*npy+qq,2)
-                size1 = arrsize((pp-1)*npy+qq)
-                size2 = offset((pp-1)*npy+qq)
-                if (isym.ne.1) then
-                    call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
-                    iequiv(1,1:nequiv) = iequiv(1,1:nequiv) + npiximgx + 1
-                    iequiv(2,1:nequiv) = iequiv(2,1:nequiv) + npiximgy + 1
-                do ip=1,nequiv
-                    sr(iequiv(1,ip),iequiv(2,ip)) = real(sum(SghCumulative(size2+1:size2+size1**2)*&
-                        LghCumulative(size2+1:size2+size1**2)))/float(sum(nat))
-                end do
-                else
-                    sr(ipx+npiximgx+1,ipy+npiximgy+1) = real(sum(SghCumulative(size2+1:size2+size1**2)*&
-                        LghCumulative(size2+1:size2+size1**2)))/float(sum(nat))
-                end if
-
-            end do
-        end do
-
-      ! if (mod(ii,4) .eq. 0) then
-            write(6,'(A,I8,A)') 'Completed ',(ii*npx*npy),' beams.'
-      ! end if
-
-        call clReleaseMemObject(cl_expA, ierr)
-        call clReleaseMemObject(cl_A, ierr)
-        call clReleaseMemObject(cl_AA, ierr)
-        call clReleaseMemObject(cl_AAA, ierr)
-        call clReleaseMemObject(cl_T1, ierr)
-        call clReleaseMemObject(cl_T2, ierr)
-        call clReleaseMemObject(cl_wavefncoeff, ierr)
-        call clReleaseMemObject(cl_wavefncoeffintd, ierr)
-        call clReleaseMemObject(cl_coeff, ierr)
-        call clReleaseMemObject(cl_arrsize, ierr)
-        call clReleaseMemObject(cl_arrsizesum, ierr)
-        call clReleaseMemObject(cl_offset, ierr)
-        call clReleaseMemObject(cl_lambdas, ierr)
-
-    else if (ii .eq. ceiling(float(numk)/float(npx*npy))) then
-        write(6,'(A,I4,A)')'Performing computation of last ',MODULO(numk,npx*npy),' beams on the CPU'
-        do jj = 1,MODULO(numk,npx*npy)
-
-            k = ktmp%k
-            FN = k
-
-            call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, k, emnl%dmin, nref)
-
-! determine strong and weak reflections
-            call Apply_BethePotentials(cell, reflist, firstw, BetheParameters, nref, nns, nnw)
-
-            if (allocated(DynMat)) deallocate(DynMat)
-
-            allocate(DynMat(nns,nns),stat=istat)
-
-            call GetDynMat(cell, reflist, firstw, rlp, DynMat, nns, nnw)
-
-            if (allocated(Lgh)) deallocate(Lgh)
-            if (allocated(Sgh)) deallocate(Sgh)
-            if (allocated(Sghtmp)) deallocate(Sghtmp)
-
-            allocate(Sghtmp(nns,nns,numset),Sgh(nns,nns),Lgh(nns,nns))
-
-            Sgh = dcmplx(0.D0,0.D0)
-            Sghtmp = dcmplx(0.D0,0.D0)
-            nat = 0
-
-            call CalcSgh(cell,reflist,nns,numset,Sghtmp,nat)
-! sum Sghtmp over the sites
-            Sgh = sum(Sghtmp,3)
+            !Sgh = sum(Sghtmp,3)
 
 ! solve the dynamical eigenvalue equation
-            kn = ktmp%kn
+                kn = ktmp%kn
 
-            call CalcLgh(DynMat,Lgh,dble(thick(iE)),dble(kn),nns,gzero,depthstep,lambdaE(iE,:),izz)
-            deallocate(DynMat,Sghtmp)
+                call CalcLgh(DynMat,Lgh,dble(thick(iE)),dble(kn),nns,gzero,depthstep,lambdaE(iE,:),izz)
+                deallocate(DynMat)
 
 ! and store the resulting values
 
@@ -872,29 +871,37 @@ write (*,*) LghCumulative(1:10)
 
 !print*, nequiv, isym
 !print*, iequiv(1,:)
-            ipx = ktmp%i
-            ipy = ktmp%j
+                ipx = ktmp%i
+                ipy = ktmp%j
 
-            if (isym.ne.1) then
-                call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
-                iequiv(1,1:nequiv) = iequiv(1,1:nequiv) + emnl%npx + 1
-                iequiv(2,1:nequiv) = iequiv(2,1:nequiv) + emnl%npx + 1
-                do ip=1,nequiv
-                    sr(iequiv(1,ip),iequiv(2,ip)) = real(sum(Lgh(1:nns,1:nns)*Sgh(1:nns,1:nns)))/float(sum(nat))
-                end do
-            else
-                sr(ipx+emnl%npx+1,ipy+emnl%npx+1) = real(sum(Lgh(1:nns,1:nns)*Sgh(1:nns,1:nns)))/float(sum(nat))
-            end if
+                if (isym.ne.1) then
+                    call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
+                    iequiv(1,1:nequiv) = iequiv(1,1:nequiv) + emnl%npx + 1
+                    iequiv(2,1:nequiv) = iequiv(2,1:nequiv) + emnl%npx + 1
 
-            ktmp => ktmp%next
+                    do ss = 1,numset
+                        do ip=1,nequiv
+                            sr(iequiv(1,ip),iequiv(2,ip),iE,ss) = real(sum(Lgh(1:nns,1:nns)*Sghtmp(1:nns,1:nns,ss)))
+                        end do
+                    end do
 
-        end do
+                else
+                    do ss = 1,numset
+                        sr(ipx+emnl%npx+1,ipy+emnl%npx+1,iE,ss) = real(sum(Lgh(1:nns,1:nns)*Sghtmp(1:nns,1:nns,ss)))
+                    end do
+                end if
 
-    end if
+                ktmp => ktmp%next
+
+            end do
+
+        end if
     !end do
-end do beamloop
+    end do beamloop
 
-call Delete_kvectorlist(khead)
+    call Delete_kvectorlist(khead)
+
+end do energyloop
 
 ! Initialize FORTRAN interface.
 !
@@ -905,8 +912,8 @@ call timestamp(timestring=tstre)
 inquire(file=trim(emnl%outname), exist=f_exists)
 
 if (f_exists) then
-  open(unit=dataunit, file=trim(emnl%outname), status='old',form='unformatted')
-  close(unit=dataunit, status='delete')
+    open(unit=dataunit, file=trim(emnl%outname), status='old',form='unformatted')
+    close(unit=dataunit, status='delete')
 end if
 
 ! Create a new file using the default properties.
@@ -946,40 +953,36 @@ dataset = 'numset'
 hdferr = HDF_writeDatasetInteger(dataset, numset, HDF_head)
 
 if (emnl%Esel.eq.-1) then
-  dataset = 'numEbins'
-  hdferr = HDF_writeDatasetInteger(dataset, numEbins, HDF_head)
+    dataset = 'numEbins'
+    hdferr = HDF_writeDatasetInteger(dataset, numEbins, HDF_head)
 
-  dataset = 'EkeVs'
-  hdferr = HDF_writeDatasetFloatArray1D(dataset, EkeVs, numEbins, HDF_head)
+    dataset = 'EkeVs'
+    hdferr = HDF_writeDatasetFloatArray1D(dataset, EkeVs, numEbins, HDF_head)
 else
-  dataset = 'numEbins'
-  hdferr = HDF_writeDatasetInteger(dataset, one, HDF_head)
+    dataset = 'numEbins'
+    hdferr = HDF_writeDatasetInteger(dataset, one, HDF_head)
 
-  dataset = 'selE'
-  hdferr = HDF_writeDatasetFloat(dataset, sngl(selE), HDF_head)
-end if 
+    dataset = 'selE'
+    hdferr = HDF_writeDatasetFloat(dataset, sngl(selE), HDF_head)
+end if
 
 dataset = 'cell%ATOM_type'
 hdferr = HDF_writeDatasetIntegerArray1D(dataset, cell%ATOM_type(1:numset), numset, HDF_head)
 
 dataset = 'squhex'
-if (usehex) then 
-  stringarray(1)= 'hexago'
-  hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
+if (usehex) then
+    stringarray(1)= 'hexago'
+    hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
 else
-  stringarray(1)= 'square'
-  hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
-end if  
-
+    stringarray(1)= 'square'
+    hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
+end if
 dataset = 'sr'
 hdferr = HDF_writeDatasetFloatArray4D(dataset, sr, 2*emnl%npx+1, 2*emnl%npx+1, numEbins, numset, HDF_head)
 
 call HDF_pop(HDF_head,.TRUE.)
-
 ! and close the fortran hdf interface
 call h5close_f(hdferr)
-
-end do energyloop
 
 call Message('Final data stored in file '//trim(emnl%outname), frm = "(A/)")
 
