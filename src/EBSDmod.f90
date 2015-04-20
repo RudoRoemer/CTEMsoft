@@ -691,6 +691,7 @@ end subroutine EBSDGenerateDetector
 !> @param master  EBSDMasterType pointer
 !
 !> @date 04/16/15  SS 1.0 original
+!> @date 04/20/15 MDG 1.1 minor edits
 !--------------------------------------------------------------------------
 subroutine TwinCubicMasterPattern(enl,master)
 
@@ -712,7 +713,7 @@ real(kind=dbl),allocatable                          :: master_twin(:,:,:)
 type(EBSDLargeAccumType),pointer                    :: acc
 logical                                             :: verbose
 real(kind=dbl)                                      :: q(4),Lamproj(2),dc(3),dc_new(3),dx,dy,dxm,dym,ixy(2),scl
-integer(kind=irg)                                   :: nix,niy
+integer(kind=irg)                                   :: nix,niy,nixp,niyp
 integer(kind=irg)                                   :: ii,jj,kk,ierr,istat,pp,qq
 
 allocate(master_twin(-enl%npx:enl%npx,-enl%npy:enl%npy,1:enl%nE),stat=istat)
@@ -737,21 +738,104 @@ do ii = 1,enl%nE
 
             nix = floor(ixy(1))
             niy = floor(ixy(2))
+            nixp = nix+1
+            niyp = niy+1
+            if (nixp.gt.enl%npx) nixp = nix
+            if (niyp.gt.enl%npy) niyp = niy
             dx = ixy(1) - nix
             dy = ixy(2) - niy
             dxm = 1.0 - dx
             dym = 1.0 - dy
 
-            master_twin(jj,kk,ii) = master%sr(nix,niy,ii)*dxm*dym + master%sr(nix+1,niy,ii)*dx*dym + &
-            master%sr(nix,niy+1,ii)*dxm*dy + master%sr(nix+1,niy+1,ii)*dx*dy
+            master_twin(jj,kk,ii) = master%sr(nix,niy,ii)*dxm*dym + master%sr(nixp,niy,ii)*dx*dym + &
+                                    master%sr(nix,niyp,ii)*dxm*dy + master%sr(nixp,niyp,ii)*dx*dy
         end do
     end do
-    master%sr(:,:,ii) = 0.5D0 * (master_twin(:,:,ii) + master%sr(:,:,ii))
 end do
+master%sr = 0.5D0 * (master_twin + master%sr)
 
-call Message(' -> completed superimposing twin and regular master file', frm = "(A)")
+call Message(' -> completed superimposing twin and regular master patterns', frm = "(A)")
 
 end subroutine TwinCubicMasterPattern
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:OverlapMasterPattern
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief Generate a master pattern with regular and rotated master pattern overlapped, both with 50% weights
+!
+!> @param enl EBSD name list structure
+!> @param master  EBSDMasterType pointer
+!> @param q unit quaternion providing the necessary rotation
+!
+!> @date 04/20/15 MDG 1.0 original, based on Saransh's twin routine above
+!--------------------------------------------------------------------------
+subroutine OverlapMasterPattern(enl,master,q)
+
+use local
+use io
+use quaternions
+use Lambert
+use rotations
+use NameListTypedefs
+use NameListHandlers
+use constants
+
+IMPLICIT NONE
+
+type(EBSDNameListType),INTENT(INOUT)                :: enl
+type(EBSDMasterType),pointer                        :: master
+real(kind=dbl),INTENT(IN)                           :: q(4)
+
+real(kind=dbl),allocatable                          :: master_rotated(:,:,:)
+type(EBSDLargeAccumType),pointer                    :: acc
+logical                                             :: verbose
+real(kind=dbl)                                      :: Lamproj(2),dc(3),dc_new(3),dx,dy,dxm,dym,ixy(2),scl
+integer(kind=irg)                                   :: nix,niy,nxip,niyp
+integer(kind=irg)                                   :: ii,jj,kk,ierr,istat,pp,qq
+
+allocate(master_rotated(-enl%npx:enl%npx,-enl%npy:enl%npy,1:enl%nE),stat=istat)
+
+scl = float(enl%npx) / LPs%sPio2
+
+do ii = 1,enl%nE
+    master_rotated = 0.0
+    do jj = -enl%npx,enl%npx
+        do kk = -enl%npy,enl%npy
+
+            Lamproj = (/ float(jj)/scl,float(kk)/scl /)
+            dc = LambertSquareToSphere(Lamproj,ierr)
+            dc_new = quat_Lp(conjg(q),dc)
+            dc_new = dc_new/sqrt(sum(dc_new**2))
+            if (dc_new(3) .lt. 0.0) dc_new = -dc_new
+
+! convert direction cosines to lambert projections
+            ixy = scl * LambertSphereToSquare( dc_new, istat )
+
+! interpolate intensity from the neighboring points
+            nix = floor(ixy(1))
+            niy = floor(ixy(2))
+            nixp = nix+1
+            niyp = niy+1
+            if (nixp.gt.enl%npx) nixp = nix
+            if (niyp.gt.enl%npy) niyp = niy
+            dx = ixy(1) - nix
+            dy = ixy(2) - niy
+            dxm = 1.0 - dx
+            dym = 1.0 - dy
+
+            master_rotated(jj,kk,ii) = master%sr(nix,niy,ii)*dxm*dym + master%sr(nixp,niy,ii)*dx*dym + &
+                                       master%sr(nix,niyp,ii)*dxm*dy + master%sr(nixp,niyp,ii)*dx*dy
+        end do
+    end do
+end do
+master%sr = 0.5D0 * (master_rotated + master%sr)
+
+call Message(' -> completed superimposing rotated and regular master patterns', frm = "(A)")
+
+end subroutine OverlapMasterPattern
 
 
 end module EBSDmod
