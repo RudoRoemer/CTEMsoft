@@ -461,7 +461,7 @@ __kernel void CalcLgh(__global float2* cl_expA,__global float2* cl_A,__global fl
 //> @date 02/19/15  SS  1.0 Original
 //--------------------------------------------------------------------------
 
-__kernel void CalcLghMaster(__global float2* cl_expA,__global float2* cl_offdiagonal,__global float* cl_diagonal,__global float2* cl_A,__global float2* cl_AA,__global float2* cl_AAA,__global int* arrsize,__global float2* cl_coeff,__global float2* cl_T1,__global float2* cl_T2,__global float2* cl_wavefncoeff,__global float2* cl_wavefncoeffintd,const int nn,__global int* sqrsize,const int numdepth,__global float* lambdas)
+__kernel void CalcLghMaster(__global float2* cl_expA,__global float2* cl_offdiagonal,__global float* cl_diagonal,__global float2* cl_A,__global float2* cl_AA,__global float2* cl_AAA,__global float2* cl_coeff,__global float2* cl_T1,__global float2* cl_T2,__global float2* cl_wavefncoeff,__global float2* cl_wavefncoeffintd,const int nn,__global int* sqrsize,const int numdepth,__global float* lambdas)
 {
     int tx,ty,id;
     tx = get_global_id(0);

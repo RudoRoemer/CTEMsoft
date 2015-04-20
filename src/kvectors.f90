@@ -1083,5 +1083,161 @@ end do
 
 end subroutine CalckvectorsECP
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: CalckvectorsGPU
+!
+!> @author Saransh Singh, Carnegie Mellon University
+!
+!> @brief create a linked list of wave vectors for approximate master pattern
+!> calculation
+!
+!> @detail this subroutine calculates the list of k vectors in a small patch of
+!> size npix*npix in lambert space. This central beam is used to calculate the list
+!> of g vectors for the whole patch, and the k vectors are used to calculate the 
+!> diagonal components i.e. the sg values.
+!
+!> @param khead head of linked list
+!> @param cell unit cell pointer
+!> @param npx half width of the master pattern
+!> @param npix gives size of the small patch for which k vectors are calculated
+!
+!
+!> @date   04/20/15 SS 1.0 original
+!--------------------------------------------------------------------------
+subroutine CalckvectorsGPU(khead,cell,npx,npix,centralpix,numk,usehex)
+
+use io
+use local
+use error
+use constants
+use diffraction
+use crystal
+use Lambert
+
+IMPLICIT NONE
+
+type(kvectorlist),pointer               :: khead,ktail
+type(unitcell),pointer                  :: cell
+integer(kind=irg),INTENT(IN)            :: npx ! 2*npx+1 is size of master pattern
+integer(kind=irg),INTENT(IN)            :: npix ! the small patch will be npix*npix
+integer(kind=irg),INTENT(IN)            :: centralpix(2)
+integer(kind=irg),INTENT(OUT)           :: numk
+logical,INTENT(IN),OPTIONAL             :: usehex
+
+logical                                 :: verbose,switchmirror,hex
+integer(kind=irg)                       :: i,j,isym,pgnum,ks,istat
+integer(kind=irg)                       :: istart,iend,jstart,jend
+integer(kind=irg),parameter             :: LaueTest(11) = (/ 149, 151, 153, 156, 158, 160, 161, 164, 165, 166, 167 /)  ! space groups with 2 or mirror at 30 degrees
+real(kind=dbl)                          :: delta,x,y,q,kstar(3),XX,YY,xp,yp,rr
+
+
+allocate(khead,stat=istat)                   ! allocate new value
+if (istat.ne.0) call FatalError('Calckvectors',' unable to allocate khead pointer')
+ktail => khead                       ! tail points to new value
+nullify(ktail%next)
+numk = 1
+! we deal with the symmetry of the master pattern in the main subroutine
+istart = centralpix(1)-npix-1
+iend = centralpix(1)+npix
+jstart = centralpix(2)-npix-1
+jend = centralpix(2)+npix
+
+if (present(usehex)) then
+    if (usehex) then
+! hexagonal grid step size
+        delta =  2.D0*dsqrt(cPi)/3.0D0**0.75D0/dble(npx)
+        ktail%i = centralpix(1)
+        ktail%j = centralpix(2)
+        x = (i - j*0.5)*delta
+        y = j*delta*LPs%srt
+        rr = x*x+y*y
+        hex = .TRUE.
+        ks = GetSextant(x,y)
+        select case (ks)
+        case (0,3)
+            XX = LPs%preb*y*dcos(x*LPs%prec/y)
+            YY = LPs%preb*y*dsin(x*LPs%prec/y)
+        case (1,4)
+            xp = y+LPs%rtt*x
+            yp = y*LPs%pred/xp
+            XX = LPs%prea*xp*dsin(yp)
+            YY = LPs%prea*xp*dcos(yp)
+        case (2,5)
+            xp = y-LPs%rtt*x
+            yp = y*LPs%pred/xp
+            XX = LPs%prea*xp*dsin(yp)
+            YY = -LPs%prea*xp*dcos(yp)
+        end select
+
+        q = XX**2+YY**2
+        kstar = (/ 0.5D0*XX*dsqrt(4.D0-q), 0.5D0*YY*dsqrt(4.D0-q),1.D0-0.5D0*q /)
+        ktail%i = centralpix(1) - centralpix(2)/2+mod(centralpix(2),2)/2                     ! i-index of beam
+        ktail%j = centralpix(2)   ! j-index of beam
+        call NormVec(cell,kstar,'c')
+        kstar = kstar/cell%mLambda                              ! divide by wavelength
+! and transform to reciprocal crystal space using the direct structure matrix
+        ktail%k = matmul(transpose(cell%dsm),kstar)
+        ktail%kn = 1.0/cell%mLambda
+    else
+        delta = LPs%ap/dble(npx)
+        ktail%i = centralpix(1)
+        ktail%j = centralpix(2)
+        x = i*delta
+        y = j*delta
+        rr = x*x+y*y
+        hex = .FALSE.
+        if (dabs(x).le.dabs(y)) then
+            q = 2.D0*y*LPs%iPi*dsqrt(cPi-y*y)
+            kstar = (/ q*dsin(x*LPs%Pi*0.25D0/y), q*dcos(x*LPs%Pi*0.25D0/y), 1.D0-2.D0*y*y*LPs%iPi /)
+        else
+            q = 2.D0*x*LPs%iPi*dsqrt(cPi-x*x)
+            kstar = (/ q*dcos(y*LPs%Pi*0.25D0/x), q*dsin(y*LPs%Pi*0.25D0/x), 1.D0-2.D0*x*x*LPs%iPi /)
+        end if
+        ktail%i = centralpix(1)
+        ktail%j = centralpix(2)
+        call NormVec(cell,kstar,'c')
+        kstar = kstar/cell%mLambda                              ! divide by wavelength
+! and transform to reciprocal crystal space using the direct structure matrix
+        ktail%k = matmul(transpose(cell%dsm),kstar)
+        ktail%kn = 1.0/cell%mLambda
+    end if
+else
+    delta = LPs%ap/dble(npx)
+    ktail%i = centralpix(1)
+    ktail%j = centralpix(2)
+    x = i*delta
+    y = j*delta
+    rr = x*x+y*y
+    hex = .FALSE.
+    if (dabs(x).le.dabs(y)) then
+        q = 2.D0*y*LPs%iPi*dsqrt(cPi-y*y)
+        kstar = (/ q*dsin(x*LPs%Pi*0.25D0/y), q*dcos(x*LPs%Pi*0.25D0/y), 1.D0-2.D0*y*y*LPs%iPi /)
+    else
+        q = 2.D0*x*LPs%iPi*dsqrt(cPi-x*x)
+        kstar = (/ q*dcos(y*LPs%Pi*0.25D0/x), q*dsin(y*LPs%Pi*0.25D0/x), 1.D0-2.D0*x*x*LPs%iPi /)
+    end if
+    ktail%i = centralpix(1)
+    ktail%j = centralpix(2)
+    call NormVec(cell,kstar,'c')
+    kstar = kstar/cell%mLambda                              ! divide by wavelength
+! and transform to reciprocal crystal space using the direct structure matrix
+    ktail%k = matmul(transpose(cell%dsm),kstar)
+    ktail%kn = 1.0/cell%mLambda
+end if
+
+do j=jstart,jend
+    do i=istart,iend
+        if (.not.((i .eq. centralpix(1)) .and. (j .eq. centralpix(2)))) then ! central pixel already taken care of
+            if (present(usehex)) then
+                call AddkVector(ktail,cell,numk,delta,i,j,usehex)
+            else
+                call AddkVector(ktail,cell,numk,delta,i,j)
+            end if
+        end if
+    end do
+end do
+
+end subroutine CalckvectorsGPU
 
 end module kvectors

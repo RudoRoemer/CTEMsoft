@@ -793,7 +793,7 @@ real(kind=dbl),allocatable                          :: master_rotated(:,:,:)
 type(EBSDLargeAccumType),pointer                    :: acc
 logical                                             :: verbose
 real(kind=dbl)                                      :: Lamproj(2),dc(3),dc_new(3),dx,dy,dxm,dym,ixy(2),scl
-integer(kind=irg)                                   :: nix,niy,nxip,niyp
+integer(kind=irg)                                   :: nix,niy,nixp,niyp
 integer(kind=irg)                                   :: ii,jj,kk,ierr,istat,pp,qq
 
 allocate(master_rotated(-enl%npx:enl%npx,-enl%npy:enl%npy,1:enl%nE),stat=istat)
