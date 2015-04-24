@@ -461,7 +461,7 @@ __kernel void CalcLgh(__global float2* cl_expA,__global float2* cl_A,__global fl
 //> @date 02/19/15  SS  1.0 Original
 //--------------------------------------------------------------------------
 
-__kernel void CalcLghMaster(__global float2* cl_expA,__global float2* cl_offdiagonal,__global float* cl_diagonal,__global float2* cl_A,__global float2* cl_AA,__global float2* cl_AAA,__global float2* cl_coeff,__global float2* cl_T1,__global float2* cl_T2,__global float2* cl_wavefncoeff,__global float2* cl_wavefncoeffintd,const int nn,__global int* sqrsize,const int numdepth,__global float* lambdas)
+__kernel void CalcLghMaster(__global float2* cl_expA,__global float2* cl_offdiagonal,__global float* cl_diagonal,__global float2* cl_AA,__global float2* cl_AAA,__global float2* cl_coeff,__global float2* cl_T1,__global float2* cl_T2,__global float2* cl_wavefncoeff,__global float2* cl_wavefncoeffintd,const int nn,__global int* sqrsize,const int numdepth,__global float* lambdas)
 {
     int tx,ty,id;
     tx = get_global_id(0);
@@ -482,16 +482,37 @@ __kernel void CalcLghMaster(__global float2* cl_expA,__global float2* cl_offdiag
         for (int j = 0; j < nn; j++){
             for (int k = 0; k < nn; k++){
                 if (k == i) {
-                    elem1 = cl_diagonal[off2 + i];
+                    if (ns != 1){
+                        elem1 = cl_diagonal[off2 + i]/powr(2.0f,ns);
+                    }
+                    else {
+                        elem1 = cl_diagonal[off2 + i];
+                    }
                 }
                 else {
-                    elem1 = cl_offdiagonal[off + i*nn + k];
+                    if (ns != 1){
+                        elem1 = cl_offdiagonal[off + i*nn + k]/powr(2.0f,ns);
+                    }
+                    else {
+                        elem1 = cl_offdiagonal[off + i*nn + k];
+                    }
                 }
                 if (k ==j) {
-                    elem2 = cl_diagonal[off2 + j];
+                    if (ns != 1){
+                        elem2 = cl_diagonal[off2 + i]/powr(2.0f,ns);
+                    }
+                    else {
+                        elem2 = cl_diagonal[off2 + i];
+                    }
+
                 }
                 else {
-                    elem2 = cl_offdiagonal[off + k*nn + j];
+                    if (ns != 1){
+                        elem2 = cl_offdiagonal[off + k*nn + j]/powr(2.0f,ns);
+                    }
+                    else {
+                        elem2 = cl_offdiagonal[off + k*nn + j];
+                    }
                 }
                 sum += cmplxmult(elem1,elem2);
             }
@@ -499,12 +520,29 @@ __kernel void CalcLghMaster(__global float2* cl_expA,__global float2* cl_offdiag
             sum = (float2)(0.0f,0.0f);
         }
     }
-    
+ 
     sum = (float2)(0.0f,0.0f);
     for (int i = 0; i < nn; i++){
         for (int j = 0; j < nn; j++){
             for (int k = 0; k < nn; k++){
-                sum += cmplxmult(cl_AA[off + i*nn + k],cl_A[off + k*nn + j]);
+                if (k ==j) {
+                    if (ns != 1){
+                        elem2 = cl_diagonal[off2 + i]/powr(2.0f,ns);
+                    }
+                    else {
+                        elem2 = cl_diagonal[off2 + i];
+                    }
+                    
+                }
+                else {
+                    if (ns != 1){
+                        elem2 = cl_offdiagonal[off + k*nn + j]/powr(2.0f,ns);
+                    }
+                    else {
+                        elem2 = cl_offdiagonal[off + k*nn + j];
+                    }
+                }
+                sum += cmplxmult(cl_AA[off + i*nn + k],elem2);
             }
             cl_AAA[off + i*nn + j] = sum;
             sum = (float2)(0.0f,0.0f);
@@ -516,16 +554,29 @@ __kernel void CalcLghMaster(__global float2* cl_expA,__global float2* cl_offdiag
     for (int i = 0; i < nn; i++){
         for (int j = 0; j < nn; j++){
             if ( i == j){
-                cl_expA[off + i*nn + j] = cl_AAA[off + i*nn + j] - cmplxmult(cl_coeff[0],cl_AA[off + i*nn + j]) + cmplxmult(cl_coeff[1],cl_A[off + i*nn + j]) - cl_coeff[2];
+  
+                if (ns != 1){
+                    elem1 = cl_diagonal[off2 + i]/powr(2.0f,ns);
+                }
+                else {
+                    elem1 = cl_offdiagonal[off2 + i];
+                }
+                cl_expA[off + i*nn + j] = cl_AAA[off + i*nn + j] - cmplxmult(cl_coeff[0],cl_AA[off + i*nn + j]) + cmplxmult(cl_coeff[1],elem1) - cl_coeff[2];
                 
-                cl_T1[off + i*nn + j] = cl_AAA[off + i*nn + j] - cmplxmult(cl_coeff[3],cl_AA[off + i*nn + j]) + cmplxmult(cl_coeff[4],cl_A[off + i*nn + j]) - cl_coeff[5];
+                cl_T1[off + i*nn + j] = cl_AAA[off + i*nn + j] - cmplxmult(cl_coeff[3],cl_AA[off + i*nn + j]) + cmplxmult(cl_coeff[4],elem1) - cl_coeff[5];
                 
             }
             else {
+                if (ns != 1){
+                    elem1 = cl_offdiagonal[off + i*nn + j]/powr(2.0f,ns);
+                }
+                else {
+                    elem1 = cl_offdiagonal[off + i*nn + j];
+                }
+  
+                cl_expA[off + i*nn + j] = cl_AAA[off + i*nn + j] - cmplxmult(cl_coeff[0],cl_AA[off + i*nn + j]) + cmplxmult(cl_coeff[1],elem1);
                 
-                cl_expA[off + i*nn + j] = cl_AAA[off + i*nn + j] - cmplxmult(cl_coeff[0],cl_AA[off + i*nn + j]) + cmplxmult(cl_coeff[1],cl_A[off + i*nn + j]);
-                
-                cl_T1[off + i*nn + j] = cl_AAA[off + i*nn + j] - cmplxmult(cl_coeff[3],cl_AA[off + i*nn + j]) + cmplxmult(cl_coeff[4],cl_A[off + i*nn + j]);
+                cl_T1[off + i*nn + j] = cl_AAA[off + i*nn + j] - cmplxmult(cl_coeff[3],cl_AA[off + i*nn + j]) + cmplxmult(cl_coeff[4],elem1);
                 
                 
             }
@@ -547,13 +598,25 @@ __kernel void CalcLghMaster(__global float2* cl_expA,__global float2* cl_offdiag
     for (int i = 0; i < nn; i++){
         for (int j = 0; j < nn; j++){
             if ( i == j){
+                if (ns != 1){
+                    elem1 = cl_diagonal[off2 + i]/powr(2.0f,ns);
+                }
+                else {
+                    elem1 = cl_diagonal[off2 + i];
+                }
                 
-                cl_T1[off + i*nn + j] = cl_AAA[off + i*nn + j] - cmplxmult(cl_coeff[6],cl_AA[off + i*nn + j]) + cmplxmult(cl_coeff[7],cl_A[off + i*nn + j]) - cl_coeff[8];
+                cl_T1[off + i*nn + j] = cl_AAA[off + i*nn + j] - cmplxmult(cl_coeff[6],cl_AA[off + i*nn + j]) + cmplxmult(cl_coeff[7],elem1) - cl_coeff[8];
                 
             }
             else {
+                if (ns != 1){
+                    elem1 = cl_offdiagonal[off + i*nn + j]/powr(2.0f,ns);
+                }
+                else {
+                    elem1 = cl_offdiagonal[off + i*nn + j];
+                }
                 
-                cl_T1[off + i*nn + j] = cl_AAA[off + i*nn + j] - cmplxmult(cl_coeff[6],cl_AA[off + i*nn + j]) + cmplxmult(cl_coeff[7],cl_A[off + i*nn + j]);
+                cl_T1[off + i*nn + j] = cl_AAA[off + i*nn + j] - cmplxmult(cl_coeff[6],cl_AA[off + i*nn + j]) + cmplxmult(cl_coeff[7],elem1);
                 
             }
         }
@@ -648,7 +711,7 @@ __kernel void CalcLghMaster(__global float2* cl_expA,__global float2* cl_offdiag
         
         
     }
-    
+   
     // we now have the Lgh matrix for depth integrated intensity calculations
     // ready to quit code
     

@@ -922,6 +922,9 @@ if ( maxval(abs( (/i,j/) )).ne.0 ) then  ! skip (0,0)
           kstar = (/ 0.5D0*XX*dsqrt(4.D0-q), 0.5D0*YY*dsqrt(4.D0-q),1.D0-0.5D0*q /)
           goahead = .TRUE.
       end if
+else
+    kstar = (/0.0,0.0,1.0/)
+    goahead = .TRUE.
 end if 
  
 if (goahead) then 
@@ -1120,7 +1123,7 @@ IMPLICIT NONE
 type(kvectorlist),pointer               :: khead,ktail
 type(unitcell),pointer                  :: cell
 integer(kind=irg),INTENT(IN)            :: npx ! 2*npx+1 is size of master pattern
-integer(kind=irg),INTENT(IN)            :: npix ! the small patch will be npix*npix
+integer(kind=irg),INTENT(IN)            :: npix ! the small patch will be 4*npix*npix
 integer(kind=irg),INTENT(IN)            :: centralpix(2)
 integer(kind=irg),INTENT(OUT)           :: numk
 logical,INTENT(IN),OPTIONAL             :: usehex
@@ -1138,10 +1141,10 @@ ktail => khead                       ! tail points to new value
 nullify(ktail%next)
 numk = 1
 ! we deal with the symmetry of the master pattern in the main subroutine
-istart = centralpix(1)-npix-1
-iend = centralpix(1)+npix
-jstart = centralpix(2)-npix-1
-jend = centralpix(2)+npix
+istart = centralpix(1)-npix
+iend = centralpix(1)+npix-1
+jstart = centralpix(2)-npix
+jend = centralpix(2)+npix-1
 
 if (present(usehex)) then
     if (usehex) then
@@ -1183,17 +1186,22 @@ if (present(usehex)) then
         delta = LPs%ap/dble(npx)
         ktail%i = centralpix(1)
         ktail%j = centralpix(2)
-        x = i*delta
-        y = j*delta
+        x = centralpix(1)*delta
+        y = centralpix(2)*delta
         rr = x*x+y*y
         hex = .FALSE.
-        if (dabs(x).le.dabs(y)) then
-            q = 2.D0*y*LPs%iPi*dsqrt(cPi-y*y)
-            kstar = (/ q*dsin(x*LPs%Pi*0.25D0/y), q*dcos(x*LPs%Pi*0.25D0/y), 1.D0-2.D0*y*y*LPs%iPi /)
+        if (maxval(abs((/x,y/))).eq.0.0) then
+            kstar = (/0.0,0.0,1.0/)
         else
-            q = 2.D0*x*LPs%iPi*dsqrt(cPi-x*x)
-            kstar = (/ q*dcos(y*LPs%Pi*0.25D0/x), q*dsin(y*LPs%Pi*0.25D0/x), 1.D0-2.D0*x*x*LPs%iPi /)
+            if (dabs(x).le.dabs(y)) then
+                q = 2.D0*y*LPs%iPi*dsqrt(cPi-y*y)
+                kstar = (/ q*dsin(x*LPs%Pi*0.25D0/y), q*dcos(x*LPs%Pi*0.25D0/y), 1.D0-2.D0*y*y*LPs%iPi /)
+            else
+                q = 2.D0*x*LPs%iPi*dsqrt(cPi-x*x)
+                kstar = (/ q*dcos(y*LPs%Pi*0.25D0/x), q*dsin(y*LPs%Pi*0.25D0/x), 1.D0-2.D0*x*x*LPs%iPi /)
+            end if
         end if
+
         ktail%i = centralpix(1)
         ktail%j = centralpix(2)
         call NormVec(cell,kstar,'c')
@@ -1206,16 +1214,21 @@ else
     delta = LPs%ap/dble(npx)
     ktail%i = centralpix(1)
     ktail%j = centralpix(2)
-    x = i*delta
-    y = j*delta
+    x = centralpix(1)*delta
+    y = centralpix(2)*delta
     rr = x*x+y*y
     hex = .FALSE.
-    if (dabs(x).le.dabs(y)) then
-        q = 2.D0*y*LPs%iPi*dsqrt(cPi-y*y)
-        kstar = (/ q*dsin(x*LPs%Pi*0.25D0/y), q*dcos(x*LPs%Pi*0.25D0/y), 1.D0-2.D0*y*y*LPs%iPi /)
+    if (maxval(abs((/x,y/))).eq.0.0) then
+        kstar = (/0.0,0.0,1.0/)
     else
-        q = 2.D0*x*LPs%iPi*dsqrt(cPi-x*x)
-        kstar = (/ q*dcos(y*LPs%Pi*0.25D0/x), q*dsin(y*LPs%Pi*0.25D0/x), 1.D0-2.D0*x*x*LPs%iPi /)
+
+        if (dabs(x).le.dabs(y)) then
+            q = 2.D0*y*LPs%iPi*dsqrt(cPi-y*y)
+            kstar = (/ q*dsin(x*LPs%Pi*0.25D0/y), q*dcos(x*LPs%Pi*0.25D0/y), 1.D0-2.D0*y*y*LPs%iPi /)
+        else
+            q = 2.D0*x*LPs%iPi*dsqrt(cPi-x*x)
+            kstar = (/ q*dcos(y*LPs%Pi*0.25D0/x), q*dsin(y*LPs%Pi*0.25D0/x), 1.D0-2.D0*x*x*LPs%iPi /)
+        end if
     end if
     ktail%i = centralpix(1)
     ktail%j = centralpix(2)
