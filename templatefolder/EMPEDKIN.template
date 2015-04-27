@@ -24,5 +24,7 @@ eulername = '/some/folder/on/my/disk/EulerAngles.txt'
 ncubochoric = 100
 ! number of threads for parallel computation
 nthreads = 1
+! mean pattern subtraction
+MeanSubtraction = .FALSE.
 ! this last line must be present!
 /
