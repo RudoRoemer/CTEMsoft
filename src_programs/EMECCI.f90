@@ -67,7 +67,7 @@ use io
 
 IMPLICIT NONE
 
-character(fnlen)                        :: nmldeffile, progname, progdesc
+character(fnlen)                      :: nmldeffile, progname, progdesc
 type(ECCINameListType)                :: eccinl
 
 nmldeffile = 'EMECCI.nml'
@@ -84,7 +84,7 @@ call GetECCINameList(nmldeffile,eccinl)
 call EMsoft(progname, progdesc)
 
 ! and call the main routine
-call ComputeECCI(eccinl,progname)
+call ComputeECCI(eccinl,progname, nmldeffile)
 
 end program EMECCI
 
@@ -112,8 +112,9 @@ end program EMECCI
 !> @date 03/05/14  MDG 3.4 correction of integration to double integration for Lgh array
 !> @date 03/12/14  MDG 3.5 conversion of Sgh and Lgh arrays to diagonal only
 !> @date 10/04/14  MDG 4.0 no globals conversion
+!> @date 04/20/15  MDG 4.1 continued no-globals conversion and HDF output
 !--------------------------------------------------------------------------
-subroutine ComputeECCI(eccinl,progname)
+subroutine ComputeECCI(eccinl,progname, nmldeffile)
 
 use local
 use typedefs
@@ -142,31 +143,39 @@ use defectmodule
 use rotations
 use timing
 use STEMmodule
+use NameListHDFwriters
+use HDFsupport
+use ISO_C_BINDING
+
 
 IMPLICIT NONE
 
 type(ECCINameListType),INTENT(IN)       :: eccinl
-character(fnlen),INTENT(IN)		:: progname
+character(fnlen),INTENT(IN)             :: progname
+character(fnlen),INTENT(IN)             :: nmldeffile
 
-integer(kind=irg)    		        :: nn,i,j,k,npix,npiy,ii,jj, numset, t_interval,nat(100), &
-					DF_nums_new,DF_npix_new,DF_npiy_new, numstart,numstop, isg, TID, &
-					NTHR, isym, ir, ga(3), gb(3)),ic,g,numd,ix,iy,nkt,nbeams, ik, ig, &
-					numk,ixp,iyp, io_int(6), skip, gg(3), iSTEM
+integer(kind=irg)                       :: nn,i,j,k,npix,npiy,ii,jj, numset, t_interval,nat(100), &
+                                           DF_nums_new,DF_npix_new,DF_npiy_new, numstart,numstop, isg, TID, &
+                                           NTHR, isym, ir, ga(3), gb(3),ic,g,numd,ix,iy,nkt,nbeams, ik, ig, &
+                                           numk,ixp,iyp, io_int(6), skip, gg(3), iSTEM
 
-integer(kind=irg),parameter 		:: numdd=360 ! 180
-real(kind=sgl)         		        :: thick, X(2), bragg, thetac, kstar(3), gperp(3), &
-					gdotR,DF_gf(3), tpi, DM(2,2), DD, c(3), gx(3), gy(3), &
-					gac(3), gbc(3),zmax, io_real(2), ijmax
+integer(kind=irg),parameter             :: numdd=360 ! 180
+real(kind=sgl)                          :: thick, X(2), bragg, thetac, kstar(3), gperp(3), &
+                                           gdotR,DF_gf(3), tpi, DM(2,2), DD, c(3), gx(3), gy(3), &
+                                           gac(3), gbc(3),zmax, io_real(2), ijmax
 real(kind=dbl)                          :: arg, glen
-complex(kind=dbl),allocatable    	:: DHWM(:,:),DHWMvoid(:,:),DDD(:,:),Sarray(:,:,:,:)
-complex(kind=dbl),allocatable    	:: amp(:),amp2(:),Azz(:,:)
-complex(kind=dbl)                	:: czero,cone
-complex(kind=dbl)                	:: para(0:numdd),dx,dy,dxm,dym, xgp
-real(kind=sgl),allocatable       	:: sgarray(:,:)
-real(kind=sgl),allocatable    		:: disparray(:,:,:,:),imatvals(:,:), ECCIimages(:,:)
-integer(kind=sgl),allocatable    	:: expval(:,:,:)
-complex(kind=dbl),allocatable           :: Lgh(:),Sgh(:) ! Lgh(:,:),Sgh(:,:)
-logical	                                :: ECCI, NANCHK, verbose
+complex(kind=dbl),allocatable           :: DHWM(:,:),DHWMvoid(:,:),DDD(:,:),Sarray(:,:,:,:)
+complex(kind=dbl),allocatable           :: amp(:),amp2(:),Azz(:,:)
+complex(kind=dbl)                       :: czero,cone
+complex(kind=dbl)                       :: para(0:numdd),dx,dy,dxm,dym, xgp
+real(kind=sgl),allocatable              :: sgarray(:,:)
+real(kind=sgl),allocatable              :: disparray(:,:,:,:),imatvals(:,:), ECCIimages(:,:)
+integer(kind=sgl),allocatable           :: expval(:,:,:)
+complex(kind=dbl),allocatable           :: Lgh(:),Sgh(:), DHWMz(:,:), DHWM(:,:), DHWMvoid(:,:) ! Lgh(:,:),Sgh(:,:)
+logical                                 :: ECCI, NANCHK, verbose
+character(11)                           :: dstr
+character(15)                           :: tstrb
+character(15)                           :: tstre
 
 type(unitcell),pointer                  :: cell
 type(gnode)                             :: rlp
@@ -174,16 +183,23 @@ type(DynType)                           :: Dyn
 type(kvectorlist),pointer               :: khead, ktmp
 type(symdata2D)                         :: TDPG
 type(BetheParameterType)                :: BetheParameters
-type(reflisttype),pointer               :: reflist, firstw,rltmp
+type(reflisttype),pointer               :: reflist, firstw, rltmp, rltmpa, rltmpb
+type (foiltype)                         :: foil
+
+type(HDFobjectStackType),pointer        :: HDF_head
 
  ECCI = .TRUE.
+ 
+ nullify(HDF_head)
+  
+ call timestamp(datestring=dstr, timestring=tstrb)
 
 ! first we define the default values
  czero=dcmplx(0.D0,0.D0)
  cone=dcmplx(1.D0,0.D0)
  tpi = 2.0*sngl(cPi)
  dinfo = 0              ! switch to make makedislocation verbose
- t_interval = 10       	! default timing interval (output every t_interval image columns)
+ t_interval = 10        ! default timing interval (output every t_interval image columns)
  numd = numdd
  
 
@@ -249,8 +265,8 @@ type(reflisttype),pointer               :: reflist, firstw,rltmp
 
 
 ! for now, we do not consider weak beams at all
-  if (BetheParameter%cutoff.eq.0.0) call Set_Bethe_Parameters
-  BetheParameter%weakcutoff = BetheParameter%cutoff
+!  if (BetheParameter%cutoff.eq.0.0) call Set_Bethe_Parameters
+!  BetheParameter%weakcutoff = BetheParameter%cutoff
 
 ! next, we read the foildata namelist from the SRdef_foildata.nml file
 ! [yes, we're using the same file as for the systematic row case]
@@ -411,7 +427,7 @@ if ((dispmode.eq.'new').or.(dispmode.eq.'not')) then
       do k=1,DF_nums
 ! then convert to the dot-product 
        if (DF_R(k,1).eq.-10000.0) then  ! this is point inside a void
- 	imatvals(1:2,k) = -10000
+        imatvals(1:2,k) = -10000
        else  ! it is not a void, so use the full dot product g.R (all vectors must be Cartesian !)
 ! use gac and gbc to get the two dot products and store both of them as integers mapped onto the 0..numd range
          gdotR = Dot_Product(gac,DF_R(k,1:3))
@@ -554,19 +570,19 @@ end do
   write (dataunit) summode
 
 ! various bits of useful information
-  write (dataunit) xtalname					! crystal structure file names	
-  write (dataunit) kk						! incident wave vector
+  write (dataunit) xtalname                                     ! crystal structure file names  
+  write (dataunit) kk                                           ! incident wave vector
   write (dataunit) CalcDiffAngle(ga(1),ga(2),ga(3))*0.5      ! Bragg angle for the first reflection (whether allowed or not)
   if (progmode.eq.'array') then 
-    write (dataunit) ktmax		                       ! max beam convergence in units of |g_a|
+    write (dataunit) ktmax                                     ! max beam convergence in units of |g_a|
   else
-    write (dataunit) 1.0		                       ! max beam convergence in units of |g_a|
+    write (dataunit) 1.0                                       ! max beam convergence in units of |g_a|
   end if
 
-  write (dataunit) dkt				               ! angular step size along disk radius
-  write (dataunit) voltage				        ! microscope voltage
-  write (dataunit) thetac					! beam divergence
-  write (dataunit) DF_L					! pixel size
+  write (dataunit) dkt                                         ! angular step size along disk radius
+  write (dataunit) voltage                                      ! microscope voltage
+  write (dataunit) thetac                                       ! beam divergence
+  write (dataunit) DF_L                                 ! pixel size
 
 ! number of reflections, and associated information (hkl, ...)
   call TransSpace(float(kk),c,'d','c')
@@ -726,7 +742,7 @@ mess = ' Scattering matrices precomputed '; call Message("(A,' ',$)")
     doslices: do k=1,DF_nums    ! loop over the fixed thickness slices
 ! compute the appropriate scattering matrix to propagate with (see section 8.3.3 in the book)
        if (disparray(1,k,i,j).eq.-10000) then  ! this is point inside a void
- 	 Azz = DHWMvoid    ! so we use the void propagator matrix
+         Azz = DHWMvoid    ! so we use the void propagator matrix
        else  ! it is not a void
 ! in this version, we use complex bi-variate interpolation to select the appropriate Azz 
 ! matrix from the pre-computed Sarray.
@@ -740,16 +756,16 @@ mess = ' Scattering matrices precomputed '; call Message("(A,' ',$)")
          dy = cmplx(amod(disparray(2,k,i,j),1.0),0.0)
          dxm = cone-dx
          dym = cone-dy
-	 Azz = dxm*dym*Sarray(1:nn,1:nn,ix,iy)+dx*dym*Sarray(1:nn,1:nn,ixp,iy)+ &
+         Azz = dxm*dym*Sarray(1:nn,1:nn,ix,iy)+dx*dym*Sarray(1:nn,1:nn,ixp,iy)+ &
                dxm*dy*Sarray(1:nn,1:nn,ix,iyp)+dx*dy*Sarray(1:nn,1:nn,ixp,iyp)
        end if
 
        amp2 = matmul(Azz,amp)
 
        if (k.eq.1) then 
-	  Lgh = abs(amp2)**2
+          Lgh = abs(amp2)**2
        else
-	  Lgh = Lgh + abs(amp2)**2
+          Lgh = Lgh + abs(amp2)**2
        end if
 
 
@@ -1065,15 +1081,15 @@ use symmetry
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(IN)		:: nn
+integer(kind=irg),INTENT(IN)            :: nn
 ! corrected on 10/22/14 in response to issue #3 raised by jfikar
 ! Sgh array changed to one dimensional vector instead of 2D array
-complex(kind=dbl),INTENT(INOUT)	:: Sgh(nn)
-integer(kind=irg),INTENT(INOUT)	:: nat(100)
+complex(kind=dbl),INTENT(INOUT) :: Sgh(nn)
+integer(kind=irg),INTENT(INOUT) :: nat(100)
 
-integer(kind=irg)			:: ip, ir, ic, kkk(3), ikk, n, numset
-real(kind=sgl)				:: Znsq, DBWF, kkl
-complex(kind=dbl)			:: carg
+integer(kind=irg)                       :: ip, ir, ic, kkk(3), ikk, n, numset
+real(kind=sgl)                          :: Znsq, DBWF, kkl
+complex(kind=dbl)                       :: carg
 real(kind=dbl)                        :: ctmp(192,3),arg, tpi
 
   tpi = 2.D0 * cPi
@@ -1148,8 +1164,8 @@ end subroutine CalcSgh
 !C
 !C                        naninfchk.f
 !C
-!C  	*****************************************************************
-!C 	* 								*
+!C      *****************************************************************
+!C      *                                                               *
 !C	* 	Absoft Corporation 					* 
 !C 	*	2781 Bond Street					*
 !C	*	Rochester Hills, MI  48309				*

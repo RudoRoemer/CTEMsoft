@@ -5,8 +5,8 @@ resolve_all
 ;define a few variables
 appname = 'EBSDDisplay'
 saveappname = appname+'.sav'
-VMappdir = '/Users/mdg/Files/OSU/Software/CTEMsoft2013/IDL/VMapps'
-Resdir = '/Users/mdg/Files/OSU/Software/CTEMsoft2013/IDL/VMapps/EBSDDisplay/Resources'
+VMappdir = '/Users/mdg/Files/EMsoft/IDL/VMapps'
+Resdir = '/Users/mdg/Files/EMsoft/IDL/VMapps/EBSDDisplay/Resources'
 manifestfile = '/Users/mdg/Files/OSU/IDL/Phasemaps/manifest_rt.txt'
 
 cd,CURRENT=cdir
@@ -22,7 +22,7 @@ cmd = '/bin/mkdir '+Resdir
 spawn,cmd
 
 ; and add the logo file to it
-cmd = '/bin/cp /Users/mdg/Files/OSU/Software/CTEMsoft2013/IDL/Resources/SEMlogo.jpg '+ResDir
+cmd = '/bin/cp /Users/mdg/Files/EMsoft/IDL/Resources/SEMlogo.jpg '+ResDir
 spawn,cmd
 
 exit

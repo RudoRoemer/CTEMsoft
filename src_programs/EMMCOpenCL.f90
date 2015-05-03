@@ -287,14 +287,13 @@ kernel = clCreateKernel(prog, 'MC', ierr)
 call clReleaseProgram(prog, ierr)
 ! allocate device memory
 
-open(unit = iunit, file = mcnl%primelist, form='unformatted', status='old')
+open(unit = iunit, file = trim(mcnl%primelist), form='unformatted', status='old')
 read(iunit) nseeds
 allocate(rnseeds(nseeds))
 read(iunit) rnseeds
 close(unit=iunit,status='keep')
 
 if (globalworkgrpsz**2 .gt. nseeds) call FatalError('EMMCOpenCL:','insufficient prime numbers')
-
 
 
 allocate(init_seeds(4*globalworkgrpsz*globalworkgrpsz),stat=istat)

@@ -285,11 +285,11 @@ recursive subroutine TransSpaceDouble(cell,t,d,inspace,outspace)
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
-real(kind=dbl),INTENT(IN)		:: t(3)			!< input vector in inspace reference frame
-real(kind=dbl),INTENT(OUT)		:: d(3)			!< output vector in outspace reference frame 
-character(1),INTENT(IN)		:: inspace		!< characters to label input space (d, r, or c)
-character(1),INTENT(IN)		:: outspace		!< characters to label output space (d, r, or c)
+type(unitcell),pointer          :: cell
+real(kind=dbl),INTENT(IN)       :: t(3)                 !< input vector in inspace reference frame
+real(kind=dbl),INTENT(OUT)      :: d(3)                 !< output vector in outspace reference frame 
+character(1),INTENT(IN)         :: inspace              !< characters to label input space (d, r, or c)
+character(1),INTENT(IN)         :: outspace             !< characters to label output space (d, r, or c)
 
  if (inspace.eq.'d') then
 ! direct to Cartesian (pre-multiplication)
@@ -355,11 +355,11 @@ recursive subroutine TransSpaceSingle(cell, t, d, inspace, outspace)
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
-real(kind=sgl),INTENT(IN)		:: t(3)			!< input vector in inspace reference frame
-real(kind=sgl),INTENT(OUT)		:: d(3)			!< output vector in outspace reference frame 
-character(1),INTENT(IN)		:: inspace	        !< characters to label input space (d, r, or c)
-character(1),INTENT(IN)		:: outspace	        !< characters to label output space (d, r, or c)
+type(unitcell),pointer          :: cell
+real(kind=sgl),INTENT(IN)       :: t(3)                 !< input vector in inspace reference frame
+real(kind=sgl),INTENT(OUT)      :: d(3)                 !< output vector in outspace reference frame 
+character(1),INTENT(IN)         :: inspace              !< characters to label input space (d, r, or c)
+character(1),INTENT(IN)         :: outspace             !< characters to label output space (d, r, or c)
 
  if (inspace.eq.'d') then
 ! direct to Cartesian (pre-multiplication)
@@ -435,15 +435,15 @@ use math, ONLY: mInvert
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
-real(kind=dbl),INTENT(IN)		:: t(3)			!< input vector w.r.t. input space reference frame
-real(kind=dbl),INTENT(OUT)		:: d(3)			!< transformed vector components
-real(kind=dbl),INTENT(IN)		:: talpha(3,3)		!< transformation matrix
-real(kind=dbl)				:: alinv(3,3)		!< inverse of transformation matrix
-character(1),INTENT(IN)		:: space		!< space in which to perform transformation ('d', 'r', 'c')
-character(2),INTENT(IN)		:: direction		!< transformation direction (no=new-to-old, on=old-to-new)
+type(unitcell),pointer          :: cell
+real(kind=dbl),INTENT(IN)       :: t(3)                 !< input vector w.r.t. input space reference frame
+real(kind=dbl),INTENT(OUT)      :: d(3)                 !< transformed vector components
+real(kind=dbl),INTENT(IN)       :: talpha(3,3)          !< transformation matrix
+real(kind=dbl)                  :: alinv(3,3)           !< inverse of transformation matrix
+character(1),INTENT(IN)         :: space                !< space in which to perform transformation ('d', 'r', 'c')
+character(2),INTENT(IN)         :: direction            !< transformation direction (no=new-to-old, on=old-to-new)
 
-logical					:: uni			!< logical to indicate unitary matrix (or not)
+logical                         :: uni                  !< logical to indicate unitary matrix (or not)
 
 ! these matrices are typically unitary, so inverse is simply the transpose
  uni = .TRUE.
@@ -493,11 +493,11 @@ recursive function CalcDotSingle(cell, p,q,space) result(cdot)
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
-real(kind=sgl),INTENT(IN)		:: p(3)		!< first input vector in space reference frame
-real(kind=sgl),INTENT(IN)		:: q(3) 	!< second input vector
-character(1),INTENT(IN)		:: space	!< space in which to compute product ('d', 'r', or 'c')
-real(kind=sgl) 				:: cdot		!< dot product p.q
+type(unitcell),pointer          :: cell
+real(kind=sgl),INTENT(IN)       :: p(3)         !< first input vector in space reference frame
+real(kind=sgl),INTENT(IN)       :: q(3)         !< second input vector
+character(1),INTENT(IN)         :: space        !< space in which to compute product ('d', 'r', or 'c')
+real(kind=sgl)                  :: cdot         !< dot product p.q
 
  cdot = 0.0_sgl
  if (space.eq.'d') cdot = dot_product(p,matmul(cell%dmt,q))
@@ -533,11 +533,11 @@ recursive function CalcDotDouble(cell, p, q, space) result(cdot)
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
-real(kind=dbl),INTENT(IN)		:: p(3)		!< first input vector in space reference frame
-real(kind=dbl),INTENT(IN)		:: q(3) 	!< second input vector
-character(1),INTENT(IN)		:: space	!< space in which to compute product ('d', 'r', or 'c')
-real(kind=dbl)				:: cdot		!< dot product p.q
+type(unitcell),pointer          :: cell
+real(kind=dbl),INTENT(IN)       :: p(3)         !< first input vector in space reference frame
+real(kind=dbl),INTENT(IN)       :: q(3)         !< second input vector
+character(1),INTENT(IN)         :: space        !< space in which to compute product ('d', 'r', or 'c')
+real(kind=dbl)                  :: cdot         !< dot product p.q
 
  cdot = 0.0_dbl
  if (space.eq.'d') cdot = dot_product(p,matmul(cell%dmt,q))
@@ -575,10 +575,10 @@ recursive subroutine NormVecSingle(cell, p, space)
 
 IMPLICIT NONE
 
-type(unitcell),pointer				:: cell
-real(kind=sgl),INTENT(INOUT)			:: p(3)	        !< input/output vector components
-character(1),INTENT(IN)			:: space	!< space character ('d', 'r', or 'c')
-real(kind=sgl)					:: x  		!< auxiliary variable
+type(unitcell),pointer                  :: cell
+real(kind=sgl),INTENT(INOUT)            :: p(3)         !< input/output vector components
+character(1),INTENT(IN)                 :: space        !< space character ('d', 'r', or 'c')
+real(kind=sgl)                          :: x            !< auxiliary variable
 
  x=CalcLength(cell, p, space)
  if (x.ne.0.0) then 
@@ -615,10 +615,10 @@ recursive subroutine NormVecDouble(cell, p, space)
 
 IMPLICIT NONE
 
-type(unitcell),pointer		:: cell
-real(kind=dbl),INTENT(INOUT)			:: p(3)	        !< input/output vector components
-character(1),INTENT(IN)			:: space	!< space character ('d', 'r', or 'c')
-real(kind=dbl)					:: x  		!< auxiliary variable
+type(unitcell),pointer                  :: cell
+real(kind=dbl),INTENT(INOUT)            :: p(3)         !< input/output vector components
+character(1),INTENT(IN)                 :: space        !< space character ('d', 'r', or 'c')
+real(kind=dbl)                          :: x            !< auxiliary variable
 
  x=CalcLength(cell,p,space)
  if (x.ne.0.D0) then 
@@ -655,10 +655,10 @@ recursive function CalcLengthSingle(cell, p, space) result(x)
 
 IMPLICIT NONE
 
-type(unitcell),pointer		:: cell
-real(kind=sgl),INTENT(IN)			:: p(3)	        !< input/output vector components
-character(1),INTENT(IN)			:: space	!< space character ('d', 'r', or 'c')
-real(kind=sgl)					:: x  		!< auxiliary variable
+type(unitcell),pointer                  :: cell
+real(kind=sgl),INTENT(IN)               :: p(3)         !< input/output vector components
+character(1),INTENT(IN)                 :: space        !< space character ('d', 'r', or 'c')
+real(kind=sgl)                          :: x            !< auxiliary variable
 
 
  x = sqrt(CalcDot(cell, p, p, space))
@@ -691,10 +691,10 @@ recursive function CalcLengthDouble(cell, p, space) result(x)
 
 IMPLICIT NONE
 
-type(unitcell),pointer		:: cell
-real(kind=dbl),INTENT(IN)			:: p(3)		!< input/output vector components
-character(1),INTENT(IN)			:: space	!< space character ('d', 'r', or 'c')
-real(kind=dbl)					:: x  		!< auxiliary variable
+type(unitcell),pointer                  :: cell
+real(kind=dbl),INTENT(IN)               :: p(3)         !< input/output vector components
+character(1),INTENT(IN)                 :: space        !< space character ('d', 'r', or 'c')
+real(kind=dbl)                          :: x            !< auxiliary variable
 
  x = dsqrt(CalcDot(cell, p, p, space))
 
@@ -730,12 +730,12 @@ use constants
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
-real(kind=sgl),INTENT(IN)		:: p(3)		!< first vector components
-real(kind=sgl),INTENT(IN)		:: q(3) 	!< second vector components
-character(1),INTENT(IN)		:: space	!< space of the computation ('d', 'r', 'c')
-real(kind=sgl)				:: a		!< angle in radians
-real(kind=sgl)				:: x, y, z, t	!< auxiliary variables
+type(unitcell),pointer                  :: cell
+real(kind=sgl),INTENT(IN)               :: p(3)         !< first vector components
+real(kind=sgl),INTENT(IN)               :: q(3)         !< second vector components
+character(1),INTENT(IN)                 :: space        !< space of the computation ('d', 'r', 'c')
+real(kind=sgl)                          :: a            !< angle in radians
+real(kind=sgl)                          :: x, y, z, t   !< auxiliary variables
 
  x = CalcDot(cell,p,q,space)
  y = CalcLength(cell,p,space)
@@ -788,12 +788,12 @@ use constants
 
 IMPLICIT NONE
 
-type(unitcell),pointer	:: cell
-real(kind=dbl),INTENT(IN)		:: p(3)		!< first vector components
-real(kind=dbl),INTENT(IN)		:: q(3) 	!< second vector components
-character(1),INTENT(IN)		:: space	!< space of the computation ('d', 'r', 'c')
-real(kind=dbl)				:: a		!< angle in radians
-real(kind=dbl)				:: x, y, z, t	!< auxiliary variables
+type(unitcell),pointer                  :: cell
+real(kind=dbl),INTENT(IN)               :: p(3)         !< first vector components
+real(kind=dbl),INTENT(IN)               :: q(3)         !< second vector components
+character(1),INTENT(IN)                 :: space        !< space of the computation ('d', 'r', 'c')
+real(kind=dbl)                          :: a            !< angle in radians
+real(kind=dbl)                          :: x, y, z, t   !< auxiliary variables
 
 
  x = CalcDot(cell,p,q,space)
@@ -855,14 +855,14 @@ use math
 
 IMPLICIT NONE 
 
-type(unitcell),pointer	:: cell
-real(kind=sgl),INTENT(IN)		:: p(3)		!< first input vector (order is important here !)
-real(kind=sgl),INTENT(IN)		:: q(3)		!< second input vector
-real(kind=sgl),INTENT(OUT)		:: r(3)		!< output vector
-character(1),INTENT(IN)		:: inspace	!< inspace character ('d','r','c')
-character(1),INTENT(IN)		:: outspace	!< outspace character
-integer(kind=irg),INTENT(IN)		:: iv		!< volume division switch
-real(kind=sgl)				:: x(3), vl	!< auxiliary variables
+type(unitcell),pointer                  :: cell
+real(kind=sgl),INTENT(IN)               :: p(3)         !< first input vector (order is important here !)
+real(kind=sgl),INTENT(IN)               :: q(3)         !< second input vector
+real(kind=sgl),INTENT(OUT)              :: r(3)         !< output vector
+character(1),INTENT(IN)                 :: inspace      !< inspace character ('d','r','c')
+character(1),INTENT(IN)                 :: outspace     !< outspace character
+integer(kind=irg),INTENT(IN)            :: iv           !< volume division switch
+real(kind=sgl)                          :: x(3), vl     !< auxiliary variables
 
 ! divide by volume?
  if (iv.eq.1) then 
@@ -872,37 +872,37 @@ real(kind=sgl)				:: x(3), vl	!< auxiliary variables
  endif
 
 ! in direct space 
- if (inspace.eq.'d') then		! so the output is in reciprocal space !!!
+ if (inspace.eq.'d') then               ! so the output is in reciprocal space !!!
   r(1) = vl*(p(2)*q(3)-p(3)*q(2))
   r(2) = vl*(p(3)*q(1)-p(1)*q(3))
   r(3) = vl*(p(1)*q(2)-p(2)*q(1))
-  if (outspace.eq.'d') then 	        ! output in direct space
+  if (outspace.eq.'d') then             ! output in direct space
    x = matmul(r,cell%rmt)
    r = x
   end if
-  if (outspace.eq.'c') then 		! output in cartesian frame
+  if (outspace.eq.'c') then             ! output in cartesian frame
    x = matmul(cell%rsm,r)
    r = x
   end if
  end if
 
 ! in reciprocal space 
- if (inspace.eq.'r') then		! so the output is in direct space !!!
+ if (inspace.eq.'r') then               ! so the output is in direct space !!!
   r(1) = (p(2)*q(3)-p(3)*q(2))/vl
   r(2) = (p(3)*q(1)-p(1)*q(3))/vl
   r(3) = (p(1)*q(2)-p(2)*q(1))/vl
-  if (outspace.eq.'r') then 		! output in reciprocal space
+  if (outspace.eq.'r') then             ! output in reciprocal space
    x = matmul(r,cell%dmt)
    r = x
   end if
-  if (outspace.eq.'c') then 		! output in cartesian frame
+  if (outspace.eq.'c') then             ! output in cartesian frame
    x = matmul(cell%dsm,r)
    r = x
   end if
  end if
 
 ! in  cartesian
- if (inspace.eq.'c') then		! so no conversion needed.
+ if (inspace.eq.'c') then               ! so no conversion needed.
   r(1) = p(2)*q(3)-p(3)*q(2)
   r(2) = p(3)*q(1)-p(1)*q(3)
   r(3) = p(1)*q(2)-p(2)*q(1)
@@ -947,14 +947,14 @@ use math
 
 IMPLICIT NONE 
 
-type(unitcell),pointer	:: cell
-real(kind=dbl),INTENT(IN)		:: p(3)		!< first input vector (order is important here !)
-real(kind=dbl),INTENT(IN)		:: q(3)		!< second input vector
-real(kind=dbl),INTENT(OUT)		:: r(3)		!< output vector
-character(1),INTENT(IN)		:: inspace	!< inspace character ('d','r','c')
-character(1),INTENT(IN)		:: outspace	!< outspace character
-integer(kind=irg),INTENT(IN)		:: iv		!< volume division switch
-real(kind=dbl)				:: x(3), vl	!< auxiliary variables
+type(unitcell),pointer                  :: cell
+real(kind=dbl),INTENT(IN)               :: p(3)         !< first input vector (order is important here !)
+real(kind=dbl),INTENT(IN)               :: q(3)         !< second input vector
+real(kind=dbl),INTENT(OUT)              :: r(3)         !< output vector
+character(1),INTENT(IN)                 :: inspace      !< inspace character ('d','r','c')
+character(1),INTENT(IN)                 :: outspace     !< outspace character
+integer(kind=irg),INTENT(IN)            :: iv           !< volume division switch
+real(kind=dbl)                          :: x(3), vl     !< auxiliary variables
 
 
  if (iv.eq.1) then 
@@ -964,37 +964,37 @@ real(kind=dbl)				:: x(3), vl	!< auxiliary variables
  endif
 
 ! in direct space 
- if (inspace.eq.'d') then		! so the output is in reciprocal space !!!
+ if (inspace.eq.'d') then               ! so the output is in reciprocal space !!!
   r(1) = vl*(p(2)*q(3)-p(3)*q(2))
   r(2) = vl*(p(3)*q(1)-p(1)*q(3))
   r(3) = vl*(p(1)*q(2)-p(2)*q(1))
-  if (outspace.eq.'d') then 	        ! output in direct space
+  if (outspace.eq.'d') then             ! output in direct space
    x = matmul(r,cell%rmt)
    r = x
   end if
-  if (outspace.eq.'c') then 		! output in cartesian frame
+  if (outspace.eq.'c') then             ! output in cartesian frame
    x = matmul(cell%rsm,r)
    r = x
   end if
  end if
 
 ! in reciprocal space 
- if (inspace.eq.'r') then		! so the output is in direct space !!!
+ if (inspace.eq.'r') then               ! so the output is in direct space !!!
   r(1) = (p(2)*q(3)-p(3)*q(2))/vl
   r(2) = (p(3)*q(1)-p(1)*q(3))/vl
   r(3) = (p(1)*q(2)-p(2)*q(1))/vl
-  if (outspace.eq.'r') then 		! output in reciprocal space
+  if (outspace.eq.'r') then             ! output in reciprocal space
    x = matmul(r,cell%dmt)
    r = x
   end if
-  if (outspace.eq.'c') then 		! output in cartesian frame
+  if (outspace.eq.'c') then             ! output in cartesian frame
    x = matmul(cell%dsm,r)
    r = x
   end if
  end if
 
 ! in  cartesian
- if (inspace.eq.'c') then		! so no conversion needed.
+ if (inspace.eq.'c') then               ! so no conversion needed.
   r(1) = p(2)*q(3)-p(3)*q(2)
   r(2) = p(3)*q(1)-p(1)*q(3)
   r(3) = p(1)*q(2)-p(2)*q(1)
@@ -1028,11 +1028,11 @@ recursive subroutine MilBrav(p,q,d)
 
 IMPLICIT NONE
 
-integer(kind=irg),INTENT(INOUT)		:: p(3)	        !< input/output vector
-integer(kind=irg),INTENT(INOUT)		:: q(4)	        !< input/output vector
-character(2),INTENT(IN)			:: d		!< direction string ('34' or '43')
-integer(kind=irg)				:: i, j		!< auxiliary variables
-real(kind=sgl)					:: r(4), rm	!< auxiliary variables	
+integer(kind=irg),INTENT(INOUT)         :: p(3)         !< input/output vector
+integer(kind=irg),INTENT(INOUT)         :: q(4)         !< input/output vector
+character(2),INTENT(IN)                 :: d            !< direction string ('34' or '43')
+integer(kind=irg)                       :: i, j         !< auxiliary variables
+real(kind=sgl)                          :: r(4), rm     !< auxiliary variables  
 
  if (d.eq.'43') then 
 ! equation 1.31
@@ -1097,12 +1097,12 @@ use io
 
 IMPLICIT NONE
 
-type(unitcell),INTENT(INOUT)		:: cell
-integer(kind=irg),OPTIONAL,INTENT(IN)	:: stdout
+type(unitcell),INTENT(INOUT)            :: cell
+integer(kind=irg),OPTIONAL,INTENT(IN)   :: stdout
 
-integer(kind=irg)			:: io_int(1)	!< integer input array
-real(kind=dbl)				:: io_real(1)	!< double precision real input array
-integer(kind=irg)			:: std
+integer(kind=irg)                       :: io_int(1)    !< integer input array
+real(kind=dbl)                          :: io_real(1)   !< double precision real input array
+integer(kind=irg)                       :: std
 
  std = 6
  if (PRESENT(stdout)) std = stdout
@@ -1248,13 +1248,13 @@ use io
 
 IMPLICIT NONE
 
-type(unitcell),INTENT(INOUT)		:: cell
-integer(kind=irg),OPTIONAL,INTENT(IN)	:: stdout
+type(unitcell),INTENT(INOUT)            :: cell
+integer(kind=irg),OPTIONAL,INTENT(IN)   :: stdout
 
-logical					:: more			!< logical to determine if more atoms need to be entered
-character(1)				:: ans, list(256)	!< used for IO
-real(kind=sgl)				:: pt(5), out_real(5)	!< used to read and write asymmetric position data
-integer(kind=irg)			:: j, io_int(1)	, std	!< auxiliary variables
+logical                                 :: more                 !< logical to determine if more atoms need to be entered
+character(1)                            :: ans, list(256)       !< used for IO
+real(kind=sgl)                          :: pt(5), out_real(5)   !< used to read and write asymmetric position data
+integer(kind=irg)                       :: j, io_int(1) , std   !< auxiliary variables
 
  std = 6
  if (PRESENT(stdout)) std = stdout
@@ -1323,9 +1323,9 @@ use io
 
 IMPLICIT NONE
 
-integer(kind=irg),OPTIONAL,INTENT(IN)	:: stdout
+integer(kind=irg),OPTIONAL,INTENT(IN)   :: stdout
 
-integer(kind=irg)			:: std
+integer(kind=irg)                       :: std
 
  std = 6
  if (PRESENT(stdout)) std = stdout
@@ -1368,7 +1368,7 @@ end subroutine DisplayElements
 !> input string; note that coordinates can be entered in decimal or in fractional
 !> notation, hence the somewhat convoluted way of interpreting this string...
 !
-!> @param list	string typed in by the user
+!> @param list  string typed in by the user
 !> @param pt set of 5 reals returned to the calling routine
 !
 !> @date   10/13/98 MDG 1.0 original
@@ -1381,14 +1381,14 @@ subroutine extractposition(list,pt)
 
 IMPLICIT NONE
 
-character(1),INTENT(IN)               :: list(256)				!< input string
-real(kind=sgl),INTENT(OUT)        	:: pt(5)				!< output real array
-integer(kind=irg)           		:: comma(6),slash(5),period(5), &
-					   ccnt,scnt,pcnt,pp,i,j,hcnt, &
-                              		   ip,ipt,icnt,nd,n,k,ns		!< auxiliary variables
-integer(kind=irg),parameter 		:: nmb(48:57)=(/0,1,2,3,4,5,6,7,8,9/)	!< list of numbers
-real(kind=dbl)              		:: nominator,denominator,x		!< used for fraction interpretation
-logical                     		:: hasperiod				!< used for decimal interpretation
+character(1),INTENT(IN)                 :: list(256)                              !< input string
+real(kind=sgl),INTENT(OUT)              :: pt(5)                                !< output real array
+integer(kind=irg)                       :: comma(6),slash(5),period(5), &
+                                           ccnt,scnt,pcnt,pp,i,j,hcnt, &
+                                           ip,ipt,icnt,nd,n,k,ns                !< auxiliary variables
+integer(kind=irg),parameter             :: nmb(48:57)=(/0,1,2,3,4,5,6,7,8,9/)   !< list of numbers
+real(kind=dbl)                          :: nominator,denominator,x              !< used for fraction interpretation
+logical                                 :: hasperiod                            !< used for decimal interpretation
 
 ! initalize a few variables
  comma(1:6) = 0
@@ -1525,11 +1525,11 @@ use constants
 
 IMPLICIT NONE
 
-type(unitcell),INTENT(IN)		:: cell
-real(kind=sgl),INTENT(OUT)		:: dens, avA, avZ
+type(unitcell),INTENT(IN)               :: cell
+real(kind=sgl),INTENT(OUT)              :: dens, avA, avZ
 
-real(kind=sgl)				:: AW, Z
-integer(kind=irg)			:: i, nat
+real(kind=sgl)                          :: AW, Z
+integer(kind=irg)                       :: i, nat
 
 ! compute the total atomic weight for the unit cell (g/mol)
 ! also compute the total atomic number
@@ -1578,11 +1578,11 @@ use io
 
 IMPLICIT NONE
 
-type(orientation),INTENT(OUT) 			:: orel			!< orientation relation type
-integer(kind=irg),OPTIONAL,INTENT(IN)		:: stdout
+type(orientation),INTENT(OUT)                   :: orel                 !< orientation relation type
+integer(kind=irg),OPTIONAL,INTENT(IN)           :: stdout
 
-real(kind=sgl)    				:: c1,c2		!< auxiliary variables
-integer(kind=irg)				:: io_int(6), std	!< used for IO
+real(kind=sgl)                                  :: c1,c2                !< auxiliary variables
+integer(kind=irg)                               :: io_int(6), std       !< used for IO
 
  std = 6
  if (PRESENT(stdout)) std = stdout
@@ -1638,14 +1638,14 @@ use io
 
 IMPLICIT NONE
 
-type(orientation),INTENT(INOUT)	:: orel		!< orientation relation type
-type(unitcell),pointer     :: cellA, cellB 
-character(2),INTENT(IN)        	:: direction  !< direction of transformation (AB or BA)
-real(kind=sgl)                 	:: TT(3,3)
+type(orientation),INTENT(INOUT) :: orel         !< orientation relation type
+type(unitcell),pointer          :: cellA, cellB 
+character(2),INTENT(IN)         :: direction  !< direction of transformation (AB or BA)
+real(kind=sgl)                  :: TT(3,3)
 
-real(kind=sgl)                 	:: r(3), p(3), Ep(3,3), E(3,3)
-real(kind=dbl)                 	:: dE(3,3)
-integer(kind=irg)              	:: i
+real(kind=sgl)                  :: r(3), p(3), Ep(3,3), E(3,3)
+real(kind=dbl)                  :: dE(3,3)
+integer(kind=irg)               :: i
 
 
 ! compute E matrix  [page 74]
@@ -1709,12 +1709,12 @@ function CalcsgHOLZ(cell,HOLZdata,gg,kt,lambda) result(exer)
 
 IMPLICIT NONE
 
-type(unitcell),pointer     :: cell
-type(HOLZentries),INTENT(INOUT)	:: HOLZdata
-real(kind=sgl),INTENT(IN)		:: gg(3), kt(3), lambda
+type(unitcell),pointer                  :: cell
+type(HOLZentries),INTENT(INOUT)         :: HOLZdata
+real(kind=sgl),INTENT(IN)               :: gg(3), kt(3), lambda
 
-real(kind=sgl)				:: exer, g1len, g2len
-real(kind=sgl)				:: ll(3), lpg(3), glen, gplen, LC1, LC2, LC3, sgdenom
+real(kind=sgl)                          :: exer, g1len, g2len
+real(kind=sgl)                          :: ll(3), lpg(3), glen, gplen, LC1, LC2, LC3, sgdenom
 
 
 glen = CalcLength(cell,gg,'r')
@@ -1770,14 +1770,14 @@ use error
 
 IMPLICIT NONE
 
-type(unitcell),pointer     :: cell
-type(HOLZentries),INTENT(INOUT)	:: HOLZdata
-integer(kind=irg),INTENT(IN)		:: uvw(3), fn(3)
-real(kind=sgl),INTENT(IN)		:: g1(3), g2(3)
+type(unitcell),pointer                  :: cell
+type(HOLZentries),INTENT(INOUT)         :: HOLZdata
+integer(kind=irg),INTENT(IN)            :: uvw(3), fn(3)
+real(kind=sgl),INTENT(IN)               :: g1(3), g2(3)
 
-real(kind=sgl)               		:: gmin,gam11,gam12,gam22, phi, glen, g3(3), c(3), gx(3), gy(3), gshort(3)
-integer(kind=irg),parameter  		:: inm = 8
-integer(kind=irg)            		:: ih,ik,il,NN, oi_int(1)
+real(kind=sgl)                          :: gmin,gam11,gam12,gam22, phi, glen, g3(3), c(3), gx(3), gy(3), gshort(3)
+integer(kind=irg),parameter             :: inm = 8
+integer(kind=irg)                       :: ih,ik,il,NN, oi_int(1)
 
 ! set some basic values
     HOLZdata%g1 = g1
@@ -1797,7 +1797,7 @@ integer(kind=irg)            		:: ih,ik,il,NN, oi_int(1)
     call TransSpace(cell,float(HOLZdata%FN),HOLZdata%FNr,'d','r')
     call NormVec(cell,HOLZdata%FNr,'r')
     HOLZdata%FNg = (/ CalcDot(cell,HOLZdata%FNr,HOLZdata%g1,'r'), CalcDot(cell,HOLZdata%FNr,HOLZdata%g2,'r'), &
-			CalcDot(cell,HOLZdata%FNr,g3,'r') /)
+                        CalcDot(cell,HOLZdata%FNr,g3,'r') /)
 
 ! look for the shortest reflection satisfying hu+kv+lw = 1
 ! This could be replaced by code from Jackson's paper (1987),
@@ -1884,30 +1884,30 @@ function GetHOLZcoordinates(cell,HOLZdata,gg,kt,lambda) result(pxy)
 
 IMPLICIT NONE
 
-type(unitcell),pointer     :: cell
-type(HOLZentries),INTENT(INOUT)	:: HOLZdata
-real(kind=sgl),INTENT(IN)		:: gg(3), kt(3), lambda
+type(unitcell),pointer                  :: cell
+type(HOLZentries),INTENT(INOUT)         :: HOLZdata
+real(kind=sgl),INTENT(IN)               :: gg(3), kt(3), lambda
 
-real(kind=sgl)				:: pxy(2), h1, h2, g11, g12, g22, z
-real(kind=sgl)				:: exer, correction, gxy(2), nx, ny, hh(3)
-integer(kind=irg)			:: N
+real(kind=sgl)                          :: pxy(2), h1, h2, g11, g12, g22, z
+real(kind=sgl)                          :: exer, correction, gxy(2), nx, ny, hh(3)
+integer(kind=irg)                       :: N
 
 ! get the Laue zone number
-	N = abs( HOLZdata%uvw(1)*gg(1) + HOLZdata%uvw(2)*gg(2) + HOLZdata%uvw(3)*gg(3) )
+        N = abs( HOLZdata%uvw(1)*gg(1) + HOLZdata%uvw(2)*gg(2) + HOLZdata%uvw(3)*gg(3) )
 
 ! get components of gg w.r.t. g1 and g2
-	hh = gg - N * HOLZdata%gshort 
-	h1 = CalcDot(cell,hh,HOLZdata%g1,'c')
-	h2 = CalcDot(cell,hh,HOLZdata%g2,'c')
-	g11 = CalcDot(cell,HOLZdata%g1,HOLZdata%g1,'c')
-	g12 = CalcDot(cell,HOLZdata%g1,HOLZdata%g2,'c')
-	g22 = CalcDot(cell,HOLZdata%g2,HOLZdata%g2,'c')
-	z = 1.0/(g12**2-g11*g22)
-    	nx = (g12*h2-g22*h1)*z
-    	ny = (g12*h1-g11*h2)*z
+        hh = gg - N * HOLZdata%gshort 
+        h1 = CalcDot(cell,hh,HOLZdata%g1,'c')
+        h2 = CalcDot(cell,hh,HOLZdata%g2,'c')
+        g11 = CalcDot(cell,HOLZdata%g1,HOLZdata%g1,'c')
+        g12 = CalcDot(cell,HOLZdata%g1,HOLZdata%g2,'c')
+        g22 = CalcDot(cell,HOLZdata%g2,HOLZdata%g2,'c')
+        z = 1.0/(g12**2-g11*g22)
+        nx = (g12*h2-g22*h1)*z
+        ny = (g12*h1-g11*h2)*z
 
 ! compute excitation error, including Laue center, foil normal, and HOLZ reflection.
-	exer = CalcsgHOLZ(cell,HOLZdata,gg,kt,lambda)
+        exer = CalcsgHOLZ(cell,HOLZdata,gg,kt,lambda)
 
 ! next, determine the drawing coordinates, first in terms of g1 and g2
         correction = 1.0/(1.0-lambda*HOLZdata%H*(float(N)+exer*HOLZdata%FNg(3)))

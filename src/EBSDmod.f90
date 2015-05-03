@@ -168,9 +168,6 @@ write (*,*) 'completed reading Euler angles'
 
 end subroutine EBSDreadangles
 
-
-
-
 !--------------------------------------------------------------------------
 !
 ! SUBROUTINE:EBSDreadMCfile
@@ -180,13 +177,14 @@ end subroutine EBSDreadangles
 !> @brief read angles from an angle file
 !
 !> @param enl EBSD name list structure
-!> @param accum_e energy histogram (square Lambert projection)
+!> @param acc energy structure
 !
 !> @date 06/24/14  MDG 1.0 original
 !> @date 11/18/14  MDG 1.1 removed enl%MCnthreads from file read
 !> @date 04/02/15  MDG 2.0 changed program input & output to HDF format
+!> @date 04/29/15  MDG 2.1 add optional parameter efile
 !--------------------------------------------------------------------------
-subroutine EBSDreadMCfile(enl,acc,verbose)
+subroutine EBSDreadMCfile(enl,acc,efile,verbose)
 
 use NameListTypedefs
 use files
@@ -198,12 +196,13 @@ IMPLICIT NONE
 
 type(EBSDNameListType),INTENT(INOUT)    :: enl
 type(EBSDLargeAccumType),pointer        :: acc
+character(fnlen),INTENT(IN),OPTIONAL    :: efile
 logical,INTENT(IN),OPTIONAL             :: verbose
 
 integer(kind=irg)                       :: istat, hdferr, nlines, nx
 logical                                 :: stat, readonly
 integer(HSIZE_T)                        :: dims3(3)
-character(fnlen)                        :: groupname, dataset 
+character(fnlen)                        :: groupname, dataset, energyfile 
 character(fnlen),allocatable            :: stringarray(:)
 
 integer(kind=irg),allocatable           :: acc_e(:,:,:)
@@ -211,10 +210,17 @@ integer(kind=irg),allocatable           :: acc_e(:,:,:)
 type(HDFobjectStackType),pointer        :: HDF_head
 
 
+! is the efile parameter present? If so, use it as the filename, otherwise use the enl%energyfile parameter
+if (PRESENT(efile)) then
+  energyfile = efile
+else
+  energyfile = enl%energyfile
+end if
+
 ! first, we need to check whether or not the input file is of the HDF5 forat type; if
 ! it is, we read it accordingly, otherwise we use the old binary format.
 !
-call h5fis_hdf5_f(trim(enl%energyfile), stat, hdferr)
+call h5fis_hdf5_f(trim(energyfile), stat, hdferr)
 
 if (stat) then 
 ! open the fortran HDF interface
@@ -224,7 +230,7 @@ if (stat) then
 
 ! open the MC file using the default properties.
   readonly = .TRUE.
-  hdferr =  HDF_openFile(enl%energyfile, HDF_head, readonly)
+  hdferr =  HDF_openFile(energyfile, HDF_head, readonly)
 
 ! open the namelist group
   groupname = 'NMLparameters'
@@ -321,7 +327,7 @@ else
 !====================================
   if (present(verbose)) call Message('opening '//trim(enl%energyfile), frm = "(A)")
 
-  open(dataunit,file=trim(enl%energyfile),status='unknown',form='unformatted')
+  open(dataunit,file=trim(energyfile),status='unknown',form='unformatted')
 
 ! read the program identifier
    read (dataunit) enl%MCprogname
@@ -354,7 +360,6 @@ if (present(verbose)) call Message(' -> completed reading '//trim(enl%energyfile
 end subroutine EBSDreadMCfile
 
 
-
 !--------------------------------------------------------------------------
 !
 ! SUBROUTINE:EBSDreadMasterfile
@@ -364,12 +369,12 @@ end subroutine EBSDreadMCfile
 !> @brief read EBSD master pattern from file
 !
 !> @param enl EBSD name list structure
-!> @param quatang array of unit quaternions (output)
+!> @param 
 !
 !> @date 06/24/14  MDG 1.0 original
 !> @date 04/02/15  MDG 2.0 changed program input & output to HDF format
 !--------------------------------------------------------------------------
-subroutine EBSDreadMasterfile(enl, master, verbose)
+subroutine EBSDreadMasterfile(enl, master, mfile, verbose)
 
 use NameListTypedefs
 use files
@@ -382,6 +387,7 @@ IMPLICIT NONE
 
 type(EBSDNameListType),INTENT(INOUT)    :: enl
 type(EBSDMasterType),pointer            :: master
+character(fnlen),INTENT(IN),OPTIONAL    :: mfile
 logical,INTENT(IN),OPTIONAL             :: verbose
 
 real(kind=sgl),allocatable              :: sr(:,:,:) 
@@ -394,7 +400,7 @@ integer(kind=irg)                       :: istat
 logical                                 :: stat, readonly
 integer(kind=irg)                       :: hdferr, nlines
 integer(HSIZE_T)                        :: dims(1), dims4(4)
-character(fnlen)                        :: groupname, dataset
+character(fnlen)                        :: groupname, dataset, masterfile
 character(fnlen),allocatable            :: stringarray(:)
 
 type(HDFobjectStackType),pointer        :: HDF_head
@@ -404,15 +410,22 @@ call h5open_f(hdferr)
 
 nullify(HDF_head, HDF_head)
 
+! is the mfile parameter present? If so, use it as the filename, otherwise use the enl%masterfile parameter
+if (PRESENT(mfile)) then
+  masterfile = mfile
+else
+  masterfile = enl%masterfile
+end if
+
 ! first, we need to check whether or not the input file is of the HDF5 forat type; if
 ! it is, we read it accordingly, otherwise we use the old binary format.
 !
-call h5fis_hdf5_f(trim(enl%masterfile), stat, hdferr)
+call h5fis_hdf5_f(trim(masterfile), stat, hdferr)
 
 if (stat) then 
 ! open the master file 
   readonly = .TRUE.
-  hdferr =  HDF_openFile(enl%masterfile, HDF_head, readonly)
+  hdferr =  HDF_openFile(masterfile, HDF_head, readonly)
 
 ! open the namelist group
   groupname = 'NMLparameters'
@@ -440,7 +453,7 @@ if (stat) then
   dataset = 'numEbins'
   enl%nE = HDF_readDatasetInteger(dataset, HDF_head)
 ! make sure that MC and Master results are compatible
-  if (enl%numEbins.ne.enl%nE) then
+  if ((enl%numEbins.ne.enl%nE).and.(.not.PRESENT(mfile))) then
     call Message('Energy histogram and Lambert stack have different energy dimension; aborting program', frm = "(A)")
     call HDF_pop(HDF_head,.TRUE.)
     stop
@@ -490,7 +503,7 @@ else
 ! ----- Read energy-dispersed Lambert projections (master pattern)
 ! this has been updated on 3/26/14 to accommodate the new EBSDmaster file format
 !====================================
-  open(unit=dataunit,file=trim(enl%masterfile),status='old',form='unformatted')
+  open(unit=dataunit,file=trim(masterfile),status='old',form='unformatted')
   read (dataunit) enl%Masterprogname
 ! read the version number
   read (dataunit) enl%Masterscversion
@@ -528,6 +541,175 @@ end if
 if (present(verbose)) call Message(' -> completed reading '//trim(enl%masterfile), frm = "(A)")
 
 end subroutine EBSDreadMasterfile
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:EBSDreadMasterfile_overlap
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read EBSD master pattern from file
+!
+!> @param enl EBSDoverlap name list structure
+!> @param 
+!
+!> @date 06/24/14  MDG 1.0 original
+!> @date 04/02/15  MDG 2.0 changed program input & output to HDF format
+!--------------------------------------------------------------------------
+subroutine EBSDreadMasterfile_overlap(enl, master, mfile, verbose)
+
+use NameListTypedefs
+use files
+use io
+use HDF5
+use HDFsupport
+
+
+IMPLICIT NONE
+
+type(EBSDoverlapNameListType),INTENT(INOUT)    :: enl
+type(EBSDMasterType),pointer            :: master
+character(fnlen),INTENT(IN),OPTIONAL    :: mfile
+logical,INTENT(IN),OPTIONAL             :: verbose
+
+real(kind=sgl),allocatable              :: sr(:,:,:) 
+real(kind=sgl),allocatable              :: EkeVs(:) 
+integer(kind=irg),allocatable           :: atomtype(:)
+
+real(kind=sgl),allocatable              :: srtmp(:,:,:,:)
+integer(kind=irg)                       :: istat
+
+logical                                 :: stat, readonly
+integer(kind=irg)                       :: hdferr, nlines
+integer(HSIZE_T)                        :: dims(1), dims4(4)
+character(fnlen)                        :: groupname, dataset, masterfile
+character(fnlen),allocatable            :: stringarray(:)
+
+type(HDFobjectStackType),pointer        :: HDF_head
+
+! open the fortran HDF interface
+call h5open_f(hdferr)
+
+nullify(HDF_head, HDF_head)
+
+! is the mfile parameter present? If so, use it as the filename, otherwise use the enl%masterfile parameter
+if (PRESENT(mfile)) then
+  masterfile = mfile
+else
+  masterfile = enl%masterfile
+end if
+
+! first, we need to check whether or not the input file is of the HDF5 forat type; if
+! it is, we read it accordingly, otherwise we use the old binary format.
+!
+call h5fis_hdf5_f(trim(masterfile), stat, hdferr)
+
+if (stat) then 
+! open the master file 
+  readonly = .TRUE.
+  hdferr =  HDF_openFile(masterfile, HDF_head, readonly)
+
+! open the namelist group
+  groupname = 'NMLparameters'
+  hdferr = HDF_openGroup(groupname, HDF_head)
+
+  groupname = 'EBSDMasterNameList'
+  hdferr = HDF_openGroup(groupname, HDF_head)
+
+! read all the necessary variables from the namelist group
+  dataset = 'energyfile'
+  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  enl%Masterenergyfile = trim(stringarray(1))
+  deallocate(stringarray)
+
+  dataset = 'npx'
+  enl%npx = HDF_readDatasetInteger(dataset, HDF_head)
+  enl%npy = enl%npx
+
+  call HDF_pop(HDF_head)
+  call HDF_pop(HDF_head)
+
+  groupname = 'EMData'
+  hdferr = HDF_openGroup(groupname, HDF_head)
+
+  dataset = 'numEbins'
+  enl%nE = HDF_readDatasetInteger(dataset, HDF_head)
+
+  dataset = 'numset'
+  enl%numset = HDF_readDatasetInteger(dataset, HDF_head)
+
+  dataset = 'squhex'
+  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  enl%sqorhe = trim(stringarray(1))
+  deallocate(stringarray)
+
+  dataset = 'sr'
+  srtmp = HDF_readDatasetFloatArray4D(dataset, dims4, HDF_head)
+  allocate(master%sr(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE),stat=istat)
+  master%sr = sum(srtmp,4)
+  deallocate(srtmp)
+
+  dataset = 'xtalname'
+  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  enl%Masterxtalname = trim(stringarray(1))
+  deallocate(stringarray)
+
+  call HDF_pop(HDF_head)
+
+  groupname = 'EMheader'
+  hdferr = HDF_openGroup(groupname, HDF_head)
+
+  dataset = 'ProgramName'
+  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  enl%Masterprogname = trim(stringarray(1))
+  deallocate(stringarray)
+  
+  dataset = 'Version'
+  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  enl%Masterscversion = trim(stringarray(1))
+  deallocate(stringarray)
+  
+  call HDF_pop(HDF_head,.TRUE.)
+
+! close the fortran HDF interface
+  call h5close_f(hdferr)
+
+else
+!====================================
+! ----- Read energy-dispersed Lambert projections (master pattern)
+! this has been updated on 3/26/14 to accommodate the new EBSDmaster file format
+!====================================
+  open(unit=dataunit,file=trim(masterfile),status='old',form='unformatted')
+  read (dataunit) enl%Masterprogname
+! read the version number
+  read (dataunit) enl%Masterscversion
+! then the name of the crystal data file
+  read (dataunit) enl%Masterxtalname
+! then the name of the corresponding Monte Carlo data file
+  read (dataunit) enl%Masterenergyfile
+! energy information and array size    
+  read (dataunit) enl%npx,enl%npy,enl%nE,enl%numset
+  allocate(master%sr(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE),srtmp(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE,enl%numset), &
+           EkeVs(enl%nE),atomtype(enl%numset),stat=istat)
+  read (dataunit) EkeVs
+  read (dataunit) atomtype
+  deallocate(EkeVs, atomtype)   ! arrays are only needed by IDL visualization routine
+! is this a regular (square) or hexagonal projection ?
+  read (dataunit) enl%sqorhe
+! and finally the results array
+  read (dataunit) srtmp
+! convert to a smaller array by summing over all atom types 
+! [in a later version of the program we might allow for the 
+! user to request an element specific EBSD pattern calculation]
+  master%sr = sum(srtmp,4)
+  deallocate(srtmp)
+  close(unit=dataunit,status='keep')
+end if
+!====================================
+
+if (present(verbose)) call Message(' -> completed reading '//trim(enl%masterfile), frm = "(A)")
+
+end subroutine EBSDreadMasterfile_overlap
 
 
 
@@ -719,9 +901,9 @@ integer(kind=irg)                                   :: ii,jj,kk,ierr,istat,pp,qq
 allocate(master_twin(-enl%npx:enl%npx,-enl%npy:enl%npy,1:enl%nE),stat=istat)
 
 q = (/ dsqrt(3.D0)/2.D0,1/dsqrt(3.D0)/2.D0,1/dsqrt(3.D0)/2.D0,1/dsqrt(3.D0)/2.D0 /)
+
 scl = float(enl%npx) / LPs%sPio2
 
-do ii = 1,enl%nE
     master_twin = 0.0
     do jj = -enl%npx,enl%npx
         do kk = -enl%npy,enl%npy
@@ -747,11 +929,10 @@ do ii = 1,enl%nE
             dxm = 1.0 - dx
             dym = 1.0 - dy
 
-            master_twin(jj,kk,ii) = master%sr(nix,niy,ii)*dxm*dym + master%sr(nixp,niy,ii)*dx*dym + &
-                                    master%sr(nix,niyp,ii)*dxm*dy + master%sr(nixp,niyp,ii)*dx*dy
+            master_twin(jj,kk,1:enl%nE) = master%sr(nix,niy,1:enl%nE)*dxm*dym + master%sr(nixp,niy,1:enl%nE)*dx*dym + &
+                                    master%sr(nix,niyp,1:enl%nE)*dxm*dy + master%sr(nixp,niyp,1:enl%nE)*dx*dy
         end do
     end do
-end do
 master%sr = 0.5D0 * (master_twin + master%sr)
 
 call Message(' -> completed superimposing twin and regular master patterns', frm = "(A)")
@@ -793,7 +974,7 @@ real(kind=dbl),allocatable                          :: master_rotated(:,:,:)
 type(EBSDLargeAccumType),pointer                    :: acc
 logical                                             :: verbose
 real(kind=dbl)                                      :: Lamproj(2),dc(3),dc_new(3),dx,dy,dxm,dym,ixy(2),scl
-integer(kind=irg)                                   :: nix,niy,nxip,niyp
+integer(kind=irg)                                   :: nix,niy,nixp,niyp
 integer(kind=irg)                                   :: ii,jj,kk,ierr,istat,pp,qq
 
 allocate(master_rotated(-enl%npx:enl%npx,-enl%npy:enl%npy,1:enl%nE),stat=istat)

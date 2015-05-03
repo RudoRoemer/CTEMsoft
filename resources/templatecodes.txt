@@ -12,6 +12,7 @@
 020EMMC.template
 021EMEBSDmaster.template
 022EMEBSD.template
+023EMEBSDoverlap.template
 030EMGAMMA.template
 040EMECP.template
 041EMECCI.template

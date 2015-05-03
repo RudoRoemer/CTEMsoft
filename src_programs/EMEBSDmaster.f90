@@ -116,6 +116,7 @@ end program EMEBSDmaster
 !> @date 04/14/15  MDG 5.2 modified HDF5 output using hyperslabs
 !> @date 04/15/15  MDG 5.3 debugged file closing problem, mostly in HDFsupport.f90
 !> @date 04/15/15  MDG 5.4 corrected offset reading of accum_z array
+!> @date 04/27/15  MDG 5.5 reactivate the hexagonal code; needs to be debugged
 !--------------------------------------------------------------------------
 subroutine ComputeMasterPattern(emnl, progname, nmldeffile)
 
@@ -154,8 +155,8 @@ integer(kind=irg)      :: isym,i,j,ik,npy,ipx,ipy,debug,iE,izz, izzmax, iequiv(2
                         numk, & ! number of independent incident beam directions
                         ir,nat(100),kk(3), npyhex, skip, ijmax, one, NUMTHREADS, TID, &
                         numset,n,ix,iy,iz, io_int(6), nns, nnw, nref,  &
-                        istat,gzero,ic,ip,ikk, totstrong, totweak     ! counters
-real(kind=dbl)         :: tpi,Znsq, kkl, DBWF, kin !
+                        istat,gzero,ic,ip,ikk, totstrong, totweak, jh     ! counters
+real(kind=dbl)         :: tpi,Znsq, kkl, DBWF, kin, delta, h, lambda, omtl, srt !
 real(kind=sgl)          :: io_real(5), selE, kn, FN(3), kkk(3)
 real(kind=sgl),allocatable      :: sr(:,:,:,:), srhex(:,:,:,:), EkeVs(:), svals(:) ! results
 complex(kind=dbl)               :: czero
@@ -429,7 +430,7 @@ deallocate(accum_z)
 ! in the trigonal/hexagonal case, we need intermediate storage arrays
   if (usehex) then
    npyhex = nint(2.0*float(npy)/sqrt(3.0))
-   allocate(srhex(-emnl%npx:emnl%npx,-npyhex:npyhex,1:numEbins,1:numset),stat=istat)
+   allocate(srhex(-emnl%npx:emnl%npx,-npyhex:npyhex,1,1:numset),stat=istat)
   end if
 
 ! set various arrays to zero
@@ -729,43 +730,38 @@ energyloop: do iE=numEbins,1,-1
 ! Finally, if this was sampled on a hexagonal array, we need to do barycentric interpolation
 ! to the standard square array for final output and use of the subsequent program.
 ! [this interpolation scheme must be verified; it is possible that there is an off-by-one error somewhere ...]
-!if (usehex) then
-!  delta = dsqrt(2.D0)/dble(npx)
-!  srt = 2.D0/dsqrt(3.D0)
-!! copy the central row without modifications
-!  sr(-npx:npx,0) = srhex(-npx:npx,0)
-!  srkin(-npx:npx,0) = srkinhex(-npx:npx,0)
-!! we'll go through the array with pairs of horizontal rows at a time
-!  do j=1,npy-1
-!! determine which way the triangle is oriented for this row of the square array
-!    jh = floor(j*srt)
-!    if (mod(jh,2).eq.0) then ! even numbers mean triangle points down
-!      h = delta/srt - (j*delta - float(jh)*delta/srt)
-!      lambda = 0.5D0 - h/delta/dsqrt(3.D0)
-!      omtl = 1.D0-2.D0*lambda
-!      do i=-npx+1,npx-1  ! perform the barycentric interpolation
+if (usehex) then
+  delta = dsqrt(2.D0)/dble(emnl%npx)
+  srt = 2.D0/dsqrt(3.D0)
+! copy the central row without modifications
+  sr(-emnl%npx:emnl%npx,0,1,1:numset) = srhex(-emnl%npx:emnl%npx,0,1,1:numset)
+! we'll go through the array with pairs of horizontal rows at a time
+  do j=1,npy-1
+! determine which way the triangle is oriented for this row of the square array
+    jh = floor(j*srt)
+    if (mod(jh,2).eq.0) then ! even numbers mean triangle points down
+      h = delta/srt - (j*delta - float(jh)*delta/srt)
+      lambda = 0.5D0 - h/delta/dsqrt(3.D0)
+      omtl = 1.D0-2.D0*lambda
+      do i=-emnl%npx+1,emnl%npx-1  ! perform the barycentric interpolation
+! positive row, pay attention to hexagonal coordinate transformation !
+        sr(i,j,1,1:numset) = ( srhex(i-1,jh+1,1,1:numset) + srhex(i,jh+1,1,1:numset) )*lambda + omtl * srhex(i,jh,1,1:numset)
+! negative row
+        sr(i,-j,1,1:numset) = ( srhex(i-1,-jh-1,1,1:numset) + srhex(i,-jh-1,1,1:numset) )*lambda + omtl * srhex(i,-jh,1,1:numset)
+      end do
+    else
+      h = j*delta - float(jh)*delta/srt
+      lambda = 0.5D0 - h/delta/dsqrt(3.D0)
+      omtl = 1.D0-2.D0*lambda
+      do i=-emnl%npx+1,emnl%npx-1  ! perform the barycentric interpolation
 !! positive row, pay attention to hexagonal coordinate transformation !
-!	sr(i,j) = ( srhex(i-1,jh+1) + srhex(i,jh+1) )*lambda + omtl * srhex(i,jh)
-!	srkin(i,j) = ( srkinhex(i-1,jh+1) + srkinhex(i,jh+1) )*lambda + omtl * srkinhex(i,jh)
-!! negative row
-!	sr(i,-j) = ( srhex(i-1,-jh-1) + srhex(i,-jh-1) )*lambda + omtl * srhex(i,-jh)
-!	srkin(i,-j) = ( srkinhex(i-1,-jh-1) + srkinhex(i,-jh-1) )*lambda + omtl * srkinhex(i,-jh)
-!      end do
-!    else
-!      h = j*delta - float(jh)*delta/srt
-!      lambda = 0.5D0 - h/delta/dsqrt(3.D0)
-!      omtl = 1.D0-2.D0*lambda
-!      do i=-npx+1,npx-1  ! perform the barycentric interpolation
-!! positive row, pay attention to hexagonal coordinate transformation !
-!	sr(i,j) = ( srhex(i-1,jh) + srhex(i,jh) )*lambda + omtl * srhex(i,jh+1)
-!	srkin(i,j) = ( srkinhex(i-1,jh) + srkinhex(i,jh) )*lambda + omtl * srkinhex(i,jh+1)
-!! negative row
-!	sr(i,-j) = ( srhex(i-1,-jh) + srhex(i,-jh) )*lambda + omtl * srhex(i,-jh-1)
-!	srkin(i,-j) = ( srkinhex(i-1,-jh) + srkinhex(i,-jh) )*lambda + omtl * srkinhex(i,-jh-1)
-!      end do
-!    end if
-!  end do
-!end if
+        sr(i,j,1,1:numset) = ( srhex(i-1,jh,1,1:numset) + srhex(i,jh,1,1:numset) )*lambda + omtl * srhex(i,jh+1,1,1:numset)
+! negative row
+        sr(i,-j,1,1:numset) = ( srhex(i-1,-jh,1,1:numset) + srhex(i,-jh,1,1:numset) )*lambda + omtl * srhex(i,-jh-1,1,1:numset)
+      end do
+    end if
+  end do
+end if
 
 ! since these computations can take a long time, here we store 
 ! all the output at the end of each pass through the energyloop.
@@ -810,37 +806,6 @@ energyloop: do iE=numEbins,1,-1
 
 ! and close the fortran hdf interface
   call h5close_f(hdferr)
-
-
-! open(unit=dataunit,file=trim(emnl%outname),status='unknown',action='write',form = 'unformatted')
-! write the program identifier
-! write (dataunit) progname
-! write the version number
-! write (dataunit) scversion
-! then the name of the crystal data file
-! write (dataunit) xtalname
-! then the name of the corresponding Monte Carlo data file
-! write (dataunit) emnl%energyfile
-! energy information and array size    
-! if (emnl%Esel.eq.-1) then
-!   write (dataunit) emnl%npx,npy,numEbins,numset
-!   write (dataunit) EkeVs
-! else
-!   one = 1
-!   write (dataunit) emnl%npx,npy,one,numset 
-!   write (dataunit) selE
-! end if
-! atom type array for asymmetric unit  
-!  write (dataunit) cell%ATOM_type(1:numset)
-! is this a regular (square) or hexagonal projection ?
-! if (usehex) then 
-!   write (dataunit) 'hexago'
-! else
-!   write (dataunit) 'square'
-! end if
-! and finally the results array
-! write (dataunit) sr
-! close(unit=dataunit,status='keep')
 
  if ((emnl%Esel.eq.-1).and.(iE.ne.1)) then 
   call Message('Intermediate data stored in file '//trim(emnl%outname), frm = "(A/)")

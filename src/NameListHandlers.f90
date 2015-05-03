@@ -778,6 +778,80 @@ end subroutine GetEBSDNameList
 
 !--------------------------------------------------------------------------
 !
+! SUBROUTINE:GetEBSDoverlapNameList
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read namelist file and fill enl structure (used by EMEBSDoverlap.f90)
+!
+!> @param nmlfile namelist file name
+!> @param enl EBSD name list structure
+!
+!> @date 04/29/15  MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine GetEBSDoverlapNameList(nmlfile, enl)
+
+use error
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                     :: nmlfile
+type(EBSDoverlapNameListType),INTENT(INOUT)     :: enl
+
+integer(kind=irg)       :: stdout
+real(kind=sgl)          :: tA(3)
+real(kind=sgl)          :: tB(3)
+real(kind=sgl)          :: gA(3)
+real(kind=sgl)          :: gB(3)
+character(fnlen)        :: masterfileA
+character(fnlen)        :: masterfileB
+character(fnlen)        :: datafile
+
+! define the IO namelist to facilitate passing variables to the program.
+namelist  / EBSDdata / stdout, tA, tB, gA, gB, masterfileA, masterfileB, datafile
+
+! set the input parameters to default values (except for xtalname, which must be present)
+stdout          = 6
+tA              = (/0.0, 0.0, 1.0/)             ! direction vector in crystal A
+tB              = (/0.0, 0.0, 1.0/)             ! direction vector in crystal B
+gA              = (/1.0, 0.0, 0.0/)             ! plane normal in crystal A
+gB              = (/1.0, 0.0, 0.0/)             ! plane normal in crystal B
+masterfileA     = 'undefined'   ! filename
+masterfileB     = 'undefined'   ! filename
+datafile        = 'undefined'   ! output file name
+
+! read the namelist file
+ open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+ read(UNIT=dataunit,NML=EBSDdata)
+ close(UNIT=dataunit,STATUS='keep')
+
+! check for required entries
+ if (trim(masterfileA).eq.'undefined') then
+  call FatalError('EMEBSD:',' master pattern file name A is undefined in '//nmlfile)
+ end if
+
+ if (trim(masterfileB).eq.'undefined') then
+  call FatalError('EMEBSD:',' master pattern file name B is undefined in '//nmlfile)
+ end if
+
+ if (trim(datafile).eq.'undefined') then
+  call FatalError('EMEBSD:',' output file name is undefined in '//nmlfile)
+ end if
+
+! if we get here, then all appears to be ok, and we need to fill in the emnl fields
+enl%stdout = stdout
+enl%tA = tA
+enl%tB = tB
+enl%gA = gA
+enl%gB = gB
+enl%masterfileA = masterfileA
+enl%masterfileB = masterfileB
+enl%datafile = datafile
+
+end subroutine GetEBSDoverlapNameList
+
+!--------------------------------------------------------------------------
+!
 ! SUBROUTINE:GetECPNameList
 !
 !> @author Marc De Graef, Carnegie Mellon University

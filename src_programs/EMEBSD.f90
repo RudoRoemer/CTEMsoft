@@ -137,6 +137,8 @@ allocate(acc%accum_e_detector(enl%numEbins,enl%numsx,enl%numsy), stat=istat)
 call EBSDGenerateDetector(enl, acc, master, verbose)
 deallocate(acc%accum_e)
 
+! call TwinCubicMasterPattern(enl, master)
+
 ! perform the zone axis computations for the knl input parameters
 call ComputeEBSDpatterns(enl, angles, acc, master, progname, nmldeffile)
 

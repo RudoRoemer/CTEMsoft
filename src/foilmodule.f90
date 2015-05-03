@@ -88,16 +88,16 @@ use rotations
 
 IMPLICIT NONE
 
-type(unitcell),pointer	        :: cell
+type(unitcell),pointer          :: cell
 type(foiltype),INTENT(INOUT)   :: foil
-integer(kind=sgl),INTENT(IN)	:: dinfo
+integer(kind=sgl),INTENT(IN)    :: dinfo
 
-real(kind=dbl)      		:: ey(3), ex(3), tt, dx, dy 
-real(kind=sgl)			:: io_real(3)
-real(kind=dbl)			:: cp,sp,cs,ss,cr,sr, ca, sa, a_fc(3,3)
-integer(kind=irg) 		:: i,j
-type(orientationtyped)		:: ot
-character(10)			:: pret
+real(kind=dbl)                  :: ey(3), ex(3), tt, dx, dy 
+real(kind=sgl)                  :: io_real(3)
+real(kind=dbl)                  :: cp,sp,cs,ss,cr,sr, ca, sa, a_fc(3,3)
+integer(kind=irg)               :: i,j
+type(orientationtyped)          :: ot
+character(10)                   :: pret
 
 ! determine the foil-to-microscope transformations [verified on 4/23/11, converted to quaternions on 6/4/13, 
 ! verified 10/30/13, and again on 11/11/13 after some changes elsewhere]
@@ -263,33 +263,33 @@ use rotations
 
 IMPLICIT NONE
 
-type(unitcell),pointer	        :: cell
+type(unitcell),pointer          :: cell
 type(foiltype),INTENT(INOUT)   :: foil
-character(fnlen),INTENT(IN)	:: foilnmlfile
-integer(kind=irg),INTENT(IN)	:: npix, npiy, dinfo
-real(kind=sgl),INTENT(IN)	:: L
+character(fnlen),INTENT(IN)     :: foilnmlfile
+integer(kind=irg),INTENT(IN)    :: npix, npiy, dinfo
+real(kind=sgl),INTENT(IN)       :: L
 
-integer(kind=irg)		:: i,j
-real(kind=sgl)			:: foilF(3), foilq(3), foilalP, foilalS, foilalR, foilbeP, &
-                          	foilz0, foilelmo(6,6),brx,bry,brxy,cpx,cpy,x, io_real(1)
-real(kind=dbl)			:: amat(3,3)
-real(kind=sgl), parameter 	:: cPi=3.1415926536
+integer(kind=irg)               :: i,j
+real(kind=sgl)                  :: foilF(3), foilq(3), foilalP, foilalS, foilalR, foilbeP, &
+                                foilz0, foilelmo(6,6),brx,bry,brxy,cpx,cpy,x, io_real(1)
+real(kind=dbl)                  :: amat(3,3)
+real(kind=sgl), parameter       :: cPi=3.1415926536
 
 namelist / foildata / foilF, foilq, foilalP, foilalS, foilalR, foilbeP, foilz0, foilelmo, brx, bry, brxy, cpx, cpy
 
 ! set the default values
- foilelmo = 0.0              		! elastic moduli
- foilF = (/ 0.0,0.0,1.0 /)   		! foil normal in direct space Bravais reference frame 
- foilq = (/ 1.0,0.0,0.0 /)   		! reciprocal space vector along primary tilt axis towards airlock
- foilalP = 0.0               		! primary tilt angle in degrees
- foilalS = 0.0               		! secondary tilt angle (for double tilt holder)
- foilalR = 0.0               		! secondary tilt angle (for rotation tilt holder)
- foilbeP = 0.0               		! angle of primary tilt axis w.r.t. image bottom edge
- foilz0 = 100.0              		! foil thickness in nm
- brx = 0.0                   		! parameters to describe the foil shape as a quadratic surface 
+ foilelmo = 0.0                         ! elastic moduli
+ foilF = (/ 0.0,0.0,1.0 /)              ! foil normal in direct space Bravais reference frame 
+ foilq = (/ 1.0,0.0,0.0 /)              ! reciprocal space vector along primary tilt axis towards airlock
+ foilalP = 0.0                          ! primary tilt angle in degrees
+ foilalS = 0.0                          ! secondary tilt angle (for double tilt holder)
+ foilalR = 0.0                          ! secondary tilt angle (for rotation tilt holder)
+ foilbeP = 0.0                          ! angle of primary tilt axis w.r.t. image bottom edge
+ foilz0 = 100.0                         ! foil thickness in nm
+ brx = 0.0                              ! parameters to describe the foil shape as a quadratic surface 
  bry = 0.0
  brxy = 0.0
- cpx = 0.0                  		! center of the foil quadratic surface within [-1,1] range in pixel coordinates
+ cpx = 0.0                              ! center of the foil quadratic surface within [-1,1] range in pixel coordinates
  cpy = 0.0
  
  if (dinfo.eq.1) then 

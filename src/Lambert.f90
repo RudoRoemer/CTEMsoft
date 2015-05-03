@@ -194,7 +194,7 @@ recursive function Lambert2DSquareForwardSingle(xy,ierr) result(res)
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)               :: xy(2)
-integer(kind=irg),INTENT(INOUT) :: ierr
+integer(kind=irg),INTENT(INOUT)         :: ierr
 real(kind=sgl)                          :: res(3), q, qq
 
 ierr = 0
@@ -244,7 +244,7 @@ recursive function Lambert2DSquareForwardDouble(xy,ierr) result(res)
 IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN)               :: xy(2)
-integer(kind=irg),INTENT(INOUT) :: ierr
+integer(kind=irg),INTENT(INOUT)         :: ierr
 real(kind=dbl)                          :: res(3), q, qq
 
 ierr = 0
