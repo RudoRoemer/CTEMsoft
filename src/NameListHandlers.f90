@@ -1161,7 +1161,6 @@ eulername = 'EulerAngles.txt'   ! output filename
 dmin = 0.04                     ! smallest d-spacing [nm]
 ncubochoric = 100               ! number of samples along the cubochoric edge length
 rnmpp = 0.2                     ! nm^{-1} per pattern pixel
-
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=inputlist)
@@ -1614,10 +1613,11 @@ integer(kind=irg)                                           :: imght
 integer(kind=irg)                                           :: imgwd
 integer(kind=irg)                                           :: nnk
 character(fnlen)                                            :: exptfile
+logical                                                     :: MeanSubtraction
 
 ! define the IO namelist to facilitate passing variables to the program.
 namelist /inputlist/ npix,ncubochoric,numexptsingle, numdictsingle, totnumexpt,voltage,dmin,thickness,rnmpp,xtalname, &
-imght, imgwd, exptfile, nnk
+imght, imgwd, exptfile, nnk, MeanSubtraction
 
 ! set some of the input parameters to default values
 npix = 0
@@ -1634,6 +1634,7 @@ imgwd = 0
 nnk = 40
 exptfile = 'undefined'
 totnumexpt = 0
+MeanSubtraction = .FALSE.
 
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
@@ -1681,6 +1682,7 @@ pednl%imgwd = imgwd
 pednl%exptfile = exptfile
 pednl%totnumexpt = totnumexpt
 pednl%nnk = nnk
+pednl%MeanSubtraction = MeanSubtraction
 
 end subroutine GetPEDIndxNameList
 

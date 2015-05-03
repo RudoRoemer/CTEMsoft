@@ -428,6 +428,8 @@ type PEDKINIndxListType
     integer(kind=irg)           :: imgwd
     integer(kind=irg)           :: nnk
     character(fnlen)            :: exptfile
+    logical                     :: MeanSubtraction
+
 end type PEDKINIndxListType
 
 type EBSDIndxListType

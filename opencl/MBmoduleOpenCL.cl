@@ -83,7 +83,20 @@ float2 conjg(float2 a)
 //> @date 02/16/15  SS  1.1 bug fixes and simplification using cmplxmult
 //--------------------------------------------------------------------------
 
-__kernel void ScatMat(__global float2* cl_expA,__global float2* cl_A,__global float2* cl_AA,__global float2* cl_AAA,__global int* arrsize,__global float2* cl_coeff,__global float2* cl_T1,__global float2* cl_T2,__global float2* cl_wavefncoeff,__global float2* cl_wavefncoeffintd,__global int* sqrsize,__global int* offset,__global int* arrsizesum,__global int* numdepth)
+__kernel void ScatMat(__global float2* cl_expA,
+                      __global float2* cl_A,
+                      __global float2* cl_AA,
+                      __global float2* cl_AAA,
+                      __global int* arrsize,
+                      __global float2* cl_coeff,
+                      __global float2* cl_T1,
+                      __global float2* cl_T2,
+                      __global float2* cl_wavefncoeff,
+                      __global float2* cl_wavefncoeffintd,
+                      __global int* sqrsize,
+                      __global int* offset,
+                      __global int* arrsizesum,
+                      __global int* numdepth)
 {
     int tx,ty,id;
     tx = get_global_id(0);
@@ -263,7 +276,21 @@ __kernel void ScatMat(__global float2* cl_expA,__global float2* cl_A,__global fl
 //> @date 02/19/15  SS  1.0 Original
 //--------------------------------------------------------------------------
 
-__kernel void CalcLgh(__global float2* cl_expA,__global float2* cl_A,__global float2* cl_AA,__global float2* cl_AAA,__global int* arrsize,__global float2* cl_coeff,__global float2* cl_T1,__global float2* cl_T2,__global float2* cl_wavefncoeff,__global float2* cl_wavefncoeffintd,__global int* sqrsize,__global int* offset,__global int* arrsizesum,const int numdepth,__global float* lambdas)
+__kernel void CalcLgh(__global float2* cl_expA,
+                      __global float2* cl_A,
+                      __global float2* cl_AA,
+                      __global float2* cl_AAA,
+                      __global int* arrsize,
+                      __global float2* cl_coeff,
+                      __global float2* cl_T1,
+                      __global float2* cl_T2,
+                      __global float2* cl_wavefncoeff,
+                      __global float2* cl_wavefncoeffintd,
+                      __global int* sqrsize,
+                      __global int* offset,
+                      __global int* arrsizesum,
+                      const int numdepth,
+                      __global float* lambdas)
 {
     int tx,ty,id;
     tx = get_global_id(0);
@@ -461,7 +488,21 @@ __kernel void CalcLgh(__global float2* cl_expA,__global float2* cl_A,__global fl
 //> @date 02/19/15  SS  1.0 Original
 //--------------------------------------------------------------------------
 
-__kernel void CalcLghMaster(__global float2* cl_expA,__global float2* cl_offdiagonal,__global float* cl_diagonal,__global float2* cl_A,__global float2* cl_AA,__global float2* cl_AAA,__global int* arrsize,__global float2* cl_coeff,__global float2* cl_T1,__global float2* cl_T2,__global float2* cl_wavefncoeff,__global float2* cl_wavefncoeffintd,const int nn,__global int* sqrsize,const int numdepth,__global float* lambdas)
+__kernel void CalcLghMaster(__global float2* cl_expA,
+                            __global float2* cl_offdiagonal,
+                            __global float2* cl_diagonal,
+                            __global float2* cl_AA,
+                            __global float2* cl_AAA,
+                            __global float2* cl_coeff,
+                            __global float2* cl_T1,
+                            __global float2* cl_T2,
+                            __global float2* cl_wavefncoeff,
+                            __global float2* cl_wavefncoeffintd,
+                            const int nn,
+                            __global int* sqrsize,
+                            const int numdepth,
+                            __global float* lambdas,
+                            __global float2* cl_A)
 {
     int tx,ty,id;
     tx = get_global_id(0);
@@ -469,31 +510,29 @@ __kernel void CalcLghMaster(__global float2* cl_expA,__global float2* cl_offdiag
     id = get_global_size(0)*ty + tx;
     
     float2 sum = (float2)(0.0f,0.0f);
-    //int nn = arrsize[id];
     int off = id*nn*nn;
     int off2 = id*nn;
     int ns = sqrsize[id];
     
-    float2 elem1 = (float2)(0.0f,0.0f);
-    float2 elem2 = (float2)(0.0f,0.0f);
+    // fillingin the A matrix
     
+    for (int i = 0; i < nn; i++){
+        for (int j = 0; j < nn; j++){
+            cl_A[off + i*nn + j] = cl_offdiagonal[i*nn + j]/powr(2.0f,ns);
+                     
+        }
+        cl_A[off + i*(nn+1)] = cl_diagonal[off2 + i];
+
+    }
+    
+    
+  
     // calculating A^2 and A^3
+    
     for (int i = 0; i < nn; i++){
         for (int j = 0; j < nn; j++){
             for (int k = 0; k < nn; k++){
-                if (k == i) {
-                    elem1 = cl_diagonal[off2 + i];
-                }
-                else {
-                    elem1 = cl_offdiagonal[off + i*nn + k];
-                }
-                if (k ==j) {
-                    elem2 = cl_diagonal[off2 + j];
-                }
-                else {
-                    elem2 = cl_offdiagonal[off + k*nn + j];
-                }
-                sum += cmplxmult(elem1,elem2);
+                sum += cmplxmult(cl_A[off + i*nn + k],cl_A[off + k*nn + j]);
             }
             cl_AA[off + i*nn + j] = sum;
             sum = (float2)(0.0f,0.0f);
@@ -652,5 +691,5 @@ __kernel void CalcLghMaster(__global float2* cl_expA,__global float2* cl_offdiag
     // we now have the Lgh matrix for depth integrated intensity calculations
     // ready to quit code
     
-    
+
 }

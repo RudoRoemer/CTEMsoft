@@ -466,10 +466,91 @@ type(reflisttype),pointer               :: rltmpa, rltmpb
   
 end subroutine CalcSgh
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: CalcSghMaster
+!
+!> @author Saransh Singh, Carnegie Mellon University
+!
+!> @brief compute structure factor-like array for EBSD, ECCI and ECP simulations
+!> WITHOUT the application of bethe potential (replace nexts pointer by next)
+!
+!> @param cell unit cell pointer
+!> @param nn dimension of array
+!> @param Sgh output array
+!> @param nat normalization array
+!
+!> @date 04/22/15  SS 1.0 original
+!--------------------------------------------------------------------------
+recursive subroutine CalcSghMaster(cell,reflist,nn,numset,Sgh,nat)
+
+use local
+use typedefs
+use crystal
+use gvectors
+use constants
+use symmetry
+
+IMPLICIT NONE
+
+type(unitcell),pointer                  :: cell
+type(reflisttype),pointer               :: reflist
+integer(kind=irg),INTENT(IN)            :: nn
+integer(kind=irg),INTENT(IN)            :: numset
+complex(kind=dbl),INTENT(INOUT)         :: Sgh(nn,nn,numset)
+integer(kind=irg),INTENT(INOUT)         :: nat(numset)
+
+integer(kind=irg)                       :: ip, ir, ic, kkk(3), ikk, n
+real(kind=sgl)                          :: Znsq, DBWF, kkl
+complex(kind=dbl)                       :: carg
+real(kind=dbl)                          :: ctmp(192,3),arg, tpi
+type(reflisttype),pointer               :: rltmpa, rltmpb
+
+tpi = 2.D0 * cPi
+
+! for each special position we need to compute its contribution to the Sgh array
+do ip=1,cell % ATOM_ntype
+    call CalcOrbit(cell,ip,n,ctmp)
+    nat(ip) = cell%numat(ip)
+! get Zn-squared for this special position, and include the site occupation parameter as well
+    Znsq = float(cell%ATOM_type(ip))**2 * cell%ATOM_pos(ip,4)
+! loop over all contributing reflections
+! ir is the row index
+    rltmpa => reflist%next    ! point to the front of the list
+    do ir=1,nn
+! ic is the column index
+        rltmpb => reflist%next    ! point to the front of the list
+        do ic=1,nn
+            kkk = rltmpb%hkl - rltmpa%hkl
+! We'll assume isotropic Debye-Waller factors for now ...
+! That means we need the square of the length of s=  kk^2/4
+            kkl = 0.25 * CalcLength(cell,float(kkk),'r')**2
+! Debye-Waller exponential times Z^2
+            DBWF = Znsq * exp(-cell%ATOM_pos(ip,5)*kkl)
+! here is where we insert the proper weight factor, Z^2 exp[-M_{h-g}]
+! and also the detector geometry...   For now, we do nothing with the detector
+! geometry; the Rossouw et al 1994 paper lists a factor A that does not depend
+! on anything in particular, so we assume it is 1.
+            do ikk=1,n
+! get the argument of the complex exponential
+!         arg = tpi*sum(kkk(1:3)*ctmp(ikk,1:3))
+                arg = tpi*sum(kkk(1:3)*cell%apos(ip,ikk,1:3))
+                carg = dcmplx(dcos(arg),dsin(arg))
+! multiply with the prefactor and add
+                Sgh(ir,ic,ip) = Sgh(ir,ic,ip) + carg * dcmplx(DBWF,0.D0)
+            end do
+            rltmpb => rltmpb%next  ! move to next column-entry
+        end do
+        rltmpa => rltmpa%next  ! move to next row-entry
+    end do
+end do
+
+end subroutine CalcSghMaster
+
 ! ###################################################################
-! 
+!
 ! SUBROUTINE: CalcLgh
-! 
+!
 !> @author Marc De Graef, Carnegie Mellon University
 !
 !> @brief compute the Lgh matrix for EBSD, ECCI, ECP, etc simulations
@@ -714,6 +795,78 @@ nullify(rlw)
 
 end subroutine GetDynMat
 
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: GetDynMatMaster
+!
+!> @author Saransh, Carnegie Mellon University
+!
+!> @brief compute the dynamical matrix, WITHOUT Bethe potentials
+!
+!> @param cell unit cell pointer
+!> @param listroot top of the main reflection list
+!> @param listrootw top of the weak reflection list
+!> @param Dyn dynamical scattering structure
+!> @param nns number of strong reflections
+!> @param nnw number of weak reflections
+!
+!> @date  04/22/14 MDG 1.0 new library version
+!> @date  06/15/14 MDG 2.0 updated for removal of globals
+!> @date  06/17/14 MDG 2.1 added listroot pointers etc to accommodate multiple threads
+!> @date  06/18/14 MDG 2.2 corrected some pointer allocation errors in other routines; this one now works fine.
+!--------------------------------------------------------------------------
+recursive subroutine GetDynMatMaster(cell, listroot, DynMat, nref)
+
+use local
+use typedefs
+use io
+use crystal
+use diffraction
+use kvectors
+use gvectors
+use constants
+
+IMPLICIT NONE
+
+type(unitcell),pointer           :: cell
+type(reflisttype),pointer        :: listroot
+complex(kind=dbl),INTENT(INOUT)  :: DynMat(nref,nref)
+integer(kind=irg),INTENT(IN)     :: nref
+
+complex(kind=dbl)                :: czero, ughp, uhph, weaksum
+real(kind=dbl)                   :: weaksgsum
+real(kind=sgl)                   :: Upz
+integer(kind=sgl)                :: ir, ic, ll(3), istat, wc
+type(reflisttype),pointer        :: rlr, rlc, rlw
+
+czero = cmplx(0.0,0.0,dbl)      ! complex zero
+
+nullify(rlr)
+nullify(rlc)
+
+DynMat = czero
+
+rlr => listroot%next
+ir = 1
+    do
+        if (.not.associated(rlr)) EXIT
+        rlc => listroot%next
+        ic = 1
+        do
+            if (.not.associated(rlc)) EXIT
+            if (ic.ne.ir) then  ! not a diagonal entry
+                ll = rlr%hkl - rlc%hkl
+                DynMat(ir,ic) = cell%LUT(ll(1),ll(2),ll(3))
+            end if
+            rlc => rlc%next
+            ic = ic + 1
+        end do
+        rlr => rlr%next
+        ir = ir+1
+    end do
+
+end subroutine GetDynMatMaster
 
 !--------------------------------------------------------------------------
 !
