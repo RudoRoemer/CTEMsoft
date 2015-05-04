@@ -174,6 +174,10 @@ use math
 use EBSDmod
 use cl
 use omp_lib
+use HDF5
+use HDFsupport
+use NameListHDFwriters
+use ISO_C_BINDING
 
 IMPLICIT NONE
 
@@ -210,7 +214,7 @@ real(kind=sgl),allocatable                          :: result(:),expt(:),dict(:)
 eulerarray(:,:),resultmain(:,:),resulttmp(:,:)
 integer(kind=irg),allocatable                       :: accum_e_MC(:,:)
 real(kind=4),allocatable                            :: meandict(:),meanexpt(:),wf(:),master_array(:,:)
-real(kind=sgl),allocatable                          :: EBSDpattern(:,:)
+real(kind=sgl),allocatable                          :: EBSDpattern(:,:),FZarray(:,:)
 integer(kind=irg)                                   :: i,j,ii,jj,kk,ll,mm,pp,qq
 integer(kind=irg)                                   :: FZcnt, pgnum, io_int(3), ncubochoric
 type(FZpointd),pointer                              :: FZlist, FZtmp
@@ -395,6 +399,17 @@ write (*,*) 'N = ',ncubochoric
 
 call sampleRFZ(ncubochoric, pgnum, FZcnt, FZlist)
 
+! allocate and fill FZarray for OpenMP parallelization
+allocate(FZarray(3,FZcnt),stat=istat)
+FZarray = 0.0
+
+FZtmp => FZlist
+
+do ii = 1,FZcnt
+    FZarray(1:3,ii) = FZtmp%rod(1:3)
+    FZtmp => FZtmp%next
+end do
+
 io_int(1) = FZcnt
 call WriteValue(' Number of incident beam directions       : ', io_int, 1, "(I8)")
 
@@ -405,7 +420,7 @@ if (istat .ne. 0) stop 'could not allocate result arrays'
 
 resultarray = 0.0
 
-allocate(indexarray(numdictsingle),stat=istat)
+allocate(indexarray(1:numdictsingle),stat=istat)
 if (istat .ne. 0) stop 'could not allocate index arrays'
 
 indexarray = 0
@@ -416,7 +431,7 @@ if (istat .ne. 0) stop 'could not allocate indexlist arrays'
 indexlist = 0
 
 do ii = 1,numdictsingle*ceiling(float(FZcnt)/float(numdictsingle))
-indexlist(ii) = ii
+    indexlist(ii) = ii
 end do
 
 allocate(resultmain(nnk,numexptsingle*ceiling(float(totnumexpt)/float(numexptsingle))),stat=istat)
@@ -451,80 +466,103 @@ call Message(' -> opened experimental file for I/O', frm = "(A)" )
 open(unit=iunitexpt,file='/Users/saranshsingh/Desktop/Recent work/CTEMDictIndxOpenCL/FrameData',&
     status='old',form='unformatted',access='direct',recl=recordsize,iostat=ierr)
 
-!$OMP PARALLEL PRIVATE(TID,ii,jj,imageexpt,imageexptflt) &
-!$OMP& SHARED(meandict,meanexpt)
+!!!!$OMP PARALLEL PRIVATE(TID,ii,jj,imageexpt,imageexptflt) &
+!!!!$OMP& SHARED(meandict,meanexpt)
 
-TID = OMP_GET_THREAD_NUM()
+!TID = OMP_GET_THREAD_NUM()
 
-if (TID .eq. 0) then
-    call Message(' -> Start calculating mean pattern for observed patterns', frm = "(A)" )
-    do ii = 1,totnumexpt
-        read(iunitexpt,rec=ii) imageexpt
-        imageexptflt = float(imageexpt(26:recordsize))
+!if (TID .eq. 0) then
+call Message(' -> Start calculating mean pattern for observed patterns', frm = "(A)" )
 
-        do jj = 1,L
-            if (imageexptflt(jj) .lt. 0) imageexptflt(jj) = imageexptflt(jj)+256.0
-        end do
+do ii = 1,totnumexpt
+    read(iunitexpt,rec=ii) imageexpt
+    imageexptflt = float(imageexpt(26:recordsize))
 
-        meanexpt = meanexpt+imageexptflt
+    do jj = 1,L
+        if (imageexptflt(jj) .lt. 0) imageexptflt(jj) = imageexptflt(jj)+256.0
     end do
 
-    meanexpt = meanexpt/totnumexpt
-    meanexpt = meanexpt/NORM2(meanexpt)
+    meanexpt = meanexpt+imageexptflt
 
-    call Message(' -> Finished calculating mean pattern for observed patterns', frm = "(A)" )
-end if
-
-if (TID .eq. 1) then
-    call Message(' -> Start estimating mean pattern for dictionnary from Monte carlo data file', frm = "(A)" )
-
-    do pp = 1,ebsdnl%numsx,ebsdnl%binning
-        do qq = 1,ebsdnl%numsy,ebsdnl%binning
-            binned(pp/ebsdnl%binning+1,qq/ebsdnl%binning+1) = &
-            float(sum(accum_e_MC(pp:pp+ebsdnl%binning-1,qq:qq+ebsdnl%binning-1)))
-        end do
     end do
 
-    binned = binned/NORM2(binned)
+meanexpt = meanexpt/totnumexpt
+meanexpt = meanexpt/NORM2(meanexpt)
 
-    do pp = 1,ebsdnl%numsx/ebsdnl%binning
-        do qq = 1,ebsdnl%numsy/ebsdnl%binning
-            meandict((qq-1)*ebsdnl%numsx/ebsdnl%binning+pp) = binned(pp,qq)
-        end do
-    end do
+! the mean of the dictionary is assumed to be the same as the experiments
+meandict = meanexpt
 
-    do pp = 1,imgwd
-        imagedictfltflip((pp-1)*imght+1:pp*imght) = meandict((imgwd-pp)*imght+1:(imgwd-pp+1)*imght)
-    end do
+!open(unit=13,file='testmean.txt',action='write')
+!do ll = 1,80
+!do mm = 1,60
+!write(13, '(F15.6)', advance='no') meanexpt((mm-1)*80+ll)
+!end do
+!write(13, *) ''  ! this gives you the line break
+!end do
+!close(13)
 
-    meandict(1:L) = imagedictfltflip(1:L)
+call Message(' -> Finished calculating mean pattern for observed patterns', frm = "(A)" )
+!end if
 
-open(unit=13,file='testmean.txt',action='write')
-do pp = 1,80
-do qq = 1,60
-write(13, '(F15.6)', advance='no') meandict((qq-1)*80+pp)
-end do
-write(13, *) ''  ! this gives you the line break
-end do
-close(13)
+!if (TID .eq. 1) then
+!    call Message(' -> Start estimating mean pattern for dictionnary from Monte carlo data file', frm = "(A)" )
 
-call Message(' -> Finished calculating mean pattern for dictionary', frm = "(A)" )
+!    do pp = 1,ebsdnl%numsx,ebsdnl%binning
+!        do qq = 1,ebsdnl%numsy,ebsdnl%binning
+!            binned(pp/ebsdnl%binning+1,qq/ebsdnl%binning+1) = &
+!            float(sum(accum_e_MC(pp:pp+ebsdnl%binning-1,qq:qq+ebsdnl%binning-1)))
+!        end do
+!    end do
 
-end if
-!$OMP END PARALLEL
+!    binned = binned/NORM2(binned)
+
+!    do pp = 1,ebsdnl%numsx/ebsdnl%binning
+!        do qq = 1,ebsdnl%numsy/ebsdnl%binning
+!            meandict((qq-1)*ebsdnl%numsx/ebsdnl%binning+pp) = binned(pp,qq)
+!        end do
+!    end do
+
+!    do pp = 1,imgwd
+!        imagedictfltflip((pp-1)*imght+1:pp*imght) = meandict((imgwd-pp)*imght+1:(imgwd-pp+1)*imght)
+!    end do
+
+!    meandict(1:L) = imagedictfltflip(1:L)
+
+!open(unit=13,file='testmean.txt',action='write')
+!do pp = 1,80
+!do qq = 1,60
+!write(13, '(F15.6)', advance='no') meandict((qq-1)*80+pp)
+!end do
+!write(13, *) ''  ! this gives you the line break
+!end do
+!close(13)
+
+!call Message(' -> Finished calculating mean pattern for dictionary', frm = "(A)" )
+
+!end if
+!!!!$OMP END PARALLEL
 
 
-FZtmp => FZlist
+!FZtmp => FZlist
 
 dictionaryloop: do ii = 1,ceiling(float(FZcnt)/float(numdictsingle))
     dict = 0.0
     result = 0.0
+
     if (ii .le. floor(float(FZcnt)/float(numdictsingle))) then
+
+!$OMP PARALLEL PRIVATE(TID,pp,binned,angle,ll,mm,dc,ixy,istat,nix,niy) &
+!$OMP& PRIVATE(nixp,niyp,dx,dy,dxm,dym,EBSDpattern,imagedictflt,projweight) &
+!$OMP& SHARED(dict,master_array,accum_e_MC,meandict,eulerarray,ii,numdictsingle,FZcnt,prefactor)
+
+        TID = OMP_GET_THREAD_NUM()
+!$OMP BARRIER
+!$OMP DO SCHEDULE(DYNAMIC)
+
         do pp = 1,numdictsingle
 
             binned = 0.0
-            angle = ro2qu(FZtmp%rod)
-            dict = 0.0
+            angle = ro2qu(FZarray(1:3,(ii-1)*numdictsingle+pp))
 
             do ll=1,ebsdnl%numsx
                 do mm=1,ebsdnl%numsy
@@ -575,18 +613,18 @@ dictionaryloop: do ii = 1,ceiling(float(FZcnt)/float(numdictsingle))
                 end do
             end do
 
-            do ll = 1,imgwd
-                imagedictfltflip((ll-1)*imght+1:ll*imght) = imagedictflt((imgwd-ll)*imght+1:(imgwd-ll+1)*imght)
-            end do
-            imagedictflt = imagedictfltflip
+            !do ll = 1,imgwd
+            !    imagedictfltflip((ll-1)*imght+1:ll*imght) = imagedictflt((imgwd-ll)*imght+1:(imgwd-ll+1)*imght)
+            !end do
+            !imagedictflt = imagedictfltflip
 
             dict((ii-1)*L+1:ii*L) = imagedictflt(1:L)/NORM2(imagedictflt(1:L))
             projweight = DOT_PRODUCT(meandict,dict((ii-1)*L+1:ii*L))
             dict((ii-1)*L+1:ii*L) = dict((ii-1)*L+1:ii*L) - projweight*meandict
             dict((ii-1)*L+1:ii*L) = dict((ii-1)*L+1:ii*L)/NORM2(dict((ii-1)*L+1:ii*L))
 
-!if (ii .eq. 1 .and. pp .eq. 1) then
-!print*,180.0/cPi*ro2eu(FZtmp%rod)
+!if ((ii-1)*numdictsingle+pp .eq. 500) then
+!print*,180.0/cPi*ro2eu(FZarray(1:3,(ii-1)*numdictsingle+pp))
 !open(unit=13,file='testdict.txt',action='write')
 !do ll = 1,80
 !do mm = 1,60
@@ -596,16 +634,26 @@ dictionaryloop: do ii = 1,ceiling(float(FZcnt)/float(numdictsingle))
 !end do
 !close(13)
 !end if
-            eulerarray(1:3,(ii-1)*numdictsingle+pp) = 180.0/cPi*ro2eu(FZtmp%rod)
-            FZtmp => FZtmp%next                  ! point to the next entry
+            eulerarray(1:3,(ii-1)*numdictsingle+pp) = 180.0/cPi*ro2eu(FZarray(1:3,(ii-1)*numdictsingle+pp))
         end do
+!$OMP END DO
+!$OMP END PARALLEL
+
 
     else if (ii .eq. ceiling(float(FZcnt)/float(numdictsingle))) then
+
+!$OMP PARALLEL PRIVATE(TID,pp,binned,angle,ll,mm,dc,ixy,istat,nix,niy) &
+!$OMP& PRIVATE(nixp,niyp,dx,dy,dxm,dym,EBSDpattern,imagedictflt,projweight) &
+!$OMP& SHARED(dict,master_array,accum_e_MC,meandict,eulerarray,ii,numdictsingle,FZcnt,prefactor)
+
+TID = OMP_GET_THREAD_NUM()
+!$OMP BARRIER
+!$OMP DO SCHEDULE(DYNAMIC)
+
         do pp = 1,MODULO(FZcnt,numdictsingle)
 
             binned = 0.0
-            angle = ro2qu(FZtmp%rod)
-            dict = 0.0
+            angle = ro2qu(FZarray(1:3,(ii-1)*numdictsingle+pp))
 
             do ll=1,ebsdnl%numsx
                 do mm=1,ebsdnl%numsy
@@ -656,19 +704,21 @@ dictionaryloop: do ii = 1,ceiling(float(FZcnt)/float(numdictsingle))
                 end do
             end do
 
-            do ll = 1,imgwd
-                imagedictfltflip((ll-1)*imght+1:ll*imght) = imagedictflt((imgwd-ll)*imght+1:(imgwd-ll+1)*imght)
-            end do
-            imagedictflt = imagedictfltflip
+            !do ll = 1,imgwd
+            !    imagedictfltflip((ll-1)*imght+1:ll*imght) = imagedictflt((imgwd-ll)*imght+1:(imgwd-ll+1)*imght)
+            !end do
+            !imagedictflt = imagedictfltflip
 
             dict((ii-1)*L+1:ii*L) = imagedictflt(1:L)/NORM2(imagedictflt(1:L))
             projweight = DOT_PRODUCT(meandict,dict((ii-1)*L+1:ii*L))
             dict((ii-1)*L+1:ii*L) = dict((ii-1)*L+1:ii*L) - projweight*meandict
             dict((ii-1)*L+1:ii*L) = dict((ii-1)*L+1:ii*L)/NORM2(dict((ii-1)*L+1:ii*L))
 
-            eulerarray(1:3,(ii-1)*numdictsingle+pp) = 180.0/cPi*ro2eu(FZtmp%rod)
-            FZtmp => FZtmp%next                  ! point to the next entry
+            eulerarray(1:3,(ii-1)*numdictsingle+pp) = 180.0/cPi*ro2eu(FZarray(1:3,(ii-1)*numdictsingle+pp))
         end do
+
+!$OMP END DO
+!$OMP END PARALLEL
 
     end if
 
@@ -717,7 +767,8 @@ dictionaryloop: do ii = 1,ceiling(float(FZcnt)/float(numdictsingle))
         if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
 
         call InnerProdGPU(cl_expt,cl_dict,Ne,Nd,L,result,source,source_length,platform,device,context,command_queue)
-print*,maxval(result),result(1)
+
+print*,maxval(result)
 !$OMP PARALLEL PRIVATE(TID,qq,resultarray,indexarray) &
 !$OMP& SHARED(nthreads,result,resultmain,indexmain,ii,jj,numdictsingle,numexptsingle,indexlist,resulttmp,indextmp)
         TID = OMP_GET_THREAD_NUM()
@@ -727,9 +778,9 @@ print*,maxval(result),result(1)
 !$OMP DO SCHEDULE(DYNAMIC)
         do qq = 1,numexptsingle
 
-            resultarray(1:numdictsingle) = result((qq-1)*numdictsingle:qq*numdictsingle)
+            resultarray(1:numdictsingle) = result((qq-1)*numdictsingle+1:qq*numdictsingle)
 
-            indexarray(1:numdictsingle) = indexlist((jj-1)*numdictsingle:jj*numdictsingle)
+            indexarray(1:numdictsingle) = indexlist((ii-1)*numdictsingle+1:ii*numdictsingle)
 
             call SSORT(resultarray,indexarray,numdictsingle,-2)
 
@@ -739,6 +790,7 @@ print*,maxval(result),result(1)
             call SSORT(resulttmp(:,(jj-1)*numexptsingle+qq),indextmp(:,(jj-1)*numexptsingle+qq),2*nnk,-2)
 
             resultmain(1:nnk,(jj-1)*numexptsingle+qq) = resulttmp(1:nnk,(jj-1)*numexptsingle+qq)
+
             indexmain(1:nnk,(jj-1)*numexptsingle+qq) = indextmp(1:nnk,(jj-1)*numexptsingle+qq)
 
         end do

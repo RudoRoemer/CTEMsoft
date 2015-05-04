@@ -518,8 +518,10 @@ __kernel void CalcLghMaster(__global float2* cl_expA,
     
     for (int i = 0; i < nn; i++){
         for (int j = 0; j < nn; j++){
-            cl_A[off + i*nn + j] = cl_offdiagonal[i*nn + j]/powr(2.0f,ns);
-                     
+            if (i != j){
+                cl_A[off + i*nn + j] = cl_offdiagonal[i*nn + j]/powr(2.0f,ns);
+            }
+            
         }
         cl_A[off + i*(nn+1)] = cl_diagonal[off2 + i];
 
