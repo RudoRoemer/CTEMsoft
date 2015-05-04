@@ -220,10 +220,12 @@ end type EBSDNameListType
 ! some of them are used to facilitate passing of subroutine arguments in EBSDmod.f90
 type EBSDoverlapNameListType
         integer(kind=irg)       :: stdout
+        integer(kind=irg)       :: PatternAxisA(3)
         real(kind=sgl)          :: tA(3)
         real(kind=sgl)          :: tB(3)
         real(kind=sgl)          :: gA(3)
         real(kind=sgl)          :: gB(3)
+        real(kind=sgl)          :: fracA
         character(fnlen)        :: masterfileA
         character(fnlen)        :: masterfileB
         character(fnlen)        :: datafile

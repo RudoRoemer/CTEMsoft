@@ -54,6 +54,7 @@
 !> @date  03/10/15  MDG 4.1 added output format selector
 !> @date  04/02/15  MDG 5.0 changed program input & output to HDF format
 !> @date  05/03/15  MDG 6.0 branched EMEBSD.f90 into this program; tested square-square case; others to be implemented
+!> @date  05/04/15  MDG 6.1 added fracA volume fraction parameter; added stereographic projection and circular Lambert output
 ! ###################################################################
 
 program EMEBSDoverlap
@@ -91,10 +92,10 @@ character(fnlen)                       :: outstr
 type(unitcell),pointer                 :: cellA, cellB
 type(DynType),save                     :: DynA, DynB
 type(gnode),save                       :: rlpA, rlpB
-real(kind=sgl)                         :: dmin, voltage, TTAB(3,3), TTBA(3,3), io_real(3)
-real(kind=dbl)                         :: edge, xy(2), xyz(3), txyz(3), txy(2)
+real(kind=sgl)                         :: dmin, voltage, TTAB(3,3), TTBA(3,3), io_real(3), fracB
+real(kind=dbl)                         :: edge, xy(2), xyz(3), txyz(3), txy(2), Radius
 type(orientation)                      :: orel    
-real(kind=sgl),allocatable             :: master(:,:)
+real(kind=sgl),allocatable             :: master(:,:), masterLC(:,:), masterSP(:,:)
 type(HDFobjectStackType),pointer       :: HDF_head
 
 interface
@@ -114,11 +115,27 @@ interface
   real(kind=sgl)                          :: res
   
   end function InterpolateMaster
+
+  function InterpolateLambert(dc, master, npx) result(res)
+
+  use local
+  use Lambert
+  use EBSDmod
+  use constants
+  
+  IMPLICIT NONE
+  
+  real(kind=dbl),INTENT(INOUT)            :: dc(3)
+  real(kind=sgl),INTENT(IN)               :: master(-npx:npx,-npx:npx)
+  integer(kind=irg),INTENT(IN)            :: npx 
+  real(kind=sgl)                          :: res
+  end function InterpolateLambert
+
 end interface
 
 
 
-verbose = .TRUE.
+verbose = .FALSE.
 
 nmldeffile = 'EMEBSDoverlap.nml'
 progname = 'EMEBSDoverlap.f90'
@@ -199,12 +216,14 @@ deallocate(cellA, cellB)
 ! next, allocate a new master array into which we'll write the superimposed patterns
 ! we discard all energies except for the highest energy
 allocate(master(-enl%npx:enl%npx,-enl%npy:enl%npy))
-write (*,*) ' shape new master =  ',shape(master)
 
 ! the only difficulty here is that one or both of the structures could be hexagonal/trigonal,
 ! and the output master pattern will be a square Lambert projection, regardless of the input
 ! formats; we'll need to distinguish between all possible cases...
+fracB = 1.0-enl%fracA
 
+!=============================
+!=============================
 ! both patterns are square Lambert projections
 if ((sqorheA.eq.'square').and.(sqorheB.eq.'square')) then 
   edge = LPs%sPio2 / dble(enl%npx)
@@ -220,22 +239,64 @@ if ((sqorheA.eq.'square').and.(sqorheB.eq.'square')) then
 ! normalize these direction cosines
       txyz = txyz/sqrt(sum(txyz*txyz))
 ! and interpolate the masterB pattern
-      master(i,j) = 0.5*( masterA%sr(i,j,sA(3)) + InterpolateMaster(txyz, masterB, sB, sqorheB) )
+      master(i,j) = enl%fracA*masterA%sr(i,j,sA(3)) + fracB*InterpolateMaster(txyz, masterB, sB, sqorheB)
     end do
   end do
 end if
 
+!=============================
+!=============================
 ! A is square, B is hexagonal [to be implemented]
 
 
+!=============================
+!=============================
 ! A is hexagonal, B is square [to be implemented]
 
 
+!=============================
+!=============================
 ! both A and B are hexagonal patterns [to be implemented]
 
 
 ! free up the master pattern memory
 deallocate(masterA, masterB)
+
+
+!=============================
+!=============================
+! convert the square Lambert projection to a stereographic projection
+! with the PatternAxis of structure A at the center
+  allocate(masterSP(-enl%npx:enl%npx,-enl%npy:enl%npy))
+  Radius = 1.0
+  do i=-enl%npx,enl%npx 
+    do j=-enl%npy,enl%npy
+      xy = (/ float(i), float(j) /) / float(enl%npx)
+      xyz = StereoGraphicInverse( xy, ierr, Radius )
+      if (ierr.ne.0) then 
+        masterSP(i,j) = 0.0
+      else
+        masterSP(i,j) = InterpolateLambert(xyz, master, enl%npx)
+      end if
+    end do
+  end do
+
+! convert the square Lambert projection to a circular Lambert projection
+! with the PatternAxis of structure A at the center
+  allocate(masterLC(-enl%npx:enl%npx,-enl%npy:enl%npy))
+  Radius = 1.0
+  do i=-enl%npx,enl%npx 
+    do j=-enl%npy,enl%npy
+      xy = sqrt(2.0) * (/ float(i), float(j) /) / float(enl%npx)
+      if (sum(xy*xy).gt.2.0) then 
+        masterLC(i,j) = 0.0
+      else
+        xyz = LambertInverse( xy, ierr, Radius )
+        masterLC(i,j) = InterpolateLambert(xyz, master, enl%npx)
+      end if
+    end do
+  end do
+
 
 ! finally, create simple HDF5 file with only the overlap master array in it
 nullify(HDF_head)
@@ -245,9 +306,15 @@ call h5open_f(hdferr)
 ! Create a new file using the default properties.
 hdferr =  HDF_createFile(enl%datafile, HDF_head)
 
-! create a dataset with the master pattern in it
-dataset = 'overlapmaster'
+! create datasets 
+dataset = 'MasterLambertSquare'
 hdferr = HDF_writeDatasetFloatArray2D(dataset, master, 2*enl%npx+1, 2*enl%npx+1, HDF_head)
+ 
+dataset = 'MasterLambertCircle'
+hdferr = HDF_writeDatasetFloatArray2D(dataset, masterLC, 2*enl%npx+1, 2*enl%npx+1, HDF_head)
+ 
+dataset = 'MasterStereographic'
+hdferr = HDF_writeDatasetFloatArray2D(dataset, masterSP, 2*enl%npx+1, 2*enl%npx+1, HDF_head)
  
 call HDF_pop(HDF_head,.TRUE.)
 
@@ -259,6 +326,50 @@ end program EMEBSDoverlap
 
 
 
+
+function InterpolateLambert(dc, master, npx) result(res)
+
+use local
+use Lambert
+use EBSDmod
+use constants
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(INOUT)            :: dc(3)
+real(kind=sgl),INTENT(IN)               :: master(-npx:npx,-npx:npx)
+integer(kind=irg),INTENT(IN)            :: npx 
+real(kind=sgl)                          :: res
+
+integer(kind=irg)                       :: nix, niy, nixp, niyp, istat
+real(kind=sgl)                          :: xy(2), dx, dy, dxm, dym, scl
+
+scl = float(npx) / LPs%sPio2
+
+if (dc(3).lt.0.0) dc = -dc
+
+! convert direction cosines to lambert projections
+xy = scl * LambertSphereToSquare( dc, istat )
+res = 0.0
+
+if (istat.eq.0) then 
+! interpolate intensity from the neighboring points
+  nix = floor(xy(1))
+  niy = floor(xy(2))
+  nixp = nix+1
+  niyp = niy+1
+  if (nixp.gt.npx) nixp = nix
+  if (niyp.gt.npx) niyp = niy
+  dx = xy(1) - nix
+  dy = xy(2) - niy
+  dxm = 1.0 - dx
+  dym = 1.0 - dy
+  
+  res = master(nix,niy)*dxm*dym + master(nixp,niy)*dx*dym + &
+        master(nix,niyp)*dxm*dy + master(nixp,niyp)*dx*dy
+end if
+
+end function InterpolateLambert
 
 
 function InterpolateMaster(dc, master, s, sqorhe) result(res)

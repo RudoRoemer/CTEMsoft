@@ -1458,7 +1458,7 @@ recursive function StereoGraphicForwardSingle(xyz, ierr, Radius) result(res)
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)               :: xyz(3)
-integer(kind=irg),INTENT(INOUT) :: ierr
+integer(kind=irg),INTENT(INOUT)         :: ierr
 real(kind=sgl),INTENT(IN),OPTIONAL      :: Radius
 real(kind=sgl)                          :: res(2)
 
@@ -1498,7 +1498,7 @@ recursive function StereoGraphicForwardDouble(xyz, ierr, Radius) result(res)
 IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN)               :: xyz(3)
-integer(kind=irg),INTENT(INOUT) :: ierr
+integer(kind=irg),INTENT(INOUT)         :: ierr
 real(kind=dbl),INTENT(IN),OPTIONAL      :: Radius
 real(kind=dbl)                          :: res(2)
 
@@ -1538,7 +1538,7 @@ recursive function StereoGraphicInverseSingle(xy, ierr, Radius) result(res)
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)               :: xy(2)
-integer(kind=irg),INTENT(INOUT) :: ierr
+integer(kind=irg),INTENT(INOUT)         :: ierr
 real(kind=sgl),INTENT(IN)               :: Radius
 real(kind=sgl)                          :: res(3)
 
@@ -1579,7 +1579,7 @@ recursive function StereoGraphicInverseDouble(xy, ierr, Radius) result(res)
 IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN)               :: xy(2)
-integer(kind=irg),INTENT(INOUT) :: ierr
+integer(kind=irg),INTENT(INOUT)         :: ierr
 real(kind=dbl),INTENT(IN)               :: Radius
 real(kind=dbl)                          :: res(3)
 
@@ -1722,7 +1722,7 @@ recursive function LambertInverseSingle(xy, ierr, Radius) result(res)
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)               :: xy(2)
-integer(kind=irg),INTENT(INOUT) :: ierr
+integer(kind=irg),INTENT(INOUT)         :: ierr
 real(kind=sgl),INTENT(IN),OPTIONAL      :: Radius
 real(kind=sgl)                          :: res(3), q, tr
 

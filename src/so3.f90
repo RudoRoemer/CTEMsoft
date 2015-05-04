@@ -449,4 +449,124 @@ stepsize = stepsize/2.0
 end subroutine CubochoricNeighbors
 
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: SampleRFZtwin
+!
+!> @author MArc De Graef, Carnegie Mellon University
+!
+!> @brief use a quaternion to rotate the fundamental zone, then sample it 
+!> this is useful for twins etc, hence the name of the routine...
+!
+!> @param nsteps number of steps along semi-edge in cubochoric grid
+!> @param pgnum point group number to determine the appropriate Rodrigues fundamental zone
+!> @param qt rotation quaternion
+!> @param FZcnt (output) number of points inside fundamental zone
+!> @param FZlist (output) linked list of points inside fundamental zone
+
+!
+!> @date 04/07/15 SS 1.0 original
+!--------------------------------------------------------------------------
+recursive subroutine SampleRFZtwin(nsteps,pgnum,qt,FZcnt,FZlist)
+
+use local
+use constants
+use typedefs
+use rotations
+use quaternions
+use so3
+
+IMPLICIT NONE
+
+integer(kind=irg), INTENT(IN)        :: nsteps
+integer(kind=irg), INTENT(IN)        :: pgnum
+real(kind=sgl),INTENT(IN)            :: qt(4)
+integer(kind=irg),INTENT(OUT)        :: FZcnt                ! counts number of entries in linked list
+type(FZpointd),pointer,INTENT(OUT)   :: FZlist               ! pointers
+
+real(kind=dbl)                       :: x, y, z, s, rod(4), rodt(4), delta, rval, ro(3), qt(4)
+type(FZpointd), pointer              :: FZtmp, FZtmp2
+integer(kind=irg)                    :: FZtype, FZorder
+
+! cube semi-edge length
+s = 0.5D0 * LPs%ap
+
+! step size for sampling of grid; total number of samples = (2*nsteps+1)**3
+delta = s/dble(nsteps)
+
+! set the counter to zero
+FZcnt = 0
+
+! make sure the linked lists are empty
+if (associated(FZlist)) then
+  FZtmp => FZlist%next
+  FZtmp2 => FZlist
+  do
+    deallocate(FZtmp2)  
+    if (.not. associated(FZtmp) ) EXIT
+    FZtmp2 => FZtmp
+    FZtmp => FZtmp%next
+  end do
+  nullify(FZlist)
+end if
+
+! we always want the identity rotation to be the first one on the list
+! it is automatically skipped later on...
+allocate(FZlist)
+FZtmp => FZlist
+nullify(FZtmp%next)
+FZtmp%rod = (/ 0.D0, 0.D0, 0.D0, 0.D0 /)
+FZcnt = 1
+
+! determine which function we should call for this point group symmetry
+FZtype = FZtarray(pgnum)
+FZorder = FZoarray(pgnum)
+
+! loop over the cube of volume pi^2; note that we do not want to include
+! the opposite edges/facets of the cube, to avoid double counting rotations
+! with a rotation angle of 180 degrees.  This only affects the cyclic groups.
+x = -s
+do while (x.lt.s)
+  y = -s
+  do while (y.lt.s)
+    z = -s
+    do while (z.lt.s)
+
+     if ((x.ne.0.D0).and.(y.ne.0.D0).and.(z.ne.0.D0)) then
+! convert to Rodrigues representation
+      rod = cu2ro( (/ x, y, z /) )
+! convert to an actual vector
+      ro(1:3) = rod(1:3)
+! then apply the twinning quaternion
+      ro = quat_Lp(qt, ro)
+! convert back to a Rodrigues vector
+      rodt = rod
+      rodt(1:3) = ro(1:3)
+
+! If insideFZ=.TRUE., then add this point to the linked list FZlist and keep
+! track of how many points there are on this list
+       if (IsinsideFZ(rodt,FZtype,FZorder)) then 
+        allocate(FZtmp%next)
+        FZtmp => FZtmp%next
+        nullify(FZtmp%next)
+        FZtmp%rod = rod
+        FZcnt = FZcnt + 1
+       end if
+     
+     end if
+    z = z + delta
+  end do
+  y = y + delta
+ end do
+ x = x + delta
+end do
+
+! that's it.
+write (*,*) 'pgnum, nsteps, delta, s = ',pgnum, nsteps,delta,s
+write (*,*) 'FZtype, FZorder = ',FZtype,FZorder
+write (*,*) 'FZcnt = ',FZcnt
+
+end subroutine SampleRFZtwin
+
+
 end module so3
