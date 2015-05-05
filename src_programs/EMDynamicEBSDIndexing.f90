@@ -225,23 +225,26 @@ integer(kind=irg)                                   :: binx,biny,TID,totnum_el,n
 real(kind=sgl)                                      :: sx,dx,dxm,dy,dym,rhos,x,projweight
 real(kind=sgl)                                      :: dc(3),angle(4),ixy(2),bindx
 integer(kind=irg)                                   :: nix,niy,nixp,niyp
+character(fnlen)                                    :: str1,str2,str3,str4,str5,str6,str7,str8,str9,str10
+real(kind=sgl)                                      :: euler(3)
+integer(kind=irg)                                   :: index
+character                                           :: TAB
 
 
-
-
+TAB = CHAR(9)
 verbose = .TRUE.
-Ne = 1024
-Nd = 1024
+Ne = 5120
+Nd = 5120
 L = 80*60
 totnumexpt = 196608
-numdictsingle = 1024
-numexptsingle = 1024
+numdictsingle = 5120
+numexptsingle = 5120
 imght =80
 imgwd = 60
 nnk = 40
 xtalname = 'Ni.xtal'
 dmin = 0.04
-voltage = 20000.0
+voltage = 30000.0
 ncubochoric = 50
 recordsize = imght*imgwd+25
 
@@ -365,7 +368,7 @@ if(ierr /= CL_SUCCESS) stop "Cannot create context"
 command_queue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, ierr)
 if(ierr /= CL_SUCCESS) stop "Cannot create command queue"
 
-call getenv("CTEMsoft2013opencl",openclpathname)
+call getenv("EMsoftopencl",openclpathname)
 open(unit = iunit, file = trim(openclpathname)//'/DictIndx.cl', access='direct', status = 'old', &
 action = 'read', iostat = ierr, recl = 1)
 if (ierr /= 0) stop 'Cannot open file DictIndx.cl'
@@ -463,7 +466,7 @@ if (istat .ne. 0) stop 'could not allocate euler array'
 
 call Message(' -> opened experimental file for I/O', frm = "(A)" )
 
-open(unit=iunitexpt,file='/Users/saranshsingh/Desktop/Recent work/CTEMDictIndxOpenCL/FrameData',&
+open(unit=iunitexpt,file='/Users/ssaransh/CTEMDIctIndx/FrameData',&
     status='old',form='unformatted',access='direct',recl=recordsize,iostat=ierr)
 
 !!!!$OMP PARALLEL PRIVATE(TID,ii,jj,imageexpt,imageexptflt) &
@@ -551,9 +554,9 @@ dictionaryloop: do ii = 1,ceiling(float(FZcnt)/float(numdictsingle))
 
     if (ii .le. floor(float(FZcnt)/float(numdictsingle))) then
 
-!$OMP PARALLEL PRIVATE(TID,pp,binned,angle,ll,mm,dc,ixy,istat,nix,niy) &
+!$OMP PARALLEL PRIVATE(TID,binned,angle,ll,mm,dc,ixy,istat,nix,niy) &
 !$OMP& PRIVATE(nixp,niyp,dx,dy,dxm,dym,EBSDpattern,imagedictflt,projweight) &
-!$OMP& SHARED(dict,master_array,accum_e_MC,meandict,eulerarray,ii,numdictsingle,FZcnt,prefactor)
+!$OMP& SHARED(pp,dict,master_array,accum_e_MC,meandict,eulerarray,ii,numdictsingle,FZcnt,prefactor)
 
         TID = OMP_GET_THREAD_NUM()
 !$OMP BARRIER
@@ -563,7 +566,6 @@ dictionaryloop: do ii = 1,ceiling(float(FZcnt)/float(numdictsingle))
 
             binned = 0.0
             angle = ro2qu(FZarray(1:3,(ii-1)*numdictsingle+pp))
-
             do ll=1,ebsdnl%numsx
                 do mm=1,ebsdnl%numsy
 !  do the active coordinate transformation for this euler angle
@@ -618,11 +620,10 @@ dictionaryloop: do ii = 1,ceiling(float(FZcnt)/float(numdictsingle))
             !end do
             !imagedictflt = imagedictfltflip
 
-            dict((ii-1)*L+1:ii*L) = imagedictflt(1:L)/NORM2(imagedictflt(1:L))
-            projweight = DOT_PRODUCT(meandict,dict((ii-1)*L+1:ii*L))
-            dict((ii-1)*L+1:ii*L) = dict((ii-1)*L+1:ii*L) - projweight*meandict
-            dict((ii-1)*L+1:ii*L) = dict((ii-1)*L+1:ii*L)/NORM2(dict((ii-1)*L+1:ii*L))
-
+            dict((pp-1)*L+1:pp*L) = imagedictflt(1:L)/NORM2(imagedictflt(1:L))
+            projweight = DOT_PRODUCT(meandict,dict((pp-1)*L+1:pp*L))
+            dict((pp-1)*L+1:pp*L) = dict((pp-1)*L+1:pp*L) - projweight*meandict
+            dict((pp-1)*L+1:pp*L) = dict((pp-1)*L+1:pp*L)/NORM2(dict((pp-1)*L+1:pp*L))
 !if ((ii-1)*numdictsingle+pp .eq. 500) then
 !print*,180.0/cPi*ro2eu(FZarray(1:3,(ii-1)*numdictsingle+pp))
 !open(unit=13,file='testdict.txt',action='write')
@@ -708,11 +709,10 @@ TID = OMP_GET_THREAD_NUM()
             !    imagedictfltflip((ll-1)*imght+1:ll*imght) = imagedictflt((imgwd-ll)*imght+1:(imgwd-ll+1)*imght)
             !end do
             !imagedictflt = imagedictfltflip
-
-            dict((ii-1)*L+1:ii*L) = imagedictflt(1:L)/NORM2(imagedictflt(1:L))
-            projweight = DOT_PRODUCT(meandict,dict((ii-1)*L+1:ii*L))
-            dict((ii-1)*L+1:ii*L) = dict((ii-1)*L+1:ii*L) - projweight*meandict
-            dict((ii-1)*L+1:ii*L) = dict((ii-1)*L+1:ii*L)/NORM2(dict((ii-1)*L+1:ii*L))
+            dict((pp-1)*L+1:pp*L) = imagedictflt(1:L)/NORM2(imagedictflt(1:L))
+            projweight = DOT_PRODUCT(meandict,dict((pp-1)*L+1:pp*L))
+            dict((pp-1)*L+1:pp*L) = dict((pp-1)*L+1:pp*L) - projweight*meandict
+            dict((pp-1)*L+1:pp*L) = dict((pp-1)*L+1:pp*L)/NORM2(dict((pp-1)*L+1:pp*L))
 
             eulerarray(1:3,(ii-1)*numdictsingle+pp) = 180.0/cPi*ro2eu(FZarray(1:3,(ii-1)*numdictsingle+pp))
         end do
@@ -721,7 +721,7 @@ TID = OMP_GET_THREAD_NUM()
 !$OMP END PARALLEL
 
     end if
-
+print*,eulerarray(1:3,1)
     dicttranspose = 0.0
 
     do ll = 1,L
@@ -744,7 +744,7 @@ TID = OMP_GET_THREAD_NUM()
                 do mm = 1,L
                     if (imageexptflt(mm) .lt. 0) imageexptflt(mm) = imageexptflt(mm) + 256.0
                 end do
-
+                imageexptflt(1:L) = imageexptflt - meanexpt(1:L)
                 expt((pp-1)*L+1:pp*L) = imageexptflt(1:L)/NORM2(imageexptflt(1:L))
 
             end do
@@ -756,7 +756,7 @@ TID = OMP_GET_THREAD_NUM()
                 do mm = 1,L
                     if (imageexptflt(mm) .lt. 0) imageexptflt(mm) = imageexptflt(mm) + 256.0
                 end do
-
+                imageexptflt(1:L) = imageexptflt - meanexpt(1:L)
                 expt((pp-1)*L+1:pp*L) = imageexptflt(1:L)/NORM2(imageexptflt(1:L))
 
             end do
@@ -768,7 +768,28 @@ TID = OMP_GET_THREAD_NUM()
 
         call InnerProdGPU(cl_expt,cl_dict,Ne,Nd,L,result,source,source_length,platform,device,context,command_queue)
 
-print*,maxval(result)
+        if (floor(float(totnumexpt)/float(numexptsingle)/10.0) .gt. 0) then
+            if (mod(jj,floor(float(totnumexpt)/float(numexptsingle)/10.0)) .eq. 0) then
+                if (ii .le. floor(float(FZcnt)/float(numdictsingle))) then
+                    write(6,'(A,I8,A,I8,A)')'Completed dot product of ',jj*numexptsingle,' experimental pattern with ',&
+                    ii*numdictsingle,' dictionary patterns.'
+                else if (ii .eq. ceiling(float(FZcnt)/float(numdictsingle))) then
+                    write(6,'(A,I8,A,I8,A)')'Completed dot product of ',jj*numexptsingle,'experimental pattern with all ',&
+                    FZcnt,'dictionary patterns'
+                end if
+            end if
+        else
+            if (mod(jj,2) .eq. 0) then
+                if (ii .le. floor(float(FZcnt)/float(numdictsingle))) then
+                    write(6,'(A,I8,A,I8,A)')'Completed dot product of ',jj*numexptsingle,' experimental pattern with ',&
+                    ii*numdictsingle,' dictionary patterns.'
+                else if (ii .eq. ceiling(float(FZcnt)/float(numdictsingle))) then
+                    write(6,'(A,I8,A,I8,A)')'Completed dot product of ',jj*numexptsingle,'experimental pattern with all ',&
+                    FZcnt,'dictionary patterns'
+                end if
+            end if
+        end if
+!print*,maxval(result)
 !$OMP PARALLEL PRIVATE(TID,qq,resultarray,indexarray) &
 !$OMP& SHARED(nthreads,result,resultmain,indexmain,ii,jj,numdictsingle,numexptsingle,indexlist,resulttmp,indextmp)
         TID = OMP_GET_THREAD_NUM()
@@ -797,10 +818,45 @@ print*,maxval(result)
 !$OMP END DO
 !$OMP END PARALLEL
 
-
+print*,resultmain(1:5,1),indexmain(1:5,1)
     end do experimentalloop
 
 end do dictionaryloop
+
+open(unit=iunit,file='Results.ctf',action='write')
+call WriteHeader(iunit,'ctf')
+!open(unit=iunit,file='euler-1.bin',status='unknown',action='write',&
+!form='unformatted',access='stream')
+!open(unit=13,file='BestMatch-100-meansub.bin',form='unformatted',action='write',status='unknown',access='stream')
+do ii = 1,totnumexpt
+
+!do jj = 1,nnk
+!    index = indexarray(jj,ii)
+!    samples(1:4,jj) = eu2qu((cPi/180.D0)*eulerangles(index,1:3))
+!end do
+
+!call DI_EMforDD(samples, dictlist, nnk, seed, muhat, kappahat,'WAT')
+!euler = 180.0/cPi*qu2eu(muhat)
+
+    index = indexmain(1,ii)
+    euler = eulerarray(1:3,index)
+    write(str1,'(F12.3)') float(MODULO(ii-1,512))
+    write(str2,'(F12.3)') float(floor(float(ii-1)/512.0))
+    write(str3,'(I2)') 10
+    write(str4,'(I2)') 0
+    write(str5,'(F12.3)') euler(1)
+    write(str6,'(F12.3)') euler(2)
+    write(str7,'(F12.3)') euler(3)
+    write(str8,'(I8)') index
+    write(str9,'(I3)') 255
+    write(str10,'(I3)') 255
+    write(iunit,'(A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A)')'1',TAB,trim(adjustl(str1)),TAB,&
+    trim(adjustl(str2)),TAB,trim(adjustl(str3)),TAB,trim(adjustl(str4)),TAB,trim(adjustl(str5)),&
+    TAB,trim(adjustl(str6)),TAB,trim(adjustl(str7)),TAB,trim(adjustl(str8)),TAB,trim(adjustl(str9)),&
+    TAB,trim(adjustl(str10))
+end do
+
+close(iunit)
 
 end subroutine MasterSubroutine
 
@@ -930,3 +986,98 @@ call clReleaseKernel(kernel, ierr)
 call clReleaseMemObject(cl_result, ierr)
 
 end subroutine InnerProdGPU
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:WriteHeader
+!
+!> @author Saransh Singh, Carnegie Mellon University
+!
+!> @brief Write the header for *.ctf or *.ang file file format
+!
+!> @param iunit unit to write to
+!> @param fileformat string to tell which type of header to write
+!
+!> @date 02/07/15  SS 1.0 original
+!--------------------------------------------------------------------------
+subroutine WriteHeader(iunit,fileformat)
+
+use local
+
+IMPLICIT NONE
+
+integer(kind=irg),INTENT(IN)                        :: iunit
+character(len=3),INTENT(IN)                         :: fileformat
+
+logical                                             :: isopen
+integer(kind=irg)                                   :: ierr
+character(fnlen)                                    :: filename
+character                                           :: TAB
+
+TAB = CHAR(9)
+inquire(unit=iunit,OPENED=isopen)
+if (isopen .eqv. .FALSE.) then
+filename = 'test.'//fileformat
+write(6,*),'Warning: No such file exists...creating file with name test.'//fileformat
+open(unit=iunit,file=trim(filename),status='unknown',action='write',iostat=ierr)
+end if
+
+if (fileformat .eq. 'ctf') then
+write(iunit,'(A)'),'Channel Text File'
+write(iunit,'(A)'),'Prj Test'
+write(iunit,'(3A)'),'Author	[Unknown]'
+write(iunit,'(A)'),'JobMode	Grid'
+write(iunit,'(3A)'),'XCells',Tab,'512'
+write(iunit,'(3A)'),'YCells',TAB,'384'
+write(iunit,'(3A)'),'XStep',TAB,'1'
+write(iunit,'(3A)'),'YStep',TAB,'1'
+write(iunit,'(A)'),'AcqE1	0'
+write(iunit,'(A)'),'AcqE2	0'
+write(iunit,'(A)'),'AcqE3	0'
+write(iunit,'(A)',advance='no'),'Euler angles refer to Sample Coordinate system (CS0)!  '
+write(iunit,'(A)')'Mag	30	Coverage	100	Device	0	KV	288.9	TiltAngle	-1	TiltAxis	0'
+write(iunit,'(A)'),'Phases	1'
+write(iunit,'(A)'),'3.524;3.524;3.524	90;90;90	Nickel	11	225'
+write(iunit,'(A)'),'Phase	X	Y	Bands	Error	Euler1	Euler2	Euler3	MAD	BC	BS'
+
+else if (fileformat .eq. 'ang') then
+write(iunit,'(A)'),'# TEM_PIXperUM          1.000000'
+write(iunit,'(A)'),'# x-star                0.372300'
+write(iunit,'(A)'),'# y-star                0.689300'
+write(iunit,'(A)'),'# z-star                0.970100'
+write(iunit,'(A)'),'# WorkingDistance       5.000000'
+write(iunit,'(A)'),'#'
+write(iunit,'(A)'),'# Phase 1'
+write(iunit,'(A)'),'# MaterialName  	Nickel'
+write(iunit,'(A)'),'# Formula     	Ni'
+write(iunit,'(A)'),'# Info'
+write(iunit,'(A)'),'# Symmetry              43'
+write(iunit,'(A)'),'# LatticeConstants      3.520 3.520 3.520  90.000  90.000  90.000'
+write(iunit,'(A)'),'# NumberFamilies        4'
+write(iunit,'(A)'),'# hklFamilies   	 1  1  1 1 0.000000'
+write(iunit,'(A)'),'# hklFamilies   	 2  0  0 1 0.000000'
+write(iunit,'(A)'),'# hklFamilies   	 2  2  0 1 0.000000'
+write(iunit,'(A)'),'# hklFamilies   	 3  1  1 1 0.000000'
+write(iunit,'(A)'),'# Categories 0 0 0 0 0'
+write(iunit,'(A)'),'#'
+write(iunit,'(A)'),'# GRID: SqrGrid'
+write(iunit,'(A)'),'# XSTEP: 1.000000'
+write(iunit,'(A)'),'# YSTEP: 1.000000'
+write(iunit,'(A)'),'# NCOLS_ODD: 189'
+write(iunit,'(A)'),'# NCOLS_EVEN: 189'
+write(iunit,'(A)'),'# NROWS: 201'
+write(iunit,'(A)'),'#'
+write(iunit,'(A)'),'# OPERATOR: 	Administrator'
+write(iunit,'(A)'),'#'
+write(iunit,'(A)'),'# SAMPLEID:'
+write(iunit,'(A)'),'#'
+write(iunit,'(A)'),'# SCANID:'
+write(iunit,'(A)'),'#'
+else
+
+stop 'Error: Can not recognize specified file format'
+
+end if
+
+end subroutine WriteHeader
+
