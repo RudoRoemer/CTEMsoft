@@ -98,8 +98,8 @@ end interface
 
 
 ! auxiliary private functions for the hexagonal mappings
-private :: GetSextantSingle
-private :: GetSextantDouble
+!private :: GetSextantSingle
+!private :: GetSextantDouble
 
 
 ! mappings from the 3D cubic grid to the 3D spherical grid
@@ -396,7 +396,7 @@ IMPLICIT NONE
 real(kind=sgl),INTENT(IN)       :: xy(2) 
 integer(kind=irg),INTENT(INOUT):: ierr
 
-real(kind=sgl)                  :: res(3), q, XX, YY, xp, yp
+real(kind=sgl)                  :: res(3), q, XX, YY, xp, yp, XY2(2)
 integer(kind=irg)               :: ks
 
  ierr = 0
@@ -406,19 +406,22 @@ integer(kind=irg)               :: ks
  else
 ! determine in which sextant this point lies
   ks = GetSextantSingle(xy)
-  
+  XY2 = xy
+! XY2(2) = xy(2)*2.0/LPs%rtt
+
   select case (ks)
     case (0,3)
-        XX = LPs%preb*xy(1)*cos(xy(2)*LPs%prec/xy(1))
-        YY = LPs%preb*xy(1)*sin(xy(2)*LPs%prec/xy(1))
+        q = XY2(2)*LPs%prec/XY2(1)
+        XX = LPs%preb*XY2(1)*cos(q)
+        YY = LPs%preb*XY2(1)*sin(q)
     case (1,4)
-        xp = xy(1)+LPs%rtt*xy(2)
-        yp = xy(1)*LPs%pred/xp
+        xp = XY2(1)+LPs%rtt*XY2(2)
+        yp = XY2(1)*LPs%pred/xp
         XX = LPs%prea*xp*sin(yp)
         YY = LPs%prea*xp*cos(yp)
     case (2,5)
-        xp = xy(1)-LPs%rtt*xy(2)
-        yp = xy(1)*LPs%pred/xp
+        xp = XY2(1)-LPs%rtt*XY2(2)
+        yp = XY2(1)*LPs%pred/xp
         XX = LPs%prea*xp*sin(yp)
         YY = -LPs%prea*xp*cos(yp)         
   end select
@@ -454,7 +457,7 @@ IMPLICIT NONE
 real(kind=dbl),INTENT(IN)       :: xy(2) 
 integer(kind=irg),INTENT(INOUT):: ierr
 
-real(kind=dbl)                  :: res(3), q, XX, YY, xp, yp
+real(kind=dbl)                  :: res(3), q, XX, YY, xp, yp, XY2(2)
 integer(kind=irg)               :: ks
 
   ierr = 0
@@ -464,23 +467,27 @@ integer(kind=irg)               :: ks
  else
 ! determine in which sextant this point lies
   ks = GetSextantDouble(xy)
-  
+  XY2 = xy
+! XY2(2) = xy(2)*2.D0/LPs%rtt
+
   select case (ks)
     case (0,3)
-        XX = LPs%preb*xy(1)*dcos(xy(2)*LPs%prec/xy(1))
-        YY = LPs%preb*xy(1)*dsin(xy(2)*LPs%prec/xy(1))
+        q = XY2(2)*LPs%prec/XY2(1)
+        XX = LPs%preb*XY2(1)*dcos(q)
+        YY = LPs%preb*XY2(1)*dsin(q)
     case (1,4)
-        xp = xy(1)+LPs%rtt*xy(2)
-        yp = xy(1)*LPs%pred/xp
+        xp = XY2(1)+LPs%rtt*XY2(2)
+        yp = XY2(1)*LPs%pred/xp
         XX = LPs%prea*xp*dsin(yp)
         YY = LPs%prea*xp*dcos(yp)
     case (2,5)
-        xp = xy(1)-LPs%rtt*xy(2)
-        yp = xy(1)*LPs%pred/xp
+        xp = XY2(1)-LPs%rtt*XY2(2)
+        yp = XY2(1)*LPs%pred/xp
         XX = LPs%prea*xp*dsin(yp)
-        YY = -LPs%prea*xp*dcos(yp)        
+        YY = -LPs%prea*xp*dcos(yp)   
   end select
   q = XX**2+YY**2
+
 ! does the point lie outside the hexagon ?
   if (q.gt.4.D0) then
     res = (/ 0.D0, 0.D0, 0.D0 /)
@@ -505,6 +512,7 @@ end function Lambert2DHexForwardDouble
 !> @param ierr error status: 0=OK, 1=input point not normalized
 !
 !> @date 7/10/13   MDG 1.0 original
+!> @date 5/04/15   MDG 1.1 correction to abs(X)/X for sign(X)
 !--------------------------------------------------------------------------
 recursive function Lambert2DHexInverseSingle(xyz,ierr) result(res)
 
@@ -513,7 +521,7 @@ IMPLICIT NONE
 real(kind=sgl),INTENT(IN)       :: xyz(3) 
 integer(kind=irg),INTENT(INOUT):: ierr
 
-real(kind=sgl)                  :: res(2), q, qq, XX, YY, xxx, yyy
+real(kind=sgl)                  :: res(2), q, qq, XX, YY, xxx, yyy, sgnX
 integer(kind=irg)               :: ks
 real(kind=sgl),parameter        :: eps = 1.0E-7
 
@@ -530,23 +538,26 @@ else
   q = sqrt(2.0/(1.0+xyz(3)))
   XX = q * xyz(1)
   YY = q * xyz(2)
+! YY = -q * xyz(2) * LPs%rtt*0.5
 
 ! determine in which sextant this point lies
   ks = GetSextantSingle( (/ XX, YY /) )
+  sgnX = sqrt(XX**2+YY**2)
+  if (XX.lt.0.0) sgnX=-sgnX
 
 ! then perform the inverse to the hexagonal grid
   select case (ks)
     case (0,3)
-        q = LPs%pree * (abs(XX)/XX) * sqrt(XX**2+YY**2)
+        q = LPs%pree * sgnX 
         xxx = q * LPs%sPio2 
         yyy = q * LPs%pref * atan(YY/XX)
     case (1,4)
-        q = LPs%prea * (abs(XX)/XX) * sqrt(XX**2+YY**2)
+        q = LPs%prea * sgnX 
         qq= atan((YY-LPs%rtt*XX)/(XX+LPs%rtt*YY))
         xxx = q * LPs%rtt *( LPs%Pi/6.0 - qq )
         yyy = q * ( 0.5*LPs%Pi + qq )
     case (2,5)
-        q = LPs%prea * (abs(XX)/XX) * sqrt(XX**2+YY**2)
+        q = LPs%prea * sgnX 
         qq= atan((YY+LPs%rtt*XX)/(XX-LPs%rtt*YY))
         xxx = q * LPs%rtt *( LPs%Pi/6.0 + qq )
         yyy = q * ( -0.5*LPs%Pi + qq )
@@ -570,6 +581,7 @@ end function Lambert2DHexInverseSingle
 !> @param ierr error status: 0=OK, 1=input point not normalized
 !
 !> @date 7/10/13   MDG 1.0 original
+!> @date 5/04/15   MDG 1.1 correction to abs(X)/X for sign(X)
 !--------------------------------------------------------------------------
 recursive function Lambert2DHexInverseDouble(xyz,ierr) result(res)
 
@@ -578,7 +590,7 @@ IMPLICIT NONE
 real(kind=dbl),INTENT(IN)       :: xyz(3) 
 integer(kind=irg),INTENT(INOUT):: ierr
 
-real(kind=dbl)                  :: res(2), q, qq, XX, YY, xxx, yyy
+real(kind=dbl)                  :: res(2), q, qq, XX, YY, xxx, yyy, sgnX
 integer(kind=irg)               :: ks
 real(kind=dbl),parameter        :: eps = 1.0E-12
 
@@ -595,23 +607,26 @@ else
   q = dsqrt(2.D0/(1.D0+xyz(3)))
   XX = q * xyz(1)
   YY = q * xyz(2)
+! YY = -q * xyz(2) * LPs%rtt*0.5D0
 
 ! determine in which sextant this point lies
   ks = GetSextantDouble( (/ XX, YY /) )
+  sgnX = dsqrt(XX**2+YY**2)
+  if (XX.lt.0.D0) sgnX=-sgnX
 
 ! then perform the inverse to the hexagonal grid
   select case (ks)
     case (0,3)
-        q = LPs%pree * (dabs(XX)/XX) * dsqrt(XX**2+YY**2)
+        q = LPs%pree * sgnX 
         xxx = q * LPs%sPio2 
         yyy = q * LPs%pref * datan(YY/XX)
     case (1,4)
-        q = LPs%prea * (dabs(XX)/XX) * dsqrt(XX**2+YY**2)
+        q = LPs%prea * sgnX
         qq= datan((YY-LPs%rtt*XX)/(XX+LPs%rtt*YY))
         xxx = q * LPs%rtt *( LPs%Pi/6.D0 - qq )
         yyy = q * ( 0.5D0*LPs%Pi + qq )
     case (2,5)
-        q = LPs%prea * (dabs(XX)/XX) * dsqrt(XX**2+YY**2)
+        q = LPs%prea * sgnX
         qq= datan((YY+LPs%rtt*XX)/(XX-LPs%rtt*YY))
         xxx = q * LPs%rtt *( LPs%Pi/6.D0 + qq )
         yyy = q * ( -0.5D0*LPs%Pi + qq )

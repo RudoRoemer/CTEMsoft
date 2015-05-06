@@ -61,14 +61,14 @@ nmldeffile = 'EMECPthinfilm.nml'
 progname = 'EMECPthinfilm.f90'
 progdesc = 'Electron channeling pattern simulation for film on substrate'
 
+! print some information
+call EMsoft(progname, progdesc)
+
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,2,(/ 0, 40 /), progname)
 
 ! deal with the namelist stuff
 call GetECPNameList(nmldeffile,ecpnl)
-
-! print some information
-call EMsoft(progname, progdesc)
 
 ! perform the zone axis computations (fos = film on substrate)
 call ECpatternfos(ecpnl, progname)

@@ -92,8 +92,8 @@ character(fnlen)                       :: outstr
 type(unitcell),pointer                 :: cellA, cellB
 type(DynType),save                     :: DynA, DynB
 type(gnode),save                       :: rlpA, rlpB
-real(kind=sgl)                         :: dmin, voltage, TTAB(3,3), TTBA(3,3), io_real(3), fracB
-real(kind=dbl)                         :: edge, xy(2), xyz(3), txyz(3), txy(2), Radius
+real(kind=sgl)                         :: dmin, voltage, TTAB(3,3), TTBA(3,3), io_real(3), fracB, scl
+real(kind=dbl)                         :: edge, xy(2), xyz(3), txyz(3), txy(2), Radius, dc(3)
 type(orientation)                      :: orel    
 real(kind=sgl),allocatable             :: master(:,:), masterLC(:,:), masterSP(:,:)
 type(HDFobjectStackType),pointer       :: HDF_head
@@ -141,14 +141,16 @@ nmldeffile = 'EMEBSDoverlap.nml'
 progname = 'EMEBSDoverlap.f90'
 progdesc = 'Merge EBSD master patterns for a particular orientation relation'
 
+! print some information
+call EMsoft(progname, progdesc)
+
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,1,(/ 23 /), progname)
 
 ! deal with the namelist stuff
 call GetEBSDoverlapNameList(nmldeffile,enl)
 
-! print some information
-call EMsoft(progname, progdesc)
+ goto 100
 
 ! read EBSD master pattern files 
 allocate(masterA, masterB)
@@ -224,8 +226,8 @@ fracB = 1.0-enl%fracA
 
 !=============================
 !=============================
-! both patterns are square Lambert projections
-if ((sqorheA.eq.'square').and.(sqorheB.eq.'square')) then 
+! A is square, B is either square or hexagonal
+if (sqorheA.eq.'square') then 
   edge = LPs%sPio2 / dble(enl%npx)
   do i=-enl%npx,enl%npx
     do j=-enl%npy,enl%npy
@@ -243,11 +245,6 @@ if ((sqorheA.eq.'square').and.(sqorheB.eq.'square')) then
     end do
   end do
 end if
-
-!=============================
-!=============================
-! A is square, B is hexagonal [to be implemented]
-
 
 !=============================
 !=============================
@@ -322,6 +319,57 @@ call HDF_pop(HDF_head,.TRUE.)
 call h5close_f(hdferr)
 
 
+
+100 enl%npx = 500
+  scl = dble(enl%npx) / LPs%alpha 
+  edge = LPs%sPio2 / dble(enl%npx)
+
+xy = (/ 0.0,2.0*sqrt(sngl(cPi))/3.0**0.75 /)
+write (*,*) xy
+xyz = LambertHexToSphere(xy, ierr)
+write (*,*) xyz, ierr
+xy = LambertSphereToHex(xyz, ierr)
+write (*,*) xy, ierr
+
+write (*,*) '---'
+
+xy = (/ sqrt(sngl(cPi))/3.0**0.25, 0.0 /)
+write (*,*) xy
+xyz = LambertHexToSphere(xy, ierr)
+write (*,*) xyz, ierr
+xy = LambertSphereToHex(xyz, ierr)
+write (*,*) xy, ierr
+
+
+
+stop
+
+
+
+
+
+
+dc = (/1.0, 0.0, 0.0/)
+dc = dc/sqrt(sum(dc*dc))
+write (*,*) dc
+xy = scl * LambertSphereToHex( dc, ierr )
+write (*,*) xy, ierr
+!xy = xy/float(enl%npx)*LPs%preg ! edge
+xyz = LambertHexToSphere(xy, ierr)
+write (*,*) xyz, ierr
+
+
+dc = (/0.0, 1.0, 0.0/)
+dc = dc/sqrt(sum(dc*dc))
+write (*,*) dc
+xy = LambertSphereToHex( dc, ierr )
+write (*,*) xy, ierr
+!xy = xy/float(enl%npx)*LPs%preg ! edge
+xyz = LambertHexToSphere(xy, ierr)
+write (*,*) xyz, ierr
+
+
+
 end program EMEBSDoverlap
 
 
@@ -388,16 +436,22 @@ character(6),INTENT(IN)                 :: sqorhe
 real(kind=sgl)                          :: res
 
 integer(kind=irg)                       :: nix, niy, nixp, niyp, istat, npx
-real(kind=sgl)                          :: xy(2), dx, dy, dxm, dym, scl
-
-scl = float((s(1)-1)/2) / LPs%sPio2
-
-if (dc(3).lt.0.0) dc = -dc
+real(kind=sgl)                          :: xy(2), dx, dy, dxm, dym, scl, tmp
 
 npx = (s(1)-1)/2
+if (dc(3).lt.0.0) dc = -dc
 
 ! convert direction cosines to lambert projections
-xy = scl * LambertSphereToSquare( dc, istat )
+if (sqorhe.eq.'square') then 
+  scl = float(npx) / LPs%sPio2
+  xy = scl * LambertSphereToSquare( dc, istat )
+else
+  scl = float(npx) / LPs%alpha 
+  xy = scl * LambertSphereToHex( dc, istat )
+  tmp = xy(1)
+  xy(1) = xy(2)
+  xy(2) = tmp
+end if
 res = 0.0
 
 if (istat.eq.0) then 

@@ -59,7 +59,7 @@ character(20)    			:: oname
 
  progname = 'EMTBBW.f90'
  progdesc = 'Two-beam bright field-dark field images, using Bloch waves'
- call EMsoft
+ call EMsoft(progname, progdesc)
                                                 
 
 ! first get the crystal data and microscope voltage

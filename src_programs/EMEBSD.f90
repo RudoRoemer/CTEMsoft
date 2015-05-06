@@ -104,14 +104,14 @@ nmldeffile = 'EMEBSD.nml'
 progname = 'EMEBSD.f90'
 progdesc = 'Dynamical EBSD patterns, using precomputed MC and master Lambert projections'
 
+! print some information
+call EMsoft(progname, progdesc)
+
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,1,(/ 21 /), progname)
 
 ! deal with the namelist stuff
 call GetEBSDNameList(nmldeffile,enl)
-
-! print some information
-call EMsoft(progname, progdesc)
 
 ! this program needs a lot of data, and it also should be integrated 
 ! with Dream.3D, so we need to make sure that all data is loaded outside
@@ -121,15 +121,15 @@ call EMsoft(progname, progdesc)
 ! 1. read the angle array from file
 verbose = .TRUE.
 allocate(angles)
-call EBSDreadangles(enl, angles, verbose)
+call EBSDreadangles(enl, angles, verbose=.TRUE.)
 
 ! 2. read the Monte Carlo data file (including HDF format)
 allocate(acc)
-call EBSDreadMCfile(enl, acc, verbose)
+call EBSDreadMCfile(enl, acc, verbose=.TRUE.)
 
 ! 3. read EBSD master pattern file (including HDF format)
 allocate(master)
-call EBSDreadMasterfile(enl, master, verbose)
+call EBSDreadMasterfile(enl, master, verbose=.TRUE.)
 
 ! 4. generate detector arrays
 allocate(master%rgx(enl%numsx,enl%numsy), master%rgy(enl%numsx,enl%numsy), master%rgz(enl%numsx,enl%numsy), stat=istat)

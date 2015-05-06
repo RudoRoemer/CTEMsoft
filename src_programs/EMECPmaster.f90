@@ -62,14 +62,14 @@ nmldeffile = 'EMECPmaster.nml'
 progname = 'EMECPmaster.f90'
 progdesc = 'Master pattern generation for Electron channeling pattern'
 
+! print some information
+call EMsoft(progname, progdesc)
+
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,2,(/ 0, 40 /), progname)
 
 ! deal with the namelist stuff
 call GetECPMasterNameList(nmldeffile,ecpnl)
-
-! print some information
-call EMsoft(progname, progdesc)
 
 ! perform the zone axis computations
 call ECmasterpattern(ecpnl, progname)

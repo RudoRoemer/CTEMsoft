@@ -61,7 +61,7 @@ real(kind=sgl)		:: io_real(1)
 
  progname = 'EMvrfft.f90'
  progdesc = '3D electrostatic lattice potential via fft'
- call EMsoft
+ call EMsoft(progname, progdesc)
  
 
  SG % SYM_reduce=.TRUE.

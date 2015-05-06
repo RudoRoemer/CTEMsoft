@@ -58,13 +58,14 @@ type(RFZNameListType)           :: rfznl
 nmldeffile = 'EMsampleRFZ.nml'
 progname = 'EMsampleRFZ.f90'
 progdesc = 'Create a uniform sampling of Rodrigues space and output Euler angles list'
+
+! print some information
+call EMsoft(progname, progdesc)
+
 call Interpret_Program_Arguments(nmldeffile,1,(/ 60 /), progname )
 
 ! deal with the namelist stuff
 call GetRFZNameList(nmldeffile,rfznl)
-
-! print some information
-call EMsoft(progname, progdesc)
 
 ! perform the zone axis computations
 call CreateSampling(rfznl,progname)

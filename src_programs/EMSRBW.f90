@@ -61,7 +61,7 @@ real(kind=sgl)             		:: ktmax,io_real(1)
 
  progname = 'EMSRBW.f90'
  progdesc = 'Systematic row convergent beam pattern (Bloch waves)'
- call EMsoft
+ call EMsoft(progname, progdesc)
 
 ! first get the crystal data and microscope voltage
  SG % SYM_reduce=.TRUE.

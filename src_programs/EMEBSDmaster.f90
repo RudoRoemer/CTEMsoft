@@ -79,14 +79,14 @@ nmldeffile = 'EMEBSDmaster.nml'
 progname = 'EMEBSDmaster.f90'
 progdesc = 'EBSD Energy-dependent Master Pattern Simulation'
 
+! print some information
+call EMsoft(progname, progdesc)
+
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,1,(/ 21 /), progname)
 
 ! deal with the namelist stuff
 call GetEBSDMasterNameList(nmldeffile,emnl)
-
-! print some information
-call EMsoft(progname, progdesc)
 
 ! generate a set of master EBSD patterns
  call ComputeMasterPattern(emnl, progname, nmldeffile)

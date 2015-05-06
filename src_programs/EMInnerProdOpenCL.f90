@@ -44,14 +44,14 @@ nmldeffile = 'EMInnerProdOpenCL.nml'
 progname = 'EMInnerProdOpenCL.f90'
 progdesc = 'Program to compute inner product of observed and calculated patterns on a GPU'
 
+! print some information
+call EMsoft(progname, progdesc)
+
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,2,(/ 0, 40 /), progname)
 
 ! deal with the namelist stuff
 call GetDictIndxOpenCLNameList(nmldeffile,dictindxnl)
-
-! print some information
-call EMsoft(progname, progdesc)
 
 ! perform the zone axis computations
 call InnerProdGPU(dictindxnl, progname)
@@ -73,6 +73,7 @@ end program InnerProdOpenCL
 !> @param progname name of the program
 !
 !> @date 12/09/14  SS 1.0 original
+!> @date 05/05/15 MDG 1.1 removed getenv() call; replaced by global path string
 !--------------------------------------------------------------------------
 
 subroutine InnerProdGPU(dictindxnl,progname)!(result,exp,dict,Ne,Nd,L)
@@ -203,8 +204,7 @@ if(ierr /= CL_SUCCESS) stop "Cannot create command queue"
 !=====================
 
 ! read the source file
-call getenv("EMsoftopencl",openclpathname)
-open(unit = iunit, file = trim(openclpathname)//'/DictIndx.cl', access='direct', status = 'old', &
+open(unit = iunit, file = trim(openclpathname)//'DictIndx.cl', access='direct', status = 'old', &
 action = 'read', iostat = ierr, recl = 1)
 if (ierr /= 0) stop 'Cannot open file InnerProd.cl'
 

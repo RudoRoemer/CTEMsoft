@@ -34,15 +34,12 @@
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
-!> @brief 
-!> local definitions of single and double precision, general constants and variables
+!> @brief definitions of single and double precision, general constants and variables
 !
 !> @details  
 !> defines the kind-parameters for short and long integers, and single/double 
-!> precision reals.
+!> precision reals, as well as a few other global variables (path variables etc).
 ! 
-!> @todo remove postscript options from this entire package
-!
 !> @date 1/8/99   MDG 1.0 original
 !> @date 5/6/01   MDG 2.0 f90
 !> @date 11/27/01 MDG 2.1 added sgl and dbl kinds
@@ -52,6 +49,7 @@
 !> @date 01/10/14 MDG 4.0 new version
 !> @date 06/05/14 MDG 4.1 added comments about global variables in Release 3.0
 !> @date 03/29/14 MDG 4.2 added path variable for .xtal files (which are now HDF5 files)
+!> @date 04/05/15 MDG 4.3 added additional path variables and an EMsoft_path_init routine
 !--------------------------------------------------------------------------
 
 !---------------------------
@@ -63,10 +61,8 @@
 
 module local
 
-! for OpenMP implementations ... 
-! use omp_lib
-
 !> @note This module must be "use"d by every program, subroutine, and function!
+!> These are the only global variables used by the EMsoft package.
 
 ! The entire EMsoft package should be processor independent.  This can
 ! be accomplished by the use of the "kind" parameters.
@@ -115,14 +111,16 @@ module local
 
 !> pathnames to the namelist template files
 ! This should be reworked via CMake commands
+  character(fnlen)                      :: EMsoftpathname
+  character(fnlen)                      :: EMdatapathname
   character(fnlen)                      :: templatepathname 
   character(fnlen)                      :: resourcepathname
   character(fnlen)                      :: openclpathname
   character(fnlen)                      :: xtalpathname
-  character(17)                         :: templatecodefilename = 'templatecodes.txt'
+  character(fnlen)                      :: templatecodefilename 
+  character(fnlen)                      :: randomseedfilename 
 
 contains
-
 
 !--------------------------------------------------------------------------
 ! EMsoft2013:local:EMsoft.f90
@@ -171,8 +169,50 @@ integer(kind=irg)                     :: std
 
  call timestamp(std)
  write (std,"(1x,//)")
+
+ call EMsoft_path_init
  
 end subroutine EMsoft
+
+
+!--------------------------------------------------------------------------
+! EMsoft2013:local:EMsoft_path_init.f90
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: EMsoft_path_init
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief Reads environment variables and sets appropriate path variables
+!
+!> @param no parameters
+!
+!> @date  05/05/15 MDG 1.0 new routine
+!--------------------------------------------------------------------------
+
+subroutine EMsoft_path_init
+
+IMPLICIT NONE
+
+character(fnlen)                        :: pathstring
+
+! get the environment variables for the EMsoft root and data folders
+call getenv("EMsoftpathname",pathstring)
+EMsoftpathname = trim(pathstring)//'/'
+
+pathstring=''
+call getenv("EMdatapathname",pathstring)
+EMdatapathname = trim(pathstring)//'/'
+
+! define the derived pathname variables (globals)
+templatepathname = EMsoftpathname//'templatefolder/'
+resourcepathname = EMsoftpathname//'resources/'
+openclpathname = EMsoftpathname//'opencl/'
+xtalpathname = EMdatapathname//'XtalFolder/'
+templatecodefilename = resourcepathname//'templatecodes.txt'
+randomseedfilename = resourcepathname//'RandomsSeeds.data'
+
+end subroutine EMsoft_path_init
 
 
 !--------------------------------------------------------------------------

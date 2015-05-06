@@ -57,14 +57,14 @@ nmldeffile = 'EMECPmaster.nml'
 progname = 'EMECPmasterOpenCL.f90'
 progdesc = 'Master pattern generation for Electron channeling pattern using scattering matrix on a GPU'
 
+! print some information
+call EMsoft(progname, progdesc)
+
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,2,(/ 0, 40 /), progname)
 
 ! deal with the namelist stuff
 call GetECPMasterNameList(nmldeffile,ecpnl)
-
-! print some information
-call EMsoft(progname, progdesc)
 
 ! perform the zone axis computations
 call ECmasterpatternOpenCL(ecpnl, progname)
@@ -87,6 +87,7 @@ end program EMECPmaster
 !> @param progname program name
 !
 !> @date 03/06/14  SS 1.0 original
+!> @date 05/05/15 MDG 1.1 removed getenv() call; replaced by global path string
 !--------------------------------------------------------------------------
 subroutine ECmasterpatternOpenCL(ecpnl, progname)
 
@@ -449,8 +450,7 @@ if(ierr /= CL_SUCCESS) stop "Cannot create command queue"
 !=====================
 
 ! read the source file
-call getenv("EMsoftopencl",openclpathname)
-open(unit = iunit, file = trim(openclpathname)//'/MBmoduleOpenCL.cl', access='direct', status = 'old', &
+open(unit = iunit, file = trim(openclpathname)//'MBmoduleOpenCL.cl', access='direct', status = 'old', &
 action = 'read', iostat = ierr, recl = 1)
 if (ierr /= 0) stop 'Cannot open file MBmoduleOpenCL.cl'
 

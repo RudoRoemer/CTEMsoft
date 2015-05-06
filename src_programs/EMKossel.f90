@@ -65,14 +65,14 @@ nmldeffile = 'EMKossel.nml'
 progname = 'EMKossel.f90'
 progdesc = 'Zone axis Kossel pattern simulation'
 
+! print some information
+call EMsoft(progname, progdesc)
+
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,1,(/ 12 /), progname)
 
 ! deal with the namelist stuff
 call GetKosselNameList(nmldeffile,knl)
-
-! print some information
-call EMsoft(progname, progdesc)
 
 ! perform the zone axis computations for the knl input parameters
 call ComputeKosselpattern(knl, progname)

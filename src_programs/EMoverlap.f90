@@ -51,6 +51,10 @@ character(fnlen)	:: nmldeffile
 ! deal with the command line arguments, if any
 nmldeffile = 'EMoverlap.nml'
 progname = 'EMoverlap.f90'
+progdesc = 'Dynamical diffraction for overlapping crystals'
+
+call EMsoft(progname, progdesc)
+
 call Interpret_Program_Arguments(nmldeffile,2,(/ 0, 50 /) )
 
 ! perform the zone axis computations

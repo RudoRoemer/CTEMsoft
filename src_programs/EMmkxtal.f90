@@ -56,6 +56,7 @@ character(fnlen)                :: progname, progdesc, fname
 
  progname = 'EMmkxtal.f90'
  progdesc = 'Create an HDF crystal structure file'
+
  call EMsoft(progname, progdesc)
 
  allocate(cell)

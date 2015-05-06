@@ -69,7 +69,7 @@ real(kind=dbl) 			:: zz
 
  progname = 'EMTBBFDF.f90'
  progdesc = 'Two-beam bright field-dark field images, using BFDF.routines'
- call EMsoft
+ call EMsoft(progname, progdesc)
                                                   
 ! compute the relevant parameters for a given crystal
  imanum = 0

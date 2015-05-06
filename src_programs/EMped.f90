@@ -65,14 +65,14 @@ nmldeffile = 'EMped.nml'
 progname = 'EMped.f90'
 progdesc = 'Precession Electron Diffraction Pattern Simulation'
 
+! print some information
+call EMsoft(progname, progdesc)
+
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,1,(/ 13 /), progname)
 
 ! deal with the namelist stuff
 call GetPEDNameList(nmldeffile,pednl)
-
-! print some information
-call EMsoft(progname, progdesc)
 
 ! generate a set of master EBSD patterns
  call PEDPattern(pednl,progname)

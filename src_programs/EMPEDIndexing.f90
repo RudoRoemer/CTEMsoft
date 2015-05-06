@@ -63,14 +63,14 @@ nmldeffile = 'EMPEDIndexing.nml'
 progname = 'EMPEDIndexing.f90'
 progdesc = 'Program to index PED patterns using the dynamically calculated dictionary'
 
+! print some information
+call EMsoft(progname, progdesc)
+
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,2,(/ 0, 40 /), progname)
 
 ! deal with the namelist stuff
 call GetPEDIndxNameList(nmldeffile,pednl)
-
-! print some information
-call EMsoft(progname, progdesc)
 
 ! perform the dictionary indexing computations
 call MasterSubroutine(pednl, progname)
@@ -91,6 +91,7 @@ end program PEDIndexing
 !> @param progname name of the program
 !
 !> @date 01/27/15  SS 1.0 original
+!> @date 05/05/15 MDG 1.1 removed getenv() call; replaced by global path string
 !--------------------------------------------------------------------------
 subroutine MasterSubroutine(pednl,progname)
 
@@ -243,8 +244,7 @@ if(ierr /= CL_SUCCESS) stop "Cannot create context"
 command_queue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, ierr)
 if(ierr /= CL_SUCCESS) stop "Cannot create command queue"
 
-!call getenv("CTEMsoft2013opencl",openclpathname)
-open(unit = iunit, file = 'DictIndx.cl', access='direct', status = 'old', &
+open(unit = iunit, file = trim(openclpathname)//'DictIndx.cl', access='direct', status = 'old', &
 action = 'read', iostat = ierr, recl = 1)
 if (ierr /= 0) stop 'Cannot open file DictIndx.cl'
 

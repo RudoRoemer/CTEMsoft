@@ -59,7 +59,7 @@ real(kind=sgl)          :: io_real(1), camlen
 
  progname = 'EMSRCBED.f90'
  progdesc = 'Systematic row convergent beam pattern using scattering matrix'
- call EMsoft
+ call EMsoft(progname, progdesc)
  
 ! first get the crystal data and microscope voltage
  SG % SYM_reduce=.TRUE.

@@ -80,14 +80,14 @@ nmldeffile = 'EMKosselmaster.nml'
 progname = 'EMKosselmaster.f90'
 progdesc = 'Kossel Master Pattern Simulation'
 
+! print some information
+call EMsoft(progname, progdesc)
+
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,1,(/ 14 /), progname)
 
 ! deal with the namelist stuff
 call GetKosselMasterNameList(nmldeffile,kmnl)
-
-! print some information
-call EMsoft(progname, progdesc)
 
 ! generate a series of master Kossel patterns
  call ComputeKosselMasterPattern(kmnl, progname)

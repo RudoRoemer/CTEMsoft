@@ -60,6 +60,10 @@ character(fnlen)			:: nmldeffile
 ! deal with the command line arguments, if any
 nmldeffile = 'EMZAdefect.nml'
 progname = 'EMZAdefect.f90'
+progdesc = 'zone axis STEM-DCI'
+
+call EMsoft(progname, progdesc)
+
 call Interpret_Program_Arguments(nmldeffile,8,(/ 0, 1, 2, 3, 200, 201, 202, 203 /) )
 
 ! initialize all user-defined variables

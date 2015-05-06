@@ -77,14 +77,14 @@ nmldeffile = 'EMMC.nml'
 progname = 'EMMC.f90'
 progdesc = 'Monte Carlo backscattered electron simulation'
 
+! print some information
+call EMsoft(progname, progdesc)
+
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,1,(/ 20 /), progname)
 
 ! deal with the namelist stuff
 call GetMCNameList(nmldeffile,mcnl)
-
-! print some information
-call EMsoft(progname, progdesc)
 
 ! perform a Monte Carlo simulation
  call DoMCsimulation(mcnl, progname)

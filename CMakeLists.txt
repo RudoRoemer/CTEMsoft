@@ -14,6 +14,10 @@ endif()
 
 include(CMakeParseArguments)
   
+set(EMsoft_VER_MAJOR "3")
+set(EMsoft_VER_MINOR "x")
+set(EMsoft_VER_PATCH "x")
+
 
 # ---------- Setup output Directories -------------------------
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
@@ -62,11 +66,6 @@ set(CMAKE_MODULE_PATH ${EMsoft_SOURCE_DIR}/Support/CMakeModules ${CMAKE_MODULE_P
 
 
 set(EXE_DEBUG_EXTENSION "_debug")
-
-set(EMsoft_VER_MAJOR "3")
-set(EMsoft_VER_MINOR "x")
-set(EMsoft_VER_PATCH "x")
-
 	   
 # FFLAGS depend on the compiler
 get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)

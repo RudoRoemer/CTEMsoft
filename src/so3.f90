@@ -474,7 +474,6 @@ use constants
 use typedefs
 use rotations
 use quaternions
-use so3
 
 IMPLICIT NONE
 
@@ -484,7 +483,7 @@ real(kind=sgl),INTENT(IN)            :: qt(4)
 integer(kind=irg),INTENT(OUT)        :: FZcnt                ! counts number of entries in linked list
 type(FZpointd),pointer,INTENT(OUT)   :: FZlist               ! pointers
 
-real(kind=dbl)                       :: x, y, z, s, rod(4), rodt(4), delta, rval, ro(3), qt(4)
+real(kind=dbl)                       :: x, y, z, s, rod(4), rodt(4), delta, rval, ro(3)
 type(FZpointd), pointer              :: FZtmp, FZtmp2
 integer(kind=irg)                    :: FZtype, FZorder
 
@@ -538,7 +537,7 @@ do while (x.lt.s)
 ! convert to an actual vector
       ro(1:3) = rod(1:3)
 ! then apply the twinning quaternion
-      ro = quat_Lp(qt, ro)
+      ro = quat_Lp(dble(qt), ro)
 ! convert back to a Rodrigues vector
       rodt = rod
       rodt(1:3) = ro(1:3)

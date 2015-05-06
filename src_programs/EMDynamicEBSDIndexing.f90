@@ -101,15 +101,15 @@ progname = 'EMEBSDIndexing.f90'
 progdesc = 'Program to index EBSD patterns using the dynamically calculated dictionary'
 verbose = .TRUE.
 
+! print some information
+call EMsoft(progname, progdesc)
+
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,2,(/ 0, 40 /), progname)
 
 ! deal with the namelist stuff
 !call GetEBSDIndxNameList(nmldeffile,ebsdnl)
 call GetEBSDNameList(nmldeffile,ebsdnl)
-
-! print some information
-call EMsoft(progname, progdesc)
 
 ! 1. read the Monte Carlo data file
 allocate(acc)
@@ -148,6 +148,7 @@ end program EBSDIndexing
 !> @param progname name of the program
 !
 !> @date 03/30/15  SS 1.0 original
+!> @date 05/05/15 MDG 1.1 removed getenv() call; replaced by global path strings
 !--------------------------------------------------------------------------
 
 subroutine MasterSubroutine(ebsdnl,acc,master,progname)
@@ -361,8 +362,7 @@ if(ierr /= CL_SUCCESS) stop "Cannot create context"
 command_queue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, ierr)
 if(ierr /= CL_SUCCESS) stop "Cannot create command queue"
 
-call getenv("CTEMsoft2013opencl",openclpathname)
-open(unit = iunit, file = trim(openclpathname)//'/DictIndx.cl', access='direct', status = 'old', &
+open(unit = iunit, file = trim(openclpathname)//'DictIndx.cl', access='direct', status = 'old', &
 action = 'read', iostat = ierr, recl = 1)
 if (ierr /= 0) stop 'Cannot open file DictIndx.cl'
 

@@ -72,6 +72,10 @@ character(fnlen)			:: nmldeffile
 ! deal with the command line arguments, if any
 nmldeffile = 'EMMCBSE.nml'
 progname = 'EMMC.f90'
+progdesc = 'Monte Carlo BSE simulation'
+
+call EMsoft(progname, progdesc)
+
 call Interpret_Program_Arguments(nmldeffile,1,(/ 20 /) )
 
 ! perform a Monte Carlo simulation

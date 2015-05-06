@@ -74,14 +74,14 @@ nmldeffile = 'EMECCI.nml'
 progname = 'EMECCI.f90'
 progdesc = 'Dynamical ECCI defect image simulation'
 
+! print some information
+call EMsoft(progname, progdesc)
+
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,8,(/ 0, 3, 41, 200, 201, 202, 203, 204 /), progname)
 
 ! deal with the namelist stuff
 call GetECCINameList(nmldeffile,eccinl)
-
-! print some information
-call EMsoft(progname, progdesc)
 
 ! and call the main routine
 call ComputeECCI(eccinl,progname, nmldeffile)

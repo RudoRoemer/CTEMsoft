@@ -55,6 +55,10 @@ character(fnlen)			:: nmldeffile
 ! deal with the command line arguments, if any
 nmldeffile = 'EMSRdefect.nml'
 progname = 'EMSRdefect.f90'
+progdesc = 'Systematic row defect image calculation'
+
+call EMsoft(progname, progdesc)
+
 call Interpret_Program_Arguments(nmldeffile,8,(/ 0, 2, 3, 4, 200, 201, 202, 203 /) )
 
 ! initialize all user-defined variables

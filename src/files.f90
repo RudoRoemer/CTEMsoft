@@ -43,7 +43,8 @@
 !> @date   11/27/01 MDG 2.1 added kind support
 !> @date   03/25/13 MDG 3.0 updated IO
 !> @date   01/10/14 MDG 4.0 update after new cell type
-!> @date   03/29/15 MDg 5.0 reformatted xtal files in HDF5 format; removed obsolete routines
+!> @date   03/29/15 MDG 5.0 reformatted xtal files in HDF5 format; removed obsolete routines
+!> @date   05/05/15 MDG 5.1 removed all getenv() calls; replaced with global path strings
 !--------------------------------------------------------------------------
 
 module files
@@ -250,8 +251,7 @@ CALL h5open_f(hdferr)
 
 call timestamp(datestring=dstr, timestring=tstr)
 
-call getenv("EMsoftxtalpath",xtalpathname)
-fname = trim(xtalpathname)//'/'//trim(cell%fname)
+fname = trim(xtalpathname)//trim(cell%fname)
 hdferr =  HDF_createFile(fname, HDF_head)
 
 groupname = 'CrystalData'
@@ -344,8 +344,7 @@ nullify(HDF_head)
 
 call h5open_f(hdferr)
 
-call getenv("EMsoftxtalpath",xtalpathname)
-fname = trim(xtalpathname)//'/'//trim(cell%fname)
+fname = trim(xtalpathname)//trim(cell%fname)
 hdferr =  HDF_openFile(fname, HDF_head)
 
 groupname = 'CrystalData'
@@ -426,6 +425,7 @@ end subroutine ReadDataHDF
 !> @date   06/26/13 MDG 1.0 first attempt
 !> @date   06/08/14 MDG 2.0 added stdout argument
 !> @date   10/06/14 MDG 2.1 corrected off-by-one error in templatelist
+!> @date   05/05/15 MDG 2.2 removed getenv() call; replaced by global path string
 !--------------------------------------------------------------------------
 subroutine CopyTemplateFiles(nt,templatelist,stdout)
 
@@ -445,13 +445,8 @@ character(255)                  :: line
 std = 6
 if (PRESENT(stdout)) std = stdout
 
-call getenv("EMsofttemplates",templatepathname)
-call getenv("EMsoftresources",resourcepathname)
-!write (*,*) 'template folder location: ',templatepathname
-!write (*,*) 'resource folder location: ',resourcepathname
-
 ! first open and read the resources/templatecodes.txt file
-open(UNIT=dataunit,FILE=trim(resourcepathname)//'/'//templatecodefilename, &
+open(UNIT=dataunit,FILE=trim(templatecodefilename), &
         STATUS='old', FORM='formatted',ACCESS='sequential')
 
 templates = ''
@@ -465,14 +460,11 @@ do
 end do
 CLOSE(UNIT=dataunit, STATUS='keep')
 
-! write (*,*) 'templatelist = ',templatelist(1:nt)
-
 do i=1,nt
- input_name = trim(templatepathname)//'/'//trim(templates(templatelist(i)+1))
-! write (*,*) i,'->',trim(input_name),'<-'
+ input_name = trim(templatepathname)//trim(templates(templatelist(i)+1))
  output_name = templates(templatelist(i)+1)
  OPEN(UNIT=dataunit,FILE=trim(input_name), STATUS='old', FORM='formatted',ACCESS='sequential')
- OPEN(UNIT=dataunit2,FILE=trim(output_name), STATUS='replace', FORM='formatted',ACCESS='sequential')
+ OPEN(UNIT=dataunit2,FILE=trim(output_name), STATUS='unknown', FORM='formatted',ACCESS='sequential')
  do
         read(dataunit,'(A)',iostat=ios) line
         if (ios.ne.0) then 
@@ -485,7 +477,6 @@ do i=1,nt
  call Message('  -> created template file '//trim(templates(templatelist(i)+1)), frm = "(A)", stdout = std)
 end do
  
-
 end subroutine CopyTemplateFiles
 
 

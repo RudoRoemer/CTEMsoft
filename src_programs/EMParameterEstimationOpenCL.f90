@@ -136,8 +136,7 @@ if(ierr /= CL_SUCCESS) stop "Cannot create command queue"
 !=====================
 
 ! read the source file
-call getenv("EMsoftopencl",openclpathname)
-open(unit = iunit, file = trim(openclpathname)//'/DictIndx.cl', access='direct', status = 'old', &
+open(unit = iunit, file = trim(openclpathname)//'DictIndx.cl', access='direct', status = 'old', &
 action = 'read', iostat = ierr, recl = 1)
 if (ierr /= 0) stop 'Cannot open file DictIndx.cl'
 

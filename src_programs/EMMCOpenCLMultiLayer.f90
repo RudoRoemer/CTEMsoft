@@ -43,14 +43,14 @@ nmldeffile = 'EMMCCLMultiLayer.nml'
 progname = 'EMMC.f90'
 progdesc = 'Monte Carlo backscattered electron simulation'
 
+! print some information
+call EMsoft(progname, progdesc)
+
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,1,(/ 20 /), progname)
 
 ! deal with the namelist stuff
 call GetMCCLMultiLayerNameList(nmldeffile,mcnl)
-
-! print some information
-call EMsoft(progname, progdesc)
 
 ! perform a Monte Carlo simulation
 call DoMCsimulation(mcnl, progname)
@@ -76,6 +76,7 @@ end program EMMCOpenCL
 !> @date 03/17/14  MDG 3.3 added a few more for the IDL visualization program
 !> @date 06/19/14  MDG 4.0 rewrite with name list handling removed
 !> @date 07/23/14  SS  4.1 conversion to OpenCL
+!> @date 05/05/15  MDG 4.2 removed getenv() call; replaced by global path string
 !--------------------------------------------------------------------------
 subroutine DoMCsimulation(mcnl, progname)
 
@@ -245,10 +246,9 @@ if(ierr /= CL_SUCCESS) stop "Cannot create command queue"
 !=====================
 
 ! read the source file
-call getenv("EMsoftopencl",openclpathname)
-open(unit = iunit, file = trim(openclpathname)//'/EMMC-multilayer.cl', access='direct', status = 'old', &
+open(unit = iunit, file = trim(openclpathname)//'EMMC-multilayer.cl', access='direct', status = 'old', &
         action = 'read', iostat = ierr, recl = 1)
-if (ierr /= 0) stop 'Cannot open file EMMC.cl'
+if (ierr /= 0) stop 'Cannot open file EMMC-multilayer.cl'
 source = ''
 irec = 1
 do

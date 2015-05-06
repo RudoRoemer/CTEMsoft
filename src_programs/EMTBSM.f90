@@ -61,7 +61,7 @@ real(kind=sgl)                  :: wmax,io_real(1)
 
  progname = 'EMTBSM.f90'
  progdesc = 'Two-beam computations: comparing scattering matrix and analytical'
- call EMsoft
+ call EMsoft(progname, progdesc)
 
 ! first get the crystal data and microscope voltage
  SG % SYM_reduce=.TRUE.

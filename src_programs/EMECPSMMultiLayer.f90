@@ -59,14 +59,14 @@ nmldeffile = 'EMECPMultiLayer.nml'
 progname = 'EMECPSMMultiLayer.f90'
 progdesc = 'Electron channeling pattern computation for two layer structure using Scattering Matrix approach'
 
+! print some information
+call EMsoft(progname, progdesc)
+
 ! deal with command line arguments if any
 call Interpret_Program_Arguments(nmldeffile,2,(/ 0, 40 /), progname)
 
 !deal with the namelist file
 call GetECPNameList(nmldeffile,ecpnl)
-
-! print some information
-call EMsoft(progname, progdesc)
 
 ! perform the zone axis computations
 call ECPMultiLayerSM(ecpnl, progname)

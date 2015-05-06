@@ -56,14 +56,14 @@ nmldeffile = 'EMpedKIN.nml'
 progname = 'EMpedKIN.f90'
 progdesc = 'Kinematical Precession Electron Diffraction Dictionary Generation'
 
+! print some information
+call EMsoft(progname, progdesc)
+
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,1,(/ 15 /), progname)
 
 ! deal with the namelist stuff
 call GetPEDKINNameList(nmldeffile,pednl)
-
-! print some information
-call EMsoft(progname, progdesc)
 
 ! generate a set of master EBSD patterns
  call PEDKIN_dictionary(pednl,progname)

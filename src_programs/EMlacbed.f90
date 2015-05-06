@@ -65,14 +65,14 @@ nmldeffile = 'EMLACBED.nml'
 progname = 'EMLACBED.f90'
 progdesc = 'Large angle convergent beam pattern simulation'
 
+! print some information
+call EMsoft(progname, progdesc)
+
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,1,(/ 10 /), progname)
 
 ! deal with the namelist stuff
 call GetLACBEDNameList(nmldeffile,lacbednl)
-
-! print some information
-call EMsoft(progname, progdesc)
 
 ! perform the zone axis computations
 call LACBEDpattern(lacbednl, progname)

@@ -73,7 +73,7 @@ real(kind=sgl)                       		:: rr(4),gg(4),g(3),r(3),cc,Vmod,Vphase,g
 
  progname = 'EMvr.f90'
  progdesc = '2D section of electrostatic lattice potential'
- call EMsoft
+ call EMsoft(proganme, progdesc)
 
  SG % SYM_reduce=.TRUE.
  thr = 1.D-6

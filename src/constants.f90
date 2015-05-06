@@ -217,6 +217,7 @@ type LambertParametersType
         real(kind=dbl)          :: pred=2.094395102393195D0     !  2pi/3
         real(kind=dbl)          :: pree=0.759835685651593D0     !  3^(-1/4)
         real(kind=dbl)          :: pref=1.381976597885342D0     !  sqrt(6/pi)
+        real(kind=dbl)          :: preg=1.5551203015562141D0    ! 2sqrt(pi)/3^(3/4)
 ! the following constants are used for the cube to quaternion hemisphere mapping
         real(kind=dbl)          :: a=1.925749019958253D0        ! pi^(5/6)/6^(1/6)
         real(kind=dbl)          :: ap=2.145029397111025D0       ! pi^(2/3)
