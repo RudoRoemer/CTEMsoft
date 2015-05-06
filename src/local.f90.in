@@ -205,12 +205,12 @@ call getenv("EMdatapathname",pathstring)
 EMdatapathname = trim(pathstring)//'/'
 
 ! define the derived pathname variables (globals)
-templatepathname = EMsoftpathname//'templatefolder/'
-resourcepathname = EMsoftpathname//'resources/'
-openclpathname = EMsoftpathname//'opencl/'
-xtalpathname = EMdatapathname//'XtalFolder/'
-templatecodefilename = resourcepathname//'templatecodes.txt'
-randomseedfilename = resourcepathname//'RandomsSeeds.data'
+templatepathname = trim(EMsoftpathname)//'templatefolder/'
+resourcepathname = trim(EMsoftpathname)//'resources/'
+openclpathname = trim(EMsoftpathname)//'opencl/'
+xtalpathname = trim(EMdatapathname)//'XtalFolder/'
+templatecodefilename = trim(resourcepathname)//'templatecodes.txt'
+randomseedfilename = trim(resourcepathname)//'RandomsSeeds.data'
 
 end subroutine EMsoft_path_init
 

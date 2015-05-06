@@ -214,15 +214,15 @@ type(HDFobjectStackType),pointer        :: HDF_head
 if (PRESENT(efile)) then
   energyfile = efile
 else
-  energyfile = enl%energyfile
+  energyfile = trim(Emdatapathname)//trim(enl%energyfile)
 end if
 
-! first, we need to check whether or not the input file is of the HDF5 forat type; if
+! first, we need to check whether or not the input file is of the HDF5 format type; if
 ! it is, we read it accordingly, otherwise we use the old binary format.
 !
-call h5fis_hdf5_f(trim(energyfile), stat, hdferr)
+call h5fis_hdf5_f(energyfile, stat, hdferr)
 
-if (stat) then 
+if (stat) then
 ! open the fortran HDF interface
   call h5open_f(hdferr)
 
@@ -414,13 +414,13 @@ nullify(HDF_head, HDF_head)
 if (PRESENT(mfile)) then
   masterfile = mfile
 else
-  masterfile = enl%masterfile
+  masterfile = trim(Emdatapathname)//trim(enl%masterfile)
 end if
 
 ! first, we need to check whether or not the input file is of the HDF5 forat type; if
 ! it is, we read it accordingly, otherwise we use the old binary format.
 !
-call h5fis_hdf5_f(trim(masterfile), stat, hdferr)
+call h5fis_hdf5_f(masterfile, stat, hdferr)
 
 if (stat) then 
 ! open the master file 
