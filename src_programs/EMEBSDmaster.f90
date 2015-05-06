@@ -171,7 +171,7 @@ integer(kind=irg)       :: numEbins, numzbins, nsx, nsy, hdferr, nlines    ! var
 real(kind=dbl)          :: EkeV, Ehistmin, Ebinsize, depthmax, depthstep, etotal ! enery variables from MC program
 integer(kind=irg),allocatable :: accum_e(:,:,:), accum_z(:,:,:,:), thick(:), acc_z(:,:,:,:)
 real(kind=sgl),allocatable :: lambdaE(:,:)
-character(fnlen)        :: oldprogname, groupname
+character(fnlen)        :: oldprogname, groupname, energyfile, outname
 character(8)            :: MCscversion
 character(11)           :: dstr
 character(15)           :: tstrb
@@ -227,7 +227,8 @@ call Message('opening '//trim(emnl%energyfile), frm = "(A)" )
 call h5open_f(hdferr)
 
 ! first of all, if the file exists, then delete it and rewrite it on each energyloop
-inquire(file=trim(emnl%energyfile), exist=f_exists)
+energyfile = trim(EMdatapathname)//trim(emnl%energyfile)
+inquire(file=energyfile, exist=f_exists)
 
 if (.not.f_exists) then
   call FatalError('ComputeMasterPattern','Monte Carlo input file does not exist')
@@ -235,7 +236,7 @@ end if
 
 ! open the MC file using the default properties.
 readonly = .TRUE.
-hdferr =  HDF_openFile(emnl%energyfile, HDF_head, readonly)
+hdferr =  HDF_openFile(energyfile, HDF_head, readonly)
 
 ! open the namelist group
 groupname = 'NMLparameters'
@@ -464,7 +465,8 @@ deallocate(accum_z)
   call h5open_f(hdferr)
 
 ! Create a new file using the default properties.
-  hdferr =  HDF_createFile(emnl%outname, HDF_head)
+  outname = trim(EMdatapathname)//trim(emnl%outname)
+  hdferr =  HDF_createFile(outname, HDF_head)
 
 ! write the EMheader to the file
   call HDF_writeEMheader(HDF_head, dstr, tstrb, tstre, progname)
@@ -780,7 +782,7 @@ end if
   call h5open_f(hdferr)
 
 ! open the existing file using the default properties.
-  hdferr =  HDF_openFile(emnl%outname, HDF_head)
+  hdferr =  HDF_openFile(outname, HDF_head)
 
 ! update the time string
   groupname = 'EMheader'

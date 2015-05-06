@@ -253,6 +253,7 @@ character(fnlen)                        :: groupname, dataset
 character(11)                           :: dstr
 character(15)                           :: tstrb
 character(15)                           :: tstre
+character(fnlen)                        :: datafile
 logical                                 :: overwrite = .TRUE., insert = .TRUE.
 
 nullify(HDF_head)
@@ -309,7 +310,8 @@ call timestamp(datestring=dstr, timestring=tstrb)
 tstre = tstrb
 
 ! Create a new file using the default properties.
-hdferr =  HDF_createFile(enl%datafile, HDF_head)
+datafile = trim(EMdatapathname)//trim(enl%datafile)
+hdferr =  HDF_createFile(datafile, HDF_head)
 
 ! write the EMheader to the file
 call HDF_writeEMheader(HDF_head, dstr, tstrb, tstre, progname)

@@ -151,7 +151,7 @@ integer(kind=irg)       :: numset, nref, ipx, ipy, iequiv(2,12), nequiv, ip, jp,
 integer(kind=irg),allocatable   :: kij(:,:), nat(:)
 real(kind=dbl)          :: res(2)
 
-character(fnlen)        :: oldprogname
+character(fnlen)        :: oldprogname, energyfile, outname
 character(fnlen)        :: xtalname
 character(8)            :: MCscversion
 character(4)            :: MCmode
@@ -182,7 +182,8 @@ allocate(cell)
 
 call Message('opening '//trim(ecpnl%energyfile), frm = "(A)" )
 
-open(dataunit,file=trim(ecpnl%energyfile),status='unknown',form='unformatted')
+energyfile = trim(EMdatapathname)//trim(ecpnl%energyfile)
+open(dataunit,file=trim(energyfile),status='unknown',form='unformatted')
 
 ! lines from EMMCCL.f90... these are the things we need to read in...
 ! write (dataunit) progname
@@ -331,8 +332,8 @@ nat = 0
 fnat = 1.0/float(sum(cell%numat(1:numset)))
 intthick = dble(depthmax)
 
-
-open(unit=dataunit,file=trim(ecpnl%outname),status='unknown',action='write',form = 'unformatted')
+outname = trim(EMdatapathname)//trim(ecpnl%outname)
+open(unit=dataunit,file=trim(outname),status='unknown',action='write',form = 'unformatted')
 ! write the program identifier
 write (dataunit) progname
 ! write the version number

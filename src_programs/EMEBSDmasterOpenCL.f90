@@ -147,7 +147,7 @@ integer(kind=irg)                               :: izzmax
 integer(kind=irg),allocatable                   :: kij(:,:), nat(:)
 real(kind=dbl)                                  :: res(2),selE
 
-character(fnlen)                                :: oldprogname
+character(fnlen)                                :: oldprogname, energyfile, outname
 character(fnlen)                                :: xtalname
 character(8)                                    :: MCscversion
 character(4)                                    :: MCmode
@@ -265,7 +265,8 @@ call Message('opening '//trim(emnl%energyfile), frm = "(A)" )
 call h5open_f(hdferr)
 
 ! first of all, if the file exists, then delete it and rewrite it on each energyloop
-inquire(file=trim(emnl%energyfile), exist=f_exists)
+energyfile = trim(EMdatapathname)//trim(emnl%energyfile)
+inquire(file=trim(energyfile), exist=f_exists)
 
 if (.not.f_exists) then
   call FatalError('ComputeMasterPattern','Monte Carlo input file does not exist')
@@ -273,7 +274,7 @@ end if
 
 ! open the MC file using the default properties.
 readonly = .TRUE.
-hdferr =  HDF_openFile(emnl%energyfile, HDF_head, readonly)
+hdferr =  HDF_openFile(energyfile, HDF_head, readonly)
 
 ! open the namelist group
 groupname = 'NMLparameters'
@@ -909,15 +910,16 @@ call h5open_f(hdferr)
 call timestamp(timestring=tstre)
 
 ! first of all, if the file exists, then delete it and rewrite it on each energyloop
-inquire(file=trim(emnl%outname), exist=f_exists)
+outname = trim(EMdatapathname)//trim(emnl%outname)
+inquire(file=trim(outname), exist=f_exists)
 
 if (f_exists) then
-    open(unit=dataunit, file=trim(emnl%outname), status='old',form='unformatted')
+    open(unit=dataunit, file=trim(outname), status='old',form='unformatted')
     close(unit=dataunit, status='delete')
 end if
 
 ! Create a new file using the default properties.
-hdferr =  HDF_createFile(emnl%outname, HDF_head)
+hdferr =  HDF_createFile(outname, HDF_head)
 
 ! write the EMheader to the file
 call HDF_writeEMheader(HDF_head, dstr, tstrb, tstre, progname)

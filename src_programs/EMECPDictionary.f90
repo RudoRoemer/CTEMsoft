@@ -106,7 +106,7 @@ IMPLICIT NONE
 type(ECPpatternNameListType),INTENT(IN) :: ecpnl
 character(fnlen),INTENT(IN)             :: progname
 
-character(fnlen)                        :: oldprogname
+character(fnlen)                        :: oldprogname, masterfile, outname, eulerfile
 character(fnlen)                        :: xtalname
 character(5)                            :: oldscversion
 character(fnlen)                        :: energyfile
@@ -142,7 +142,8 @@ real(kind=dbl)                          :: time_start,time_end
 
 call Message('opening '//trim(ecpnl%masterfile), frm = "(A)" )
 
-open(dataunit,file=trim(ecpnl%masterfile),status='unknown',form='unformatted')
+masterfile = trim(EMdatapathname)//trim(ecpnl%masterfile)
+open(dataunit,file=trim(masterfile),status='unknown',form='unformatted')
 
 ! lines from EMECPmaster.f90... these are the things we need to read in...
 ! write (dataunit) progname
@@ -208,8 +209,10 @@ io_int_sgl(1)=FZcnt
 
 call WriteValue('# independent crystal orientations to be considered = ', io_int_sgl, 1, "(I8)")
 
-open(unit=13,file="Euler.txt",action="write")
-open(unit=dataunit,file=trim(ecpnl%outname),status='unknown',action='write',form = 'unformatted')
+eulerfile = trim(EMdatapathname)//'Euler.txt'
+open(unit=13,file=trim(eulerfile),action="write")
+outname = trim(EMdatapathname)//trim(ecpnl%outname)
+open(unit=dataunit,file=trim(outname),status='unknown',action='write',form = 'unformatted')
 write(13,'(I15)') FZcnt
 
 

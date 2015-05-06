@@ -103,7 +103,7 @@ IMPLICIT NONE
 type(ECPpatternNameListType),INTENT(IN)        :: ecpnl
 character(fnlen),INTENT(IN)             :: progname
 
-character(fnlen)                        :: oldprogname
+character(fnlen)                        :: oldprogname, masterfile, outname, testfile
 character(fnlen)                        :: xtalname
 character(5)                            :: oldscversion
 character(fnlen)                        :: energyfile
@@ -134,7 +134,8 @@ real(kind=sgl),allocatable              :: ecp(:,:)
 
 call Message('opening '//trim(ecpnl%masterfile), frm = "(A)" )
 
-open(dataunit,file=trim(ecpnl%masterfile),status='unknown',form='unformatted')
+masterfile = trim(EMdatapathname)//trim(ecpnl%masterfile)
+open(dataunit,file=trim(masterfile),status='unknown',form='unformatted')
 
 ! lines from EMECPmaster.f90... these are the things we need to read in...
 ! write (dataunit) progname
@@ -246,7 +247,8 @@ nullify(ktmp)
 call Delete_kvectorlist(khead)
 nullify(khead)
 
-open(unit=12,file="test.txt",action="write")
+testfile = trim(EMdatapathname)//'test.txt'
+open(unit=12,file=trim(testfile),action="write")
 
 do i= -ecpnl%npix,ecpnl%npix
     do j= -ecpnl%npix,ecpnl%npix

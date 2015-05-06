@@ -159,7 +159,7 @@ integer, parameter      :: iunit = 10
 integer, parameter      :: source_length = 10000000
 character(len = source_length)  :: source
 integer(kind=4)         :: num, ierr, irec, io_int(1), val,val1 ! auxiliary variables
-character(fnlen)        :: groupname, dataset, instring
+character(fnlen)        :: groupname, dataset, instring, dataname
 
 
 type(HDFobjectStackType),pointer  :: HDF_head
@@ -287,7 +287,7 @@ kernel = clCreateKernel(prog, 'MC', ierr)
 call clReleaseProgram(prog, ierr)
 ! allocate device memory
 
-open(unit = iunit, file = trim(randomseefilename), form='unformatted', status='old')
+open(unit = iunit, file = trim(randomseedfilename), form='unformatted', status='old')
 read(iunit) nseeds
 allocate(rnseeds(nseeds))
 read(iunit) rnseeds
@@ -445,15 +445,16 @@ call h5open_f(hdferr)
 call timestamp(timestring=tstre)
 
 ! first of all, if the file exists, then delete it and rewrite it on each energyloop
-inquire(file=trim(mcnl%dataname), exist=f_exists)
+dataname = trim(EMdatapathname)//trim(mcnl%dataname)
+inquire(file=trim(dataname), exist=f_exists)
 
 if (f_exists) then
-  open(unit=dataunit, file=trim(mcnl%dataname), status='old',form='unformatted')
+  open(unit=dataunit, file=trim(dataname), status='old',form='unformatted')
   close(unit=dataunit, status='delete')
 end if
 
 ! Create a new file using the default properties.
-hdferr =  HDF_createFile(mcnl%dataname, HDF_head)
+hdferr =  HDF_createFile(dataname, HDF_head)
 
 ! write the EMheader to the file
 call HDF_writeEMheader(HDF_head, dstr, tstrb, tstre, progname)

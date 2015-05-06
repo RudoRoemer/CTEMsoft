@@ -51,7 +51,7 @@ use io
 IMPLICIT NONE
 
 character(fnlen)                        :: nmldeffile, progname, progdesc
-type(ECPpatternNameListType)                   :: ecpnl
+type(ECPpatternNameListType)            :: ecpnl
 
 nmldeffile = 'EMECP.nml'
 progname = 'EMECP.f90'
@@ -104,7 +104,7 @@ IMPLICIT NONE
 type(ECPpatternNameListType),INTENT(IN) :: ecpnl
 character(fnlen),INTENT(IN)             :: progname
 
-character(fnlen)                        :: oldprogname
+character(fnlen)                        :: oldprogname, masterfile, outname
 character(fnlen)                        :: xtalname
 character(5)                            :: oldscversion
 character(fnlen)                        :: energyfile
@@ -137,7 +137,8 @@ real(kind=dbl)                          :: time_start,time_end
 
 call Message('opening '//trim(ecpnl%masterfile), frm = "(A)" )
 
-open(dataunit,file=trim(ecpnl%masterfile),status='unknown',form='unformatted')
+masterfile = trim(EMdatapathname)//trim(ecpnl%outname)
+open(dataunit,file=trim(masterfile),status='unknown',form='unformatted')
 
 ! lines from EMECPmaster.f90... these are the things we need to read in...
 ! write (dataunit) progname
@@ -245,7 +246,8 @@ end do imageloop
 nullify(ktmp)
 call Delete_kvectorlist(khead)
 
-open(unit=12,file="test.txt",action="write")
+outname = trim(EMdatapathname)//'test.txt'
+open(unit=12,file=trim(outname),action="write")
 
 do i= -ecpnl%npix,ecpnl%npix
     do j= -ecpnl%npix,ecpnl%npix

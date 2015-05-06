@@ -54,6 +54,9 @@ character(fnlen)	:: nmldeffile
 ! deal with the command line arguments, if any
 nmldeffile = 'EMECP.nml'
 progname = 'EMECP.f90'
+progdesc = 'Zone axis ECP simulation'
+call EMsoft(progname, progdesc)
+
 call Interpret_Program_Arguments(nmldeffile,2,(/ 0, 40 /) )
 
 ! perform the zone axis computations
