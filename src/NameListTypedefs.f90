@@ -37,6 +37,7 @@
 !> @brief collection of namelist type declarations
 !
 !> @date 06/13/14 MDG 1.0 initial version
+!> @date 05/05/15 MDG 1.1 removed primelist variable from name list files
 !--------------------------------------------------------------------------
 module NameListTypedefs
 
@@ -115,7 +116,6 @@ type MCCLNameListType
         character(4)            :: MCmode
         character(fnlen)        :: xtalname
         character(fnlen)        :: dataname
-        character(fnlen)        :: primelist
         character(fnlen)        :: mode
 end type MCCLNameListType
 
@@ -140,7 +140,6 @@ type MCCLMultiLayerNameListType
     character(fnlen)        :: xtalname_film
     character(fnlen)        :: xtalname_subs
     character(fnlen)        :: dataname
-    character(fnlen)        :: primelist
     character(fnlen)        :: mode
 end type MCCLMultiLayerNameListType
 

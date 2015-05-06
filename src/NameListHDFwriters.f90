@@ -39,6 +39,7 @@
 !> @date 03/20/15 MDG 1.0 original, completed on 3/23/15
 !> @date 03/28/15 MDG 2.0 removing all h5lt calls; replaced with HDFsupport calls
 !> @date 04/08/15 MDG 2.1 removed HDF_tail pointer as it was no longer needed
+!> @date 05/05/15 MDG 2.2 removed primelist variable from name list files
 !--------------------------------------------------------------------------
 module NameListHDFwriters
 
@@ -460,11 +461,6 @@ line2(1) = mcnl%dataname
 hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head)
 if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteMCCLNameList: unable to create dataname dataset',.TRUE.)
 
-dataset = 'primelist'
-line2(1) = mcnl%primelist
-hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head)
-if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteMCCLNameList: unable to create primelist dataset',.TRUE.)
-
 dataset = 'mode'
 sval(1) = mcnl%mode
 hdferr = HDF_writeDatasetStringArray(dataset, sval, 1, HDF_head)
@@ -550,11 +546,6 @@ dataset = 'dataname'
 line2(1) = mcnl%dataname
 hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head)
 if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteMCCLMultiLayerNameList: unable to create dataname dataset',.TRUE.)
-
-dataset = 'primelist'
-line2(1) = mcnl%primelist
-hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head)
-if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteMCCLMultiLayerNameList: unable to create primelist dataset',.TRUE.)
 
 dataset = 'mode'
 line2(1) = mcnl%mode

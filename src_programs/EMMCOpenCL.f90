@@ -287,7 +287,7 @@ kernel = clCreateKernel(prog, 'MC', ierr)
 call clReleaseProgram(prog, ierr)
 ! allocate device memory
 
-open(unit = iunit, file = trim(mcnl%primelist), form='unformatted', status='old')
+open(unit = iunit, file = trim(randomseefilename), form='unformatted', status='old')
 read(iunit) nseeds
 allocate(rnseeds(nseeds))
 read(iunit) rnseeds

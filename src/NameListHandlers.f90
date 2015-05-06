@@ -37,6 +37,7 @@
 !> @brief routines for reading and returning name list type structures
 !
 !> @date 06/13/14 MDG 1.0 original
+!> @date 05/05/15 MDG 1.1 removed primelist variable from name list files
 !--------------------------------------------------------------------------
 module NameListHandlers
 
@@ -234,8 +235,8 @@ type(MCNameListType),INTENT(INOUT)      :: mcnl
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: numsx
-integer(kind=irg)       :: primeseed
 integer(kind=irg)       :: num_el
+integer(kind=irg)       :: primeseed
 integer(kind=irg)       :: nthreads
 real(kind=dbl)          :: sig
 real(kind=dbl)          :: omega
@@ -336,12 +337,11 @@ real(kind=dbl)          :: depthstep
 character(4)            :: MCmode
 character(fnlen)        :: xtalname
 character(fnlen)        :: dataname
-character(fnlen)        :: primelist
 character(fnlen)        :: mode
 
 ! define the IO namelist to facilitate passing variables to the program.
 namelist  / MCCLdata / stdout, xtalname, sig, numsx, num_el, globalworkgrpsz, EkeV, &
-dataname, primelist, totnum_el, Ehistmin, Ebinsize, depthmax, depthstep, omega, MCmode, mode
+dataname, totnum_el, Ehistmin, Ebinsize, depthmax, depthstep, omega, MCmode, mode
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 stdout = 6
@@ -359,7 +359,6 @@ depthstep = 1.0D0
 MCmode = 'CSDA'
 xtalname = 'undefined'
 dataname = 'MCoutput.data'
-primelist = 'list.txt'
 mode = 'full'
 
 ! read the namelist file
@@ -388,7 +387,6 @@ mcnl%depthstep = depthstep
 mcnl%MCmode = MCmode
 mcnl%xtalname = xtalname
 mcnl%dataname = dataname
-mcnl%primelist = primelist
 mcnl%mode = mode
 
 end subroutine GetMCCLNameList
@@ -433,12 +431,11 @@ character(4)            :: MCmode
 character(fnlen)        :: xtalname_film
 character(fnlen)        :: xtalname_subs
 character(fnlen)        :: dataname
-character(fnlen)        :: primelist
 character(fnlen)        :: mode
 
 ! define the IO namelist to facilitate passing variables to the program.
 namelist  / MCCLdata / stdout, sig, numsx, num_el, globalworkgrpsz, EkeV, &
-        dataname, primelist, totnum_el, Ehistmin, Ebinsize, depthmax, &
+        dataname, totnum_el, Ehistmin, Ebinsize, depthmax, &
         depthstep, omega, MCmode, mode, xtalname_film, xtalname_subs, &
         filmthickness, filmstep
 
@@ -460,7 +457,6 @@ MCmode = 'CSDA'
 xtalname_film = 'undefined'
 xtalname_subs = 'undefined'
 dataname = 'MCoutput.data'
-primelist = 'RandomSeeds.data'
 mode = 'full'
 filmthickness = 20.D0
 filmstep = 2.D0
@@ -492,7 +488,6 @@ mcnl%MCmode = MCmode
 mcnl%xtalname_film = xtalname_film
 mcnl%xtalname_subs = xtalname_subs
 mcnl%dataname = dataname
-mcnl%primelist = primelist
 mcnl%mode = mode
 mcnl%filmthickness = filmthickness
 mcnl%filmstep = filmstep

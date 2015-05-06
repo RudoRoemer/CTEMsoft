@@ -278,7 +278,7 @@ write(6,*) "Kernel Build Successful...."
 kernel = clCreateKernel(prog, 'MC', ierr)
 call clReleaseProgram(prog, ierr)
 
-open(unit = iunit, file = mcnl%primelist, form='unformatted', status='old')
+open(unit = iunit, file = trim(randomseedfilename), form='unformatted', status='old')
 read(iunit) nseeds
 allocate(rnseeds(nseeds))
 read(iunit) rnseeds
