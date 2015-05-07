@@ -101,6 +101,8 @@ end else begin
 	  filename = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,title='enter EBSD output file name ')
 	  if (filename ne '') then begin
 	    EBSDdata.EBSDpatternfilename = filename
+; and correct this for the relative pathnames of the EMsoft package
+            EBSDdata.EBSDpatternfilename = strmid(EBSDdata.EBSDpatternfilename,strpos(EBSDdata.EBSDpatternfilename,EBSDdata.mcpathname))
 	    WIDGET_CONTROL, set_value=filename, EBSDwidget_s.EBSDpatternfilename
 	    WIDGET_CONTROL, EBSDwidget_s.DisplayEBSD, sensitive=1
 	    WIDGET_CONTROL, EBSDwidget_s.EBSDgetanglefilename, sensitive=1

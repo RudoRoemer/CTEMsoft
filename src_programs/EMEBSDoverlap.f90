@@ -86,16 +86,17 @@ type(EBSDLargeAccumType),pointer       :: acc
 type(EBSDMasterType),pointer           :: masterA, masterB
 
 integer(kind=irg)                      :: istat, sA(3), sB(3), ierr, i, j , hdferr
+integer(kind=irg),parameter            :: numfrac = 21
 logical                                :: verbose
 character(6)                           :: sqorheA, sqorheB
 character(fnlen)                       :: outstr, datafile
 type(unitcell),pointer                 :: cellA, cellB
 type(DynType),save                     :: DynA, DynB
 type(gnode),save                       :: rlpA, rlpB
-real(kind=sgl)                         :: dmin, voltage, TTAB(3,3), TT(3,3), io_real(3), fracB, scl
+real(kind=sgl)                         :: dmin, voltage, TTAB(3,3), TT(3,3), io_real(3), cA, cB, scl, fA(numfrac)
 real(kind=dbl)                         :: edge, xy(2), xyz(3), txyz(3), txy(2), Radius, dc(3)
 type(orientation)                      :: orel    
-real(kind=sgl),allocatable             :: master(:,:), masterLC(:,:), masterSP(:,:)
+real(kind=sgl),allocatable             :: master(:,:,:), masterLC(:,:,:), masterSP(:,:,:)
 type(HDFobjectStackType),pointer       :: HDF_head
 
 interface
@@ -116,7 +117,7 @@ interface
   
   end function InterpolateMaster
 
-  function InterpolateLambert(dc, master, npx) result(res)
+  function InterpolateLambert(dc, master, npx, nf) result(res)
 
   use local
   use Lambert
@@ -126,9 +127,10 @@ interface
   IMPLICIT NONE
   
   real(kind=dbl),INTENT(INOUT)            :: dc(3)
-  real(kind=sgl),INTENT(IN)               :: master(-npx:npx,-npx:npx)
+  real(kind=sgl),INTENT(IN)               :: master(-npx:npx,-npx:npx, 1:nf)
   integer(kind=irg),INTENT(IN)            :: npx 
-  real(kind=sgl)                          :: res
+  integer(kind=irg),INTENT(IN)            :: nf
+  real(kind=sgl)                          :: res(nf)
   end function InterpolateLambert
 
 end interface
@@ -214,12 +216,12 @@ end do
 !=============================
 ! next, allocate a new master array into which we'll write the superimposed patterns
 ! we discard all energies except for the highest energy
-allocate(master(-enl%npx:enl%npx,-enl%npy:enl%npy))
+allocate(master(-enl%npx:enl%npx,-enl%npy:enl%npy,numfrac))
 
 ! the only difficulty here is that one or both of the structures could be hexagonal/trigonal,
 ! and the output master pattern will be a square Lambert projection, regardless of the input
 ! formats; we'll need to distinguish between all possible cases...
-fracB = 1.0-enl%fracA
+fA = (/ (float(i)*0.05,i=0,numfrac-1) /)
 
 call WriteValue('','Each master pattern has its own intensity range.',"(/A)")
 call WriteValue('','This means that one pattern may dominate over another')
@@ -246,7 +248,9 @@ if (sqorheA.eq.'square') then
 ! normalize these direction cosines (they are already in a cartesian reference frame!)
       txyz = txyz/sqrt(sum(txyz*txyz))
 ! and interpolate the masterB pattern
-      master(i,j) = enl%fracA*masterA%sr(i,j,sA(3)) + fracB*InterpolateMaster(txyz, masterB, sB, sqorheB)
+      cA = masterA%sr(i,j,sA(3))
+      cB = InterpolateMaster(txyz, masterB, sB, sqorheB)
+      master(i,j,1:numfrac) = fA(1:numfrac)*cA+(1.0-fA(1:numfrac))*cB
     end do
   end do
 end if
@@ -269,32 +273,32 @@ deallocate(masterA, masterB)
 !=============================
 ! convert the square Lambert projection to a stereographic projection
 ! with the PatternAxis of structure A at the center
-  allocate(masterSP(-enl%npx:enl%npx,-enl%npy:enl%npy))
+  allocate(masterSP(-enl%npx:enl%npx,-enl%npy:enl%npy,numfrac))
   Radius = 1.0
   do i=-enl%npx,enl%npx 
     do j=-enl%npy,enl%npy
       xy = (/ float(i), float(j) /) / float(enl%npx)
       xyz = StereoGraphicInverse( xy, ierr, Radius )
       if (ierr.ne.0) then 
-        masterSP(i,j) = 0.0
+        masterSP(i,j,1:numfrac) = 0.0
       else
-        masterSP(i,j) = InterpolateLambert(xyz, master, enl%npx)
+        masterSP(i,j,1:numfrac) = InterpolateLambert(xyz, master, enl%npx, numfrac)
       end if
     end do
   end do
 
 ! convert the square Lambert projection to a circular Lambert projection
 ! with the PatternAxis of structure A at the center
-  allocate(masterLC(-enl%npx:enl%npx,-enl%npy:enl%npy))
+  allocate(masterLC(-enl%npx:enl%npx,-enl%npy:enl%npy,numfrac))
   Radius = 1.0
   do i=-enl%npx,enl%npx 
     do j=-enl%npy,enl%npy
       xy = sqrt(2.0) * (/ float(i), float(j) /) / float(enl%npx)
       if (sum(xy*xy).gt.2.0) then 
-        masterLC(i,j) = 0.0
+        masterLC(i,j,1:numfrac) = 0.0
       else
         xyz = LambertInverse( xy, ierr, Radius )
-        masterLC(i,j) = InterpolateLambert(xyz, master, enl%npx)
+        masterLC(i,j,1:numfrac) = InterpolateLambert(xyz, master, enl%npx, numfrac)
       end if
     end do
   end do
@@ -311,27 +315,28 @@ hdferr =  HDF_createFile(datafile, HDF_head)
 
 ! create datasets 
 dataset = 'MasterLambertSquare'
-hdferr = HDF_writeDatasetFloatArray2D(dataset, master, 2*enl%npx+1, 2*enl%npx+1, HDF_head)
+hdferr = HDF_writeDatasetFloatArray3D(dataset, master, 2*enl%npx+1, 2*enl%npx+1, numfrac, HDF_head)
  
 dataset = 'MasterLambertCircle'
-hdferr = HDF_writeDatasetFloatArray2D(dataset, masterLC, 2*enl%npx+1, 2*enl%npx+1, HDF_head)
+hdferr = HDF_writeDatasetFloatArray3D(dataset, masterLC, 2*enl%npx+1, 2*enl%npx+1, numfrac, HDF_head)
  
 dataset = 'MasterStereographic'
-hdferr = HDF_writeDatasetFloatArray2D(dataset, masterSP, 2*enl%npx+1, 2*enl%npx+1, HDF_head)
+hdferr = HDF_writeDatasetFloatArray3D(dataset, masterSP, 2*enl%npx+1, 2*enl%npx+1, numfrac, HDF_head)
  
 call HDF_pop(HDF_head,.TRUE.)
 
 ! and close the fortran hdf interface
 call h5close_f(hdferr)
 
-call WriteValue('','Output data stored in '//trim(datafile),"(//A/)")
+call WriteValue('Output data stored in '//trim(datafile),'',"(//A/)")
+
 
 end program EMEBSDoverlap
 
 
 
 
-function InterpolateLambert(dc, master, npx) result(res)
+function InterpolateLambert(dc, master, npx, nf) result(res)
 
 use local
 use Lambert
@@ -341,9 +346,10 @@ use constants
 IMPLICIT NONE
 
 real(kind=dbl),INTENT(INOUT)            :: dc(3)
-real(kind=sgl),INTENT(IN)               :: master(-npx:npx,-npx:npx)
+real(kind=sgl),INTENT(IN)               :: master(-npx:npx,-npx:npx, 1:nf)
 integer(kind=irg),INTENT(IN)            :: npx 
-real(kind=sgl)                          :: res
+integer(kind=irg),INTENT(IN)            :: nf
+real(kind=sgl)                          :: res(nf)
 
 integer(kind=irg)                       :: nix, niy, nixp, niyp, istat
 real(kind=sgl)                          :: xy(2), dx, dy, dxm, dym, scl
@@ -369,8 +375,8 @@ if (istat.eq.0) then
   dxm = 1.0 - dx
   dym = 1.0 - dy
   
-  res = master(nix,niy)*dxm*dym + master(nixp,niy)*dx*dym + &
-        master(nix,niyp)*dxm*dy + master(nixp,niyp)*dx*dy
+  res(1:nf) = master(nix,niy,1:nf)*dxm*dym + master(nixp,niy,1:nf)*dx*dym + &
+        master(nix,niyp,1:nf)*dxm*dy + master(nixp,niyp,1:nf)*dx*dy
 end if
 
 end function InterpolateLambert

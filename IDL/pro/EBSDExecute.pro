@@ -111,7 +111,7 @@ end
   end else begin
     printf,10,'eulerconvention = ''hkl'''
   end 
-  printf,10,'masterfile = '''+EBSDdata.pathname+'/'+EBSDdata.mpfilename+''''
+  printf,10,'masterfile = '''+EBSDdata.mpfilename+''''
   printf,10,'energyfile = '''+EBSDdata.mcpathname+'/'+EBSDdata.mcfilename+''''
   printf,10,'datafile = '''+EBSDdata.EBSDpatternfilename+''''
   printf,10,'beamcurrent = '+string(EBSDdata.detbeamcurrent,FORMAT="(F9.2)")
@@ -176,10 +176,12 @@ end
  cmd = '/bin/rm '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
  spawn, cmd
 
+EMdatapathname = getenv('EMdatapathname')
+
 ; next, we need to load the pattern if we are in single mode
 ; we check for HDF5 filetype first 
 if keyword_set(single) then begin
-  res = H5F_IS_HDF5(EBSDdata.EBSDpatternfilename)
+  res = H5F_IS_HDF5(EMdatapathname+EBSDdata.EBSDpatternfilename)
   if (res eq 0) then begin
     openu,1,EBSDdata.EBSDpatternfilename,/f77
     nsx = 0L
@@ -191,7 +193,7 @@ if keyword_set(single) then begin
     readu,1,pattern
     close,1
   end else begin  ; this is an HDF5 file
-    file_id = H5F_OPEN(EBSDdata.EBSDpatternfilename)
+    file_id = H5F_OPEN(EMdatapathname+EBSDdata.EBSDpatternfilename)
     group_id = H5G_OPEN(file_id,'EMData')
     dset_id = H5D_OPEN(group_id,'EBSDpatterns')
     pattern = H5D_READ(dset_id)
