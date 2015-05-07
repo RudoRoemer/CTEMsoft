@@ -36,12 +36,8 @@
 !
 !> @brief Zone axis electron channeling master patterns
 !
-!> @date 03/18/10 MDG 1.0 f90
-!> @date 08/09/10 MDG 2.0 corrected weight factors and g-vector ordering problem
-!> @date 11/18/13 MDG 3.0 major rewrite with new libraries
-!> @date 06/27/14 MDG 4.0 removal of all globals; separation of namelist handling from computation
-!> @date 06/30/14 MDG 4.1 added OpenMP
-!> @date 07/23/14 SS  4.2 rewrite master pattern
+!> @date 07/23/14 SS 1.0 rewrite master pattern
+!> @date 05/06/15 SS 1.1 added OpenMP and made master pattern site specific
 !--------------------------------------------------------------------------
 
 program EMECPmaster
@@ -72,7 +68,7 @@ call Interpret_Program_Arguments(nmldeffile,2,(/ 0, 40 /), progname)
 call GetECPMasterNameList(nmldeffile,ecpnl)
 
 ! perform the zone axis computations
-call ECmasterpattern(ecpnl, progname)
+call ECmasterpattern(ecpnl, progname, nmldeffile)
 
 end program EMECPmaster
 
@@ -84,23 +80,10 @@ end program EMECPmaster
 !
 !> @brief compute a master electron channeling pattern
 !
-!> @note This is really very similar EBSDmaster computation, except that
-!> the final intensity computation is somewhat different.  We could in
-!> principle also include the Kossel pattern computation in this program.
-!> This program now also includes the Bethe potential approximation, to
-!> hopefully speed things up a little bit...
-!
-!> @param ecpnl name list structure
-!> @param progname program name
-!
-!> @date 11/18/13  MDG 1.0 major rewrite from older ECP program
-!> @date 11/22/13  MDG 1.1 output modified for IDL interface
-!> @date 03/04/14  MDG 1.2 added scattering matrix mode
-!> @date 06/27/14  MDG 2.0 removal of globals, split of namelist and computation; OpenMP
-!> @date 06/30/14  MDG 2.1 debug; found some inconsistent array (de)allocations
-!> @date 07/23/14  SS  2.2 conversion to master pattern simulation
+!> @date 07/23/14  SS  1.0 original
+!> @date 06/05/15  SS  1.1 added OpenMP support and HDF5 support
 !--------------------------------------------------------------------------
-subroutine ECmasterpattern(ecpnl, progname)
+subroutine ECmasterpattern(ecpnl, progname, nmldeffile)
 
 use local
 use typedefs
@@ -118,18 +101,23 @@ use files
 use diffraction
 use omp_lib
 use MBModule
+use HDF5
+use NameListHDFwriters
+use HDFsupport
+use ISO_C_BINDING
 
 IMPLICIT NONE
 
-type(ECPMasterNameListType),INTENT(IN)        :: ecpnl
-character(fnlen),INTENT(IN)                   :: progname
+type(ECPMasterNameListType),INTENT(INOUT)        :: ecpnl
+character(fnlen),INTENT(IN)                      :: progname
+character(fnlen),INTENT(IN)                      :: nmldeffile
 
 real(kind=dbl)          :: frac
 integer(kind=irg)       :: gzero, istat
 
 integer(kind=irg)       :: numEbins, numzbins, nx, ny, totnum_el ! reading from MC file
 real(kind=dbl)          :: EkeV, Ehistmin, Ebinsize, depthmax, depthstep, sig, omega  ! reading from MC file
-integer(kind=irg), allocatable :: accum_e(:,:,:), accum_z(:,:,:,:) ! reading from MC file
+integer(kind=irg), allocatable :: acc_z(:,:,:,:),accum_z(:,:,:,:) ! reading from MC file
 
 integer(kind=irg)       :: io_int_sgl(1), io_int(6) ! integer output variable
 real(kind=dbl)          :: io_real(5) ! real output variable
@@ -139,7 +127,7 @@ integer(kind=irg),parameter     :: LaueTest(11) = (/ 149, 151, 153, 156, 158, 16
 integer(kind=irg)       :: npyhex, ijmax, numk, skip ! parameters for calckvectors and calcwavelength subroutine
 
 integer(kind=irg)       :: ga(3), gb(3) ! shortest reciprocal lattice vector for zone axis
-real(kind=sgl), allocatable :: thick(:), sr(:,:), lambdaZ(:)
+real(kind=sgl), allocatable :: thick(:), sr(:,:,:), lambdaZ(:), klist(:,:), knlist(:)
 real(kind=dbl)          :: intthick
 complex(kind=dbl),allocatable   :: Lgh(:,:),Sgh(:,:),Sghtmp(:,:,:)
 complex(kind=dbl),allocatable   :: DynMat(:,:)
@@ -152,22 +140,41 @@ integer(kind=irg),allocatable   :: kij(:,:), nat(:)
 real(kind=dbl)          :: res(2)
 
 character(fnlen)        :: oldprogname, energyfile, outname
-character(fnlen)        :: xtalname
+character(fnlen)        :: xtalname, groupname
 character(8)            :: MCscversion
 character(4)            :: MCmode
 character(6)            :: projtype
+character(11)           :: dstr
+character(15)           :: tstrb
+character(15)           :: tstre
+logical                 :: f_exists, readonly, overwrite=.TRUE., insert=.TRUE.
+character(fnlen, KIND=c_char),allocatable,TARGET :: stringarray(:)
+character(fnlen,kind=c_char)                     :: line2(1)
+
 
 logical                 :: verbose, usehex, switchmirror
 
-type(unitcell), pointer         :: cell
-type(gnode)                     :: rlp
-type(DynType)                   :: Dyn
-type(kvectorlist), pointer      :: khead, ktmp ! linked list for incident wave vectors for master list
-type(kvectorlist), pointer      :: kheadcone,ktmpcone ! linked list for incident wave vectors for individual pattern
-real(kind=dbl),allocatable      :: ecpattern(:,:)
-type(BetheParameterType)        :: BetheParameters
-type(reflisttype),pointer       :: reflist, firstw,rltmp
+type(unitcell), pointer             :: cell
+type(gnode),save                    :: rlp
+type(DynType),save                  :: Dyn
+type(kvectorlist), pointer          :: khead, ktmp ! linked list for incident wave vectors for master list
+type(kvectorlist), pointer          :: kheadcone,ktmpcone ! linked list for incident wave vectors for individual pattern
+real(kind=dbl),allocatable          :: ecpattern(:,:)
+type(BetheParameterType)            :: BetheParameters
+type(reflisttype),pointer           :: reflist, firstw,rltmp
+integer(kind=irg)                   :: nthreads,TID,ix,hdferr,num_el,etotal, nlines,nsx,nsy,SelE
+type(HDFobjectStackType),pointer    :: HDF_head
+character(fnlen)                    :: dataset, instring
+integer(HSIZE_T)                    :: dims4(4), cnt4(4), offset4(4), dims3(3), cnt3(3), offset3(3)
 
+
+
+
+!$OMP THREADPRIVATE(rlp) 
+
+nullify(HDF_head)
+
+call timestamp(datestring=dstr, timestring=tstrb)
 
 gzero = 1
 frac = 0.05
@@ -183,48 +190,100 @@ allocate(cell)
 call Message('opening '//trim(ecpnl%energyfile), frm = "(A)" )
 
 energyfile = trim(EMdatapathname)//trim(ecpnl%energyfile)
-open(dataunit,file=trim(energyfile),status='unknown',form='unformatted')
+! this is now an HDF5 file as of version 5.1
+! [since this is no longer a sequential access file, we do not need to read everything, just
+! the quantities that we need...]
 
-! lines from EMMCCL.f90... these are the things we need to read in...
-! write (dataunit) progname
-!! write the version number
-! write (dataunit) MCscversion
-!! then the name of the crystal data file
-! write (dataunit) xtalname
-!! energy information etc...
-! write (dataunit) numEbins, numzbins, numsx, numsy, , totnum_el
-! write (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
-! write (dataunit) sig, omega
-! write (dataunit) MCmode
-!! and here are the actual results
-! write (dataunit) accum_e
-! write (dataunit) accum_z
+!
+! Initialize FORTRAN interface.
+!
+call h5open_f(hdferr)
 
-read (dataunit) oldprogname
-read (dataunit) MCscversion
-read (dataunit) xtalname
+! first of all, if the file exists, then delete it and rewrite it on each energyloop
+energyfile = trim(EMdatapathname)//trim(ecpnl%energyfile)
+inquire(file=energyfile, exist=f_exists)
 
-read(dataunit) numEbins, numzbins, nx, ny, totnum_el
-nx = (nx - 1)/2
-ny = (ny - 1)/2
+if (.not.f_exists) then
+call FatalError('ComputeMasterPattern','Monte Carlo input file does not exist')
+end if
 
-read (dataunit) EkeV, Ehistmin, Ebinsize, depthmax, depthstep
+! open the MC file using the default properties.
+readonly = .TRUE.
+hdferr =  HDF_openFile(energyfile, HDF_head, readonly)
+
+! open the namelist group
+groupname = 'NMLparameters'
+hdferr = HDF_openGroup(groupname, HDF_head)
+
+groupname = 'MCCLNameList'
+hdferr = HDF_openGroup(groupname, HDF_head)
+
+! read all the necessary variables from the namelist group
+dataset = 'xtalname'
+stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+xtalname = trim(stringarray(1))
+
+dataset = 'numsx'
+nsx = HDF_readDatasetInteger(dataset, HDF_head)
+nsx = (nsx - 1)/2
+nsy = nsx
+
+dataset = 'EkeV'
+EkeV = HDF_readDatasetDouble(dataset, HDF_head)
+
+dataset = 'Ehistmin'
+Ehistmin = HDF_readDatasetDouble(dataset, HDF_head)
+
+dataset = 'Ebinsize'
+Ebinsize = HDF_readDatasetDouble(dataset, HDF_head)
+
+dataset = 'depthmax'
+depthmax = HDF_readDatasetDouble(dataset, HDF_head)
+
+dataset = 'depthstep'
+depthstep = HDF_readDatasetDouble(dataset, HDF_head)
+
+! close the name list group
+call HDF_pop(HDF_head)
+call HDF_pop(HDF_head)
+
+! open the Data group
+groupname = 'EMData'
+hdferr = HDF_openGroup(groupname, HDF_head)
+
+! read data items
+dataset = 'numEbins'
+numEbins = HDF_readDatasetInteger(dataset, HDF_head)
+
+dataset = 'numzbins'
+numzbins = HDF_readDatasetInteger(dataset, HDF_head)
+
+dataset = 'totnum_el'
+num_el = HDF_readDatasetInteger(dataset, HDF_head)
+
+dataset = 'accum_z'
+! dims4 =  (/ numEbins, numzbins, 2*(nsx/10)+1,2*(nsy/10)+1 /)
+acc_z = HDF_readDatasetIntegerArray4D(dataset, dims4, HDF_head)
+allocate(accum_z(numEbins,numzbins,-nsx/10:nsx/10,-nsy/10:nsy/10),stat=istat)
+accum_z = acc_z
+deallocate(acc_z)
+
+! and close everything
+call HDF_pop(HDF_head,.TRUE.)
+
+! close the fortran interface
+call h5close_f(hdferr)
+
+! print some information to the console
+io_int(1:5) = (/ numEbins, numzbins, nsx, nsy, num_el /)
+call WriteValue(' NumEbins, numzbins, nsx, nsy, num_el',io_int,5,"(4I8,', ',I14)")
+etotal = num_el
+
 io_real(1:5) = (/ EkeV, Ehistmin, Ebinsize, depthmax, depthstep /)
 call WriteValue(' EkeV, Ehistmin, Ebinsize, depthmax, depthstep ',io_real,5,"(4F10.5,',',F10.5)")
 
-read (dataunit) sig, omega
-read (dataunit) MCmode
+call Message(' -> completed reading '//trim(ecpnl%energyfile), frm = "(A//)")
 
-allocate(accum_e(numEbins,-nx:nx,-nx:nx),accum_z(numEbins,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
-
-read(dataunit) accum_e
-! actually, we do not yet need the accum_e array for ECP. This will be removed with an updated version of the MC code
-! but we need to skip it in this unformatted file so that we can read the accum_z array ...
-!deallocate(accum_e)
-
-read(dataunit) accum_z    ! we only need this array for the depth integrations
-close(dataunit,status='keep')
-call Message(' -> completed reading '//trim(ecpnl%energyfile), frm = "(A)")
 !=============================================
 ! completed reading monte carlo file
 !=============================================
@@ -309,19 +368,25 @@ totw = 0
 
 numset = cell % ATOM_ntype  ! number of special positions in the unit cell
 izz = numzbins
+
 allocate(lambdaZ(1:izz),stat=istat)
 allocate(nat(numset),stat=istat)
 allocate(kij(2,numk),stat=istat)
+allocate(klist(3,numk),knlist(numk),stat=istat)
 
 do iz=1,izz
-    lambdaZ(iz) = float(sum(accum_z(:,iz,:,:)))/float(sum(accum_z(:,:,:,:)))
+    lambdaZ(iz) = float(sum(accum_z(:,iz,:,:)))/etotal
 end do
 
 kij(1:2,1) = (/ ktmp%i, ktmp%j /)
+klist(1:3,1) = ktmp%k
+knlist(1) = ktmp%kn
 
 do i = 2,numk
     ktmp => ktmp%next
     kij(1:2,i) = (/ ktmp%i, ktmp%j /)
+    klist(1:3,i) = ktmp%k
+    knlist(i) = ktmp%kn
 end do
 
 open(unit=11,file="test.txt",action="write")
@@ -333,36 +398,99 @@ fnat = 1.0/float(sum(cell%numat(1:numset)))
 intthick = dble(depthmax)
 
 outname = trim(EMdatapathname)//trim(ecpnl%outname)
-open(unit=dataunit,file=trim(outname),status='unknown',action='write',form = 'unformatted')
-! write the program identifier
-write (dataunit) progname
-! write the version number
-write (dataunit) scversion
-! then the name of the crystal data file
-write (dataunit) xtalname
-! then the name of the corresponding Monte Carlo data file
-write (dataunit) ecpnl%energyfile
-! energy information and array size
-write (dataunit) ecpnl%npx,ecpnl%npx,numset
-write (dataunit) EkeV
-write (dataunit) ecpnl%dmin
-! atom type array for asymmetric unit
-write (dataunit) cell%ATOM_type(1:numset)
-! is this a regular (square) or hexagonal projection ?
-!if (usehex) then
- !   projtype = 'hexago'
- !  write (dataunit) projtype
-!else
- !   projtype = 'square'
- !   write (dataunit) projtype
-!end if
-
-allocate(sr(2*ecpnl%npx+1,2*ecpnl%npx+1),stat=istat)
+allocate(sr(2*ecpnl%npx+1,2*ecpnl%npx+1,numset),stat=istat)
 sr = 0.0
 
+nullify(HDF_head)
+! Initialize FORTRAN interface.
+call h5open_f(hdferr)
+
+! Create a new file using the default properties.
+outname = trim(EMdatapathname)//trim(ecpnl%outname)
+hdferr =  HDF_createFile(outname, HDF_head)
+
+! write the EMheader to the file
+call HDF_writeEMheader(HDF_head, dstr, tstrb, tstre, progname)
+
+! create a namelist group to write all the namelist files into
+groupname = "NMLfiles"
+hdferr = HDF_createGroup(groupname, HDF_head)
+
+! read the text file and write the array to the file
+dataset = 'EBSDmasterNML'
+hdferr = HDF_writeDatasetTextFile(dataset, nmldeffile, HDF_head)
+
+! leave this group
+call HDF_pop(HDF_head)
+
+! create a namelist group to write all the namelist files into
+groupname = "NMLparameters"
+hdferr = HDF_createGroup(groupname, HDF_head)
+call HDFwriteECPMasterNameList(HDF_head, ecpnl)
+
+! leave this group
+call HDF_pop(HDF_head)
+
+! then the remainder of the data in a EMData group
+groupname = 'EMData'
+hdferr = HDF_createGroup(groupname, HDF_head)
+
+dataset = 'xtalname'
+stringarray(1)= trim(xtalname)
+hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
+
+dataset = 'numset'
+hdferr = HDF_writeDatasetInteger(dataset, numset, HDF_head)
+
+dataset = 'EkeV'
+hdferr = HDF_writeDatasetDouble(dataset, EkeV, HDF_head)
+
+dataset = 'cell%ATOM_type'
+hdferr = HDF_writeDatasetIntegerArray1D(dataset, cell%ATOM_type(1:numset), numset, HDF_head)
+
+dataset = 'squhex'
+if (usehex) then
+stringarray(1)= 'hexago'
+hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
+else
+stringarray(1)= 'square'
+hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
+end if
+
+! create the hyperslab and write zeroes to it for now
+dataset = 'sr'
+dims3 = (/  2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
+cnt3 = (/ 2*ecpnl%npx+1, 2*ecpnl%npx+1, 1 /)
+offset3 = (/ 0, 0, 0/)
+hdferr = HDF_writeHyperslabFloatArray3D(dataset, sr, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head)
+
+call HDF_pop(HDF_head,.TRUE.)
+
+! and close the fortran hdf interface
+call h5close_f(hdferr)
+
+
+!!$OMP PARALLEL default(shared) COPYIN(rlp) &
+!$OMP PARALLEL COPYIN(rlp) &
+!$OMP& PRIVATE(DynMat,Sgh,Sghtmp,Lgh,i,FN,TID,kn,ipx,ipy,ix,ip,iequiv,nequiv,reflist,firstw) &
+!$OMP& PRIVATE(kk,nns,nnw,nref,nat,io_int,io_int_sgl,nthreads) &
+!$OMP& SHARED(sr,tots,totw)
+
+nthreads = OMP_GET_NUM_THREADS()
+TID = OMP_GET_THREAD_NUM()
+
+io_int_sgl(1) = nthreads
+
+if (TID .eq. 0) call WriteValue('Setting number of threads to ', io_int_sgl, 1, "(I8)")
+
+
+!$OMP DO SCHEDULE(DYNAMIC)
+
 beamloop: do i = 1, numk
-    kk = ktmp%k(1:3)
+    kk = klist(1:3,i)
     FN = kk
+
+    nullify(reflist)
 
     call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, kk, ecpnl%dmin, nref)
 
@@ -374,27 +502,27 @@ beamloop: do i = 1, numk
     call GetDynMat(cell, reflist, firstw, rlp, DynMat, nns, nnw)
 
 ! then we need to initialize the Sgh and Lgh arrays
-    if (allocated(Sgh)) deallocate(Sgh)
+    !if (allocated(Sgh)) deallocate(Sgh)
     if (allocated(Lgh)) deallocate(Lgh)
     if (allocated(Sghtmp)) deallocate(Sghtmp)
 
-    allocate(Sghtmp(nns,nns,numset),Lgh(nns,nns),Sgh(nns,nns))
+    allocate(Sghtmp(nns,nns,numset),Lgh(nns,nns))
 
-    Sgh = czero
+    !Sgh = czero
     Lgh = czero
     Sghtmp = czero
     nat = 0
 
     call CalcSgh(cell,reflist,nns,numset,Sghtmp,nat)
 ! sum Sghtmp over the sites
-    Sgh = sum(Sghtmp,3)
+    !Sgh = sum(Sghtmp,3)
 
 
 ! solve the dynamical eigenvalue equation
-    kn = ktmp%kn
+    kn = knlist(i)
 
     call CalcLgh(DynMat,Lgh,intthick,dble(kn),nns,gzero,depthstep,lambdaZ,izz)
-    deallocate(DynMat,Sghtmp)
+    deallocate(DynMat)
 
 ! and store the resulting values
 
@@ -404,20 +532,29 @@ beamloop: do i = 1, numk
 !print*, iequiv(1,:)
     ipx = kij(1,i)
     ipy = kij(2,i)
+
+!$OMP CRITICAL
     if (isym.ne.1) then
         call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
         iequiv(1,1:nequiv) = iequiv(1,1:nequiv) + ecpnl%npx + 1
         iequiv(2,1:nequiv) = iequiv(2,1:nequiv) + ecpnl%npx + 1
-        do ip=1,nequiv
-            sr(iequiv(1,ip),iequiv(2,ip)) = real(sum(Lgh(1:nns,1:nns)*Sgh(1:nns,1:nns)))/float(sum(nat))
+        do ix = 1,numset
+            do ip=1,nequiv
+                sr(iequiv(1,ip),iequiv(2,ip),ix) = real(sum(Lgh(1:nns,1:nns)*Sghtmp(1:nns,1:nns,ix)))/float(sum(nat(1:numset)))
+            end do
         end do
     else
-        sr(ipx+ecpnl%npx+1,ipy+ecpnl%npx+1) = real(sum(Lgh(1:nns,1:nns)*Sgh(1:nns,1:nns)))/float(sum(nat))
+        do ix = 1,numset
+            sr(ipx+ecpnl%npx+1,ipy+ecpnl%npx+1,ix) = real(sum(Lgh(1:nns,1:nns)*Sghtmp(1:nns,1:nns,ix)))/float(sum(nat(1:numset)))
+        end do
     end if
-!print*, sr
+
     totw = totw + nnw
     tots = tots + nns
-    deallocate(Lgh, Sgh)
+
+!$OMP END CRITICAL
+
+        deallocate(Lgh, Sghtmp)
 
     if (mod(i,2500).eq.0) then
         io_int(1) = i
@@ -430,22 +567,61 @@ beamloop: do i = 1, numk
 ! and finally the results array
     !write (dataunit) sr
 
-    ktmp => ktmp%next
-
 end do beamloop
 
+!$OMP END PARALLEL
 
-do i=1,2*ecpnl%npx+1
-   do j=1,2*ecpnl%npx+1
-        write(11, '(F15.6)', advance='no') sr(i,j)
-    end do
-    write(11, *) ''  ! this gives you the line break
+! since these computations can take a long time, here we store
+! all the output at the end of each pass through the energyloop.
+
+
+io_int(1) = nint(float(tots)/float(numk))
+call WriteValue(' -> Average number of strong reflections = ',io_int, 1, "(I5)")
+io_int(1) = nint(float(totw)/float(numk))
+call WriteValue(' -> Average number of weak reflections   = ',io_int, 1, "(I5)")
+
+! and here is where the major changes are for this version 5.0: all output now in HDF5 format
+call timestamp(timestring=tstre)
+
+nullify(HDF_head)
+! Initialize FORTRAN HDF interface.
+call h5open_f(hdferr)
+
+! open the existing file using the default properties.
+hdferr =  HDF_openFile(outname, HDF_head)
+
+! update the time string
+groupname = 'EMheader'
+hdferr = HDF_openGroup(groupname, HDF_head)
+
+dataset = 'StopTime'
+line2(1) = tstre
+hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head, overwrite)
+
+call HDF_pop(HDF_head)
+
+do ix = 1,numset
+
+    groupname = 'EMData'
+    hdferr = HDF_openGroup(groupname, HDF_head)
+
+! add data to the hyperslab
+    dataset = 'sr'
+    dims3 = (/  2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
+    cnt3 = (/ 2*ecpnl%npx+1, 2*ecpnl%npx+1, 1/)
+    offset3 = (/ 0, 0, ix-1 /)
+    hdferr = HDF_writeHyperslabFloatArray3D(dataset, sr, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head, insert)
+
+    call HDF_pop(HDF_head,.TRUE.)
+
+! and close the fortran hdf interface
+    call h5close_f(hdferr)
+
 end do
 
-write (dataunit) sr
-!deallocate(sr)
+if ((ecpnl%Esel.eq.-1).and.(ix.eq.1)) then
+    call Message('Final data stored in file '//trim(ecpnl%outname), frm = "(A/)")
+end if
 
-close(unit=dataunit,status='keep')
-close(unit=11,status='keep')
 
 end subroutine ECmasterpattern
