@@ -538,7 +538,6 @@ else
   q = sqrt(2.0/(1.0+xyz(3)))
   XX = q * xyz(1)
   YY = q * xyz(2)
-! YY = -q * xyz(2) * LPs%rtt*0.5
 
 ! determine in which sextant this point lies
   ks = GetSextantSingle( (/ XX, YY /) )
@@ -607,7 +606,6 @@ else
   q = dsqrt(2.D0/(1.D0+xyz(3)))
   XX = q * xyz(1)
   YY = q * xyz(2)
-! YY = -q * xyz(2) * LPs%rtt*0.5D0
 
 ! determine in which sextant this point lies
   ks = GetSextantDouble( (/ XX, YY /) )

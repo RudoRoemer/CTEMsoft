@@ -165,10 +165,10 @@ integer(kind=irg)                     :: std
  write (std,"(1x,'under certain conditions; see License.txt file for details.'//)")
 
  write (std,"(1x,'Program name : ',A)") trim(progname)
- write (std,"(1x,A//)") trim(progdesc)
+ write (std,"(1x,A/)") trim(progdesc)
 
  call timestamp(std)
- write (std,"(1x,//)")
+ write (std,"(1x,/)")
 
  call EMsoft_path_init
  
@@ -210,7 +210,7 @@ resourcepathname = trim(EMsoftpathname)//'resources/'
 openclpathname = trim(EMsoftpathname)//'opencl/'
 xtalpathname = trim(EMdatapathname)//'XtalFolder/'
 templatecodefilename = trim(resourcepathname)//'templatecodes.txt'
-randomseedfilename = trim(resourcepathname)//'RandomsSeeds.data'
+randomseedfilename = trim(resourcepathname)//'RandomSeeds.data'
 
 end subroutine EMsoft_path_init
 
@@ -291,8 +291,8 @@ subroutine timestamp (stdout, timestring, datestring)
   end if
 
   if ((.not.PRESENT(datestring)).and.(.not.PRESENT(timestring))) then
-    write ( std, '(a,1x,i2,1x,i4,2x,i2,a1,i2.2,a1,i2.2,a1,i3.3,1x,a)' ) &
-      month(mo), d, y, h, ':', n, ':', s, '.', mm, trim ( ampm )
+    write ( std, '(a1,a3,1x,i2,1x,i4,2x,i2,a1,i2.2,a1,i2.2,a1,i3.3,1x,a)' ) &
+      ' ',month(mo), d, y, h, ':', n, ':', s, '.', mm, trim ( ampm )
   else
     if (PRESENT(datestring)) write (datestring, '(a,1x,i2,1x,i4)' ) month(mo), d, y
     if (PRESENT(timestring)) then

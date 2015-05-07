@@ -101,11 +101,11 @@ logical                                    :: loadingfile
 ! matrices as well as all the symmetry arrays
  cell%SG%SYM_reduce=.TRUE.
  cell%fname = xtalname
- call CrystalData(cell)
+ call CrystalData(cell,verbose)
  cell%voltage = dble(voltage)
 
  skip = 3        ! always use Weickenmeier&Kohl scattering coefficients, including absorptive form factors
- call CalcWaveLength(cell,rlp,skip)
+ call CalcWaveLength(cell,rlp,skip,verbose)
 
 ! generate all atom positions
 ! if the cell is dostorted, then this is not exactly correct, but it should be close for small distortions
@@ -133,8 +133,10 @@ logical                                    :: loadingfile
  end do
 
  if (present(verbose)) then
+  if (verbose) then
     io_int = (/ imh, imk, iml /)
-   call WriteValue(' Range of reflections along a*, b* and c* = ',io_int,3)
+    call WriteValue(' Range of reflections along a*, b* and c* = ',io_int,3)
+  end if
  end if
   
 ! the LUT array stores all the Fourier coefficients, so that we only need to compute them once... i.e., here and now
@@ -159,15 +161,19 @@ logical                                    :: loadingfile
  call CalcUcg(cell,rlp,gg)   
  Dyn%Upz = rlp%Vpmod         ! U'0 normal absorption parameter 
  if (present(verbose)) then
+  if (verbose) then
    io_real(1) = rlp%xgp
    call WriteValue(' Normal absorption length [nm] = ', io_real, 1)
+  end if
  end if
  
 ! and add this reflection to the look-up table
  cell%LUT(0,0,0) = rlp%Ucg
 
  if (present(verbose)) then
-  call Message('Generating Fourier coefficient lookup table ... ', frm = "(/A,$)")
+  if (verbose) then
+   call Message('Generating Fourier coefficient lookup table ... ', frm = "(/A,$)")
+  end if
  end if
  
 ! now do the same for the other allowed reflections
@@ -191,7 +197,9 @@ izl:   do iz=-2*iml,2*iml
     end do ixl
 
   if (present(verbose)) then
-   call Message('Done', frm = "(A/)")
+   if (verbose) then
+    call Message('Done', frm = "(A/)")
+   end if
   end if
   
 

@@ -594,9 +594,9 @@ nullify(HDF_head, HDF_head)
 
 ! is the mfile parameter present? If so, use it as the filename, otherwise use the enl%masterfile parameter
 if (PRESENT(mfile)) then
-  masterfile = mfile
+  masterfile = trim(EMdatapathname)//trim(mfile)
 else
-  masterfile = enl%masterfile
+  masterfile = trim(EMdatapathname)//trim(enl%masterfile)
 end if
 
 ! first, we need to check whether or not the input file is of the HDF5 forat type; if
@@ -707,7 +707,9 @@ else
 end if
 !====================================
 
-if (present(verbose)) call Message(' -> completed reading '//trim(enl%masterfile), frm = "(A)")
+if (present(verbose)) then
+  if (verbose) call Message(' -> completed reading '//trim(masterfile), frm = "(A)")
+end if
 
 end subroutine EBSDreadMasterfile_overlap
 

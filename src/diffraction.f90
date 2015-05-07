@@ -223,7 +223,7 @@ end subroutine
 !> @date   03/26/13 MDG 3.0 updated IO
 !> @date   12/02/14 MDG 3.1 removed mAccvol as global variable
 !--------------------------------------------------------------------------
-subroutine CalcWaveLength(cell,rlp,skip)
+subroutine CalcWaveLength(cell,rlp,skip,verbose)
 
 use constants
 use symmetry
@@ -234,6 +234,8 @@ IMPLICIT NONE
 type(unitcell),pointer                  :: cell
 type(gnode),INTENT(INOUT)               :: rlp
 integer(kind=irg),INTENT(IN),OPTIONAL   :: skip                 !< scattering set identifier
+logical,INTENT(IN),OPTIONAL             :: verbose
+
 real(kind=dbl)                          :: temp1,temp2, oi_real(1)
 integer(kind=irg)                       :: hkl(3), io_int(1)
 
@@ -271,25 +273,30 @@ integer(kind=irg)                       :: hkl(3), io_int(1)
    end select
   end if
 
-  hkl=(/0,0,0/)
-  call CalcUcg(cell,rlp,hkl) 
-  oi_real(1) = rlp%Vmod
-  call WriteValue('Mean inner potential [V] ', oi_real, 1,"(' ',E10.4)")
-  cell%mPsihat = cell%mPsihat + dble(rlp%Vmod)
-  call Message(' Wavelength corrected for refraction', frm = "(A)")
-
-  oi_real(1) = cell%mRelcor
-  call WriteValue('Relativistic correction factor [gamma]  ', oi_real, 1,"(' ',E10.4)")
-  oi_real(1) = cell%mPsihat
-  call WriteValue('Relativistic Accelerating Potential [V] ', oi_real, 1,"(' ',E10.4)")
-  cell%mLambda = temp1/dsqrt(cell%mPsihat)
-  oi_real(1) = cell%mLambda
-  call WriteValue('Electron Wavelength [nm]                ', oi_real, 1,"(' ',E10.4)")
+ hkl=(/0,0,0/)
+ call CalcUcg(cell,rlp,hkl) 
+ cell%mPsihat = cell%mPsihat + dble(rlp%Vmod)
+ cell%mLambda = temp1/dsqrt(cell%mPsihat)
 ! interaction constant sigma
-  cell%mSigma = 2.D0*cPi*cRestmass*cell%mRelcor*cCharge*cell%mLambda
-  cell%mSigma = 1.0D-18*cell%mSigma/cPlanck**2
-  oi_real(1) = cell%mSigma
-  call WriteValue('Interaction constant [V nm]^(-1)        ', oi_real, 1,"(' ',E10.4)")
+ cell%mSigma = 2.D0*cPi*cRestmass*cell%mRelcor*cCharge*cell%mLambda
+ cell%mSigma = 1.0D-18*cell%mSigma/cPlanck**2
+
+ if (present(verbose)) then
+  if (verbose) then
+    oi_real(1) = rlp%Vmod
+    call WriteValue('Mean inner potential [V] ', oi_real, 1,"(' ',E10.4)")
+    call Message(' Wavelength corrected for refraction', frm = "(A)")
+    oi_real(1) = cell%mRelcor
+    call WriteValue('Relativistic correction factor [gamma]  ', oi_real, 1,"(' ',E10.4)")
+    oi_real(1) = cell%mPsihat
+    call WriteValue('Relativistic Accelerating Potential [V] ', oi_real, 1,"(' ',E10.4)")
+    oi_real(1) = cell%mLambda
+    call WriteValue('Electron Wavelength [nm]                ', oi_real, 1,"(' ',E10.4)")
+    oi_real(1) = cell%mSigma
+    call WriteValue('Interaction constant [V nm]^(-1)        ', oi_real, 1,"(' ',E10.4)")
+  end if
+ end if
+
  
 end subroutine
 
