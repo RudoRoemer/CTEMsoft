@@ -88,11 +88,11 @@ type(EBSDMasterType),pointer           :: masterA, masterB
 integer(kind=irg)                      :: istat, sA(3), sB(3), ierr, i, j , hdferr
 logical                                :: verbose
 character(6)                           :: sqorheA, sqorheB
-character(fnlen)                       :: outstr
+character(fnlen)                       :: outstr, datafile
 type(unitcell),pointer                 :: cellA, cellB
 type(DynType),save                     :: DynA, DynB
 type(gnode),save                       :: rlpA, rlpB
-real(kind=sgl)                         :: dmin, voltage, TTAB(3,3), TTBA(3,3), io_real(3), fracB, scl
+real(kind=sgl)                         :: dmin, voltage, TTAB(3,3), TT(3,3), io_real(3), fracB, scl
 real(kind=dbl)                         :: edge, xy(2), xyz(3), txyz(3), txy(2), Radius, dc(3)
 type(orientation)                      :: orel    
 real(kind=sgl),allocatable             :: master(:,:), masterLC(:,:), masterSP(:,:)
@@ -150,8 +150,6 @@ call Interpret_Program_Arguments(nmldeffile,1,(/ 23 /), progname)
 ! deal with the namelist stuff
 call GetEBSDoverlapNameList(nmldeffile,enl)
 
- goto 100
-
 ! read EBSD master pattern files 
 allocate(masterA, masterB)
 call EBSDreadMasterfile_overlap(enl, masterA, enl%masterfileA, verbose)
@@ -164,12 +162,13 @@ enl%xtalnameB = enl%Masterxtalname
 ! make sure that the master pattern arrays have the same dimensions
 sA = shape(masterA%sr)
 sB = shape(masterB%sr)
-write (*,*) 'array shape = ',sA
 
 if (sum(abs(sA-sB)).ne.0) then
   call FatalError('EMEBSDoverlap','master patterns have different dimensions')
 end if
 
+!=============================
+!=============================
 ! ok, we're in business... let's initialize the crystal structures so that we
 ! can compute the orientation relation matrix
 nullify(cellA,cellB)
@@ -180,6 +179,8 @@ voltage = 30000.0
 call Initialize_Cell(cellA,DynA,rlpA,enl%xtalnameA, dmin, voltage, verbose)
 call Initialize_Cell(cellB,DynB,rlpB,enl%xtalnameB, dmin, voltage, verbose)
 
+!=============================
+!=============================
 orel%gA = enl%gA
 orel%gB = enl%gB
 orel%tA = enl%tA
@@ -194,27 +195,23 @@ if (sum(orel%gB*orel%tB).ne.0.0) then
   call FatalError('EMEBSDoverlap','gB and tB must be orthogonal !!!')
 end if
 
-
+! compute the rotation matrix for this OR
 TTAB = ComputeOR(orel, cellA, cellB, 'AB')
-TTBA = ComputeOR(orel, cellA, cellB, 'BA')
+TT = transpose(matmul( cellA%rsm, matmul( TTAB, transpose(cellB%dsm))))
 
-outstr = trim(enl%xtalnameA)//' <-- '//trim(enl%xtalnameB)
-call WriteValue('Transformation direction: ',outstr)
+! output
+outstr = ' '//trim(enl%xtalnameA)//' --> '//trim(enl%xtalnameB)
+call WriteValue('Transformation Matrix : ',outstr)
 do i=1,3
-  io_real(1:3) = TTAB(i,1:3)
-  call WriteValue('',io_real,3,"(3f10.6)")
-end do
-
-outstr = trim(enl%xtalnameB)//' <-- '//trim(enl%xtalnameA)
-call WriteValue('Transformation direction: ',outstr)
-do i=1,3
-  io_real(1:3) = TTBA(i,1:3)
+  io_real(1:3) = TT(i,1:3)
   call WriteValue('',io_real,3,"(3f10.6)")
 end do
 
 ! we no longer need the crystal structure data
-deallocate(cellA, cellB)
+ deallocate(cellA, cellB)
 
+!=============================
+!=============================
 ! next, allocate a new master array into which we'll write the superimposed patterns
 ! we discard all energies except for the highest energy
 allocate(master(-enl%npx:enl%npx,-enl%npy:enl%npy))
@@ -223,6 +220,14 @@ allocate(master(-enl%npx:enl%npx,-enl%npy:enl%npy))
 ! and the output master pattern will be a square Lambert projection, regardless of the input
 ! formats; we'll need to distinguish between all possible cases...
 fracB = 1.0-enl%fracA
+
+call WriteValue('','Each master pattern has its own intensity range.',"(/A)")
+call WriteValue('','This means that one pattern may dominate over another')
+call WriteValue('','even when the volume fractions of A and B are equal. ',"(A/)")
+io_real(1) = maxval(masterA%sr)
+call WriteValue('maximum intensity in master A: ',io_real, 1)
+io_real(1) = maxval(masterB%sr)
+call WriteValue('maximum intensity in master B: ',io_real, 1)
 
 !=============================
 !=============================
@@ -236,9 +241,9 @@ if (sqorheA.eq.'square') then
       xyz = LambertSquareToSphere(xy, ierr)
 ! since A is already square Lambert, all we need to do is compute the 
 ! beam orientation in crystal B, and sample the master pattern for that
-! location.
-      txyz = matmul(TTBA, xyz)
-! normalize these direction cosines
+! location. 
+      txyz = matmul(TT, xyz)
+! normalize these direction cosines (they are already in a cartesian reference frame!)
       txyz = txyz/sqrt(sum(txyz*txyz))
 ! and interpolate the masterB pattern
       master(i,j) = enl%fracA*masterA%sr(i,j,sA(3)) + fracB*InterpolateMaster(txyz, masterB, sB, sqorheB)
@@ -301,7 +306,8 @@ nullify(HDF_head)
 call h5open_f(hdferr)
 
 ! Create a new file using the default properties.
-hdferr =  HDF_createFile(enl%datafile, HDF_head)
+datafile = trim(EMdatapathname)//trim(enl%datafile)
+hdferr =  HDF_createFile(datafile, HDF_head)
 
 ! create datasets 
 dataset = 'MasterLambertSquare'
@@ -318,57 +324,7 @@ call HDF_pop(HDF_head,.TRUE.)
 ! and close the fortran hdf interface
 call h5close_f(hdferr)
 
-
-
-100 enl%npx = 500
-  scl = dble(enl%npx) / LPs%alpha 
-  edge = LPs%sPio2 / dble(enl%npx)
-
-xy = (/ 0.0,2.0*sqrt(sngl(cPi))/3.0**0.75 /)
-write (*,*) xy
-xyz = LambertHexToSphere(xy, ierr)
-write (*,*) xyz, ierr
-xy = LambertSphereToHex(xyz, ierr)
-write (*,*) xy, ierr
-
-write (*,*) '---'
-
-xy = (/ sqrt(sngl(cPi))/3.0**0.25, 0.0 /)
-write (*,*) xy
-xyz = LambertHexToSphere(xy, ierr)
-write (*,*) xyz, ierr
-xy = LambertSphereToHex(xyz, ierr)
-write (*,*) xy, ierr
-
-
-
-stop
-
-
-
-
-
-
-dc = (/1.0, 0.0, 0.0/)
-dc = dc/sqrt(sum(dc*dc))
-write (*,*) dc
-xy = scl * LambertSphereToHex( dc, ierr )
-write (*,*) xy, ierr
-!xy = xy/float(enl%npx)*LPs%preg ! edge
-xyz = LambertHexToSphere(xy, ierr)
-write (*,*) xyz, ierr
-
-
-dc = (/0.0, 1.0, 0.0/)
-dc = dc/sqrt(sum(dc*dc))
-write (*,*) dc
-xy = LambertSphereToHex( dc, ierr )
-write (*,*) xy, ierr
-!xy = xy/float(enl%npx)*LPs%preg ! edge
-xyz = LambertHexToSphere(xy, ierr)
-write (*,*) xyz, ierr
-
-
+call WriteValue('','Output data stored in '//trim(datafile),"(//A/)")
 
 end program EMEBSDoverlap
 
@@ -446,7 +402,7 @@ if (sqorhe.eq.'square') then
   scl = float(npx) / LPs%sPio2
   xy = scl * LambertSphereToSquare( dc, istat )
 else
-  scl = float(npx) / LPs%alpha 
+  scl = float(npx)/LPs%preg
   xy = scl * LambertSphereToHex( dc, istat )
   tmp = xy(1)
   xy(1) = xy(2)

@@ -145,7 +145,7 @@ end subroutine DumpXtalInfo
 !> @brief load or generate crystal data
 ! 
 !> @param cell unit cell pointer
-!> @param loadingfile logical
+!> @param verbose (OPTIONAL)
 !> @param fname file name (optional)
 !
 !> @date    1/ 5/99 MDG 1.0 original
@@ -156,7 +156,7 @@ end subroutine DumpXtalInfo
 !> @date   06/06/14 MDG 4.1 added cell pointer and loadingfile arguments
 !> @date   03/30/15 MDG 5.0 changed file format to HDF; always assume that the file exists
 !--------------------------------------------------------------------------
-subroutine CrystalData(cell)
+subroutine CrystalData(cell,verbose)
 
 use io
 use crystal
@@ -165,6 +165,7 @@ use symmetry
 IMPLICIT NONE
 
 type(unitcell), pointer                 :: cell
+logical,INTENT(IN),OPTIONAL             :: verbose
 
 integer(kind=irg)                       :: i, ipg, isave
 
@@ -200,7 +201,11 @@ call ReadDataHDF(cell)
  end if
 
 ! and print the information on the screen
- call DumpXtalInfo(cell)
+if (present(verbose)) then
+ if (verbose) then
+   call DumpXtalInfo(cell)
+ end if
+end if 
 
 end subroutine CrystalData
 
