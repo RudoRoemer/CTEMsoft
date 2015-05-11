@@ -90,7 +90,7 @@ end
 ; if the keyword is not set, then we expect the angle file to already exist
 
 ; then generate the proper nml file
-  openw,10,EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
+  openw,10,EBSDdata.pathname+'/'+'EMEBSDtmp.nml'
   printf,10,'&EBSDdata'
   printf,10,'L = '+string(EBSDdata.detL,FORMAT="(F10.2)")
   printf,10,'thetac = '+string(EBSDdata.dettheta,FORMAT="(F6.2)")
@@ -143,7 +143,7 @@ end
   printf,10,'/'
   close,10
 
-cmd = 'more '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
+cmd = 'more '+EBSDdata.pathname+'/'+'EMEBSDtmp.nml'
 spawn,cmd
 
   if (EBSDdata.numangles gt 1000) then begin
@@ -154,8 +154,8 @@ spawn,cmd
   endif
 
 ; and finally run the CTEMEBSD program
-  ;cmd = EBSDdata.f90exepath+'CTEMEBSD '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
-  cmd = '/Users/mdg/Files/EMsoft/Build/Bin/EMEBSD '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
+  cmd = EBSDdata.f90exepath+'EMEBSD '+EBSDdata.pathname+'/'+'EMEBSDtmp.nml'
+  ;cmd = '/Users/mdg/Files/EMsoft/Build/Bin/EMEBSD '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
   spawn,cmd, cmdoutput, cmderroutput
 
   Core_Print,'EMEBSD program reported the following output '
@@ -173,7 +173,7 @@ if keyword_set(single) then begin
   spawn, cmd
 end
 
- cmd = '/bin/rm '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
+ cmd = '/bin/rm '+EBSDdata.pathname+'/'+'EMEBSDtmp.nml'
  spawn, cmd
 
 EMdatapathname = getenv('EMdatapathname')
