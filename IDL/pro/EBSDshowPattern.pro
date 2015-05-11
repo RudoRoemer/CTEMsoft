@@ -49,6 +49,8 @@ common EBSD_data_common, EBSDdata
 common EBSDpatterns, pattern, image, finalpattern
 common EBSDmasks, circularmask
 
+EMpath = getenv('EMdatapathname')
+
 ; check whether the mask needs to be recomputed or not
 s = size(circularmask)
 dbin = 2^EBSDdata.detbinning
@@ -76,9 +78,9 @@ end
 if not keyword_set(single) then begin
   dbin = 2^EBSDdata.detbinning
 ; we need to read the pattern from file
-  res = H5F_IS_HDF5(EBSDdata.EBSDpatternfilename)
+  res = H5F_IS_HDF5(EMpath+EBSDdata.EBSDpatternfilename)
   if (res eq 0) then begin
-    openr,1,EBSDdata.EBSDpatternfilename,/f77
+    openr,1,EMpath+EBSDdata.EBSDpatternfilename,/f77
     q = assoc(1,lonarr(3),4)
     dims = q[0]
     offset = 24L + EBSDdata.currentpatternID * ( EBSDdata.detnumsx * EBSDdata.detnumsy / dbin^2 +2L ) * 4L 
@@ -86,7 +88,7 @@ if not keyword_set(single) then begin
     pattern = q[0]
     close,1
   end else begin  ; this is an HDF5 file
-    file_id = H5F_OPEN(EBSDdata.EBSDpatternfilename)
+    file_id = H5F_OPEN(EMpath+EBSDdata.EBSDpatternfilename)
     group_id = H5G_OPEN(file_id,'EMData')
     dset_id = H5D_OPEN(group_id,'EBSDpatterns')
     pattern = H5D_READ(dset_id)

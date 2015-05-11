@@ -513,17 +513,18 @@ end function Lambert2DHexForwardDouble
 !
 !> @date 7/10/13   MDG 1.0 original
 !> @date 5/04/15   MDG 1.1 correction to abs(X)/X for sign(X)
+!> @date 5/09/15   MDG 1.2 added slight offset to XX,YY to avoid interpolation issues
 !--------------------------------------------------------------------------
 recursive function Lambert2DHexInverseSingle(xyz,ierr) result(res)
 
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)       :: xyz(3) 
-integer(kind=irg),INTENT(INOUT):: ierr
+integer(kind=irg),INTENT(INOUT) :: ierr
 
 real(kind=sgl)                  :: res(2), q, qq, XX, YY, xxx, yyy, sgnX
 integer(kind=irg)               :: ks
-real(kind=sgl),parameter        :: eps = 1.0E-7
+real(kind=sgl),parameter        :: eps = 1.0E-7, eps2 = 1.0E-4
 
 ierr = 0
 ! check to make sure that the input point lies on the unit sphere
@@ -536,8 +537,8 @@ else
  else
 ! first do the Lambert projection
   q = sqrt(2.0/(1.0+xyz(3)))
-  XX = q * xyz(1)
-  YY = q * xyz(2)
+  XX = q * xyz(1)+eps2
+  YY = q * xyz(2)+eps2
 
 ! determine in which sextant this point lies
   ks = GetSextantSingle( (/ XX, YY /) )
@@ -549,7 +550,11 @@ else
     case (0,3)
         q = LPs%pree * sgnX 
         xxx = q * LPs%sPio2 
-        yyy = q * LPs%pref * atan(YY/XX)
+        if (XX.eq.0.0) then
+          yyy = LPs%pref * LPs%Pi * 0.5
+        else
+          yyy = q * LPs%pref * atan(YY/XX)
+        end if
     case (1,4)
         q = LPs%prea * sgnX 
         qq= atan((YY-LPs%rtt*XX)/(XX+LPs%rtt*YY))
@@ -581,17 +586,18 @@ end function Lambert2DHexInverseSingle
 !
 !> @date 7/10/13   MDG 1.0 original
 !> @date 5/04/15   MDG 1.1 correction to abs(X)/X for sign(X)
+!> @date 5/09/15   MDG 1.2 added slight offset to XX,YY to avoid interpolation issues
 !--------------------------------------------------------------------------
 recursive function Lambert2DHexInverseDouble(xyz,ierr) result(res)
 
 IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN)       :: xyz(3) 
-integer(kind=irg),INTENT(INOUT):: ierr
+integer(kind=irg),INTENT(INOUT) :: ierr
 
 real(kind=dbl)                  :: res(2), q, qq, XX, YY, xxx, yyy, sgnX
 integer(kind=irg)               :: ks
-real(kind=dbl),parameter        :: eps = 1.0E-12
+real(kind=dbl),parameter        :: eps = 1.0E-12, eps2 = 1.0E-4
 
 ierr = 0
 ! check to make sure that the input point lies on the unit sphere
@@ -604,8 +610,8 @@ else
  else
 ! first do the Lambert projection
   q = dsqrt(2.D0/(1.D0+xyz(3)))
-  XX = q * xyz(1)
-  YY = q * xyz(2)
+  XX = q * xyz(1)+eps2
+  YY = q * xyz(2)+eps2
 
 ! determine in which sextant this point lies
   ks = GetSextantDouble( (/ XX, YY /) )
@@ -617,7 +623,11 @@ else
     case (0,3)
         q = LPs%pree * sgnX 
         xxx = q * LPs%sPio2 
-        yyy = q * LPs%pref * datan(YY/XX)
+        if (XX.eq.0.0) then
+          yyy = LPs%pref * LPs%Pi * 0.5D0
+        else
+          yyy = q * LPs%pref * datan(YY/XX)
+        end if
     case (1,4)
         q = LPs%prea * sgnX
         qq= datan((YY-LPs%rtt*XX)/(XX+LPs%rtt*YY))

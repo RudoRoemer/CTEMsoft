@@ -158,7 +158,7 @@ for i=0,EBSDdata.mcenergynumbin-1 do begin
   tvals[i] = string(th,format="(F5.2)")
 end
 
-EBSDdata.Eminsel = tvals[0]
+EBSDdata.Eminsel = 0L
 
 file3 = WIDGET_LABEL(file2, VALUE='Energy Min ', font=fontstr)
 EBSDwidget_s.EBSDminenergylist = WIDGET_DROPLIST(file2, $
@@ -169,7 +169,7 @@ EBSDwidget_s.EBSDminenergylist = WIDGET_DROPLIST(file2, $
 ;WIDGET_CONTROL, set_droplist_select=EBSDdata.Eminsel, EBSDwidget_s.EBSDminenergylist
 WIDGET_CONTROL, set_droplist_select=0, EBSDwidget_s.EBSDminenergylist
 
-EBSDdata.Emaxsel = tvals[EBSDdata.mcenergynumbin-1]
+EBSDdata.Emaxsel = EBSDdata.mcenergynumbin-1L
 
 file3 = WIDGET_LABEL(file2, VALUE='Max ', font=fontstr)
 EBSDwidget_s.EBSDmaxenergylist = WIDGET_DROPLIST(file2, $

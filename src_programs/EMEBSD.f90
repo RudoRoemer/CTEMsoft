@@ -175,6 +175,7 @@ end program EMEBSD
 !> @date 03/14/15  MDG 5.3 attempt at speeding up the program by performing approximate energy sums (energyaverage = 1)
 !> @date 03/20/15  MDG 5.4 corrected out-of-bounds error in EBSDpattern array
 !> @date 04/07/15  MDG 5.5 added HDF-formatted output
+!> @date 05/08/15  MDG 5.6 added support for hexagonal/trigonal master pattern interpolation
 !--------------------------------------------------------------------------
 subroutine ComputeEBSDPatterns(enl, angles, acc, master, progname, nmldeffile)
 
@@ -230,9 +231,9 @@ real(kind=sgl),parameter                :: dtor = 0.0174533  ! convert from degr
 real(kind=dbl),parameter                :: nAmpere = 6.241D+18   ! Coulomb per second
 integer(kind=irg),parameter             :: storemax = 20        ! number of EBSD patterns stored in one output block
 integer(kind=irg)                       :: Emin, Emax      ! various parameters
-real(kind=sgl)                          :: dc(3), scl           ! direction cosine array
-real(kind=sgl)                          :: sx, dx, dxm, dy, dym, rhos, x         ! various parameters
-real(kind=sgl)                          :: ixy(2)
+real(kind=dbl)                          :: dc(3), scl           ! direction cosine array
+real(kind=dbl)                          :: sx, dx, dxm, dy, dym, rhos, x         ! various parameters
+real(kind=dbl)                          :: ixy(2), tmp
 
 real(kind=sgl),allocatable              :: mask(:,:), lx(:), ly(:)
 character(len=1),allocatable            :: batchpatterns(:,:,:), bpat(:,:)
@@ -288,10 +289,6 @@ num_el = nint(sum(acc%accum_e_detector))
   biny = enl%numsy/enl%binning
   bindx = 1.0/float(enl%binning)**2
 
-
-! determine the scale factor for the Lambert interpolation; the square has
-! an edge length of 2 x sqrt(pi/2)
-  scl = float(enl%npx) / LPs%sPio2
 
 ! intensity prefactor
   prefactor = 0.25D0 * nAmpere * enl%beamcurrent * enl%dwelltime * 1.0D-15/ dble(num_el)
@@ -411,11 +408,21 @@ if (enl%energyaverage.eq.1) then
   master_array = sum(master%sr,3)
 end if
 
+! determine the scale factor for the Lambert interpolation; the square has
+! an edge length of 2 x sqrt(pi/2), and a different scale factor for the 
+! hexagonal/trigonal case
+  if (enl%sqorhe.eq.'square') then 
+    scl = dble(enl%npx) / LPs%sPio2
+  else
+    scl = dble(enl%npx) / LPs%preg
+  end if
+
 
 ! set the number of OpenMP threads and allocate the corresponding number of random number streams
 io_int(1) = nthreads
 call WriteValue(' Attempting to set number of threads to ',io_int,1,"(I4)")
 call OMP_SET_NUM_THREADS(nthreads)
+
 
 io_int(1) = ninbatch
 io_int(2) = nbatches
@@ -460,36 +467,45 @@ do ibatch=1,nbatches+1
 
         do i=1,enl%numsx
             do j=1,enl%numsy
-!  do the active coordinate transformation for this euler angle
-             !dc = sngl(quat_Lp(conjg(angles%quatang(1:4,jang)),  (/ master%rgx(i,j),master%rgy(i,j),master%rgz(i,j) /) )) 
-              dc = sngl(quat_Lp(angles%quatang(1:4,jang),  (/ master%rgx(i,j),master%rgy(i,j),master%rgz(i,j) /) )) 
+! do the active coordinate transformation for this euler angle
+              dc = quat_Lp(angles%quatang(1:4,jang),  (/ master%rgx(i,j),master%rgy(i,j),master%rgz(i,j) /) )
 ! make sure the third one is positive; if not, switch all 
-              dc = dc/sqrt(sum(dc**2))
-              if (dc(3).lt.0.0) dc = -dc
+              dc = dc/dsqrt(sum(dc*dc))
+              if (dc(3).lt.0.D0) dc = -dc
 ! convert these direction cosines to coordinates in the Rosca-Lambert projection
-              ixy = scl * LambertSphereToSquare( dc, istat )
-! four-point interpolation (bi-quadratic)
-              nix = int(enl%npx+ixy(1))-enl%npx
-              niy = int(enl%npy+ixy(2))-enl%npy
-              nixp = nix+1
-              niyp = niy+1
-              if (nixp.gt.enl%npx) nixp = nix
-              if (niyp.gt.enl%npy) niyp = niy
-              dx = ixy(1)-nix
-              dy = ixy(2)-niy
-              dxm = 1.0-dx
-              dym = 1.0-dy
- ! interpolate the intensity 
-              if (enl%energyaverage.eq.1) then
-                EBSDpattern(i,j) = EBSDpattern(i,j) + acc_array(i,j) * ( master_array(nix,niy) * dxm * dym + &
-                                           master_array(nixp,niy) * dx * dym + master_array(nix,niyp) * dxm * dy + &
-                                           master_array(nixp,niyp) * dx * dy )
+              if (enl%sqorhe.eq.'square') then
+                ixy = scl * LambertSphereToSquare( dc, istat )
               else
-                do k=Emin,Emax 
-                  EBSDpattern(i,j) = EBSDpattern(i,j) + acc%accum_e_detector(k,i,j) * ( master%sr(nix,niy,k) * dxm * dym + &
-                                             master%sr(nixp,niy,k) * dx * dym + master%sr(nix,niyp,k) * dxm * dy + &
-                                             master%sr(nixp,niyp,k) * dx * dy )
-                end do
+                ixy = scl * LambertSphereToHex( dc, istat )
+                tmp = ixy(1)
+                ixy(1) = ixy(2)
+                ixy(2) = tmp
+              end if
+
+              if (istat.eq.0) then 
+! four-point interpolation (bi-quadratic)
+                nix = int(enl%npx+ixy(1))-enl%npx
+                niy = int(enl%npy+ixy(2))-enl%npy
+                nixp = nix+1
+                niyp = niy+1
+                if (nixp.gt.enl%npx) nixp = nix
+                if (niyp.gt.enl%npy) niyp = niy
+                dx = ixy(1)-nix
+                dy = ixy(2)-niy
+                dxm = 1.0-dx
+                dym = 1.0-dy
+ ! interpolate the intensity 
+                if (enl%energyaverage.eq.1) then
+                  EBSDpattern(i,j) = EBSDpattern(i,j) + acc_array(i,j) * ( master_array(nix,niy) * dxm * dym + &
+                                             master_array(nixp,niy) * dx * dym + master_array(nix,niyp) * dxm * dy + &
+                                             master_array(nixp,niyp) * dx * dy )
+                else
+                  do k=Emin,Emax 
+                    EBSDpattern(i,j) = EBSDpattern(i,j) + acc%accum_e_detector(k,i,j) * ( master%sr(nix,niy,k) * dxm * dym + &
+                                               master%sr(nixp,niy,k) * dx * dym + master%sr(nix,niyp,k) * dxm * dy + &
+                                               master%sr(nixp,niyp,k) * dx * dy )
+                  end do
+                end if
               end if
           end do
        end do

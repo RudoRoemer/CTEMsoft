@@ -74,6 +74,7 @@ EMdatapathname = getenv('EMdatapathname')
     goto, skipall
   endif 
 
+  
 ; open the EMheader group
   group_id = H5G_open(file_id,'EMheader')
 
@@ -120,7 +121,7 @@ EMdatapathname = getenv('EMdatapathname')
   dpos = strpos(res,'.',/reverse_search)
   plen = strlen(res)
   EBSDdata.mcpathname = strmid(res,0,spos)
-EBSDdata.mcpathname = strmid(EBSDdata.mcpathname,1,strlen(EBSDdata.mcpathname))
+;EBSDdata.mcpathname = strmid(EBSDdata.mcpathname,1,strlen(EBSDdata.mcpathname))
   EBSDdata.mcfilename = strmid(res,spos+1)
     Core_Print,'MC filename = ->'+EBSDdata.mcfilename+'<-'
   WIDGET_CONTROL, SET_VALUE=EBSDdata.mcfilename, EBSDwidget_s.mcfilename
@@ -130,7 +131,8 @@ EBSDdata.mcpathname = strmid(EBSDdata.mcpathname,1,strlen(EBSDdata.mcpathname))
   z = H5D_read(dset_id)
   res = strtrim(z[0],2)
   H5D_close,dset_id
-  EBSDdata.mpfilename = strpos(res,1,strlen(res))
+; EBSDdata.mpfilename = strmid(res,1,strlen(res))
+  EBSDdata.mpfilename = strmid(res,0,strlen(res))
 
 ; npx, npy
   dset_id = H5D_open(group_id,'npx')
