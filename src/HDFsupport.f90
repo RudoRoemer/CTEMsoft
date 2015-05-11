@@ -163,6 +163,11 @@ line = 'UserEmail'
 line2(1) = useremail
 error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head)
 
+! overall EM data pathname
+!line = 'EMdatapathname'
+!line2(1) = EMdatapathname
+!error = HDF_writeDatasetStringArray(line, line2, 1, HDF_head)
+
 ! hostname /EMheader/HostName 'character'
 call hostnm(c)
 ! lowercase it

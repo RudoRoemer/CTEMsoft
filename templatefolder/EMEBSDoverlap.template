@@ -1,0 +1,14 @@
+&EBSDdata
+! template file for the CTEMEBSDoverlap program
+!
+! name of EBSD master files
+masterfileA = '/somefoldersomwhere/Cu_master.data'
+masterfileB = '/somefoldersomwhere/Cu_master.data'
+! name of output file
+datafile = '/somefoldersomwhere/EBSDtest.data'
+! orientation relation vectors:
+gA = 1, 1, 0
+gB = 1, 0, 1
+tA = 1, 1, 1
+tB = -1, -1, -1
+/

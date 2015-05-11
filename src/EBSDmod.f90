@@ -467,7 +467,11 @@ if (stat) then
   enl%sqorhe = trim(stringarray(1))
   deallocate(stringarray)
 
-  dataset = 'sr'
+  if (enl%sqorhe.eq.'hexago') then
+    dataset = 'srhex'
+  else
+    dataset = 'sr'
+  end if
   srtmp = HDF_readDatasetFloatArray4D(dataset, dims4, HDF_head)
   allocate(master%sr(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE),stat=istat)
   master%sr = sum(srtmp,4)

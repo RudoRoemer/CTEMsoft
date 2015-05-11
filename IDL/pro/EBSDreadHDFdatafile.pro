@@ -37,6 +37,7 @@
 ;
 ;> @date 03/19/14 MDG 1.0 first attempt 
 ;> @date 04/02/15 MDG 2.0 modfied from EBSDreaddatafile to cover HDF formatted files
+;> @date 05/07/15 MDG 2.1 modified to accommodate changes in path names for the entire EMsoft package
 ;--------------------------------------------------------------------------
 pro EBSDreadHDFdatafile,MCFILE=MCFILE,MPFILE=MPFILE
 ;
@@ -51,8 +52,13 @@ common EBSD_rawdata, accum_e, accum_z, MParray, MParraysum
   Core_Print,' ',/blank
   EBSDdata.MCMPboth = 0
 
+
+EMdatapathname = ''
+
 if keyword_set(MPFILE) then begin
   Core_Print,'Reading data file '+EBSDdata.mpfilename
+
+EMdatapathname = getenv('EMdatapathname')
 
 ; first make sure that this is indeed an HDF file
   res = H5F_IS_HDF5(EBSDdata.pathname+'/'+EBSDdata.mpfilename)
@@ -68,6 +74,7 @@ if keyword_set(MPFILE) then begin
     goto, skipall
   endif 
 
+  
 ; open the EMheader group
   group_id = H5G_open(file_id,'EMheader')
 
@@ -114,9 +121,18 @@ if keyword_set(MPFILE) then begin
   dpos = strpos(res,'.',/reverse_search)
   plen = strlen(res)
   EBSDdata.mcpathname = strmid(res,0,spos)
+;EBSDdata.mcpathname = strmid(EBSDdata.mcpathname,1,strlen(EBSDdata.mcpathname))
   EBSDdata.mcfilename = strmid(res,spos+1)
     Core_Print,'MC filename = ->'+EBSDdata.mcfilename+'<-'
   WIDGET_CONTROL, SET_VALUE=EBSDdata.mcfilename, EBSDwidget_s.mcfilename
+
+; outname (to reset the current filename to the correct EMdatapathname
+  dset_id = H5D_open(group_id,'outname')
+  z = H5D_read(dset_id)
+  res = strtrim(z[0],2)
+  H5D_close,dset_id
+; EBSDdata.mpfilename = strmid(res,1,strlen(res))
+  EBSDdata.mpfilename = strmid(res,0,strlen(res))
 
 ; npx, npy
   dset_id = H5D_open(group_id,'npx')
@@ -202,14 +218,14 @@ if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
   EBSDdata.Esel = 0
 
 ; first make sure that this is indeed an HDF file
-  res = H5F_IS_HDF5(EBSDdata.mcpathname+'/'+EBSDdata.mcfilename)
+  res = H5F_IS_HDF5(EMdatapathname+EBSDdata.mcpathname+'/'+EBSDdata.mcfilename)
   if (res eq 0) then begin
     Core_Print,'  This is not an HDF file ! ',/blank
     goto,skipall
   endif
 
 ; ok, so it is an HDF file; let's open it
-  file_id = H5F_OPEN(EBSDdata.mcpathname+'/'+EBSDdata.mcfilename)
+  file_id = H5F_OPEN(EMdatapathname+EBSDdata.mcpathname+'/'+EBSDdata.mcfilename)
   if (file_id eq -1L) then begin
     Core_Print,'  Error opening file',/blank
     goto, skipall

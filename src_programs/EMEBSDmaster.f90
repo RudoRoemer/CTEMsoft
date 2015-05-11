@@ -61,6 +61,7 @@
 !> @date  05/03/14  MDG 4.2 test version to resolve bug in the Sgh matrix part (solved)
 !> @date  06/19/14  MDG 4.3 rewrite, removal of all globals, split of namelist handling from computation; add OpenMP
 !> @date  03/26/15  MDG 5.0 all output now in HDF5 format (this is the first converted program)
+!> @date  05/09/15  MDG 5.1 completed conversion from hexagonal Lambert to square Labert
 !--------------------------------------------------------------------------
 program EMEBSDmaster
 
@@ -117,6 +118,7 @@ end program EMEBSDmaster
 !> @date 04/15/15  MDG 5.3 debugged file closing problem, mostly in HDFsupport.f90
 !> @date 04/15/15  MDG 5.4 corrected offset reading of accum_z array
 !> @date 04/27/15  MDG 5.5 reactivate the hexagonal code; needs to be debugged
+!> @date 05/08/15  MDG 5.6 added automated conversion from hexagonal to square Lambert; debugged
 !--------------------------------------------------------------------------
 subroutine ComputeMasterPattern(emnl, progname, nmldeffile)
 
@@ -155,10 +157,10 @@ integer(kind=irg)      :: isym,i,j,ik,npy,ipx,ipy,debug,iE,izz, izzmax, iequiv(2
                         numk, & ! number of independent incident beam directions
                         ir,nat(100),kk(3), npyhex, skip, ijmax, one, NUMTHREADS, TID, &
                         numset,n,ix,iy,iz, io_int(6), nns, nnw, nref,  &
-                        istat,gzero,ic,ip,ikk, totstrong, totweak, jh     ! counters
-real(kind=dbl)         :: tpi,Znsq, kkl, DBWF, kin, delta, h, lambda, omtl, srt !
+                        istat,gzero,ic,ip,ikk, totstrong, totweak, jh, ierr, nix, niy, nixp, niyp     ! counters
+real(kind=dbl)         :: tpi,Znsq, kkl, DBWF, kin, delta, h, lambda, omtl, srt, dc(3), xy(2), edge, scl, tmp, dx, dxm, dy, dym !
 real(kind=sgl)          :: io_real(5), selE, kn, FN(3), kkk(3)
-real(kind=sgl),allocatable      :: sr(:,:,:,:), srhex(:,:,:,:), EkeVs(:), svals(:) ! results
+real(kind=sgl),allocatable      :: sr(:,:,:,:), srhex(:,:,:,:), srh(:,:,:,:), EkeVs(:), svals(:) ! results
 complex(kind=dbl)               :: czero
 complex(kind=dbl),allocatable   :: Lgh(:,:), Sgh(:,:,:)
 logical                 :: usehex, switchmirror, verbose
@@ -432,6 +434,8 @@ deallocate(accum_z)
   if (usehex) then
    npyhex = nint(2.0*float(npy)/sqrt(3.0))
    allocate(srhex(-emnl%npx:emnl%npx,-npyhex:npyhex,1,1:numset),stat=istat)
+   allocate(srh(-emnl%npx:emnl%npx,-npy:npy,1,1:numset),stat=istat)
+   allocate(sr(-emnl%npx:emnl%npx,-npy:npy,1,1:numset),stat=istat)
   end if
 
 ! set various arrays to zero
@@ -533,6 +537,15 @@ deallocate(accum_z)
   cnt4 = (/ 2*emnl%npx+1, 2*emnl%npx+1, 1, numset /)
   offset4 = (/ 0, 0, 0, 0 /)
   hdferr = HDF_writeHyperslabFloatArray4D(dataset, sr, dims4, offset4, cnt4(1), cnt4(2), cnt4(3), cnt4(4), HDF_head)
+
+! create the hexagonal hyperslab hyperslab and write zeroes to it for now
+  if (usehex) then 
+    dataset = 'srhex'
+    dims4 = (/  2*emnl%npx+1, 2*emnl%npx+1, numEbins, numset /)
+    cnt4 = (/ 2*emnl%npx+1, 2*emnl%npx+1, 1, numset /)
+    offset4 = (/ 0, 0, 0, 0 /)
+    hdferr = HDF_writeHyperslabFloatArray4D(dataset, srh, dims4, offset4, cnt4(1), cnt4(2), cnt4(3), cnt4(4), HDF_head)
+  end if
 
   call HDF_pop(HDF_head,.TRUE.)
 
@@ -736,7 +749,7 @@ if (usehex) then
   delta = dsqrt(2.D0)/dble(emnl%npx)
   srt = 2.D0/dsqrt(3.D0)
 ! copy the central row without modifications
-  sr(-emnl%npx:emnl%npx,0,1,1:numset) = srhex(-emnl%npx:emnl%npx,0,1,1:numset)
+  srh(-emnl%npx:emnl%npx,0,1,1:numset) = srhex(-emnl%npx:emnl%npx,0,1,1:numset)
 ! we'll go through the array with pairs of horizontal rows at a time
   do j=1,npy-1
 ! determine which way the triangle is oriented for this row of the square array
@@ -747,9 +760,9 @@ if (usehex) then
       omtl = 1.D0-2.D0*lambda
       do i=-emnl%npx+1,emnl%npx-1  ! perform the barycentric interpolation
 ! positive row, pay attention to hexagonal coordinate transformation !
-        sr(i,j,1,1:numset) = ( srhex(i-1,jh+1,1,1:numset) + srhex(i,jh+1,1,1:numset) )*lambda + omtl * srhex(i,jh,1,1:numset)
+        srh(i,j,1,1:numset) = ( srhex(i-1,jh+1,1,1:numset) + srhex(i,jh+1,1,1:numset) )*lambda + omtl * srhex(i,jh,1,1:numset)
 ! negative row
-        sr(i,-j,1,1:numset) = ( srhex(i-1,-jh-1,1,1:numset) + srhex(i,-jh-1,1,1:numset) )*lambda + omtl * srhex(i,-jh,1,1:numset)
+        srh(i,-j,1,1:numset) = ( srhex(i-1,-jh-1,1,1:numset) + srhex(i,-jh-1,1,1:numset) )*lambda + omtl * srhex(i,-jh,1,1:numset)
       end do
     else
       h = j*delta - float(jh)*delta/srt
@@ -757,11 +770,46 @@ if (usehex) then
       omtl = 1.D0-2.D0*lambda
       do i=-emnl%npx+1,emnl%npx-1  ! perform the barycentric interpolation
 !! positive row, pay attention to hexagonal coordinate transformation !
-        sr(i,j,1,1:numset) = ( srhex(i-1,jh,1,1:numset) + srhex(i,jh,1,1:numset) )*lambda + omtl * srhex(i,jh+1,1,1:numset)
+        srh(i,j,1,1:numset) = ( srhex(i-1,jh,1,1:numset) + srhex(i,jh,1,1:numset) )*lambda + omtl * srhex(i,jh+1,1,1:numset)
 ! negative row
-        sr(i,-j,1,1:numset) = ( srhex(i-1,-jh,1,1:numset) + srhex(i,-jh,1,1:numset) )*lambda + omtl * srhex(i,-jh-1,1,1:numset)
+        srh(i,-j,1,1:numset) = ( srhex(i-1,-jh,1,1:numset) + srhex(i,-jh,1,1:numset) )*lambda + omtl * srhex(i,-jh-1,1,1:numset)
       end do
     end if
+  end do
+  
+! and finally, we convert this to a square Lambert projection which will be used 
+! for all EBSD pattern interpolations; we do store the srh array in the HDF5 file as well for 
+! visualization purposes.
+  edge = LPs%sPio2 / dble(emnl%npx)
+  scl = float(emnl%npx) / LPs%preg
+  do i=-emnl%npx,emnl%npx
+    do j=-npy,npy
+! determine the spherical direction for this point
+      xy = (/ dble(i), dble(j) /) * edge
+      dc = LambertSquareToSphere(xy, ierr)
+! and interpolate the hexagonal master pattern
+      if (dc(3).lt.0.D0) dc = -dc
+! convert direction cosines to hexagonal Lambert projections
+      xy = scl * LambertSphereToHex( dc, ierr )
+      tmp = xy(1)
+      xy(1) = xy(2)
+      xy(2) = tmp
+! interpolate intensity from the neighboring points
+      if (ierr.eq.0) then 
+        nix = floor(xy(1))
+        niy = floor(xy(2))
+        nixp = nix+1
+        niyp = niy+1
+        if (nixp.gt.emnl%npx) nixp = nix
+        if (niyp.gt.emnl%npx) niyp = niy
+        dx = xy(1) - nix
+        dy = xy(2) - niy
+        dxm = 1.D0 - dx
+        dym = 1.D0 - dy
+        sr(i,j,1,1:numset) = srh(nix,niy,1,1:numset)*dxm*dym + srh(nixp,niy,1,1:numset)*dx*dym + &
+                             srh(nix,niyp,1,1:numset)*dxm*dy + srh(nixp,niyp,1,1:numset)*dx*dy
+      end if
+    end do
   end do
 end if
 
@@ -803,6 +851,14 @@ end if
   cnt4 = (/ 2*emnl%npx+1, 2*emnl%npx+1, 1, numset /)
   offset4 = (/ 0, 0, iE-1, 0 /)
   hdferr = HDF_writeHyperslabFloatArray4D(dataset, sr, dims4, offset4, cnt4(1), cnt4(2), cnt4(3), cnt4(4), HDF_head, insert)
+
+  if (usehex) then
+    dataset = 'srhex'
+    dims4 = (/  2*emnl%npx+1, 2*emnl%npx+1, numEbins, numset /)
+    cnt4 = (/ 2*emnl%npx+1, 2*emnl%npx+1, 1, numset /)
+    offset4 = (/ 0, 0, iE-1, 0 /)
+    hdferr = HDF_writeHyperslabFloatArray4D(dataset, srh, dims4, offset4, cnt4(1), cnt4(2), cnt4(3), cnt4(4), HDF_head, insert)
+  end if
 
   call HDF_pop(HDF_head,.TRUE.)
 
