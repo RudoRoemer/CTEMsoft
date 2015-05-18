@@ -41,6 +41,7 @@ Create_exe_and_tll(EMMC)  #MP
 Create_exe_and_tll(EMEBSD)
 Create_exe_and_tll(EMEBSDoverlap)
 Create_exe_and_tll(EMquatSP)
+Create_exe_and_tll(EMkikuchimap)
 Create_exe_and_tll(EMEBSDmaster)
 Create_exe_and_tll(EMEBSDmasterOpenCL)
 Create_exe_and_tll(EMmkxtal)

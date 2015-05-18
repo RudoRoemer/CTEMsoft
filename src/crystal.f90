@@ -838,7 +838,7 @@ end function CalcAngleDouble
 !> @param r output vector 
 !> @param inspace input space character ('d', 'r', 'c')
 !> @param outspace output space character ('d', 'r', 'c')
-!> @param iv logical switch for colume division (if TRUE)
+!> @param iv logical switch for volume division (if TRUE)
 !
 !> @todo replace iv by a logical switch; replace if-statements by case statement
 !

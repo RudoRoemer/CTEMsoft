@@ -220,6 +220,7 @@ end type EBSDNameListType
 type EBSDoverlapNameListType
         integer(kind=irg)       :: stdout
         integer(kind=irg)       :: PatternAxisA(3)
+        integer(kind=irg)       :: HorizontalAxisA(3)
         real(kind=sgl)          :: tA(3)
         real(kind=sgl)          :: tB(3)
         real(kind=sgl)          :: gA(3)

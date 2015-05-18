@@ -198,11 +198,11 @@ character(fnlen)                        :: pathstring
 
 ! get the environment variables for the EMsoft root and data folders
 call getenv("EMsoftpathname",pathstring)
-EMsoftpathname = trim(pathstring)//'/'
+EMsoftpathname = trim(pathstring)
 
 pathstring=''
 call getenv("EMdatapathname",pathstring)
-EMdatapathname = trim(pathstring)//'/'
+EMdatapathname = trim(pathstring)
 
 ! define the derived pathname variables (globals)
 templatepathname = trim(EMsoftpathname)//'templatefolder/'

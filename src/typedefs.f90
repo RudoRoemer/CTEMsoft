@@ -964,5 +964,16 @@ type HDFobjectStackType   ! this is a push-pop stack to keep track of the open o
 end type HDFobjectStackType
 
 
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+type kikuchireflection
+  integer(kind=irg)                     :: hkl(3),rnum
+  logical                               :: drawh,drawk,drawc
+  real(kind=sgl)                        :: hlx(2),hly(2),klx(2),kly(2),clx(2),cly(2),beta,theta,Ig
+  type(kikuchireflection),pointer       :: next
+end type kikuchireflection
+
 
 end module typedefs

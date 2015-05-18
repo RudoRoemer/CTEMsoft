@@ -87,13 +87,14 @@ type(EBSDMasterType),pointer           :: masterA, masterB
 
 integer(kind=irg)                      :: istat, sA(3), sB(3), ierr, i, j , hdferr
 integer(kind=irg),parameter            :: numfrac = 21
-logical                                :: verbose
+logical                                :: verbose, iv
 character(6)                           :: sqorheA, sqorheB
 character(fnlen)                       :: outstr, datafile
 type(unitcell),pointer                 :: cellA, cellB
 type(DynType),save                     :: DynA, DynB
 type(gnode),save                       :: rlpA, rlpB
-real(kind=sgl)                         :: dmin, voltage, TTAB(3,3), TT(3,3), io_real(3), cA, cB, scl, fA(numfrac)
+real(kind=sgl)                         :: dmin, voltage, TTAB(3,3), TT(3,3), io_real(3), cA, cB, scl, fA(numfrac), om(3,3), &
+                                          PP(3), HH(3), CC(3)
 real(kind=dbl)                         :: edge, xy(2), xyz(3), txyz(3), txy(2), Radius, dc(3)
 type(orientation)                      :: orel    
 real(kind=sgl),allocatable             :: master(:,:,:), masterLC(:,:,:), masterSP(:,:,:)
@@ -201,6 +202,37 @@ end if
 TTAB = ComputeOR(orel, cellA, cellB, 'AB')
 TT = transpose(matmul( cellA%rsm, matmul( TTAB, transpose(cellB%dsm))))
 
+! apply the overall rotation to the requested reference frame
+! defined by the PatternAxisA and HorizontalAxisA vectors
+! make sure that these two directions are orthogonal
+if (abs(CalcDot(cellA,float(enl%PatternAxisA),float(enl%HorizontalAxisA),'d')).gt.1.e-6) then 
+  call FatalError('EMEBSDoverlap','PatternAxisA and HorizontalAxisA must be orthogonal !!!')
+end if
+
+! convert the vectors to the standard cartesian frame for structure A
+call TransSpaceSingle(cellA, float(enl%PatternAxisA), PP, 'd', 'c')
+call TransSpaceSingle(cellA, float(enl%HorizontalAxisA), HH, 'd', 'c')
+iv = .FALSE.
+call CalcCross(cellA, PP, HH, CC, 'c', 'c', 0)
+
+call NormVec(cellA, PP, 'c')
+call NormVec(cellA, HH, 'c')
+call NormVec(cellA, CC, 'c')
+
+! place these normalized vectors in the om array
+om(1,1:3) = PP(1:3)
+om(2,1:3) = CC(1:3)
+om(3,1:3) = HH(1:3)
+om = transpose(om)
+
+outstr = ''
+call WriteValue('Overall Transformation Matrix : ',outstr)
+do i=1,3
+  io_real(1:3) = om(i,1:3)
+  call WriteValue('',io_real,3,"(3f10.6)")
+end do
+
+
 ! output
 outstr = ' '//trim(enl%xtalnameA)//' --> '//trim(enl%xtalnameB)
 call WriteValue('Transformation Matrix : ',outstr)
@@ -241,6 +273,9 @@ if (sqorheA.eq.'square') then
 ! determine the spherical direction for this point
       xy = (/ dble(i), dble(j) /) * edge
       xyz = LambertSquareToSphere(xy, ierr)
+! apply the overall pattern rotation with rotation matrix om
+      xyz = matmul(om, xyz)
+      call NormVec(cellA, xyz, 'c')
 ! since A is already square Lambert, all we need to do is compute the 
 ! beam orientation in crystal B, and sample the master pattern for that
 ! location. 
@@ -248,7 +283,8 @@ if (sqorheA.eq.'square') then
 ! normalize these direction cosines (they are already in a cartesian reference frame!)
       txyz = txyz/sqrt(sum(txyz*txyz))
 ! and interpolate the masterB pattern
-      cA = masterA%sr(i,j,sA(3))
+      !cA = masterA%sr(i,j,sA(3))
+      cA = InterpolateMaster(xyz, masterA, sA, sqorheA)
       cB = InterpolateMaster(txyz, masterB, sB, sqorheB)
       master(i,j,1:numfrac) = fA(1:numfrac)*cA+(1.0-fA(1:numfrac))*cB
     end do
@@ -258,16 +294,50 @@ end if
 !=============================
 !=============================
 ! A is hexagonal, B is square [to be implemented]
-
-
-!=============================
-!=============================
-! both A and B are hexagonal patterns [to be implemented]
-
+if (sqorheA.eq.'hexago') then 
+! first, we transform the A pattern into a square Lambert projection
+  edge =  LPs%sPio2 / dble(enl%npx)
+  do i=-enl%npx,enl%npx
+    do j=-enl%npy,enl%npy
+! determine the spherical direction for this point
+      xy = (/ dble(j), dble(i) /) * edge
+      xyz = LambertSquareToSphere(xy, ierr)
+      cA = InterpolateMaster(xyz, masterA, sA, sqorheA)
+      master(i,j,1:numfrac) = cA
+    end do
+  end do
+goto 200
+  masterA%sr = master
+! then do the regular transformation as for the previous case
+  edge = LPs%sPio2 / dble(enl%npx)
+  do i=-enl%npx,enl%npx
+    do j=-enl%npy,enl%npy
+! determine the spherical direction for this point
+      xy = (/ dble(i), dble(j) /) * edge
+      xyz = LambertSquareToSphere(xy, ierr)
+      if (ierr.eq.0) then
+! apply the overall pattern rotation with rotation matrix om
+        xyz = matmul(om, xyz)
+        call NormVec(cellA, xyz, 'c')
+! since A is already square Lambert, all we need to do is compute the 
+! beam orientation in crystal B, and sample the master pattern for that
+! location. 
+        txyz = matmul(TT, xyz)
+! normalize these direction cosines (they are already in a cartesian reference frame!)
+        txyz = txyz/sqrt(sum(txyz*txyz))
+! and interpolate the masterB pattern
+        cA = InterpolateMaster(xyz, masterA, sA, sqorheA)
+        cB = InterpolateMaster(txyz, masterB, sB, sqorheB)
+        master(i,j,1:numfrac) = fA(1:numfrac)*cA+(1.0-fA(1:numfrac))*cB
+      else
+        master(i,j,1:numfrac) = 0.0
+      end if
+    end do
+  end do
+200 end if
 
 ! free up the master pattern memory
 deallocate(masterA, masterB)
-
 
 !=============================
 !=============================
