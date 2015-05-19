@@ -492,6 +492,8 @@ do ibatch=1,nbatches+1
                 niyp = niy+1
                 if (nixp.gt.enl%npx) nixp = nix
                 if (niyp.gt.enl%npy) niyp = niy
+                if (nix.lt.-enl%npx) nix = nixp
+                if (niy.lt.-enl%npy) niy = niyp
                 dx = ixy(1)-nix
                 dy = ixy(2)-niy
                 dxm = 1.0-dx
@@ -615,7 +617,7 @@ dataset = 'EBSDpatterns'
    dim0 = binx
    dim1 = biny
    dim2 = ninbatch*enl%nthreads
-write (*,*) ibatch,offset,hdims,dim0,dim1,dim2
+! write (*,*) ibatch,offset,hdims,dim0,dim1,dim2
    if (ibatch.eq.1) then
      hdferr = HDF_writeHyperslabCharArray3D(dataset, batchpatterns, hdims, offset, dim0, dim1, dim2, &
                                           HDF_head)
@@ -629,7 +631,7 @@ write (*,*) ibatch,offset,hdims,dim0,dim1,dim2
    dim0 = binx
    dim1 = biny
    dim2 = nremainder
-write (*,*) ibatch,offset,hdims,dim0,dim1,dim2
+! write (*,*) ibatch,offset,hdims,dim0,dim1,dim2
    if (ibatch.eq.1) then
      hdferr = HDF_writeHyperslabCharArray3D(dataset, batchpatterns(1:binx,1:biny,1:nremainder), hdims, offset, dim0, dim1, dim2, &
                                           HDF_head)
