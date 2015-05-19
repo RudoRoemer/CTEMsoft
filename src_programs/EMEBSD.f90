@@ -369,7 +369,7 @@ else
   ninbatch = 1024
   nbatches = enl%numangles/(ninbatch*nthreads)
   nremainder = mod(enl%numangles,ninbatch*nthreads)
-  allocate(batchpatterns(enl%numsx,enl%numsy,ninbatch*nthreads),stat=istat)
+  allocate(batchpatterns(enl%numsx/enl%binning,enl%numsy/enl%binning,ninbatch*nthreads),stat=istat)
 ! this is also the size of the hyperslabs that we will write to the HDF output file
 
 ! here we also create a mask if necessary
@@ -424,10 +424,12 @@ call WriteValue(' Attempting to set number of threads to ',io_int,1,"(I4)")
 call OMP_SET_NUM_THREADS(nthreads)
 
 
-io_int(1) = ninbatch
-io_int(2) = nbatches
-io_int(3) = nremainder
-call WriteValue('  OpenMP loop variables : ',io_int,3,"(I6,I6,I6)")
+io_int(1) = enl%numangles 
+io_int(2) = ninbatch
+io_int(3) = nthreads
+io_int(4) = nbatches
+io_int(5) = nremainder
+call WriteValue('  OpenMP loop variables : ',io_int,5,"(I10,' = ',I4,' * ',I2,' * ',I4,' + ',I6)")
 
 do ibatch=1,nbatches+1
 
@@ -454,7 +456,7 @@ do ibatch=1,nbatches+1
 ! initialize the random number generator for the Poison noise
   idum = -1-TID               
 
-!$OMP DO SCHEDULE(STATIC,1000)  
+!$OMP DO SCHEDULE(STATIC,1024)  
   do iang=istart,istop
 ! convert the direction cosines to quaternions, include the 
 ! sample quaternion orientation, and then back to direction cosines...
@@ -589,7 +591,8 @@ do ibatch=1,nbatches+1
         end if
        
         if (enl%binning.ne.1) then 
-         batchpatterns(1:enl%numsx/enl%binning+1,1:enl%numsy/enl%binning+1, iang) = bpat
+         !batchpatterns(1:enl%numsx/enl%binning+1,1:enl%numsy/enl%binning+1, iang) = bpat
+         batchpatterns(1:enl%numsx/enl%binning,1:enl%numsy/enl%binning, iang) = bpat
        else
          batchpatterns(1:enl%numsx,1:enl%numsy, iang) = bpat
        end if
@@ -603,6 +606,8 @@ do ibatch=1,nbatches+1
 ! here we write all the entries in the batchpatterns array to the HDF file as a hyperslab
 dataset = 'EBSDpatterns'
 
+
+
  if (outputformat.eq.'bin') then
   if (ibatch.le.nbatches) then 
    offset = (/ 0, 0, (ibatch-1)*ninbatch*enl%nthreads /)
@@ -610,6 +615,7 @@ dataset = 'EBSDpatterns'
    dim0 = binx
    dim1 = biny
    dim2 = ninbatch*enl%nthreads
+write (*,*) ibatch,offset,hdims,dim0,dim1,dim2
    if (ibatch.eq.1) then
      hdferr = HDF_writeHyperslabCharArray3D(dataset, batchpatterns, hdims, offset, dim0, dim1, dim2, &
                                           HDF_head)
@@ -623,6 +629,7 @@ dataset = 'EBSDpatterns'
    dim0 = binx
    dim1 = biny
    dim2 = nremainder
+write (*,*) ibatch,offset,hdims,dim0,dim1,dim2
    if (ibatch.eq.1) then
      hdferr = HDF_writeHyperslabCharArray3D(dataset, batchpatterns(1:binx,1:biny,1:nremainder), hdims, offset, dim0, dim1, dim2, &
                                           HDF_head)

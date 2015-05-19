@@ -65,7 +65,8 @@ INCLUDE (${CMP_SOURCE_DIR}/cmpProject.cmake)
 set(CMAKE_MODULE_PATH ${EMsoft_SOURCE_DIR}/Support/CMakeModules ${CMAKE_MODULE_PATH})
 
 
-set(EXE_DEBUG_EXTENSION "_debug")
+# set(EXE_DEBUG_EXTENSION "_debug")
+set(EXE_DEBUG_EXTENSION "")
 	   
 # FFLAGS depend on the compiler
 get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)

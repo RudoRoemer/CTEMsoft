@@ -795,6 +795,7 @@ type(EBSDoverlapNameListType),INTENT(INOUT)     :: enl
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: PatternAxisA(3)
+integer(kind=irg)       :: HorizontalAxisA(3)
 real(kind=sgl)          :: tA(3)
 real(kind=sgl)          :: tB(3)
 real(kind=sgl)          :: gA(3)
@@ -805,11 +806,12 @@ character(fnlen)        :: masterfileB
 character(fnlen)        :: datafile
 
 ! define the IO namelist to facilitate passing variables to the program.
-namelist  / EBSDdata / stdout, PatternAxisA, tA, tB, gA, gB, fracA, masterfileA, masterfileB, datafile
+namelist  / EBSDdata / stdout, PatternAxisA, tA, tB, gA, gB, fracA, masterfileA, masterfileB, datafile, HorizontalAxisA
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 stdout          = 6
 PatternAxisA    = (/ 0, 0, 1 /)                 ! center axis for output pattern
+HorizontalAxisA = (/ 1, 0, 0 /)                 ! horizontal axis for output pattern
 tA              = (/0.0, 0.0, 1.0/)             ! direction vector in crystal A
 tB              = (/0.0, 0.0, 1.0/)             ! direction vector in crystal B
 gA              = (/1.0, 0.0, 0.0/)             ! plane normal in crystal A
@@ -840,6 +842,7 @@ datafile        = 'undefined'   ! output file name
 ! if we get here, then all appears to be ok, and we need to fill in the emnl fields
 enl%stdout = stdout
 enl%PatternAxisA = PatternAxisA
+enl%HorizontalAxisA = HorizontalAxisA
 enl%tA = tA
 enl%tB = tB
 enl%gA = gA
