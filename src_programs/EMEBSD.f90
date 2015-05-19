@@ -522,12 +522,9 @@ do ibatch=1,nbatches+1
           do j=1,enl%numsy
               EBSDpattern(i,j) = POIDEV(EBSDpattern(i,j),idum)
           end do
-         end do      
-        end if
-
+         end do
 ! if this is a GUI-computation, then we can directly store the current pattern in the output file;
 ! otherwise, we process it and turn it into a byte array of the right binning level.
-        if (outputformat.eq.'gui') then 
           dataset = 'EBSDpatterns'
           offset = (/ 0, 0, ibatch-1 /)
           hdims = (/ enl%numsx, enl%numsy, enl%numangles /)
@@ -541,22 +538,8 @@ do ibatch=1,nbatches+1
             hdferr = HDF_writeHyperslabFloatArray3D(dataset, EBSDpattern, hdims, offset, dim0, dim1, dim2, &
                                           HDF_head, insert)
           end if
-        else
-
-! we may need to deal with the energy sensitivity of the scintillator as well...
-
-
-! all the following things should really be done in the IDL visualization program:
-!
-! - point spread function of camera
-! - binning
-! - brightness/contrast scaling
-! - storage in image files of large HDF5 ? file
-!  
-! that means that at this point, we really only need to store all the patterns in a single
-! file, at full resolution, as observed at the scintillator stage.
+        else ! if output mode not equal to gui
        
-        if (enl%scalingmode.ne.'not') then
 
 ! apply any camera binning
          if (enl%binning.ne.1) then 
@@ -577,30 +560,18 @@ do ibatch=1,nbatches+1
            binned = binned**enl%gammavalue
          end if
 
-        end if ! scaling mode .ne. 'not'
 
-! write either the EBSDpattern array or the binned array to the batchpatterns array (convert to bytes first)
-        if (enl%scalingmode.eq.'not') then
-         ma = maxval(EBSDpattern)
-         mi = minval(EBSDpattern)
-         EBSDpattern = mask * ((EBSDpattern - mi)/ (ma-mi))
-         bpat = char(nint(255.0*EBSDpattern))
-        else
+! write the binned array to the batchpatterns array (convert to bytes first)
+
          ma = maxval(binned)
          mi = minval(binned)
          binned = mask * ((binned - mi)/ (ma-mi))
          bpat = char(nint(255.0*binned))
-        end if
-       
-        if (enl%binning.ne.1) then 
-         !batchpatterns(1:enl%numsx/enl%binning+1,1:enl%numsy/enl%binning+1, iang) = bpat
+
          batchpatterns(1:enl%numsx/enl%binning,1:enl%numsy/enl%binning, iang) = bpat
-       else
-         batchpatterns(1:enl%numsx,1:enl%numsy, iang) = bpat
-       end if
 
       end if
-  end do
+  end do ! end of iang loop
 !$OMP END DO
 
 !$OMP END PARALLEL
