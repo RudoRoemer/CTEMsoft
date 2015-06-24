@@ -133,7 +133,6 @@ logical               			:: isvoid
 ! scale the image coordinates with respect to the origin at the center of the image
  xpos = float(i-defects%DF_npix/2)*defects%DF_L
  ypos = float(j-defects%DF_npiy/2)*defects%DF_L
-
 ! determine the starting point of the z-integration for the tilted foil
 ! this depends on the foil normal components which give the equation
 ! of the top foil plane as F . r = z0/2, from which we get zt...
@@ -142,7 +141,7 @@ logical               			:: isvoid
  fy = a_fm(3,2)
  fz = a_fm(3,3) 
  zt = foil%zb*0.5 - (fx*xpos + fy*ypos)/fz
- 
+
 ! initialize some other variables
  thick = foil%zb
  zero = cmplx(0.0,0.0)
@@ -152,12 +151,13 @@ logical               			:: isvoid
 
 ! zpos is the position down the column, starting at zt (in image coordinates)
     zpos = zt - float(islice)*defects%DF_slice
-    
+
 ! set the displacements to zero
     sumR = 0.0
-        
+
 ! set the position in the foil reference frame
     tmpf = quat_Lp( conjg(foil%a_fi), dble( (/ xpos, ypos, zpos /)) )
+
 
 !------------
 !----VOIDS---
@@ -182,6 +182,7 @@ if (defects%numvoids.ne.0) then
       cycle sliceloop
     end if
  end if 
+
 
 ! ok, if we get here, then we're not inside a void...
 
@@ -290,6 +291,7 @@ do ii=1,defects%numsf
   end if
 end do
 
+
 !--------------------
 !--LARGE INCLUSIONS--  currently commented out 
 !--------------------
@@ -348,7 +350,9 @@ end do
 ! finally any displacement fields defined by the user routine UserDisp
 ! sumR = sumR + UserDisp()        
 
+
    defects%DF_R(islice,1:3) = sumR(1:3)
+
   end do sliceloop ! main loop over the slices
 
 end subroutine CalcR

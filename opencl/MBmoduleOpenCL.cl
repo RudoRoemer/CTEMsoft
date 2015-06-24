@@ -77,7 +77,9 @@ float2 conjg(float2 a)
 //
 //> @author Saransh Singh, Carnegie Mellon University
 //
-//> @brief OpenCL kernel for calculating exponential of matrix using Taylor series when multiple exponentials are calculated simultaneously
+//> @brief OpenCL kernel for calculating exponential of matrix using Taylor series when
+//  multiple exponentials are calculated simultaneously. This routine is for the TEM
+//  geometry.
 //
 //> @date 09/09/14  SS  1.0 Original
 //> @date 02/16/15  SS  1.1 bug fixes and simplification using cmplxmult
@@ -271,7 +273,9 @@ __kernel void ScatMat(__global float2* cl_expA,
 //
 //> @author Saransh Singh, Carnegie Mellon University
 //
-//> @brief OpenCL kernel for calculating exponential of matrix using Taylor series when multiple exponentials are calculated simultaneously
+//> @brief OpenCL kernel for calculating exponential of matrix using Taylor series when
+//  multiple exponentials are calculated simultaneously. This routine is for the SEM
+//  geometry.
 //
 //> @date 02/19/15  SS  1.0 Original
 //--------------------------------------------------------------------------

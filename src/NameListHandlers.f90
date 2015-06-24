@@ -1512,10 +1512,11 @@ character(fnlen)                                            :: exptfile
 character(fnlen)                                            :: dictfile
 character(fnlen)                                            :: eulerfile
 logical                                                     :: MeanSubtraction
+logical                                                     :: patternflip
 
 ! define the IO namelist to facilitate passing variables to the program.
 namelist /DictIndxOpenCLvars/ numexptsingle, numdictsingle, totnumexpt, totnumdict,&
-        imght, imgwd, exptfile, dictfile, eulerfile, nnk, MeanSubtraction
+        imght, imgwd, exptfile, dictfile, eulerfile, nnk, MeanSubtraction, patternflip
 
 ! set some of the input parameters to default values 
 numdictsingle = 1024
@@ -1529,6 +1530,7 @@ eulerfile = 'undefined'
 totnumdict = 0
 totnumexpt = 0
 MeanSubtraction = .TRUE.
+patternflip = .TRUE.
 
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
@@ -1577,6 +1579,7 @@ dictindxnl%totnumdict = totnumdict
 dictindxnl%totnumexpt = totnumexpt
 dictindxnl%nnk = nnk
 dictindxnl%MeanSubtraction = MeanSubtraction
+dictindxnl%patternflip = patternflip
 
 end subroutine GetDictIndxOpenCLNameList
 
@@ -1694,14 +1697,14 @@ end subroutine GetPEDIndxNameList
 !
 ! SUBROUTINE:GetEBSDNameList
 !
-!> @author Marc De Graef, Carnegie Mellon University
+!> @author Saransh Singh, Carnegie Mellon University
 !
-!> @brief read namelist file and fill enl structure (used by EMEBSD.f90)
+!> @brief read namelist file and fill enl structure (used by EMDynamicEBSDIndeixing.f90)
 !
 !> @param nmlfile namelist file name
-!> @param enl EBSD name list structure
+!> @param enl EBSD indexing name list structure
 !
-!> @date 06/23/14  MDG 1.0 new routine
+!> @date 06/10/15  SS 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine GetEBSDIndxNameList(nmlfile, enl)
 
@@ -1712,136 +1715,238 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)               :: nmlfile
 type(EBSDIndxListType),INTENT(INOUT)      :: enl
 
-integer(kind=irg)       :: stdout
+
 integer(kind=irg)       :: numsx
 integer(kind=irg)       :: numsy
 integer(kind=irg)       :: binning
-integer(kind=irg)       :: nthreads
 integer(kind=irg)       :: energyaverage
 real(kind=sgl)          :: L
 real(kind=sgl)          :: thetac
 real(kind=sgl)          :: delta
 real(kind=sgl)          :: xpc
 real(kind=sgl)          :: ypc
-real(kind=sgl)          :: energymin
-real(kind=sgl)          :: energymax
 real(kind=sgl)          :: gammavalue
-real(kind=sgl)          :: axisangle(4)
 real(kind=dbl)          :: beamcurrent
 real(kind=dbl)          :: dwelltime
 character(1)            :: maskpattern
 character(3)            :: scalingmode
 character(3)            :: eulerconvention
-character(3)            :: outputformat
-character(fnlen)        :: anglefile
 character(fnlen)        :: masterfile
 character(fnlen)        :: energyfile
-character(fnlen)        :: datafile
-
-integer(kind=irg)       :: npix
 integer(kind=irg)       :: ncubochoric
-real(kind=sgl)          :: voltage
 integer(kind=irg)       :: numexptsingle
 integer(kind=irg)       :: numdictsingle
 integer(kind=irg)       :: totnumexpt
-integer(kind=irg)       :: imght
-integer(kind=irg)       :: imgwd
 integer(kind=irg)       :: nnk
 character(fnlen)        :: exptfile
 
 ! define the IO namelist to facilitate passing variables to the program.
-namelist  / EBSDdata / stdout, L, thetac, delta, numsx, numsy, xpc, ypc, anglefile, eulerconvention, masterfile, &
-energyfile, datafile, beamcurrent, dwelltime, energymin, energymax, binning, gammavalue, &
-scalingmode, axisangle, nthreads, outputformat, maskpattern, energyaverage, &
-npix, ncubochoric, numexptsingle, numdictsingle, totnumexpt,imght,imgwd,nnk,exptfile
+namelist  / EBSDIndxdata / thetac, delta, numsx, numsy, xpc, ypc, eulerconvention, masterfile, &
+energyfile, beamcurrent, dwelltime, binning, gammavalue, &
+scalingmode, maskpattern, energyaverage, L, &
+ncubochoric, numexptsingle, numdictsingle, totnumexpt,nnk,exptfile
 
 ! set the input parameters to default values (except for xtalname, which must be present)
-npix            = 0
 ncubochoric     = 50
 numexptsingle   = 1024
 numdictsingle   = 1024
 totnumexpt      = 0
-imght           = 0
-imgwd           = 0
 nnk             = 40
 exptfile        = 'undefined'
-
-stdout          = 6
 numsx           = 640           ! [dimensionless]
 numsy           = 480           ! [dimensionless]
 binning         = 1             ! binning mode  (1, 2, 4, or 8)
 L               = 20000.0       ! [microns]
-nthreads        = 1             ! number of OpenMP threads
-energyaverage   = 0             ! apply energy averaging (1) or not (0); useful for dictionary computations
+energyaverage   = 1             ! apply energy averaging (1) or not (0); useful for dictionary computations
 thetac          = 0.0           ! [degrees]
 delta           = 25.0          ! [microns]
 xpc             = 0.0           ! [pixels]
 ypc             = 0.0           ! [pixels]
-energymin       = 15.0          ! minimum energy to consider
-energymax       = 30.0          ! maximum energy to consider
 gammavalue      = 1.0           ! gamma factor
-axisangle       = (/0.0, 0.0, 1.0, 0.0/)        ! no additional axis angle rotation
 beamcurrent     = 14.513D0      ! beam current (actually emission current) in nano ampere
 dwelltime       = 100.0D0       ! in microseconds
 maskpattern     = 'n'           ! 'y' or 'n' to include a circular mask
 scalingmode     = 'not'         ! intensity selector ('lin', 'gam', or 'not')
 eulerconvention = 'tsl'         ! convention for the first Euler angle ['tsl' or 'hkl']
-outputformat    = 'gui'         ! output format for 'bin' or 'gui' use
-anglefile       = 'undefined'   ! filename
 masterfile      = 'undefined'   ! filename
 energyfile      = 'undefined'   ! name of file that contains energy histograms for all scintillator pixels (output from MC program)
-datafile        = 'undefined'   ! output file name
 
 
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
-read(UNIT=dataunit,NML=EBSDdata)
+read(UNIT=dataunit,NML=EBSDIndxdata)
 close(UNIT=dataunit,STATUS='keep')
 
 ! check for required entries
 if (trim(energyfile).eq.'undefined') then
-call FatalError('EMEBSD:',' energy file name is undefined in '//nmlfile)
-end if
-
-if (trim(anglefile).eq.'undefined') then
-call FatalError('EMEBSD:',' angle file name is undefined in '//nmlfile)
+call FatalError('EMEBSDIndexing:',' energy file name is undefined in '//nmlfile)
 end if
 
 if (trim(masterfile).eq.'undefined') then
-call FatalError('EMEBSD:',' master pattern file name is undefined in '//nmlfile)
+call FatalError('EMEBSDIndexing:',' master pattern file name is undefined in '//nmlfile)
 end if
 
-if (trim(datafile).eq.'undefined') then
-call FatalError('EMEBSD:',' output file name is undefined in '//nmlfile)
+if (trim(exptfile).eq.'undefined') then
+call FatalError('EMEBSDIndexing:',' experimental file name is undefined in '//nmlfile)
 end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the emnl fields
-enl%stdout = stdout
+enl%L = L
 enl%numsx = numsx
 enl%numsy = numsy
 enl%binning = binning
-enl%L = L
-enl%nthreads = nthreads
 enl%energyaverage = energyaverage
 enl%thetac = thetac
 enl%delta = delta
 enl%xpc = xpc
 enl%ypc = ypc
-enl%energymin = energymin
-enl%energymax = energymax
 enl%gammavalue = gammavalue
-enl%axisangle = axisangle
 enl%beamcurrent = beamcurrent
 enl%dwelltime = dwelltime
 enl%maskpattern = maskpattern
 enl%scalingmode = scalingmode
 enl%eulerconvention = eulerconvention
-enl%outputformat = outputformat
-enl%anglefile = anglefile
 enl%masterfile = masterfile
 enl%energyfile = energyfile
-enl%datafile = datafile
+enl%exptfile = exptfile
+enl%numdictsingle = numdictsingle
+enl%numexptsingle = numexptsingle
+enl%nnk = nnk
+enl%ncubochoric = ncubochoric
 
 end subroutine GetEBSDIndxNameList
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:GetZAdefectNameList
+!
+!> @author Saransh Singh, Carnegie Mellon University
+!
+!> @brief read namelist file and fill ZAdefect structure (used by CTEMDefect.f90)
+!
+!> @param nmlfile namelist file name
+!> @param ZAdefect Zone Axis defect simulation name list structure
+!
+!> @date 06/24/15  SS 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine GetZAdefectNameList(nmlfile, ZAdefect)
+
+use error
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)                   :: nmlfile
+type(ZAdefectnameListType),INTENT(INOUT)      :: ZAdefect
+
+
+	character(fnlen)		:: xtalname
+	real(kind=sgl)			:: voltage 
+	integer(kind=irg)		:: kk(3) 
+	real(kind=sgl)			:: lauec(2) 
+	real(kind=sgl)			:: dmin 
+
+! EM or STEM ?
+	character(fnlen)		:: progmode
+	character(fnlen)		:: STEMnmlfile 
+character(fnlen)			:: foilnmlfile 
+ 
+! column approximation parameters and image parameters 
+	real(kind=sgl)			:: DF_L 
+	real(kind=sgl)			:: DF_npix 
+	real(kind=sgl)			:: DF_npiy 
+	real(kind=sgl)			:: DF_slice 
+
+	integer(kind=irg)		:: dinfo
+	character(fnlen)		:: sgname 
+
+! defect parameters
+	integer(kind=irg)		:: numdisl
+	integer(kind=irg)		:: numsf
+	integer(kind=irg)		:: numinc
+	integer(kind=irg)		:: numvoids
+	character(fnlen)		:: voidname
+	character(fnlen)		:: dislname
+	character(fnlen)		:: sfname
+	character(fnlen)		:: incname
+	character(fnlen)		:: dispfile
+	character(fnlen)		:: dispmode
+
+! output parameters
+	character(fnlen)		:: dataname
+	integer(kind=irg)		:: t_interval
+
+! define the IO namelist to facilitate passing variables to the program.
+namelist  / rundata / xtalname, voltage, kk, lauec, dmin, progmode, STEMnmlfile, foilnmlfile,&
+			DF_L, DF_npix, DF_npiy, DF_slice, dinfo, sgname, numdisl, numsf, numinc,&
+			numvoids, voidname, dislname, sfname, incname, dispfile, dispmode, dataname, t_interval 
+
+! set the input parameters to default values (except for xtalname, which must be present)
+xtalname = 'undefined'
+voltage = 200000.0
+kk = (/0.0,0.0,1.0/)
+lauec = (/0.0,0.0/)
+dmin = 0.04
+progmode = 'CTEM'
+STEMnmlfile = 'STEM_rundata.nml'
+foilnmlfile = 'FOIL_rundata.nml'
+DF_L = 1.0
+DF_npix = 256
+DF_npiy = 256
+DF_slice = 1.0
+dinfo = 0
+sgname = 'undefined'
+numdisl = 0
+numsf = 0
+numinc = 0
+numvoids = 0
+voidname = 'void.nml'
+dislname = 'dislocation.nml'
+sfname = 'stackingfault.nml'
+incname = 'inclusion.nml'
+dispfile = 'undefined'
+dispmode = 'undefined'
+dataname = 'undefined'
+t_interval = 10
+
+! read the namelist file
+open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+read(UNIT=dataunit,NML=rundata)
+close(UNIT=dataunit,STATUS='keep')
+
+! check for required entries
+if (trim(xtalname).eq.'undefined') then
+call FatalError('CTEMDefect:',' xtal file name is undefined in '//nmlfile)
+end if
+
+! if we get here, then all appears to be ok, and we need to fill in the emnl fields
+ZAdefect%xtalname = xtalname
+ZAdefect%voltage = voltage
+ZAdefect%kk = kk
+ZAdefect%lauec = lauec
+ZAdefect%dmin = dmin
+ZAdefect%progmode = progmode
+ZAdefect%STEMnmlfile = STEMnmlfile
+ZAdefect%foilnmlfile = foilnmlfile
+ZAdefect%DF_L = DF_L
+ZAdefect%DF_npix = DF_npix
+ZAdefect%DF_npiy = DF_npiy
+ZAdefect%DF_slice = DF_slice
+ZAdefect%dinfo = dinfo
+ZAdefect%sgname = sgname
+ZAdefect%numdisl = numdisl
+ZAdefect%numsf = numsf
+ZAdefect%numinc = numinc
+ZAdefect%numvoids = numvoids
+ZAdefect%voidname = voidname
+ZAdefect%dislname = dislname
+ZAdefect%sfname = sfname
+ZAdefect%incname = incname
+ZAdefect%dispfile = dispfile
+ZAdefect%dispmode = dispmode
+ZAdefect%dataname = dataname
+ZAdefect%t_interval = t_interval
+
+end subroutine GetZADefectNameList
+
 
 end module NameListHandlers
