@@ -1512,10 +1512,11 @@ character(fnlen)                                            :: exptfile
 character(fnlen)                                            :: dictfile
 character(fnlen)                                            :: eulerfile
 logical                                                     :: MeanSubtraction
+logical                                                     :: patternflip
 
 ! define the IO namelist to facilitate passing variables to the program.
 namelist /DictIndxOpenCLvars/ numexptsingle, numdictsingle, totnumexpt, totnumdict,&
-        imght, imgwd, exptfile, dictfile, eulerfile, nnk, MeanSubtraction
+        imght, imgwd, exptfile, dictfile, eulerfile, nnk, MeanSubtraction, patternflip
 
 ! set some of the input parameters to default values 
 numdictsingle = 1024
@@ -1529,6 +1530,7 @@ eulerfile = 'undefined'
 totnumdict = 0
 totnumexpt = 0
 MeanSubtraction = .TRUE.
+patternflip = .TRUE.
 
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
@@ -1577,6 +1579,7 @@ dictindxnl%totnumdict = totnumdict
 dictindxnl%totnumexpt = totnumexpt
 dictindxnl%nnk = nnk
 dictindxnl%MeanSubtraction = MeanSubtraction
+dictindxnl%patternflip = patternflip
 
 end subroutine GetDictIndxOpenCLNameList
 

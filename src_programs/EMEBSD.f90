@@ -131,6 +131,9 @@ call EBSDreadMCfile(enl, acc, verbose=.TRUE.)
 allocate(master)
 call EBSDreadMasterfile(enl, master, verbose=.TRUE.)
 
+! 3.1 twin the master pattern with equal weight (FZ == pg 622)
+!call TwinCubicMasterPattern(enl,master)
+
 ! 4. generate detector arrays
 allocate(master%rgx(enl%numsx,enl%numsy), master%rgy(enl%numsx,enl%numsy), master%rgz(enl%numsx,enl%numsy), stat=istat)
 allocate(acc%accum_e_detector(enl%numEbins,enl%numsx,enl%numsy), stat=istat)

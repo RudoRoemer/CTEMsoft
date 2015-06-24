@@ -1077,6 +1077,120 @@ end do
 
 end subroutine Delete_gvectorlist
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: Compute_ReflectionList
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief compute the entire reflection list for general conditions (including HOLZ)
+!
+!> @details also computes the LUT (LookUpTable) that stores all the scattering
+!> potential coefficients that are needed to fill the dynamical matrix (only for the 
+!> general case).
+!
+!> @param dmin minimum d-spacing to allow in the list
+!> @param k zone axis indices
+!> @param ga first reciprocal vector of zone
+!> @param gb second reciprocal vector 
+!> @param method  approach to follow (ALL or ZA)
+!> @param ConvertList logical, determines whether or not conversion of list is needed
+!> @param maxholz maximum range of HOLZ reflections to include
+!> @param convang (optional) beam convergence angle for beam inclusion selection (used for CBED etc.)
+!
+!> @date 04/29/13 MDG 1.0 original
+!> @date 09/20/13 MDG 1.1 corrected handling of LUT
+!> @date 10/05/13 MDG 1.2 limit the range of reflections by means of the convergence angle (optional)
+!--------------------------------------------------------------------------
+subroutine Compute_ReflectionListZoneAxis(cell,listroot,BetheParameter,FN,dmin,k,ga,gb,nref)
+
+use local
+use io
+use crystal
+use constants
+use MBmodule
+use diffraction
+use symmetry
+use typedefs
+
+IMPLICIT NONE
+
+type(unitcell),pointer				:: cell
+type(reflisttype),pointer			:: listroot
+real(kind=sgl),INTENT(IN)			:: FN(3)
+real(kind=sgl),INTENT(IN)			:: dmin
+type(BetheParameterType),INTENT(INOUT)		:: BetheParameter
+real(kind=sgl),INTENT(IN)			:: k(3)
+integer(kind=irg),INTENT(IN)			:: ga(3)
+integer(kind=irg),INTENT(IN)			:: gb(3)
+integer(kind=irg),INTENT(OUT)			:: nref
+
+integer(kind=irg)				:: imh, imk, iml, gg(3), ix, iy, iz, i, minholz, RHOLZ, im, istat, N, &
+                                                   ig, numr, ir, irsel
+real(kind=sgl)					:: dhkl, io_real(6), H, g3(3), g3n(3), FNg(3), ddt, s, kr(3), exer, &
+                                                   rBethe_i, rBethe_d, sgp, r_g, la, dval
+integer(kind=irg)				:: io_int(3), gshort(3), gp(3)
+
+type(reflisttype),pointer			:: rltail
+
+! set the truncation parameters
+  rBethe_i = BetheParameter%c3          ! if larger than this value, we ignore the reflection completely
+  rBethe_d = BetheParameter%sgdbdiff    ! excitation error cutoff for double diffraction reflections
+  la = 1.0/sngl(cell%mLambda)
+  
+! get the size of the lookup table
+  gp = shape(cell%LUT)
+  imh = (gp(1)-1)/4
+  imk = (gp(2)-1)/4
+  iml = (gp(3)-1)/4
+  
+  nullify(listroot)
+  nullify(rltail)
+    
+  io_real = (/ float(ga(1:3)), float(gb(1:3))/)
+  call WriteValue('basis vectors for this computation: ', io_real, 6, "(/'ga = ',3f10.5,/'gb = ',3f10.5,/'g3 = ',3f10.5,/)")
+  gg = (/0,0,0/)
+  call AddReflection(rltail, listroot, cell, nref, gg )  ! this guarantees that 000 is always the first reflection
+  
+  rltail%sg = 0.0
+! now compute |sg|/|U_g|/lambda for the other allowed reflections; if this parameter is less than
+! the threshhold, rBethe_i, then add the reflection to the list of potential reflections
+! note that this uses the older form of the Bethe Potential truncation parameters for now
+
+do ix=-imh,imh
+	do iy=-imk,imk
+		gg = ix*ga + iy*gb
+		if ((abs(gg(1))+abs(gg(2))+abs(gg(3))).ne.0) then  ! avoid double counting the origin
+			dval = 1.0/CalcLength(cell, float(gg), 'r' )
+			if ((IsGAllowed(cell,gg)).AND.(dval .gt. dmin)) then
+				sgp = Calcsg(cell,float(gg),k,FN)
+				if  ((abs(gg(1)).le.imh).and.(abs(gg(2)).le.imk).and.(abs(gg(3)).le.iml) ) then
+					if (cell%dbdiff(gg(1), gg(2), gg(3))) then ! potential double diffraction reflection
+						if (abs(sgp).le.rBethe_d) then 
+							call AddReflection(rltail, listroot, cell, nref, gg)
+							rltail%sg = sgp
+							rltail%dbdiff = .TRUE.
+						end if 
+					else
+						r_g = la * abs(sgp)/cdabs(cell%LUT(gg(1), gg(2), gg(3)))
+						if (r_g.le.rBethe_i) then 
+							call AddReflection(rltail, listroot, cell, nref, gg )
+							rltail%sg = sgp
+							rltail%dbdiff = .FALSE.
+						end if
+					end if
+				end if
+			end if
+		end if
+	end do
+end do
+io_int(1) = nref
+call WriteValue(' Length of the master list of reflections : ', io_int, 1, "(I5,/)")
+
+ 
+end subroutine Compute_ReflectionListZoneAxis
+
+
 
 
 end module gvectors
