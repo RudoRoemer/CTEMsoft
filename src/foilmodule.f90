@@ -197,7 +197,7 @@ character(10)                   :: pret
   
 ! express the beam direction in the Bravais reference frame [verified 4/23/11, and again on 11/12/13
 ! after changes elsewhere]
-  ex = quat_Lp( foil%a_fc, dble(foil%Bn) ) 
+  ex = quat_Lp( conjg(foil%a_fc), dble(foil%Bn) ) 
   call TransSpace(cell,ex,ey,'c','d')
   call NormVec(cell,ey,'c')
   if (dinfo.eq.1) then

@@ -436,73 +436,72 @@ type PEDKINIndxListType
 end type PEDKINIndxListType
 
 type EBSDIndxListType
-    integer(kind=irg)       :: npix
+    
     integer(kind=irg)       :: ncubochoric
     integer(kind=irg)       :: numexptsingle
     integer(kind=irg)       :: numdictsingle
-    integer(kind=irg)       :: totnumexpt
-    integer(kind=irg)       :: imght
-    integer(kind=irg)       :: imgwd
+    integer(kind=irg)       :: totnumexpt 
     integer(kind=irg)       :: nnk
-    character(fnlen)        :: exptfile
-
-    integer(kind=irg)       :: stdout
+    character(fnlen)        :: exptfile 
     integer(kind=irg)       :: numsx
     integer(kind=irg)       :: numsy
-    integer(kind=irg)       :: binning
-    integer(kind=irg)       :: nthreads
+    integer(kind=irg)       :: binning 
     integer(kind=irg)       :: energyaverage
     real(kind=sgl)          :: L
     real(kind=sgl)          :: thetac
     real(kind=sgl)          :: delta
     real(kind=sgl)          :: xpc
-    real(kind=sgl)          :: ypc
-    real(kind=sgl)          :: energymin
-    real(kind=sgl)          :: energymax
+    real(kind=sgl)          :: ypc 
     real(kind=sgl)          :: gammavalue
-    real(kind=sgl)          :: axisangle(4)
     real(kind=dbl)          :: beamcurrent
     real(kind=dbl)          :: dwelltime
     character(1)            :: maskpattern
     character(3)            :: scalingmode
     character(3)            :: eulerconvention
-    character(3)            :: outputformat
-    character(fnlen)        :: anglefile
     character(fnlen)        :: masterfile
-    character(fnlen)        :: energyfile
-    character(fnlen)        :: datafile
-
-! everything below here is not part of the namelist input structure, but is used to pass arguments to subroutines
-    integer(kind=irg)       :: numangles
-    integer(kind=irg)       :: numEbins
-    integer(kind=irg)       :: numzbins
-    integer(kind=irg)       :: nsx
-    integer(kind=irg)       :: nsy
-    integer(kind=irg)       :: num_el
-    integer(kind=irg)       :: MCnthreads
-    integer(kind=irg)       :: npx
-    integer(kind=irg)       :: npy
-    integer(kind=irg)       :: nE
-    integer(kind=irg)       :: numset
-    real(kind=dbl)          :: EkeV
-    real(kind=dbl)          :: Ehistmin
-    real(kind=dbl)          :: Ebinsize
-    real(kind=dbl)          :: depthmax
-    real(kind=dbl)          :: depthstep
-    real(kind=dbl)          :: MCsig
-    real(kind=dbl)          :: MComega
-    character(4)            :: MCmode       ! Monte Carlo mode
-    character(5)            :: anglemode    ! 'quats' or 'euler' for angular input
-    character(6)            :: sqorhe       ! from Master file, square or hexagonal Lambert projection
-    character(8)            :: MCscversion
-    character(8)            :: Masterscversion
-    character(fnlen)        :: Masterprogname
-    character(fnlen)        :: Masterxtalname
-    character(fnlen)        :: Masterenergyfile
-    character(fnlen)        :: MCprogname
-    character(fnlen)        :: MCxtalname
-
+    character(fnlen)        :: energyfile 
+   
 end type EBSDIndxListType
 
+type ZAdefectnameListType
+ 
+	character(fnlen)		:: xtalname
+	real(kind=sgl)			:: voltage 
+	integer(kind=irg)		:: kk(3) 
+	real(kind=sgl)			:: lauec(2) 
+	real(kind=sgl)			:: dmin 
+
+! EM or STEM ?
+	character(fnlen)		:: progmode
+	character(fnlen)		:: STEMnmlfile 
+character(fnlen)			:: foilnmlfile 
+ 
+! column approximation parameters and image parameters 
+	real(kind=sgl)			:: DF_L 
+	real(kind=sgl)			:: DF_npix 
+	real(kind=sgl)			:: DF_npiy 
+	real(kind=sgl)			:: DF_slice 
+
+	integer(kind=irg)		:: dinfo
+	character(fnlen)		:: sgname 
+
+! defect parameters
+	integer(kind=irg)		:: numdisl
+	integer(kind=irg)		:: numsf
+	integer(kind=irg)		:: numinc
+	integer(kind=irg)		:: numvoids
+	character(fnlen)		:: voidname
+	character(fnlen)		::dislname
+	character(fnlen)		::sfname
+	character(fnlen)		::incname
+	character(fnlen)		::dispfile
+	character(fnlen)		::dispmode
+
+! output parameters
+	character(fnlen)		:: dataname
+	integer(kind=irg)		:: t_interval
+
+
+end type ZAdefectnameListType
 
 end module NameListTypedefs

@@ -1055,7 +1055,7 @@ ktail%k = matmul(rotmat,kk)
 !print*,ktail%k
 kkk = CalcDot(cell,sngl(ktail%k),kcart,'c')			! normal component
 ktail%kn = kkk
-call NormVec(cell,ktail%k,'c')
+!call NormVec(cell,ktail%k,'c')
 
 do i = imin,imax
     do j = jmin,jmax
@@ -1075,7 +1075,7 @@ do i = imin,imax
             k = ktail%k
             call TransSpace(cell,k,krec,'c','r')
             ktail%k = krec
-            call NormVec(cell,ktail%k,'c')
+            !call NormVec(cell,ktail%k,'c')
             k = ktail%kt
             call TransSpace(cell,k,krec,'c','r')
             ktail%kt = krec

@@ -1147,8 +1147,8 @@ type(reflisttype),pointer			:: rltail
   nullify(listroot)
   nullify(rltail)
     
-  io_real = (/ float(ga(1:3)), float(gb(1:3))/)
-  call WriteValue('basis vectors for this computation: ', io_real, 6, "(/'ga = ',3f10.5,/'gb = ',3f10.5,/'g3 = ',3f10.5,/)")
+  !io_real = (/ float(ga(1:3)), float(gb(1:3))/)
+  !call WriteValue('basis vectors for this computation: ', io_real, 6, "(/'ga = ',3f10.5,/'gb = ',3f10.5,/')")
   gg = (/0,0,0/)
   call AddReflection(rltail, listroot, cell, nref, gg )  ! this guarantees that 000 is always the first reflection
   
