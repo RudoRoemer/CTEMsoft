@@ -156,7 +156,7 @@ logical               			:: isvoid
     sumR = 0.0
 
 ! set the position in the foil reference frame
-    tmpf = quat_Lp( conjg(foil%a_fi), dble( (/ xpos, ypos, zpos /)) )
+    tmpf = quat_Lp( foil%a_fi, dble( (/ xpos, ypos, zpos /)) )
 
 
 !------------
@@ -202,7 +202,7 @@ do ii=1,defects%numdisl
   tmp2 =  tmpf - dble((/ defects%DF_L*defects%DL(ii)%id, defects%DF_L*defects%DL(ii)%jd, defects%DL(ii)%zfrac*foil%z0 /))
 
 ! then convert the difference vector to the defect reference frame for this dislocation (we will only need the x and y coordinates)
-  tmp = quat_Lp( conjg(defects%DL(ii)%a_df), tmp2 ) 
+  tmp = quat_Lp( defects%DL(ii)%a_df, tmp2 ) 
 
 
 ! compute x1 + p_alpha x2  (eq. 8.38)
@@ -245,7 +245,7 @@ do ii=1,defects%numdisl
   end if
   u = 2.0*real(matmul(defects%DL(ii)%dismat,cmplx(zr,zi)))
 ! transform displacement vector u to the Cartesian crystal reference frame
-  u = quat_Lp( defects%DL(ii)%a_dc, dble(u) )  
+  u = quat_Lp( conjg(defects%DL(ii)%a_dc), dble(u) )  
   sumR = sumR + u 
 end do
 
