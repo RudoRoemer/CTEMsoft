@@ -45,9 +45,6 @@
 module so3
 
 use local
-use typedefs
-use constants
-use rotations
 
 IMPLICIT NONE
 
@@ -85,8 +82,11 @@ contains
 !> @param FZorder FZ order
 !
 !> @date 01/01/15 MDG 1.0 new routine, needed for dictionary indexing approach
+!> @date 06/04/15 MDG 1.1 corrected infty to inftyd (double precision infinity)
 !--------------------------------------------------------------------------
 recursive function IsinsideFZ(rod,FZtype,FZorder) result(insideFZ)
+
+use constants
 
 IMPLICIT NONE
 
@@ -103,11 +103,11 @@ select case (FZtype)
   case (1)
     insideFZ = insideCyclicFZ(rod,FZorder)        ! infinity is checked inside this function
   case (2)
-    if (rod(4).ne.infty) insideFZ = insideDihedralFZ(rod,FZorder)
+    if (rod(4).ne.inftyd) insideFZ = insideDihedralFZ(rod,FZorder)
   case (3)
-    if (rod(4).ne.infty) insideFZ = insideCubicFZ(rod,'tet')
+    if (rod(4).ne.inftyd) insideFZ = insideCubicFZ(rod,'tet')
   case (4)
-    if (rod(4).ne.infty) insideFZ = insideCubicFZ(rod,'oct')
+    if (rod(4).ne.inftyd) insideFZ = insideCubicFZ(rod,'oct')
 end select
 
 end function IsinsideFZ
@@ -124,10 +124,13 @@ end function IsinsideFZ
 !> @param rod Rodrigues coordinates  (double precision)
 !> @param order depending on main symmetry axis
 !
-!> @date 05/12/14  MDG 1.0 original
-!> @date 10/02/14  MDG 2.0 rewrite
+!> @date 05/12/14 MDG 1.0 original
+!> @date 10/02/14 MDG 2.0 rewrite
+!> @date 06/04/15 MDG 2.1 corrected infty to inftyd (double precision infinity)
 !--------------------------------------------------------------------------
 recursive function insideCyclicFZ(rod,order) result(res)
+
+use constants
 
 IMPLICIT NONE
 
@@ -138,7 +141,7 @@ logical                                   :: res
 
 res = .FALSE.
 
-if (rod(4).ne.infty) then
+if (rod(4).ne.inftyd) then
 ! check the z-component vs. tan(pi/2n)
   res = dabs(rod(3)*rod(4)).le.LPs%BP(order)
 else
@@ -166,6 +169,8 @@ end function insideCyclicFZ
 !--------------------------------------------------------------------------
 recursive function insideDihedralFZ(rod,order) result(res)
 
+use constants
+
 IMPLICIT NONE
 
 real(kind=dbl), INTENT(IN)                :: rod(4)
@@ -187,17 +192,17 @@ if (c1) then
     case (2)
       c2 = (dabs(r(1)).le.r1).and.(dabs(r(2)).le.r1)
     case (3)
-      c2 =          dabs( LPs%srt*r(1)+0.5*r(2)).le.r1
-      c2 = c2.and.( dabs( LPs%srt*r(1)-0.5*r(2)).le.r1 )
+      c2 =          dabs( LPs%srt*r(1)+0.5D0*r(2)).le.r1
+      c2 = c2.and.( dabs( LPs%srt*r(1)-0.5D0*r(2)).le.r1 )
       c2 = c2.and.( dabs(r(2)).le.r1 )
     case (4)
       c2 = (dabs(r(1)).le.r1).and.(dabs(r(2)).le.r1)
       c2 = c2.and.((LPs%r22*dabs(r(1)+r(2)).le.r1).and.(LPs%r22*dabs(r(1)-r(2)).le.r1))
     case (6)
-      c2 =          dabs( 0.5*r(1)+LPs%srt*r(2)).le.r1
-      c2 = c2.and.( dabs( LPs%srt*r(1)+0.5*r(2)).le.r1 )
-      c2 = c2.and.( dabs( LPs%srt*r(1)-0.5*r(2)).le.r1 )
-      c2 = c2.and.( dabs( 0.5*r(1)-LPs%srt*r(2)).le.r1 )
+      c2 =          dabs( 0.5D0*r(1)+LPs%srt*r(2)).le.r1
+      c2 = c2.and.( dabs( LPs%srt*r(1)+0.5D0*r(2)).le.r1 )
+      c2 = c2.and.( dabs( LPs%srt*r(1)-0.5D0*r(2)).le.r1 )
+      c2 = c2.and.( dabs( 0.5D0*r(1)-LPs%srt*r(2)).le.r1 )
       c2 = c2.and.( dabs(r(2)).le.r1 )
       c2 = c2.and.( dabs(r(1)).le.r1 )
   end select
@@ -220,8 +225,11 @@ end function insideDihedralFZ
 !> @date 05/12/14 MDG 1.0 original
 !> @date 10/02/14 MDG 2.0 rewrite
 !> @date 01/03/15 MDG 2.1 correction of boundary error; simplification of octahedral planes
+!> @date 06/04/15 MDG 2.2 simplified handling of components of r
 !--------------------------------------------------------------------------
 recursive function insideCubicFZ(rod,ot) result(res)
+
+use constants
 
 IMPLICIT NONE
 
@@ -229,24 +237,22 @@ real(kind=dbl), INTENT(IN)                :: rod(4)
 character(3), INTENT(IN)                  :: ot
 
 logical                                   :: res, c1, c2
-real(kind=dbl)                            :: rx, ry, rz
+real(kind=dbl)                            :: r(3)
 real(kind=dbl),parameter                  :: r1 = 1.0D0
 
-rx = rod(1)*rod(4)
-ry = rod(2)*rod(4)
-rz = rod(3)*rod(4)
+r(1:3) = rod(1:3) * rod(4)
 
 res = .FALSE.
 
 ! primary cube planes (only needed for octahedral case)
 if (ot.eq.'oct') then
-  c1 = (maxval(dabs( (/ rx, ry, rz /) )).le.LPS%BP(4)) 
+  c1 = (maxval(dabs(r)).le.LPS%BP(4)) 
 else 
   c1 = .TRUE.
 end if
 
 ! octahedral truncation planes, both for tetrahedral and octahedral point groups
-c2 = ((dabs(rx)+dabs(ry)+dabs(rz)).le.r1)
+c2 = ((dabs(r(1))+dabs(r(2))+dabs(r(3))).le.r1)
 
 ! if both c1 and c2, then the point is inside
 if (c1.and.c2) res = .TRUE.
@@ -308,6 +314,10 @@ end function insideCubicFZ
 !--------------------------------------------------------------------------
 recursive subroutine SampleRFZ(nsteps,pgnum,FZcnt,FZlist)
 
+use typedefs
+use constants
+use rotations
+
 IMPLICIT NONE
 
 integer(kind=irg), INTENT(IN)        :: nsteps
@@ -338,6 +348,8 @@ if (associated(FZlist)) then
     FZtmp2 => FZtmp
     FZtmp => FZtmp%next
   end do
+  nullify(FZlist)
+else
   nullify(FZlist)
 end if
 
@@ -385,9 +397,9 @@ do while (x.lt.s)
 end do
 
 ! that's it.
-write (*,*) 'pgnum, nsteps, delta, s = ',pgnum, nsteps,delta,s
-write (*,*) 'FZtype, FZorder = ',FZtype,FZorder
-write (*,*) 'FZcnt = ',FZcnt
+!write (*,*) 'pgnum, nsteps, delta, s = ',pgnum, nsteps,delta,s
+!write (*,*) 'FZtype, FZorder = ',FZtype,FZorder
+!write (*,*) 'FZcnt = ',FZcnt
 
 end subroutine SampleRFZ
 
@@ -408,6 +420,8 @@ end subroutine SampleRFZ
 !> @date 04/07/15 SS 1.0 original
 !--------------------------------------------------------------------------
 recursive subroutine CubochoricNeighbors(cubneighbor,nn,cub,stepsize)
+
+use constants
 
 IMPLICIT NONE
 

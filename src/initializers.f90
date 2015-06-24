@@ -66,7 +66,7 @@ contains
 !> @date 01/10/14 MDG 1.0 original
 !> @date 06/10/14 MDG 2.0 rewrite without global variables
 !--------------------------------------------------------------------------
-subroutine Initialize_Cell(cell,Dyn,rlp,xtalname, dmin, voltage, verbose)
+recursive subroutine Initialize_Cell(cell,Dyn,rlp,xtalname, dmin, voltage, verbose)
 
 use local
 use typedefs
@@ -108,7 +108,7 @@ logical                                    :: loadingfile
  call CalcWaveLength(cell,rlp,skip,verbose)
 
 ! generate all atom positions
-! if the cell is dostorted, then this is not exactly correct, but it should be close for small distortions
+! if the cell is distorted, then this is not exactly correct, but it should be close for small distortions
  call CalcPositions(cell,'v')
 
 ! compute the range of reflections for the lookup table and allocate the table

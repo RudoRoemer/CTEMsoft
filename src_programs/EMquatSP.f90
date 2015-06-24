@@ -55,6 +55,7 @@
 !> @date    02/19/15 MDG 1.1 tested the use of 3D Gaussian blobs but so far this doesn't work well
 !> @date    02/20/15 MDG 1.2 added option to draw Euler space instead of 3D-SP
 !> @date    02/25/15 MDG 1.3 added option to generate random distribution
+!> @date    06/01/15 MDG 2.0 added povray volume rendering option with DF3 output file
 !--------------------------------------------------------------------------
 program EMquatSP
 
@@ -71,19 +72,22 @@ IMPLICIT NONE
 
 integer(kind=irg)               :: nums, seed, FZtype, FZorder, i, j, k, nt, numt, ii, jj, kk, &
                                    dimx, dimy, pgnum, np, fx, fy, fz, npix, nump, bad, nquats, one
+integer(kind=2)                 :: inpix
 real(kind=sgl),allocatable      :: eulers(:,:),cube(:,:,:) 
 integer(kind=sgl),allocatable   :: cubeSP(:,:,:), cubeHO(:,:,:), cubeCU(:,:,:), cubeEU(:,:,:)
+character(1),allocatable        :: outarray(:)
 real(kind=dbl)                  :: x1y1(2), x2y2(2), s1, s2
 
 type(dicttype),pointer          :: dict
 real(kind=dbl)                  :: qu(4), c, s, rod(4), n, delta, qq(4)
 real(kind=sgl)                  :: x, y, z, xfrac, yfrac, zfrac, tpi, eu(3), ho(3), cu(3), m, ma, sh, sc !, sig
                                 
-character(fnlen)                :: eulerdatafile, cubefile
+character(fnlen)                :: eulerdatafile, cubefile, DF3file, povrayfile
 character(6)                    :: FZmode               ! 'Random', 'FullSP', 'DrawFZ', 'EulerS' or 'FZonly', 
 character(1)                    :: circles,verbose      ! 'y' or 'n'
+logical                         :: povray
 
-namelist /Stereogram/ eulerdatafile, cubefile, pgnum, FZmode, verbose, np, npix
+namelist /Stereogram/ eulerdatafile, cubefile, pgnum, FZmode, verbose, np, npix, povray, povrayfile, DF3file
 
 eulerdatafile = 'empty'
 cubefile = 'empty'
@@ -92,6 +96,9 @@ FZmode = 'FullSP'
 np = 2
 npix = 128 
 verbose = 'n'
+povray = .FALSE.
+DF3file = 'empty'
+povrayfile = 'empty'
 
 open(UNIT=dataunit,FILE='Stereogram.nml',DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=Stereogram)
@@ -412,13 +419,108 @@ if (FZmode.ne.'Random') then
   if (bad.ne.0) write (*,*) 'number of bad points              : ',bad
  end if
 
- open(UNIT=dataunit,file=cubefile,status='unknown',form='unformatted')
- write (dataunit) shape(cube)
- write (dataunit) dict%Nqsym, nquats
- s = maxval(cube)
- write (*,*) 'maximum value in cube array = ',s
- cube = cube*100.0/s
- write (dataunit) cube
- close(UNIT=dataunit,status='keep')
+ if (povray.eqv..TRUE.) then
+! first we write the DF3 output file
+! this requires first a triplet of 2-byte integers
+! followed by an array of bytes for the volume; we take 
+! the array to have a single dimension of 6+(2*nump+1)^3
+   allocate( outarray(6+(2*nump+1)**3) )
+
+! open this as a file with records, and write only one record
+   open(dataunit,file=trim(df3file),status='unknown',form='unformatted')
+   
+
+   close(dataunit,status='keep')
+
+! and then the corresponding povray script file
+   open(unit=dataunit,file=trim(povrayfile),form='formatted',status='unknown')
+
+   write (dataunit,"(A)") "//Persistence of Vision Ray Tracer Scene Description File"
+   write (dataunit,"(A)") "#include ""colors.inc"""
+   write (dataunit,"(A)") "#include ""textures.inc"""
+   write (dataunit,"(A)") "#include ""glass.inc"""
+   write (dataunit,"(A)") "#include ""envir.pov"""
+   write (dataunit,"(A)") " "
+
+   write (dataunit,"(A)") "camera {"
+   write (dataunit,"(A)") "location <2,1,0>"
+   write (dataunit,"(A)") "up       y"
+   write (dataunit,"(A)") "right    x"
+   write (dataunit,"(A)") "angle    60"
+   write (dataunit,"(A)") "look_at  <0,0,0>"
+   write (dataunit,"(A)") "}"
+   write (dataunit,"(A)") ""
+   write (dataunit,"(A)") "light_source {"
+   write (dataunit,"(A)") "<0,5,0>"
+   write (dataunit,"(A)") "color rgb <1,1,1>"
+   write (dataunit,"(A)") "media_interaction off"
+   write (dataunit,"(A)") "media_attenuation off"
+   write (dataunit,"(A)") "}"
+   write (dataunit,"(A)") ""
+   write (dataunit,"(A)") "#declare boxtexture = texture {"
+   write (dataunit,"(A)") "pigment {"
+   write (dataunit,"(A)") "rgbf 1"
+   write (dataunit,"(A)") "}"
+   write (dataunit,"(A)") "}"
+   write (dataunit,"(A)") ""
+   write (dataunit,"(A)") ""
+   write (dataunit,"(A)") "#declare boxinterior = interior {"
+   write (dataunit,"(A)") "media {"
+   write (dataunit,"(A)") "intervals 300"
+   write (dataunit,"(A)") "samples 1,20"
+   write (dataunit,"(A)") "emission <1,1,1>"
+   write (dataunit,"(A)") "absorption <0,0,0>"
+   write (dataunit,"(A)") "scattering { 1,<0,0,0> }"
+   write (dataunit,"(A)") "confidence 0.9999"
+   write (dataunit,"(A)") "variance 1/1000"
+   write (dataunit,"(A)") "density {"
+   write (dataunit,"(A)") "density_file df3 """//trim(df3file)//""""
+   write (dataunit,"(A)") "interpolate 1"
+   write (dataunit,"(A)") "}"
+   write (dataunit,"(A)") "}"
+   write (dataunit,"(A)") "}"
+   write (dataunit,"(A)") ""
+   write (dataunit,"(A)") "box {"
+   write (dataunit,"(A)") "<0,0,0>, <1,1,1>"
+   write (dataunit,"(A)") "texture { boxtexture }"
+   write (dataunit,"(A)") "interior { boxinterior }"
+   write (dataunit,"(A)") "hollow"
+   write (dataunit,"(A)") "translate <-0.5,-0.5,-0.5>"
+   write (dataunit,"(A)") "}"
+   write (dataunit,"(A)") ""
+   write (dataunit,"(A)") "#declare bbox = texture {"
+   write (dataunit,"(A)") "pigment {"
+   write (dataunit,"(A)") "rgb <1,0,0>"
+   write (dataunit,"(A)") "}"
+   write (dataunit,"(A)") "}"
+   write (dataunit,"(A)") ""
+   write (dataunit,"(A)") "cylinder { <-0.51,-0.51,-0.51>, < 0.51,-0.51,-0.51>, 0.01 texture {bbox} }"
+   write (dataunit,"(A)") "cylinder { <-0.51,-0.51,-0.51>, <-0.51, 0.51,-0.51>, 0.01 texture {bbox} }"
+   write (dataunit,"(A)") "cylinder { <-0.51,-0.51,-0.51>, <-0.51,-0.51, 0.51>, 0.01 texture {bbox} }"
+   write (dataunit,"(A)") ""
+   write (dataunit,"(A)") "cylinder { <0.51,0.51,0.51>, <-0.51, 0.51, 0.51>, 0.01 texture {bbox} }"
+   write (dataunit,"(A)") "cylinder { <0.51,0.51,0.51>, < 0.51,-0.51, 0.51>, 0.01 texture {bbox} }"
+   write (dataunit,"(A)") "cylinder { <0.51,0.51,0.51>, < 0.51, 0.51,-0.51>, 0.01 texture {bbox} }"
+   write (dataunit,"(A)") ""
+   write (dataunit,"(A)") "cylinder { <-0.51,-0.51,0.51>, < 0.51,-0.51,0.51>, 0.01 texture {bbox} }"
+   write (dataunit,"(A)") "cylinder { <-0.51,-0.51,0.51>, <-0.51, 0.51,0.51>, 0.01 texture {bbox} }"
+   write (dataunit,"(A)") ""
+   write (dataunit,"(A)") "cylinder { <0.51,0.51,-0.51>, < 0.51,-0.51,-0.51>, 0.01 texture {bbox} }"
+   write (dataunit,"(A)") "cylinder { <0.51,0.51,-0.51>, <-0.51, 0.51,-0.51>, 0.01 texture {bbox} }"
+   write (dataunit,"(A)") ""
+   write (dataunit,"(A)") "cylinder { <-0.51,0.51,-0.51>, <-0.51, 0.51,0.51>, 0.01 texture {bbox} }"
+   write (dataunit,"(A)") "cylinder { < 0.5,-0.51,-0.51>, < 0.51,-0.51,0.51>, 0.01 texture {bbox} }"
+   close(dataunit, status='keep')
+ else
+! we write a simple binary file
+   open(UNIT=dataunit,file=cubefile,status='unknown',form='unformatted')
+   write (dataunit) shape(cube)
+   write (dataunit) dict%Nqsym, nquats
+   s = maxval(cube)
+   write (*,*) 'maximum value in cube array = ',s
+   cube = cube*100.0/s
+   write (dataunit) cube
+   close(UNIT=dataunit,status='keep')
+ end if
 end if
 end program

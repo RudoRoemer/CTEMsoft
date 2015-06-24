@@ -253,6 +253,13 @@ type(LambertParametersType)        :: LPs
 ! The following two arrays are used to determine the FZtype (FZtarray) and primary rotation axis order (FZoarray)
 ! for each of the 32 crystallographic point group symmetries (in the order of the International Tables)
 !
+!                                       '    1','   -1','    2','    m','  2/m','  222', &
+!                                       '  mm2','  mmm','    4','   -4','  4/m','  422', &
+!                                       '  4mm',' -42m','4/mmm','    3','   -3','   32', &
+!                                       '   3m','  -3m','    6','   -6','  6/m','  622', &
+!                                       '  6mm',' -6m2','6/mmm','   23','   m3','  432', &
+!                                       ' -43m',' m-3m'/
+!
 ! 1 (C1), -1 (Ci), [triclinic]
 ! 2 (C2), m (Cs), 2/m (C2h), [monoclinic]
 ! 222 (D2), mm2 (C2v), mmm (D2h), [orthorhombic]

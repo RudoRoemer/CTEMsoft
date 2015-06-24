@@ -110,14 +110,17 @@ call Interpret_Program_Arguments(nmldeffile,2,(/ 0, 40 /), progname)
 ! deal with the namelist stuff
 !call GetEBSDIndxNameList(nmldeffile,ebsdnl)
 call GetEBSDNameList(nmldeffile,ebsdnl)
+write (*,*) 'read namelist '
 
 ! 1. read the Monte Carlo data file
 allocate(acc)
-call EBSDreadMCfile(ebsdnl, acc, verbose)
+call EBSDreadMCfile(ebsdnl, acc)
+write (*,*) 'read MC file'
 
 ! 2. read EBSD master pattern file
 allocate(master)
-call EBSDreadMasterfile(ebsdnl, master, verbose)
+call EBSDreadMasterfile(ebsdnl, master)
+write (*,*) 'read master  file'
 
 ! 3. generate detector arrays
 allocate(master%rgx(ebsdnl%numsx,ebsdnl%numsy), master%rgy(ebsdnl%numsx,ebsdnl%numsy), &
@@ -125,6 +128,8 @@ allocate(master%rgx(ebsdnl%numsx,ebsdnl%numsy), master%rgy(ebsdnl%numsx,ebsdnl%n
 allocate(acc%accum_e_detector(ebsdnl%numEbins,ebsdnl%numsx,ebsdnl%numsy), stat=istat)
 call EBSDGenerateDetector(ebsdnl, acc, master, verbose)
 deallocate(acc%accum_e)
+
+write (*,*) 'calling main routine'
 
 ! perform the dictionary indexing computations
 call MasterSubroutine(ebsdnl,acc,master,progname)
@@ -151,7 +156,7 @@ end program EBSDIndexing
 !> @date 05/05/15 MDG 1.1 removed getenv() call; replaced by global path strings
 !--------------------------------------------------------------------------
 
-subroutine MasterSubroutine(ebsdnl,acc,master,progname)
+recursive subroutine MasterSubroutine(ebsdnl,acc,master,progname)
 
 use local
 use typedefs
@@ -159,8 +164,8 @@ use NameListTypedefs
 use NameListHandlers
 use files
 use dictmod
-use Lambert, only: LambertSphereToSquare
-use others, only: SSORT
+use Lambert
+use others
 use crystal
 use initializers
 use gvectors
@@ -201,6 +206,7 @@ type(cl_mem)                                        :: cl_expt,cl_dict
 integer(kind=irg)                                   :: num,ierr,irec,istat
 integer(kind=irg),parameter                         :: iunit = 40
 integer(kind=irg),parameter                         :: iunitexpt = 41
+integer(kind=irg),parameter                         :: iunitdict = 42
 character(len = 100)                                :: info ! info about the GPU
 integer, parameter                                  :: source_length = 50000
 real(kind=dbl),parameter                            :: nAmpere = 6.241D+18   ! Coulomb per second
@@ -209,7 +215,7 @@ character(len = source_length)                      :: source
 
 integer(kind=irg)                                   :: Ne,Nd,L,totnumexpt,numdictsingle,numexptsingle,imght,imgwd,nnk,recordsize
 integer(kind=8)                                     :: size_in_bytes_dict,size_in_bytes_expt
-integer(kind=1),allocatable                         :: imageexpt(:)
+integer(kind=1),allocatable                         :: imageexpt(:),imagedict(:)
 real(kind=sgl),allocatable                          :: imageexptflt(:),binned(:,:),imagedictflt(:),imagedictfltflip(:)
 real(kind=sgl),allocatable                          :: result(:),expt(:),dict(:),dicttranspose(:),resultarray(:),&
 eulerarray(:,:),resultmain(:,:),resulttmp(:,:)
@@ -224,7 +230,7 @@ real(kind=sgl)                                      :: dmin,voltage,scl,prefacto
 character(fnlen)                                    :: xtalname
 integer(kind=irg)                                   :: binx,biny,TID,totnum_el,nthreads,Emin,Emax
 real(kind=sgl)                                      :: sx,dx,dxm,dy,dym,rhos,x,projweight
-real(kind=sgl)                                      :: dc(3),angle(4),ixy(2),bindx
+real(kind=sgl)                                      :: dc(3),quat(4),ixy(2),bindx
 integer(kind=irg)                                   :: nix,niy,nixp,niyp
 character(fnlen)                                    :: str1,str2,str3,str4,str5,str6,str7,str8,str9,str10
 real(kind=sgl)                                      :: euler(3)
@@ -234,25 +240,71 @@ character                                           :: TAB
 
 TAB = CHAR(9)
 verbose = .TRUE.
-Ne = 5120
-Nd = 5120
+Ne = 10240
+Nd = 10240
 L = 80*60
 totnumexpt = 196608
-numdictsingle = 5120
-numexptsingle = 5120
+numdictsingle = 10240
+numexptsingle = 10240
 imght =80
 imgwd = 60
-nnk = 40
+nnk = 5
 xtalname = 'Ni.xtal'
 dmin = 0.04
 voltage = 30000.0
-ncubochoric = 50
+ncubochoric = 100
+pgnum = 32
 recordsize = imght*imgwd+25
 
 size_in_bytes_dict = Nd*L*sizeof(dict(1))
 size_in_bytes_expt = Ne*L*sizeof(expt(1))
 
 totnum_el = sum(acc%accum_e_detector)
+
+
+
+!================================
+! INITIALIZATION OF CELL POINTER
+!================================
+
+nullify(cell)
+allocate(cell)
+
+write (*,*) 'init cell '//trim(xtalname)
+
+verbose = .TRUE.
+call Initialize_Cell(cell,Dyn,rlp,xtalname, dmin, voltage, verbose)
+
+! determine the point group number
+jj=0
+
+do ii=1,32
+    if (SGPG(ii).le.cell % SYM_SGnum) jj=ii
+end do
+
+pgnum = jj
+write (*,*) 'point group number = ', pgnum
+
+nullify(FZlist)
+write (*,*) 'pgnum = ', pgnum
+write (*,*) 'N = ',ncubochoric
+
+call sampleRFZ(ncubochoric, pgnum, FZcnt, FZlist)
+
+! allocate and fill FZarray for OpenMP parallelization
+allocate(FZarray(4,FZcnt),stat=istat)
+FZarray = 0.0
+
+FZtmp => FZlist
+
+do ii = 1,FZcnt
+    FZarray(1:4,ii) = FZtmp%rod(1:4) 
+    FZtmp => FZtmp%next
+end do
+
+io_int(1) = FZcnt
+call WriteValue(' Number of unique orientations sampled =        : ', io_int, 1, "(I8)")
+
 
 ! get the indices of the minimum and maximum energy
 Emin = nint((ebsdnl%energymin - ebsdnl%Ehistmin)/ebsdnl%Ebinsize) +1
@@ -315,36 +367,16 @@ if (istat .ne. 0) stop 'Could not allocate array for reading experimental image 
 imageexpt = 0.0
 imageexptflt = 0.0
 
-allocate(meandict(imght*imgwd),meanexpt(imght*imgwd),&
-    binned(ebsdnl%numsx/ebsdnl%binning,ebsdnl%numsy/ebsdnl%binning),stat=istat)
+allocate(meandict(imght*imgwd),meanexpt(imght*imgwd),imagedict(imght*imgwd),stat=istat)
 if (istat .ne. 0) stop 'Could not allocate array for mean dictionary and experimental patterns'
-meandict = 0
-meanexpt = 0
+meandict = 0.0
+meanexpt = 0.0
 
-allocate(EBSDpattern(ebsdnl%numsx,ebsdnl%numsy),stat=istat)
+allocate(EBSDpattern(ebsdnl%numsx,ebsdnl%numsy),binned(binx,biny),stat=istat)
 if (istat .ne. 0) stop 'Could not allocate array for EBSD pattern'
 EBSDpattern = 0.0
 
 
-!================================
-! INITIALIZATION OF CELL POINTER
-!================================
-
-nullify(cell)
-allocate(cell)
-
-verbose = .TRUE.
-call Initialize_Cell(cell,Dyn,rlp,xtalname, dmin, voltage, verbose)
-
-! determine the point group number
-jj=0
-
-do ii=1,32
-    if (SGPG(ii).le.cell % SYM_SGnum) jj=ii
-end do
-
-pgnum = jj
-write (*,*) 'point group number = ', pgnum
 
 !==========================
 ! INITIALIZATION OF DEVICE
@@ -375,12 +407,14 @@ if (ierr /= 0) stop 'Cannot open file DictIndx.cl'
 
 source = ''
 irec = 1
+
 do
-read(unit = iunit, rec = irec, iostat = ierr) source(irec:irec)
-if (ierr /= 0) exit
-if(irec == source_length) stop 'Error: CL source file is too big'
-irec = irec + 1
+    read(unit = iunit, rec = irec, iostat = ierr) source(irec:irec)
+    if (ierr /= 0) exit
+    if(irec == source_length) stop 'Error: CL source file is too big'
+    irec = irec + 1
 end do
+
 close(unit=iunit)
 
 ! allocate device memory
@@ -391,34 +425,10 @@ cl_dict = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_dict, ierr)
 if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for dictionary data.'
 
 
-!=====================================================
-! SAMPLING OF RODRIGUES FUNDAMENTAL ZONE
-!=====================================================
-
-nullify(FZlist)
-FZcnt = 0
-write (*,*) 'pgnum = ', pgnum
-write (*,*) 'N = ',ncubochoric
-
-call sampleRFZ(ncubochoric, pgnum, FZcnt, FZlist)
-
-! allocate and fill FZarray for OpenMP parallelization
-allocate(FZarray(3,FZcnt),stat=istat)
-FZarray = 0.0
-
-FZtmp => FZlist
-
-do ii = 1,FZcnt
-    FZarray(1:3,ii) = FZtmp%rod(1:3)
-    FZtmp => FZtmp%next
-end do
-
-io_int(1) = FZcnt
-call WriteValue(' Number of incident beam directions       : ', io_int, 1, "(I8)")
 
 ! allocate some arrays
 
-allocate(resultarray(numdictsingle),stat=istat)
+allocate(resultarray(1:numdictsingle),stat=istat)
 if (istat .ne. 0) stop 'could not allocate result arrays'
 
 resultarray = 0.0
@@ -466,15 +476,9 @@ if (istat .ne. 0) stop 'could not allocate euler array'
 
 call Message(' -> opened experimental file for I/O', frm = "(A)" )
 
-open(unit=iunitexpt,file='/Users/ssaransh/CTEMDIctIndx/FrameData',&
+open(unit=iunitexpt,file=trim(EMdatapathname)//'playarea/Ni-test/FrameData',&
     status='old',form='unformatted',access='direct',recl=recordsize,iostat=ierr)
 
-!!!!$OMP PARALLEL PRIVATE(TID,ii,jj,imageexpt,imageexptflt) &
-!!!!$OMP& SHARED(meandict,meanexpt)
-
-!TID = OMP_GET_THREAD_NUM()
-
-!if (TID .eq. 0) then
 call Message(' -> Start calculating mean pattern for observed patterns', frm = "(A)" )
 
 do ii = 1,totnumexpt
@@ -482,160 +486,148 @@ do ii = 1,totnumexpt
     imageexptflt = float(imageexpt(26:recordsize))
 
     do jj = 1,L
-        if (imageexptflt(jj) .lt. 0) imageexptflt(jj) = imageexptflt(jj)+256.0
+        if (imageexptflt(jj) .lt. 0.0) imageexptflt(jj) = imageexptflt(jj)+256.0
     end do
 
     meanexpt = meanexpt+imageexptflt
 
-    end do
+end do
 
-meanexpt = meanexpt/totnumexpt
+meanexpt = meanexpt/float(totnumexpt)
 meanexpt = meanexpt/NORM2(meanexpt)
 
-! the mean of the dictionary is assumed to be the same as the experiments
+call Message(' -> Finished calculating mean pattern for observed patterns', frm = "(A)" )
+
 meandict = meanexpt
 
-!open(unit=13,file='testmean.txt',action='write')
-!do ll = 1,80
-!do mm = 1,60
-!write(13, '(F15.6)', advance='no') meanexpt((mm-1)*80+ll)
+!open(unit=iunitdict,file='/Users/saranshsingh/Desktop/Recent work/CTEMDictIndxOpenCL/dict_333226_bg.data',status='old',&
+!    form='unformatted',access='direct',recl=imght*imgwd,iostat=ierr)
+
+
+!do ii = 1,333226
+
+!    read(iunitdict,rec=ii) imagedict
+!    imagedictflt = float(imagedict(1:imght*imgwd))
+
+!    do jj = 1,L
+!        if (imagedictflt(jj) .lt. 0) imagedictflt(jj) = imagedictflt(jj)+256.0
+!    end do
+
+!    meandict = meandict + imagedictflt
+
+!end do
+
+!do ll = 1,imgwd
+!    imagedictfltflip((ll-1)*imght+1:ll*imght) = meandict((imgwd-ll)*imght+1:(imgwd-ll+1)*imght)
+!end do
+!meandict = imagedictfltflip
+!meandict = meandict/333226.0
+!meandict = meandict/NORM2(meandict)
+
+!call Message(' -> Start calculating mean pattern for observed patterns in parallel', frm = "(A)" )
+
+!!$OMP PARALLEL PRIVATE(TID,binned,angle) &
+!!$OMP& PRIVATE(imagedictflt,projweight,ll,mm) &
+!!$OMP& FIRSTPRIVATE(master_array,accum_e_MC) &
+!!$OMP& SHARED(pp,meandict,eulerarray,FZcnt,nthreads,io_int)
+
+!TID = OMP_GET_THREAD_NUM()
+!nthreads = OMP_GET_NUM_THREADS()
+!io_int(1) = nthreads
+!if (TID .eq. 0) call WriteValue(' Number of threads       : ', io_int, 1, "(I8)")
+
+!!$OMP BARRIER
+!!$OMP DO SCHEDULE(DYNAMIC)
+
+!do pp = 1,FZcnt
+!    binned = 0.0
+!    angle = ro2qu(FZarray(1:3,pp))
+
+!    call CalcEBSDPatternSingle(ebsdnl,angle,accum_e_MC,master_array,master%rgx,master%rgy,master%rgz,binned)
+
+!    do ll = 1,ebsdnl%numsx/ebsdnl%binning
+!        do mm = 1,ebsdnl%numsy/ebsdnl%binning
+!            imagedictflt((mm-1)*ebsdnl%numsx/ebsdnl%binning+ll) = binned(ll,mm)
+!        end do
+!    end do
+
+!    if (mod(pp,1000) .eq. 0) then
+!        io_int(1) = pp
+!        call WriteValue(' Completed pattern #       : ', io_int, 1, "(I8)")
+!    end if
+
+!    meandict = meandict + imagedictflt
+!end do
+!!$OMP END DO
+!!$OMP END PARALLEL
+
+!meandict = meandict/float(FZcnt)
+!meandict = meandict/NORM2(meandict)
+
+
+call Message(' -> Finished calculating mean pattern for dictionary', frm = "(A)" )
+
+
+! the mean of the dictionary is assumed to be the same as the experiments
+! meandict = meanexpt
+!euler = cPi*(/33.12,38.30,307.5/)/180.0
+!angle = eu2qu(euler)
+!call CalcEBSDPatternSingle(ebsdnl,angle,accum_e_MC,master_array,master%rgx,master%rgy,master%rgz,binned)
+!binned = binned/NORM2(binned)
+!open(unit=13,file='testdict.txt',action='write')
+!do ll = 1,binx
+!do mm = 1,biny
+!!if ((ll-61)**2+(mm-61)**2 .le. 61*61) then
+!    write(13, '(F15.6)', advance='no') binned(mm,ll)
+!else
+    !write(13, '(F15.6)', advance='no') 0.0
+!end if
 !end do
 !write(13, *) ''  ! this gives you the line break
 !end do
 !close(13)
-
-call Message(' -> Finished calculating mean pattern for observed patterns', frm = "(A)" )
-!end if
-
-!if (TID .eq. 1) then
-!    call Message(' -> Start estimating mean pattern for dictionnary from Monte carlo data file', frm = "(A)" )
-
-!    do pp = 1,ebsdnl%numsx,ebsdnl%binning
-!        do qq = 1,ebsdnl%numsy,ebsdnl%binning
-!            binned(pp/ebsdnl%binning+1,qq/ebsdnl%binning+1) = &
-!            float(sum(accum_e_MC(pp:pp+ebsdnl%binning-1,qq:qq+ebsdnl%binning-1)))
-!        end do
-!    end do
-
-!    binned = binned/NORM2(binned)
-
-!    do pp = 1,ebsdnl%numsx/ebsdnl%binning
-!        do qq = 1,ebsdnl%numsy/ebsdnl%binning
-!            meandict((qq-1)*ebsdnl%numsx/ebsdnl%binning+pp) = binned(pp,qq)
-!        end do
-!    end do
-
-!    do pp = 1,imgwd
-!        imagedictfltflip((pp-1)*imght+1:pp*imght) = meandict((imgwd-pp)*imght+1:(imgwd-pp+1)*imght)
-!    end do
-
-!    meandict(1:L) = imagedictfltflip(1:L)
-
-!open(unit=13,file='testmean.txt',action='write')
-!do pp = 1,80
-!do qq = 1,60
-!write(13, '(F15.6)', advance='no') meandict((qq-1)*80+pp)
-!end do
-!write(13, *) ''  ! this gives you the line break
-!end do
-!close(13)
-
-!call Message(' -> Finished calculating mean pattern for dictionary', frm = "(A)" )
-
-!end if
-!!!!$OMP END PARALLEL
-
-
-!FZtmp => FZlist
-
+!=====================================================
+! MAIN COMPUTATIONAL LOOP
+!=====================================================
+print*,meanexpt(1:10),meandict(1:10)
 dictionaryloop: do ii = 1,ceiling(float(FZcnt)/float(numdictsingle))
     dict = 0.0
     result = 0.0
-
     if (ii .le. floor(float(FZcnt)/float(numdictsingle))) then
 
-!$OMP PARALLEL PRIVATE(TID,binned,angle,ll,mm,dc,ixy,istat,nix,niy) &
-!$OMP& PRIVATE(nixp,niyp,dx,dy,dxm,dym,EBSDpattern,imagedictflt,projweight) &
-!$OMP& SHARED(pp,dict,master_array,accum_e_MC,meandict,eulerarray,ii,numdictsingle,FZcnt,prefactor)
+!$OMP PARALLEL PRIVATE(TID,binned,quat) &
+!$OMP& PRIVATE(imagedictflt,projweight,ll,mm) &
+!$OMP& FIRSTPRIVATE(master_array,accum_e_MC,meandict,ii,numdictsingle,FZcnt) &
+!$OMP& SHARED(dict,eulerarray)
 
         TID = OMP_GET_THREAD_NUM()
 !$OMP BARRIER
 !$OMP DO SCHEDULE(DYNAMIC)
 
         do pp = 1,numdictsingle
-
             binned = 0.0
-            angle = ro2qu(FZarray(1:3,(ii-1)*numdictsingle+pp))
-            do ll=1,ebsdnl%numsx
-                do mm=1,ebsdnl%numsy
-!  do the active coordinate transformation for this euler angle
-                    dc = sngl(quat_Lp(conjg(angle(1:4)),  (/ master%rgx(ll,mm),master%rgy(ll,mm),master%rgz(ll,mm) /) ))
-! make sure the third one is positive; if not, switch all
-                    dc = dc/sqrt(sum(dc**2))
-                    if (dc(3).lt.0.0) dc = -dc
-! convert these direction cosines to coordinates in the Rosca-Lambert projection
-                    ixy = scl * LambertSphereToSquare( dc, istat )
-! four-point interpolation (bi-quadratic)
-                    nix = int(ebsdnl%npx+ixy(1))-ebsdnl%npx
-                    niy = int(ebsdnl%npy+ixy(2))-ebsdnl%npy
-                    nixp = nix+1
-                    niyp = niy+1
-                    if (nixp.gt.ebsdnl%npx) nixp = nix
-                    if (niyp.gt.ebsdnl%npy) niyp = niy
-                    dx = ixy(1)-nix
-                    dy = ixy(2)-niy
-                    dxm = 1.0-dx
-                    dym = 1.0-dy
-! interpolate the intensity
-                    EBSDpattern(ll,mm) = EBSDpattern(ll,mm) + accum_e_MC(ll,mm) * ( master_array(nix,niy) * dxm * dym + &
-                    master_array(nixp,niy) * dx * dym + master_array(nix,niyp) * dxm * dy + &
-                    master_array(nixp,niyp) * dx * dy )
+            quat = ro2qu(FZarray(1:4,(ii-1)*numdictsingle+pp))
 
+            call CalcEBSDPatternSingle(ebsdnl,quat,accum_e_MC,master_array,master%rgx,master%rgy,master%rgz,binned)
+
+            do ll = 1,biny
+                do mm = 1,binx
+                    imagedictflt((ll-1)*binx+mm) = binned(mm,ll)
                 end do
             end do
 
-            EBSDpattern = prefactor * EBSDpattern
-
-            if (ebsdnl%binning .ne. 1) then
-                do ll=1,ebsdnl%numsx,ebsdnl%binning
-                    do mm=1,ebsdnl%numsy,ebsdnl%binning
-                        binned(ll/ebsdnl%binning+1,mm/ebsdnl%binning+1) = &
-                        sum(EBSDpattern(ll:ll+ebsdnl%binning-1,mm:mm+ebsdnl%binning-1))
-                    end do
-                end do
-! and divide by binning^2
-                binned = binned * bindx
-            else
-                binned = EBSDpattern
-            end if
-
-            do ll = 1,ebsdnl%numsx/ebsdnl%binning
-                do mm = 1,ebsdnl%numsy/ebsdnl%binning
-                    imagedictflt((mm-1)*ebsdnl%numsx/ebsdnl%binning+ll) = binned(ll,mm)
-                end do
+            do ll = 1,imgwd
+                imagedictfltflip((ll-1)*imght+1:ll*imght) = imagedictflt((imgwd-ll)*imght+1:(imgwd-ll+1)*imght)
             end do
-
-            !do ll = 1,imgwd
-            !    imagedictfltflip((ll-1)*imght+1:ll*imght) = imagedictflt((imgwd-ll)*imght+1:(imgwd-ll+1)*imght)
-            !end do
-            !imagedictflt = imagedictfltflip
+            imagedictflt = imagedictfltflip
 
             dict((pp-1)*L+1:pp*L) = imagedictflt(1:L)/NORM2(imagedictflt(1:L))
             projweight = DOT_PRODUCT(meandict,dict((pp-1)*L+1:pp*L))
             dict((pp-1)*L+1:pp*L) = dict((pp-1)*L+1:pp*L) - projweight*meandict
             dict((pp-1)*L+1:pp*L) = dict((pp-1)*L+1:pp*L)/NORM2(dict((pp-1)*L+1:pp*L))
-!if ((ii-1)*numdictsingle+pp .eq. 500) then
-!print*,180.0/cPi*ro2eu(FZarray(1:3,(ii-1)*numdictsingle+pp))
-!open(unit=13,file='testdict.txt',action='write')
-!do ll = 1,80
-!do mm = 1,60
-!write(13, '(F15.6)', advance='no') dict((mm-1)*80+ll)
-!end do
-!write(13, *) ''  ! this gives you the line break
-!end do
-!close(13)
-!end if
-            eulerarray(1:3,(ii-1)*numdictsingle+pp) = 180.0/cPi*ro2eu(FZarray(1:3,(ii-1)*numdictsingle+pp))
+
+            eulerarray(1:3,(ii-1)*numdictsingle+pp) = 180.0/cPi*ro2eu(FZarray(1:4,(ii-1)*numdictsingle+pp))
+
         end do
 !$OMP END DO
 !$OMP END PARALLEL
@@ -643,85 +635,46 @@ dictionaryloop: do ii = 1,ceiling(float(FZcnt)/float(numdictsingle))
 
     else if (ii .eq. ceiling(float(FZcnt)/float(numdictsingle))) then
 
-!$OMP PARALLEL PRIVATE(TID,pp,binned,angle,ll,mm,dc,ixy,istat,nix,niy) &
-!$OMP& PRIVATE(nixp,niyp,dx,dy,dxm,dym,EBSDpattern,imagedictflt,projweight) &
-!$OMP& SHARED(dict,master_array,accum_e_MC,meandict,eulerarray,ii,numdictsingle,FZcnt,prefactor)
+!$OMP PARALLEL PRIVATE(TID,binned,quat) &
+!$OMP& PRIVATE(imagedictflt,projweight,ll,mm) &
+!$OMP& FIRSTPRIVATE(master_array,accum_e_MC,prefactor) &
+!$OMP& SHARED(pp,dict,meandict,eulerarray,ii,numdictsingle,FZcnt)
 
-TID = OMP_GET_THREAD_NUM()
+        TID = OMP_GET_THREAD_NUM()
 !$OMP BARRIER
 !$OMP DO SCHEDULE(DYNAMIC)
 
         do pp = 1,MODULO(FZcnt,numdictsingle)
 
             binned = 0.0
-            angle = ro2qu(FZarray(1:3,(ii-1)*numdictsingle+pp))
+            quat = ro2qu(FZarray(1:4,(ii-1)*numdictsingle+pp))
 
-            do ll=1,ebsdnl%numsx
-                do mm=1,ebsdnl%numsy
-!  do the active coordinate transformation for this euler angle
-                    dc = sngl(quat_Lp(conjg(angle(1:4)),  (/ master%rgx(ll,mm),master%rgy(ll,mm),master%rgz(ll,mm) /) ))
-! make sure the third one is positive; if not, switch all
-                    dc = dc/sqrt(sum(dc**2))
-                    if (dc(3).lt.0.0) dc = -dc
-! convert these direction cosines to coordinates in the Rosca-Lambert projection
-                    ixy = scl * LambertSphereToSquare( dc, istat )
-! four-point interpolation (bi-quadratic)
-                    nix = int(ebsdnl%npx+ixy(1))-ebsdnl%npx
-                    niy = int(ebsdnl%npy+ixy(2))-ebsdnl%npy
-                    nixp = nix+1
-                    niyp = niy+1
-                    if (nixp.gt.ebsdnl%npx) nixp = nix
-                    if (niyp.gt.ebsdnl%npy) niyp = niy
-                    dx = ixy(1)-nix
-                    dy = ixy(2)-niy
-                    dxm = 1.0-dx
-                    dym = 1.0-dy
-! interpolate the intensity
-                    EBSDpattern(ll,mm) = EBSDpattern(ll,mm) + accum_e_MC(ll,mm) * ( master_array(nix,niy) * dxm * dym + &
-                    master_array(nixp,niy) * dx * dym + master_array(nix,niyp) * dxm * dy + &
-                    master_array(nixp,niyp) * dx * dy )
+            call CalcEBSDPatternSingle(ebsdnl,quat,accum_e_MC,master_array,master%rgx,master%rgy,master%rgz,binned)
 
+            do ll = 1,biny
+                do mm = 1,binx
+                    imagedictflt((ll-1)*binx+mm) = binned(mm,ll)
                 end do
             end do
 
-            EBSDpattern = prefactor * EBSDpattern
 
-            if (ebsdnl%binning.ne.1) then
-                do ll=1,ebsdnl%numsx,ebsdnl%binning
-                    do mm=1,ebsdnl%numsy,ebsdnl%binning
-                        binned(ll/ebsdnl%binning+1,mm/ebsdnl%binning+1) = &
-                        sum(EBSDpattern(ll:ll+ebsdnl%binning-1,mm:mm+ebsdnl%binning-1))
-                    end do
-                end do
-! and divide by binning^2
-                binned = binned * bindx
-            else
-                binned = EBSDpattern
-            end if
-
-            do ll = 1,ebsdnl%numsx/ebsdnl%binning
-                do mm = 1,ebsdnl%numsy/ebsdnl%binning
-                    imagedictflt((mm-1)*ebsdnl%numsx/ebsdnl%binning+ll) = binned(ll,mm)
-                end do
+            do ll = 1,imgwd
+                imagedictfltflip((ll-1)*imght+1:ll*imght) = imagedictflt((imgwd-ll)*imght+1:(imgwd-ll+1)*imght)
             end do
+            imagedictflt = imagedictfltflip
 
-            !do ll = 1,imgwd
-            !    imagedictfltflip((ll-1)*imght+1:ll*imght) = imagedictflt((imgwd-ll)*imght+1:(imgwd-ll+1)*imght)
-            !end do
-            !imagedictflt = imagedictfltflip
             dict((pp-1)*L+1:pp*L) = imagedictflt(1:L)/NORM2(imagedictflt(1:L))
             projweight = DOT_PRODUCT(meandict,dict((pp-1)*L+1:pp*L))
             dict((pp-1)*L+1:pp*L) = dict((pp-1)*L+1:pp*L) - projweight*meandict
             dict((pp-1)*L+1:pp*L) = dict((pp-1)*L+1:pp*L)/NORM2(dict((pp-1)*L+1:pp*L))
 
-            eulerarray(1:3,(ii-1)*numdictsingle+pp) = 180.0/cPi*ro2eu(FZarray(1:3,(ii-1)*numdictsingle+pp))
+            eulerarray(1:3,(ii-1)*numdictsingle+pp) = 180.0/cPi*ro2eu(FZarray(1:4,(ii-1)*numdictsingle+pp))
         end do
-
 !$OMP END DO
 !$OMP END PARALLEL
 
     end if
-print*,eulerarray(1:3,1)
+
     dicttranspose = 0.0
 
     do ll = 1,L
@@ -742,11 +695,23 @@ print*,eulerarray(1:3,1)
                 read(iunitexpt,rec=(jj-1)*numexptsingle+pp) imageexpt
                 imageexptflt = float(imageexpt(26:recordsize))
                 do mm = 1,L
-                    if (imageexptflt(mm) .lt. 0) imageexptflt(mm) = imageexptflt(mm) + 256.0
+                    if (imageexptflt(mm) .lt. 0.0) imageexptflt(mm) = imageexptflt(mm) + 256.0
                 end do
-                imageexptflt(1:L) = imageexptflt - meanexpt(1:L)
-                expt((pp-1)*L+1:pp*L) = imageexptflt(1:L)/NORM2(imageexptflt(1:L))
 
+                expt((pp-1)*L+1:pp*L) = imageexptflt(1:L)/NORM2(imageexptflt(1:L))
+                projweight = DOT_PRODUCT(meanexpt,expt((pp-1)*L+1:pp*L))
+                expt((pp-1)*L+1:pp*L) = expt((pp-1)*L+1:pp*L) - projweight*meanexpt
+                expt((pp-1)*L+1:pp*L) = expt((pp-1)*L+1:pp*L)/NORM2(expt((pp-1)*L+1:pp*L))
+!if (jj .eq. 1 .and. pp .eq. 422) then
+!open(unit=13,file='testexpt.txt',action='write')
+!do ll = 1,80
+!do mm = 1,60
+!write(13, '(F15.6)', advance='no') expt((mm-1)*80+ll)
+!end do
+!write(13, *) ''  ! this gives you the line break
+!end do
+!close(13)
+!end if
             end do
 
         else if (jj .eq. ceiling(float(totnumexpt)/float(numexptsingle))) then
@@ -754,10 +719,13 @@ print*,eulerarray(1:3,1)
                 read(iunitexpt,rec=(jj-1)*numexptsingle+pp) imageexpt
                 imageexptflt = float(imageexpt(26:recordsize))
                 do mm = 1,L
-                    if (imageexptflt(mm) .lt. 0) imageexptflt(mm) = imageexptflt(mm) + 256.0
+                    if (imageexptflt(mm) .lt. 0.0) imageexptflt(mm) = imageexptflt(mm) + 256.0
                 end do
-                imageexptflt(1:L) = imageexptflt - meanexpt(1:L)
+
                 expt((pp-1)*L+1:pp*L) = imageexptflt(1:L)/NORM2(imageexptflt(1:L))
+                projweight = DOT_PRODUCT(meanexpt,expt((pp-1)*L+1:pp*L))
+                expt((pp-1)*L+1:pp*L) = expt((pp-1)*L+1:pp*L) - projweight*meanexpt
+                expt((pp-1)*L+1:pp*L) = expt((pp-1)*L+1:pp*L)/NORM2(expt((pp-1)*L+1:pp*L))
 
             end do
 
@@ -767,7 +735,7 @@ print*,eulerarray(1:3,1)
         if(ierr /= CL_SUCCESS) stop 'Error: cannot write to buffer.'
 
         call InnerProdGPU(cl_expt,cl_dict,Ne,Nd,L,result,source,source_length,platform,device,context,command_queue)
-
+print*,maxval(result)
         if (floor(float(totnumexpt)/float(numexptsingle)/10.0) .gt. 0) then
             if (mod(jj,floor(float(totnumexpt)/float(numexptsingle)/10.0)) .eq. 0) then
                 if (ii .le. floor(float(FZcnt)/float(numdictsingle))) then
@@ -789,7 +757,6 @@ print*,eulerarray(1:3,1)
                 end if
             end if
         end if
-!print*,maxval(result)
 !$OMP PARALLEL PRIVATE(TID,qq,resultarray,indexarray) &
 !$OMP& SHARED(nthreads,result,resultmain,indexmain,ii,jj,numdictsingle,numexptsingle,indexlist,resulttmp,indextmp)
         TID = OMP_GET_THREAD_NUM()
@@ -800,44 +767,29 @@ print*,eulerarray(1:3,1)
         do qq = 1,numexptsingle
 
             resultarray(1:numdictsingle) = result((qq-1)*numdictsingle+1:qq*numdictsingle)
-
             indexarray(1:numdictsingle) = indexlist((ii-1)*numdictsingle+1:ii*numdictsingle)
 
             call SSORT(resultarray,indexarray,numdictsingle,-2)
-
             resulttmp(nnk+1:2*nnk,(jj-1)*numexptsingle+qq) = resultarray(1:nnk)
             indextmp(nnk+1:2*nnk,(jj-1)*numexptsingle+qq) = indexarray(1:nnk)
 
             call SSORT(resulttmp(:,(jj-1)*numexptsingle+qq),indextmp(:,(jj-1)*numexptsingle+qq),2*nnk,-2)
 
             resultmain(1:nnk,(jj-1)*numexptsingle+qq) = resulttmp(1:nnk,(jj-1)*numexptsingle+qq)
-
+!if (resultmain(1,(jj-1)*numexptsingle+qq) .eq. 0.0) print*,(jj-1)*numexptsingle+qq
             indexmain(1:nnk,(jj-1)*numexptsingle+qq) = indextmp(1:nnk,(jj-1)*numexptsingle+qq)
 
         end do
 !$OMP END DO
 !$OMP END PARALLEL
-
-print*,resultmain(1:5,1),indexmain(1:5,1)
     end do experimentalloop
 
 end do dictionaryloop
 
 open(unit=iunit,file='Results.ctf',action='write')
 call WriteHeader(iunit,'ctf')
-!open(unit=iunit,file='euler-1.bin',status='unknown',action='write',&
-!form='unformatted',access='stream')
-!open(unit=13,file='BestMatch-100-meansub.bin',form='unformatted',action='write',status='unknown',access='stream')
+
 do ii = 1,totnumexpt
-
-!do jj = 1,nnk
-!    index = indexarray(jj,ii)
-!    samples(1:4,jj) = eu2qu((cPi/180.D0)*eulerangles(index,1:3))
-!end do
-
-!call DI_EMforDD(samples, dictlist, nnk, seed, muhat, kappahat,'WAT')
-!euler = 180.0/cPi*qu2eu(muhat)
-
     index = indexmain(1,ii)
     euler = eulerarray(1:3,index)
     write(str1,'(F12.3)') float(MODULO(ii-1,512))
@@ -1080,4 +1032,138 @@ stop 'Error: Can not recognize specified file format'
 end if
 
 end subroutine WriteHeader
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:CalcEBSDPatternSingle
+!
+!> @author Saransh Singh, Carnegie Mellon University
+!
+!> @brief Calculate a single EBSD pattern for a given euler angle
+!
+!> @param enl namelist file for ebsd
+!> @param qu quaternion for the pattern
+!> @param acc accumulator array from MC simulation
+!> @param master master pattern
+!
+!> @date 05/07/15  SS 1.0 original
+!--------------------------------------------------------------------------
+
+recursive subroutine CalcEBSDPatternSingle(ebsdnl,qu,accum_e_MC,master_array,rgx,rgy,rgz,binned)
+
+use local
+use typedefs
+use NameListTypedefs
+use NameListHDFwriters
+use symmetry
+use crystal
+use constants
+use io
+use files
+use diffraction
+use EBSDmod
+use Lambert
+use quaternions
+use rotations
+
+IMPLICIT NONE
+
+type(EBSDNameListType),INTENT(IN)               :: ebsdnl
+real(kind=sgl),INTENT(IN)                       :: qu(4)
+integer(kind=irg),INTENT(IN)                    :: accum_e_MC(ebsdnl%numsx,ebsdnl%numsy)
+real(kind=sgl),INTENT(IN)                       :: master_array(-ebsdnl%npx:ebsdnl%npx,-ebsdnl%npy:ebsdnl%npy)
+real(kind=sgl),INTENT(IN)                       :: rgx(ebsdnl%numsx,ebsdnl%numsy)
+real(kind=sgl),INTENT(IN)                       :: rgy(ebsdnl%numsx,ebsdnl%numsy)
+real(kind=sgl),INTENT(IN)                       :: rgz(ebsdnl%numsx,ebsdnl%numsy)
+real(kind=sgl),INTENT(OUT)                      :: binned(ebsdnl%numsx/ebsdnl%binning,ebsdnl%numsy/ebsdnl%binning)
+
+
+real(kind=sgl),allocatable                      :: EBSDpattern(:,:),mask(:,:),lx(:),ly(:)
+real(kind=sgl),allocatable                      :: wf(:)
+real(kind=sgl)                                  :: dc(3),ixy(2),scl,prefactor,bindx,maskradius
+real(kind=sgl)                                  :: dx,dy,dxm,dym
+integer(kind=irg)                               :: ii,jj,istat
+integer(kind=irg)                               :: nix,niy,nixp,niyp,binx,biny
+real(kind=dbl),parameter                        :: nAmpere = 6.241D+18   ! Coulomb per second
+
+
+
+binx = ebsdnl%numsx/ebsdnl%binning
+biny = ebsdnl%numsy/ebsdnl%binning
+bindx = 1.0/float(ebsdnl%binning)**2
+
+allocate(EBSDpattern(ebsdnl%numsx,ebsdnl%numsy),stat=istat)
+
+binned = 0.0
+EBSDpattern = 0.0
+
+prefactor = 0.25D0 * nAmpere * ebsdnl%beamcurrent * ebsdnl%dwelltime * 1.0D-15/ dble(sum(accum_e_MC))
+scl = float(ebsdnl%npx) / LPs%sPio2
+
+! create a mask if necessary
+allocate(mask(binx,biny),stat=istat)
+mask = 1.0
+
+if (ebsdnl%maskpattern.eq.'y') then
+    maskradius = (minval( (/ binx, biny /) ) / 2 )**2
+    allocate(lx(binx), ly(biny), stat=istat)
+    lx = (/ (float(ii),ii=1,binx) /) - float(binx/2)
+    ly = (/ (float(ii),ii=1,biny) /) - float(biny/2)
+    do ii=1,binx
+        do jj=1,biny
+            if ((lx(ii)**2+ly(jj)**2).gt.maskradius) mask(ii,jj) = 0.0
+        end do
+    end do
+    deallocate(lx, ly)
+end if
+
+do ii = 1,ebsdnl%numsx
+    do jj = 1,ebsdnl%numsy
+
+        dc = sngl(quat_Lp(qu(1:4),  (/ rgx(ii,jj),rgy(ii,jj),rgz(ii,jj) /) ))
+
+        dc = dc/sqrt(sum(dc**2))
+
+        if (dc(3).lt.0.0) dc = -dc
+! convert these direction cosines to coordinates in the Rosca-Lambert projection
+            ixy = scl * LambertSphereToSquare( dc, istat )
+! four-point interpolation (bi-quadratic)
+            nix = int(ebsdnl%npx+ixy(1))-ebsdnl%npx
+            niy = int(ebsdnl%npy+ixy(2))-ebsdnl%npy
+            nixp = nix+1
+            niyp = niy+1
+            if (nixp.gt.ebsdnl%npx) nixp = nix
+            if (niyp.gt.ebsdnl%npy) niyp = niy
+            dx = ixy(1)-nix
+            dy = ixy(2)-niy
+            dxm = 1.0-dx
+            dym = 1.0-dy
+! interpolate the intensity
+            EBSDpattern(ii,jj) = EBSDpattern(ii,jj) + accum_e_MC(ii,jj) * ( master_array(nix,niy) * dxm * dym + &
+                                master_array(nixp,niy) * dx * dym + master_array(nix,niyp) * dxm * dy + &
+                                master_array(nixp,niyp) * dx * dy )
+
+    end do
+end do
+
+EBSDpattern = prefactor * EBSDpattern
+
+if (ebsdnl%binning .ne. 1) then
+    do ii=1,ebsdnl%numsx,ebsdnl%binning
+        do jj=1,ebsdnl%numsy,ebsdnl%binning
+            binned(ii/ebsdnl%binning+1,jj/ebsdnl%binning+1) = &
+            sum(EBSDpattern(ii:ii+ebsdnl%binning-1,jj:jj+ebsdnl%binning-1))
+        end do
+    end do
+! and divide by binning^2
+
+    binned = binned * bindx
+    binned = binned * mask
+else
+    binned = EBSDpattern
+    binned = binned * mask
+end if
+
+end subroutine CalcEBSDPatternSingle
+
 
