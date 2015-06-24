@@ -1,0 +1,14 @@
+#!/bin/sh
+
+for file in $(grep -il "CTEM" src/*.f90)
+do
+sed -e "s/CTEM/EM/g" $file > ~/tmp/tempfile.tmp
+mv ~/tmp/tempfile.tmp $file
+done
+
+for file in $(grep -il "CTEM" src_programs/*.f90)
+do
+sed -e "s/CTEM/EM/g" $file > ~/tmp/tempfile.tmp
+mv ~/tmp/tempfile.tmp $file
+done
+                          

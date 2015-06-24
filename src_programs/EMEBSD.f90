@@ -108,7 +108,7 @@ progdesc = 'Dynamical EBSD patterns, using precomputed MC and master Lambert pro
 call EMsoft(progname, progdesc)
 
 ! deal with the command line arguments, if any
-call Interpret_Program_Arguments(nmldeffile,1,(/ 21 /), progname)
+call Interpret_Program_Arguments(nmldeffile,1,(/ 22 /), progname)
 
 ! deal with the namelist stuff
 call GetEBSDNameList(nmldeffile,enl)
