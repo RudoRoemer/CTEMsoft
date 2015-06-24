@@ -414,13 +414,12 @@ nullify(HDF_head, HDF_head)
 if (PRESENT(mfile)) then
   masterfile = mfile
 else
-  masterfile = trim(Emdatapathname)//trim(enl%masterfile)
+  masterfile = trim(EMdatapathname)//trim(enl%masterfile)
 end if
-
 ! first, we need to check whether or not the input file is of the HDF5 forat type; if
 ! it is, we read it accordingly, otherwise we use the old binary format.
 !
-call h5fis_hdf5_f(masterfile, stat, hdferr)
+call h5fis_hdf5_f(trim(masterfile), stat, hdferr)
 
 if (stat) then 
 ! open the master file 
