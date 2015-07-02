@@ -113,11 +113,11 @@ call GetEBSDNameList(nmldeffile,ebsdnl)
 
 ! 1. read the Monte Carlo data file
 allocate(acc)
-call EBSDreadMCfile(ebsdnl, acc, verbose)
+call EBSDreadMCfile(ebsdnl, acc)
 
 ! 2. read EBSD master pattern file
 allocate(master)
-call EBSDreadMasterfile(ebsdnl, master, verbose)
+call EBSDreadMasterfile(ebsdnl, master)
 
 ! 3. generate detector arrays
 allocate(master%rgx(ebsdnl%numsx,ebsdnl%numsy), master%rgy(ebsdnl%numsx,ebsdnl%numsy), &
@@ -234,12 +234,12 @@ character                                           :: TAB
 
 TAB = CHAR(9)
 verbose = .TRUE.
-Ne = 5120
-Nd = 5120
+Ne = 512
+Nd = 512
 L = 80*60
 totnumexpt = 196608
-numdictsingle = 5120
-numexptsingle = 5120
+numdictsingle = 512
+numexptsingle = 512
 imght =80
 imgwd = 60
 nnk = 40
@@ -466,7 +466,7 @@ if (istat .ne. 0) stop 'could not allocate euler array'
 
 call Message(' -> opened experimental file for I/O', frm = "(A)" )
 
-open(unit=iunitexpt,file='/Users/ssaransh/CTEMDIctIndx/FrameData',&
+open(unit=iunitexpt,file=trim(EMdatapathname)//'Experiments/FrameData',&
     status='old',form='unformatted',access='direct',recl=recordsize,iostat=ierr)
 
 !!!!$OMP PARALLEL PRIVATE(TID,ii,jj,imageexpt,imageexptflt) &
@@ -615,10 +615,10 @@ dictionaryloop: do ii = 1,ceiling(float(FZcnt)/float(numdictsingle))
                 end do
             end do
 
-            !do ll = 1,imgwd
-            !    imagedictfltflip((ll-1)*imght+1:ll*imght) = imagedictflt((imgwd-ll)*imght+1:(imgwd-ll+1)*imght)
-            !end do
-            !imagedictflt = imagedictfltflip
+            do ll = 1,imgwd
+                imagedictfltflip((ll-1)*imght+1:ll*imght) = imagedictflt((imgwd-ll)*imght+1:(imgwd-ll+1)*imght)
+            end do
+            imagedictflt = imagedictfltflip
 
             dict((pp-1)*L+1:pp*L) = imagedictflt(1:L)/NORM2(imagedictflt(1:L))
             projweight = DOT_PRODUCT(meandict,dict((pp-1)*L+1:pp*L))
@@ -705,10 +705,10 @@ TID = OMP_GET_THREAD_NUM()
                 end do
             end do
 
-            !do ll = 1,imgwd
-            !    imagedictfltflip((ll-1)*imght+1:ll*imght) = imagedictflt((imgwd-ll)*imght+1:(imgwd-ll+1)*imght)
-            !end do
-            !imagedictflt = imagedictfltflip
+            do ll = 1,imgwd
+                imagedictfltflip((ll-1)*imght+1:ll*imght) = imagedictflt((imgwd-ll)*imght+1:(imgwd-ll+1)*imght)
+            end do
+            imagedictflt = imagedictfltflip
             dict((pp-1)*L+1:pp*L) = imagedictflt(1:L)/NORM2(imagedictflt(1:L))
             projweight = DOT_PRODUCT(meandict,dict((pp-1)*L+1:pp*L))
             dict((pp-1)*L+1:pp*L) = dict((pp-1)*L+1:pp*L) - projweight*meandict
@@ -721,7 +721,7 @@ TID = OMP_GET_THREAD_NUM()
 !$OMP END PARALLEL
 
     end if
-print*,eulerarray(1:3,1)
+
     dicttranspose = 0.0
 
     do ll = 1,L
@@ -800,11 +800,9 @@ print*,eulerarray(1:3,1)
         do qq = 1,numexptsingle
 
             resultarray(1:numdictsingle) = result((qq-1)*numdictsingle+1:qq*numdictsingle)
-
             indexarray(1:numdictsingle) = indexlist((ii-1)*numdictsingle+1:ii*numdictsingle)
 
             call SSORT(resultarray,indexarray,numdictsingle,-2)
-
             resulttmp(nnk+1:2*nnk,(jj-1)*numexptsingle+qq) = resultarray(1:nnk)
             indextmp(nnk+1:2*nnk,(jj-1)*numexptsingle+qq) = indexarray(1:nnk)
 
@@ -818,7 +816,6 @@ print*,eulerarray(1:3,1)
 !$OMP END DO
 !$OMP END PARALLEL
 
-print*,resultmain(1:5,1),indexmain(1:5,1)
     end do experimentalloop
 
 end do dictionaryloop
