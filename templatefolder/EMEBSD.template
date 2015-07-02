@@ -4,7 +4,7 @@
 ! distance between scintillator and illumination point [microns]
 L = 15000.0
 ! tilt angle of the camera (positive below horizontal, [degrees])
-thetac = 0.0
+thetac = 10.0
 ! CCD pixel size on the scintillator surface [microns]
 delta = 50.0
 ! number of CCD pixels along x and y
@@ -18,13 +18,13 @@ anglefile = 'testeuler.txt'
 ! 'tsl' or 'hkl' Euler angle convention parameter
 eulerconvention = 'tsl'
 ! name of EBSD master output file
-FZfile = '/some/folder/somwhere/Cu_master.data'
+FZfile = 'master.h5'
 ! name of Monte Carlo output file
-energyfile = '/some/folder/somewhere/Cu_MC.data'
+energyfile = 'MC.h5'
 ! name of output file
-datafile = '/some/folder/somwhere/EBSDtest.data'
+datafile = 'EBSDout.h5'
 ! incident beam current [nA]
-beamcurrent = 15.0
+beamcurrent = 150.0
 ! beam dwell time [micro s]
 dwelltime = 100.0
 ! binning mode (1, 2, 4, or 8)
@@ -34,7 +34,7 @@ scalingmode = 'not'
 ! gamma correction factor
 gammavalue = 1.0
 ! output format selector  'bin' for dictionaries, 'gui' for interactive mode
-outputformat = 'gui'
+outputformat = 'bin'
 ! should a circular mask be applied to the data? 'y', 'n'
 maskpattern = 'n'
 ! number of threads (default = 1)

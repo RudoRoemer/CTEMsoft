@@ -201,6 +201,22 @@ if (istat .ne. 0) stop 'Could not allocate array for results'
 allocate(imageexpt(imght*imgwd),imageexptflt(imght*imgwd),img(imght,imgwd),mean(imght*imgwd),stat=istat)
 if (istat .ne. 0) stop 'Could not allocate array for reading experimental image patterns'
 
+!=====================================================
+! SAMPLING OF RODRIGUES FUNDAMENTAL ZONE
+!=====================================================
+
+nullify(FZlist)
+FZcnt = 0
+pgnum = 32
+write (*,*) 'pgnum = ', pgnum
+write (*,*) 'N = ',pednl%ncubochoric
+
+call sampleRFZ(pednl%ncubochoric, pgnum, FZcnt, FZlist)
+
+io_int(1) = FZcnt
+call WriteValue(' Number of incident beam directions       : ', io_int, 1, "(I8)")
+
+
 !================================
 ! INITIALIZATION OF CELL POINTER
 !================================
@@ -251,11 +267,12 @@ if (ierr /= 0) stop 'Cannot open file DictIndx.cl'
 source = ''
 irec = 1
 do
-read(unit = iunit, rec = irec, iostat = ierr) source(irec:irec)
-if (ierr /= 0) exit
-if(irec == source_length) stop 'Error: CL source file is too big'
-irec = irec + 1
+    read(unit = iunit, rec = irec, iostat = ierr) source(irec:irec)
+    if (ierr /= 0) exit
+    if(irec == source_length) stop 'Error: CL source file is too big'
+    irec = irec + 1
 end do
+
 close(unit=iunit)
 
 ! allocate device memory
@@ -264,21 +281,6 @@ if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for experiment
 
 cl_dict = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes_dict, ierr)
 if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for dictionary data.'
-
-
-!=====================================================
-! SAMPLING OF RODRIGUES FUNDAMENTAL ZONE
-!=====================================================
-
-nullify(FZlist)
-FZcnt = 0
-write (*,*) 'pgnum = ', pgnum
-write (*,*) 'N = ',pednl%ncubochoric
-
-call sampleRFZ(pednl%ncubochoric, pgnum, FZcnt, FZlist)
-
-io_int(1) = FZcnt
-call WriteValue(' Number of incident beam directions       : ', io_int, 1, "(I8)")
 
 ! allocate some arrays
 
