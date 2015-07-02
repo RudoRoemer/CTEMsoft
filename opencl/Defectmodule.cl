@@ -36,6 +36,7 @@ float2 cmplxmult(float2, float2);
 float2 conjg(float2);
 float2 cmplxexp(float);
 float  sqrabs(float2);
+float2 cmplxexpTable(float,__global float2*,const int);
 
 //--------------------------------------------------------------------------
 // FUNCTION: cmplxmult
@@ -85,9 +86,33 @@ float2 conjg(float2 a)
 
 float2 cmplxexp(float a)
 {
-     float2 ret;
-     ret = (float2)(cos(a),sin(a));
-     return ret;
+    float2 ret;
+    ret = (float2)(cos(a),sin(a));
+    return ret;
+}
+
+//--------------------------------------------------------------------------
+// FUNCTION: cmplxexpTable
+//
+//> @author Saransh Singh, Carnegie Mellon University
+//
+//> @brief function to calculate exponential of imaginary number using LUT
+//
+//> @date 06/25/15  SS  1.0 Original
+//--------------------------------------------------------------------------
+
+float2 cmplxexpTable(float a,__global float2* table, const int n)
+{
+    float ap;
+    ap = a - floor(a/2.0f/PI)*2.0f*PI;
+    for (int i = 0; i < n-1; i++){
+        if( (2.0f*PI*i/n - ap)*(2.0f*PI*(i+1)/n - ap) <= 0.0f){
+            return (float2)(table[i].x + (table[i+1].x - table[i].x)*(ap*n - i*2.0f*PI)/2.0f/PI,table[i].y + (table[i+1].y - table[i].y)*(ap*n - i*2.0f*PI)/2.0f/PI);
+        }
+        else {
+            return (float2)(0.0f,0.0f);
+        }
+    }
 }
 
 //--------------------------------------------------------------------------
@@ -200,11 +225,8 @@ __kernel void SEMDefect(	__global float2* cl_A)
 //
 //> @author Saransh Singh, Carnegie Mellon University
 //
-//> @brief OpenCL kernel for precomputing a list of all possible scattering
-//> matrices on a GPU. The kernel will do the calculations and leave the 
-//> buffers in the memory to be used later by the SEMDefect/CTEMDefect/STEMDefect.
-//> The exponential is calculated using the optimized taylor's algorithm.
-
+//> @brief OpenCL kernel computing defect imaging using parallel beam illumination
+//
 //> @date 06/11/15  SS  1.0 Original
 //--------------------------------------------------------------------------
 
@@ -259,7 +281,7 @@ __kernel void CalcScatMatDefects(	__global float2* cl_DynMat,
                 arg1 = cmplxexp(-2.0f*PI*cl_ScalFact[i*nn+j].x*gdotR.x);
                 arg2 = cmplxexp(-2.0f*PI*cl_ScalFact[i*nn+j].y*gdotR.y);
                 arg1 = cmplxmult(arg1,arg2);
-                DynMatScald = cl_DynMat[i*nn + j]/scaling;
+                DynMatScald = cl_DynMat[id*nn*nn + i*nn + j]/scaling;
 		cl_A[id*nn*nn + i*nn + j] = cmplxmult(DynMatScald,arg1); 
 
             }
@@ -401,7 +423,214 @@ __kernel void CalcScatMatDefects(	__global float2* cl_DynMat,
     
 }
                                 
-                      
+
+//--------------------------------------------------------------------------
+// EMsoft:CalcScatMatDefectsTable.cl
+//--------------------------------------------------------------------------
+//
+// KERNEL: CalcScatMatDefectsTable
+//
+//> @author Saransh Singh, Carnegie Mellon University
+//
+//> @brief OpenCL kernel for defect imaging for parallel beam illumination using a precomputed list of sin and cosine.
+//
+//> @date 06/16/15  SS  1.0 Original
+//--------------------------------------------------------------------------
+
+
+
+__kernel void CalcScatMatDefectsTable(	__global float2* cl_DynMat,
+                                 __global float2* cl_ScalFact,
+                                 __global float2* cl_A,
+                                 __global float2* cl_expA,
+                                 __global float2* cl_AA,
+                                 __global float2* cl_AAA,
+                                 __global float2* cl_T1,
+                                 __global float2* cl_T2,
+                                 __global float2* cl_wavefncoeff,
+                                 __global float2* cl_wavefncoeffintd,
+                                 __global float2* cl_coeff,
+                                 __global float2* cl_gdotR,
+                                 __global float2* cl_table,
+                                 const int nn,
+                                 const int ns,
+                                 const int numdepth,
+                                 const int numentries)
+
+
+{
+	int tx, ty, id;
+	tx = get_global_id(0);
+	ty = get_global_id(1);
+	id = get_global_size(0)*ty + tx;
+	int offset;
+    float scaling;
+	float2 gdotR,arg1,arg2,DynMatScald;
+    scaling = pow(2.0f,ns);
+    
+    for (int i = 0; i < nn; i++){
+        if ( i == 0) {
+            cl_wavefncoeff[id*nn + i] = (float2)(1.0f,0.0f);
+        }
+        else {
+            cl_wavefncoeff[id*nn + i] = (float2)(0.0f,0.0f);
+        }
+        
+    }
+    
+	for (int nstep = 0; nstep < numdepth; nstep++){
+        
+        // calculating initial input matrix
+        
+        offset = nstep*get_global_size(0)*get_global_size(1);
+        gdotR = cl_gdotR[offset + id];
+        
+        for (int i = 0; i < nn; i++){
+            for (int j = 0; j < nn; j++){
+                arg1 = cmplxexpTable(-2.0f*PI*cl_ScalFact[i*nn+j].x*gdotR.x,cl_table,numentries);
+                //printf("cos( %f ) = %f\n",-2.0f*PI*cl_ScalFact[i*nn+j].x*gdotR.x,arg1.x);
+                arg2 = cmplxexpTable(-2.0f*PI*cl_ScalFact[i*nn+j].y*gdotR.y,cl_table,numentries);
+                arg1 = cmplxmult(arg1,arg2);
+                DynMatScald = cl_DynMat[i*nn + j]/scaling;
+                cl_A[id*nn*nn + i*nn + j] = cmplxmult(DynMatScald,arg1);
+                
+            }
+        }
+        //barrier(CLK_GLOBAL_MEM_FENCE);
+        
+		float2 sum = (float2)(0.0f,0.0f);
+        
+        // calculating A^2 and A^3
+        
+        for (int i = 0; i < nn; i++){
+            for (int j = 0; j < nn; j++){
+                for (int k = 0; k < nn; k++){
+                    sum += cmplxmult(cl_A[id*nn*nn + i*nn + k],cl_A[id*nn*nn + k*nn + j]);
+                }
+                cl_AA[id*nn*nn + i*nn + j] = sum;
+                sum = (float2)(0.0f,0.0f);
+            }
+        }
+        
+        
+   		sum = (float2)(0.0f,0.0f);
+   		for (int i = 0; i < nn; i++){
+            for (int j = 0; j < nn; j++){
+                for (int k = 0; k < nn; k++){
+                    sum += cmplxmult(cl_AA[id*nn*nn + i*nn + k],cl_A[id*nn*nn + k*nn + j]);
+                }
+                cl_AAA[id*nn*nn + i*nn + j] = sum;
+                sum = (float2)(0.0f,0.0f);
+            }
+        }
+        
+        // Calculating the three factors for the exponential
+        
+        for (int i = 0; i < nn; i++){
+            for (int j = 0; j < nn; j++){
+                if ( i == j){
+                    cl_expA[id*nn*nn + i*nn + j] = cl_AAA[id*nn*nn + i*nn + j] - cmplxmult(cl_coeff[0],cl_AA[id*nn*nn + i*nn + j]) + cmplxmult(cl_coeff[1],cl_A[id*nn*nn + i*nn + j]) - cl_coeff[2];
+                    
+                    cl_T1[id*nn*nn + i*nn + j] = cl_AAA[id*nn*nn + i*nn + j] - cmplxmult(cl_coeff[3],cl_AA[id*nn*nn + i*nn + j]) + cmplxmult(cl_coeff[4],cl_A[id*nn*nn + i*nn + j]) - cl_coeff[5];
+                    
+                }
+                else {
+                    
+                    cl_expA[id*nn*nn + i*nn + j] = cl_AAA[id*nn*nn + i*nn + j] - cmplxmult(cl_coeff[0],cl_AA[id*nn*nn + i*nn + j]) + cmplxmult(cl_coeff[1],cl_A[id*nn*nn + i*nn + j]);
+                    
+                    cl_T1[id*nn*nn + i*nn + j] = cl_AAA[id*nn*nn + i*nn + j] - cmplxmult(cl_coeff[3],cl_AA[id*nn*nn + i*nn + j]) + cmplxmult(cl_coeff[4],cl_A[id*nn*nn + i*nn + j]);
+                    
+                    
+                }
+            }
+        }
+        
+        
+        sum = (float2)(0.0f,0.0f);
+        for (int i = 0; i < nn; i++){
+            for (int j = 0; j < nn; j++){
+                for (int k = 0; k < nn; k++){
+                    sum += cmplxmult(cl_T1[id*nn*nn + i*nn + k],cl_expA[id*nn*nn + k*nn + j]);
+                }
+                cl_T2[id*nn*nn + i*nn + j] = sum;
+                sum = (float2)(0.0f,0.0f);
+            }
+        }
+        
+        for (int i = 0; i < nn; i++){
+            for (int j = 0; j < nn; j++){
+                if ( i == j){
+                    
+                    cl_T1[id*nn*nn + i*nn + j] = cl_AAA[id*nn*nn + i*nn + j] - cmplxmult(cl_coeff[6],cl_AA[id*nn*nn + i*nn + j]) + cmplxmult(cl_coeff[7],cl_A[id*nn*nn + i*nn + j]) - cl_coeff[8];
+                    
+                }
+                else {
+                    
+                    cl_T1[id*nn*nn + i*nn + j] = cl_AAA[id*nn*nn + i*nn + j] - cmplxmult(cl_coeff[6],cl_AA[id*nn*nn + i*nn + j]) + cmplxmult(cl_coeff[7],cl_A[id*nn*nn + i*nn + j]);
+                    
+                }
+            }
+        }
+        
+        
+        sum = (float2)(0.0f,0.0f);
+        for (int i = 0; i < nn; i++){
+            for (int j = 0; j < nn; j++){
+                for (int k = 0; k < nn; k++){
+                    sum += cmplxmult(cl_T2[id*nn*nn + i*nn + k],cl_T1[id*nn*nn + k*nn + j]);
+                }
+                sum /= 362880;
+                cl_expA[id*nn*nn + i*nn + j] = sum;
+                sum = (float2)(0.0f,0.0f);
+            }
+        }
+        
+        // squaring operation as matrix was scaled
+        
+        for (int l = 0; l < ns; l++){
+            sum = (float2)(0.0f,0.0f);
+            for (int i = 0; i < nn; i++){
+                for (int j = 0; j < nn; j++){
+                    for (int k = 0; k < nn; k++){
+                        
+                        sum += cmplxmult(cl_expA[id*nn*nn + i*nn + k],cl_expA[id*nn*nn + k*nn + j]);
+                        
+                    }
+                    cl_T1[id*nn*nn + i*nn + j] = sum;
+                    sum = (float2)(0.0f,0.0f);
+                }
+            }
+            
+            for (int i = 0; i < nn; i++){
+                for (int j = 0; j < nn; j++){
+                    cl_expA[id*nn*nn + i*nn + j] = cl_T1[id*nn*nn + i*nn + j];
+                }
+            }
+        }
+        
+        // cl_expA now has the exponential of the structure matrix. We now multiply
+        // by the column vector [1 0 0 ...... 0] to the the fourier coefficients of
+        // wavefunction at different depths and subsequently the depth integrated
+        // intensity
+        
+        sum = (float2)(0.0f,0.0f);
+        for (int l = 0; l < nn; l++){
+            cl_wavefncoeffintd[id*nn + l] = cl_wavefncoeff[id*nn + l];
+        }
+        for (int j = 0; j < nn; j++){
+            for (int k = 0; k < nn; k++){
+                sum += cmplxmult(cl_expA[id*nn*nn + j*nn + k],cl_wavefncoeffintd[id*nn + k]);
+            }
+            cl_wavefncoeff[id*nn + j] = sum;
+            sum = (float2)(0.0f,0.0f);
+        }
+        
+        // we have the fourier coefficients of the wavefunction here
+        // just take the square modulus to get the intensity
+        
+	}
+    
+}
                                            
 
 

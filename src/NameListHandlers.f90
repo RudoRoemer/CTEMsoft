@@ -672,6 +672,7 @@ real(kind=sgl)          :: thetac
 real(kind=sgl)          :: delta
 real(kind=sgl)          :: xpc
 real(kind=sgl)          :: ypc
+real(kind=sgl)          :: omega
 real(kind=sgl)          :: energymin
 real(kind=sgl)          :: energymax
 real(kind=sgl)          :: gammavalue
@@ -690,7 +691,7 @@ character(fnlen)        :: datafile
 ! define the IO namelist to facilitate passing variables to the program.
 namelist  / EBSDdata / stdout, L, thetac, delta, numsx, numsy, xpc, ypc, anglefile, eulerconvention, masterfile, &
                         energyfile, datafile, beamcurrent, dwelltime, energymin, energymax, binning, gammavalue, &
-                        scalingmode, axisangle, nthreads, outputformat, maskpattern, energyaverage
+                        scalingmode, axisangle, nthreads, outputformat, maskpattern, energyaverage, omega
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 stdout          = 6
@@ -704,6 +705,7 @@ thetac          = 0.0           ! [degrees]
 delta           = 25.0          ! [microns]
 xpc             = 0.0           ! [pixels]
 ypc             = 0.0           ! [pixels]
+omega           = 0.0
 energymin       = 15.0          ! minimum energy to consider
 energymax       = 30.0          ! maximum energy to consider
 gammavalue      = 1.0           ! gamma factor
@@ -768,6 +770,7 @@ enl%anglefile = anglefile
 enl%masterfile = masterfile
 enl%energyfile = energyfile
 enl%datafile = datafile
+enl%omega = omega
 
 end subroutine GetEBSDNameList
 

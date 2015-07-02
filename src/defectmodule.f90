@@ -246,7 +246,8 @@ do ii=1,defects%numdisl
   u = 2.0*real(matmul(defects%DL(ii)%dismat,cmplx(zr,zi)))
 ! transform displacement vector u to the Cartesian crystal reference frame
   u = quat_Lp( conjg(defects%DL(ii)%a_dc), dble(u) )  
-  sumR = sumR + u 
+  sumR = sumR + u
+
 end do
 
 !-------------------------------------
