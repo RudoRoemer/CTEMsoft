@@ -109,10 +109,8 @@ float2 cmplxexpTable(float a,__global float2* table, const int n)
         if( (2.0f*PI*i/n - ap)*(2.0f*PI*(i+1)/n - ap) <= 0.0f){
             return (float2)(table[i].x + (table[i+1].x - table[i].x)*(ap*n - i*2.0f*PI)/2.0f/PI,table[i].y + (table[i+1].y - table[i].y)*(ap*n - i*2.0f*PI)/2.0f/PI);
         }
-        else {
-            return (float2)(0.0f,0.0f);
-        }
     }
+    return (float2)(0.0f,0.0f);
 }
 
 //--------------------------------------------------------------------------
@@ -488,10 +486,9 @@ __kernel void CalcScatMatDefectsTable(	__global float2* cl_DynMat,
         for (int i = 0; i < nn; i++){
             for (int j = 0; j < nn; j++){
                 arg1 = cmplxexpTable(-2.0f*PI*cl_ScalFact[i*nn+j].x*gdotR.x,cl_table,numentries);
-                //printf("cos( %f ) = %f\n",-2.0f*PI*cl_ScalFact[i*nn+j].x*gdotR.x,arg1.x);
                 arg2 = cmplxexpTable(-2.0f*PI*cl_ScalFact[i*nn+j].y*gdotR.y,cl_table,numentries);
                 arg1 = cmplxmult(arg1,arg2);
-                DynMatScald = cl_DynMat[i*nn + j]/scaling;
+                DynMatScald = cl_DynMat[id*nn*nn + i*nn + j]/scaling;
                 cl_A[id*nn*nn + i*nn + j] = cmplxmult(DynMatScald,arg1);
                 
             }

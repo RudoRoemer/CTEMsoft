@@ -541,9 +541,9 @@ do ibatch=1,nbatches+1
 
 ! apply any camera binning
          if (enl%binning.ne.1) then 
-          do i=1,enl%numsx,enl%binning
-            do j=1,enl%numsy,enl%binning
-                binned(i/enl%binning+1,j/enl%binning+1) = sum(EBSDpattern(i:i+enl%binning-1,j:j+enl%binning-1))
+          do i=1,enl%numsx/enl%binning
+            do j=1,enl%numsy/enl%binning
+                binned(i,j) = sum(EBSDpattern((i-1)*enl%binning+1:i*enl%binning,(j-1)*enl%binning:j*enl%binning))
             end do
           end do  
 ! and divide by binning^2
