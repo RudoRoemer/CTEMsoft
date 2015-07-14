@@ -65,7 +65,7 @@ character(3)                            :: acol(n)
         
 real(kind=sgl)                          :: p(4),q(4),xmax,x(n),y(n),z(n),x1,y1,z1,asize(n),M(4,4),VD,diam, io_real(3)
 integer(kind=irg)                       :: idx(n),iview(3),iform, io_int(3), imanum
-character(fnlen)                        :: progname, progdesc
+character(fnlen)                        :: progname, progdesc, gname
 type(unitcell),pointer                  :: cell
 logical                                 :: loadingfile
 type(postscript_type)                   :: PS
@@ -99,8 +99,9 @@ end interface
  CY=7.0
 
 ! read crystal information
- loadingfile = .TRUE.
- call CrystalData(cell, loadingfile)
+ call ReadValue(' Enter xtal file name : ', gname,"(A)")
+ cell%fname = gname
+ call CrystalData(cell)
 
 ! real space or reciprocal space
  sp = 'd'
