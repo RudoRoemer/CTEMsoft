@@ -449,11 +449,11 @@ __kernel void CalcScatMatDefectsTable(	__global float2* cl_DynMat,
                                  __global float2* cl_wavefncoeffintd,
                                  __global float2* cl_coeff,
                                  __global float2* cl_gdotR,
-                                 /*__global float2* cl_table,*/
+                                 __global float2* cl_table,
                                  const int nn,
                                  const int ns,
-                                 const int numdepth/*,
-                                 const int numentries*/)
+                                 const int numdepth,
+                                 const int numentries)
 
 
 {
@@ -475,7 +475,7 @@ __kernel void CalcScatMatDefectsTable(	__global float2* cl_DynMat,
         }
         
     }
-
+    
 	for (int nstep = 0; nstep < numdepth; nstep++){
         
         // calculating initial input matrix
@@ -485,18 +485,15 @@ __kernel void CalcScatMatDefectsTable(	__global float2* cl_DynMat,
         
         for (int i = 0; i < nn; i++){
             for (int j = 0; j < nn; j++){
-                arg1 = cmplxexp(-2.0f*PI*cl_ScalFact[i*nn+j].x*gdotR.x);
-                arg2 = cmplxexp(-2.0f*PI*cl_ScalFact[i*nn+j].y*gdotR.y);
-                //arg1 = cmplxexpTable(-2.0f*PI*cl_ScalFact[i*nn+j].x*gdotR.x,cl_table,numentries);
-                //printf("cos( %f ) = %f\n",-2.0f*PI*cl_ScalFact[i*nn+j].x*gdotR.x,arg1.x);
-                //arg2 = cmplxexpTable(-2.0f*PI*cl_ScalFact[i*nn+j].y*gdotR.y,cl_table,numentries);
+                arg1 = cmplxexpTable(-2.0f*PI*cl_ScalFact[i*nn+j].x*gdotR.x,cl_table,numentries);
+                arg2 = cmplxexpTable(-2.0f*PI*cl_ScalFact[i*nn+j].y*gdotR.y,cl_table,numentries);
                 arg1 = cmplxmult(arg1,arg2);
                 DynMatScald = cl_DynMat[id*nn*nn + i*nn + j]/scaling;
                 cl_A[id*nn*nn + i*nn + j] = cmplxmult(DynMatScald,arg1);
                 
             }
         }
-        
+        //barrier(CLK_GLOBAL_MEM_FENCE);
         
 		float2 sum = (float2)(0.0f,0.0f);
         
@@ -629,7 +626,7 @@ __kernel void CalcScatMatDefectsTable(	__global float2* cl_DynMat,
         // just take the square modulus to get the intensity
         
 	}
-    barrier(CLK_GLOBAL_MEM_FENCE);
+    
 }
                                            
 

@@ -1,1 +1,0 @@
-perl -e "s/mLambda/cell%mLambda/g;" -pi ../src_programs/*.f90

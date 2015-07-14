@@ -63,6 +63,25 @@ then the potential is simplified to:
 \subsection{Example: fcc}
 For fcc, the first star $\{111\}$ has eight members, with potential coefficient $V_{1,i} = V_{111}$, and the spherical angles of the $\mathbf{g}_{\{111\}}$ vectors are 
 given by:
+\[ 
+	\phi \in \{ \frac{\pi}{4}, \frac{3\pi}{4}, \frac{5\pi}{4}, \frac{7\pi}{4} \}
+\]
+and for each entry there are two possible values of $\theta$, measured from the $z$-axis:
+\[
+	\theta \in \{ \arccos\frac{1}{\sqrt{3}}, \arccos\frac{-1}{\sqrt{3}}  \}.
+\] 
+In this case, the sum over the spherical harmonics is only non-zero for a few $lm$ combinations; we should be able to use the crystal symmetry here to determine
+ahead of time which ones we need to consider.  For the $\{111\}$ planes, the following are a few of the non-zero results:
+\begin{align*}
+	V_{1;0,0} &= V_{111}\frac{4}{\sqrt{\pi}};\\
+	V_{1;4,-4} &= -\frac{1}{3}V_{111}\sqrt{\frac{70}{\pi}};\\
+	V_{1;4,0} &= -\frac{14}{3\sqrt{\pi}}V_{111};\\
+	V_{1;4,4} &= -\frac{1}{3}V_{111}\sqrt{\frac{70}{\pi}};\\
+	V_{1;6,-4} &= -\frac{4}{9}V_{111}\sqrt{\frac{182}{\pi}};\\
+	V_{1;6,0} &= -\frac{8}{9}V_{111}\sqrt{\frac{13}{\pi}};\\
+	V_{1;6,4} &= -\frac{4}{9}V_{111}\sqrt{\frac{182}{\pi}};\\
+	\ldots &
+\end{align*}
 
 
 

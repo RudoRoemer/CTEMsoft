@@ -730,6 +730,9 @@ end subroutine EBSDreadMasterfile_overlap
 !> @param enl EBSD name list structure
 !
 !> @date 06/24/14  MDG 1.0 original
+!> @date 07/01/15   SS  1.1 added omega as the second tilt angle
+!> @date 07/07/15   SS  1.2 correction to the omega tilt parameter; old version in the comments
+
 !--------------------------------------------------------------------------
 subroutine EBSDGenerateDetector(enl, acc, master, verbose)
 
@@ -748,7 +751,7 @@ logical,INTENT(IN),OPTIONAL             :: verbose
 
 real(kind=sgl),allocatable              :: scin_x(:), scin_y(:)                 ! scintillator coordinate ararays [microns]
 real(kind=sgl),parameter                :: dtor = 0.0174533  ! convert from degrees to radians
-real(kind=sgl)                          :: alp, ca, sa
+real(kind=sgl)                          :: alp, ca, sa, cw, sw
 real(kind=sgl)                          :: L2, Ls, Lc     ! distances
 real(kind=sgl),allocatable              :: z(:,:)           
 integer(kind=irg)                       :: nix, niy, binx, biny , i, j, Emin, Emax, istat, k      ! various parameters
@@ -771,6 +774,9 @@ alp = 0.5 * cPi - (enl%MCsig - enl%thetac) * dtor
 ca = cos(alp)
 sa = sin(alp)
 
+cw = cos(enl%omega * dtor)
+sw = sin(enl%omega * dtor)
+
 ! we will need to incorporate a series of possible distortions 
 ! here as well, as described in Gert nolze's paper; for now we 
 ! just leave this place holder comment instead
@@ -779,15 +785,15 @@ sa = sin(alp)
 ! if (istat.ne.0) then ...
 
 L2 = enl%L * enl%L
-do j=1,enl%numsy
-  sx = L2 + scin_y(j) * scin_y(j)
-  Ls = ca * scin_y(j) + enl%L*sa
-  Lc = -sa * scin_y(j) + enl%L*ca
-  do i=1,enl%numsx
-   rhos = 1.0/sqrt(sx + scin_x(i)**2)
-   master%rgx(i,j) = Ls * rhos
-   master%rgy(i,j) = scin_x(i) * rhos
-   master%rgz(i,j) = Lc * rhos
+do j=1,enl%numsx
+  sx = L2 + scin_x(j) * scin_x(j)
+  Ls = -sw * scin_x(j) + enl%L*cw
+  Lc = cw * scin_x(j) + enl%L*sw
+  do i=1,enl%numsy
+   rhos = 1.0/sqrt(sx + scin_y(i)**2)
+   master%rgx(j,i) = (scin_y(i) * ca + sa * Ls) * rhos!Ls * rhos
+   master%rgy(j,i) = Lc * rhos!(scin_x(i) * cw + Lc * sw) * rhos
+   master%rgz(j,i) = (-sa * scin_y(i) + ca * Ls) * rhos!(-sw * scin_x(i) + Lc * cw) * rhos
   end do
 end do
 deallocate(scin_x, scin_y)
@@ -1022,7 +1028,6 @@ master%sr = 0.5D0 * (master_rotated + master%sr)
 call Message(' -> completed superimposing rotated and regular master patterns', frm = "(A)")
 
 end subroutine OverlapMasterPattern
-
 
 end module EBSDmod
 

@@ -25,5 +25,7 @@ dictfile = 'undefined'
 eulerfile = 'undefined'
 ! Mean Subtraction switch
 MeanSubtraction = .TRUE. 
+! flip patterns vertically to account for different origins
+patternflip = .TRUE.
 
 /

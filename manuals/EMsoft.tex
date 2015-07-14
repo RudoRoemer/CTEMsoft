@@ -51,7 +51,7 @@
 \rhead{}
 
 % Footers
-\lfoot{\textsf{EMsoft--2015} manual, Pre-Release 3.0, \today}
+\lfoot{\textsf{EMsoft--2015} manual, Release 3.0, \today}
 \cfoot{}
 \rfoot{\footnotesize Page \thepage\ of \pageref{LastPage}} % "Page 1 of 2"
 
@@ -94,11 +94,10 @@
 \newpage
 \section{Introduction}
 This manual describes those aspects of the \ctp\ package that are common to almost all of the programs; it also describes the functionality of 
-the library source code files.  The 2013 version of the source code was based on the original CTEMsoft code from the late 90s and the years 
+the library source code files.  The 2013 version of the source code is based on the original CTEMsoft code from the late 90s and the years 
 leading up to the publication of the CTEM textbook (2003, Cambridge University Press).  While some of the code was described in the 
 book, not everything was subsequently released in the public domain.  In fact, only the code corresponding to Chapters 1 through 7 was 
-released; the remainder exists, but due to time limitations it was never released.  Version 2.0 was released on github in the Summer of 
-2014, and represents a more complete implementation, but mostly on single (serial) CPU. The present version (Release 3.0) aims to correct this issue and also
+released; the remainder exists, but due to time limitations it was never released.  The present version (Release 3.0) aims to correct this issue and also
 provides a significantly upgraded and updated code base.  The name of the package has also been changed from CTEMsoft to \ctp, to reflect the 
 fact that both SEM and TEM codes are part of the library.
 
@@ -106,69 +105,61 @@ At the time of writing of this manual, these programs have been successfully com
 There is no basic reason why this code should not work on Windows and Linux systems, and efforts are underway
 to make sure that the code will run on all platforms. It would be interesting to see some of this code
 implemented in a super computer setting, since many of the routines should be quite parallellizable.  Where possible, some of the computations
-are carried out using the OpenMP directives, so that multiple cores can be used.  Several programs have been ported to the GPU platform.
+are carried out using the OpenMP directives, so that multiple cores can be used.  This aspect of the code is still under further development,
+and we anticipate that GPUs will become useful as well, using the OpenCL approach.
 
 The \ctp\ package is entirely written in f90 and, since March 2015, also includes commands from the fortran-2003 implementation, in 
-particular ISO\_C\_BINDINGS for the HDF module.  A relatively complete f03 module for efficient HDF calls has been created, and all
-the input and output files, with the exception of the namelist files, are now in HDF5 format.
+particular ISO\_C\_BINDINGS for the HDF modules.
 
 The source code is extensively commented, using regular comment lines, but also using DOxygen documentation generation commands.  Hence
 there exists an extensive on-line documentation of all variables, variable types, modules, subroutines, functions, etc. for the latest version 
 of the code.  For selected programs, more extensive manual pages are available.  If interested, please contact the author for further information.
 
-%\newpage
-%\section{The EMsoft library and third party libraries\label{sec:library}}
-%The core of the \ctp\ package is the static library \textsf{EMsoftlib.a}.  This library contains all the code segments and variable/type definitions
-%that are used by the programs.  The library must be compiled first, before any program can be compiled.  The source code is organized 
-%in a series of modules, starting with \textsf{src/local.f90} which is/should be the only routine that might need some editing before the library is 
-%compiled.  
-%
-%\ctp\ also makes use of a number of third party libraries and source files, all of them in the public domain.  The most important ones are 
-%the LAPACK and associated BLAS libraries, as well as the HDF5 library.  With the help of Mike Jackson and Megna Shah (BlueQuartz.net), the 
-%compilation files from version 1.0 have been reworked from old-fashioned
-%makefiles to use the more flexible CMake environment; to compile the \ctp\ you must have the following installed on your system:
-%
-%
+\newpage
+\section{The EMsoft library and third party libraries\label{sec:library}}
+The core of the \ctp\ package is the static library \textsf{EMsoftlib.a}.  This library contains all the code segments and variable/type definitions
+that are used by the programs.  The library must be compiled first, before any program can be compiled.  The source code is organized 
+in a series of modules, starting with \textsf{src/local.f90} which is/should be the only routine that might need some editing before the library is 
+compiled.  
+
+\ctp\ also makes use of a number of third party libraries and source files, all of them in the public domain.  The most important ones are 
+the LAPACK and associated BLAS libraries, as well as the HDF5 library.  With the help of Mike Jackson and Megna Shah (BlueQuartz.net), the 
+compilation files from version 1.0 have been reworked from old-fashioned
+makefiles to use the more flexible CMake environment; to compile the \ctp\ you must have the following installed on your system:
+
+
 
 
 \newpage
 \section{Things to do before running any of the programs\label{sec:todo}}
-The programs require that two environment variables be set: \textsf{EMsoftpathname},
-\textsf{EMdatapathname}.  Depending on the UNIX shell that one is using, they must be set in
+The programs require that three environment variables be set: \textsf{EMsofttemplates},
+\textsf{EMsoftresources} and \textsf{EMsoftopencl}.  Depending on the UNIX shell that one is using, they must be set in
 the appropriate shell start-up files.
 
 \begin{itemize}
-\item \textit{csh}: edit the \textsf{.cshrc} file in your home folder and add the following lines (do not forget the backslash at the end):
+\item \textit{csh}: edit the \textsf{.cshrc} file in your home folder and add the following lines:
 \begin{verbatim}
-  setenv EMsoftpathname /some/absolute/path/EMsoft/
-  setenv EMdatapathname /some/absolute/path/EMdata/
+  setenv EMsofttemplates /some/absolute/path/EMsoft/templatefolder
+  setenv EMsoftresources /some/absolute/path/EMsoft/resources
+  setenv EMsoftopencl /som/absolute/path/EMsoft/opencl
 \end{verbatim}
 \item \textit{bash}: edit the \textsf{.bash\_profile} file in your home folder and add the following lines:
 \begin{verbatim}
-  EMsoftpathname=/some/absolute/path/EMsoft/
-  EMdatapathname=/some/absolute/path/EMdata/
-  export EMsoftpathname EMdatapathname
+  EMsofttemplates=/some/absolute/path/EMsoft/templatefolder
+  EMsoftresources=/some/absolute/path/EMsoft/resources
+  EMsoftopencl=/some/absolute/path/EMsoft/opencl
+  export EMsofttemplates EMsoftresources EMsoftopencl
 \end{verbatim}
 \end{itemize}
 Make sure that you replace the string \textsf{/some/absolute/path} by the correct path for your system.
 For other shells, please use the appropriate approach to defining shell variables.
 
-Regardless of the shell you are using, you will want to add the EMsoftpathname/bin folder to your PATH environmental variable.
-
-
-Inside the EMdatapathname folder, you must create a folder with the name ``XtalFolder''; this is where the 
-crystal structure files will be kept.
-
-All the package programs assume that file names are relative to the EMdatapathname path; so you can really put
-your data files wherever you want them, in whatever folder structure makes most sense for you.
-
-
-%{\color{blue}How is this done on the PC platform?}
+{\color{blue}How is this done on the PC platform?}
 
 \newpage
 \section{The general structure of EMsoft programs\label{sec:structure}}
 Each \ctp\ program has the same high level source code structure, and is called in the same way.  If \textsf{EMprogram} represents 
-a program name (for instance \textsf{EMECP} or \textsf{EMlacbed}, then the following command line options can be used:
+a program name (for instance \textsf{EMECP} or \textsf{EMlacbed}, then the following command line options can be used (all of them optional):
 \begin{verbatim}
 	EMprogram [-h] [-t] [file.nml]
 \end{verbatim}
@@ -180,20 +171,20 @@ The arguments  between square brackets are optional, and are defined as follows:
 	name-value entry in the template file (see section~\ref{sec:f90input} for more details), a comment line is inserted with a brief explanation 
 	of the variable and its units, if appropriate.  The user can then copy the template file to a new file with the namelist (.nml) extension and edit the 
 	file with a regular text editor.  The program will quit after generating the template files.  Each template file contains the default values for each parameter.
-	If this option produces an error, then this is likely due to an incorrect setting of the environment variables in the previous section.
+	If this option produces an error, then this is likely due to an incorrect setting of the shell variables in the previous section.
 	\item \textsf{file.nml}: the main namelist file to be used by the program.  If no name is present, then the default filename CTEMprogram.nml will be used.  If the 
 	provided namelist file does not exist, the program will report an error and abort.
 \end{itemize}
 
-%The programs in the top half of the table on the last page of this manual function in the way described above; all other programs
-%have a simple command line interface, with user prompts for all relevant variables.  Eventually, in the next Release, all programs
-%will make use of namelist files and will likely be callable from a single user interface.
+The programs in the top half of the table on the last page of this manual function in the way described above; all other programs
+have a simple command line interface, with user prompts for all relevant variables.  Eventually, in the next Release, all programs
+will make use of namelist files and will likely be callable from a single user interface.
 
 
 \newpage
 \section{Namelist input files\label{sec:f90input}}
 All user input for the \ctp\ programs is performed via namelist files; this is a special f90 IO format that allows one to list 
-\textit{name-value} pairs in an ordinary text file, and then this file will be parsed automatically by the 
+\textit{name-value} pairs in an ordinary text file, and then this file will be read and interpreted by the 
 program.  The basic format of a namelist file is as follows:
 \begin{verbatim}
 &nmlname
@@ -254,8 +245,9 @@ in your editor before you start editing namelist files.
 With very few exceptions, all programs in the \ctp\ suite of programs require a crystallographic input file that defines the 
 crystal system, crystal lattice parameters, space group number, and all unique positions in the 
 asymmetric unit along with site occupations and Debye-Waller parameters.  To keep things simple and 
-portable across platforms, structure description files (*.xtal) are small HDF5 files that contain the minimum
-amount of information needed to unambiguously define the complete unit cell.  
+portable across platforms, structure description files (*.xtal) are small binary files that contain the minimum
+amount of information needed to unambiguously define the complete unit cell.  In a later version of the package, this
+will be replaced by a more standard file format, perhaps one that can be created by the CrystalMaker program.
 
 To create a crystal structure description file, one uses the \textsf{EMmkxtal} program, which will prompt
 the user for the crystal system number, the lattice parameters (in nm and degrees), the space group number,
@@ -264,9 +256,9 @@ coordinates (which can be entered as real numbers or as fraction, e.g., $0.5$ or
 occupation parameter (a real number between $0$ and $1$), and the isotropic Debye-Waller factor in nm$^{2}$.
 
 Once all atoms in the asymmetric unit have been entered, the program will ask for a structure file name; we
-recommend that all such files have the extension \textsf{.xtal}, to make them easily recognizable.  There is no
-need to add a path to this filename, since the program will automatically store these files in the EMdatapathname/XtalFolder
-location.
+recommend that all such files have the extension \textsf{.xtal}, to make them easily recognizable.  You can also
+create a folder that holds all the structure files, and then use an absolute or relative path name to store 
+the file in that folder.
 
 %
 %With very few exceptions, all programs in the \ctp\ suite of programs require a crystallographic input file that defines the 
@@ -305,17 +297,15 @@ location.
 %will be taken, otherwise the rhombohedral unit cell will be assumed.
 %
 
-\newpage
 \section{List of programs}
-The list below shows all the available programs in the current Pre-Release (3.0) of the \ctp\ suite, along with whether or not there is a 
-separate manual for each program.  
-%Programs for which no manual is available are generally relatively easy to figure out.
-%In the current release, many programs still have a command-line interaction with the user; this will be modified
-%in the next release so that all programs will eventually make use of namelist files.  The top half of the table
-%lists those programs for which an extensive manual is available, as well as IDL visualization routines. The \textsf{EMmkxtal}
-%program is explained in the present document.  The other programs do not yet have manual pages, but are generally 
-%simple to figure out.  Many of the programs in the bottom half of the table are simple illustrations of how 
-%to perform certain computations.
+The list below shows all the available programs in the current Release (2.0) of the \ctp\ suite, along with whether or not there is a 
+separate manual for each program.  Programs for which no manual is available are generally relatively easy to figure out.
+In the current release, many programs still have a command-line interaction with the user; this will be modified
+in the next release so that all programs will eventually make use of namelist files.  The top half of the table
+lists those programs for which an extensive manual is available, as well as IDL visualization routines. The \textsf{EMmkxtal}
+program is explained in the present document.  The other programs do not yet have manual pages, but are generally 
+simple to figure out.  Many of the programs in the bottom half of the table are simple illustrations of how 
+to perform certain computations.
 
 %All it takes is to run the program with the \textit{-t} option, to create a template namelist file in the current folder;
 %you can then edit this file to set the appropriate parameters, and 
@@ -326,38 +316,35 @@ separate manual for each program.
 \hline
 Program & Short description & Manual? \\
 \hline\hline
-%  \textsf{EMlacbed} & large angle CBED pattern computation (TEM)& $\checkmark$ \\
-%  \textsf{EMmbcbed} & regular CBED pattern (TEM)& $\checkmark$\\
-%  \textsf{EMSRdefect} & (S)TEM systematic row defect images (TEM) & $\checkmark$\\
-%  \textsf{EMZAdefect} & (S)TEM zone axis defect images (TEM) & $\checkmark$\\
-%  \textsf{EMECP} & electron channeling pattern (SEM) & $\checkmark$\\
-%  \textsf{EMECCI} & ECCI defect images (SEM) & $\checkmark$\\
-%  \textsf{EMKossel} & electron Kossel patterns (SEM) & $\checkmark$\\
-  \textsf{EMMCOpenCL} & Monte Carlo trajectory simulations (SEM) & $\checkmark$\\
+  \textsf{EMlacbed} & large angle CBED pattern computation (TEM)& $\checkmark$ \\
+  \textsf{EMmbcbed} & regular CBED pattern (TEM)& $\checkmark$\\
+  \textsf{EMSRdefect} & (S)TEM systematic row defect images (TEM) & $\checkmark$\\
+  \textsf{EMZAdefect} & (S)TEM zone axis defect images (TEM) & $\checkmark$\\
+  \textsf{EMECP} & electron channeling pattern (SEM) & $\checkmark$\\
+  \textsf{EMECCI} & ECCI defect images (SEM) & $\checkmark$\\
+  \textsf{EMKossel} & electron Kossel patterns (SEM) & $\checkmark$\\
+  \textsf{EMMC} & Monte Carlo trajectory simulations (SEM) & $\checkmark$\\
   \textsf{EMEBSDmaster} & EBSD master pattern simulation (SEM) & $\checkmark$\\
   \textsf{EMEBSD} & EBSD pattern simulation (SEM) & $\checkmark$\\
 \hline
   \textsf{EMmkxtal} & make a crystal structure input file& $\checkmark$\\
-%  \textsf{EMlistSG} & list the equivalent positions of any space group & \\
-%  \textsf{EMqg} & list Fourier coefficient information & \\
-%  \textsf{EMfamily} & draw a family of planes (stereographic) & \\
-%  \textsf{EMstar} & list the star of any reciprocal lattice point & \\
-%  \textsf{EMorbit} & list the orbit of a point & \\
-%  \textsf{EMZAgeom} & print zone axis geometry and symmetry information & \\
-%  \textsf{EMlatgeom} & perform some simple lattice geometry calculations & \\
-%  \textsf{EMstereo} & basic stereographic prpjection tool & \\
-%  \textsf{EMorient} & stereographic projection for orientation relation & \\
-%  \textsf{EMxtalinfo} & makes postscript file with lots of information & \\
-%  \textsf{EMzap} & create postscript file with zone axis patterns & \\
-%  \textsf{EMdrawcell} & draw a unit cell (very primitive) & \\
+  \textsf{EMlistSG} & list the equivalent positions of any space group & \\
+  \textsf{EMqg} & list Fourier coefficient information & \\
+  \textsf{EMfamily} & draw a family of planes (stereographic) & \\
+  \textsf{EMstar} & list the star of any reciprocal lattice point & \\
+  \textsf{EMorbit} & list the orbit of a point & \\
+  \textsf{EMZAgeom} & print zone axis geometry and symmetry information & \\
+  \textsf{EMlatgeom} & perform some simple lattice geometry calculations & \\
+  \textsf{EMstereo} & basic stereographic prpjection tool & \\
+  \textsf{EMorient} & stereographic projection for orientation relation & \\
+  \textsf{EMxtalinfo} & makes postscript file with lots of information & \\
+  \textsf{EMzap} & create postscript file with zone axis patterns & \\
+  \textsf{EMdrawcell} & draw a unit cell (very primitive) & \\
 \hline
 \end{tabular}
 \end{table*}
 
-The current Pre-Release 3.0 only contains programs for EBSD pattern simulations.  They can be found in the 
-EMsoftpathname/bin folder.  Note that the EMMCOpenCL program makes use of a GPU to accelerate the 
-Monte Carlo simulation.  The corresponding OpenCL source code can be found in the EMsoftpathname/opencl
-folder and must not be moved elsewhere.  
+
 
 
 
