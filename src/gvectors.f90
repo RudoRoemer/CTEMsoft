@@ -1108,7 +1108,6 @@ use local
 use io
 use crystal
 use constants
-use MBmodule
 use diffraction
 use symmetry
 use typedefs
