@@ -187,7 +187,7 @@ __kernel void CTEMDefect(__global float2* cl_expA,
 
     // calculating A^2 and A^3
 
-}
+}*/
 
 //--------------------------------------------------------------------------
 // EMsoft:SEMDefect.cl
@@ -197,23 +197,150 @@ __kernel void CTEMDefect(__global float2* cl_expA,
 //
 //> @author Saransh Singh, Carnegie Mellon University
 //
-//> @brief OpenCL kernel for defect simulation in the SEM geometry i.e. depth
-//  integrated intensities (ECCI simulations). The algorithm closely follows the one 
-//  outlined in the paper "Systematic row and zone axis STEM defect image simulations"
-//  P.J. Philips, M.j. Mills, M. De Graef Phil. Mag., 2011. 
+//> @brief OpenCL kernel for defect simulation where the list of precomputed
+//  scattering matrices is used along with bilinear interpolation to calculate
+//  the intensity
+
 //> @date 06/08/15  SS  1.0 Original
 //--------------------------------------------------------------------------
 
-__kernel void SEMDefect(	__global float2* cl_A)
+__kernel void PreCalcScatMat(   __global float2* cl_A,
+                                __global float2* cl_expA,
+                                __global float2* cl_AA,
+                                __global float2* cl_AAA,
+                                __global float2* cl_T1,
+                                __global float2* cl_T2,
+                                __global float2* cl_coeff,
+                                const int nn,
+                                const int ns )
 
 {
-    	int tx,ty,id;
-   	tx = get_global_id(0);
-   	ty = get_global_id(1);
-   	id = get_global_size(0)*ty + tx;
+    int tx, ty, id;
+	tx = get_global_id(0);
+	ty = get_global_id(1);
+	id = get_global_size(0)*ty + tx;
+    float scaling;
+    scaling = pow(2.0f,ns);
+    
+    // calculating initial input matrix
+    
+    float2 sum = (float2)(0.0f,0.0f);
+    
+    // calculating A^2 and A^3
+    
+    for (int i = 0; i < nn; i++){
+        for (int j = 0; j < nn; j++){
+            for (int k = 0; k < nn; k++){
+                sum += cmplxmult(cl_A[id*nn*nn + i*nn + k],cl_A[id*nn*nn + k*nn + j]);
+            }
+            cl_AA[id*nn*nn + i*nn + j] = sum;
+            sum = (float2)(0.0f,0.0f);
+        }
+    }
 
+    sum = (float2)(0.0f,0.0f);
+    for (int i = 0; i < nn; i++){
+        for (int j = 0; j < nn; j++){
+            for (int k = 0; k < nn; k++){
+                sum += cmplxmult(cl_AA[id*nn*nn + i*nn + k],cl_A[id*nn*nn + k*nn + j]);
+            }
+            cl_AAA[id*nn*nn + i*nn + j] = sum;
+            sum = (float2)(0.0f,0.0f);
+        }
+    }
+    
+    // Calculating the three factors for the exponential
+    
+    for (int i = 0; i < nn; i++){
+        for (int j = 0; j < nn; j++){
+            if ( i == j){
+                cl_expA[id*nn*nn + i*nn + j] = cl_AAA[id*nn*nn + i*nn + j] - cmplxmult(cl_coeff[0],cl_AA[id*nn*nn + i*nn + j]) + cmplxmult(cl_coeff[1],cl_A[id*nn*nn + i*nn + j]) - cl_coeff[2];
+                
+                cl_T1[id*nn*nn + i*nn + j] = cl_AAA[id*nn*nn + i*nn + j] - cmplxmult(cl_coeff[3],cl_AA[id*nn*nn + i*nn + j]) + cmplxmult(cl_coeff[4],cl_A[id*nn*nn + i*nn + j]) - cl_coeff[5];
+                
+            }
+            else {
+                
+                cl_expA[id*nn*nn + i*nn + j] = cl_AAA[id*nn*nn + i*nn + j] - cmplxmult(cl_coeff[0],cl_AA[id*nn*nn + i*nn + j]) + cmplxmult(cl_coeff[1],cl_A[id*nn*nn + i*nn + j]);
+                
+                cl_T1[id*nn*nn + i*nn + j] = cl_AAA[id*nn*nn + i*nn + j] - cmplxmult(cl_coeff[3],cl_AA[id*nn*nn + i*nn + j]) + cmplxmult(cl_coeff[4],cl_A[id*nn*nn + i*nn + j]);
+                
+                
+            }
+        }
+    }
+    
+    
+    sum = (float2)(0.0f,0.0f);
+    for (int i = 0; i < nn; i++){
+        for (int j = 0; j < nn; j++){
+            for (int k = 0; k < nn; k++){
+                sum += cmplxmult(cl_T1[id*nn*nn + i*nn + k],cl_expA[id*nn*nn + k*nn + j]);
+            }
+            cl_T2[id*nn*nn + i*nn + j] = sum;
+            sum = (float2)(0.0f,0.0f);
+        }
+    }
+    
+    for (int i = 0; i < nn; i++){
+        for (int j = 0; j < nn; j++){
+            if ( i == j){
+                
+                cl_T1[id*nn*nn + i*nn + j] = cl_AAA[id*nn*nn + i*nn + j] - cmplxmult(cl_coeff[6],cl_AA[id*nn*nn + i*nn + j]) + cmplxmult(cl_coeff[7],cl_A[id*nn*nn + i*nn + j]) - cl_coeff[8];
+                
+            }
+            else {
+                
+                cl_T1[id*nn*nn + i*nn + j] = cl_AAA[id*nn*nn + i*nn + j] - cmplxmult(cl_coeff[6],cl_AA[id*nn*nn + i*nn + j]) + cmplxmult(cl_coeff[7],cl_A[id*nn*nn + i*nn + j]);
+                
+            }
+        }
+    }
+    
+    
+    sum = (float2)(0.0f,0.0f);
+    for (int i = 0; i < nn; i++){
+        for (int j = 0; j < nn; j++){
+            for (int k = 0; k < nn; k++){
+                sum += cmplxmult(cl_T2[id*nn*nn + i*nn + k],cl_T1[id*nn*nn + k*nn + j]);
+            }
+            sum /= 362880;
+            cl_expA[id*nn*nn + i*nn + j] = sum;
+            sum = (float2)(0.0f,0.0f);
+        }
+    }
+    
+    // squaring operation as matrix was scaled
+    
+    for (int l = 0; l < ns; l++){
+        sum = (float2)(0.0f,0.0f);
+        for (int i = 0; i < nn; i++){
+            for (int j = 0; j < nn; j++){
+                for (int k = 0; k < nn; k++){
+                    
+                    sum += cmplxmult(cl_expA[id*nn*nn + i*nn + k],cl_expA[id*nn*nn + k*nn + j]);
+                    
+                }
+                cl_T1[id*nn*nn + i*nn + j] = sum;
+                sum = (float2)(0.0f,0.0f);
+            }
+        }
+        
+        for (int i = 0; i < nn; i++){
+            for (int j = 0; j < nn; j++){
+                cl_expA[id*nn*nn + i*nn + j] = cl_T1[id*nn*nn + i*nn + j];
+            }
+        }
+    }
+    
+    // cl_expA now has the exponential of the structure matrix. We now multiply
+    // by the column vector [1 0 0 ...... 0] to the the fourier coefficients of
+    // wavefunction at different depths and subsequently the depth integrated
+    // intensity
+    
+    
 }
-*/
+
 
 //--------------------------------------------------------------------------
 // EMsoft:CalcScatMatDefects.cl

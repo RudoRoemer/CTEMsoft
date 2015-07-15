@@ -1029,5 +1029,79 @@ call Message(' -> completed superimposing rotated and regular master patterns', 
 
 end subroutine OverlapMasterPattern
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:GenerateBackground
+!
+!> @author Saransh Singh, Carnegie Mellon University
+!
+!> @brief Generate a binned and normalized background for the dictionary patterns using the monte carlo simulation
+!
+!> @param enl EBSD name list structure
+!> @param master  EBSDMasterType pointer
+!> @param q unit quaternion providing the necessary rotation
+!
+!> @date 04/20/15 MDG 1.0 original, based on Saransh's twin routine above
+!--------------------------------------------------------------------------
+subroutine GenerateBackground(enl,acc,EBSDBackground)
+
+use local 
+use typedefs
+
+type(EBSDNameListType),INTENT(IN)       :: enl
+type(EBSDLargeAccumType),pointer        :: acc
+real(kind=sgl),INTENT(OUT)              :: EBSDBackground(enl%numsx/enl%binning,enl%numsy/enl%binning)
+
+integer(kind=irg)                       :: ii, jj, kk, istat
+real(kind=sgl),allocatable              :: EBSDtmp(:,:)
+integer(kind=irg)                       :: Emin, Emax, bindx
+
+
+allocate(EBSDtmp(enl%numsx,enl%numsy),stat=istat)
+EBSDtmp = 0.0
+
+! get the indices of the minimum and maximum energy
+Emin = nint((enl%energymin - enl%Ehistmin)/enl%Ebinsize) +1
+if (Emin.lt.1)  Emin=1
+if (Emin.gt.enl%numEbins)  Emin=enl%numEbins
+
+Emax = nint((enl%energymax - enl%Ehistmin)/enl%Ebinsize) +1
+if (Emax.lt.1)  Emax=1
+if (Emax.gt.enl%numEbins)  Emax=enl%numEbins
+
+bindx = 1.0/float(enl%binning)**2
+
+do ii = 1,enl%numsx
+   do jj = 1,enl%numsy
+      do kk = Emin,Emax
+         EBSDtmp(ii,jj) = EBSDtmp(ii,jj) + acc%accum_e_detector(kk,ii,jj)
+      end do
+   end do
+end do
+
+if(enl%binning .ne. 1) then
+  do ii=1,enl%numsx/enl%binning
+      do jj=1,enl%numsy/enl%binning
+           EBSDBackground(ii,jj) = sum(EBSDtmp((ii-1)*enl%binning+1:ii*enl%binning,(jj-1)*enl%binning:jj*enl%binning))
+           if(isnan(EBSDBackground(ii,jj))) then
+               stop 'Background pattern encountered NaN during binning'
+           end if
+      end do
+  end do  
+! and divide by binning^2
+  EBSDBackground = EBSDBackground * bindx
+else
+   EBSDBackground = EBSDtmp
+end if
+
+! apply gamma scaling
+EBSDBackground = EBSDBackground**enl%gammavalue
+
+! normalize the pattern
+EBSDBackground = EBSDBackground/NORM2(EBSDBackground)
+
+end subroutine GenerateBackground
+
+
 end module EBSDmod
 
