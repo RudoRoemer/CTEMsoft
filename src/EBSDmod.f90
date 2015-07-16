@@ -1047,6 +1047,7 @@ subroutine GenerateBackground(enl,acc,EBSDBackground)
 
 use local 
 use typedefs
+use NameListTypedefs
 
 type(EBSDNameListType),INTENT(IN)       :: enl
 type(EBSDLargeAccumType),pointer        :: acc
@@ -1054,12 +1055,13 @@ real(kind=sgl),INTENT(OUT)              :: EBSDBackground(enl%numsx/enl%binning,
 
 integer(kind=irg)                       :: ii, jj, kk, istat
 real(kind=sgl),allocatable              :: EBSDtmp(:,:)
-integer(kind=irg)                       :: Emin, Emax, bindx
+integer(kind=irg)                       :: Emin, Emax
+real(kind=sgl)                          :: bindx
 
 
 allocate(EBSDtmp(enl%numsx,enl%numsy),stat=istat)
 EBSDtmp = 0.0
-
+EBSDBackground = 0.0
 ! get the indices of the minimum and maximum energy
 Emin = nint((enl%energymin - enl%Ehistmin)/enl%Ebinsize) +1
 if (Emin.lt.1)  Emin=1
@@ -1074,7 +1076,7 @@ bindx = 1.0/float(enl%binning)**2
 do ii = 1,enl%numsx
    do jj = 1,enl%numsy
       do kk = Emin,Emax
-         EBSDtmp(ii,jj) = EBSDtmp(ii,jj) + acc%accum_e_detector(kk,ii,jj)
+         EBSDtmp(ii,jj) = EBSDtmp(ii,jj) + acc%accum_e_detector(kk,ii,jj) 
       end do
    end do
 end do
