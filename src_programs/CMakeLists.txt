@@ -3,7 +3,7 @@ project(Apps)
 
 macro (Create_exe_and_tll INPUT)
 	ADD_EXECUTABLE(${INPUT} ${Apps_SOURCE_DIR}/${INPUT}.f90)
- 	TARGET_LINK_LIBRARIES(${INPUT} EMSoftLib gomp gcc_eh)
+ 	TARGET_LINK_LIBRARIES(${INPUT} EMSoftLib gomp gcc_eh jsonfortran)
 	
 	
 	set(install_dir "bin")
@@ -64,6 +64,7 @@ Create_exe_and_tll(EMPEDKIN)
 
 Create_exe_and_tll(rotationtest)
 Create_exe_and_tll(hdftest)
+Create_exe_and_tll(jsontest)
 
 
 
