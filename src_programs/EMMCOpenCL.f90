@@ -146,7 +146,7 @@ logical                 :: f_exists
 
 ! OpenCL variables
 type(cl_platform_id)    :: platform
-type(cl_device_id)      :: device
+type(cl_device_id)      :: device(2)
 type(cl_context)        :: context
 type(cl_command_queue)  :: command_queue
 type(cl_program)        :: prog
@@ -238,13 +238,13 @@ call clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, device, num, ierr)
 if(ierr /= CL_SUCCESS) stop "Cannot get CL device."
 
 ! get the device name and print it
-call clGetDeviceInfo(device, CL_DEVICE_NAME, info, ierr)
+call clGetDeviceInfo(device(2), CL_DEVICE_NAME, info, ierr)
 write(6,*) "CL device: ", info
 
 ! create the context and the command queue
-context = clCreateContext(platform, device, ierr)
+context = clCreateContext(platform, device(2), ierr)
 if(ierr /= CL_SUCCESS) stop "Cannot create context"
-command_queue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, ierr)
+command_queue = clCreateCommandQueue(context, device(2), CL_QUEUE_PROFILING_ENABLE, ierr)
 if(ierr /= CL_SUCCESS) stop "Cannot create command queue"
 
 
@@ -275,7 +275,7 @@ if(ierr /= CL_SUCCESS) stop 'Error: cannot create program from source.'
 call clBuildProgram(prog, '-cl-no-signed-zeros', ierr)
 
 ! get the compilation log
-call clGetProgramBuildInfo(prog, device, CL_PROGRAM_BUILD_LOG, source, irec)
+call clGetProgramBuildInfo(prog, device(2), CL_PROGRAM_BUILD_LOG, source, irec)
 if(len(trim(source)) > 0) print*, trim(source)
 
 if(ierr /= CL_SUCCESS) stop 'Error: program build failed.'

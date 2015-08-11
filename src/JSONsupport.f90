@@ -132,6 +132,46 @@ end subroutine JSON_writeNMLreals
 
 !--------------------------------------------------------------------------
 !
+! SUBROUTINE:JSON_writeNMLdoubles
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief write a series of double namelist entries to a json structure
+!
+!> @param inp pointer to json_value 
+!> @param io_real list ofadoubles 
+!> @param reallist list of string descriptors
+!> @param n_real number of entries
+!> @param error_cnt error counter
+!
+!> @date 08/11/15  MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine JSON_writeNMLdoubles(inp, io_real, reallist, n_real, error_cnt)
+
+IMPLICIT NONE
+
+type(json_value),INTENT(INOUT),pointer                :: inp
+real(kind=dbl),INTENT(IN)                             :: io_real(n_real)
+character(20),INTENT(IN)                              :: reallist(n_real)
+integer(kind=irg),INTENT(IN)                          :: n_real
+
+integer(kind=irg)                                     :: hdferr, i
+character(fnlen)                                      :: dataset
+integer(kind=irg),INTENT(INOUT)                       :: error_cnt
+
+do i=1,n_real
+  dataset = reallist(i)
+  call json_add(inp, dataset, io_real(i))
+  if (json_failed()) then
+    call json_print_error_message(error_unit)
+    error_cnt = error_cnt + 1
+  end if
+end do
+
+end subroutine JSON_writeNMLdoubles
+
+!--------------------------------------------------------------------------
+!
 ! SUBROUTINE:JSON_initpointers
 !
 !> @author Marc De Graef, Carnegie Mellon University
@@ -408,8 +448,284 @@ if (json_failed()) then
   error_cnt = error_cnt + 1
 end if
 
+! and then we write the file and clean up
+call JSON_cleanuppointers(p, inp, jsonname, error_cnt)
+
 end subroutine JSONwriteKosselMasterNameList
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:JSONwriteMCNameList
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief write namelist file into JSON file
+!
+!> @param mcnl Monte Carlo name list structure
+!> @param jsonname output file name
+!> @param error_cnt total number of errors encountered by json routines
+!
+!> @date 08/11/15  MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine JSONwriteMCNameList(mcnl, jsonname, error_cnt)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+type(MCNameListType),INTENT(INOUT)                    :: mcnl
+character(fnlen),INTENT(IN)                           :: jsonname
+integer(kind=irg),INTENT(INOUT)                       :: error_cnt
+
+type(json_value),pointer                              :: p, inp
+
+integer(kind=irg),parameter                           :: n_int = 5, n_real = 7
+integer(kind=irg)                                     :: io_int(n_int)
+real(kind=dbl)                                        :: io_real(n_real)
+character(20)                                         :: intlist(n_int), reallist(n_real)
+character(fnlen)                                      :: dataset, sval(1), namelistname
+character(fnlen,kind=c_char)                          :: line2(1)
+
+! initialize the json state variables
+namelistname = 'MCdata'
+call JSON_initpointers(p, inp, jsonname, namelistname, error_cnt)
+
+! write all the single integers
+io_int = (/ mcnl%stdout, mcnl%numsx, mcnl%primeseed, mcnl%num_el, mcnl%nthreads /)
+intlist(1) = 'stdout'
+intlist(2) = 'numsx'
+intlist(3) = 'primeseed'
+intlist(4) = 'num_el'
+intlist(5) = 'nthreads'
+call JSON_writeNMLintegers(inp, io_int, intlist, n_int, error_cnt)
+
+! write all the single doubles
+io_real = (/ mcnl%sig, mcnl%omega, mcnl%EkeV, mcnl%Ehistmin, mcnl%Ebinsize, mcnl%depthmax, mcnl%depthstep /)
+reallist(1) = 'sig'
+reallist(2) = 'omega'
+reallist(3) = 'EkeV'
+reallist(4) = 'Ehistmin'
+reallist(5) = 'Ebinsize'
+reallist(6) = 'depthmax'
+reallist(7) = 'depthstep'
+call JSON_writeNMLreals(inp, io_real, reallist, n_real, error_cnt)
+
+! write all the strings
+dataset = 'MCmode'
+call json_add(inp, dataset, mcnl%MCmode)
+if (json_failed()) then
+  call json_print_error_message(error_unit)
+  error_cnt = error_cnt + 1
+end if
+
+dataset = 'xtalname'
+call json_add(inp, dataset, mcnl%xtalname)
+if (json_failed()) then
+  call json_print_error_message(error_unit)
+  error_cnt = error_cnt + 1
+end if
+
+dataset = 'dataname'
+call json_add(inp, dataset, mcnl%dataname)
+if (json_failed()) then
+  call json_print_error_message(error_unit)
+  error_cnt = error_cnt + 1
+end if
+
+! and then we write the file and clean up
+call JSON_cleanuppointers(p, inp, jsonname, error_cnt)
+
+end subroutine JSONwriteMCNameList
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:JSONwriteMCCLNameList
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief write namelist to JSON file
+!> @param jsonname output file name
+!> @param error_cnt total number of errors encountered by json routines
+!
+!> @param mcnl Monte Carlo name list structure
+!
+!> @date 03/21/15 MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine JSONwriteMCCLNameList(mcnl, jsonname, error_cnt)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+type(MCCLNameListType),INTENT(INOUT)                  :: mcnl
+character(fnlen),INTENT(IN)                           :: jsonname
+integer(kind=irg),INTENT(INOUT)                       :: error_cnt
+
+type(json_value),pointer                              :: p, inp
+
+integer(kind=irg),parameter                           :: n_int = 5, n_real = 7
+integer(kind=irg)                                     :: io_int(n_int)
+real(kind=dbl)                                        :: io_real(n_real)
+character(20)                                         :: intlist(n_int), reallist(n_real)
+character(fnlen)                                      :: dataset, sval(1), namelistname
+character(fnlen,kind=c_char)                          :: line2(1)
+
+! initialize the json state variables
+namelistname = 'MCCLdata'
+call JSON_initpointers(p, inp, jsonname, namelistname, error_cnt)
+
+! write all the single integers
+io_int = (/ mcnl%stdout, mcnl%numsx, mcnl%globalworkgrpsz, mcnl%num_el, mcnl%totnum_el /)
+intlist(1) = 'stdout'
+intlist(2) = 'numsx'
+intlist(3) = 'globalworkgrpsz'
+intlist(4) = 'num_el'
+intlist(5) = 'totnum_el'
+call JSON_writeNMLintegers(inp, io_int, intlist, n_int, error_cnt)
+
+! write all the single doubles
+io_real = (/ mcnl%sig, mcnl%omega, mcnl%EkeV, mcnl%Ehistmin, mcnl%Ebinsize, mcnl%depthmax, mcnl%depthstep /)
+reallist(1) = 'sig'
+reallist(2) = 'omega'
+reallist(3) = 'EkeV'
+reallist(4) = 'Ehistmin'
+reallist(5) = 'Ebinsize'
+reallist(6) = 'depthmax'
+reallist(7) = 'depthstep'
+call JSON_writeNMLdoubles(inp, io_real, reallist, n_real, error_cnt)
+
+! write all the strings
+dataset = 'MCmode'
+call json_add(inp, dataset, mcnl%MCmode)
+if (json_failed()) then
+  call json_print_error_message(error_unit)
+  error_cnt = error_cnt + 1
+end if
+
+dataset = 'xtalname'
+call json_add(inp, dataset, mcnl%xtalname)
+if (json_failed()) then
+  call json_print_error_message(error_unit)
+  error_cnt = error_cnt + 1
+end if
+
+dataset = 'dataname'
+call json_add(inp, dataset, mcnl%dataname)
+if (json_failed()) then
+  call json_print_error_message(error_unit)
+  error_cnt = error_cnt + 1
+end if
+
+dataset = 'mode'
+call json_add(inp, dataset, mcnl%mode)
+if (json_failed()) then
+  call json_print_error_message(error_unit)
+  error_cnt = error_cnt + 1
+end if
+
+! and then we write the file and clean up
+call JSON_cleanuppointers(p, inp, jsonname, error_cnt)
+
+end subroutine JSONwriteMCCLNameList
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:JSONwriteMCCLMultiLayerNameList
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief write namelist to JSON file
+!
+!> @param mcnl Monte Carlo name list structure
+!> @param jsonname output file name
+!> @param error_cnt total number of errors encountered by json routines
+!
+!> @date 03/21/15 MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine JSONwriteMCCLMultiLayerNameList(mcnl, jsonname, error_cnt)
+
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+type(MCCLMultiLayerNameListType),INTENT(INOUT)        :: mcnl
+character(fnlen),INTENT(IN)                           :: jsonname
+integer(kind=irg),INTENT(INOUT)                       :: error_cnt
+
+integer(kind=irg),parameter                           :: n_int = 5, n_real = 9
+integer(kind=irg)                                     :: io_int(n_int)
+real(kind=dbl)                                        :: io_real(n_real)
+character(20)                                         :: intlist(n_int), reallist(n_real)
+character(fnlen)                                      :: dataset, namelistname
+character(fnlen,kind=c_char)                          :: line2(1)
+
+! initialize the json state variables
+namelistname = 'MCCLdata'
+call JSON_initpointers(p, inp, jsonname, namelistname, error_cnt)
+
+! write all the single integers
+io_int = (/ mcnl%stdout, mcnl%numsx, mcnl%globalworkgrpsz, mcnl%num_el, mcnl%totnum_el /)
+intlist(1) = 'stdout'
+intlist(2) = 'numsx'
+intlist(3) = 'globalworkgrpsz'
+intlist(4) = 'num_el'
+intlist(5) = 'totnum_el'
+call JSON_writeNMLintegers(inp, io_int, intlist, n_int, error_cnt)
+
+! write all the single doubles
+io_real = (/ mcnl%sig, mcnl%omega, mcnl%EkeV, mcnl%Ehistmin, mcnl%Ebinsize, mcnl%depthmax, mcnl%depthstep, &
+             mcnl%filmthickness, mcnl%filmstep /)
+reallist(1) = 'sig'
+reallist(2) = 'omega'
+reallist(3) = 'EkeV'
+reallist(4) = 'Ehistmin'
+reallist(5) = 'Ebinsize'
+reallist(6) = 'depthmax'
+reallist(7) = 'depthstep'
+reallist(8) = 'filmthickness'
+reallist(9) = 'filmstep'
+call JSON_writeNMLdoubles(inp, io_real, reallist, n_real, error_cnt)
+
+! write all the strings
+dataset = 'MCmode'
+call json_add(inp, dataset, mcnl%MCmode)
+if (json_failed()) then
+  call json_print_error_message(error_unit)
+  error_cnt = error_cnt + 1
+end if
+
+dataset = 'xtalname_film'
+call json_add(inp, dataset, mcnl%xtalname_film)
+if (json_failed()) then
+  call json_print_error_message(error_unit)
+  error_cnt = error_cnt + 1
+end if
+
+dataset = 'xtalname_subs'
+call json_add(inp, dataset, mcnl%xtalname_subs)
+if (json_failed()) then
+  call json_print_error_message(error_unit)
+  error_cnt = error_cnt + 1
+end if
+
+dataset = 'dataname'
+call json_add(inp, dataset, mcnl%dataname)
+if (json_failed()) then
+  call json_print_error_message(error_unit)
+  error_cnt = error_cnt + 1
+end if
+
+dataset = 'mode'
+call json_add(inp, dataset, mcnl%mode)
+if (json_failed()) then
+  call json_print_error_message(error_unit)
+  error_cnt = error_cnt + 1
+end if
+
+! and then we write the file and clean up
+call JSON_cleanuppointers(p, inp, jsonname, error_cnt)
+
+end subroutine JSONwriteMCCLMultiLayerNameList
 
 
 end module JSONsupport
