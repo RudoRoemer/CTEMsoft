@@ -569,6 +569,7 @@ end subroutine GetEBSDMasterNameList
 !> @param emnl ECP master name list structure
 !
 !> @date 06/19/14  SS 1.0 new routine
+!> @date 08/12/15 MDG 1.1 correction of type for startthick and fn(3)
 !--------------------------------------------------------------------------
 subroutine GetECPMasterNameList(nmlfile, ecpnl)
 
@@ -582,14 +583,11 @@ type(ECPMasterNameListType),INTENT(INOUT)      :: ecpnl
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: npx
 integer(kind=irg)       :: Esel
-integer(kind=irg)       :: numthick
-real(kind=irg)          :: startthick
-real(kind=irg)          :: fn(3)
+real(kind=sgl)          :: fn(3)
+real(kind=sgl)          :: startthick
 real(kind=sgl)          :: dmin
-real(kind=sgl)          :: zintstep
 real(kind=sgl)          :: abcdist(3)
 real(kind=sgl)          :: albegadist(3)
-real(kind=sgl)          :: thickinc
 character(fnlen)        :: compmode
 character(fnlen)        :: energyfile
 character(fnlen)        :: outname
