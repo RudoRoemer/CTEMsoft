@@ -22,11 +22,34 @@ call GetKosselNameList(nmlfile, knl)
 ! and then we write it to json format
 jsonname = 'Kossel.json'
 n_errors = 0
-call JSONwriteKosselNameList(knl, jsonname, n_errors)
+!call JSONwriteKosselNameList(knl, jsonname, n_errors)
 
 if (n_errors /= 0) stop 1
 
-call Message('nml -> json conversion completed')
+
+! next, we need to do the inverse (json->nml) and compare the two nml files
+n_errors = 0
+call JSONreadKosselNameList(knl, jsonname, n_errors)
+
+write (*,*) knl%stdout 
+write (*,*) knl%numthick
+write (*,*) knl%npix
+write (*,*) knl%maxHOLZ
+write (*,*) knl%nthreads
+write (*,*) knl%k
+write (*,*) knl%fn
+write (*,*) knl%voltage
+write (*,*) knl%dmin
+write (*,*) knl%convergence
+write (*,*) knl%startthick
+write (*,*) knl%thickinc
+write (*,*) knl%minten
+write (*,*) knl%xtalname
+write (*,*) knl%outname
+
+write (*,*) 'number of errors = ',n_errors
+
+if (n_errors /= 0) stop 1
 
 end program jsontest
 !*****************************************************************************************

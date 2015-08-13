@@ -129,7 +129,7 @@ type(unitcell),pointer  :: cell
  cell%ATOM_ntype = 0_irg
  cell%SYM_SGnum = 0_irg
  cell%xtal_system = 0_irg
- cell%SYM_SGset = 0_irg
+ cell%SYM_SGset = 1_irg
  cell%ATOM_pos = 0.0_dbl
  cell%fname = ''
 

@@ -38,6 +38,7 @@
 !
 !> @date 06/13/14 MDG 1.0 original
 !> @date 05/05/15 MDG 1.1 removed primelist variable from name list files
+!> @date 08/12/15 MDG 1.2 added initonly optional keyword to skip reading from file
 !--------------------------------------------------------------------------
 module NameListHandlers
 
@@ -56,10 +57,11 @@ contains
 !
 !> @param nmlfile namelist file name
 !> @param knl Kossel name list structure
+!> @param initonly [optional] logical
 !
 !> @date 06/13/14  MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine GetKosselNameList(nmlfile, knl)
+recursive subroutine GetKosselNameList(nmlfile, knl, initonly)
 
 use error
 
@@ -67,6 +69,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)             :: nmlfile
 type(KosselNameListType),INTENT(INOUT)  :: knl
+logical,OPTIONAL,INTENT(IN)             :: initonly
+
+logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: numthick
@@ -83,6 +88,7 @@ real(kind=sgl)          :: thickinc
 real(kind=sgl)          :: minten
 character(fnlen)        :: xtalname
 character(fnlen)        :: outname
+
 
 namelist /Kossellist/ stdout, xtalname, voltage, k, fn, dmin, convergence, minten, nthreads, &
                               startthick, thickinc, numthick, outname, npix, maxHOLZ
@@ -104,6 +110,11 @@ minten = 1.0E-5                 ! minimum intensity in diffraction disk to make 
 xtalname = 'undefined'          ! initial value to check that the keyword is present in the nml file
 outname = 'Kosselout.data'      ! output filename
 
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
  open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
  read(UNIT=dataunit,NML=Kossellist)
@@ -113,6 +124,7 @@ outname = 'Kosselout.data'      ! output filename
  if (trim(xtalname).eq.'undefined') then
   call FatalError('EMKossel:',' structure file name is undefined in '//nmlfile)
  end if
+end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the knl fields
 knl%stdout = stdout

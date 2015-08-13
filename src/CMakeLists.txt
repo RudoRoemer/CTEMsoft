@@ -56,7 +56,7 @@ set(EMSoftLib_SRCS
 
 ADD_LIBRARY(EMSoftLib ${LIB_TYPE} ${EMSoftLib_SRCS})
 #ADD_LIBRARY(local ${EMSoftLib_SOURCE_DIR}/local.f90)
-TARGET_LINK_LIBRARIES(EMSoftLib blas lapack ${HDF5_LIBRARIES} jsonfortran)
+TARGET_LINK_LIBRARIES(EMSoftLib blas lapack ${HDF5_LIBRARIES} ${JSONFORTRAN_LIBRARY})
 
 set(install_dir "tools")
 set(lib_install_dir "lib")

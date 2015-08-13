@@ -206,7 +206,7 @@ character(40)                   :: genst                        !< full generato
 
 ! now check for special origin conditions (choices 1 and 2) 
  if (genst(i:i).ne.'0') then 
-  if (cell%SYM_SGset.eq.0) then
+  if (cell%SYM_SGset.eq.1) then
    call GetSetting(cell,iset)
    cell%SYM_SGset=iset
   end if
@@ -949,13 +949,20 @@ character(7),parameter          :: sitesym(48) = (/ '222    ',' -1    ','222/n  
  end do
  
  if (isg.ne.0) then 
-  call Message(' ---------------------------------------------', frm = "(A)")
-  call Message(' This space group has two origin settings.', frm = "(A)")
-  call Message(' The first setting has site symmetry    : '//sitesym(2*isg-1), frm = "(A)")
-  call Message(' the second setting has site symmetry   : '//sitesym(2*isg), frm = "(A)")
-  call ReadValue(' Which setting do you wish to use (1/2) : ', io_int, 1)
-  iset = io_int(1)
-  call Message('---------------------------------------------', frm = "(A)")
+  iset = 0
+  do while (iset.eq.0)
+    call Message(' ---------------------------------------------', frm = "(A)")
+    call Message(' This space group has two origin settings.', frm = "(A)")
+    call Message(' The first setting has site symmetry    : '//sitesym(2*isg-1), frm = "(A)")
+    call Message(' the second setting has site symmetry   : '//sitesym(2*isg), frm = "(A)")
+    call ReadValue(' Which setting do you wish to use (1/2) : ', io_int, 1)
+    call Message('---------------------------------------------', frm = "(A)")
+    if ((io_int(1).eq.1).or.(io_int(1).eq.2)) then 
+      iset = io_int(1)
+    else
+      call Message(' Value entered must be 1 or 2 !', frm = "(A)")
+    end if
+  end do
  end if
  
 end subroutine GetSetting
