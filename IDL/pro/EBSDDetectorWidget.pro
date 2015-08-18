@@ -100,6 +100,10 @@ EBSDwidget_s.dettheta = Core_WTextE(file2,'Detector Tilt Angle [deg]', fontstr, 
 
 ;---------- 
 file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
+EBSDwidget_s.detomega = Core_WTextE(file2,'Detector Omega Angle [deg]', fontstr, 250, 25, 10, 1, string(EBSDdata.detomega,format="(F6.2)"),'DETOMEGA','EBSDDetectorWidget_event')
+
+;---------- 
+file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
 EBSDwidget_s.detdelta = Core_WTextE(file2,'Scintillator Pixel Size [micron]', fontstr, 250, 25, 10, 1, string(EBSDdata.detdelta,format="(F7.2)"),'DETDELTA','EBSDDetectorWidget_event')
 
 ;---------- 
