@@ -865,6 +865,9 @@ deallocate(z)
   end do 
   acc%accum_e_detector = acc%accum_e_detector * 0.25
 
+write (*,*) 'max acc arrays : ', maxval(acc%accum_e_detector), maxval(acc%accum_e)
+
+
 ! and finally, get rid of the original accum_e array which is no longer needed
 ! [we'll do that in the calling program ]
 !  deallocate(accum_e)

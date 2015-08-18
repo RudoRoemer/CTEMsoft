@@ -380,7 +380,7 @@ do iE = 1,numEbins
   do iy=-nsy/10,nsy/10
    istat = sum(accum_z(iE,:,ix,iy))
    izz = 1
-   do while (sum(accum_z(iE,1:izz,ix,iy)).lt.(0.95*istat)) 
+   do while (sum(accum_z(iE,1:izz,ix,iy)).lt.(0.99*istat)) 
     izz = izz+1
    end do
    if (izz.gt.izzmax) izzmax = izz
@@ -602,12 +602,17 @@ energyloop: do iE=numEbins,1,-1
   karray(1:3,1) = sngl(ktmp%k(1:3))
   karray(4,1) = sngl(ktmp%kn)
   kij(1:2,1) = (/ ktmp%i, ktmp%j /)
+open(unit=dataunit,file='kvecs.txt',status='unknown',form='formatted')
+ik = 1
+write(dataunit,"(I5,'->',2(F14.5,','),F14.5)") ik, karray(1:3,ik)
   do ik=2,numk
     ktmp => ktmp%next
     karray(1:3,ik) = sngl(ktmp%k(1:3))
     karray(4,ik) = sngl(ktmp%kn)
     kij(1:2,ik) = (/ ktmp%i, ktmp%j /)
+write(dataunit,"(I5,'->',2(F14.5,','),F14.5)") ik, karray(1:3,ik)
   end do
+close(unit=dataunit,status='keep')
 ! and remove the linked list
   call Delete_kvectorlist(khead)
 
@@ -646,13 +651,22 @@ energyloop: do iE=numEbins,1,-1
 ! distinction becomes meaningless when we consider the complete 
 ! reciprocal lattice.  
      nullify(reflist)
-!    kkk = karray(1:3,ik)
      kkk = karray(1:3,ik)
      FN = kkk
+
+! [110] beam direction
+!kkk =  (/ 44.73017,      44.73017,       0.00000 /) 
+!FN = kkk
 !    call TransSpace(cell,kkk,FN,'r','d')
 !    call NormVec(cell,FN,'d')
 !    FN = karray(1:3,ik)
+!verbose = .TRUE.
      call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, kkk, emnl%dmin, nref, verbose)
+!write (*,*) 'original number of reflections in list ',nref
+!write (*,*) 'zone axis = ',kkk
+
+
+
 ! ---------- end of "create the master reflection list"
 !=============================================
 
@@ -663,6 +677,19 @@ energyloop: do iE=numEbins,1,-1
      nns = 0
      nnw = 0
      call Apply_BethePotentials(cell, reflist, firstw, BetheParameters, nref, nns, nnw)
+
+!rltmp=>reflist%next
+!write (*,*) 'number of reflections in list ',nref, nns, nnw
+!write(*,*) ' double diffraction for 0, 0, 2 ? ',cell%dbdiff(0,0,2),  IsGAllowed(cell, (/ 0, 0, 2 /) )
+!do i=1,nref
+!  write (*,*) i, rltmp%hkl, rltmp%sg, cell%LUT( rltmp%hkl(1), rltmp%hkl(2), rltmp%hkl(3) ), rltmp%strong, rltmp%weak, &
+!              cell%dbdiff( rltmp%hkl(1), rltmp%hkl(2), rltmp%hkl(3) ), rltmp%hkl(1)+rltmp%hkl(2)
+!  rltmp => rltmp%next
+!end do
+!
+!
+!stop
+
 
 ! generate the dynamical matrix
      allocate(DynMat(nns,nns))

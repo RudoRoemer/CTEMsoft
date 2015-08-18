@@ -206,7 +206,7 @@ character(40)                   :: genst                        !< full generato
 
 ! now check for special origin conditions (choices 1 and 2) 
  if (genst(i:i).ne.'0') then 
-  if (cell%SYM_SGset.eq.1) then
+  if (cell%SYM_SGset.eq.0) then
    call GetSetting(cell,iset)
    cell%SYM_SGset=iset
   end if
@@ -912,6 +912,7 @@ end subroutine CalcPositions
 !> @date  03/21/13 MDG 3.0 clean up and updated IO
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable
+!> @date  08/14/15 MDG 4.2 minor change in handling of iset for space group with only one setting
 !--------------------------------------------------------------------------
 subroutine GetSetting(cell, iset)
 
@@ -919,7 +920,7 @@ use io
 
 IMPLICIT NONE
 
-type(unitcell),pointer  :: cell
+type(unitcell),pointer          :: cell
 integer(kind=irg),INTENT(OUT)   :: iset                         !< output setting
 
 integer(kind=irg)               :: i,isg, io_int(1)             !< auxiliary variables
@@ -963,6 +964,8 @@ character(7),parameter          :: sitesym(48) = (/ '222    ',' -1    ','222/n  
       call Message(' Value entered must be 1 or 2 !', frm = "(A)")
     end if
   end do
+ else 
+  iset = 1   ! setting for space group with only one origin setting...
  end if
  
 end subroutine GetSetting

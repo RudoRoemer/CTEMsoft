@@ -177,6 +177,7 @@ end program EMEBSD
 !> @date 03/20/15  MDG 5.4 corrected out-of-bounds error in EBSDpattern array
 !> @date 04/07/15  MDG 5.5 added HDF-formatted output
 !> @date 05/08/15  MDG 5.6 added support for hexagonal/trigonal master pattern interpolation
+!> @date 08/13/15  MDG 5.7 correction to num_el normalization in prefactor
 !--------------------------------------------------------------------------
 subroutine ComputeEBSDPatterns(enl, angles, acc, master, progname, nmldeffile)
 
@@ -278,8 +279,7 @@ Emax = nint((enl%energymax - enl%Ehistmin)/enl%Ebinsize) +1
 if (Emax.lt.1)  Emax=1
 if (Emax.gt.enl%numEbins)  Emax=enl%numEbins
 
-num_el = nint(sum(acc%accum_e_detector))
-
+!num_el = nint(sum(acc%accum_e_detector))
 !====================================
 
 !====================================
@@ -290,9 +290,10 @@ num_el = nint(sum(acc%accum_e_detector))
   biny = enl%numsy/enl%binning
   bindx = 1.0/float(enl%binning)**2
 
+write (*,*) maxval(acc%accum_e_detector)
 
 ! intensity prefactor
-  prefactor = 0.25D0 * nAmpere * enl%beamcurrent * enl%dwelltime * 1.0D-15/ dble(num_el)
+  prefactor = 0.25D0 * (nAmpere*1.0D-15) * enl%beamcurrent * enl%dwelltime / dble(sum(acc%accum_e_detector))
 !====================================
 
 !====================================
