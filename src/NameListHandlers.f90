@@ -1458,6 +1458,7 @@ end subroutine GetECCINameList
 !> @param rfznl RFZ name list structure
 !
 !> @date 12/09/14 MDG 1.0 new routine
+!> @date 08/18/15 MDG 1.1 added options for all seven representations
 !--------------------------------------------------------------------------
 subroutine GetRFZNameList(nmlfile,rfznl)
 
@@ -1469,15 +1470,27 @@ character(fnlen),INTENT(IN)                     :: nmlfile
 type(RFZNameListType),INTENT(INOUT)             :: rfznl
 
 integer(kind=irg)                               :: pgnum, nsteps
-character(fnlen)                                :: outname
+character(fnlen)                                :: euoutname
+character(fnlen)                                :: cuoutname
+character(fnlen)                                :: hooutname
+character(fnlen)                                :: rooutname
+character(fnlen)                                :: quoutname
+character(fnlen)                                :: omoutname
+character(fnlen)                                :: axoutname
 
 ! namelist components
-namelist / RFZlist / pgnum, nsteps, outname
+namelist / RFZlist / pgnum, nsteps, euoutname, cuoutname, hooutname, rooutname, quoutname, omoutname, axoutname
 
 ! initialize to default values
 pgnum = 32
 nsteps = 50
-outname = 'anglefile.txt'
+euoutname = 'undefined'
+cuoutname = 'undefined'
+hooutname = 'undefined'
+rooutname = 'undefined'
+quoutname = 'undefined'
+omoutname = 'undefined'
+axoutname = 'undefined'
 
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
@@ -1487,7 +1500,13 @@ close(UNIT=dataunit,STATUS='keep')
 ! and copy the variables to the rfznl variable
 rfznl%pgnum  = pgnum
 rfznl%nsteps = nsteps
-rfznl%outname= outname
+rfznl%euoutname = euoutname
+rfznl%cuoutname = cuoutname
+rfznl%hooutname = hooutname
+rfznl%rooutname = rooutname
+rfznl%quoutname = quoutname
+rfznl%omoutname = omoutname
+rfznl%axoutname = axoutname
 
 end subroutine GetRFZNameList
 

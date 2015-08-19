@@ -398,7 +398,13 @@ end type ECCINameListType
 type RFZNameListType
     integer(kind=irg)       :: pgnum
     integer(kind=irg)       :: nsteps
-    character(fnlen)        :: outname
+    character(fnlen)        :: euoutname
+    character(fnlen)        :: cuoutname
+    character(fnlen)        :: hooutname
+    character(fnlen)        :: rooutname
+    character(fnlen)        :: quoutname
+    character(fnlen)        :: omoutname
+    character(fnlen)        :: axoutname
 end type RFZNameListType
 
 type DictIndxOpenCLListType

@@ -1415,6 +1415,7 @@ end subroutine JSONwriteECCINameList
 !> @param error_cnt total number of errors encountered by json routines
 !
 !> @date 08/12/15 MDG 1.0 new routine
+!> @date 08/18/15 MDG 1.1 added other rotation representations
 !--------------------------------------------------------------------------
 subroutine JSONwriteRFZNameList(rfznl, jsonname, error_cnt)
 
@@ -1447,8 +1448,26 @@ intlist(2) = 'nsteps'
 call JSON_writeNMLintegers(inp, io_int, intlist, n_int, error_cnt)
 
 ! strings
-dataset = 'outname'
-call json_add(inp, dataset, rfznl%outname); call JSON_failtest(error_cnt)
+dataset = 'euoutname'
+call json_add(inp, dataset, rfznl%euoutname); call JSON_failtest(error_cnt)
+
+dataset = 'cuoutname'
+call json_add(inp, dataset, rfznl%cuoutname); call JSON_failtest(error_cnt)
+
+dataset = 'hooutname'
+call json_add(inp, dataset, rfznl%hooutname); call JSON_failtest(error_cnt)
+
+dataset = 'quoutname'
+call json_add(inp, dataset, rfznl%quoutname); call JSON_failtest(error_cnt)
+
+dataset = 'rooutname'
+call json_add(inp, dataset, rfznl%rooutname); call JSON_failtest(error_cnt)
+
+dataset = 'omoutname'
+call json_add(inp, dataset, rfznl%omoutname); call JSON_failtest(error_cnt)
+
+dataset = 'axoutname'
+call json_add(inp, dataset, rfznl%axoutname); call JSON_failtest(error_cnt)
 
 ! and then we write the file and clean up
 call JSON_cleanuppointers(p, inp, jsonname, error_cnt)

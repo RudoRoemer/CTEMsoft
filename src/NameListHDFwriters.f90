@@ -1418,10 +1418,40 @@ intlist(2) = 'nsteps'
 call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
 ! strings
-dataset = 'outname'
-line2(1) = rfznl%outname
+dataset = 'euoutname'
+line2(1) = rfznl%euoutname
 hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head)
-if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteRFZNameList: unable to create outname dataset',.TRUE.)
+if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteRFZNameList: unable to create euler outname dataset',.TRUE.)
+
+dataset = 'cuoutname'
+line2(1) = rfznl%cuoutname
+hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head)
+if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteRFZNameList: unable to create cubochoric outname dataset',.TRUE.)
+
+dataset = 'hooutname'
+line2(1) = rfznl%hooutname
+hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head)
+if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteRFZNameList: unable to create homochoric outname dataset',.TRUE.)
+
+dataset = 'rooutname'
+line2(1) = rfznl%rooutname
+hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head)
+if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteRFZNameList: unable to create rodrigues outname dataset',.TRUE.)
+
+dataset = 'quoutname'
+line2(1) = rfznl%quoutname
+hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head)
+if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteRFZNameList: unable to create quaternion outname dataset',.TRUE.)
+
+dataset = 'omoutname'
+line2(1) = rfznl%omoutname
+hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head)
+if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteRFZNameList: unable to create orientation matrix outname dataset',.TRUE.)
+
+dataset = 'axoutname'
+line2(1) = rfznl%axoutname
+hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head)
+if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteRFZNameList: unable to create axis angle pair outname dataset',.TRUE.)
 
 ! and pop this group off the stack
 call HDF_pop(HDF_head)
