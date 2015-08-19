@@ -84,7 +84,7 @@ end program EMsampleRFZ
 !
 !> @date 05/29/14 MDG 1.0 original
 !> @date 12/09/14 MDG 2.0 changed rfznl handling
-!> @date 08/18/15 MDG 2.1 added all rotation representations as output options
+!> @date 08/19/15 MDG 2.1 added all rotation representations as output options
 !--------------------------------------------------------------------------
 subroutine CreateSampling(rfznl, progname)
 
