@@ -1932,8 +1932,11 @@ end function GetHOLZcoordinates
 !> @param kg wave vector components in film
 !> @param TTinv coordinate transformation matrix
 !> @param lambdaS electron wavelength in substrate, corrected for refraction
+!> @param FN foil normal in substrate frame
 ! 
 !> @date 11/25/14 MDG 1.0 original
+!> @date 08/19/15 SS  1.1 replaced FN by r in evaluation of tangential 
+!> component and corrected calculation of kgS from p1
 !--------------------------------------------------------------------------
 recursive function Convert_kgs_to_Substrate(cell, cellS, kg, TTinv, FN) result(kgS)
 
@@ -1952,20 +1955,36 @@ real(kind=sgl)                          :: tangential(3)
 
 real(kind=sgl)                          :: p(3), r(3), p1(3)
 
+! convert to direct space for transforming to substrate frame
 call TransSpace(cell,kg,p,'r','d')
+
+! convert to substrate frame
 p = matmul(TTinv,p)
+
+! convert to cartesian frame and get correct length of wavevector
 call TransSpace(cellS,p,p1,'d','c')
 call NormVec(cellS,p1,'c')
 p1 = p1/cellS%mLambda
+
+! convert foil normal to cartesian frame and get normal component of wavevector
 call TransSpace(cellS,FN,r,'r','c')
 call NormVec(cellS,r,'c')
 dp = CalcDot(cellS,p1,r,'c')
-tangential = p1 - dp*FN
+
+! subtract out the normal component to get tangential component; this is conserved across the interface
+tangential = p1 - dp*r
+
+! get magnitude of normal component
 normal = sqrt((1/cellS%mLambda)**2 - sum(tangential**2))
-p1 = normal*FN + tangential
+
+p1 = normal*r + tangential
+
+call NormVec(cellS,p1,'c')
+
+p1 = p1/cellS%mLambda
+
 call TransSpace(cellS,p1,kgS,'c','r')
-call NormVec(cellS,kgS,'c')
-kgS = kgS/cellS%mLambda
+
 end function Convert_kgs_to_Substrate
 
 

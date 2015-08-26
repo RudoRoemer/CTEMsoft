@@ -1130,13 +1130,12 @@ end subroutine CalcSigmaggSubstrate
 !> @param nns_film number of strong beams in film
 !> @param dmin cutoff value for the g vectors used
 !> @param TTinv transformation matrix for the orientation relation between film and substrate
-!> @param eWavelength_subs electron wavelength in substrate
 !
 !> @date   12/01/14 MDG 1.0 original
 !--------------------------------------------------------------------------
 
 subroutine GetStrongBeamsSubs(cell_film,cell_subs,reflist_film,refliststrong_subs,&
-k0,FN,nns_film,dmin,TTinv,eWavelength_subs,rlp_subs)
+k0,FN,nns_film,dmin,TTinv,rlp_subs)
 
 
 use typedefs
@@ -1152,7 +1151,7 @@ type(unitcell),pointer                  :: cell_film,cell_subs
 type(reflisttype),pointer               :: reflist_film
 type(refliststrongsubstype),pointer     :: refliststrong_subs
 real(kind=sgl),INTENT(IN)               :: k0(3),dmin
-real(kind=dbl),INTENT(IN)               :: FN(3),eWavelength_subs
+real(kind=dbl),INTENT(IN)               :: FN(3)
 real(kind=sgl),INTENT(IN)               :: TTinv(3,3)
 integer(kind=irg),INTENT(IN)            :: nns_film
 type(gnode),INTENT(INOUT)               :: rlp_subs
