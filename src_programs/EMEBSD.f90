@@ -216,7 +216,7 @@ real(kind=dbl)                          :: prefactor, qz(3)
 ! allocatable arrays
 real(kind=sgl),allocatable              :: EBSDpattern(:,:), binned(:,:)        ! array with EBSD patterns
 real(kind=sgl),allocatable              :: z(:,:)               ! used to store the computed patterns before writing to disk
-
+real(kind=sgl),allocatable              :: energywf(:)
 ! quaternion variables
 real(kind=dbl)                          :: qq(4), qq1(4), qq2(4), qq3(4)
 
@@ -279,6 +279,11 @@ if (Emax.lt.1)  Emax=1
 if (Emax.gt.enl%numEbins)  Emax=enl%numEbins
 
 num_el = nint(sum(acc%accum_e_detector))
+allocate(energywf(Emin:Emax),stat=istat)
+energywf = 0.0
+
+energywf(Emin:Emax) = sum(sum(acc%accum_e_detector,3),2)
+energywf = energywf/sum(energywf)
 
 !====================================
 
@@ -501,15 +506,28 @@ do ibatch=1,nbatches+1
                 dym = 1.0-dy
  ! interpolate the intensity 
                 if (enl%energyaverage.eq.1) then
+                  if (enl%spatialaverage .eq. 'y') then
+                    write(*,*) 'Cannot simultaneously use both energyaverage and spatial average..setting spatialaverage to n'
+                  end if
                   EBSDpattern(i,j) = EBSDpattern(i,j) + acc_array(i,j) * ( master_array(nix,niy) * dxm * dym + &
                                              master_array(nixp,niy) * dx * dym + master_array(nix,niyp) * dxm * dy + &
                                              master_array(nixp,niyp) * dx * dy )
                 else
-                  do k=Emin,Emax 
-                    EBSDpattern(i,j) = EBSDpattern(i,j) + acc%accum_e_detector(k,i,j) * ( master%sr(nix,niy,k) * dxm * dym + &
+                  if (enl%spatialaverage .eq. 'n') then
+                     do k=Emin,Emax 
+                       EBSDpattern(i,j) = EBSDpattern(i,j) + acc%accum_e_detector(k,i,j) * ( master%sr(nix,niy,k) * dxm * dym + &
                                                master%sr(nixp,niy,k) * dx * dym + master%sr(nix,niyp,k) * dxm * dy + &
                                                master%sr(nixp,niyp,k) * dx * dy )
-                  end do
+                     end do
+                  else if (enl%spatialaverage .eq. 'y') then
+                     do k=Emin,Emax 
+                        EBSDpattern(i,j) = EBSDpattern(i,j) + energywf(k) * ( master%sr(nix,niy,k) * dxm * dym + &
+                                               master%sr(nixp,niy,k) * dx * dym + master%sr(nix,niyp,k) * dxm * dy + &
+                                               master%sr(nixp,niyp,k) * dx * dy )
+                     end do
+                  end if
+
+  
                 end if
               end if
           end do

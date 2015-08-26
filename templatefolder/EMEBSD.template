@@ -13,6 +13,8 @@ numsy = 480
 ! pattern center coordinates in units of pixels
 xpc = 0.0
 ypc = 0.0
+! angle between normal of sample and detector
+omega = 0.0
 ! name of angle file (euler angles or quaternions)
 anglefile = 'testeuler.txt'
 ! 'tsl' or 'hkl' Euler angle convention parameter
@@ -39,4 +41,8 @@ outputformat = 'bin'
 maskpattern = 'n'
 ! number of threads (default = 1)
 nthreads = 1
+! energy averaging method (0 for full, 1 for approximate)
+energyaverage = 0
+! spatial averaging method ('y' or 'n';can't be used with approximate energy average)
+spatialaverage = 'n'
 /

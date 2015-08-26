@@ -180,6 +180,7 @@ type EBSDNameListType
         character(3)            :: scalingmode
         character(3)            :: eulerconvention
         character(3)            :: outputformat
+        character(1)            :: spatialaverage
         character(fnlen)        :: anglefile
         character(fnlen)        :: masterfile
         character(fnlen)        :: energyfile 

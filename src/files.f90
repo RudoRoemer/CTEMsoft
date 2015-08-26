@@ -451,6 +451,7 @@ std = 6
 if (PRESENT(stdout)) std = stdout
 
 ! first open and read the resources/templatecodes.txt file
+
 open(UNIT=dataunit,FILE=trim(templatecodefilename), &
         STATUS='old', FORM='formatted',ACCESS='sequential')
 
