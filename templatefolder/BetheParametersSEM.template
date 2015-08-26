@@ -6,6 +6,6 @@ weakcutoff = 30.0
 ! this cutoff (c1 in the manual) separates weak reflections from those that will not be considered
 cutoff = 60.0
 ! this parameter sets the threshold excitation error for double diffraction reflections
-sgcutoff = 0.05
+sgcutoff = 1.00
 ! do not change the following line
 /

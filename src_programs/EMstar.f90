@@ -76,7 +76,7 @@ type(gnode)             :: rlp
  space = 'r'
  call ReadValue(' Enter xtal file name : ', gname,"(A)")
  cell%fname = gname
- call CrystalData(cell)
+ call CrystalData(cell,.TRUE.)
  call GetVoltage(cell, rlp)
  call CalcPositions(cell,'v')
 

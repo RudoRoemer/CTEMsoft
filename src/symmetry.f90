@@ -912,6 +912,7 @@ end subroutine CalcPositions
 !> @date  03/21/13 MDG 3.0 clean up and updated IO
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable
+!> @date  08/14/15 MDG 4.2 minor change in handling of iset for space group with only one setting
 !--------------------------------------------------------------------------
 subroutine GetSetting(cell, iset)
 
@@ -919,7 +920,7 @@ use io
 
 IMPLICIT NONE
 
-type(unitcell),pointer  :: cell
+type(unitcell),pointer          :: cell
 integer(kind=irg),INTENT(OUT)   :: iset                         !< output setting
 
 integer(kind=irg)               :: i,isg, io_int(1)             !< auxiliary variables
@@ -949,13 +950,22 @@ character(7),parameter          :: sitesym(48) = (/ '222    ',' -1    ','222/n  
  end do
  
  if (isg.ne.0) then 
-  call Message(' ---------------------------------------------', frm = "(A)")
-  call Message(' This space group has two origin settings.', frm = "(A)")
-  call Message(' The first setting has site symmetry    : '//sitesym(2*isg-1), frm = "(A)")
-  call Message(' the second setting has site symmetry   : '//sitesym(2*isg), frm = "(A)")
-  call ReadValue(' Which setting do you wish to use (1/2) : ', io_int, 1)
-  iset = io_int(1)
-  call Message('---------------------------------------------', frm = "(A)")
+  iset = 0
+  do while (iset.eq.0)
+    call Message(' ---------------------------------------------', frm = "(A)")
+    call Message(' This space group has two origin settings.', frm = "(A)")
+    call Message(' The first setting has site symmetry    : '//sitesym(2*isg-1), frm = "(A)")
+    call Message(' the second setting has site symmetry   : '//sitesym(2*isg), frm = "(A)")
+    call ReadValue(' Which setting do you wish to use (1/2) : ', io_int, 1)
+    call Message('---------------------------------------------', frm = "(A)")
+    if ((io_int(1).eq.1).or.(io_int(1).eq.2)) then 
+      iset = io_int(1)
+    else
+      call Message(' Value entered must be 1 or 2 !', frm = "(A)")
+    end if
+  end do
+ else 
+  iset = 1   ! setting for space group with only one origin setting...
  end if
  
 end subroutine GetSetting

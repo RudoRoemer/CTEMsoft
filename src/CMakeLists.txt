@@ -32,6 +32,7 @@ set(EMSoftLib_SRCS
  	${EMSoftLib_SOURCE_DIR}/NameListHandlers.f90
  	${EMSoftLib_SOURCE_DIR}/NameListHDFwriters.f90
  	${EMSoftLib_SOURCE_DIR}/HDFsupport.f90
+ 	${EMSoftLib_SOURCE_DIR}/JSONsupport.f90
  	${EMSoftLib_SOURCE_DIR}/noise.f90
 	${EMSoftLib_SOURCE_DIR}/others.f90
 	${EMSoftLib_SOURCE_DIR}/pgm.f90
@@ -55,7 +56,7 @@ set(EMSoftLib_SRCS
 
 ADD_LIBRARY(EMSoftLib ${LIB_TYPE} ${EMSoftLib_SRCS})
 #ADD_LIBRARY(local ${EMSoftLib_SOURCE_DIR}/local.f90)
-TARGET_LINK_LIBRARIES(EMSoftLib blas lapack ${HDF5_LIBRARIES})
+TARGET_LINK_LIBRARIES(EMSoftLib blas lapack ${HDF5_LIBRARIES} ${JSONFORTRAN_LIBRARY})
 
 set(install_dir "tools")
 set(lib_install_dir "lib")

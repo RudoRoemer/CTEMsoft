@@ -61,6 +61,7 @@ end else begin
  'DETL': EBSDdata.detL = Core_WidgetEvent( EBSDwidget_s.detL,  'Detector distance set to [micron] ', '(F9.2)', /flt)
 
  'DETTHETA': EBSDdata.dettheta = Core_WidgetEvent( EBSDwidget_s.dettheta, 'Detector angle set to [deg] ', '(F6.2)', /flt)
+ 'DETOMEGA': EBSDdata.detomega = Core_WidgetEvent( EBSDwidget_s.detomega, 'Detector omega angle set to [deg] ', '(F6.2)', /flt)
 
  'DETDELTA': EBSDdata.detdelta = Core_WidgetEvent( EBSDwidget_s.detdelta, 'Scintillator pixel size set to [micron] ', '(F6.2)', /flt)
 
