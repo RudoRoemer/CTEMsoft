@@ -112,7 +112,7 @@ install(FILES ${PROJECT_SOURCE_DIR}/ReadMe.md ${PROJECT_SOURCE_DIR}/License.txt
         COMPONENT Applications)
 
 
-include_directories(${EMsoft_BINARY_DIR}/src)
+include_directories(${EMsoft_BINARY_DIR}/src ${JSONFORTRAN_INCLUDE_DIR})
 #find_package (FFTW3 COMPONENTS single double)
 
 

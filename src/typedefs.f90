@@ -772,10 +772,10 @@ end type DynType
 
 ! define the cutoff parameters for the Bethe potential approach 
 type BetheParameterType
-        real(kind=sgl)                 :: c1 = 8.0_sgl
-        real(kind=sgl)                 :: c2 = 20.0_sgl
+        real(kind=sgl)                 :: c1 = 8.0_sgl         ! changed from 8 and 12 for a test on 8/14/15
+        real(kind=sgl)                 :: c2 = 50.0_sgl
         real(kind=sgl)                 :: c3 = 100.0_sgl
-        real(kind=sgl)                 :: sgdbdiff = 0.05_sgl
+        real(kind=sgl)                 :: sgdbdiff = 1.00_sgl    ! changed from 0.05 on 08/14/15 by MDG
         real(kind=sgl)                 :: weakcutoff = 0.0_sgl
         real(kind=sgl)                 :: cutoff = 0.0_sgl
         real(kind=sgl)                 :: sgcutoff = 0.0_sgl

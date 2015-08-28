@@ -94,6 +94,7 @@ end
   printf,10,'&EBSDdata'
   printf,10,'L = '+string(EBSDdata.detL,FORMAT="(F10.2)")
   printf,10,'thetac = '+string(EBSDdata.dettheta,FORMAT="(F6.2)")
+  printf,10,'omega = '+string(EBSDdata.detomega,FORMAT="(F6.2)")
   printf,10,'delta = '+string(EBSDdata.detdelta,FORMAT="(F7.3)")
   printf,10,'numsx = '+string(EBSDdata.detnumsx,FORMAT="(I4)")
   printf,10,'numsy = '+string(EBSDdata.detnumsy,FORMAT="(I4)")

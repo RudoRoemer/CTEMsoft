@@ -3,7 +3,7 @@ project(Apps)
 
 macro (Create_exe_and_tll INPUT)
 	ADD_EXECUTABLE(${INPUT} ${Apps_SOURCE_DIR}/${INPUT}.f90)
- 	TARGET_LINK_LIBRARIES(${INPUT} EMSoftLib gomp gcc_eh)
+ 	TARGET_LINK_LIBRARIES(${INPUT} EMSoftLib gomp gcc_eh jsonfortran)
 	
 	
 	set(install_dir "bin")
@@ -64,6 +64,7 @@ Create_exe_and_tll(EMPEDKIN)
 
 Create_exe_and_tll(rotationtest)
 Create_exe_and_tll(hdftest)
+Create_exe_and_tll(jsontest)
 
 
 
@@ -97,8 +98,19 @@ include_directories(${FORTRANCL_INCLUDE_DIR})
 
 message(STATUS "FORTRANCL_LIBRARIES: ${FORTRANCL_LIBRARIES}")
 
+
+find_package(jsonfortran REQUIRED)
+if( NOT JSONFORTRAN_FOUND)
+  message(STATUS "jsonfortran is REQUIRED for this project.")
+  message(STATUS "jsonfortran source repository is at https://github.com/jacobwilliams/json-fortran")
+  message(FATAL_ERROR "Please Download, Build and install. After install export the environment variable JSONFORTRAN_INSTALL to point to the installation location.")
+endif()
+#
+include_directories(${JSONFORTRAN_INCLUDE_DIR})
+
+
 ADD_EXECUTABLE(EMMCOpenCL EMMCOpenCL.f90)
-TARGET_LINK_LIBRARIES(EMMCOpenCL ${OPENCL_LIBRARIES} ${LAPACK_LIB} ${FORTRANCL_LIBRARIES} EMSoftLib)
+TARGET_LINK_LIBRARIES(EMMCOpenCL ${OPENCL_LIBRARIES} ${LAPACK_LIB} ${FORTRANCL_LIBRARIES} EMSoftLib jsonfortran)
 
 
 #Create_exe_and_tll(EMBWshow)

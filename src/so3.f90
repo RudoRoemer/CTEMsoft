@@ -425,10 +425,10 @@ use constants
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(OUT)              :: cubneighbor(3,-(nn**3 - 1)/2:(nn**3 - 1)/2)
+real(kind=dbl),INTENT(OUT)              :: cubneighbor(3,-(nn - 1)/2:(nn - 1)/2,-(nn - 1)/2:(nn - 1)/2,-(nn - 1)/2:(nn - 1)/2)
 integer(kind=irg),INTENT(IN)            :: nn ! number of nearest neighbor in each direction (should be an odd number for symmetric meshing)
 real(kind=dbl),INTENT(IN)               :: cub(3)
-real(kind=dbl),INTENT(INOUT)            :: stepsize
+real(kind=dbl),INTENT(IN)               :: stepsize
 
 integer(kind=irg)                       :: ii,jj,kk,ll,index
 
@@ -445,20 +445,20 @@ end if
 do ii = -(nn-1)/2,(nn-1)/2
     do jj = -(nn-1)/2,(nn-1)/2
         do kk = -(nn-1)/2,(nn-1)/2
-            index = ii*nn*nn + jj*nn + kk
-            cubneighbor(1:3,index) = cub + stepsize/2.D0*(/ii,jj,kk/)
+            !index = ii*nn*nn + jj*nn + kk
+            cubneighbor(1:3,ii,jj,kk) = cub + stepsize/2.D0*(/ii,jj,kk/)
             do ll = 1,3
-                if (cubneighbor(ll,index) .lt.  -0.5D0 * LPs%ap) then
-                    cubneighbor(ll,index) = cubneighbor(ll,index)+0.5D0 * LPs%ap
-                else if (cubneighbor(ll,index) .gt.  0.5D0 * LPs%ap) then
-                    cubneighbor(ll,index) = cubneighbor(ll,index)-0.5D0 * LPs%ap
+                if (cubneighbor(ll,ii,jj,kk) .lt.  -0.5D0 * LPs%ap) then
+                    cubneighbor(ll,ii,jj,kk) = cubneighbor(ll,ii,jj,kk)+0.5D0 * LPs%ap
+                else if (cubneighbor(ll,ii,jj,kk) .gt.  0.5D0 * LPs%ap) then
+                    cubneighbor(ll,ii,jj,kk) = cubneighbor(ll,ii,jj,kk)-0.5D0 * LPs%ap
                 end if
             end do
         end do
     end do
 end do
 
-stepsize = stepsize/2.0
+!stepsize = stepsize/2.0
 
 end subroutine CubochoricNeighbors
 

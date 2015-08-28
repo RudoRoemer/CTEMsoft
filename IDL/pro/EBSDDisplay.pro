@@ -159,6 +159,7 @@ EBSDwidget_s = {widgetstruct, $
 	; detector parameter widget ids
 	detL: long(0), $			; sample scintillator distance [microns]
 	dettheta: long(0), $			; detector tilt angle [degrees]
+	detomega: long(0), $			; detector omega tilt angle [degrees]
 	detdelta: long(0), $			; detector pixel size [microns]
 	detnumsx: long(0), $			; number of x-pixels
 	detnumsy: long(0), $			; number of y-pixels
@@ -283,6 +284,7 @@ EBSDdata = {EBSDdatastruct, $
 	; detector parameters
 	detL: float(0), $			; scintillator - sample distance [microns]
 	dettheta: float(0), $			; detector tilt angle [degrees]
+	detomega: float(0), $			; detector omega tilt angle [degrees]
 	detdelta: float(0), $			; scintillator pixel size [microns]
 	detnumsx: long(0), $			; number of x-pixels
 	detnumsy: long(0), $			; number of y-pixels

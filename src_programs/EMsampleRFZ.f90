@@ -84,6 +84,7 @@ end program EMsampleRFZ
 !
 !> @date 05/29/14 MDG 1.0 original
 !> @date 12/09/14 MDG 2.0 changed rfznl handling
+!> @date 08/18/15 MDG 2.1 added all rotation representations as output options
 !--------------------------------------------------------------------------
 subroutine CreateSampling(rfznl, progname)
 
@@ -101,10 +102,21 @@ type(RFZNameListType),INTENT(IN)        :: rfznl
 character(fnlen),INTENT(IN)             :: progname
 
 integer(kind=irg)                       :: i, FZcnt, io_int(1)
-real(kind=dbl)                          :: eud(3), rtod
+real(kind=dbl)                          :: eud(3), rtod, cud(3), qud(4), hod(3)
 type(FZpointd),pointer                  :: FZlist, FZtmp
+logical                                 :: doeu = .FALSE., docu = .FALSE., doho = .FALSE., doqu = .FALSE., &
+                                           doom = .FALSE., doax = .FALSE., doro = .FALSE.
 
 rtod = 180.D0/cPi
+
+! determine which files to create
+if (trim(rfznl%euoutname).ne.'undefined') doeu = .TRUE.
+if (trim(rfznl%cuoutname).ne.'undefined') docu = .TRUE.
+if (trim(rfznl%hooutname).ne.'undefined') doho = .TRUE.
+if (trim(rfznl%quoutname).ne.'undefined') doqu = .TRUE.
+if (trim(rfznl%rooutname).ne.'undefined') doro = .TRUE.
+if (trim(rfznl%omoutname).ne.'undefined') doom = .TRUE.
+if (trim(rfznl%axoutname).ne.'undefined') doax = .TRUE.
 
 ! a bit of output
 call Message('Starting computation for point group '//PGTHD(rfznl%pgnum))
@@ -117,23 +129,99 @@ call SampleRFZ(rfznl%nsteps,rfznl%pgnum,FZcnt,FZlist)
 io_int(1) = FZcnt
 call WriteValue('Total number of unique orientations generated = ',io_int,1,"(I10)")
 
-! generate a list of all orientations in Euler angle format
-open (UNIT=22,FILE=trim(rfznl%outname),FORM='formatted',STATUS='unknown')
-write (22,"(A)") 'eu'
-write (22,"(I8)") FZcnt
+! generate a list of all orientations in Euler angle format (if requested)
+if (doeu) then
+  open (UNIT=20,FILE=trim(rfznl%euoutname),FORM='formatted',STATUS='unknown')
+  write (20,"(A)") 'eu'
+  write (20,"(I8)") FZcnt
+end if
 
-! scan through the list
+! generate a list of all orientations in cubochoric format (if requested)
+if (docu) then
+  open (UNIT=21,FILE=trim(rfznl%cuoutname),FORM='formatted',STATUS='unknown')
+  write (21,"(A)") 'cu'
+  write (21,"(I8)") FZcnt
+end if
+
+! generate a list of all orientations in homochoric format (if requested)
+if (doho) then
+  open (UNIT=22,FILE=trim(rfznl%hooutname),FORM='formatted',STATUS='unknown')
+  write (22,"(A)") 'ho'
+  write (22,"(I8)") FZcnt
+end if
+
+! generate a list of all orientations in quternion format (if requested)
+if (doqu) then
+  open (UNIT=23,FILE=trim(rfznl%quoutname),FORM='formatted',STATUS='unknown')
+  write (23,"(A)") 'qu'
+  write (23,"(I8)") FZcnt
+end if
+
+! generate a list of all orientations in Rodrigues format (if requested)
+if (doro) then
+  open (UNIT=24,FILE=trim(rfznl%rooutname),FORM='formatted',STATUS='unknown')
+  write (24,"(A)") 'ro'
+  write (24,"(I8)") FZcnt
+end if
+
+! generate a list of all orientations in orientation matrix format (if requested)
+if (doom) then
+  open (UNIT=25,FILE=trim(rfznl%omoutname),FORM='formatted',STATUS='unknown')
+  write (25,"(A)") 'om'
+  write (25,"(I8)") FZcnt
+end if
+
+! generate a list of all orientations in axis angle pair format (if requested)
+if (doax) then
+  open (UNIT=26,FILE=trim(rfznl%axoutname),FORM='formatted',STATUS='unknown')
+  write (26,"(A)") 'ax'
+  write (26,"(I8)") FZcnt
+end if
+
+
+! then scan through the list and write the requested representation(s) to its/their file(s) 
 FZtmp => FZlist
 do i = 1, FZcnt
-! convert each rodrigues triplet into euler angles and write them to the file
-  eud = ro2eu(FZtmp%rod) * rtod
-  write (22,"(3F16.4)") eud
+! euler angles
+  if (doeu) write (20,"(3F14.6)") ro2eu(FZtmp%rod) * rtod
+
+! cubochoric
+  if (docu) write (21,"(3F14.6)") ro2cu(FZtmp%rod)
+
+! homochoric
+  if (doho) write (22,"(3F14.6)") ro2ho(FZtmp%rod)
+
+! quaternion
+  if (doqu) write (23,"(4F14.6)") ro2qu(FZtmp%rod)
+
+! rodrigues
+  if (doro) write (24,"(4F14.6)") FZtmp%rod
+  
+! orientation matrix
+  if (doom) write (25,"(9F14.6)") ro2om(FZtmp%rod)
+
+! axis angle pair
+  if (doax) write (20,"(4F14.6)") ro2ax(FZtmp%rod)
+
+! next orientation
   FZtmp => FZtmp%next
 end do
 
-close(UNIT=22,STATUS='keep')
+if (doeu) close(UNIT=20,STATUS='keep')
+if (docu) close(UNIT=21,STATUS='keep')
+if (doho) close(UNIT=22,STATUS='keep')
+if (doqu) close(UNIT=23,STATUS='keep')
+if (doro) close(UNIT=24,STATUS='keep')
+if (doom) close(UNIT=25,STATUS='keep')
+if (doax) close(UNIT=26,STATUS='keep')
 
-call Message('Euler angles stored in file '//rfznl%outname)
+if (doeu) call Message('Euler angles stored in file '//rfznl%euoutname)
+if (docu) call Message('Cubochoric representation stored in file '//rfznl%cuoutname)
+if (doho) call Message('Homochoric representation stored in file '//rfznl%hooutname)
+if (doqu) call Message('Quaternion representation stored in file '//rfznl%quoutname)
+if (doro) call Message('Rodrigues vector representation stored in file '//rfznl%rooutname)
+if (doom) call Message('Orientation matrix representation stored in file '//rfznl%omoutname)
+if (doax) call Message('Axis-angle pair representation stored in file '//rfznl%axoutname)
 
 
 end subroutine CreateSampling

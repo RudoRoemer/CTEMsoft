@@ -65,6 +65,7 @@ contains
 !
 !> @date 01/10/14 MDG 1.0 original
 !> @date 06/10/14 MDG 2.0 rewrite without global variables
+!> @date 08/14/15 MDG 2.1 increased threshold ddt for double diffraction spots
 !--------------------------------------------------------------------------
 recursive subroutine Initialize_Cell(cell,Dyn,rlp,xtalname, dmin, voltage, verbose)
 
@@ -148,7 +149,9 @@ logical                                    :: loadingfile
  allocate(cell%dbdiff(-2*imh:2*imh,-2*imk:2*imk,-2*iml:2*iml),stat=istat)
  if (istat.ne.0) call FatalError('InitializeCell:',' unable to allocate cell%dbdiff array')
  cell%dbdiff = .FALSE.
- ddt = 1.0e-10
+ ddt = 1.0e-5  
+! changed from 1.0e-10 on 08/14/15 by MDG in response to some issues with double
+! diffraction spots not being taken into account in EBSD master pattern simulations 
 
 
 ! next, we compute the overall lookup table cell%LUT; we do not, at this point, create a 
