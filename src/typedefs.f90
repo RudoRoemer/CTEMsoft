@@ -50,6 +50,8 @@
 !> @date    6/ 9/14 MDG 4.2 added all defect type declarations
 !> @date    8/11/14 MDG 4.3 modified Rodrigues vector to 4 components
 !> @date   12/02/14 MDG 4.4 added a few entries to unitcell pointer
+!> @date   08/25/15 MDG 4.5 added PGSamplingType conversion array for master pattern computations
+!> @date   08/27/15 MDG 4.6 added component to kvectorlist
 !--------------------------------------------------------------------------
 module typedefs
 
@@ -323,6 +325,10 @@ integer(kind=irg),parameter       :: PGLaue(32) =(/2,2,5,5,5,8,8,8,11,11,11,15,1
 !> 3D point groups : inverted Laue group number
 integer(kind=irg),parameter       :: PGLaueinv(32) = (/1,1,2,2,2,3,3,3,4,4,4,5,5,5,5,6,6, &
                                                        7,7,7,8,8,8,9,9,9,9,10,10,11,11,11/)
+
+!> 3D point groups mapped onto kvector sampling type (used for master pattern computations) [-1 for special cases]
+integer(kind=irg),parameter       :: PGSamplingType(32) = (/1,2,3,4,5,5,5,6,5,5,6,6,7,-1,9,-1, &
+                                                            -1,-1,-1,-1,15,12,17,16,18,-1,19,3,6,6,8,9 /)
 
 !> 31 diffraction group symbols in BESR order
 character(5),parameter  :: DG(31) =(/'    1','   1R','    2','   2R','  21R','   mR', &
@@ -819,11 +825,11 @@ end type STEMtype
 
 ! linked list of wave vectors (used by all diffraction programs)
 type kvectorlist  
-  integer(kind=irg)             :: i,j                  ! image coordinates
+  integer(kind=irg)             :: i,j,hs       ! image coordinates
   real(kind=dbl)                :: kt(3)        ! tangential component of wavevector
   real(kind=dbl)                :: kn           ! normal component
   real(kind=dbl)                :: k(3)         ! full wave vector
-  type(kvectorlist),pointer     :: next                 ! connection to next wave vector
+  type(kvectorlist),pointer     :: next         ! connection to next wave vector
 end type kvectorlist
 
 !--------------------------------------------------------------------------

@@ -1856,6 +1856,49 @@ end subroutine JSONreadString
 
 !--------------------------------------------------------------------------
 !
+! SUBROUTINE:JSONreadLogical
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read logical from json file into namelist structure (with auto missing detection)
+!
+!> @param json structure
+!> @param ep entry path string
+!> @param sval logical 
+!> @param dval logical (default value)
+!
+!> @date 08/20/15  MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine JSONreadLogical(json, ep, sval, dval)
+
+use ISO_C_BINDING
+use io
+
+IMPLICIT NONE
+
+type(json_file),INTENT(INOUT)           :: json
+character(fnlen),INTENT(IN)             :: ep
+logical,INTENT(INOUT)                   :: sval
+logical,INTENT(IN)                      :: dval
+
+logical                                 :: found, cval
+
+! if we find the field 'ep' in the file, then we read its corresponding value
+! if it is not there, then we return the dval default value
+call json%get(ep, cval, found)
+if (.not. found) then
+  write(error_unit,'(A)') 'WARNING: field '//trim(ep)//' not found in json file; using default value from namelist template'
+  sval = dval
+else
+  sval = cval
+end if
+
+end subroutine JSONreadLogical
+
+
+
+!--------------------------------------------------------------------------
+!
 ! SUBROUTINE:JSONreadKosselNameList
 !
 !> @author Marc De Graef, Carnegie Mellon University
@@ -2008,7 +2051,7 @@ else
   ep = 'Kosselmasterlist.thickinc'
   call JSONreadReal(json, ep, knl%thickinc, defknl%thickinc)
   ep = 'Kosselmasterlist.tfraction'
-  call JSONreadReal(json, ep, knl%mtfraction, defknl%tfraction)
+  call JSONreadReal(json, ep, knl%tfraction, defknl%tfraction)
 
   ep = 'Kosselmasterlist.Kosselmode'
   s = knl%Kosselmode
@@ -2079,24 +2122,24 @@ else
   ep = 'MCdata.num_el'
   call JSONreadInteger(json, ep, mcnl%num_el, defmcnl%num_el)
   ep = 'MCdata.primeseeds'
-  call JSONreadInteger(json, ep, mcnl%primeseeds, defmcnl%primeseed)
+  call JSONreadInteger(json, ep, mcnl%primeseed, defmcnl%primeseed)
   ep = 'MCdata.nthreads'
   call JSONreadInteger(json, ep, mcnl%nthreads, defmcnl%nthreads)
 
   ep = 'MCdata.sig'
-  call JSONreadReal(json, ep, mcnl%sig, defmcnl%sig)
+  call JSONreadDouble(json, ep, mcnl%sig, defmcnl%sig)
   ep = 'MCdata.omega'
-  call JSONreadReal(json, ep, mcnl%omega, defmcnl%omega)
+  call JSONreadDouble(json, ep, mcnl%omega, defmcnl%omega)
   ep = 'MCdata.EkeV'
-  call JSONreadReal(json, ep, mcnl%EkeV, defmcnl%EkeV)
+  call JSONreadDouble(json, ep, mcnl%EkeV, defmcnl%EkeV)
   ep = 'MCdata.Ehistmin'
-  call JSONreadReal(json, ep, mcnl%Ehistmin, defmcnl%Ehistmin)
+  call JSONreadDouble(json, ep, mcnl%Ehistmin, defmcnl%Ehistmin)
   ep = 'MCdata.Ebinsize'
-  call JSONreadReal(json, ep, mcnl%Ebinsize, defmcnl%Ebinsize)
+  call JSONreadDouble(json, ep, mcnl%Ebinsize, defmcnl%Ebinsize)
   ep = 'MCdata.depthmax'
-  call JSONreadReal(json, ep, mcnl%depthmax, defmcnl%depthmax)
+  call JSONreadDouble(json, ep, mcnl%depthmax, defmcnl%depthmax)
   ep = 'MCdata.depthstep'
-  call JSONreadReal(json, ep, mcnl%depthstep, defmcnl%depthstep)
+  call JSONreadDouble(json, ep, mcnl%depthstep, defmcnl%depthstep)
 
   ep = 'MCdata.MCmode'
   s = mcnl%MCmode
@@ -2172,19 +2215,19 @@ else
   call JSONreadInteger(json, ep, mcnl%totnum_el, defmcnl%totnum_el)
 
   ep = 'MCCLdata.sig'
-  call JSONreadReal(json, ep, mcnl%sig, defmcnl%sig)
+  call JSONreadDouble(json, ep, mcnl%sig, defmcnl%sig)
   ep = 'MCCLdata.omega'
-  call JSONreadReal(json, ep, mcnl%omega, defmcnl%omega)
+  call JSONreadDouble(json, ep, mcnl%omega, defmcnl%omega)
   ep = 'MCCLdata.EkeV'
-  call JSONreadReal(json, ep, mcnl%EkeV, defmcnl%EkeV)
+  call JSONreadDouble(json, ep, mcnl%EkeV, defmcnl%EkeV)
   ep = 'MCCLdata.Ehistmin'
-  call JSONreadReal(json, ep, mcnl%Ehistmin, defmcnl%Ehistmin)
+  call JSONreadDouble(json, ep, mcnl%Ehistmin, defmcnl%Ehistmin)
   ep = 'MCCLdata.Ebinsize'
-  call JSONreadReal(json, ep, mcnl%Ebinsize, defmcnl%Ebinsize)
+  call JSONreadDouble(json, ep, mcnl%Ebinsize, defmcnl%Ebinsize)
   ep = 'MCCLdata.depthmax'
-  call JSONreadReal(json, ep, mcnl%depthmax, defmcnl%depthmax)
+  call JSONreadDouble(json, ep, mcnl%depthmax, defmcnl%depthmax)
   ep = 'MCCLdata.depthstep'
-  call JSONreadReal(json, ep, mcnl%depthstep, defmcnl%depthstep)
+  call JSONreadDouble(json, ep, mcnl%depthstep, defmcnl%depthstep)
 
   ep = 'MCCLdata.MCmode'
   s = mcnl%MCmode
@@ -2223,13 +2266,13 @@ use NameListHandlers
 
 IMPLICIT NONE
 
-type(MCCLNameListType),INTENT(INOUT)                  :: mcnl
+type(MCCLMultiLayerNameListType),INTENT(INOUT)        :: mcnl
 character(fnlen),INTENT(IN)                           :: jsonname
 integer(kind=irg),INTENT(INOUT)                       :: error_cnt
 
 type(json_file)                                       :: json    !the JSON structure read from the file:
 
-type(MCCLNameListType)                                :: defmcnl
+type(MCCLMultiLayerNameListType)                      :: defmcnl
 logical                                               :: init = .TRUE.
 character(fnlen)                                      :: nmlfile = '', ep, s, s2
 real(kind=wp)                                         :: rval
@@ -2262,23 +2305,23 @@ else
   call JSONreadInteger(json, ep, mcnl%totnum_el, defmcnl%totnum_el)
 
   ep = 'MCCLdata.sig'
-  call JSONreadReal(json, ep, mcnl%sig, defmcnl%sig)
+  call JSONreadDouble(json, ep, mcnl%sig, defmcnl%sig)
   ep = 'MCCLdata.omega'
-  call JSONreadReal(json, ep, mcnl%omega, defmcnl%omega)
+  call JSONreadDouble(json, ep, mcnl%omega, defmcnl%omega)
   ep = 'MCCLdata.EkeV'
-  call JSONreadReal(json, ep, mcnl%EkeV, defmcnl%EkeV)
+  call JSONreadDouble(json, ep, mcnl%EkeV, defmcnl%EkeV)
   ep = 'MCCLdata.Ehistmin'
-  call JSONreadReal(json, ep, mcnl%Ehistmin, defmcnl%Ehistmin)
+  call JSONreadDouble(json, ep, mcnl%Ehistmin, defmcnl%Ehistmin)
   ep = 'MCCLdata.Ebinsize'
-  call JSONreadReal(json, ep, mcnl%Ebinsize, defmcnl%Ebinsize)
+  call JSONreadDouble(json, ep, mcnl%Ebinsize, defmcnl%Ebinsize)
   ep = 'MCCLdata.depthmax'
-  call JSONreadReal(json, ep, mcnl%depthmax, defmcnl%depthmax)
+  call JSONreadDouble(json, ep, mcnl%depthmax, defmcnl%depthmax)
   ep = 'MCCLdata.depthstep'
-  call JSONreadReal(json, ep, mcnl%depthstep, defmcnl%depthstep)
+  call JSONreadDouble(json, ep, mcnl%depthstep, defmcnl%depthstep)
   ep = 'MCCLdata.filmthickness'
-  call JSONreadReal(json, ep, mcnl%filmthickness, defmcnl%filmthickness)
+  call JSONreadDouble(json, ep, mcnl%filmthickness, defmcnl%filmthickness)
   ep = 'MCCLdata.filmstep'
-  call JSONreadReal(json, ep, mcnl%filmstep, defmcnl%filmstep)
+  call JSONreadDouble(json, ep, mcnl%filmstep, defmcnl%filmstep)
 
   ep = 'MCCLdata.MCmode'
   s = mcnl%MCmode
@@ -2355,7 +2398,7 @@ else
   ep = 'EBSDmastervars.nthreads'
   call JSONreadInteger(json, ep, emnl%nthreads, defemnl%nthreads)
 
-  ep = 'EBSDmastervars.dimn'
+  ep = 'EBSDmastervars.dmin'
   call JSONreadReal(json, ep, emnl%dmin, defemnl%dmin)
 
   ep = 'EBSDmastervars.energyfile'
@@ -2368,8 +2411,287 @@ call json%destroy(); call JSON_failtest(error_cnt)
 
 end subroutine JSONreadEBSDMasterNameList
 
-! start at line 572 of NameListHandlers.f90
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:JSONreadECPMasterNameList
+!
+!> @author Saransh Singh/Marc De Graef, Carnegie Mellon University
+!
+!> @brief read json file and fill mcnl structure (used by EMECPmaster.f90)
+!
+!> @param emnl ECP master name list structure
+!> @param jsonname input file name
+!> @param error_cnt total number of errors encountered by json routines
+!
+!> @date 08/20/15  MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine JSONreadECPMasterNameList(ecpnl, jsonname, error_cnt)
 
+use ISO_C_BINDING
+use NameListHandlers
 
+IMPLICIT NONE
+
+type(ECPMasterNameListType),INTENT(INOUT)             :: ecpnl
+character(fnlen),INTENT(IN)                           :: jsonname
+integer(kind=irg),INTENT(INOUT)                       :: error_cnt
+
+type(json_file)                                       :: json    !the JSON structure read from the file:
+
+type(ECPMasterNameListType)                           :: defecpnl
+logical                                               :: init = .TRUE.
+character(fnlen)                                      :: nmlfile = '', ep, s, s2
+real(kind=wp)                                         :: rval
+character(kind=CK,len=:),allocatable                  :: cval
+real(wp),dimension(:),allocatable                     :: rvec
+
+! first of all, open the file and return an error message if it does not exist
+error_cnt = 0
+call json_initialize(); call JSON_failtest(error_cnt)
+
+! populate the json structure
+call json%load_file(filename = trim(jsonname))
+if (json_failed()) then    !if there was an error reading the file
+  call json_print_error_message(error_unit)
+  error_cnt = error_cnt + 1
+else
+! ok, we got here so we need to initialize the namelist first to its default values (set in NameListHandlers)
+  call GetECPMasterNameList(nmlfile, defecpnl, initonly=init)
+
+! then we start reading the values in the json file  
+  ep = 'ECPmastervars.stdout'
+  call JSONreadInteger(json, ep, ecpnl%stdout, defecpnl%stdout)
+  ep = 'ECPmastervars.npx'
+  call JSONreadInteger(json, ep, ecpnl%npx, defecpnl%npx)
+  ep = 'ECPmastervars.Esel'
+  call JSONreadInteger(json, ep, ecpnl%Esel, defecpnl%Esel)
+
+  ep = 'ECPmastervars.startthick'
+  call JSONreadReal(json, ep, ecpnl%startthick, defecpnl%startthick)
+  ep = 'ECPmastervars.dmin'
+  call JSONreadReal(json, ep, ecpnl%dmin, defecpnl%dmin)
+
+  ep = 'ECPmastervars.fn'
+  call JSONreadRealVec(json, ep, ecpnl%fn, defecpnl%fn, size(ecpnl%fn))
+  ep = 'ECPmastervars.abcdist'
+  call JSONreadRealVec(json, ep, ecpnl%abcdist, defecpnl%abcdist, size(ecpnl%abcdist))
+  ep = 'ECPmastervars.albegadist'
+  call JSONreadRealVec(json, ep, ecpnl%albegadist, defecpnl%albegadist, size(ecpnl%albegadist))
+
+  ep = 'ECPmastervars.compmode'
+  call JSONreadString(json, ep, ecpnl%compmode, defecpnl%compmode)
+  ep = 'ECPmastervars.energyfile'
+  call JSONreadString(json, ep, ecpnl%energyfile, defecpnl%energyfile)
+  ep = 'ECPmastervars.outname'
+  call JSONreadString(json, ep, ecpnl%outname, defecpnl%outname)
+
+  ep = 'ECPmastervars.distort'
+  call JSONreadLogical(json, ep, ecpnl%distort, defecpnl%distort)
+end if
+
+call json%destroy(); call JSON_failtest(error_cnt)
+
+end subroutine JSONreadECPMasterNameList
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:JSONreadEBSDNameList
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read json file and fill enl structure (used by EMEBSD.f90)
+!
+!> @param enl EBSD name list structure
+!> @param jsonname input file name
+!> @param error_cnt total number of errors encountered by json routines
+!
+!> @date 08/20/15  MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine JSONreadEBSDNameList(enl, jsonname, error_cnt)
+
+use ISO_C_BINDING
+use NameListHandlers
+use error
+
+IMPLICIT NONE
+
+type(EBSDNameListType),INTENT(INOUT)                  :: enl
+character(fnlen),INTENT(IN)                           :: jsonname
+integer(kind=irg),INTENT(INOUT)                       :: error_cnt
+
+type(json_file)                                       :: json    !the JSON structure read from the file:
+
+type(EBSDNameListType)                                :: defenl
+logical                                               :: init = .TRUE.
+character(fnlen)                                      :: nmlfile = '', ep, s, s2
+real(kind=wp)                                         :: rval
+character(kind=CK,len=:),allocatable                  :: cval
+real(wp),dimension(:),allocatable                     :: rvec
+
+! first of all, open the file and return an error message if it does not exist
+error_cnt = 0
+call json_initialize(); call JSON_failtest(error_cnt)
+
+! populate the json structure
+call json%load_file(filename = trim(jsonname))
+if (json_failed()) then    !if there was an error reading the file
+  call json_print_error_message(error_unit)
+  error_cnt = error_cnt + 1
+else
+! ok, we got here so we need to initialize the namelist first to its default values (set in NameListHandlers)
+  call GetEBSDNameList(nmlfile, defenl, initonly=init)
+
+  ep = 'EBSDdata.stdout'
+  call JSONreadInteger(json, ep, enl%stdout, defenl%stdout)
+  ep = 'EBSDdata.numsx'
+  call JSONreadInteger(json, ep, enl%numsx, defenl%numsx)
+  ep = 'EBSDdata.numsy'
+  call JSONreadInteger(json, ep, enl%numsy, defenl%numsy)
+  ep = 'EBSDdata.binning'
+  call JSONreadInteger(json, ep, enl%binning, defenl%binning)
+  ep = 'EBSDdata.nthreads'
+  call JSONreadInteger(json, ep, enl%nthreads, defenl%nthreads)
+  ep = 'EBSDdata.energyaverage'
+  call JSONreadInteger(json, ep, enl%energyaverage, defenl%energyaverage)
+
+  ep = 'EBSDdata.L'
+  call JSONreadReal(json, ep, enl%L, defenl%L)
+  ep = 'EBSDdata.thetac'
+  call JSONreadReal(json, ep, enl%thetac, defenl%thetac)
+  ep = 'EBSDdata.delta'
+  call JSONreadReal(json, ep, enl%delta, defenl%delta)
+  ep = 'EBSDdata.xpc'
+  call JSONreadReal(json, ep, enl%xpc, defenl%xpc)
+  ep = 'EBSDdata.ypc'
+  call JSONreadReal(json, ep, enl%ypc, defenl%ypc)
+  ep = 'EBSDdata.omega'
+  call JSONreadReal(json, ep, enl%omega, defenl%omega)
+  ep = 'EBSDdata.energymin'
+  call JSONreadReal(json, ep, enl%energymin, defenl%energymin)
+  ep = 'EBSDdata.energymax'
+  call JSONreadReal(json, ep, enl%energymax, defenl%energymax)
+  ep = 'EBSDdata.gammavalue'
+  call JSONreadReal(json, ep, enl%gammavalue, defenl%gammavalue)
+
+  ep = 'EBSDdata.axisangle'
+  call JSONreadRealVec(json, ep, enl%axisangle, defenl%axisangle, size(enl%axisangle))
+
+  ep = 'EBSDdata.beamcurrent'
+  call JSONreadDouble(json, ep, enl%beamcurrent, defenl%beamcurrent)
+  ep = 'EBSDdata.dwelltime'
+  call JSONreadDouble(json, ep, enl%dwelltime, defenl%dwelltime)
+
+  ep = 'EBSDdata.maskpattern'
+  s = enl%maskpattern
+  s2 = defenl%maskpattern
+  call JSONreadString(json, ep, s, s2)
+  ep = 'EBSDdata.scalingmode'
+  s = enl%scalingmode
+  s2 = defenl%scalingmode
+  call JSONreadString(json, ep, s, s2)
+  ep = 'EBSDdata.eulerconvention'
+  s = enl%eulerconvention
+  s2 = defenl%eulerconvention
+  call JSONreadString(json, ep, s, s2)
+  ep = 'EBSDdata.outputformat'
+  s = enl%outputformat
+  s2 = defenl%outputformat
+  call JSONreadString(json, ep, s, s2)
+
+  ep = 'EBSDdata.anglefile'
+  call JSONreadString(json, ep, enl%anglefile, defenl%anglefile)
+  ep = 'EBSDdata.masterfile'
+  call JSONreadString(json, ep, enl%masterfile, defenl%masterfile)
+  ep = 'EBSDdata.energyfile'
+  call JSONreadString(json, ep, enl%energyfile, defenl%energyfile)
+  ep = 'EBSDdata.datafile'
+  call JSONreadString(json, ep, enl%datafile, defenl%datafile)
+end if
+
+call json%destroy(); call JSON_failtest(error_cnt)
+
+end subroutine JSONreadEBSDNameList
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:JSONreadEBSDoverlapNameList
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read jsonfile and fill enl structure (used by EMEBSDoverlap.f90)
+!
+!> @param enl EBSD name list structure
+!> @param jsonname input file name
+!> @param error_cnt total number of errors encountered by json routines
+!
+!> @date 08/20/15  MDG 1.0 new routine
+!--------------------------------------------------------------------------
+subroutine JSONreadEBSDoverlapNameList(enl, jsonname, error_cnt)
+
+use ISO_C_BINDING
+use NameListHandlers
+use error
+
+IMPLICIT NONE
+
+type(EBSDoverlapNameListType),INTENT(INOUT)           :: enl
+character(fnlen),INTENT(IN)                           :: jsonname
+integer(kind=irg),INTENT(INOUT)                       :: error_cnt
+
+type(json_file)                                       :: json    !the JSON structure read from the file:
+
+type(EBSDoverlapNameListType)                         :: defenl
+logical                                               :: init = .TRUE.
+character(fnlen)                                      :: nmlfile = '', ep, s, s2
+real(kind=wp)                                         :: rval
+character(kind=CK,len=:),allocatable                  :: cval
+real(wp),dimension(:),allocatable                     :: rvec
+
+! first of all, open the file and return an error message if it does not exist
+error_cnt = 0
+call json_initialize(); call JSON_failtest(error_cnt)
+
+! populate the json structure
+call json%load_file(filename = trim(jsonname))
+if (json_failed()) then    !if there was an error reading the file
+  call json_print_error_message(error_unit)
+  error_cnt = error_cnt + 1
+else
+! ok, we got here so we need to initialize the namelist first to its default values (set in NameListHandlers)
+  call GetEBSDoverlapNameList(nmlfile, defenl, initonly=init)
+
+  ep = 'EBSDdata.stdout'
+  call JSONreadInteger(json, ep, enl%stdout, defenl%stdout)
+
+  ep = 'EBSDdata.PatternAxisA'
+  call JSONreadIntegerVec(json, ep, enl%PatternAxisA, defenl%PatternAxisA, size(defenl%PatternAxisA))
+  ep = 'EBSDdata.HorizontalAxisA'
+  call JSONreadIntegerVec(json, ep, enl%HorizontalAxisA, defenl%HorizontalAxisA, size(defenl%HorizontalAxisA))
+
+  ep = 'EBSDdata.tA'
+  call JSONreadRealVec(json, ep, enl%tA, defenl%tA, size(enl%tA))
+  ep = 'EBSDdata.tB'
+  call JSONreadRealVec(json, ep, enl%tB, defenl%tB, size(enl%tB))
+  ep = 'EBSDdata.gA'
+  call JSONreadRealVec(json, ep, enl%gA, defenl%gA, size(enl%gA))
+  ep = 'EBSDdata.gB'
+  call JSONreadRealVec(json, ep, enl%gB, defenl%gB, size(enl%gB))
+
+  ep = 'EBSDdata.fracA'
+  call JSONreadReal(json, ep, enl%fracA, defenl%fracA)
+
+  ep = 'EBSDdata.masterfileA'
+  call JSONreadString(json, ep, enl%masterfileA, defenl%masterfileA)
+  ep = 'EBSDdata.masterfileB'
+  call JSONreadString(json, ep, enl%masterfileB, defenl%masterfileB)
+  ep = 'EBSDdata.datafile'
+  call JSONreadString(json, ep, enl%datafile, defenl%datafile)
+end if
+
+call json%destroy(); call JSON_failtest(error_cnt)
+
+end subroutine JSONreadEBSDoverlapNameList
+
+! line 870 of NameListHandlers
 
 end module JSONsupport

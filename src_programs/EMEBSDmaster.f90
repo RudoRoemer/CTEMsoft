@@ -119,6 +119,7 @@ end program EMEBSDmaster
 !> @date 04/15/15  MDG 5.4 corrected offset reading of accum_z array
 !> @date 04/27/15  MDG 5.5 reactivate the hexagonal code; needs to be debugged
 !> @date 05/08/15  MDG 5.6 added automated conversion from hexagonal to square Lambert; debugged
+!> @date 08/25/15  MDG 6.0 changed symmetry to full point group and two Lambert hemispheres for output
 !--------------------------------------------------------------------------
 subroutine ComputeMasterPattern(emnl, progname, nmldeffile)
 
@@ -155,7 +156,7 @@ real(kind=dbl)          :: ctmp(192,3), arg
 integer(HSIZE_T)        :: dims4(4), cnt4(4), offset4(4)
 integer(kind=irg)      :: isym,i,j,ik,npy,ipx,ipy,debug,iE,izz, izzmax, iequiv(2,12), nequiv, num_el, MCnthreads, & ! counters
                         numk, & ! number of independent incident beam directions
-                        ir,nat(100),kk(3), npyhex, skip, ijmax, one, NUMTHREADS, TID, &
+                        ir,nat(100),kk(3), npyhex, skip, ijmax, one, NUMTHREADS, TID, SamplingType, &
                         numset,n,ix,iy,iz, io_int(6), nns, nnw, nref,  &
                         istat,gzero,ic,ip,ikk, totstrong, totweak, jh, ierr, nix, niy, nixp, niyp     ! counters
 real(kind=dbl)         :: tpi,Znsq, kkl, DBWF, kin, delta, h, lambda, omtl, srt, dc(3), xy(2), edge, scl, tmp, dx, dxm, dy, dym !
@@ -337,29 +338,30 @@ allocate(cell)
  end do
  isym = j
 
-! and convert this to the corresponding  Laue point group number since diffraction 
-! patterns are always centrosymmetric (hence, there are only 11 different cases for
-! the symmetry of the incident beam).   
-  isym = PGLaueinv(isym)  
+! here is new code dealing with all the special cases (quite a few more compared to the 
+! Laue group case)...  isym is the point group number. Once the symmetry case has been
+! fully determined (taking into account things like 31m and 3m1 an such), then the only places
+! that symmetry is handled are the modified Calckvectors routine, and the filling of the modified
+! Lambert projections after the dynamical simulation step.  We are also changing the name of the 
+! sr array (or srhex) to mLPNH and mLPSH (modified Lambert Projection Northern/Southern Hemisphere),
+! and we change the output HDF5 file a little as well. We need to make sure that the EMEBSD program
+! issues a warning when an old format HDF5 file is read.  
 
-! If the Laue group is # 7, then we need to determine the orientation of the mirror plane.
-! The second orientation of the mirror plane is represented by "Laue group" # 12 in this program.
- switchmirror = .FALSE.
- if (isym.eq.7) then
-  do i=1,11
-    if (cell%SYM_SGnum.eq.LaueTest(i)) switchmirror = .TRUE.
-  end do
- end if
- if (switchmirror) then
-  isym = 12
-  call Message(' Switching computational wedge to second setting for this space group', frm = "(A)")
- end if
- write (*,*) ' Laue group # ',isym, PGTHD(j)
+! Here, we encode isym into a new number that describes the sampling scheme; the new schemes are 
+! described in detail in the EBSD manual pdf file.
 
-! if this point group is trigonal or hexagonal, we need to switch usehex to .TRUE. so that
+SamplingType = PGSamplingType(isym)
+
+! next, intercept the special cases (hexagonal vs. rhombohedral cases that require special treatment)
+if (SamplingType.eq.-1) then 
+  SamplingType = getHexvsRho(cell,isym)
+end if
+
+! if the point group is trigonal or hexagonal, we need to switch usehex to .TRUE. so that
 ! the program will use the hexagonal sampling method
 usehex = .FALSE.
-if (((isym.ge.6).and.(isym.le.9)).or.(isym.eq.12)) usehex = .TRUE.
+if ((cell%xtal_system.eq.4).or.(cell%xtal_system.eq.5)) usehex = .TRUE.
+
 ! ---------- end of symmetry and crystallography section
 !=============================================
 !=============================================
