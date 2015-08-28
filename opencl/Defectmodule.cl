@@ -190,10 +190,10 @@ __kernel void CTEMDefect(__global float2* cl_expA,
 }*/
 
 //--------------------------------------------------------------------------
-// EMsoft:SEMDefect.cl
+// EMsoft:Defectmodule.cl
 //--------------------------------------------------------------------------
 //
-// KERNEL: SEMDefect
+// KERNEL: PreCalcScatMat
 //
 //> @author Saransh Singh, Carnegie Mellon University
 //
@@ -212,7 +212,8 @@ __kernel void PreCalcScatMat(   __global float2* cl_A,
                                 __global float2* cl_T2,
                                 __global float2* cl_coeff,
                                 const int nn,
-                                const int ns )
+                                const int ns,
+                                const int numpass)
 
 {
     int tx, ty, id;
@@ -231,7 +232,7 @@ __kernel void PreCalcScatMat(   __global float2* cl_A,
     for (int i = 0; i < nn; i++){
         for (int j = 0; j < nn; j++){
             for (int k = 0; k < nn; k++){
-                sum += cmplxmult(cl_A[id*nn*nn + i*nn + k],cl_A[id*nn*nn + k*nn + j]);
+                sum += cmplxmult(cl_A[numpass*nn*nn + id*nn*nn + i*nn + k],cl_A[numpass*nn*nn + id*nn*nn + k*nn + j]);
             }
             cl_AA[id*nn*nn + i*nn + j] = sum;
             sum = (float2)(0.0f,0.0f);
@@ -343,7 +344,7 @@ __kernel void PreCalcScatMat(   __global float2* cl_A,
 
 
 //--------------------------------------------------------------------------
-// EMsoft:CalcScatMatDefects.cl
+// EMsoft:Defectmodule.cl
 //--------------------------------------------------------------------------
 //
 // KERNEL: CalcScatMatDefects
@@ -400,12 +401,18 @@ __kernel void CalcScatMatDefects(	__global float2* cl_DynMat,
     
         offset = nstep*get_global_size(0)*get_global_size(1);
         gdotR = cl_gdotR[offset + id];
- 
+        //if(id == 0 && nstep == 1){
+        //    printf("%v2hlf",gdotR);
+        //}
+        //if(id == 1 && nstep == 1){
+        //    printf("%v2hlf",gdotR);
+        //}
+
         for (int i = 0; i < nn; i++){
             for (int j = 0; j < nn; j++){
-                arg1 = cmplxexp(-2.0f*PI*cl_ScalFact[i*nn+j].x*gdotR.x);
-                arg2 = cmplxexp(-2.0f*PI*cl_ScalFact[i*nn+j].y*gdotR.y);
-                arg1 = cmplxmult(arg1,arg2);
+                arg1 = cmplxexp(-2.0f*PI*cl_ScalFact[i*nn+j].x*gdotR.x - 2.0f*PI*cl_ScalFact[i*nn+j].y*gdotR.y);
+                //arg2 = cmplxexp();
+                //arg1 = cmplxmult(arg1,arg2);
                 DynMatScald = cl_DynMat[id*nn*nn + i*nn + j]/scaling;
 		cl_A[id*nn*nn + i*nn + j] = cmplxmult(DynMatScald,arg1); 
 
@@ -522,11 +529,14 @@ __kernel void CalcScatMatDefects(	__global float2* cl_DynMat,
                 }
             }
         }
-
+        
 // cl_expA now has the exponential of the structure matrix. We now multiply
 // by the column vector [1 0 0 ...... 0] to the the fourier coefficients of
 // wavefunction at different depths and subsequently the depth integrated
 // intensity
+        //if(id == 0){
+        //    printf("%10.6v2hlf\n",cl_expA[1]);
+        //}
         
         sum = (float2)(0.0f,0.0f);
         for (int l = 0; l < nn; l++){
@@ -547,7 +557,70 @@ __kernel void CalcScatMatDefects(	__global float2* cl_DynMat,
     barrier(CLK_GLOBAL_MEM_FENCE);
     
 }
-                                
+
+//--------------------------------------------------------------------------
+// EMsoft: Defectmodule.cl
+//--------------------------------------------------------------------------
+//
+// KERNEL: InterpolateScatMat
+//
+//> @author Saransh Singh, Carnegie Mellon University
+//
+//> @brief OpenCL kernel to interpolate and calculate intensity from a precomputed list
+//
+//> @date 07/20/15  SS  1.0 Original
+//--------------------------------------------------------------------------
+
+__kernel void InterpolateScatMat( __global float2* cl_DynMat,
+                                  __global int* cl_offset,
+                                  __global float2* cl_wavefncoeff,
+                                  __global float2* cl_wavefncoeffintd,
+                                  const int nn,
+                                  const int numdepth)
+{
+    int tx, ty, id;
+    tx = get_global_id(0);
+	ty = get_global_id(1);
+	id = get_global_size(0)*ty + tx;
+    int offset;
+    float2 sum;
+    for (int i = 0; i < nn; i++){
+        if ( i == 0) {
+            cl_wavefncoeff[id*nn + i] = (float2)(1.0f,0.0f);
+        }
+        else {
+            cl_wavefncoeff[id*nn + i] = (float2)(0.0f,0.0f);
+        }
+        
+    }
+    
+    for (int nstep = 0; nstep < numdepth; nstep++){
+        
+        // calculating initial input matrix
+        
+        offset = cl_offset[id*numdepth + nstep];
+
+        
+        sum = (float2)(0.0f,0.0f);
+        for (int l = 0; l < nn; l++){
+            cl_wavefncoeffintd[id*nn + l] = cl_wavefncoeff[id*nn + l];
+        }
+        for (int j = 0; j < nn; j++){
+            for (int k = 0; k < nn; k++){
+                sum += cmplxmult(cl_DynMat[offset*nn*nn + j*nn + k],cl_wavefncoeffintd[id*nn + k]);
+            }
+            cl_wavefncoeff[id*nn + j] = sum;
+            sum = (float2)(0.0f,0.0f);
+        }
+        
+        // we have the fourier coefficients of the wavefunction here
+        // just take the square modulus to get the intensity
+        
+	}
+    barrier(CLK_GLOBAL_MEM_FENCE);
+    
+}
+
 
 //--------------------------------------------------------------------------
 // EMsoft:CalcScatMatDefectsTable.cl

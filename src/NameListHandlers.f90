@@ -38,6 +38,7 @@
 !
 !> @date 06/13/14 MDG 1.0 original
 !> @date 05/05/15 MDG 1.1 removed primelist variable from name list files
+!> @date 08/12/15 MDG 1.2 added initonly optional keyword to skip reading from file
 !--------------------------------------------------------------------------
 module NameListHandlers
 
@@ -56,10 +57,11 @@ contains
 !
 !> @param nmlfile namelist file name
 !> @param knl Kossel name list structure
+!> @param initonly [optional] logical
 !
 !> @date 06/13/14  MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine GetKosselNameList(nmlfile, knl)
+recursive subroutine GetKosselNameList(nmlfile, knl, initonly)
 
 use error
 
@@ -67,6 +69,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)             :: nmlfile
 type(KosselNameListType),INTENT(INOUT)  :: knl
+logical,OPTIONAL,INTENT(IN)             :: initonly
+
+logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: numthick
@@ -83,6 +88,7 @@ real(kind=sgl)          :: thickinc
 real(kind=sgl)          :: minten
 character(fnlen)        :: xtalname
 character(fnlen)        :: outname
+
 
 namelist /Kossellist/ stdout, xtalname, voltage, k, fn, dmin, convergence, minten, nthreads, &
                               startthick, thickinc, numthick, outname, npix, maxHOLZ
@@ -104,6 +110,11 @@ minten = 1.0E-5                 ! minimum intensity in diffraction disk to make 
 xtalname = 'undefined'          ! initial value to check that the keyword is present in the nml file
 outname = 'Kosselout.data'      ! output filename
 
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
  open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
  read(UNIT=dataunit,NML=Kossellist)
@@ -113,6 +124,7 @@ outname = 'Kosselout.data'      ! output filename
  if (trim(xtalname).eq.'undefined') then
   call FatalError('EMKossel:',' structure file name is undefined in '//nmlfile)
  end if
+end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the knl fields
 knl%stdout = stdout
@@ -569,6 +581,7 @@ end subroutine GetEBSDMasterNameList
 !> @param emnl ECP master name list structure
 !
 !> @date 06/19/14  SS 1.0 new routine
+!> @date 08/12/15 MDG 1.1 correction of type for startthick and fn(3)
 !--------------------------------------------------------------------------
 subroutine GetECPMasterNameList(nmlfile, ecpnl)
 
@@ -582,14 +595,11 @@ type(ECPMasterNameListType),INTENT(INOUT)      :: ecpnl
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: npx
 integer(kind=irg)       :: Esel
-integer(kind=irg)       :: numthick
-real(kind=irg)          :: startthick
-real(kind=irg)          :: fn(3)
+real(kind=sgl)          :: fn(3)
+real(kind=sgl)          :: startthick
 real(kind=sgl)          :: dmin
-real(kind=sgl)          :: zintstep
 real(kind=sgl)          :: abcdist(3)
 real(kind=sgl)          :: albegadist(3)
-real(kind=sgl)          :: thickinc
 character(fnlen)        :: compmode
 character(fnlen)        :: energyfile
 character(fnlen)        :: outname
@@ -680,6 +690,7 @@ real(kind=sgl)          :: axisangle(4)
 real(kind=dbl)          :: beamcurrent
 real(kind=dbl)          :: dwelltime
 character(1)            :: maskpattern
+character(1)            :: spatialaverage
 character(3)            :: scalingmode
 character(3)            :: eulerconvention
 character(3)            :: outputformat
@@ -691,7 +702,7 @@ character(fnlen)        :: datafile
 ! define the IO namelist to facilitate passing variables to the program.
 namelist  / EBSDdata / stdout, L, thetac, delta, numsx, numsy, xpc, ypc, anglefile, eulerconvention, masterfile, &
                         energyfile, datafile, beamcurrent, dwelltime, energymin, energymax, binning, gammavalue, &
-                        scalingmode, axisangle, nthreads, outputformat, maskpattern, energyaverage, omega
+                        scalingmode, axisangle, nthreads, outputformat, maskpattern, energyaverage, omega, spatialaverage
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 stdout          = 6
@@ -720,7 +731,7 @@ anglefile       = 'undefined'   ! filename
 masterfile      = 'undefined'   ! filename
 energyfile      = 'undefined'   ! name of file that contains energy histograms for all scintillator pixels (output from MC program)
 datafile        = 'undefined'   ! output file name
-
+spatialaverage  = 'n'
 
 ! read the namelist file
  open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
@@ -771,7 +782,7 @@ enl%masterfile = masterfile
 enl%energyfile = energyfile
 enl%datafile = datafile
 enl%omega = omega
-
+enl%spatialaverage = spatialaverage
 end subroutine GetEBSDNameList
 
 !--------------------------------------------------------------------------
@@ -903,11 +914,14 @@ character(fnlen)        :: outname
 character(fnlen)        :: xtalname
 character(fnlen)        :: xtalname2
 character(fnlen)        :: energyfile
+character(fnlen)        :: filmfile
+character(fnlen)        :: subsfile
+
 
 ! namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, distort, abcdist, albegadist, ktmax, &
 namelist /ECPlist/ stdout, xtalname, xtalname2, voltage, k, fn, dmin, ktmax, filmthickness, &
                    startthick, thickinc, nthreads, numthick, npix, outname, thetac, compmode, zintstep, &
-                   gF, gS, tF, tS, energyfile
+                   gF, gS, tF, tS, energyfile, filmfile, subsfile
 
 ! default values
 stdout = 6                              ! standard output
@@ -933,6 +947,8 @@ outname = 'ecp.data'                    ! output filename
 xtalname = 'undefined'                  ! initial value to check that the keyword is present in the nml file
 xtalname2 = 'undefined'                 ! initial value for substrate structure name
 energyfile = 'undefined'
+filmfile = 'undefined'
+subsfile = 'undefined'
 
 ! read the namelist file
  open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
@@ -967,6 +983,8 @@ ecpnl%outname = outname
 ecpnl%xtalname = xtalname
 ecpnl%xtalname2 = xtalname2
 ecpnl%energyfile = energyfile
+ecpnl%filmfile = filmfile
+ecpnl%subsfile = subsfile
 
 end subroutine GetECPNameList
 
@@ -1448,6 +1466,7 @@ end subroutine GetECCINameList
 !> @param rfznl RFZ name list structure
 !
 !> @date 12/09/14 MDG 1.0 new routine
+!> @date 08/18/15 MDG 1.1 added options for all seven representations
 !--------------------------------------------------------------------------
 subroutine GetRFZNameList(nmlfile,rfznl)
 
@@ -1459,15 +1478,27 @@ character(fnlen),INTENT(IN)                     :: nmlfile
 type(RFZNameListType),INTENT(INOUT)             :: rfznl
 
 integer(kind=irg)                               :: pgnum, nsteps
-character(fnlen)                                :: outname
+character(fnlen)                                :: euoutname
+character(fnlen)                                :: cuoutname
+character(fnlen)                                :: hooutname
+character(fnlen)                                :: rooutname
+character(fnlen)                                :: quoutname
+character(fnlen)                                :: omoutname
+character(fnlen)                                :: axoutname
 
 ! namelist components
-namelist / RFZlist / pgnum, nsteps, outname
+namelist / RFZlist / pgnum, nsteps, euoutname, cuoutname, hooutname, rooutname, quoutname, omoutname, axoutname
 
 ! initialize to default values
 pgnum = 32
 nsteps = 50
-outname = 'anglefile.txt'
+euoutname = 'undefined'
+cuoutname = 'undefined'
+hooutname = 'undefined'
+rooutname = 'undefined'
+quoutname = 'undefined'
+omoutname = 'undefined'
+axoutname = 'undefined'
 
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
@@ -1477,7 +1508,13 @@ close(UNIT=dataunit,STATUS='keep')
 ! and copy the variables to the rfznl variable
 rfznl%pgnum  = pgnum
 rfznl%nsteps = nsteps
-rfznl%outname= outname
+rfznl%euoutname = euoutname
+rfznl%cuoutname = cuoutname
+rfznl%hooutname = hooutname
+rfznl%rooutname = rooutname
+rfznl%quoutname = quoutname
+rfznl%omoutname = omoutname
+rfznl%axoutname = axoutname
 
 end subroutine GetRFZNameList
 

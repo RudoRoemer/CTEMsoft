@@ -180,6 +180,7 @@ type EBSDNameListType
         character(3)            :: scalingmode
         character(3)            :: eulerconvention
         character(3)            :: outputformat
+        character(1)            :: spatialaverage
         character(fnlen)        :: anglefile
         character(fnlen)        :: masterfile
         character(fnlen)        :: energyfile 
@@ -274,6 +275,8 @@ type ECPNameListType
         character(fnlen)        :: xtalname
         character(fnlen)        :: xtalname2
         character(fnlen)        :: energyfile
+        character(fnlen)        :: filmfile
+        character(fnlen)        :: subsfile
 end type ECPNameListType
 
 
@@ -398,7 +401,13 @@ end type ECCINameListType
 type RFZNameListType
     integer(kind=irg)       :: pgnum
     integer(kind=irg)       :: nsteps
-    character(fnlen)        :: outname
+    character(fnlen)        :: euoutname
+    character(fnlen)        :: cuoutname
+    character(fnlen)        :: hooutname
+    character(fnlen)        :: rooutname
+    character(fnlen)        :: quoutname
+    character(fnlen)        :: omoutname
+    character(fnlen)        :: axoutname
 end type RFZNameListType
 
 type DictIndxOpenCLListType
