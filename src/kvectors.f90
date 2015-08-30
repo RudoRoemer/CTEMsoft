@@ -1164,6 +1164,9 @@ ktail%i = 0                                             ! i-index of beam
 ktail%j = 0                                             ! j-index of beam
 ktail%kt = (/0.0,0.0,0.0/)                              ! no tangential component for central beam direction
 ktail%k = matmul(rotmat,kk)
+k = ktail%k
+call TransSpace(cell,k,krec,'c','r')
+ktail%k = krec
 !kcent = ktail%k
 !print*,ktail%k
 kkk = CalcDot(cell,sngl(ktail%k),kcart,'c')			! normal component

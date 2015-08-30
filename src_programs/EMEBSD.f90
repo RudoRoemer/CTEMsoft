@@ -177,7 +177,6 @@ end program EMEBSD
 !> @date 03/20/15  MDG 5.4 corrected out-of-bounds error in EBSDpattern array
 !> @date 04/07/15  MDG 5.5 added HDF-formatted output
 !> @date 05/08/15  MDG 5.6 added support for hexagonal/trigonal master pattern interpolation
-!> @date 08/13/15  MDG 5.7 correction to num_el normalization in prefactor
 !--------------------------------------------------------------------------
 subroutine ComputeEBSDPatterns(enl, angles, acc, master, progname, nmldeffile)
 
@@ -217,7 +216,7 @@ real(kind=dbl)                          :: prefactor, qz(3)
 ! allocatable arrays
 real(kind=sgl),allocatable              :: EBSDpattern(:,:), binned(:,:)        ! array with EBSD patterns
 real(kind=sgl),allocatable              :: z(:,:)               ! used to store the computed patterns before writing to disk
-
+real(kind=sgl),allocatable              :: energywf(:)
 ! quaternion variables
 real(kind=dbl)                          :: qq(4), qq1(4), qq2(4), qq3(4)
 
@@ -279,7 +278,13 @@ Emax = nint((enl%energymax - enl%Ehistmin)/enl%Ebinsize) +1
 if (Emax.lt.1)  Emax=1
 if (Emax.gt.enl%numEbins)  Emax=enl%numEbins
 
-!num_el = nint(sum(acc%accum_e_detector))
+num_el = nint(sum(acc%accum_e_detector))
+allocate(energywf(Emin:Emax),stat=istat)
+energywf = 0.0
+
+energywf(Emin:Emax) = sum(sum(acc%accum_e_detector,3),2)
+energywf = energywf/sum(energywf)
+
 !====================================
 
 !====================================
@@ -290,10 +295,9 @@ if (Emax.gt.enl%numEbins)  Emax=enl%numEbins
   biny = enl%numsy/enl%binning
   bindx = 1.0/float(enl%binning)**2
 
-write (*,*) maxval(acc%accum_e_detector)
 
 ! intensity prefactor
-  prefactor = 0.25D0 * (nAmpere*1.0D-15) * enl%beamcurrent * enl%dwelltime / dble(sum(acc%accum_e_detector))
+  prefactor = 0.25D0 * nAmpere * enl%beamcurrent * enl%dwelltime * 1.0D-15/ dble(num_el)
 !====================================
 
 !====================================
@@ -502,15 +506,28 @@ do ibatch=1,nbatches+1
                 dym = 1.0-dy
  ! interpolate the intensity 
                 if (enl%energyaverage.eq.1) then
+                  if (enl%spatialaverage .eq. 'y') then
+                    write(*,*) 'Cannot simultaneously use both energyaverage and spatial average..setting spatialaverage to n'
+                  end if
                   EBSDpattern(i,j) = EBSDpattern(i,j) + acc_array(i,j) * ( master_array(nix,niy) * dxm * dym + &
                                              master_array(nixp,niy) * dx * dym + master_array(nix,niyp) * dxm * dy + &
                                              master_array(nixp,niyp) * dx * dy )
                 else
-                  do k=Emin,Emax 
-                    EBSDpattern(i,j) = EBSDpattern(i,j) + acc%accum_e_detector(k,i,j) * ( master%sr(nix,niy,k) * dxm * dym + &
+                  if (enl%spatialaverage .eq. 'n') then
+                     do k=Emin,Emax 
+                       EBSDpattern(i,j) = EBSDpattern(i,j) + acc%accum_e_detector(k,i,j) * ( master%sr(nix,niy,k) * dxm * dym + &
                                                master%sr(nixp,niy,k) * dx * dym + master%sr(nix,niyp,k) * dxm * dy + &
                                                master%sr(nixp,niyp,k) * dx * dy )
-                  end do
+                     end do
+                  else if (enl%spatialaverage .eq. 'y') then
+                     do k=Emin,Emax 
+                        EBSDpattern(i,j) = EBSDpattern(i,j) + energywf(k) * ( master%sr(nix,niy,k) * dxm * dym + &
+                                               master%sr(nixp,niy,k) * dx * dym + master%sr(nix,niyp,k) * dxm * dy + &
+                                               master%sr(nixp,niyp,k) * dx * dy )
+                     end do
+                  end if
+
+  
                 end if
               end if
           end do

@@ -747,6 +747,7 @@ real(kind=sgl)          :: axisangle(4)
 real(kind=dbl)          :: beamcurrent
 real(kind=dbl)          :: dwelltime
 character(1)            :: maskpattern
+character(1)            :: spatialaverage
 character(3)            :: scalingmode
 character(3)            :: eulerconvention
 character(3)            :: outputformat
@@ -758,7 +759,7 @@ character(fnlen)        :: datafile
 ! define the IO namelist to facilitate passing variables to the program.
 namelist  / EBSDdata / stdout, L, thetac, delta, numsx, numsy, xpc, ypc, anglefile, eulerconvention, masterfile, &
                         energyfile, datafile, beamcurrent, dwelltime, energymin, energymax, binning, gammavalue, &
-                        scalingmode, axisangle, nthreads, outputformat, maskpattern, energyaverage, omega
+                        scalingmode, axisangle, nthreads, outputformat, maskpattern, energyaverage, omega, spatialaverage
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 stdout          = 6
@@ -787,7 +788,7 @@ anglefile       = 'undefined'   ! filename
 masterfile      = 'undefined'   ! filename
 energyfile      = 'undefined'   ! name of file that contains energy histograms for all scintillator pixels (output from MC program)
 datafile        = 'undefined'   ! output file name
-
+spatialaverage  = 'n'
 
 if (present(initonly)) then
   if (initonly) skipread = .TRUE.
@@ -844,7 +845,7 @@ enl%masterfile = masterfile
 enl%energyfile = energyfile
 enl%datafile = datafile
 enl%omega = omega
-
+enl%spatialaverage = spatialaverage
 end subroutine GetEBSDNameList
 
 !--------------------------------------------------------------------------
@@ -988,11 +989,14 @@ character(fnlen)        :: outname
 character(fnlen)        :: xtalname
 character(fnlen)        :: xtalname2
 character(fnlen)        :: energyfile
+character(fnlen)        :: filmfile
+character(fnlen)        :: subsfile
+
 
 ! namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, distort, abcdist, albegadist, ktmax, &
 namelist /ECPlist/ stdout, xtalname, xtalname2, voltage, k, fn, dmin, ktmax, filmthickness, &
                    startthick, thickinc, nthreads, numthick, npix, outname, thetac, compmode, zintstep, &
-                   gF, gS, tF, tS, energyfile
+                   gF, gS, tF, tS, energyfile, filmfile, subsfile
 
 ! default values
 stdout = 6                              ! standard output
@@ -1018,6 +1022,8 @@ outname = 'ecp.data'                    ! output filename
 xtalname = 'undefined'                  ! initial value to check that the keyword is present in the nml file
 xtalname2 = 'undefined'                 ! initial value for substrate structure name
 energyfile = 'undefined'
+filmfile = 'undefined'
+subsfile = 'undefined'
 
 if (present(initonly)) then
   if (initonly) skipread = .TRUE.
@@ -1058,6 +1064,8 @@ ecpnl%outname = outname
 ecpnl%xtalname = xtalname
 ecpnl%xtalname2 = xtalname2
 ecpnl%energyfile = energyfile
+ecpnl%filmfile = filmfile
+ecpnl%subsfile = subsfile
 
 end subroutine GetECPNameList
 
