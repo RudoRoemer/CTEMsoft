@@ -408,17 +408,17 @@ end if ! mapmode.eq.'Standard' or 'StandardConical'
 
 if (mapmode.eq.'RoscaLambert') then 
    if (usehex) then             ! hexagonal grid step size
-      delta =  2.D0*dsqrt(cPi)/3.0D0**0.75D0/dble(npx)
+      delta =  LPs%preg / dble(npx)
       hexgrid = .TRUE.
    else                         ! square grid step size
-      delta = dsqrt(cPi*0.5D0)/dble(npx)
+      delta = LPs%sPio2 / dble(npx)
       hexgrid = .FALSE.
    end if
 
 ! allocate the head of the linked list
    allocate(khead,stat=istat)                   ! allocate new value
    if (istat.ne.0) call FatalError('Calckvectors',' unable to allocate khead pointer')
-   ktail => khead                       ! tail points to new value
+   ktail => khead                               ! tail points to new value
    nullify(ktail%next)                          ! nullify next in new value
    numk = 1                                     ! keep track of number of k-vectors so far
    ktail%hs = 1                                 ! this lies in the Northern Hemisphere
@@ -431,7 +431,7 @@ if (mapmode.eq.'RoscaLambert') then
    ktail%k = matmul(transpose(cell%dsm),kstar)
    ktail%kn = 1.0/cell%mLambda
 
-! MDG: as of 8/25/15, we no linger use the Laue groups to determine the set of independent wave vectors,
+! MDG: as of 8/25/15, we no longer use the Laue groups to determine the set of independent wave vectors,
 ! but instead we use the complete point group symmetry, as it should be.  Upon reflection, using
 ! the Laue groups was equivalent to implicitly using Friedel's law, which makes all diffraction patterns
 ! centrosymmetric, and that is not correct for EBSD. So, the symbol isym now encodes the full point group,
@@ -959,7 +959,7 @@ end function GetSextant
 !> @date   06/09/14 MDG 2.0 added ktail as argument
 !> @date   08/25/15 MDG 2.1 added addSH as optional argument
 !> @date   08/27/15 MDG 2.2 added flip for special case of rhombohedral sampling
-!> @date   08/28/15 MDG 2.3 mappings replaced with calls to Lambert module
+!> @date   08/28/15 MDG 2.3 mappings replaced with calls to Lambert module (significant simplification of code)
 !--------------------------------------------------------------------------
 subroutine AddkVector(ktail,cell,numk,delta,i,j,usehex,addSH,flip)
 
@@ -968,6 +968,8 @@ use typedefs
 use constants
 use error
 use diffraction
+use crystal
+use Lambert
 use crystal
 
 IMPLICIT NONE
@@ -982,88 +984,27 @@ logical,INTENT(IN),OPTIONAL             :: usehex
 logical,INTENT(IN),OPTIONAL             :: addSH
 logical,INTENT(IN),OPTIONAL             :: flip
 
-integer(kind=irg)                       :: istat, ks, ii
-real(kind=dbl)                          :: kstar(3), x, y, rr, q, iPi, XX, YY, xp, yp
-logical                                 :: goahead, hex
+integer(kind=irg)                       :: istat, ks, ii, ierr
+real(kind=dbl)                          :: kstar(3), xy(2)
+logical                                 :: hex
 real(kind=dbl),parameter                :: srt = 0.86602540D0           ! sqrt(3.D0)/2.D0
-real(kind=dbl),parameter                :: isrt = 0.577350269D0         ! 1.D0/sqrt(3.D0)
-real(kind=dbl),parameter                :: rtt = 1.7320508076D0         !  sqrt(3)
-real(kind=dbl),parameter                :: prea = 0.525037568D0         !  3^(1/4)/sqrt(2pi)
-real(kind=dbl),parameter                :: preb = 1.050075136D0         !  3^(1/4)sqrt(2/pi)
-real(kind=dbl),parameter                :: prec = 0.90689968D0          !  pi/2sqrt(3)
-real(kind=dbl),parameter                :: pred = 2.09439510D0          !  2pi/3
 
-! [06/09/14] all this needs to be replaced with calls to Lambert module !!!
-
-! initalize some parameters
-iPi = 1.D0/cPi  ! inverse of pi
-goahead = .FALSE.
-
-! hexagonal sampling or not?
+! project the coordinate up to the sphere, to get a unit 3D vector kstar in cartesian space
 if (present(usehex)) then
-  if (present(flip)) then 
-   x = -j*delta*srt
-   y = (i - j*0.5)*delta
+  if (present(flip)) then
+   xy = (/ dble(j)*srt, -(dble(i)-dble(j)*0.5D0) /) * delta
   else
-   x = (i - j*0.5)*delta
-   y = j*delta*srt
+   xy = (/ dble(i)-dble(j)*0.5D0, dble(j)*srt /) * delta
   end if
+  kstar = LambertHexToSphere(xy,ierr)
   hex = .TRUE.
 else
-  x = i*delta
-  y = j*delta
+  xy = (/ dble(i), dble(j) /) * delta
+  kstar = LambertSquareToSphere(xy, ierr)
   hex = .FALSE.
 end if
 
-! r^2
-rr = x*x+y*y
-
-! this is the more correct mapping from a uniform square grid to a sphere via an equal area map
-! to the 2D circle first; it is computationally slightly longer due to the trigonometric function calls
-! but it is mathematically more correct.  We do distinguish here between the square and hexagon
-! projections; Note that the hexagonal case must be mirrored x <-> y with respect to the 
-! analytical derivation in the MSMSE paper due to a rotation of the hexagonal cell.
-
-if ( maxval(abs( (/i,j/) )).ne.0 ) then  ! skip (0,0) 
-      if (hex.eqv..FALSE.) then  ! we're projecting from a square array
-! decide which equation to use  [ (8) or (9) from Rosca's paper, with r=1 ]
-             if (dabs(x).le.dabs(y)) then
-                  q = 2.D0*y*iPi*dsqrt(cPi-y*y)
-                  kstar = (/ q*dsin(x*cPi*0.25D0/y), q*dcos(x*cPi*0.25D0/y), 1.D0-2.D0*y*y*iPi /)  
-             else
-                  q = 2.D0*x*iPi*dsqrt(cPi-x*x)
-                  kstar = (/ q*dcos(y*cPi*0.25D0/x), q*dsin(y*cPi*0.25D0/x), 1.D0-2.D0*x*x*iPi /)  
-             end if
-             goahead = .TRUE.
-      end if
-      if (hex.eqv..TRUE.) then  ! we're projecting from a hexagonal array
-! decide which sextant the point (i,j) is located in.
-          ks = GetSextant(x,y)
-          select case (ks)
-          case (0,3)
-                XX = preb*y*dcos(x*prec/y)
-                YY = preb*y*dsin(x*prec/y)
-          case (1,4)
-                xp = y+rtt*x
-                yp = y*pred/xp
-                XX = prea*xp*dsin(yp)
-                YY = prea*xp*dcos(yp)
-          case (2,5)
-                xp = y-rtt*x
-                yp = y*pred/xp
-                XX = prea*xp*dsin(yp)
-                YY = -prea*xp*dcos(yp)    
-          end select
-          q = XX**2+YY**2
-          kstar = (/ 0.5D0*XX*dsqrt(4.D0-q), 0.5D0*YY*dsqrt(4.D0-q),1.D0-0.5D0*q /)
-          goahead = .TRUE.
-      end if
-else
-    kstar = (/0.0,0.0,1.0/)
-    goahead = .TRUE.
-end if 
- 
-if (goahead) then 
+! add this vector to the linked list
      allocate(ktail%next,stat=istat)                    ! allocate new value
      if (istat.ne.0) call FatalError('Addkvector:',' unable to allocate ktail pointer')
      ktail => ktail%next                                ! tail points to new value
@@ -1083,12 +1024,13 @@ if (goahead) then
        ktail%j = j                                      ! j-index of beam
      end if 
      call NormVec(cell,kstar,'c')                       ! normalize incident direction in cartesian space
-     kstar = kstar/cell%mLambda                              ! divide by wavelength
+     kstar = kstar/cell%mLambda                         ! divide by wavelength
 ! and transform to reciprocal crystal space using the direct structure matrix
-     ktail%k = matmul(transpose(cell%dsm),kstar)
+     !ktail%k = matmul(transpose(cell%dsm),kstar)
+     call TransSpace(cell, kstar, ktail%k, 'c', 'r')
      ktail%kn = 1.0/cell%mLambda
 
-! do we also need to add Southern Hemisphere vectors ?
+! do we also need to add a Southern Hemisphere vector ?
      if (present(addSH)) then
        if (addSH.eqv..TRUE.) then
          allocate(ktail%next,stat=istat)                    ! allocate new value
@@ -1112,12 +1054,11 @@ if (goahead) then
 ! get the Southern hemisphere version of kstar
          kstar(3) = -kstar(3)
 ! and transform to reciprocal crystal space using the direct structure matrix
-         ktail%k = matmul(transpose(cell%dsm),kstar)
+         !ktail%k = matmul(transpose(cell%dsm),kstar)
+         call TransSpace(cell, kstar, ktail%k, 'c', 'r')
          ktail%kn = 1.0/cell%mLambda
        end if
      end if
-
-end if
 
 end subroutine AddkVector
 

@@ -54,6 +54,7 @@ use io
 use diffraction
 use HDF5
 use HDFsupport
+use Lambert
 
 IMPLICIT NONE
 
@@ -67,14 +68,13 @@ character(15)                   :: tstrb
 character(15)                   :: tstre
 character(2)                    :: groupstring
 integer(kind=irg)               :: pgnums(42), isymval(42), csvals(42), sgnums(42), sgset(42), istrig(42)
-integer(kind=irg)               :: npx, npy, npyhex, skip, numk, ijmax, io_int(3), hdferr, i, j, nx, ny, SamplingType, ix, iy
-real(kind=dbl)                  :: aval(42), bval(42), cval(42), alval(42), beval(42), gaval(42), xyz(3)
-integer(kind=irg),parameter     :: cnums = 26 ! number of tests to carry out
+integer(kind=irg)               :: npx, npy, npyhex, skip, numk, ijmax, io_int(3), hdferr, i, j, nx, ny, SamplingType, ix, iy, ierr
+real(kind=dbl)                  :: aval(42), bval(42), cval(42), alval(42), beval(42), gaval(42), xyz(3), xy(2), delta, srt
+integer(kind=irg),parameter     :: cnums = 17 ! number of tests to carry out
 type(kvectorlist),pointer       :: khead, ktmp, ktmp2
 logical                         :: usehex
 integer(kind=irg),allocatable   :: mLPNH(:,:), mLPSH(:,:), spNH(:,:), spSH(:,:)
 type(gnode),save                :: rlp
-
 
 progname = 'pgtest.f90'
 progdesc = 'Point group k-space sampling tests'
@@ -84,7 +84,30 @@ call timestamp(datestring=dstr, timestring=tstrb)
 ! define the cell pointer and assign default values
 nullify(cell)
 allocate(cell)
+call ResetCell(cell)
 
+! this is a test for the trigonal/rhombohedral case to determine the appropriate 
+! transformation matrix for the Cartesian reference frame to coincide with that 
+! of the hexagonal Lambert grid...
+
+cell%a = 0.4
+cell%b = 0.4
+cell%c = 0.4
+cell%alpha = 90.0
+cell%beta  = 90.0
+cell%gamma = 90.0
+cell%xtal_system = 5
+cell%SYM_SGnum = 146
+cell%hexset = .FALSE.
+usehex = .FALSE.
+cell%SG%SYM_trigonal = .TRUE.
+call CalcMatrices(cell)
+
+do i=1,3 
+  write (*,*) (cell%trigmat(i,j),j=1,3)
+end do
+
+stop
 ! initialize the necessary parameters for all 42 tests
 !point group numbers
 pgnums = (/ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 14, 15, &
@@ -258,20 +281,22 @@ do i=1,cnums
      if (ktmp%hs.eq.-1) mLPSH(ktmp%i,ktmp%j) = 1
      if (ktmp%hs.eq.1) mLPNH(ktmp%i,ktmp%j) = 1
 ! then do the same with the stereographic projections
-!    write (*,*) 'k-vector = ', ktmp%k, ktmp%hs
      call TransSpace(cell,ktmp%k,xyz,'r','c')
-     call NormVec(cell,xyz,'c')
-!    write (*,*) 'normalized vector = ', xyz
-     if (ktmp%hs.eq.1) then
+     call NormVec(cell, xyz, 'c')
+!  write (*,*) 'normalized vector = ', xyz, sum(xyz*xyz)
+     
+if ((xyz(3).lt.0.0).and.(ktmp%hs.eq.1)) write (*,*) 'sign problem: ',j,ktmp%i,ktmp%j,ktmp%k,xyz
+     if (xyz(3).gt.0.0) then
+!    if (ktmp%hs.gt.0.0) then
        ix = int(float(npx)*xyz(1)/(1.D0+xyz(3)))
        iy = int(float(npx)*xyz(2)/(1.D0+xyz(3)))
-!rite (*,*) 'NH : ',ix,iy
+!write (*,*) 'NH : ',ix, iy
        spNH(ix,iy) = 1
      else
        ix = int(float(npx)*xyz(1)/(1.D0-xyz(3)))
        iy = int(float(npx)*xyz(2)/(1.D0-xyz(3)))
-!rite (*,*) 'SH : ',ix,iy
        spSH(ix,iy) = 1
+!write (*,*) 'SH : ',ix, iy
      end if
 ! delete the linked list entry
     ktmp2 => ktmp%next

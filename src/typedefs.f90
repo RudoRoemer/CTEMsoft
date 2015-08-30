@@ -52,6 +52,7 @@
 !> @date   12/02/14 MDG 4.4 added a few entries to unitcell pointer
 !> @date   08/25/15 MDG 4.5 added PGSamplingType conversion array for master pattern computations
 !> @date   08/27/15 MDG 4.6 added component to kvectorlist
+!> @date   08/30/15 MDG 4.7 added trigmat to unitcell type
 !--------------------------------------------------------------------------
 module typedefs
 
@@ -586,6 +587,7 @@ end type
 !> rmt		= reciprocal space metric tensor
 !> dsm	        = direct space structure matrix
 !> rsm	        = reciprocal space structure matrix
+!> trigmat      = direct structure matrix for the trigonal/rhombohedral case, used for Lambert projections
 !> [removed on 1/10/14] krdel	= Kronecker delta (unit matrix)
 !
 !> asymmetric unit contents
@@ -630,7 +632,7 @@ end type
 
 type unitcell
   real(kind=dbl)                       :: a,b,c,alpha,beta,gamma
-  real(kind=dbl)                       :: dmt(3,3),rmt(3,3),dsm(3,3),rsm(3,3),vol
+  real(kind=dbl)                       :: dmt(3,3),rmt(3,3),dsm(3,3),rsm(3,3),trigmat(3,3),vol
   integer(kind=irg)                    :: ATOM_type(maxpasym),ATOM_ntype,SYM_SGnum,xtal_system,SYM_SGset
   real(kind=sgl)                       :: ATOM_pos(maxpasym,5)
   integer(kind=irg)                    :: numat(maxpasym)      !< number of atoms of each type in the asymmetric unit
