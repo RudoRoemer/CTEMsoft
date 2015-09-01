@@ -36,6 +36,7 @@
 !> @brief EMEBSD helper routines
 !
 !> @date  06/24/14  MDG 1.0 original, lifted from EMEBSD.f90 to simplify code
+!> @date  09/01/15  MDG 1.1 modified EBSDMasterType definition to accommodate multiple Lambert maps
 !--------------------------------------------------------------------------
 module EBSDmod
 
@@ -54,7 +55,7 @@ type EBSDLargeAccumType
 end type EBSDLargeAccumType
 
 type EBSDMasterType
-        real(kind=sgl),allocatable      :: sr(:,:,:) 
+        real(kind=sgl),allocatable      :: mLPNH(:,:,:) , mLPSH(:,:,:)
         real(kind=sgl),allocatable      :: rgx(:,:), rgy(:,:), rgz(:,:)          ! auxiliary detector arrays needed for interpolation
 end type EBSDMasterType
         
@@ -373,6 +374,7 @@ end subroutine EBSDreadMCfile
 !
 !> @date 06/24/14  MDG 1.0 original
 !> @date 04/02/15  MDG 2.0 changed program input & output to HDF format
+!> @date 09/01/15  MDG 3.0 changed Lambert maps to Northern + Southern maps; lots of changes...
 !--------------------------------------------------------------------------
 subroutine EBSDreadMasterfile(enl, master, mfile, verbose)
 
@@ -390,7 +392,8 @@ type(EBSDMasterType),pointer            :: master
 character(fnlen),INTENT(IN),OPTIONAL    :: mfile
 logical,INTENT(IN),OPTIONAL             :: verbose
 
-real(kind=sgl),allocatable              :: sr(:,:,:) 
+real(kind=sgl),allocatable              :: mLPNH(:,:,:) 
+real(kind=sgl),allocatable              :: mLPSH(:,:,:) 
 real(kind=sgl),allocatable              :: EkeVs(:) 
 integer(kind=irg),allocatable           :: atomtype(:)
 
@@ -466,14 +469,16 @@ if (stat) then
   enl%sqorhe = trim(stringarray(1))
   deallocate(stringarray)
 
-  if (enl%sqorhe.eq.'hexago') then
-    dataset = 'srhex'
-  else
-    dataset = 'sr'
-  end if
+  dataset = 'mLPNH'
   srtmp = HDF_readDatasetFloatArray4D(dataset, dims4, HDF_head)
-  allocate(master%sr(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE),stat=istat)
-  master%sr = sum(srtmp,4)
+  allocate(master%mLPNH(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE),stat=istat)
+  master%mLPNH = sum(srtmp,4)
+  deallocate(srtmp)
+
+  dataset = 'mLPSH'
+  srtmp = HDF_readDatasetFloatArray4D(dataset, dims4, HDF_head)
+  allocate(master%mLPSH(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE),stat=istat)
+  master%mLPSH = sum(srtmp,4)
   deallocate(srtmp)
 
   dataset = 'xtalname'
@@ -505,6 +510,7 @@ else
 !====================================
 ! ----- Read energy-dispersed Lambert projections (master pattern)
 ! this has been updated on 3/26/14 to accommodate the new EBSDmaster file format
+! [old data format will be deleted in version 4.0]
 !====================================
   open(unit=dataunit,file=trim(masterfile),status='old',form='unformatted')
   read (dataunit) enl%Masterprogname
@@ -825,7 +831,7 @@ deallocate(z)
 
 ! determine the scale factor for the Lambert interpolation; the square has
 ! an edge length of 2 x sqrt(pi/2)
-  scl = float(enl%nsx) / LPs%sPio2
+  scl = float(enl%nsx) !  / LPs%sPio2  [removed on 09/01/15 by MDG for new Lambert routines]
 
 ! get the indices of the minimum and maximum energy
   Emin = nint((enl%energymin - enl%Ehistmin)/enl%Ebinsize) +1
@@ -916,7 +922,7 @@ allocate(master_twin(-enl%npx:enl%npx,-enl%npy:enl%npy,1:enl%nE),stat=istat)
 
 q = (/ dsqrt(3.D0)/2.D0,1/dsqrt(3.D0)/2.D0,1/dsqrt(3.D0)/2.D0,1/dsqrt(3.D0)/2.D0 /)
 
-scl = float(enl%npx) / LPs%sPio2
+scl = float(enl%npx) ! / LPs%sPio2 [removed 09/01/15 by MDG for new Lambert module]
 
     master_twin = 0.0
     do jj = -enl%npx,enl%npx
@@ -993,7 +999,7 @@ integer(kind=irg)                                   :: ii,jj,kk,ierr,istat,pp,qq
 
 allocate(master_rotated(-enl%npx:enl%npx,-enl%npy:enl%npy,1:enl%nE),stat=istat)
 
-scl = float(enl%npx) / LPs%sPio2
+scl = float(enl%npx) ! / LPs%sPio2 [ removed on 09/01/15 by MDG for new Lambert module]
 
 do ii = 1,enl%nE
     master_rotated = 0.0
