@@ -1100,6 +1100,12 @@ end subroutine MilBrav
 !
 !> @details  Input of crystal system followed by the appropriate set of lattice
 !> parameters; all are stored in the cell type.
+!>
+!> For the trigonal and hexagonal crystal systems, the following switch settings are to be used:
+!>              xtal_system   hexset    SYM_trigonal   SYM_second
+!> hexagonal          4         T            F              F
+!> trig/hex           5         T            T              F
+!> trig/rhomb         5         F            T              T
 !
 !> @param cell unit cell pointer
 !> @param stdout optional output unit identifier
@@ -1110,6 +1116,7 @@ end subroutine MilBrav
 !> @date   03/19/13 MDG 3.0 interface support
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell 
 !> @date   06/05/14 MDG 4.1 modified after elimination of global variables
+!> @date   08/30/15 MDG 4.2 validated trigonal setting
 !--------------------------------------------------------------------------
 subroutine GetLatParm(cell, stdout)
 
@@ -1154,16 +1161,16 @@ integer(kind=irg)                       :: std
  cell%SG%SYM_reduce=.TRUE.
  cell%hexset=.FALSE.
 
-! deal with the rhombohedral vs. hexagonal setting
+! deal with the rhombohedral vs. hexagonal setting in the trigonal crystal system
 ! (the rhombohedral axes are considered as the second setting)
  cell%SG%SYM_trigonal=.FALSE.
  cell%SG%SYM_second=.FALSE.
  if (cell%xtal_system.eq.5) then
   cell%SG%SYM_trigonal=.TRUE.
-  call Message('Enter 1 for rhombohedral lattice parameters,', frm = "(A)", stdout = std)
-  call ReadValue('0 for hexagonal lattice parameters : ', io_int, 1, stdout = std)
+  call Message('Enter 1 for rhombohedral setting ,', frm = "(/A)", stdout = std)
+  call ReadValue('0 for hexagonal setting : ', io_int, 1, stdout = std)
   if (io_int(1).eq.0) then
-   cell%xtal_system=4
+   cell%xtal_system=4   ! this is set to 4 so that we ask for the correct lattice parameters below
   else
    cell%SG%SYM_second=.TRUE.
   end if

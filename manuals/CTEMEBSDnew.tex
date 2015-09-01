@@ -329,8 +329,37 @@ On the one hand, the hexagonal Lambert projection requires the three-fold axis t
 for a given set of trigonal lattice parameters, $(a,\alpha)$, in rhombohedral setting, in the standard crystallographic orientation
 the $\mathbf{c}^{\ast}$ axis will lie at the pattern center.  To properly apply the trigonal symmetry, we must determine the 
 transformation that takes a $\mathbf{k}$ vector between the two coordinate systems.  The $\mathbf{a}$ and $\mathbf{b}$ axes
-lie in the plane of the Lambert projection, with an angle $\alpha$ between them.  
-
+lie in the plane of the Lambert projection, with an angle $\alpha$ between them.  It is not too difficult to figure out how to
+map the rhombohedral system onto the hexagonal Lambert grid.  First, the $[111]_r$ direction must be rotated into the $x-z$
+plane by a counterclockwise rotation around the $x$ axis by an angle that depends on the rhombohedral $\alpha$ angle; the 
+corresponding rotation matrix is given by:
+\begin{equation}
+	R_x(\alpha) = \left(\begin{array}{ccc}
+	1 & 0 & 0\\
+	0 & x & -\sqrt{1-x^2}\\
+	0 & \sqrt{1-x^2} & x\end{array}\right)\qquad\text{with}\quad x\equiv\frac{1}{2}\sec\frac{\alpha}{2}.
+\end{equation}
+Then the rotated $[111]_r$ must be rotated clockwise around the $y$ axis by the following matrix:
+\begin{equation}
+	R_y(\alpha) = \left(\begin{array}{ccc}
+	y & 0 & -\sqrt{1-y^2}\\
+	0 & 1 & 0\\
+	\sqrt{1-y^2} & 0 & y\end{array}\right)\qquad\text{with}\quad y\equiv\frac{2}{\sqrt{3}}\sin\frac{\alpha}{2}.
+\end{equation}
+The complete transformation matrix (called \textsf{trigmat} in the \textsf{cell} structure), is then given by
+the product:
+\begin{equation}
+	t = R_y(\alpha) R_x(\alpha) d(a,\alpha)
+\end{equation}
+where $d(a,\alpha)$ is the direct structure matrix for the rhombohedral system:
+\begin{equation}
+	d(a,\alpha)\equiv = a\left(\begin{array}{ccc}
+	1 & \cos\alpha & \cos\alpha \\
+	0 & \sin\alpha & -\cos\alpha\tan\frac{\alpha}{2}\\
+	0 & 0 & \tan\frac{\alpha}{2}\sqrt{2\cos\alpha+1}\end{array}\right).
+\end{equation}
+Application of the matrix $t$ to the rhombohedral direction $[111]_r$ produces a vector along the $z$ direction normal to the 
+hexagonal Lambert projection; application to $[100]_r$ produces a vector in the $x-z$ plane.
 
 
 Fig.~\ref{fig:Laue-hemispheres} shows the nine unique asymmetric units for the $11$ Laue groups; six of them will be sampled on a square grid 

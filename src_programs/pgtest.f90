@@ -68,13 +68,20 @@ character(15)                   :: tstrb
 character(15)                   :: tstre
 character(2)                    :: groupstring
 integer(kind=irg)               :: pgnums(42), isymval(42), csvals(42), sgnums(42), sgset(42), istrig(42)
-integer(kind=irg)               :: npx, npy, npyhex, skip, numk, ijmax, io_int(3), hdferr, i, j, nx, ny, SamplingType, ix, iy, ierr
-real(kind=dbl)                  :: aval(42), bval(42), cval(42), alval(42), beval(42), gaval(42), xyz(3), xy(2), delta, srt
-integer(kind=irg),parameter     :: cnums = 17 ! number of tests to carry out
+integer(kind=irg)               :: npx, npy, npyhex, skip, numk, ijmax, io_int(3), hdferr, i, j, l, nx, ny, SamplingType, &
+                                   ix, iy, ierr, jj, nequiv, iequiv(3,48), jjj
+real(kind=dbl)                  :: aval(42), bval(42), cval(42), alval(42), beval(42), gaval(42), xyz(3), xy(2), delta, srt, &
+                                   xyz2(3), xx(6), yy(6), x, y, kstar(3)
+integer(kind=irg),parameter     :: cnums = 42! number of tests to carry out
 type(kvectorlist),pointer       :: khead, ktmp, ktmp2
 logical                         :: usehex
 integer(kind=irg),allocatable   :: mLPNH(:,:), mLPSH(:,:), spNH(:,:), spSH(:,:)
 type(gnode),save                :: rlp
+
+real(kind=dbl)                  :: stmp(48,3)           !< output array with equivalent vectors
+integer(kind=irg)               :: n                    !< number of entries in equivalent vector array
+character(1)                    :: space                !< 'd' or 'r'
+
 
 progname = 'pgtest.f90'
 progdesc = 'Point group k-space sampling tests'
@@ -86,28 +93,60 @@ nullify(cell)
 allocate(cell)
 call ResetCell(cell)
 
-! this is a test for the trigonal/rhombohedral case to determine the appropriate 
-! transformation matrix for the Cartesian reference frame to coincide with that 
-! of the hexagonal Lambert grid...
+!  test the hexagonal case
 
-cell%a = 0.4
-cell%b = 0.4
-cell%c = 0.4
-cell%alpha = 90.0
-cell%beta  = 90.0
-cell%gamma = 90.0
-cell%xtal_system = 5
-cell%SYM_SGnum = 146
-cell%hexset = .FALSE.
-usehex = .FALSE.
-cell%SG%SYM_trigonal = .TRUE.
+cell%a = 0.4D0
+cell%b = 0.4D0
+cell%c = 0.6D0
+cell%alpha = 90.0D0
+cell%beta  = 90.0D0
+cell%gamma = 120.0D0
+cell%xtal_system = 4
+cell%SYM_SGnum = 162
+cell%hexset = .TRUE.
+usehex = .TRUE.
+cell%SG%SYM_trigonal = .FALSE.
 call CalcMatrices(cell)
+!
+!
+npx = 200
+delta = 1.D0 / dble(npx)
+srt = 0.5D0*dsqrt(3.D0)
+cell%voltage = 20000.D0
+call CalcWaveLength(cell, rlp, skip)
+write (*,*) 'wave number : ', 1.D0/cell%mLambda
 
-do i=1,3 
-  write (*,*) (cell%trigmat(i,j),j=1,3)
+xx = dble( (/ npx, npx, 0, -npx, -npx, 0 /) )
+yy = dble( (/ 0, npx, npx, 0, -npx, -npx /) ) 
+
+do i=1,6
+  xy = (/ xx(i), yy(i) /) * delta
+  xyz = LambertHexToSphere(xy,ierr)
+  write (*,*) xy, ' --> ',xyz
+
+  call NormVec(cell,xyz,'c')                       ! normalize incident direction in cartesian space
+  xyz = xyz/cell%mLambda                         ! divide by wavelength
+! and transform to reciprocal crystal space using the direct structure matrix
+  call TransSpace(cell, xyz, xyz2, 'c', 'r')
+  write (*,*) 'xyz2 = ',xyz2, CalcLength(cell,xyz2,'r')
+
+! then do the stereographic projections
+  call TransSpace(cell,xyz2,xyz,'r','c')
+  call NormVec(cell, xyz, 'c')
+  write (*,*) 'normalized vector = ', xyz, sum(xyz*xyz)
+  xy = LambertSphereToHex(xyz,ierr)*dble(npx)
+  write (*,*) 'inverse hexmap : ',xy
+     
+  x = xyz(1) + 0.5D0*xyz(2)/srt
+  y = xyz(2)/srt
+  ix = nint(float(npx)*x/(1.D0+xyz(3)))
+  iy = nint(float(npx)*y/(1.D0+xyz(3)))
+ write (*,*) 'NH : ',ix, iy, xx(i)-yy(i)*0.5D0, yy(i)*srt 
+write (*,*) '---'
+
 end do
 
-stop
+
 ! initialize the necessary parameters for all 42 tests
 !point group numbers
 pgnums = (/ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 14, 15, &
@@ -133,7 +172,7 @@ istrig = (/ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, &
 !  6. Monoclinic
 !  7. Triclinic
 csvals = (/ 7, 7, 6, 6, 6, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, &
-            4, 5, 4, 5, 4, 5, 4, 4, 5, 4, 4, 5, 4, 4, 4, 4, &
+            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 4, 4, 4, &
             4, 4, 4, 4, 4, 1, 1, 1, 1, 1 /)
 
 ! define some nominal lattice parameters for each case
@@ -203,6 +242,7 @@ nx = 2*npx+1
 
 ! loop through the point groups and all their settings (a total of 42 cases)
 do i=1,cnums
+ if (istrig(i).ne.1) then
 ! initialize the components of cell that will be needed for this test
   call ResetCell(cell)
   cell%a = aval(i)
@@ -214,13 +254,17 @@ do i=1,cnums
   cell%xtal_system = csvals(i)
   cell%SYM_SGnum = sgnums(i)
   cell%hexset = .FALSE.
-  if (cell%xtal_system.eq.4) cell%hexset = .TRUE.
-  if ((cell%xtal_system.eq.5).AND.(cell%SYM_SGset.ne.2)) cell%hexset = .TRUE.
-  usehex = .FALSE.
-  if ((cell%xtal_system.eq.4).or.(cell%xtal_system.eq.5)) usehex = .TRUE.
-  nullify(khead)
   cell%SG%SYM_trigonal = .FALSE.
-  if (istrig(i).ne.0) cell%SG%SYM_trigonal = .TRUE.
+  cell%SG%SYM_second = .FALSE.
+  if (istrig(i).gt.0) cell%SG%SYM_trigonal = .TRUE.
+  if (istrig(i).eq.1) cell%SG%SYM_second = .TRUE.
+  usehex = .FALSE.
+  if ((cell%xtal_system.eq.4).or.(cell%xtal_system.eq.5)) then
+    usehex = .TRUE.
+    cell%hexset = .TRUE.
+  end if
+
+  nullify(khead)
 
   SamplingType = PGSamplingType(pgnums(i))
 
@@ -229,8 +273,10 @@ do i=1,cnums
     SamplingType = getHexvsRho(cell,pgnums(i))
   end if
 
-  write (*,*) 'Starting point group ',i,pgnums(i), aval(i),bval(i),cval(i),alval(i),beval(i),gaval(i), csvals(i), &
-               sgnums(i), PGTHD(pgnums(i)), SamplingType
+  write (*,*) 'Starting point group ',i,pgnums(i), csvals(i), sgnums(i), PGTHD(pgnums(i)), SamplingType, &
+              cell%SYM_SGset, cell%SG%SYM_trigonal
+  write (*,*) ' --> latparm = ',cell%a, cell%b, cell%c, cell%alpha, cell%beta, cell%gamma
+
 
 ! compute the metric matrices
   call CalcMatrices(cell)
@@ -253,80 +299,94 @@ do i=1,cnums
 ! numk is the total number of k-vectors to be included in this computation;
 ! note that this needs to be redone for each energy, since the wave vector changes with energy
    nullify(khead)
-   if (usehex) then
-    call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,npx,npyhex,numk, &
-                SamplingType,ijmax,'RoscaLambert',usehex)
-   else 
+!  if (usehex) then
+!   call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,npx,npyhex,numk, &
+!               SamplingType,ijmax,'RoscaLambert',usehex)
+!  else 
     call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,npx,npy,numk, &
                 SamplingType,ijmax,'RoscaLambert',usehex)
-   end if
+!  end if
    io_int(1)=numk
    call WriteValue('# independent beam directions to be considered = ', io_int, 1, "(I8)")
 
 ! next, fill the Northern and Southern hemisphere arrays
-   if (usehex) then 
-     allocate(mLPNH(-npx:npx,-npyhex:npyhex),mLPSH(-npx:npx,-npyhex:npyhex))
-   else
+!  if (usehex) then 
+!    allocate(mLPNH(-npx:npx,-npyhex:npyhex),mLPSH(-npx:npx,-npyhex:npyhex))
+!  else
      allocate(mLPNH(-npx:npx,-npy:npy),mLPSH(-npx:npx,-npy:npy))
-   end if
+!  end if
    allocate(spNH(-npx:npx,-npy:npy),spSH(-npx:npx,-npy:npy))
    mLPNH = 0
    mLPSH = 0
    spNH = 0
    spSH = 0
-   ktmp => khead
+   
+write (*,*) 'starting loop over k-vectors'
+
+ktmp => khead
 ! loop through the list and delete it at the same time
    do j=1,numk
-! fill in the point
-     if (ktmp%hs.eq.-1) mLPSH(ktmp%i,ktmp%j) = 1
-     if (ktmp%hs.eq.1) mLPNH(ktmp%i,ktmp%j) = 1
-! then do the same with the stereographic projections
-     call TransSpace(cell,ktmp%k,xyz,'r','c')
-     call NormVec(cell, xyz, 'c')
-!  write (*,*) 'normalized vector = ', xyz, sum(xyz*xyz)
-     
-if ((xyz(3).lt.0.0).and.(ktmp%hs.eq.1)) write (*,*) 'sign problem: ',j,ktmp%i,ktmp%j,ktmp%k,xyz
-     if (xyz(3).gt.0.0) then
-!    if (ktmp%hs.gt.0.0) then
-       ix = int(float(npx)*xyz(1)/(1.D0+xyz(3)))
-       iy = int(float(npx)*xyz(2)/(1.D0+xyz(3)))
-!write (*,*) 'NH : ',ix, iy
-       spNH(ix,iy) = 1
+! fill in the point and its symmetrically equivalent versions
+     if (usehex) then 
+       call Apply3DPGsymmetry(cell,ktmp%i,ktmp%j,ktmp%hs,npx,iequiv,nequiv,usehex)
      else
-       ix = int(float(npx)*xyz(1)/(1.D0-xyz(3)))
-       iy = int(float(npx)*xyz(2)/(1.D0-xyz(3)))
-       spSH(ix,iy) = 1
-!write (*,*) 'SH : ',ix, iy
+       if ((cell%SYM_SGnum.ge.195).and.(cell%SYM_SGnum.le.230)) then
+         call Apply3DPGsymmetry(cell,ktmp%i,ktmp%j,ktmp%hs,npx,iequiv,nequiv,cubictype=SamplingType)
+       else
+         call Apply3DPGsymmetry(cell,ktmp%i,ktmp%j,ktmp%hs,npx,iequiv,nequiv)
+       end if
      end if
+     do jj=1,nequiv
+       if (iequiv(3,jj).eq.-1) mLPSH(iequiv(1,jj),iequiv(2,jj)) = jj
+       if (iequiv(3,jj).eq.1) mLPNH(iequiv(1,jj),iequiv(2,jj)) = jj
+     end do
+! stereographic projections
+     if (usehex) then 
+       call Apply3DPGsymmetry(cell,ktmp%i,ktmp%j,ktmp%hs,npx,iequiv,nequiv,usehex,stereographic=.TRUE.)
+     else
+       if ((cell%SYM_SGnum.ge.195).and.(cell%SYM_SGnum.le.230)) then
+         call Apply3DPGsymmetry(cell,ktmp%i,ktmp%j,ktmp%hs,npx,iequiv,nequiv,cubictype=SamplingType,stereographic=.TRUE.)
+       else
+         call Apply3DPGsymmetry(cell,ktmp%i,ktmp%j,ktmp%hs,npx,iequiv,nequiv,stereographic=.TRUE.)
+       end if
+     end if
+     do jj=1,nequiv
+       if (iequiv(3,jj).eq.-1) SPSH(iequiv(1,jj),iequiv(2,jj)) = jj
+       if (iequiv(3,jj).eq.1)  SPNH(iequiv(1,jj),iequiv(2,jj)) = jj
+     end do
+
 ! delete the linked list entry
     ktmp2 => ktmp%next
     deallocate(ktmp)
     ktmp => ktmp2 
    end do
 
+write (*,*) 'ready to write to file'
+
 ! write the output arrays to the HDF5 file
    write (groupstring,"(I2.2)") i
-   if (usehex) then 
-     ny = 2*npyhex+1
-     dataset = groupstring//"NH"
-     hdferr = HDF_writeDatasetIntegerArray2D(dataset, mLPNH, nx, ny, HDF_head)
-     dataset = groupstring//"SH"
-     hdferr = HDF_writeDatasetIntegerArray2D(dataset, mLPSH, nx, ny, HDF_head)
-   else 
+!  if (usehex) then 
+!    ny = 2*npyhex+1
+!    dataset = groupstring//"NH"
+!    hdferr = HDF_writeDatasetIntegerArray2D(dataset, mLPNH, nx, ny, HDF_head)
+!    dataset = groupstring//"SH"
+!    hdferr = HDF_writeDatasetIntegerArray2D(dataset, mLPSH, nx, ny, HDF_head)
+!  else 
      ny = 2*npy+1
      dataset = groupstring//"NH"
      hdferr = HDF_writeDatasetIntegerArray2D(dataset, mLPNH, nx, ny, HDF_head)
      dataset = groupstring//"SH"
      hdferr = HDF_writeDatasetIntegerArray2D(dataset, mLPSH, nx, ny, HDF_head)
-   end if
+!  end if
    ny = 2*npy+1
    dataset = groupstring//"NHsp"
    hdferr = HDF_writeDatasetIntegerArray2D(dataset, spNH, nx, ny, HDF_head)
    dataset = groupstring//"SHsp"
    hdferr = HDF_writeDatasetIntegerArray2D(dataset, spSH, nx, ny, HDF_head)
-
+write (*,*) '  --> done'
 ! and get rid of the arrays
    deallocate(mLPNH, mLPSH, spNH, spSH)
+ end if
 end do
 
 

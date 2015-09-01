@@ -35,8 +35,7 @@
 !
 !> @brief EMEBSDmaster computes the energy-dependent master EBSD pattern for a given structure
 !
-!> @todo implement full symmetry use; implement multiple reflection output
-!> or, easier perhaps, selection of one reflection;
+!> @todo implement full symmetry use (trigonal/rhombohedral is currently not implemented) 
 !>
 !> implement OpenMP multithreading for the actual computation part; requires modifications
 !> in EMlib.a routines (mostly THREADPRIVATE commands in several modules)
@@ -62,6 +61,7 @@
 !> @date  06/19/14  MDG 4.3 rewrite, removal of all globals, split of namelist handling from computation; add OpenMP
 !> @date  03/26/15  MDG 5.0 all output now in HDF5 format (this is the first converted program)
 !> @date  05/09/15  MDG 5.1 completed conversion from hexagonal Lambert to square Labert
+!> @date  09/01/15  MDG 5.2 updated Lambert sampling to accomodate Northern and Southern hemispheres; changed variable names
 !--------------------------------------------------------------------------
 program EMEBSDmaster
 
@@ -119,7 +119,7 @@ end program EMEBSDmaster
 !> @date 04/15/15  MDG 5.4 corrected offset reading of accum_z array
 !> @date 04/27/15  MDG 5.5 reactivate the hexagonal code; needs to be debugged
 !> @date 05/08/15  MDG 5.6 added automated conversion from hexagonal to square Lambert; debugged
-!> @date 08/25/15  MDG 6.0 changed symmetry to full point group and two Lambert hemispheres for output
+!> @date 09/01/15  MDG 6.0 changed symmetry to full point group and two Lambert hemispheres for output
 !--------------------------------------------------------------------------
 subroutine ComputeMasterPattern(emnl, progname, nmldeffile)
 
@@ -154,20 +154,19 @@ character(fnlen),INTENT(IN)                :: nmldeffile
 
 real(kind=dbl)          :: ctmp(192,3), arg
 integer(HSIZE_T)        :: dims4(4), cnt4(4), offset4(4)
-integer(kind=irg)      :: isym,i,j,ik,npy,ipx,ipy,debug,iE,izz, izzmax, iequiv(2,12), nequiv, num_el, MCnthreads, & ! counters
-                        numk, & ! number of independent incident beam directions
-                        ir,nat(100),kk(3), npyhex, skip, ijmax, one, NUMTHREADS, TID, SamplingType, &
-                        numset,n,ix,iy,iz, io_int(6), nns, nnw, nref,  &
-                        istat,gzero,ic,ip,ikk, totstrong, totweak, jh, ierr, nix, niy, nixp, niyp     ! counters
-real(kind=dbl)         :: tpi,Znsq, kkl, DBWF, kin, delta, h, lambda, omtl, srt, dc(3), xy(2), edge, scl, tmp, dx, dxm, dy, dym !
+integer(kind=irg)       :: isym,i,j,ik,npy,ipx,ipy,ipz,debug,iE,izz, izzmax, iequiv(3,48), nequiv, num_el, MCnthreads, & ! counters
+                           numk, & ! number of independent incident beam directions
+                           ir,nat(100),kk(3), skip, ijmax, one, NUMTHREADS, TID, SamplingType, &
+                           numset,n,ix,iy,iz, io_int(6), nns, nnw, nref,  &
+                           istat,gzero,ic,ip,ikk, totstrong, totweak, jh, ierr, nix, niy, nixp, niyp     ! counters
+real(kind=dbl)          :: tpi,Znsq, kkl, DBWF, kin, delta, h, lambda, omtl, srt, dc(3), xy(2), edge, scl, tmp, dx, dxm, dy, dym !
 real(kind=sgl)          :: io_real(5), selE, kn, FN(3), kkk(3)
-real(kind=sgl),allocatable      :: sr(:,:,:,:), srhex(:,:,:,:), srh(:,:,:,:), EkeVs(:), svals(:) ! results
+real(kind=sgl),allocatable      :: EkeVs(:), svals(:), auxNH(:,:,:,:), auxSH(:,:,:,:)  ! results
+real(kind=sgl),allocatable      :: mLPNH(:,:,:,:), mLPSH(:,:,:,:)  ! results
 complex(kind=dbl)               :: czero
 complex(kind=dbl),allocatable   :: Lgh(:,:), Sgh(:,:,:)
 logical                 :: usehex, switchmirror, verbose
 character(fnlen)        :: xtalname
-! the following will need to be moved elsewhere at some point...
-integer(kind=irg),parameter     :: LaueTest(11) = (/ 149, 151, 153, 156, 158, 160, 161, 164, 165, 166, 167 /)  ! space groups with 2 or mirror at 30 degrees
 
 ! Monte Carlo derived quantities
 integer(kind=irg)       :: numEbins, numzbins, nsx, nsy, hdferr, nlines    ! variables used in MC energy file
@@ -420,31 +419,13 @@ deallocate(accum_z)
 
 !=============================================
 !=============================================
-! ---------- allocate memory for the master pattern
-! we need to sample the stereographic projection Northern hemisphere or a portion
-! thereoff, depending on the order of the Laue group.  There are 11 Laue groups, 
-! which leads to 9 different shapes for the stereographic asymmetric unit for the 
-! independent incident beam directions.  
-! allocate space for the results (needs to be altered for general symmetry case)
-!if (emnl%Esel.eq.-1) then
-!  allocate(sr(-emnl%npx:emnl%npx,-npy:npy,1:numEbins,1:numset),stat=istat)
-!else
-  allocate(sr(-emnl%npx:emnl%npx,-npy:npy,1,1:numset),stat=istat)
-!end if 
-
-! in the trigonal/hexagonal case, we need intermediate storage arrays
-  if (usehex) then
-   npyhex = nint(2.0*float(npy)/sqrt(3.0))
-   allocate(srhex(-emnl%npx:emnl%npx,-npyhex:npyhex,1,1:numset),stat=istat)
-   allocate(srh(-emnl%npx:emnl%npx,-npy:npy,1,1:numset),stat=istat)
-   allocate(sr(-emnl%npx:emnl%npx,-npy:npy,1,1:numset),stat=istat)
-  end if
+! ---------- allocate memory for the master patterns
+  allocate(mLPNH(-emnl%npx:emnl%npx,-npy:npy,1,1:numset),stat=istat)
+  allocate(mLPSH(-emnl%npx:emnl%npx,-npy:npy,1,1:numset),stat=istat)
 
 ! set various arrays to zero
-   sr = 0.0
-   if (usehex) then
-     srhex = 0.0
-   end if
+   mLPNH = 0.0
+   mLPSH = 0.0
 ! ---------- end allocate memory for the master pattern
 !=============================================
 !=============================================
@@ -533,21 +514,18 @@ deallocate(accum_z)
     hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
   end if  
 
-! create the hyperslab and write zeroes to it for now
-  dataset = 'sr'
+! create the hyperslabs and write zeroes to them for now
+  dataset = 'mLPNH'
   dims4 = (/  2*emnl%npx+1, 2*emnl%npx+1, numEbins, numset /)
   cnt4 = (/ 2*emnl%npx+1, 2*emnl%npx+1, 1, numset /)
   offset4 = (/ 0, 0, 0, 0 /)
-  hdferr = HDF_writeHyperslabFloatArray4D(dataset, sr, dims4, offset4, cnt4(1), cnt4(2), cnt4(3), cnt4(4), HDF_head)
+  hdferr = HDF_writeHyperslabFloatArray4D(dataset, mLPNH, dims4, offset4, cnt4(1), cnt4(2), cnt4(3), cnt4(4), HDF_head)
 
-! create the hexagonal hyperslab hyperslab and write zeroes to it for now
-  if (usehex) then 
-    dataset = 'srhex'
-    dims4 = (/  2*emnl%npx+1, 2*emnl%npx+1, numEbins, numset /)
-    cnt4 = (/ 2*emnl%npx+1, 2*emnl%npx+1, 1, numset /)
-    offset4 = (/ 0, 0, 0, 0 /)
-    hdferr = HDF_writeHyperslabFloatArray4D(dataset, srh, dims4, offset4, cnt4(1), cnt4(2), cnt4(3), cnt4(4), HDF_head)
-  end if
+  dataset = 'mLPSH'
+  dims4 = (/  2*emnl%npx+1, 2*emnl%npx+1, numEbins, numset /)
+  cnt4 = (/ 2*emnl%npx+1, 2*emnl%npx+1, 1, numset /)
+  offset4 = (/ 0, 0, 0, 0 /)
+  hdferr = HDF_writeHyperslabFloatArray4D(dataset, mLPSH, dims4, offset4, cnt4(1), cnt4(2), cnt4(3), cnt4(4), HDF_head)
 
   call HDF_pop(HDF_head,.TRUE.)
 
@@ -586,7 +564,7 @@ energyloop: do iE=numEbins,1,-1
 ! note that this needs to be redone for each energy, since the wave vector changes with energy
    nullify(khead)
    if (usehex) then
-    call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,emnl%npx,npyhex,numk, &
+    call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,emnl%npx,npy,numk, &
                 isym,ijmax,'RoscaLambert',usehex)
    else 
 ! Calckvectors(k,ga,ktmax,npx,npy,numk,isym,ijmax,mapmode,usehex)
@@ -597,24 +575,24 @@ energyloop: do iE=numEbins,1,-1
    call WriteValue('# independent beam directions to be considered = ', io_int, 1, "(I8)")
 
 ! convert the kvector linked list into arrays for OpenMP
-  allocate(karray(4,numk), kij(2,numk),stat=istat)
+  allocate(karray(4,numk), kij(3,numk),stat=istat)
 ! point to the first beam direction
   ktmp => khead
 ! and loop through the list, keeping k, kn, and i,j
   karray(1:3,1) = sngl(ktmp%k(1:3))
   karray(4,1) = sngl(ktmp%kn)
-  kij(1:2,1) = (/ ktmp%i, ktmp%j /)
-open(unit=dataunit,file='kvecs.txt',status='unknown',form='formatted')
-ik = 1
-write(dataunit,"(I5,'->',2(F14.5,','),F14.5)") ik, karray(1:3,ik)
-  do ik=2,numk
-    ktmp => ktmp%next
-    karray(1:3,ik) = sngl(ktmp%k(1:3))
-    karray(4,ik) = sngl(ktmp%kn)
-    kij(1:2,ik) = (/ ktmp%i, ktmp%j /)
-write(dataunit,"(I5,'->',2(F14.5,','),F14.5)") ik, karray(1:3,ik)
-  end do
-close(unit=dataunit,status='keep')
+  kij(1:3,1) = (/ ktmp%i, ktmp%j, ktmp%hs /)
+!open(unit=dataunit,file='kvecs.txt',status='unknown',form='formatted')
+!ik = 1
+!write(dataunit,"(I5,'->',2(F14.5,','),F14.5)") ik, karray(1:3,ik)
+   do ik=2,numk
+     ktmp => ktmp%next
+     karray(1:3,ik) = sngl(ktmp%k(1:3))
+     karray(4,ik) = sngl(ktmp%kn)
+     kij(1:3,ik) = (/ ktmp%i, ktmp%j, ktmp%hs /)
+!write(dataunit,"(I5,'->',2(F14.5,','),F14.5)") ik, karray(1:3,ik)
+   end do
+!close(unit=dataunit,status='keep')
 ! and remove the linked list
   call Delete_kvectorlist(khead)
 
@@ -633,7 +611,6 @@ close(unit=dataunit,status='keep')
   call WriteValue(' Attempting to set number of threads to ',io_int, 1, frm = "(I4)")
 
 ! use OpenMP to run on multiple cores ... 
-!!$OMP PARALLEL default(shared) COPYIN(rlp) &
 !$OMP PARALLEL COPYIN(rlp) &
 !$OMP& PRIVATE(DynMat,Sgh,Lgh,ik,FN,TID,kn,ipx,ipy,ix,iequiv,nequiv,reflist,firstw) &
 !$OMP& PRIVATE(kkk,nns,nnw,nref,svals,nat,io_int)
@@ -656,19 +633,7 @@ close(unit=dataunit,status='keep')
      kkk = karray(1:3,ik)
      FN = kkk
 
-! [110] beam direction
-!kkk =  (/ 44.73017,      44.73017,       0.00000 /) 
-!FN = kkk
-!    call TransSpace(cell,kkk,FN,'r','d')
-!    call NormVec(cell,FN,'d')
-!    FN = karray(1:3,ik)
-!verbose = .TRUE.
      call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, kkk, emnl%dmin, nref, verbose)
-!write (*,*) 'original number of reflections in list ',nref
-!write (*,*) 'zone axis = ',kkk
-
-
-
 ! ---------- end of "create the master reflection list"
 !=============================================
 
@@ -679,19 +644,6 @@ close(unit=dataunit,status='keep')
      nns = 0
      nnw = 0
      call Apply_BethePotentials(cell, reflist, firstw, BetheParameters, nref, nns, nnw)
-
-!rltmp=>reflist%next
-!write (*,*) 'number of reflections in list ',nref, nns, nnw
-!write(*,*) ' double diffraction for 0, 0, 2 ? ',cell%dbdiff(0,0,2),  IsGAllowed(cell, (/ 0, 0, 2 /) )
-!do i=1,nref
-!  write (*,*) i, rltmp%hkl, rltmp%sg, cell%LUT( rltmp%hkl(1), rltmp%hkl(2), rltmp%hkl(3) ), rltmp%strong, rltmp%weak, &
-!              cell%dbdiff( rltmp%hkl(1), rltmp%hkl(2), rltmp%hkl(3) ), rltmp%hkl(1)+rltmp%hkl(2)
-!  rltmp => rltmp%next
-!end do
-!
-!
-!stop
-
 
 ! generate the dynamical matrix
      allocate(DynMat(nns,nns))
@@ -716,35 +668,32 @@ close(unit=dataunit,status='keep')
      call CalcLgh(DynMat,Lgh,dble(thick(iE)),dble(kn),nns,gzero,depthstep,lambdaE(iE,1:izzmax),izzmax)
      deallocate(DynMat)
 
-! dynamical contribution
+! dynamical contributions
      svals = 0.0
      do ix=1,numset
        svals(ix) = real(sum(Lgh(1:nns,1:nns)*Sgh(1:nns,1:nns,ix)))
      end do
      svals = svals/float(sum(nat(1:numset)))
 
-! and store the resulting values, applying point group symmetry where needed.
+! and store the resulting svals values, applying point group symmetry where needed.
      ipx = kij(1,ik)
      ipy = kij(2,ik)
-     call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
-!$OMP CRITICAL
-     if (usehex) then
-       do ix=1,nequiv
-!        srhex(iequiv(1,ix),iequiv(2,ix),iE,1:numset) = svals(1:numset)
-         srhex(iequiv(1,ix),iequiv(2,ix),1,1:numset) = svals(1:numset)
-        end do
+     ipz = kij(3,ik)
+!
+     if (usehex) then 
+       call Apply3DPGSymmetry(cell,ipx,ipy,ipz,emnl%npx,iequiv,nequiv,usehex)
      else
-        if (emnl%Esel.eq.-1) then
-         do ix=1,nequiv
-!          sr(iequiv(1,ix),iequiv(2,ix),iE,1:numset) = svals(1:numset)
-           sr(iequiv(1,ix),iequiv(2,ix),1,1:numset) = svals(1:numset)
-          end do
-        else
-         do ix=1,nequiv
-           sr(iequiv(1,ix),iequiv(2,ix),1,1:numset) = svals(1:numset)
-          end do
-        endif
+       if ((cell%SYM_SGnum.ge.195).and.(cell%SYM_SGnum.le.230)) then
+         call Apply3DPGSymmetry(cell,ipx,ipy,ipz,emnl%npx,iequiv,nequiv,cubictype=SamplingType)
+       else
+         call Apply3DPGSymmetry(cell,ipx,ipy,ipz,emnl%npx,iequiv,nequiv)
+       end if
      end if
+!$OMP CRITICAL
+     do ix=1,nequiv
+       if (iequiv(3,ix).eq.-1) mLPSH(iequiv(1,ix),iequiv(2,ix),1,1:numset) = svals(1:numset)
+       if (iequiv(3,ix).eq.1) mLPNH(iequiv(1,ix),iequiv(2,ix),1,1:numset) = svals(1:numset)
+     end do
 !$OMP END CRITICAL
   
      if (mod(ik,2500).eq.0) then
@@ -761,68 +710,30 @@ close(unit=dataunit,status='keep')
 
   deallocate(karray, kij)
 
-! stop the clock and report the total time     
-!   call Time_stop(numk)
-
-! write (*,*) 'Some statistics :'
-! write (*,*) 'Average number of strong beams : ',float(BetheParameter%totstrong)/float(numk)
-! write (*,*) '          (min,max) : ',BetheParameter%minstrong,BetheParameter%maxstrong
-! write (*,*) 'Average number of weak beams : ',float(BetheParameter%totweak)/float(numk)
-! write (*,*) '          (min,max) : ',BetheParameter%minweak,BetheParameter%maxweak
-
-
 ! Finally, if this was sampled on a hexagonal array, we need to do barycentric interpolation
 ! to the standard square array for final output and use of the subsequent program.
 ! [this interpolation scheme must be verified; it is possible that there is an off-by-one error somewhere ...]
 if (usehex) then
-  delta = dsqrt(2.D0)/dble(emnl%npx)
-  srt = 2.D0/dsqrt(3.D0)
-! copy the central row without modifications
-  srh(-emnl%npx:emnl%npx,0,1,1:numset) = srhex(-emnl%npx:emnl%npx,0,1,1:numset)
-! we'll go through the array with pairs of horizontal rows at a time
-  do j=1,npy-1
-! determine which way the triangle is oriented for this row of the square array
-    jh = floor(j*srt)
-    if (mod(jh,2).eq.0) then ! even numbers mean triangle points down
-      h = delta/srt - (j*delta - float(jh)*delta/srt)
-      lambda = 0.5D0 - h/delta/dsqrt(3.D0)
-      omtl = 1.D0-2.D0*lambda
-      do i=-emnl%npx+1,emnl%npx-1  ! perform the barycentric interpolation
-! positive row, pay attention to hexagonal coordinate transformation !
-        srh(i,j,1,1:numset) = ( srhex(i-1,jh+1,1,1:numset) + srhex(i,jh+1,1,1:numset) )*lambda + omtl * srhex(i,jh,1,1:numset)
-! negative row
-        srh(i,-j,1,1:numset) = ( srhex(i-1,-jh-1,1,1:numset) + srhex(i,-jh-1,1,1:numset) )*lambda + omtl * srhex(i,-jh,1,1:numset)
-      end do
-    else
-      h = j*delta - float(jh)*delta/srt
-      lambda = 0.5D0 - h/delta/dsqrt(3.D0)
-      omtl = 1.D0-2.D0*lambda
-      do i=-emnl%npx+1,emnl%npx-1  ! perform the barycentric interpolation
-!! positive row, pay attention to hexagonal coordinate transformation !
-        srh(i,j,1,1:numset) = ( srhex(i-1,jh,1,1:numset) + srhex(i,jh,1,1:numset) )*lambda + omtl * srhex(i,jh+1,1,1:numset)
-! negative row
-        srh(i,-j,1,1:numset) = ( srhex(i-1,-jh,1,1:numset) + srhex(i,-jh,1,1:numset) )*lambda + omtl * srhex(i,-jh-1,1,1:numset)
-      end do
-    end if
-  end do
-  
-! and finally, we convert this to a square Lambert projection which will be used 
-! for all EBSD pattern interpolations; we do store the srh array in the HDF5 file as well for 
-! visualization purposes.
-  edge = LPs%sPio2 / dble(emnl%npx)
-  scl = float(emnl%npx) / LPs%preg
+! and finally, we convert the hexgonally sampled array to a square Lambert projection which will be used 
+! for all EBSD pattern interpolations;  we need to do this for both the Northern and Southern hemispheres
+
+! we begin by allocating auxiliary arrays to hold copies of the hexagonal data; the original arrays will
+! then be overwritten with the newly interpolated data.
+  allocate(auxNH(-emnl%npx:emnl%npx,-npy:npy,1,1:numset),stat=istat)
+  allocate(auxSH(-emnl%npx:emnl%npx,-npy:npy,1,1:numset),stat=istat)
+  auxNH = mLPNH
+  auxSH = mLPSH
+
+! 
+  edge = 1.D0 / dble(emnl%npx)
+  scl = float(emnl%npx) 
   do i=-emnl%npx,emnl%npx
     do j=-npy,npy
 ! determine the spherical direction for this point
       xy = (/ dble(i), dble(j) /) * edge
       dc = LambertSquareToSphere(xy, ierr)
-! and interpolate the hexagonal master pattern
-      if (dc(3).lt.0.D0) dc = -dc
 ! convert direction cosines to hexagonal Lambert projections
       xy = scl * LambertSphereToHex( dc, ierr )
-      tmp = xy(1)
-      xy(1) = xy(2)
-      xy(2) = tmp
 ! interpolate intensity from the neighboring points
       if (ierr.eq.0) then 
         nix = floor(xy(1))
@@ -835,23 +746,25 @@ if (usehex) then
         dy = xy(2) - niy
         dxm = 1.D0 - dx
         dym = 1.D0 - dy
-        sr(i,j,1,1:numset) = srh(nix,niy,1,1:numset)*dxm*dym + srh(nixp,niy,1,1:numset)*dx*dym + &
-                             srh(nix,niyp,1,1:numset)*dxm*dy + srh(nixp,niyp,1,1:numset)*dx*dy
+        mLPNH(i,j,1,1:numset) = auxNH(nix,niy,1,1:numset)*dxm*dym + auxNH(nixp,niy,1,1:numset)*dx*dym + &
+                             auxNH(nix,niyp,1,1:numset)*dxm*dy + auxNH(nixp,niyp,1,1:numset)*dx*dy
+        mLPSH(i,j,1,1:numset) = auxSH(nix,niy,1,1:numset)*dxm*dym + auxSH(nixp,niy,1,1:numset)*dx*dym + &
+                             auxSH(nix,niyp,1,1:numset)*dxm*dy + auxSH(nixp,niyp,1,1:numset)*dx*dy
       end if
     end do
   end do
+  deallocate(auxNH, auxSH)
 end if
 
 ! since these computations can take a long time, here we store 
 ! all the output at the end of each pass through the energyloop.
-
 
   io_int(1) = nint(float(totstrong)/float(numk))
   call WriteValue(' -> Average number of strong reflections = ',io_int, 1, "(I5)")
   io_int(1) = nint(float(totweak)/float(numk))
   call WriteValue(' -> Average number of weak reflections   = ',io_int, 1, "(I5)")
 
-! and here is where the major changes are for this version 5.0: all output now in HDF5 format
+! and here is where the major changes are for version 5.0: all output now in HDF5 format
   call timestamp(timestring=tstre)
 
   nullify(HDF_head)
@@ -875,19 +788,17 @@ end if
   hdferr = HDF_openGroup(groupname, HDF_head)
 
 ! add data to the hyperslab
-  dataset = 'sr'
+  dataset = 'mLPNH'
   dims4 = (/  2*emnl%npx+1, 2*emnl%npx+1, numEbins, numset /)
   cnt4 = (/ 2*emnl%npx+1, 2*emnl%npx+1, 1, numset /)
   offset4 = (/ 0, 0, iE-1, 0 /)
-  hdferr = HDF_writeHyperslabFloatArray4D(dataset, sr, dims4, offset4, cnt4(1), cnt4(2), cnt4(3), cnt4(4), HDF_head, insert)
+  hdferr = HDF_writeHyperslabFloatArray4D(dataset, mLPNH, dims4, offset4, cnt4(1), cnt4(2), cnt4(3), cnt4(4), HDF_head, insert)
 
-  if (usehex) then
-    dataset = 'srhex'
-    dims4 = (/  2*emnl%npx+1, 2*emnl%npx+1, numEbins, numset /)
-    cnt4 = (/ 2*emnl%npx+1, 2*emnl%npx+1, 1, numset /)
-    offset4 = (/ 0, 0, iE-1, 0 /)
-    hdferr = HDF_writeHyperslabFloatArray4D(dataset, srh, dims4, offset4, cnt4(1), cnt4(2), cnt4(3), cnt4(4), HDF_head, insert)
-  end if
+  dataset = 'mLPSH'
+  dims4 = (/  2*emnl%npx+1, 2*emnl%npx+1, numEbins, numset /)
+  cnt4 = (/ 2*emnl%npx+1, 2*emnl%npx+1, 1, numset /)
+  offset4 = (/ 0, 0, iE-1, 0 /)
+  hdferr = HDF_writeHyperslabFloatArray4D(dataset, mLPSH, dims4, offset4, cnt4(1), cnt4(2), cnt4(3), cnt4(4), HDF_head, insert)
 
   call HDF_pop(HDF_head,.TRUE.)
 

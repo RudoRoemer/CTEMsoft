@@ -52,7 +52,7 @@
 !> @date 07/12/13   MDG 1.1 added forward cube to ball to quaternion mappings
 !> @date 08/01/13   MDG 1.2 added standard Lambert projection
 !> @date 08/12/13   MDG 1.3 added inverse Lambert projections for Ball to Cube
-!> @date 09/20/13   MDG 1.4 added ApplyLaueSymmetry
+!> @date 09/20/13   MDG 1.4 added ApplyaueSymmetry
 !> @date 08/29/15   MDg 1.5 small changes to hexagonal mapping routines; coordinate swap inside routines
 !--------------------------------------------------------------------------
 module Lambert
@@ -185,7 +185,8 @@ contains
 !> @param xy 2D coordinates to be transformed (single precision)  
 !> @param ierr error status: 0=OK, 1=input point lies outside square grid bounds
 !
-!> @date 7/10/13   MDG 1.0 original
+!> @date 07/10/13   MDG 1.0 original
+!> @date 08/31/15   MDG 1.1 coordinates are prescaled 
 !--------------------------------------------------------------------------
 recursive function Lambert2DSquareForwardSingle(xy,ierr) result(res)
 
@@ -193,11 +194,13 @@ IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)               :: xy(2)
 integer(kind=irg),INTENT(INOUT)         :: ierr
-real(kind=sgl)                          :: res(3), q, qq
+real(kind=sgl)                          :: res(3), q, qq, xy2(2)
+
+xy2 = xy * sngl(LPs%sPio2)
 
 ierr = 0
 ! check to make sure that the input point lies inside the square of edge length 2 sqrt(pi/2)
-if (maxval(abs(xy)).gt.LPs%sPio2) then
+if (maxval(abs(xy2)).gt.LPs%sPio2) then
   res = (/ 0.0, 0.0, 0.0 /)             
   ierr = 1
 else
@@ -206,17 +209,17 @@ else
 ! Astronomy & Astrophysics, 520, A63 (2010)
 
 ! deal with the origin first:
- if (maxval(abs(xy)).eq.0.0) then 
+ if (maxval(abs(xy2)).eq.0.0) then 
    res = (/ 0.0, 0.0, 1.0 /)
  else
-  if (abs(xy(1)).le.abs(xy(2))) then
-   q = 2.0*xy(2)*LPs%iPi*sqrt(LPs%Pi-xy(2)*xy(2))
-   qq = xy(1)*LPs%Pi*0.25/xy(2)
-   res = (/ q*sin(qq), q*cos(qq), 1.0-2.0*xy(2)*xy(2)*sngl(LPs%iPi) /)  
+  if (abs(xy2(1)).le.abs(xy2(2))) then
+   q = 2.0*xy2(2)*LPs%iPi*sqrt(LPs%Pi-xy2(2)*xy2(2))
+   qq = xy2(1)*LPs%Pi*0.25/xy2(2)
+   res = (/ q*sin(qq), q*cos(qq), 1.0-2.0*xy2(2)*xy2(2)*sngl(LPs%iPi) /)  
   else
-   q = 2.0*xy(1)*LPs%iPi*sqrt(LPs%Pi-xy(1)*xy(1))
-   qq = xy(2)*LPs%Pi*0.25/xy(1)
-   res = (/ q*cos(qq), q*sin(qq), 1.0-2.0*xy(1)*xy(1)*sngl(LPs%iPi) /)  
+   q = 2.0*xy2(1)*LPs%iPi*sqrt(LPs%Pi-xy2(1)*xy2(1))
+   qq = xy2(2)*LPs%Pi*0.25/xy2(1)
+   res = (/ q*cos(qq), q*sin(qq), 1.0-2.0*xy2(1)*xy2(1)*sngl(LPs%iPi) /)  
   end if
  end if
 end if
@@ -235,7 +238,8 @@ end function Lambert2DSquareForwardSingle
 !> @param xy 2D coordinates to be transformed (double precision)  
 !> @param ierr error status: 0=OK, 1=input point lies outside square grid bounds
 ! 
-!> @date 7/10/13   MDG 1.0 original
+!> @date 07/10/13   MDG 1.0 original
+!> @date 08/31/15   MDG 1.1 coordinates are prescaled 
 !--------------------------------------------------------------------------
 recursive function Lambert2DSquareForwardDouble(xy,ierr) result(res)
 
@@ -243,11 +247,13 @@ IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN)               :: xy(2)
 integer(kind=irg),INTENT(INOUT)         :: ierr
-real(kind=dbl)                          :: res(3), q, qq
+real(kind=dbl)                          :: res(3), q, qq, xy2(2)
+
+xy2 = xy * LPs%sPio2
 
 ierr = 0
 ! check to make sure that the input point lies inside the square of edge length 2 sqrt(pi)
-if (maxval(dabs(xy)).gt.LPs%sPio2) then
+if (maxval(dabs(xy2)).gt.LPs%sPio2) then
   res = (/ 0.D0, 0.D0, 0.D0 /)
   ierr = 1   ! input point does not lie inside square with edge length 2 sqrt(pi/2)
 else
@@ -256,17 +262,17 @@ else
 ! Astronomy & Astrophysics, 520, A63 (2010)
 
 ! deal with the origin first:
- if (maxval(abs(xy)).eq.0.0) then 
+ if (maxval(abs(xy2)).eq.0.0) then 
    res = (/ 0.D0, 0.D0, 1.D0 /)
  else 
-  if (dabs(xy(1)).le.dabs(xy(2))) then
-   q = 2.D0*xy(2)*LPs%iPi*dsqrt(LPs%Pi-xy(2)*xy(2))
-   qq = xy(1)*LPs%Pi*0.25D0/xy(2)
-   res = (/ q*dsin(qq), q*dcos(qq), 1.D0-2.D0*xy(2)*xy(2)*LPs%iPi /)  
+  if (dabs(xy2(1)).le.dabs(xy2(2))) then
+   q = 2.D0*xy2(2)*LPs%iPi*dsqrt(LPs%Pi-xy2(2)*xy2(2))
+   qq = xy2(1)*LPs%Pi*0.25D0/xy2(2)
+   res = (/ q*dsin(qq), q*dcos(qq), 1.D0-2.D0*xy2(2)*xy2(2)*LPs%iPi /)  
   else
-   q = 2.D0*xy(1)*LPs%iPi*dsqrt(LPs%Pi-xy(1)*xy(1))
-   qq = xy(2)*LPs%Pi*0.25D0/xy(1)
-   res = (/ q*dcos(qq), q*dsin(qq), 1.D0-2.D0*xy(1)*xy(1)*LPs%iPi /)  
+   q = 2.D0*xy2(1)*LPs%iPi*dsqrt(LPs%Pi-xy2(1)*xy2(1))
+   qq = xy2(2)*LPs%Pi*0.25D0/xy2(1)
+   res = (/ q*dcos(qq), q*dsin(qq), 1.D0-2.D0*xy2(1)*xy2(1)*LPs%iPi /)  
   end if
  end if
 end if
@@ -282,17 +288,21 @@ end function Lambert2DSquareForwardDouble
 !
 !> @brief inverse projection from 3D hemisphere to 2D square, single precision
 !
+!> @note IMPORTANT: the calling routine must keep track of the sign of xyz(3);
+!> this routine only uses the absolute value !
+!
 !> @param xyz 3D coordinates to be transformed (single precision)  
 !> @param ierr error status: 0=OK, 1=input point has norm different from 1
 !
-!> @date 7/10/13   MDG 1.0 original
+!> @date 07/10/13   MDG 1.0 original
+!> @date 08/31/15   MDG 1.1 return scaled coordinates
 !--------------------------------------------------------------------------
 recursive function Lambert2DSquareInverseSingle(xyz,ierr) result(res)
 
 IMPLICIT NONE
 
 real(kind=sgl),INTENT(IN)               :: xyz(3)
-integer(kind=irg),INTENT(INOUT) :: ierr
+integer(kind=irg),INTENT(INOUT)         :: ierr
 real(kind=sgl)                          :: res(2), q
 real(kind=sgl),parameter                :: eps = 1.0E-6
 
@@ -307,14 +317,16 @@ else
     res = (/ 0.0, 0.0 /)
   else
     if (abs(xyz(2)).le.abs(xyz(1))) then
-      q = abs(xyz(1))/xyz(1) * sqrt(2.0*(1.0-xyz(3)))
+      q = abs(xyz(1))/xyz(1) * sqrt(2.0*(1.0-abs(xyz(3))))
       res = (/ q * sngl(LPs%sPi2), q * atan(xyz(2)/xyz(1))/sngl(LPs%sPi2) /)
     else
-      q = abs(xyz(2))/xyz(2) * sqrt(2.0*(1.0-xyz(3)))
+      q = abs(xyz(2))/xyz(2) * sqrt(2.0*(1.0-abs(xyz(3))))
       res = (/  q * atan(xyz(1)/xyz(2))/sngl(LPs%sPi2), q * sngl(LPs%sPi2) /)
     end if
   end if
 end if
+
+res = res / sngl(LPs%sPio2)
 
 end function Lambert2DSquareInverseSingle
 
@@ -327,10 +339,14 @@ end function Lambert2DSquareInverseSingle
 !
 !> @brief inverse projection from 3D hemisphere to 2D square, double precision
 !
+!> @note IMPORTANT: the calling routine must keep track of the sign of xyz(3);
+!> this routine only uses the absolute value !
+!
 !> @param xyz 3D coordinates to be transformed (double precision)  
 !> @param ierr error status: 0=OK, 1=input point has norm different from 1
 !
-!> @date 7/10/13   MDG 1.0 original
+!> @date 07/10/13   MDG 1.0 original
+!> @date 08/31/15   MDG 1.1 return scaled coordinates
 !--------------------------------------------------------------------------
 recursive function Lambert2DSquareInverseDouble(xyz,ierr) result(res)
 
@@ -352,14 +368,16 @@ else
     res = (/ 0.D0, 0.D0 /)
   else
     if (dabs(xyz(2)).le.dabs(xyz(1))) then
-      q = dabs(xyz(1))/xyz(1) * dsqrt(2.D0*(1.D0-xyz(3)))
+      q = dabs(xyz(1))/xyz(1) * dsqrt(2.D0*(1.D0-dabs(xyz(3))))
       res = (/ q * LPs%sPi2, q * datan(xyz(2)/xyz(1))/LPs%sPi2 /)
     else
-      q = dabs(xyz(2))/xyz(2) * dsqrt(2.D0*(1.D0-xyz(3)))
+      q = dabs(xyz(2))/xyz(2) * dsqrt(2.D0*(1.D0-dabs(xyz(3))))
       res = (/  q * datan(xyz(1)/xyz(2))/LPs%sPi2, q * LPs%sPi2 /)
     end if
   end if
 end if
+
+res = res / LPs%sPio2
 
 end function Lambert2DSquareInverseDouble
 
@@ -387,6 +405,7 @@ end function Lambert2DSquareInverseDouble
 !
 !> @date 07/10/13   MDG 1.0 original
 !> @date 08/29/15   MDG 1.1 debug
+!> @date 08/30/15   MDG 1.2 moved grid-to-cartesian coordinate transformation inside routine
 !--------------------------------------------------------------------------
 recursive function Lambert2DHexForwardSingle(xy,ierr) result(res)
 
@@ -395,16 +414,19 @@ IMPLICIT NONE
 real(kind=sgl),INTENT(IN)       :: xy(2) 
 integer(kind=irg),INTENT(INOUT):: ierr
 
-real(kind=sgl)                  :: res(3), q, XX, YY, xp, yp, XY2(2)
+real(kind=sgl)                  :: res(3), q, XX, YY, xp, yp, XY2(2), xyc(2)
 integer(kind=irg)               :: ks
 
  ierr = 0
+
+ xyc = (/ xy(1) - 0.5 * xy(2), xy(2) * sngl(LPS%srt) /) * sngl(LPs%preg)
   
- if (maxval(abs(xy)).eq.0.0) then
+ if (maxval(abs(xyc)).eq.0.0) then
   res = (/ 0.0, 0.0, 1.0 /)
  else
+! flip coordinates
+  XY2 = (/ xyc(2), xyc(1) /)
 ! determine in which sextant this point lies
-  XY2 = (/ xy(2), xy(1) /)
   ks = GetSextantSingle(XY2)
 
   select case (ks)
@@ -451,26 +473,30 @@ end function Lambert2DHexForwardSingle
 !> @param xy 2D coordinates to be transformed (double precision)  
 !> @param ierr error status: 0=OK, 1=input point outside hexagon
 !
-!> @date 7/10/13   MDG 1.0 original
+!> @date 07/10/13   MDG 1.0 original
 !> @date 08/29/15   MDG 1.1 debug
+!> @date 08/30/15   MDG 1.2 moved grid-to-cartesian coordinate transformation inside routine
 !--------------------------------------------------------------------------
 recursive function Lambert2DHexForwardDouble(xy,ierr) result(res)
 
 IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN)       :: xy(2) 
-integer(kind=irg),INTENT(INOUT):: ierr
+integer(kind=irg),INTENT(INOUT) :: ierr
 
-real(kind=dbl)                  :: res(3), q, XX, YY, xp, yp, XY2(2)
+real(kind=dbl)                  :: res(3), q, XX, YY, xp, yp, XY2(2), xyc(2)
 integer(kind=irg)               :: ks
 
   ierr = 0
 
- if (maxval(dabs(xy)).eq.0.D0) then
+ xyc = (/ xy(1) - 0.5D0 * xy(2), xy(2) * LPS%srt /) * LPs%preg
+ 
+ if (maxval(dabs(xyc)).eq.0.D0) then
   res = (/ 0.D0, 0.D0, 1.D0 /)
  else
+! flip coordinates
+  XY2 = (/ xyc(2), xyc(1) /)
 ! determine in which sextant this point lies
-  XY2 = (/ xy(2), xy(1) /)
   ks = GetSextantDouble(XY2)
 
   select case (ks)
@@ -516,12 +542,16 @@ end function Lambert2DHexForwardDouble
 !
 !> @brief inverse projection from 3D hemisphere to 2D hexagon, single precision
 !
+!> @note Important: The calling program must keep track of the sign of xyz(3), since this
+!> routine will take the absolute value |xyz(3)| for the z-component of the input vector!
+!
 !> @param xyz 3D coordinates to be transformed (single precision)  
 !> @param ierr error status: 0=OK, 1=input point not normalized
 !
-!> @date 7/10/13   MDG 1.0 original
-!> @date 5/04/15   MDG 1.1 correction to abs(X)/X for sign(X)
-!> @date 5/09/15   MDG 1.2 added slight offset to XX,YY to avoid interpolation issues
+!> @date 07/10/13   MDG 1.0 original
+!> @date 05/04/15   MDG 1.1 correction to abs(X)/X for sign(X)
+!> @date 05/09/15   MDG 1.2 added slight offset to XX,YY to avoid interpolation issues
+!> @date 08/30/15   MDG 1.3 moved grid-to-cartesian coordinate transformation inside routine
 !--------------------------------------------------------------------------
 recursive function Lambert2DHexInverseSingle(xyz,ierr) result(res)
 
@@ -530,7 +560,7 @@ IMPLICIT NONE
 real(kind=sgl),INTENT(IN)       :: xyz(3) 
 integer(kind=irg),INTENT(INOUT) :: ierr
 
-real(kind=sgl)                  :: res(2), q, qq, XX, YY, xxx, yyy, sgnX, XYZ2(3)
+real(kind=sgl)                  :: res(2), q, qq, XX, YY, xxx, yyy, sgnX, XYZ2(3), xy(2)
 integer(kind=irg)               :: ks
 real(kind=sgl),parameter        :: eps = 1.0E-7, eps2 = 1.0E-4
 
@@ -543,8 +573,8 @@ else
  if (abs(xyz(3)).eq.1.0) then
   res = (/ 0.0, 0.0 /)
  else
-! flip x and y components
-  XYZ2 = (/ xyz(2), xyz(1), xyz(3) /)
+! flip x and y components, and take the | | of the third component.
+  XYZ2 = (/ xyz(2), xyz(1), abs(xyz(3)) /)
 
 ! first do the Lambert projection
   q = sqrt(2.0/(1.0+XYZ2(3)))
@@ -582,6 +612,10 @@ else
  end if
 end if
 
+! and finally, transform the coordinates back to the hexagonal grid
+xy = res
+res = (/ xy(1) + xy(2) * sngl(LPS%isrt), xy(2) * 2.0 * sngl(LPS%isrt) /) / LPs%preg
+
 end function Lambert2DHexInverseSingle
 
 
@@ -593,12 +627,16 @@ end function Lambert2DHexInverseSingle
 !
 !> @brief inverse projection from 3D hemisphere to 2D hexagon, double precision
 !
+!> @note Important: The calling program must keep track of the sign of xyz(3), since this
+!> routine will take the absolute value |xyz(3)| for the z-component of the input vector!
+!
 !> @param xyz 3D coordinates to be transformed (double precision)  
 !> @param ierr error status: 0=OK, 1=input point not normalized
 !
-!> @date 7/10/13   MDG 1.0 original
-!> @date 5/04/15   MDG 1.1 correction to abs(X)/X for sign(X)
-!> @date 5/09/15   MDG 1.2 added slight offset to XX,YY to avoid interpolation issues
+!> @date 07/10/13   MDG 1.0 original
+!> @date 05/04/15   MDG 1.1 correction to abs(X)/X for sign(X)
+!> @date 05/09/15   MDG 1.2 added slight offset to XX,YY to avoid interpolation issues
+!> @date 08/30/15   MDG 1.3 moved grid-to-cartesian coordinate transformation inside routine
 !--------------------------------------------------------------------------
 recursive function Lambert2DHexInverseDouble(xyz,ierr) result(res)
 
@@ -607,7 +645,7 @@ IMPLICIT NONE
 real(kind=dbl),INTENT(IN)       :: xyz(3) 
 integer(kind=irg),INTENT(INOUT) :: ierr
 
-real(kind=dbl)                  :: res(2), q, qq, XX, YY, xxx, yyy, sgnX, XYZ2(3)
+real(kind=dbl)                  :: res(2), q, qq, XX, YY, xxx, yyy, sgnX, XYZ2(3), xy(2)
 integer(kind=irg)               :: ks
 real(kind=dbl),parameter        :: eps = 1.0E-12, eps2 = 1.0E-4
 
@@ -620,8 +658,8 @@ else
  if (dabs(xyz(3)).eq.1.D0) then
   res = (/ 0.D0, 0.D0 /)
  else
-! flip x and y components
-  XYZ2 = (/ xyz(2), xyz(1), xyz(3) /)
+! flip x and y components, and take the | | of the third component.
+  XYZ2 = (/ xyz(2), xyz(1), dabs(xyz(3)) /)
 
 ! first do the Lambert projection
   q = dsqrt(2.D0/(1.D0+XYZ2(3)))
@@ -658,6 +696,10 @@ else
     res = (/ yyy, xxx /)
 end if
 end if
+
+! and finally, transform the coordinates back to the hexagonal grid
+xy = res
+res = (/ xy(1) + xy(2) * LPS%isrt, xy(2) * 2.D0 * LPS%isrt /) / LPs%preg
 
 end function Lambert2DHexInverseDouble
 
@@ -2032,6 +2074,166 @@ end do
 ! that's it.
 end subroutine Apply2DPGSymmetry
 
+!--------------------------------------------------------------------------
+!
+! FUNCTION: Apply3DPGSymmetry
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief Apply the 3D point group symmetry to a pair of coordinates on a Lambert grid
+!
+!> @param cell unit cell pointer
+!> @param ipx x-coordinate
+!> @param ipy y-coordinate
+!> @param ipz y-coordinate (hemisphere)
+!> @param npx number of points for Lambert projection
+!> @param iequiv array with equivalent coordinates
+!> @param nequiv number of equivalent coordinates
+!> @param usehex [optional] indicates if the hexagonal Lambert grid should be used
+!> @param stereographic [optional] used to get the output in stereographic coordinates
+!> @param cubictype [optional] to force use of hardcoded symmetry operations for cubic groups
+!
+!> @todo implement full symmetry handling; this may need some more verification tests
+! 
+!> @date  09/01/15 MDG 1.0 original
+!--------------------------------------------------------------------------
+recursive subroutine Apply3DPGSymmetry(cell,ipx,ipy,ipz,npx,iequiv,nequiv,usehex,stereographic,cubictype)
+
+use local
+use crystal
+use typedefs
+use symmetry
+use error
+
+IMPLICIT NONE
+
+type(unitcell),pointer          :: cell
+integer(kind=irg),INTENT(IN)    :: ipx
+integer(kind=irg),INTENT(IN)    :: ipy
+integer(kind=irg),INTENT(IN)    :: ipz
+integer(kind=irg),INTENT(IN)    :: npx
+integer(kind=irg),INTENT(OUT)   :: iequiv(3,48)
+integer(kind=irg),INTENT(OUT)   :: nequiv
+logical,INTENT(IN),OPTIONAL     :: usehex
+logical,INTENT(IN),OPTIONAL     :: stereographic
+integer(kind=irg),INTENT(IN),OPTIONAL :: cubictype
+
+real(kind=dbl)                  :: xy(2), xyz(3), kstar(3)
+integer(kind=irg)               :: ierr, i, ix, iy
+real(kind=dbl)                  :: stmp(48,3)           !< output array with equivalent vectors
+integer(kind=irg)               :: n                    !< number of entries in equivalent vector array
+character(1)                    :: space                !< 'd' or 'r'
+
+
+! for the cubic groups, we need to apply a lower symmetry group due to the fact that we
+! do not use interpolations to apply the three-fold axes.  So, for all space groups with
+! number .ge. 195, we must apply a lower symmetry group.  To avoid unnecessary repetitions,
+! we pre-compute the relevant syhmmetry operations and store them in an extra SG%SYM_extra array
+! when we apply the symmetry for the first time.  Then, we test the space group number in 
+! the CalcStar routine to see which set of arrays to use.  Since the cubic symmetry is used a lot,
+! we hard-coded the symmetry operations to make things go slightly faster.
+
+
+! we have point on the square/hexagonal Lambert projection and we need to determine the 
+! set of equivalent points; we can use the CalcStar routine to do this, but first we
+! need to convert the 2D coordinates into a 3D vector in reciprocal space.
+xy = (/ dble(ipx), dble(ipy) /) / dble(npx)
+if (present(usehex)) then
+  xyz = LambertHexToSphere(xy, ierr)
+else
+  xyz = LambertSquaretoSphere(xy,ierr)
+end if
+if (ipz.lt.0) xyz(3) = -xyz(3)
+! convert to reciprocal space
+call NormVec(cell, xyz, 'c')
+call TransSpace(cell, xyz, kstar, 'c', 'r')
+
+! apply the 3D point group to get the complete star of kstar
+if (present(cubictype)) then
+  stmp(1,1:3) = kstar(1:3)
+  select case (cubictype) 
+    case(3)
+        n = 2
+        stmp(2,1:3) = (/ -kstar(1), kstar(2), -kstar(3) /)
+
+    case(6)
+        n = 8
+        stmp(2,1:3) = (/ -kstar(1), -kstar(2),  kstar(3) /)
+        stmp(3,1:3) = (/ -kstar(1),  kstar(2), -kstar(3) /)
+        stmp(4,1:3) = (/ -kstar(1), -kstar(2), -kstar(3) /)
+        stmp(5,1:3) = (/  kstar(1), -kstar(2), -kstar(3) /)
+        stmp(6,1:3) = (/  kstar(1),  kstar(2), -kstar(3) /)
+        stmp(7,1:3) = (/  kstar(1), -kstar(2),  kstar(3) /)
+        stmp(8,1:3) = (/ -kstar(1),  kstar(2),  kstar(3) /)
+
+    case(8)
+        n = 8
+        stmp(2,1:3) = (/ -kstar(1), -kstar(2),  kstar(3) /)
+        stmp(3,1:3) = (/ -kstar(1),  kstar(2), -kstar(3) /)
+        stmp(4,1:3) = (/  kstar(1), -kstar(2), -kstar(3) /)
+        stmp(5,1:3) = (/  kstar(2), -kstar(1), -kstar(3) /)
+        stmp(6,1:3) = (/ -kstar(2),  kstar(1), -kstar(3) /)
+        stmp(7,1:3) = (/ -kstar(2), -kstar(1),  kstar(3) /)
+        stmp(8,1:3) = (/  kstar(2),  kstar(1),  kstar(3) /)
+
+    case(9)
+        n = 16
+        stmp(2,1:3) =  (/ -kstar(1), -kstar(2),  kstar(3) /)
+        stmp(3,1:3) =  (/ -kstar(1),  kstar(2), -kstar(3) /)
+        stmp(4,1:3) =  (/ -kstar(1), -kstar(2), -kstar(3) /)
+        stmp(5,1:3) =  (/  kstar(1), -kstar(2), -kstar(3) /)
+        stmp(6,1:3) =  (/  kstar(1),  kstar(2), -kstar(3) /)
+        stmp(7,1:3) =  (/  kstar(1), -kstar(2),  kstar(3) /)
+        stmp(8,1:3) =  (/ -kstar(1),  kstar(2),  kstar(3) /)
+        stmp(9,1:3) =  (/ -kstar(2),  kstar(1),  kstar(3) /)
+        stmp(10,1:3) = (/  kstar(2), -kstar(1),  kstar(3) /)
+        stmp(11,1:3) = (/  kstar(2),  kstar(1), -kstar(3) /)
+        stmp(12,1:3) = (/  kstar(2), -kstar(1), -kstar(3) /)
+        stmp(13,1:3) = (/ -kstar(2), -kstar(1), -kstar(3) /)
+        stmp(14,1:3) = (/ -kstar(2),  kstar(1), -kstar(3) /)
+        stmp(15,1:3) = (/  kstar(2),  kstar(1),  kstar(3) /)
+        stmp(16,1:3) = (/ -kstar(2), -kstar(1),  kstar(3) /)
+
+    case default
+        call FatalError('Apply3DPGSymmetry','unknown cubictype parameter [3, 6, 8, or 9]')
+  end select
+
+else
+  space = 'r'
+  call CalcStar(cell,kstar,n,stmp,space)
+end if
+
+! then convert the equivalent points back into 2D Lambert coordinates
+do i=1,n
+  call TransSpace(cell, stmp(i,1:3), xyz, 'r', 'c')
+  call NormVec(cell, xyz, 'c')
+  iequiv(3,i) = 1
+  if (xyz(3).lt.0.D0) iequiv(3,i) = -1
+  if (present(stereographic)) then 
+! export stereographic coordinates
+   if (iequiv(3,i).eq.1) then
+    ix = int(dble(npx)*xyz(1)/(1.D0+xyz(3)))
+    iy = int(dble(npx)*xyz(2)/(1.D0+xyz(3)))
+   else
+    ix = int(dble(npx)*xyz(1)/(1.D0-xyz(3)))
+    iy = int(dble(npx)*xyz(2)/(1.D0-xyz(3)))
+   end if
+   iequiv(1,i) = ix
+   iequiv(2,i) = iy
+  else   
+    if (present(usehex)) then
+      xy = LambertSphereToHex(xyz, ierr)
+    else
+      xy = LambertSphereToSquare(xyz, ierr)
+    end if
+    xy = xy * dble(npx)
+    iequiv(1,i) = nint(xy(1))
+    iequiv(2,i) = nint(xy(2))
+  end if
+end do
+nequiv = n
+
+end subroutine Apply3DPGSymmetry
 
 end module Lambert
 

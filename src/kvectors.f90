@@ -138,9 +138,9 @@ character(*),INTENT(IN)                 :: mapmode      !< controls the type of 
 !real(kind=sgl),INTENT(IN)              :: klaue(2)     !< Laue center coordinates
 logical,INTENT(IN),OPTIONAL             :: usehex       !< hexagonal mode for RoscaLambert mapmode
 
-integer(kind=irg)                       :: istat,i,j,istart,iend,jstart,jend, imin, imax, jmin, jmax
-real(kind=dbl)                          :: glen, gan(3), gperp(3), kstar(3), delta
-logical                                 :: hexgrid = .FALSE., yes = .TRUE., flip = .TRUE.
+integer(kind=irg)                       :: istat,i,j,istart,iend,jstart,jend, imin, imax, jmin, jmax, ii, jj
+real(kind=dbl)                          :: glen, gan(3), gperp(3), kstar(3), delta, xy(2), xx, yy
+logical                                 :: hexgrid = .FALSE., yes = .TRUE., flip = .TRUE., check
 character(3)                            :: grid
 type(kvectorlist),pointer               :: ktail, ktmp
 
@@ -407,11 +407,10 @@ end if ! mapmode.eq.'Standard' or 'StandardConical'
 ! well, here we only allow for the RoscaLambert mode.
 
 if (mapmode.eq.'RoscaLambert') then 
-   if (usehex) then             ! hexagonal grid step size
-      delta =  LPs%preg / dble(npx)
+   delta =  1.D0 / dble(npx)
+   if (usehex) then             ! hexagonal grid 
       hexgrid = .TRUE.
-   else                         ! square grid step size
-      delta = LPs%sPio2 / dble(npx)
+   else                         ! square grid
       hexgrid = .FALSE.
    end if
 
@@ -439,7 +438,7 @@ if (mapmode.eq.'RoscaLambert') then
 
 ! in addition, the modified Lambert projection will now require two hemispheres (NH and SH). We can handle this
 ! by means of an optional argument to the AddkVector routine; when the argument is present, the -k_z version
-! of the direction is also added to the list
+! of the direction is also added to the list.
 
 ! deal with each point group symmetry separately or in sets, depending on the value of isym
  select case (isym)
@@ -451,7 +450,8 @@ if (mapmode.eq.'RoscaLambert') then
         jend = npy
           do j=jstart,jend
             do i=istart,iend   ! 
-                call AddkVector(ktail,cell,numk,delta,i,j,addSH = yes)
+                xy = (/ dble(i), dble(j) /) * delta
+                call AddkVector(ktail,cell,numk,xy,i,j,addSH = yes)
             end do
           end do
 
@@ -462,7 +462,8 @@ if (mapmode.eq.'RoscaLambert') then
         jend = npy
           do j=jstart,jend
             do i=istart,iend   ! 
-                call AddkVector(ktail,cell,numk,delta,i,j)
+                xy = (/ dble(i), dble(j) /) * delta
+                call AddkVector(ktail,cell,numk,xy,i,j)
             end do
           end do
 
@@ -473,7 +474,8 @@ if (mapmode.eq.'RoscaLambert') then
         jend = npy
           do j=jstart,jend
            do i=istart,iend   ! 
-                call AddkVector(ktail,cell,numk,delta,i,j, addSH = yes)
+                xy = (/ dble(i), dble(j) /) * delta
+                call AddkVector(ktail,cell,numk,xy,i,j, addSH = yes)
            end do
           end do
 
@@ -484,7 +486,8 @@ if (mapmode.eq.'RoscaLambert') then
         jend = npy
           do j=jstart,jend
            do i=istart,iend   ! 
-                call AddkVector(ktail,cell,numk,delta,i,j, addSH = yes)
+                xy = (/ dble(i), dble(j) /) * delta
+                call AddkVector(ktail,cell,numk,xy,i,j, addSH = yes)
            end do
           end do
 
@@ -495,7 +498,8 @@ if (mapmode.eq.'RoscaLambert') then
         jend = npy
           do j=jstart,jend
            do i=istart,iend   ! 
-                call AddkVector(ktail,cell,numk,delta,i,j, addSH = yes)
+                xy = (/ dble(i), dble(j) /) * delta
+                call AddkVector(ktail,cell,numk,xy,i,j, addSH = yes)
            end do
           end do
 
@@ -506,7 +510,8 @@ if (mapmode.eq.'RoscaLambert') then
         jend = npy
           do j=jstart,jend
            do i=istart,iend   ! 
-                call AddkVector(ktail,cell,numk,delta,i,j)
+                xy = (/ dble(i), dble(j) /) * delta
+                call AddkVector(ktail,cell,numk,xy,i,j)
            end do
           end do
 
@@ -517,7 +522,8 @@ if (mapmode.eq.'RoscaLambert') then
         jend = npx
           do i=istart,iend
            do j=jstart,i   ! 
-                call AddkVector(ktail,cell,numk,delta,i,j, addSH = yes)
+                xy = (/ dble(i), dble(j) /) * delta
+                call AddkVector(ktail,cell,numk,xy,i,j, addSH = yes)
            end do
           end do
 
@@ -528,7 +534,8 @@ if (mapmode.eq.'RoscaLambert') then
         jend = npx
           do i=istart,iend
            do j=-i, i   ! 
-                call AddkVector(ktail,cell,numk,delta,i,j)
+                xy = (/ dble(i), dble(j) /) * delta
+                call AddkVector(ktail,cell,numk,xy,i,j)
            end do
           end do
 
@@ -539,118 +546,283 @@ if (mapmode.eq.'RoscaLambert') then
         jend = npx
           do i=istart,iend
            do j=jstart,i   ! 
-                call AddkVector(ktail,cell,numk,delta,i,j)
+                xy = (/ dble(i), dble(j) /) * delta
+                call AddkVector(ktail,cell,numk,xy,i,j)
            end do
           end do
 
 ! cases 10 through 19 are all on a hexagonal grid...
-! npy is now npyhex !!!
+! for now (08/31/15), we have not yet implemented the rhombohedral setting of the trigonal space groups;
+! this case is truly a pain in the neck to implement...
 
   case (10)   ! hexagonal 3
         istart = 0
         iend = npx
         jstart = 0
-        jend = npy
+        jend = npx
           do j=jstart,jend
             do i=istart,iend   ! 
-                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid, addSH = yes)
+                xy = (/ dble(i), dble(j) /) * delta
+                if (InsideHexGrid(xy)) call AddkVector(ktail,cell,numk,xy,i,j,hexgrid, addSH = yes)
             end do
           end do
 
   case (11)   ! rhombohedral 3
-        istart = 0
-        iend = npy
-        jstart = 0
-        jend = npx
-          do j=jstart,jend
-            do i=istart,iend   ! 
-                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid, addSH = yes, flip = flip)
-            end do
-          end do
+        call FatalError('Calckvectors: ','rhombohedral setting has not been implemented yet, use hexagonal setting instead')
+!       istart = 0
+!       iend = npx
+!       jstart = 0
+!       jend = npx
+!         do j=jstart,jend
+!           do i=istart,iend   ! 
+!               ii = 2*j-i
+!               jj = j-2*i
+!               xy = (/ dble(ii), dble(jj) /) * delta * LPs%isrt
+!               if (InsideHexGrid(xy)) call AddkVector(ktail,cell,numk,xy,ii,jj,hexgrid, addSH = yes)
+!           end do
+!         end do
 
-  case (12)   ! hexagonal -3, 321, -6, rhombohedral 32
-        istart = 0
-        iend = npx
-        jstart = 0
-        jend = npy
-          do j=jstart,jend
-            do i=istart,iend   ! 
-                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
+  case (12)   ! hexagonal -3, 321, -6; [not implemented: rhombohedral 32]
+        if ((cell%SG%SYM_trigonal).and.(cell%SG%SYM_second)) then
+          call FatalError('Calckvectors: ','rhombohedral setting has not been implemented yet, use hexagonal setting instead')
+        else
+          istart = 0
+          iend = npx
+          jstart = 0
+          jend = npx
+            do j=jstart,jend
+              do i=istart,iend   ! 
+                  xy = (/ dble(i), dble(j) /) * delta
+                  if (InsideHexGrid(xy)) call AddkVector(ktail,cell,numk,xy,i,j,hexgrid)
+              end do
             end do
-          end do
+        end if
 
-  case (13)   ! rhombohedral -3, hexagonal 312
-        istart = 0
-        iend = npy
-        jstart = 0
-        jend = npx
-          do j=jstart,jend
+  case (13)   ! [not implemented: rhombohedral -3], hexagonal 312
+        if ((cell%SG%SYM_trigonal).and.(cell%SG%SYM_second)) then
+          call FatalError('Calckvectors: ','rhombohedral setting has not been implemented yet, use hexagonal setting instead')
+        else
+          istart = 0
+          iend = npx
+          jstart = 0
+          jend = -npx
+            do j=jstart,jend,-1
+              do i=istart+j/2,iend   ! 
+                xy = (/ dble(i), dble(j) /) * delta 
+                if (InsideHexGrid(xy)) call AddkVector(ktail,cell,numk,xy,i,j,hexgrid)
+              end do
+            end do
+          istart = 0
+          iend = npx
+          jstart = 0
+          jend = npx
             do i=istart,iend   ! 
-                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid, flip = flip)
+              do j=jstart,i/2
+                xy = (/ dble(i), dble(j) /) * delta 
+                if (InsideHexGrid(xy)) call AddkVector(ktail,cell,numk,xy,i,j,hexgrid)
+              end do
             end do
-          end do
+        end if
 
-  case (14)   ! hexagonal 3m1, rhombohedral 3m
-        istart = 0
-        iend = npx
-        jstart = 0
-        jend = npy
-          do j=jstart,jend
-            do i=j/2,j   ! 
-                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid, addSH = yes)
+  case (14)   ! hexagonal 3m1, [not implemented: rhombohedral 3m]
+        if ((cell%SG%SYM_trigonal).and.(cell%SG%SYM_second)) then
+          call FatalError('Calckvectors: ','rhombohedral setting has not been implemented yet, use hexagonal setting instead')
+        else
+          istart = 0
+          iend = npx
+          jstart = 0
+          jend = npx
+            do j=jstart,jend
+              do i=istart,iend
+                  xy = (/ dble(i), dble(j) /) * delta
+                  xx = dble(i-j/2)
+                  yy = dble(j)*LPs%srt
+                  check = .TRUE.
+                  if (xx.lt.0.D0) then
+                    check = .FALSE.
+                  else
+                    if (xx.gt.0.D0) then
+                      yy = datan(yy/xx)
+                      if (yy.lt.cPi/6.D0) check = .FALSE.
+                    end if
+                  end if
+                  if (InsideHexGrid(xy).and.(check)) call AddkVector(ktail,cell,numk,xy,i,j,hexgrid, addSH = yes)
+              end do
             end do
-          end do
+        end if
 
   case (15)   ! hexagonal 31m, 6
         istart = 0
         iend = npx
         jstart = 0
-        jend = npy
+        jend = npx
           do j=jstart,jend
-            do i=j/2,j   ! 
-                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid, addSH = yes, flip=flip)
+            do i=istart,iend
+                xy = (/ dble(i), dble(j) /) * delta
+                xx = dble(i-j/2)
+                yy = dble(j)*LPs%srt
+                check = .TRUE.
+                if (xx.le.0.D0) then
+                   check = .FALSE.
+                else
+                   if (xx.gt.0.D0) then
+                     yy = datan(yy/xx)
+                     if (yy.gt.cPi/3.D0) check = .FALSE.
+                   end if
+                end if
+                if (InsideHexGrid(xy).and.(check)) call AddkVector(ktail,cell,numk,xy,i,j,hexgrid, addSH = yes)
             end do
           end do
 
-!  case (8)   
-!        istart = 0
-!        iend = npy
-!        jstart = 0
-!        jend = npy
-!          do j=jstart,jend
-!            do i=j,iend   ! 
-!                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
-!            end do
-!          end do
+  case (16)   ! hexagonal -3m1,, 622, -6m2 [not implemented: rhombohedral -3m]
+        if ((cell%SG%SYM_trigonal).and.(cell%SG%SYM_second)) then
+          call FatalError('Calckvectors: ','rhombohedral setting has not been implemented yet, use hexagonal setting instead')
+        else
+          istart = 0
+          iend = npx
+          jstart = 0
+          jend = npx
+            do j=jstart,jend
+              do i=istart,iend
+                  xy = (/ dble(i), dble(j) /) * delta
+                  xx = dble(i-j/2)
+                  yy = dble(j)*LPs%srt
+                  check = .TRUE.
+                  if (xx.lt.0.D0) then
+                    check = .FALSE.
+                  else
+                    if (xx.gt.0.D0) then
+                      yy = datan(yy/xx)
+                      if (yy.lt.cPi/6.D0) check = .FALSE.
+                    end if
+                  end if
+                  if (InsideHexGrid(xy).and.(check)) call AddkVector(ktail,cell,numk,xy,i,j,hexgrid)
+              end do
+            end do
+        end if
 
-!  case (9)   
-!        istart = 0
-!        iend = npx   ! was npy
-!        jstart = 0
-!        jend = npx   ! was npy
-!          do j=jstart,jend
-!            do i=2*j,iend   ! 
-!                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
-!            end do
-!          end do
+  case (17)   ! hexagonal -31m, 6/m, -62m
+        istart = 0
+        iend = npx
+        jstart = 0
+        jend = npx
+          do j=jstart,jend
+            do i=istart,iend
+                xy = (/ dble(i), dble(j) /) * delta
+                xx = dble(i-j/2)
+                yy = dble(j)*LPs%srt
+                check = .TRUE.
+                if (xx.le.0.D0) then
+                   check = .FALSE.
+                else
+                   if (xx.gt.0.D0) then
+                     yy = datan(yy/xx)
+                     if (yy.gt.cPi/3.D0) check = .FALSE.
+                   end if
+                end if
+                if (InsideHexGrid(xy).and.(check)) call AddkVector(ktail,cell,numk,xy,i,j,hexgrid)
+            end do
+          end do
 
-!  case (12)   
-!        istart = 0
-!        iend = npy
-!        jstart = 0
-!        jend = npy/2
-!          do j=jstart,jend
-!            do i=2*j,iend   ! 
-!                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
-!                call AddkVector(ktail,cell,numk,delta,i-j,-j,hexgrid)
-!            end do
-!          end do
+  case (18)   ! hexagonal 6mm
+        istart = 0
+        iend = npx
+        jstart = 0
+        jend = npx
+          do j=jstart,jend
+            do i=istart,iend
+                xy = (/ dble(i), dble(j) /) * delta
+                xx = dble(i-j/2)
+                yy = dble(j)*LPs%srt
+                check = .TRUE.
+                if (xx.le.0.D0) then
+                   check = .FALSE.
+                else
+                   if (xx.gt.0.D0) then
+                     yy = datan(yy/xx)
+                     if (yy.gt.cPi/6.D0) check = .FALSE.
+                   end if
+                end if
+                if (InsideHexGrid(xy).and.(check)) call AddkVector(ktail,cell,numk,xy,i,j,hexgrid, addSH = yes)
+            end do
+          end do
+
+  case (19)   ! hexagonal 6mm
+        istart = 0
+        iend = npx
+        jstart = 0
+        jend = npx
+          do j=jstart,jend
+            do i=istart,iend
+                xy = (/ dble(i), dble(j) /) * delta
+                xx = dble(i-j/2)
+                yy = dble(j)*LPs%srt
+                check = .TRUE.
+                if (xx.le.0.D0) then
+                   check = .FALSE.
+                else
+                   if (xx.gt.0.D0) then
+                     yy = datan(yy/xx)
+                     if (yy.gt.cPi/6.D0) check = .FALSE.
+                   end if
+                end if
+                if (InsideHexGrid(xy).and.(check)) call AddkVector(ktail,cell,numk,xy,i,j,hexgrid)
+            end do
+          end do
 
  end select
 
 end if
 
 end subroutine Calckvectors
+
+
+!--------------------------------------------------------------------------
+!
+! FUNCTION: InsideHexGrid
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief determines whether or not a point lies inside the standard hexagonal Lambert grid
+!
+!> @details The hexagon has unit edge length, with one vertex at (1,0). Take the 
+!> absolute values of x and y and check if this point lies inside a box with edge
+!> lengths (1, sqrt(3)/2).  If not, exit; else, check on which side of the line
+!> |x|+|y|/sqrt(3)=1 the point lies.
+!
+!> @param xy  coordinate 
+!
+!> @date   08/31/15 MDG 1.0 original 
+!--------------------------------------------------------------------------
+recursive function InsideHexGrid(xy) result(res)
+
+use Lambert
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(IN)       :: xy(2)
+logical                         :: res
+
+real(kind=dbl)                  :: ax, ay
+
+! assume it is a good point
+res = .TRUE.
+
+! first of all, take the absolute values and see if the transformed point lies inside the 
+! rectangular box with edge lengths (1,sqrt(3)/2)
+ax = dabs(xy(1)-0.5D0*xy(2))
+ay = dabs(xy(2)*LPs%srt)
+
+if ((ax.gt.1.D0).or.(ay.gt.LPS%srt)) res = .FALSE.
+
+! then check for the inclined edge
+if (res) then
+  if (ax+ay*LPs%isrt.gt.1.D0) res = .FALSE.
+end if
+
+end function InsideHexGrid
+
+
 
 
 !--------------------------------------------------------------------------
@@ -947,12 +1119,11 @@ end function GetSextant
 !> @param ktail current entry in linked list
 !> @param cell unit cell pointer
 !> @param numk total number of wave vectors in list
-!> @param delta scale parameter
-!> @param i x image coordinate 
-!> @param j y image coordinate 
+!> @param xy input coordinates (normalized on square or hexagonal grid)
+!> @param i point index
+!> @param j point index
 !> @param usehex (optional) indicates hexagonal sampling if present
 !> @param addSH (optional) indicates if Southern Hemisphere sampling is needed
-!> @param flip (optional) for rhombohedral sampling
 !
 !> @date   11/21/12 MDG 1.0 original 
 !> @date   04/29/13 MDG 1.1 modified for kvectors module
@@ -960,8 +1131,9 @@ end function GetSextant
 !> @date   08/25/15 MDG 2.1 added addSH as optional argument
 !> @date   08/27/15 MDG 2.2 added flip for special case of rhombohedral sampling
 !> @date   08/28/15 MDG 2.3 mappings replaced with calls to Lambert module (significant simplification of code)
+!> @date   08/31/15 MDG 2.4 replaced integer coordinates by actual scaled coordinates
 !--------------------------------------------------------------------------
-subroutine AddkVector(ktail,cell,numk,delta,i,j,usehex,addSH,flip)
+subroutine AddkVector(ktail,cell,numk,xy,i,j,usehex,addSH)
 
 use io
 use typedefs
@@ -977,29 +1149,21 @@ IMPLICIT NONE
 type(kvectorlist),pointer               :: ktail
 type(unitcell),pointer                  :: cell
 integer(kind=irg),INTENT(INOUT)         :: numk
-real(kind=dbl),INTENT(IN)               :: delta
+real(kind=dbl),INTENT(IN)               :: xy(2)
 integer(kind=irg),INTENT(IN)            :: i
 integer(kind=irg),INTENT(IN)            :: j
 logical,INTENT(IN),OPTIONAL             :: usehex
 logical,INTENT(IN),OPTIONAL             :: addSH
-logical,INTENT(IN),OPTIONAL             :: flip
 
 integer(kind=irg)                       :: istat, ks, ii, ierr
-real(kind=dbl)                          :: kstar(3), xy(2)
+real(kind=dbl)                          :: kstar(3)
 logical                                 :: hex
-real(kind=dbl),parameter                :: srt = 0.86602540D0           ! sqrt(3.D0)/2.D0
 
 ! project the coordinate up to the sphere, to get a unit 3D vector kstar in cartesian space
 if (present(usehex)) then
-  if (present(flip)) then
-   xy = (/ dble(j)*srt, -(dble(i)-dble(j)*0.5D0) /) * delta
-  else
-   xy = (/ dble(i)-dble(j)*0.5D0, dble(j)*srt /) * delta
-  end if
   kstar = LambertHexToSphere(xy,ierr)
   hex = .TRUE.
 else
-  xy = (/ dble(i), dble(j) /) * delta
   kstar = LambertSquareToSphere(xy, ierr)
   hex = .FALSE.
 end if
@@ -1011,22 +1175,16 @@ end if
      nullify(ktail%next)                                ! nullify next in new value
      numk = numk + 1                                    ! keep track of number of k-vectors so far
      ktail%hs = 1                                       ! which hemisphere (Northern = 1, Southern = -1)
-     if (hex) then                                      ! transform the hex coordinates to square-array coordinates
-      if (present(flip)) then 
-       ktail%i = j                                      ! i-index of beam
-       ktail%j = -(i - j/2)+mod(j,2)/2                  ! j-index of beam
-      else
-       ktail%i = i - j/2+mod(j,2)/2                     ! i-index of beam
-       ktail%j = j                                      ! j-index of beam
-      end if
-     else                                               ! leave the square coordinates unchanged
+!    if (hex) then                                      ! transform the hex coordinates to square-array coordinates
+!      ktail%i = i - j/2+mod(j,2)/2                     ! i-index of beam
+!      ktail%j = j                                      ! j-index of beam
+!    else                                               ! leave the square coordinates unchanged
        ktail%i = i                                      ! i-index of beam
        ktail%j = j                                      ! j-index of beam
-     end if 
+!    end if 
      call NormVec(cell,kstar,'c')                       ! normalize incident direction in cartesian space
      kstar = kstar/cell%mLambda                         ! divide by wavelength
 ! and transform to reciprocal crystal space using the direct structure matrix
-     !ktail%k = matmul(transpose(cell%dsm),kstar)
      call TransSpace(cell, kstar, ktail%k, 'c', 'r')
      ktail%kn = 1.0/cell%mLambda
 
@@ -1039,22 +1197,16 @@ end if
          nullify(ktail%next)                                ! nullify next in new value
          numk = numk + 1                                    ! keep track of number of k-vectors so far
          ktail%hs = -1                                      ! which hemisphere (Northern = 1, Southern = -1)
-         if (hex) then                                      ! transform the hex coordinates to square-array coordinates
-          if (present(flip)) then 
-           ktail%i = j                                      ! i-index of beam
-           ktail%j = -(i - j/2)+mod(j,2)/2                  ! j-index of beam
-          else
-           ktail%i = i - j/2+mod(j,2)/2                     ! i-index of beam
-           ktail%j = j                                      ! j-index of beam
-          end if
-         else                                               ! leave the square coordinates unchanged
+!        if (hex) then                                      ! transform the hex coordinates to square-array coordinates
+!          ktail%i = i - j/2+mod(j,2)/2                     ! i-index of beam
+!          ktail%j = j                                      ! j-index of beam
+!        else                                               ! leave the square coordinates unchanged
            ktail%i = i                                      ! i-index of beam
            ktail%j = j                                      ! j-index of beam
-         end if 
+!        end if 
 ! get the Southern hemisphere version of kstar
          kstar(3) = -kstar(3)
 ! and transform to reciprocal crystal space using the direct structure matrix
-         !ktail%k = matmul(transpose(cell%dsm),kstar)
          call TransSpace(cell, kstar, ktail%k, 'c', 'r')
          ktail%kn = 1.0/cell%mLambda
        end if
@@ -1222,7 +1374,8 @@ end subroutine CalckvectorsECP
 !> @param npix gives size of the small patch for which k vectors are calculated
 !
 !
-!> @date   04/20/15 SS 1.0 original
+!> @date   04/20/15  SS 1.0 original
+!> @date   08/31/15 MDG 1.1 changes to AddkVector; THIS ROUTINE WILL NEED TO BE MODIFIED !!!!!!
 !--------------------------------------------------------------------------
 subroutine CalckvectorsGPU(khead,cell,npx,npix,centralpix,numk,usehex)
 
@@ -1248,7 +1401,7 @@ logical                                 :: verbose,switchmirror,hex
 integer(kind=irg)                       :: i,j,isym,pgnum,ks,istat
 integer(kind=irg)                       :: istart,iend,jstart,jend
 integer(kind=irg),parameter             :: LaueTest(11) = (/ 149, 151, 153, 156, 158, 160, 161, 164, 165, 166, 167 /)  ! space groups with 2 or mirror at 30 degrees
-real(kind=dbl)                          :: delta,x,y,q,kstar(3),XX,YY,xp,yp,rr
+real(kind=dbl)                          :: delta,x,y,q,kstar(3),XX,YY,xp,yp,rr, xy(2)
 
 
 allocate(khead,stat=istat)                   ! allocate new value
@@ -1265,7 +1418,7 @@ jend = centralpix(2)+npix-1
 if (present(usehex)) then
     if (usehex) then
 ! hexagonal grid step size
-        delta =  2.D0*dsqrt(cPi)/3.0D0**0.75D0/dble(npx)
+        delta =  1.D0/dble(npx)
         ktail%i = centralpix(1)
         ktail%j = centralpix(2)
         x = (i - j*0.5)*delta
@@ -1299,7 +1452,7 @@ if (present(usehex)) then
         ktail%k = matmul(transpose(cell%dsm),kstar)
         ktail%kn = 1.0/cell%mLambda
     else
-        delta = LPs%ap/dble(npx)
+        delta = 1.D0/dble(npx)
         ktail%i = centralpix(1)
         ktail%j = centralpix(2)
         x = centralpix(1)*delta
@@ -1359,9 +1512,11 @@ do j=jstart,jend
     do i=istart,iend
         if (.not.((i .eq. centralpix(1)) .and. (j .eq. centralpix(2)))) then ! central pixel already taken care of
             if (present(usehex)) then
-                call AddkVector(ktail,cell,numk,delta,i,j,usehex)
+                xy = (/ dble(i), dble(j) /) * delta
+                call AddkVector(ktail,cell,numk,xy,i,j,usehex)
             else
-                call AddkVector(ktail,cell,numk,delta,i,j)
+                xy = (/ dble(i), dble(j) /) * delta
+                call AddkVector(ktail,cell,numk,xy,i,j)
             end if
         end if
     end do

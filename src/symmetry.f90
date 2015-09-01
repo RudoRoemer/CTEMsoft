@@ -728,11 +728,11 @@ recursive subroutine CalcStar(cell,kk,n,stmp,space)
 
 IMPLICIT NONE
 
-type(unitcell),pointer  :: cell
-real(kind=dbl),INTENT(OUT)              :: stmp(48,3)           !< output array with equivalent vectors
+type(unitcell),pointer                  :: cell
 real(kind=dbl),INTENT(IN)               :: kk(3)                !< input vector
 integer(kind=irg),INTENT(OUT)           :: n                    !< number of entries in equivalent vector array
-character(1),INTENT(IN)         :: space                !< 'd' or 'r'
+real(kind=dbl),INTENT(OUT)              :: stmp(48,3)           !< output array with equivalent vectors
+character(1),INTENT(IN)                 :: space                !< 'd' or 'r'
 
 integer(kind=irg)                       :: i,j,k,mm             !< various loop counters and such
 real(kind=dbl)                          :: r(3),s(3),diff       !< auxiliary variables
@@ -2331,7 +2331,7 @@ integer(kind=irg)                       :: stnum
 
 ! Is this a trigonal group
 if (cell%SG%SYM_trigonal.eqv..TRUE.) then ! yes, it is
-  if (cell%xtal_system.eq.5) then ! so check the crystal system; if trigonal then ...
+  if (cell%SG%SYM_second.eqv..TRUE.) then ! so check the crystal system; if trigonal then ...
     if (pgnum.eq.16) stnum = 11
     if (pgnum.eq.17) stnum = 13
     if (pgnum.eq.18) stnum = 12
