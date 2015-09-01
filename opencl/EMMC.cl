@@ -47,6 +47,7 @@
 //> This is the part which runs on the GPU. This is independent of the platform. The data/memory management is done using MainMC.c.
 //
 //> @date 06/13/14  SS  1.0 OpenCL implementation
+//> @date 09/01/15 MDG  1.1 modified Lambert mapping due to changes in main Lambert module
 //--------------------------------------------------------------------------
 
 #define RAND_MAX  2147483647.0f
@@ -113,11 +114,13 @@ struct lfsrret lfsr113_Bits (int z11,int z22,int z33,int z44)
 //
 //> @param xyz 3D coordinates to be considered
 //> @date 05/14/14    SS 1.0 original
+//> @date 09/01/15   MDG 1.1 modified Lambert scaling to conform with Lambert module
 //--------------------------------------------------------------------------
 
 struct LambertStruct LambertSphereToPlane(float normxyz[3]){
-    float q, LPssPi2;
+    float q, LPssPi2, LPssPio2;
     LPssPi2 = 0.886226925452758f;
+    LPssPio2 = 1.253314137315500f;
     struct LambertStruct ret;
     float xyz[3];
     float mag = sqrt(normxyz[0]*normxyz[0] + normxyz[1]*normxyz[1] + normxyz[2]*normxyz[2]);
@@ -143,6 +146,8 @@ struct LambertStruct LambertSphereToPlane(float normxyz[3]){
         }
         
     }
+    ret.x = ret.x/LPssPio2;
+    ret.y = ret.y/LPssPio2;
     return ret;
     
 }

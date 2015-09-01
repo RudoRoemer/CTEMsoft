@@ -80,6 +80,7 @@ end program EMMCOpenCL
 !> @date 07/23/14  SS  4.1 conversion to OpenCL
 !> @date 03/26/15  MDG 5.0 all output now in HDF5 format 
 !> @date 05/05/15  MDG 5.1 removed getenv() call; replaced by global path string
+!> @date 09/01/15  MDG 5.2 modifications due to Lambert module changes
 !--------------------------------------------------------------------------
 subroutine DoMCsimulation(mcnl, progname, nmldeffile)
 
@@ -223,7 +224,9 @@ energyres = 0.0
 size_in_bytes = num_max*sizeof(EkeV)
 size_in_bytes_seeds = 4*globalworkgrpsz*globalworkgrpsz*sizeof(EkeV)
 
-delta = dble(nx)/LPs%sPio2
+! changed by MDG [09/01/15] after extensive modifications to Lambert routines
+! old code delta = dble(nx)/LPs%sPio2
+delta = dble(nx)
 
 !=====================
 ! INITIALIZATION
