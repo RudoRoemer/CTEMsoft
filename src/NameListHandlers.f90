@@ -914,11 +914,14 @@ character(fnlen)        :: outname
 character(fnlen)        :: xtalname
 character(fnlen)        :: xtalname2
 character(fnlen)        :: energyfile
+character(fnlen)        :: filmfile
+character(fnlen)        :: subsfile
+
 
 ! namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, distort, abcdist, albegadist, ktmax, &
 namelist /ECPlist/ stdout, xtalname, xtalname2, voltage, k, fn, dmin, ktmax, filmthickness, &
                    startthick, thickinc, nthreads, numthick, npix, outname, thetac, compmode, zintstep, &
-                   gF, gS, tF, tS, energyfile
+                   gF, gS, tF, tS, energyfile, filmfile, subsfile
 
 ! default values
 stdout = 6                              ! standard output
@@ -944,6 +947,8 @@ outname = 'ecp.data'                    ! output filename
 xtalname = 'undefined'                  ! initial value to check that the keyword is present in the nml file
 xtalname2 = 'undefined'                 ! initial value for substrate structure name
 energyfile = 'undefined'
+filmfile = 'undefined'
+subsfile = 'undefined'
 
 ! read the namelist file
  open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
@@ -978,6 +983,8 @@ ecpnl%outname = outname
 ecpnl%xtalname = xtalname
 ecpnl%xtalname2 = xtalname2
 ecpnl%energyfile = energyfile
+ecpnl%filmfile = filmfile
+ecpnl%subsfile = subsfile
 
 end subroutine GetECPNameList
 

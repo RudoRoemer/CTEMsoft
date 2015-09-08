@@ -275,6 +275,8 @@ type ECPNameListType
         character(fnlen)        :: xtalname
         character(fnlen)        :: xtalname2
         character(fnlen)        :: energyfile
+        character(fnlen)        :: filmfile
+        character(fnlen)        :: subsfile
 end type ECPNameListType
 
 
