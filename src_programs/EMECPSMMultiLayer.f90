@@ -27,7 +27,7 @@
 ! ###################################################################
 
 !--------------------------------------------------------------------------
-! EMsoft:EMECP.f90
+! EMsoft:EMECPSMMultiLayer.f90
 !--------------------------------------------------------------------------
 !
 ! PROGRAM: EMECPSMMultiLayer
@@ -36,7 +36,8 @@
 !
 !> @brief Zone axis electron channeling patterns for two layer structure using scattering matrix
 !
-!> @date 03/18/10 MDG 1.0 f90
+!> @date 11/25/14 SS 1.0 f90
+!> @date 08/31/15 SS 1.1 Revisions+OpenMP support
 !--------------------------------------------------------------------------
 program EMECPSMMultiLayer
 
@@ -59,7 +60,7 @@ nmldeffile = 'EMECPMultiLayer.nml'
 progname = 'EMECPSMMultiLayer.f90'
 progdesc = 'Electron channeling pattern computation for two layer structure using Scattering Matrix approach'
 
-! print some information
+! set all global variables and print information
 call EMsoft(progname, progdesc)
 
 ! deal with command line arguments if any
@@ -92,7 +93,9 @@ end program EMECPSMMultiLayer
 !> @param ecpnl namelist file
 !
 !> @date 11/25/14  SS 1.0 new routine
+!> @date 08/31/15  SS 1.1 revisions+OpenMP support
 !--------------------------------------------------------------------------
+
 subroutine ECPMultiLayerSM(ecpnl, progname)
 
 
@@ -113,13 +116,15 @@ use files
 use diffraction
 use rotations
 use MBmodule
-use TIFF_f90
+use math
+use omp_lib
 
 IMPLICIT NONE
 
 type(ECPNameListType),INTENT(IN)        :: ecpnl
 character(fnlen),INTENT(IN)             :: progname
 
+integer(kind=irg)                       :: TID, nthreads
 integer(kind=irg)                       :: numEbins,numzbins,nx,ny,totnum_el
 !integer(kind=8)                        :: totnum_el this will be done later
 real(kind=dbl)                          :: EkeV,Ehistmin,Ebinsize,depthmax,depthstep,sig,omega
@@ -127,7 +132,7 @@ real(kind=sgl)                          :: totnum_el_det
 integer(kind=irg)                       :: iz,izz,ii,jj,kk,ll ! all loop variables
 integer(kind=irg)                       :: ipx,ipy,iequiv(2,12),nequiv,gzero
 integer(kind=irg),allocatable           :: accum_z(:,:,:,:), accum_e(:,:,:)
-integer(kind=irg)                       :: istat,filmthickness
+integer(kind=irg)                       :: istat,filmthickness,substhickness
 real(kind=sgl),allocatable              :: lambdaZ(:),thick(:)
 real(kind=dbl)                          :: io_real(5)
 integer(kind=irg)                       :: io_int_sgl(1)
@@ -142,7 +147,7 @@ logical                                 :: verbose
 type(unitcell),pointer                  :: cell_film
 type(unitcell),pointer                  :: cell_subs
 type(orientation),pointer               :: orel
-real(kind=sgl)                          :: TTinv(3,3)
+real(kind=sgl)                          :: TTinv(3,3),kg(3),kg1(3)
 real(kind=dbl)                          :: eWavelength_subs,eWavelength_film
 type(gnode)                             :: rlp_film
 type(gnode)                             :: rlp_subs
@@ -150,29 +155,32 @@ type(DynType)                           :: Dyn_film
 type(DynType)                           :: Dyn_subs
 integer(kind=irg)                       :: pgnum_film,pgnum_subs,isym_film,isym_subs,numset_film,numset_subs
 type(reflisttype),pointer               :: reflist_film,reflisttmp,firstw_film,rltmpb
-type(refliststrongsubstype),pointer     :: refliststrong_subs,rltmp
+type(reflisttype),pointer               :: reflist_subs,firstw_subs,rltmpa
+type(refliststrongsubstype),pointer     :: refliststrong_subs,refliststrong_subs_tmp
+real(kind=dbl)                          :: kn,K0c(3),FNc(3)
 
 type(kvectorlist),pointer               :: khead,ktmp
 integer(kind=irg)                       :: numk,nref_film,nns_film,nnw_film
 integer(kind=irg)                       :: nref_subs,nns_subs,nnw_subs,numg
 integer(kind=irg),allocatable           :: kij(:,:)
-real(kind=sgl)                          :: rotmat(3,3),FN(3),k0(3),dmin
+real(kind=sgl),allocatable              :: klist(:,:)
+real(kind=sgl)                          :: rotmat(3,3),FN(3),k0(3),dmin,k1(3),natsubs
 type(BetheParameterType)                :: BetheParameters
-real(kind=sgl),allocatable              :: sr(:,:)
-complex(kind=dbl),allocatable           :: DynMat_film(:,:),Dynmat_subs(:,:)
+real(kind=sgl),allocatable              :: sr_film(:,:),sr_subs(:,:)
+complex(kind=dbl),allocatable           :: DynMat_film(:,:),Dynmat_subs(:,:),mexp(:,:),ampl2(:),ampl(:)
 complex(kind=dbl),allocatable           :: Sghfilm(:,:),Lghfilm(:,:),Sghfilmtmp(:,:,:),Lghfilmtmp(:,:,:)
-real(kind=dbl),allocatable              :: sigmagg(:,:)
+complex(kind=dbl),allocatable           :: Sghsubs(:,:),Lghsubs(:,:),Sghsubstmp(:,:,:),Lghsubstmp(:,:,:)
 complex(kind=dbl),allocatable           :: S0_subs(:)
 complex(kind=dbl)                       :: czero
 integer(kind=irg),allocatable           :: nat_film(:),nat_subs(:)
-
-gzero = 1
+real(kind=dbl)                          :: xgp,subscontribution
+real(kind=dbl),allocatable              :: sigmagg(:,:)
 
 call Message('opening '//trim(ecpnl%energyfile), frm = "(A)" )
 
 open(dataunit,file=trim(ecpnl%energyfile),status='unknown',form='unformatted')
 
-! lines from EMMCCL.f90... these are the things we need to read in...
+! lines from CTEMMCCL.f90... these are the things we need to read in...
 ! write (dataunit) progname
 !! write the version number
 ! write (dataunit) MCscversion
@@ -228,6 +236,7 @@ end do
 call Message(' -> completed calculating lambda values from file '//trim(ecpnl%energyfile), frm = "(A)")
 deallocate(accum_z)
 filmthickness = nint(ecpnl%filmthickness)
+substhickness = numzbins - filmthickness
 
 if(ecpnl%filmthickness .gt. depthmax) call FatalError('ECPpattern','Lambda values not available for all film thicknesses')
 
@@ -261,6 +270,7 @@ pgnum_subs = jj
 !=============================================
 ! completed initializing the two crystals
 !=============================================
+
 allocate(orel)
 orel%gA = float(ecpnl%gF)
 orel%tA = float(ecpnl%tF)
@@ -274,8 +284,13 @@ if (sum(orel%tB*orel%gB) .ne. 0.0) call FatalError('ECPpatternfos','Plane does n
 TTinv = ComputeOR(orel, cell_film, cell_subs, 'BA')
 
 rotmat(:,1) = (/1.0,0.0,0.0/)
+rotmat(:,1) = rotmat(:,1)/NORM2(rotmat(:,1))
+
 rotmat(:,2) = (/0.0,1.0,0.0/)
+rotmat(:,2) = rotmat(:,2)/NORM2(rotmat(:,2))
+
 rotmat(:,3) = (/0.0,0.0,1.0/)
+rotmat(:,3) = rotmat(:,3)/NORM2(rotmat(:,3))
 
 nullify(khead)
 nullify(ktmp)
@@ -285,12 +300,13 @@ call CalckvectorsECP(khead,cell_film,rotmat,ecpnl%thetac,ecpnl%npix,ecpnl%npix,n
 io_int_sgl(1) = numk
 call WriteValue('# independent beam directions to be considered = ', io_int_sgl, 1, "(I8)")
 
-allocate(kij(2,numk),stat=istat)
+allocate(kij(2,numk),klist(3,numk),stat=istat)
 
 ktmp => khead
 !kij(1:2,1) = (/ ktmp%i, ktmp%j /)
 do ii = 1,numk
     kij(1:2,ii) = (/ ktmp%i, ktmp%j /)
+    klist(1:3,ii) = ktmp%k
     ktmp => ktmp%next
 end do
 
@@ -299,52 +315,86 @@ end do
 !==============================================================
 call Set_Bethe_Parameters(BetheParameters,.TRUE.)
 dmin = ecpnl%dmin
-allocate(sr(-ecpnl%npix:ecpnl%npix,-ecpnl%npix:ecpnl%npix),stat=istat)
-sr = 0.0
+
+allocate(sr_film(-ecpnl%npix:ecpnl%npix,-ecpnl%npix:ecpnl%npix),stat=istat)
+sr_film = 0.0
+allocate(sr_subs(-ecpnl%npix:ecpnl%npix,-ecpnl%npix:ecpnl%npix),stat=istat)
+sr_subs = 0.0
+
 !----------------------------MAIN COMPUTATIONAL LOOP-----------------------
 ! point to the first beam direction
-czero = dcmplx(0.D0,0.D0)
-FN = ecpnl%fn(1:3)
+ czero = dcmplx(0.D0,0.D0)
 
-ktmp => khead
+!$OMP PARALLEL PRIVATE(TID,nthreads,k0,FN,kn,nref_film,firstw_film,reflist_film) &
+!$OMP& PRIVATE(nns_film,nnw_film,DynMat_film,Sghfilmtmp,Lghfilmtmp,Sghfilm,Lghfilm,S0_subs,refliststrong_subs) &
+!$OMP& PRIVATE(jj,rltmpa,kg,kg1,reflist_subs,nref_subs,firstw_subs,nns_subs,nnw_subs,ipx,ipy) &
+!$OMP& PRIVATE(DynMat_subs,Sghsubstmp,Lghsubstmp,Sghsubs,Lghsubs,sigmagg,refliststrong_subs_tmp) &
+!$OMP& SHARED(lambdaZ,sr_film,filmthickness,ecpnl,ii,cell_film,cell_subs,BetheParameters,dmin,rlp_film) &
+!$OMP& SHARED(numset_film,numset_subs,nat_film,nat_subs,substhickness,sr_subs,czero,numzbins,thick,TTinv,rlp_subs)
 
+TID = OMP_GET_THREAD_NUM()
+nthreads = OMP_GET_NUM_THREADS()
+if(TID .eq. 0) write(*,*)'Number of threads = ',nthreads 
+
+!$OMP BARRIER
+!$OMP DO SCHEDULE(DYNAMIC)
 beamloop: do ii = 1,numk
-    k0 = ktmp%k(1:3)/(cell_film%mLambda)
-    call Initialize_ReflectionList(cell_film, reflist_film, BetheParameters, FN, k0, dmin, nref_film)
+
+     k0 = klist(1:3,ii) 
+     FN = ecpnl%gF
+     call NormVec(cell_film,FN,'r')
+     kn = CalcDot(cell_film,FN,k0,'r')
+     nullify(reflist_film)
+     call Initialize_ReflectionList(cell_film, reflist_film, BetheParameters, FN, k0, dmin, nref_film)
+
 ! determine strong and weak reflections
-    call Apply_BethePotentials(cell_film, reflist_film, firstw_film, BetheParameters, nref_film, nns_film, nnw_film)
-    if (allocated(DynMat_film)) deallocate(DynMat_film)
-    if (allocated(Sghfilmtmp)) deallocate(Sghfilmtmp)
-    if (allocated(Lghfilmtmp)) deallocate(Lghfilmtmp)
-    if (allocated(Sghfilm)) deallocate(Sghfilm)
-    if (allocated(Lghfilm)) deallocate(Lghfilm)
-    if (allocated(S0_subs)) deallocate(S0_subs)
+     call Apply_BethePotentials(cell_film, reflist_film, firstw_film, BetheParameters, nref_film, nns_film, nnw_film)
 
-    allocate(DynMat_film(nns_film,nns_film),stat=istat)
-    call GetDynMat(cell_film, reflist_film, firstw_film, rlp_film, DynMat_film, nns_film, nnw_film)
-    allocate(Sghfilmtmp(nns_film,nns_film,numset_film), Sghfilm(nns_film,nns_film),&
+     if (allocated(DynMat_film)) deallocate(DynMat_film)
+     if (allocated(Sghfilmtmp)) deallocate(Sghfilmtmp)
+     if (allocated(Lghfilmtmp)) deallocate(Lghfilmtmp)
+     if (allocated(Sghfilm)) deallocate(Sghfilm)
+     if (allocated(Lghfilm)) deallocate(Lghfilm)
+     if (allocated(S0_subs)) deallocate(S0_subs)
+
+     allocate(DynMat_film(nns_film,nns_film),stat=istat)
+     call GetDynMat(cell_film, reflist_film, firstw_film, rlp_film, DynMat_film, nns_film, nnw_film)
+    
+     allocate(Sghfilmtmp(nns_film,nns_film,numset_film), Sghfilm(nns_film,nns_film),&
             Lghfilmtmp(nns_film,nns_film,filmthickness),Lghfilm(nns_film,nns_film),stat=istat)
-    allocate(S0_subs(1:nns_film),stat =istat)
+     allocate(S0_subs(1:nns_film),stat =istat)
 
 
-    Sghfilmtmp = czero
-    Sghfilm = czero
-    Lghfilmtmp = czero
-    Lghfilm = czero
-    nat_film = 0
-    call CalcSgh(cell_film,reflist_film,nns_film,numset_film,Sghfilmtmp,nat_film)
-    Sghfilm = sum(Sghfilmtmp,3)
-    call CalcLghfilm(cell_film%mLambda,nns_film,numzbins,thick,ktmp%kn,Lghfilmtmp,DynMat_film,lambdaZ,gzero,filmthickness,S0_subs)
-    Lghfilm = Lghfilmtmp(:,:,filmthickness)/dcmplx(ecpnl%filmthickness,0.D0)
-    ipx = kij(1,ii)
-    ipy = kij(2,ii)
 
-    sr(ipx,ipy) = real(sum(Lghfilm(1:nns_film,1:nns_film)*&
-                Sghfilm(1:nns_film,1:nns_film)))/float(sum(nat_film))
-print*,sr(ipx,ipy),'Film contribution'
+     Sghfilmtmp = czero
+     Sghfilm = czero
+     Lghfilmtmp = czero
+     Lghfilm = czero
+     nat_film = 0
+     call CalcSgh(cell_film,reflist_film,nns_film,numset_film,Sghfilmtmp,nat_film)
+     Sghfilm = sum(Sghfilmtmp,3)
+
+!   call CalcLgh(DynMat_film,Lghfilm,dble(filmthickness),kn,nns_film,gzero,1.D0,lambdaZ,numzbins)
+
+     call CalcLghfilm(cell_film%mLambda,nns_film,numzbins,thick,ktmp%kn,Lghfilmtmp,DynMat_film,lambdaZ,gzero,filmthickness,S0_subs)
+     Lghfilm = Lghfilmtmp(:,:,filmthickness)/dcmplx(ecpnl%filmthickness,0.D0)
+     ipx = kij(1,ii)
+     ipy = kij(2,ii)
+
+     sr_film(ipx,ipy) = real(sum(Lghfilm(1:nns_film,1:nns_film)*&
+                Sghfilm(1:nns_film,1:nns_film)))/2.0
+
+!print*,'Film contribution = ',sr_film(ipx,ipy)
+!print*,S0_subs
+!stop
+!if(TID .eq. 3) print*,'Film contribution = ',sr_film(ipx,ipy) 
+
 !==================================================================================
 ! film contribution done
 !==================================================================================
+
+! THIS IS THE FULL APPROACH IN WHICH THE DIFFRACTED BEAMS FROM DIFFERENT INCIDENT BEAM ON SUBSTRATE INTERACT
+
 
 ! this routine gives the list of reflections and corresponding dynamical matrices for every incident direction on the substrate
 ! the members of the linked list are 
@@ -353,63 +403,124 @@ print*,sr(ipx,ipy),'Film contribution'
 ! hlist:    list of reflections (hkl)
 ! nns:      number of strong beams
 
-    call GetStrongBeamsSubs(cell_film,cell_subs,reflist_film,refliststrong_subs,&
-         k0,dble(FN),nns_film,dmin,TTinv,cell_subs%mLambda,rlp_subs)
-! calculate sigmagg
-    if (allocated(sigmagg)) deallocate(sigmagg)
-    allocate(sigmagg(1:nns_film,1:nns_film),stat=istat)
-    sigmagg = 0.D0
-    if (istat .ne. 0) call FatalError("STOP:"," cannot allocate pointer")
+     FN = ecpnl%gS
+     call NormVec(cell_subs,FN,'r')
 
-    call CalcSigmaggSubstrate(cell_subs,nns_film,refliststrong_subs,S0_subs,sigmagg,&
-         numzbins,thick,lambdaZ,filmthickness,nat_subs,numset_subs)
-    sr(ipx,ipy) = sr(ipx,ipy) + sum(sigmagg)/float(sum(nat_subs))
-    print*,sum(sigmagg)/float(sum(nat_subs)),'Substrate contribution'
-    !print*,sigmagg(1,1)/float(sum(nat_subs)),'Main substrate contribution term'
-    print*,sr(ipx,ipy),'Overall contribution'
-    !sigmagg = sigmagg + abs(minval(sigmagg))
-    !print*,(minval(sigmagg))
-    !sigmagg = nint((sigmagg/maxval(sigmagg))*255)
-    !TIFF_nx = nns_film
-    !TIFF_ny = nns_film
-    !if (allocated(TIFF_image)) deallocate(TIFF_image)
-    !allocate(TIFF_image(0:TIFF_nx-1,0:TIFF_ny-1),stat=istat)
-    !TIFF_filename = "test.tiff"
-    !do kk = 1,nns_film
-    !    do ll = 1,nns_film
-    !        TIFF_image(ll-1,kk-1) = 255-sigmagg(ll,kk)
-    !    end do
-    !end do
-    !call TIFF_Write_File
-    !deallocate(TIFF_image)
-!==================================================================================
-! substrate contribution done
-!==================================================================================
+     !if(allocated(refliststrong_subs)) deallocate(refliststrong_subs)
+    
+     call GetStrongBeamsSubs(cell_film,cell_subs,reflist_film,refliststrong_subs,&
+         k0,dble(FN),nns_film,dmin,TTinv,rlp_subs,1.D0)
 
-    if (mod(ii,25) .eq. 0) then
+!if(TID .eq. 0) then    
+!     refliststrong_subs_tmp => refliststrong_subs
+!     do jj = 1,nns_film
+        !print*,'No. of strong beams for last incident beam = ',refliststrong_subs_tmp%nns
+!        call Initialize_ReflectionList(cell_subs,reflist_subs,BetheParameters,sngl(FN),&
+!        sngl(refliststrong_subs_tmp%kg),dmin,nref_subs)
+
+!        call Apply_BethePotentials(cell_subs, reflist_subs, firstw_subs, BetheParameters, nref_subs, nns_subs, nnw_subs)
+!        if(allocated(Sghsubs)) deallocate(Sghsubs)
+        
+!        allocate(Sghsubs(nns_subs,nns_subs))
+!        Sghsubs = czero
+
+!        call CalcSgh(cell_subs,reflist_subs,nns_subs,numset_subs,Sghsubs,nat_subs)
+
+!        if(allocated(DynMat_subs)) deallocate(DynMat_subs)
+!        if(allocated(mexp)) deallocate(mexp)
+!        allocate(DynMat_subs(nns_subs,nns_subs),mexp(nns_subs,nns_subs))
+        !print*,'No. of strong beams for this beam inline = ',nns_subs
+        !print*,''
+        
+!        call GetDynMat(cell_subs,reflist_subs,firstw_subs,rlp_subs,DynMat_subs,nns_subs,nnw_subs)
+        
+!        DynMat_subs = DynMat_subs*cmplx(0.D0,cPi*cell_subs%mLambda)
+!        call MatrixExponential(DynMat_subs,mexp,1.D0,'Pade',nns_subs)
+!        if(allocated(Lghsubs)) deallocate(Lghsubs)
+!        if(allocated(ampl)) deallocate(ampl)
+!        if(allocated(ampl2)) deallocate(ampl2)
+
+!        allocate(Lghsubs(nns_subs,nns_subs),ampl(nns_subs),ampl2(nns_subs))
+!        ampl = czero
+!        ampl2 = czero
+!        Lghsubs = czero
+!        ampl(1) = S0_subs(jj)
+
+!        do kk = 1,substhickness
+!            ampl2 = matmul(mexp,ampl)
+!            Lghsubs = Lghsubs + spread(ampl2(1:nns_subs),dim=2,ncopies=nns_subs)*&
+!            spread(conjg(ampl2(1:nns_subs)),dim=1,ncopies=nns_subs)*lambdaZ(kk+filmthickness)
+!            ampl = ampl2
+!        end do
+
+       
+!       print*,Lghsubs(1,1:5)
+!subscontribution = subscontribution + real(sum(Lghsubs*Sghsubs))/4.0
+
+!if(real(sum(Lghsubs*Sghsubs))/float(substhickness) .gt. 100) then
+!print*,maxval(abs(Lghsubs)),maxval(abs(Sghsubs))
+!end if
+
+!print*,'Inline =',real(sum(Lghsubs*Sghsubs))/float(substhickness)        
+!print*,'Inline = ', mexp(1,1:5)
+!print*,'subroutine = ',refliststrong_subs_tmp%DynMat(1,1:5)
+!print*,''
+
+!        refliststrong_subs_tmp => refliststrong_subs_tmp%next
+!     end do
+!stop
+!end if
+
+     if (allocated(sigmagg)) deallocate(sigmagg)
+     allocate(sigmagg(1:nns_film,1:nns_film),stat=istat)
+     if (istat .ne. 0) call FatalError("STOP:"," cannot allocate pointer")
+     sigmagg = 0.D0
+
+     call CalcSigmaggSubstrate(cell_subs,nns_film,refliststrong_subs,S0_subs,sigmagg,&
+         filmthickness,substhickness,lambdaZ,thick,numzbins)
+
+     sr_subs(ipx,ipy) = sum(sigmagg)
+
+!if(TID .eq. 0) then
+!print*,'Substrate contribution = ',sr_subs(ipx,ipy) 
+!print*,'Symmetric check',sigmagg(11,17),sigmagg(17,11)
+!print*,''
+!subscontribution = 0.0
+!do ll = 1,nns_film
+!do kk = 1,nns_film
+!if(ll .eq. kk) subscontribution = subscontribution  + sigmagg(ll,kk)
+!end do
+!end do
+!print*,'Diagonal term = ',subscontribution
+!print*,'Off diagonal term = ',sum(sigmagg) - subscontribution
+!end if
+
+     if (mod(ii,100) .eq. 0) then
         io_int_sgl = ii
         call WriteValue('Completed beam # ', io_int_sgl, 1, "(I8)")
-    end if
-    call Delete_StrongBeamList(refliststrong_subs)
-    !call Delete_gvectorlist(reflist_film)
-    ktmp => ktmp%next
+     end if
 
+ 
 end do beamloop
 
-open(unit=11,file="test.txt",action="write")
+!$OMP END DO
+!$OMP END PARALLEL
 
-do ii=-ecpnl%npix,ecpnl%npix
-    do jj=-ecpnl%npix,ecpnl%npix
-        write(11, '(F15.6)', advance='no') sr(ii,jj)
-    end do
-    write(11, *) ''  ! this gives you the line break
+open(unit=13,file='test_film_10.txt',action='write')
+open(unit=14,file='test_subs_10.txt',action='write')
+
+
+do ii = -ecpnl%npix,ecpnl%npix
+   do jj = -ecpnl%npix,ecpnl%npix
+      write(13,'(F15.6)',advance='no')sr_film(ii,jj)
+      write(14,'(F15.6)',advance='no')sr_subs(ii,jj) 
+   end do
+   write(13,*)''
+   write(14,*)''
 end do
-close(unit=11,status='keep')
 
-!==================================================================================
-!==================================================================================
-!==================================================================================
-!==================================================================================
+close(13)
+close(14)
 
 end subroutine ECPMultiLayerSM
 
@@ -496,9 +607,4 @@ end do
 deallocate(Minp,Azz,ampl,ampl2)
 
 end subroutine CalcLghfilm
-
-
-
-
-
 

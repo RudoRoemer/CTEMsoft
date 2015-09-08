@@ -576,6 +576,7 @@ if (rlp%method.eq.'WK') then
 
   ff = ff + p1*real(sf)
   gg = gg + p1*aimag(sf)
+
  end do
 !
 ! fill in the entries of the rlp variable
