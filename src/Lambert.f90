@@ -47,15 +47,13 @@
 !> mapping is taken to be the one from the simple grid to the curved grid.  Since the module
 !> deals with various grids, we also add a few functions/subroutines that apply symmetry
 !> operations on those grids.
-!>
-!> To use any of these routines, one must first call the InitLambertParameters routine
-!> to initialize a bunch of constants.
 !
-!> @date 7/10/13   MDG 1.0 original
-!> @date 7/12/13   MDG 1.1 added forward cube to ball to quaternion mappings
-!> @date 8/01/13   MDG 1.2 added standard Lambert projection
-!> @date 8/12/13   MDG 1.3 added inverse Lambert projections for Ball to Cube
-!> @date 9/20/13   MDG 1.4 added ApplyLaueSymmetry
+!> @date 07/10/13   MDG 1.0 original
+!> @date 07/12/13   MDG 1.1 added forward cube to ball to quaternion mappings
+!> @date 08/01/13   MDG 1.2 added standard Lambert projection
+!> @date 08/12/13   MDG 1.3 added inverse Lambert projections for Ball to Cube
+!> @date 09/20/13   MDG 1.4 added ApplyLaueSymmetry
+!> @date 08/29/15   MDg 1.5 small changes to hexagonal mapping routines; coordinate swap inside routines
 !--------------------------------------------------------------------------
 module Lambert
 
@@ -387,7 +385,8 @@ end function Lambert2DSquareInverseDouble
 !> @param xy 2D coordinates to be transformed (single precision)  
 !> @param ierr error status: 0=OK, 1=input point outside hexagon
 !
-!> @date 7/10/13   MDG 1.0 original
+!> @date 07/10/13   MDG 1.0 original
+!> @date 08/29/15   MDG 1.1 debug
 !--------------------------------------------------------------------------
 recursive function Lambert2DHexForwardSingle(xy,ierr) result(res)
 
@@ -405,9 +404,8 @@ integer(kind=irg)               :: ks
   res = (/ 0.0, 0.0, 1.0 /)
  else
 ! determine in which sextant this point lies
-  ks = GetSextantSingle(xy)
-  XY2 = xy
-! XY2(2) = xy(2)*2.0/LPs%rtt
+  XY2 = (/ xy(2), xy(1) /)
+  ks = GetSextantSingle(XY2)
 
   select case (ks)
     case (0,3)
@@ -433,6 +431,11 @@ integer(kind=irg)               :: ks
   else
     res = (/ 0.50*XX*sqrt(4.0-q), 0.50*YY*sqrt(4.0-q), 1.0-0.5*q /)
   end if
+
+! and flip the x and y coordinates
+  xp = res(1)
+  res(1) = res(2)
+  res(2) = xp
  end if
  
 end function Lambert2DHexForwardSingle
@@ -449,6 +452,7 @@ end function Lambert2DHexForwardSingle
 !> @param ierr error status: 0=OK, 1=input point outside hexagon
 !
 !> @date 7/10/13   MDG 1.0 original
+!> @date 08/29/15   MDG 1.1 debug
 !--------------------------------------------------------------------------
 recursive function Lambert2DHexForwardDouble(xy,ierr) result(res)
 
@@ -466,9 +470,8 @@ integer(kind=irg)               :: ks
   res = (/ 0.D0, 0.D0, 1.D0 /)
  else
 ! determine in which sextant this point lies
-  ks = GetSextantDouble(xy)
-  XY2 = xy
-! XY2(2) = xy(2)*2.D0/LPs%rtt
+  XY2 = (/ xy(2), xy(1) /)
+  ks = GetSextantDouble(XY2)
 
   select case (ks)
     case (0,3)
@@ -495,6 +498,11 @@ integer(kind=irg)               :: ks
   else
     res = (/ 0.5D0*XX*dsqrt(4.D0-q), 0.5D0*YY*dsqrt(4.D0-q), 1.D0-0.5D0*q /)
   end if
+
+! and flip the x and y coordinates
+  xp = res(1)
+  res(1) = res(2)
+  res(2) = xp
  end if
  
 end function Lambert2DHexForwardDouble
@@ -522,7 +530,7 @@ IMPLICIT NONE
 real(kind=sgl),INTENT(IN)       :: xyz(3) 
 integer(kind=irg),INTENT(INOUT) :: ierr
 
-real(kind=sgl)                  :: res(2), q, qq, XX, YY, xxx, yyy, sgnX
+real(kind=sgl)                  :: res(2), q, qq, XX, YY, xxx, yyy, sgnX, XYZ2(3)
 integer(kind=irg)               :: ks
 real(kind=sgl),parameter        :: eps = 1.0E-7, eps2 = 1.0E-4
 
@@ -535,10 +543,13 @@ else
  if (abs(xyz(3)).eq.1.0) then
   res = (/ 0.0, 0.0 /)
  else
+! flip x and y components
+  XYZ2 = (/ xyz(2), xyz(1), xyz(3) /)
+
 ! first do the Lambert projection
-  q = sqrt(2.0/(1.0+xyz(3)))
-  XX = q * xyz(1)+eps2
-  YY = q * xyz(2)+eps2
+  q = sqrt(2.0/(1.0+XYZ2(3)))
+  XX = q * XYZ2(1)+eps2
+  YY = q * XYZ2(2)+eps2
 
 ! determine in which sextant this point lies
   ks = GetSextantSingle( (/ XX, YY /) )
@@ -566,7 +577,8 @@ else
         xxx = q * LPs%rtt *( LPs%Pi/6.0 + qq )
         yyy = q * ( -0.5*LPs%Pi + qq )
   end select
-  res = (/ xxx, yyy /)
+! and flip the coordinates 
+  res = (/ yyy, xxx /)
  end if
 end if
 
@@ -595,7 +607,7 @@ IMPLICIT NONE
 real(kind=dbl),INTENT(IN)       :: xyz(3) 
 integer(kind=irg),INTENT(INOUT) :: ierr
 
-real(kind=dbl)                  :: res(2), q, qq, XX, YY, xxx, yyy, sgnX
+real(kind=dbl)                  :: res(2), q, qq, XX, YY, xxx, yyy, sgnX, XYZ2(3)
 integer(kind=irg)               :: ks
 real(kind=dbl),parameter        :: eps = 1.0E-12, eps2 = 1.0E-4
 
@@ -608,10 +620,13 @@ else
  if (dabs(xyz(3)).eq.1.D0) then
   res = (/ 0.D0, 0.D0 /)
  else
+! flip x and y components
+  XYZ2 = (/ xyz(2), xyz(1), xyz(3) /)
+
 ! first do the Lambert projection
-  q = dsqrt(2.D0/(1.D0+xyz(3)))
-  XX = q * xyz(1)+eps2
-  YY = q * xyz(2)+eps2
+  q = dsqrt(2.D0/(1.D0+XYZ2(3)))
+  XX = q * XYZ2(1)+eps2
+  YY = q * XYZ2(2)+eps2
 
 ! determine in which sextant this point lies
   ks = GetSextantDouble( (/ XX, YY /) )
@@ -639,7 +654,8 @@ else
         xxx = q * LPs%rtt *( LPs%Pi/6.D0 + qq )
         yyy = q * ( -0.5D0*LPs%Pi + qq )
   end select
-    res = (/ xxx, yyy /)
+! and flip the coordinates back
+    res = (/ yyy, xxx /)
 end if
 end if
 
@@ -656,6 +672,7 @@ end function Lambert2DHexInverseDouble
 !> @param xy 2D coordinates to be considered (single precision)  
 ! 
 !> @date 11/21/12    MDG 1.0 original
+!> @date 08/29/15    MDG 1.1 debug
 !--------------------------------------------------------------------------
 recursive function GetSextantSingle(xy) result(res)
 
@@ -668,7 +685,7 @@ real(kind=sgl)                  :: xx
 
 xx = abs(xy(1)*LPs%isrt)        ! |x| / sqrt(3)
 
-if (xy(1).gt.0.0) then 
+if (xy(1).ge.0.0) then 
   if (abs(xy(2)).le.xx) then
     res = 0
   else 
@@ -703,6 +720,7 @@ end function GetSextantSingle
 !> @param xy 2D coordinates to be considered (double precision)  
 ! 
 !> @date 11/21/12    MDG 1.0 original
+!> @date 08/29/15    MDG 1.1 debug
 !--------------------------------------------------------------------------
 recursive function GetSextantDouble(xy) result(res)
 
@@ -715,7 +733,7 @@ real(kind=dbl)                  :: xx
 
 xx = dabs(xy(1)*LPs%isrt)       ! |x| / sqrt(3)
 
-if (xy(1).gt.0.D0) then 
+if (xy(1).ge.0.D0) then 
   if (dabs(xy(2)).le.xx) then
     res = 0
   else 

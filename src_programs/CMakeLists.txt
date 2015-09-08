@@ -65,6 +65,7 @@ Create_exe_and_tll(EMPEDKIN)
 Create_exe_and_tll(rotationtest)
 Create_exe_and_tll(hdftest)
 Create_exe_and_tll(jsontest)
+Create_exe_and_tll(pgtest)
 
 
 

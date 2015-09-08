@@ -157,7 +157,7 @@ end subroutine GetKosselNameList
 !
 !> @date 09/09/14  MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine GetKosselMasterNameList(nmlfile, knl)
+subroutine GetKosselMasterNameList(nmlfile, knl, initonly)
 
 use error
 
@@ -165,6 +165,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)             :: nmlfile
 type(KosselMasterNameListType),INTENT(INOUT)  :: knl
+logical,OPTIONAL,INTENT(IN)             :: initonly
+
+logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: numthick
@@ -196,6 +199,11 @@ outname = 'Kosselout.data'      ! output filename
 Kosselmode = 'normal'           ! 'thicks' for thickness determination, 'normal' for normal plot
 tfraction = 0.1                 ! thickness fraction for 'thicks' mode
 
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
  open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
  read(UNIT=dataunit,NML=Kosselmasterlist)
@@ -205,6 +213,7 @@ tfraction = 0.1                 ! thickness fraction for 'thicks' mode
  if (trim(xtalname).eq.'undefined') then
   call FatalError('EMKosselMaster:',' structure file name is undefined in '//nmlfile)
  end if
+end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the knl fields
 knl%stdout = stdout
@@ -236,7 +245,7 @@ end subroutine GetKosselMasterNameList
 !
 !> @date 06/18/14  MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine GetMCNameList(nmlfile, mcnl)
+subroutine GetMCNameList(nmlfile, mcnl, initonly)
 
 use error
 
@@ -244,6 +253,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)             :: nmlfile
 type(MCNameListType),INTENT(INOUT)      :: mcnl
+logical,OPTIONAL,INTENT(IN)             :: initonly
+
+logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: numsx
@@ -282,6 +294,11 @@ MCmode = 'CSDA'
 xtalname = 'undefined'
 dataname = 'MCoutput.data'
 
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
  open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
  read(UNIT=dataunit,NML=MCdata)
@@ -291,6 +308,7 @@ dataname = 'MCoutput.data'
  if (trim(xtalname).eq.'undefined') then
   call FatalError('EMMC:',' structure file name is undefined in '//nmlfile)
  end if
+end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the mcnl fields
 mcnl%stdout = stdout
@@ -325,7 +343,7 @@ end subroutine GetMCNameList
 !
 !> @date 06/18/14  SS 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine GetMCCLNameList(nmlfile, mcnl)
+subroutine GetMCCLNameList(nmlfile, mcnl, initonly)
 
 use error
 
@@ -333,6 +351,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)             :: nmlfile
 type(MCCLNameListType),INTENT(INOUT)      :: mcnl
+logical,OPTIONAL,INTENT(IN)             :: initonly
+
+logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: numsx
@@ -373,6 +394,11 @@ xtalname = 'undefined'
 dataname = 'MCoutput.data'
 mode = 'full'
 
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=MCCLdata)
@@ -381,6 +407,7 @@ close(UNIT=dataunit,STATUS='keep')
 ! check for required entries
 if (trim(xtalname).eq.'undefined') then
 call FatalError('EMMC:',' structure file name is undefined in '//nmlfile)
+end if
 end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the mcnl fields
@@ -416,7 +443,7 @@ end subroutine GetMCCLNameList
 !
 !> @date 06/18/14  SS 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine GetMCCLMultiLayerNameList(nmlfile, mcnl)
+subroutine GetMCCLMultiLayerNameList(nmlfile, mcnl, initonly)
 
 use error
 
@@ -424,6 +451,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)             :: nmlfile
 type(MCCLMultiLayerNameListType),INTENT(INOUT)      :: mcnl
+logical,OPTIONAL,INTENT(IN)             :: initonly
+
+logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: numsx
@@ -473,6 +503,11 @@ mode = 'full'
 filmthickness = 20.D0
 filmstep = 2.D0
 
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=MCCLdata)
@@ -481,6 +516,7 @@ close(UNIT=dataunit,STATUS='keep')
 ! check for required entries
 if ((trim(xtalname_film).eq.'undefined') .or. (trim(xtalname_subs).eq.'undefined')) then
 call FatalError('EMMC:',' structure file name is undefined in '//nmlfile)
+end if
 end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the mcnl fields
@@ -519,7 +555,7 @@ end subroutine GetMCCLMultiLayerNameList
 !
 !> @date 06/19/14  MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine GetEBSDMasterNameList(nmlfile, emnl)
+subroutine GetEBSDMasterNameList(nmlfile, emnl, initonly)
 
 use error
 
@@ -527,6 +563,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                     :: nmlfile
 type(EBSDMasterNameListType),INTENT(INOUT)      :: emnl
+logical,OPTIONAL,INTENT(IN)             :: initonly
+
+logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: npx
@@ -548,6 +587,11 @@ dmin = 0.025                    ! smallest d-spacing to include in dynamical mat
 energyfile = 'undefined'        ! default filename for z_0(E_e) data from EMMC Monte Carlo simulations
 outname = 'EBSDmasterout.data'  ! default filename for final output
 
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
  open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
  read(UNIT=dataunit,NML=EBSDmastervars)
@@ -557,6 +601,7 @@ outname = 'EBSDmasterout.data'  ! default filename for final output
  if (trim(energyfile).eq.'undefined') then
   call FatalError('EMEBSDmaster:',' energy file name is undefined in '//nmlfile)
  end if
+end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the emnl fields
 emnl%stdout = stdout
@@ -583,7 +628,7 @@ end subroutine GetEBSDMasterNameList
 !> @date 06/19/14  SS 1.0 new routine
 !> @date 08/12/15 MDG 1.1 correction of type for startthick and fn(3)
 !--------------------------------------------------------------------------
-subroutine GetECPMasterNameList(nmlfile, ecpnl)
+subroutine GetECPMasterNameList(nmlfile, ecpnl, initonly)
 
 use error
 
@@ -591,6 +636,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                     :: nmlfile
 type(ECPMasterNameListType),INTENT(INOUT)      :: ecpnl
+logical,OPTIONAL,INTENT(IN)             :: initonly
+
+logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: npx
@@ -623,6 +671,11 @@ distort = .FALSE.
 energyfile = 'undefined'        ! default filename for z_0(E_e) data from EMMC Monte Carlo simulations
 outname = 'ECPmasterout.data'  ! default filename for final output
 
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=ECPmastervars)
@@ -631,6 +684,7 @@ close(UNIT=dataunit,STATUS='keep')
 ! check for required entries
 if (trim(energyfile).eq.'undefined') then
 call FatalError('EMECPmaster:',' energy file name is undefined in '//nmlfile)
+end if
 end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the emnl fields
@@ -662,7 +716,7 @@ end subroutine GetECPMasterNameList
 !
 !> @date 06/23/14  MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine GetEBSDNameList(nmlfile, enl)
+subroutine GetEBSDNameList(nmlfile, enl, initonly)
 
 use error
 
@@ -670,6 +724,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)               :: nmlfile
 type(EBSDNameListType),INTENT(INOUT)      :: enl
+logical,OPTIONAL,INTENT(IN)             :: initonly
+
+logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: numsx
@@ -733,6 +790,11 @@ energyfile      = 'undefined'   ! name of file that contains energy histograms f
 datafile        = 'undefined'   ! output file name
 spatialaverage  = 'n'
 
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
  open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
  read(UNIT=dataunit,NML=EBSDdata)
@@ -754,6 +816,7 @@ spatialaverage  = 'n'
  if (trim(datafile).eq.'undefined') then
   call FatalError('EMEBSD:',' output file name is undefined in '//nmlfile)
  end if
+end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the emnl fields
 enl%stdout = stdout
@@ -798,7 +861,7 @@ end subroutine GetEBSDNameList
 !
 !> @date 04/29/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine GetEBSDoverlapNameList(nmlfile, enl)
+subroutine GetEBSDoverlapNameList(nmlfile, enl, initonly)
 
 use error
 
@@ -806,6 +869,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                     :: nmlfile
 type(EBSDoverlapNameListType),INTENT(INOUT)     :: enl
+logical,OPTIONAL,INTENT(IN)             :: initonly
+
+logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: PatternAxisA(3)
@@ -835,6 +901,11 @@ masterfileA     = 'undefined'   ! filename
 masterfileB     = 'undefined'   ! filename
 datafile        = 'undefined'   ! output file name
 
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
  open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
  read(UNIT=dataunit,NML=EBSDdata)
@@ -852,6 +923,7 @@ datafile        = 'undefined'   ! output file name
  if (trim(datafile).eq.'undefined') then
   call FatalError('EMEBSD:',' output file name is undefined in '//nmlfile)
  end if
+end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the emnl fields
 enl%stdout = stdout
@@ -882,7 +954,7 @@ end subroutine GetEBSDoverlapNameList
 !> @date 06/13/14  MDG 1.0 new routine
 !> @date 11/25/14  MDG 2.0 added parameters for film on substrate mode
 !--------------------------------------------------------------------------
-subroutine GetECPNameList(nmlfile, ecpnl)
+subroutine GetECPNameList(nmlfile, ecpnl, initonly)
 
 use error
 
@@ -890,6 +962,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)             :: nmlfile
 type(ECPNameListType),INTENT(INOUT)     :: ecpnl
+logical,OPTIONAL,INTENT(IN)             :: initonly
+
+logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: k(3)
@@ -950,6 +1025,11 @@ energyfile = 'undefined'
 filmfile = 'undefined'
 subsfile = 'undefined'
 
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
  open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
  read(UNIT=dataunit,NML=ECPlist)
@@ -959,6 +1039,7 @@ subsfile = 'undefined'
  if (trim(xtalname).eq.'undefined') then
   call FatalError('EMEECP:',' crystal file name is undefined in '//nmlfile)
  end if
+end if
 
 ecpnl%stdout = stdout
 ecpnl%k = k
@@ -1001,7 +1082,7 @@ end subroutine GetECPNameList
 !
 !> @date 07/01/14  MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine GetLACBEDNameList(nmlfile, lacbednl)
+subroutine GetLACBEDNameList(nmlfile, lacbednl, initonly)
 
 use error
 
@@ -1009,6 +1090,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)             :: nmlfile
 type(LACBEDNameListType),INTENT(INOUT)  :: lacbednl
+logical,OPTIONAL,INTENT(IN)             :: initonly
+
+logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: k(3)
@@ -1047,6 +1131,11 @@ minten = 1.0E-5                 ! minimum intensity in diffraction disk to make 
 xtalname = 'undefined'          ! initial value to check that the keyword is present in the nml file
 outname = 'lacbedout.data'      ! output filename
 
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=inputlist)
@@ -1055,6 +1144,7 @@ close(UNIT=dataunit,STATUS='keep')
 ! check for required entries
 if (trim(xtalname).eq.'undefined') then
   call FatalError('EMLACBED:',' structure file name is undefined in '//nmlfile)
+end if
 end if
 
 lacbednl%stdout = stdout
@@ -1089,7 +1179,7 @@ end subroutine GetLACBEDNameList
 !
 !> @date 06/19/14  SS 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine GetECPpatternNameList(nmlfile,ecpnl)
+subroutine GetECPpatternNameList(nmlfile,ecpnl, initonly)
 
 use error
 
@@ -1097,6 +1187,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                     :: nmlfile
 type(ECPpatternNameListType),INTENT(INOUT)             :: ecpnl
+logical,OPTIONAL,INTENT(IN)             :: initonly
+
+logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: npix
@@ -1116,6 +1209,11 @@ k = (/0.0,0.0,1.0/)
 masterfile = 'undefined'        ! default filename for master data from EMECPmaster
 outname = 'ECP.data'  ! default filename for final output
 
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=ECPvars)
@@ -1124,6 +1222,7 @@ close(UNIT=dataunit,STATUS='keep')
 ! check for required entries
 if (trim(masterfile).eq.'undefined') then
 call FatalError('EMECP:',' master file name is undefined in '//nmlfile)
+end if
 end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the emnl fields
@@ -1149,7 +1248,7 @@ end subroutine GetECPpatternNameList
 !
 !> @date 03/02/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine GetPEDKINNameList(nmlfile,pednl)
+subroutine GetPEDKINNameList(nmlfile,pednl, initonly)
 
 use error
 
@@ -1157,6 +1256,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                     :: nmlfile
 type(PEDKINNameListType),INTENT(INOUT)             :: pednl
+logical,OPTIONAL,INTENT(IN)             :: initonly
+
+logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: npix
@@ -1186,6 +1288,11 @@ eulername = 'EulerAngles.txt'   ! output filename
 dmin = 0.04                     ! smallest d-spacing [nm]
 ncubochoric = 100               ! number of samples along the cubochoric edge length
 rnmpp = 0.2                     ! nm^{-1} per pattern pixel
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=inputlist)
@@ -1194,6 +1301,7 @@ close(UNIT=dataunit,STATUS='keep')
 ! check for required entries
 if (trim(xtalname).eq.'undefined') then
   call FatalError('EMPED:',' crystal structure file name is undefined in '//nmlfile)
+end if
 end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the pednl fields
@@ -1224,7 +1332,7 @@ end subroutine GetPEDKINNameList
 !
 !> @date 07/09/14 MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine GetPEDNameList(nmlfile,pednl)
+subroutine GetPEDNameList(nmlfile,pednl, initonly)
 
 use error
 
@@ -1232,6 +1340,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                     :: nmlfile
 type(PEDNameListType),INTENT(INOUT)             :: pednl
+logical,OPTIONAL,INTENT(IN)             :: initonly
+
+logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: k(3)
@@ -1273,6 +1384,11 @@ outname = 'pedout.data'         ! output filename
 camlen = 1000.0                 ! camera length [mm]
 
 
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=inputlist)
@@ -1281,6 +1397,7 @@ close(UNIT=dataunit,STATUS='keep')
 ! check for required entries
 if (trim(xtalname).eq.'undefined') then
 call FatalError('EMPED:',' crystal structure file name is undefined in '//nmlfile)
+end if
 end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the pednl fields
@@ -1317,7 +1434,7 @@ end subroutine GetPEDNameList
 !
 !> @date 10/04/14 MDG 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine GetECCINameList(nmlfile,eccinl)
+subroutine GetECCINameList(nmlfile,eccinl, initonly)
 
 use error
 
@@ -1325,6 +1442,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                     :: nmlfile
 type(ECCINameListType),INTENT(INOUT)            :: eccinl
+logical,OPTIONAL,INTENT(IN)             :: initonly
+
+logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)                               :: i
 
@@ -1403,6 +1523,11 @@ apbname = 'none'
 incname = 'none'   
 voidname = 'none'
 
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=ECCIlist)
@@ -1416,6 +1541,7 @@ end if
 ! make sure the ECPname variable has been properly defined
 if (trim(ECPname).eq.'undefined') then
   call FatalError('EMECCI:',' ECP pattern file name is undefined in '//nmlfile)
+end if
 end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the emnl fields
@@ -1468,7 +1594,7 @@ end subroutine GetECCINameList
 !> @date 12/09/14 MDG 1.0 new routine
 !> @date 08/18/15 MDG 1.1 added options for all seven representations
 !--------------------------------------------------------------------------
-subroutine GetRFZNameList(nmlfile,rfznl)
+subroutine GetRFZNameList(nmlfile,rfznl, initonly)
 
 use error
 
@@ -1476,6 +1602,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                     :: nmlfile
 type(RFZNameListType),INTENT(INOUT)             :: rfznl
+logical,OPTIONAL,INTENT(IN)             :: initonly
+
+logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)                               :: pgnum, nsteps
 character(fnlen)                                :: euoutname
@@ -1500,10 +1629,16 @@ quoutname = 'undefined'
 omoutname = 'undefined'
 axoutname = 'undefined'
 
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=RFZlist)
 close(UNIT=dataunit,STATUS='keep')
+end if
 
 ! and copy the variables to the rfznl variable
 rfznl%pgnum  = pgnum
@@ -1531,7 +1666,7 @@ end subroutine GetRFZNameList
 !
 !> @date 13/01/15 SS 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine GetDictIndxOpenCLNameList(nmlfile,dictindxnl)
+subroutine GetDictIndxOpenCLNameList(nmlfile,dictindxnl, initonly)
 
 use error
 use local
@@ -1540,6 +1675,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                                 :: nmlfile
 type(DictIndxOpenCLListType),INTENT(INOUT)                  :: dictindxnl
+logical,OPTIONAL,INTENT(IN)             :: initonly
+
+logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)                                           :: numexptsingle
 integer(kind=irg)                                           :: numdictsingle
@@ -1572,6 +1710,11 @@ totnumexpt = 0
 MeanSubtraction = .TRUE.
 patternflip = .TRUE.
 
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=DictIndxOpenCLvars)
@@ -1605,6 +1748,7 @@ end if
 if (imgwd .eq. 0) then
     call FatalError('EMDictIndxOpenCL:',' width of single pattern is undefined in '//nmlfile)
 end if
+end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the emnl fields
 
@@ -1636,7 +1780,7 @@ end subroutine GetDictIndxOpenCLNameList
 !
 !> @date 13/01/15 SS 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine GetPEDIndxNameList(nmlfile,pednl)
+subroutine GetPEDIndxNameList(nmlfile,pednl, initonly)
 
 use error
 use local
@@ -1645,6 +1789,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                                 :: nmlfile
 type(PEDKINIndxListType),INTENT(INOUT)                      :: pednl
+logical,OPTIONAL,INTENT(IN)             :: initonly
+
+logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)                                           :: npix
 integer(kind=irg)                                           :: ncubochoric
@@ -1683,6 +1830,11 @@ exptfile = 'undefined'
 totnumexpt = 0
 MeanSubtraction = .FALSE.
 
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=inputlist)
@@ -1712,6 +1864,7 @@ end if
 
 if (imgwd .eq. 0) then
 call FatalError('CTEMPEDIndexing:',' width of single pattern is undefined in '//nmlfile)
+end if
 end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the emnl fields
@@ -1746,7 +1899,7 @@ end subroutine GetPEDIndxNameList
 !
 !> @date 06/10/15  SS 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine GetEBSDIndxNameList(nmlfile, enl)
+subroutine GetEBSDIndxNameList(nmlfile, enl, initonly)
 
 use error
 
@@ -1754,7 +1907,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)               :: nmlfile
 type(EBSDIndxListType),INTENT(INOUT)      :: enl
+logical,OPTIONAL,INTENT(IN)             :: initonly
 
+logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)       :: numsx
 integer(kind=irg)       :: numsy
@@ -1812,6 +1967,11 @@ masterfile      = 'undefined'   ! filename
 energyfile      = 'undefined'   ! name of file that contains energy histograms for all scintillator pixels (output from MC program)
 
 
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=EBSDIndxdata)
@@ -1828,6 +1988,7 @@ end if
 
 if (trim(exptfile).eq.'undefined') then
 call FatalError('EMEBSDIndexing:',' experimental file name is undefined in '//nmlfile)
+end if
 end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the emnl fields
@@ -1869,7 +2030,7 @@ end subroutine GetEBSDIndxNameList
 !
 !> @date 06/24/15  SS 1.0 new routine
 !--------------------------------------------------------------------------
-subroutine GetZAdefectNameList(nmlfile, ZAdefect)
+subroutine GetZAdefectNameList(nmlfile, ZAdefect, initonly)
 
 use error
 
@@ -1877,6 +2038,9 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                   :: nmlfile
 type(ZAdefectnameListType),INTENT(INOUT)      :: ZAdefect
+logical,OPTIONAL,INTENT(IN)             :: initonly
+
+logical                                 :: skipread = .FALSE.
 
 
 	character(fnlen)		:: xtalname
@@ -1948,6 +2112,11 @@ dispmode = 'undefined'
 dataname = 'undefined'
 t_interval = 10
 
+if (present(initonly)) then
+  if (initonly) skipread = .TRUE.
+end if
+
+if (.not.skipread) then
 ! read the namelist file
 open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=rundata)
@@ -1956,6 +2125,7 @@ close(UNIT=dataunit,STATUS='keep')
 ! check for required entries
 if (trim(xtalname).eq.'undefined') then
 call FatalError('CTEMDefect:',' xtal file name is undefined in '//nmlfile)
+end if
 end if
 
 ! if we get here, then all appears to be ok, and we need to fill in the emnl fields

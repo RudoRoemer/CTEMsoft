@@ -125,6 +125,7 @@ type(unitcell),pointer  :: cell
  cell%rmt = 0.0_dbl
  cell%dsm = 0.0_dbl
  cell%rsm = 0.0_dbl
+ cell%trigmat = 0.0_dbl
  cell%ATOM_type = 0_irg
  cell%ATOM_ntype = 0_irg
  cell%SYM_SGnum = 0_irg
@@ -187,7 +188,8 @@ IMPLICIT NONE
 type(unitcell),pointer  :: cell
 
 !> auxiliary variables for geometric computation
-real(kind=dbl)     :: det,ca,cb,cg,sa,sb,sg,tg,pirad
+real(kind=dbl)          :: det,ca,cb,cg,sa,sb,sg,tg,pirad
+real(kind=dbl)          :: Mx(3,3), My(3,3), x, y
 
 ! auxiliary variables for the various tensors
  pirad = cPi/180.0_dbl
@@ -255,6 +257,24 @@ real(kind=dbl)     :: det,ca,cb,cg,sa,sb,sg,tg,pirad
  cell%rsm(3,1) = cell%b*cell%c*(cg*ca-cb)/(cell%vol*sg)
  cell%rsm(3,2) = cell%a*cell%c*(cb*cg-ca)/(cell%vol*sg)
  cell%rsm(3,3) = (cell%a*cell%b*sg)/cell%vol
+
+! finally, if we have the trigonal/rhombohedral case, we need a second direct structure matrix
+! that can transform the three-fold [111] axis to the z-axis of a cartesian reference frame,
+! while keeping the rhombohedral [100] direction in the x-z plane.  This is used for the k-vector
+! sampling routines for master pattern calculations.
+!
+! added by MDG on 08/30/15; computations in Mathematica notebook rhombohedral.nb in manuals folder, validated.
+if (cell%xtal_system.eq.5) then 
+! Mx matrix
+  x = 0.5D0/dcos(pirad*0.5D0*cell%alpha)
+  y = dsqrt(1.D0-x*x)
+  Mx = transpose(reshape( (/ 1.D0, 0.D0, 0.D0,  0.D0, x, -y,  0.D0, y, x /), (/ 3,3 /) ))
+! My matrix
+  x = 2.0D0*dsin(pirad*0.5D0*cell%alpha)/dsqrt(3.D0)
+  y = dsqrt(1.D0-x*x)
+  My = transpose(reshape( (/ x, 0.D0, -y,  0.D0, 1.0D0, 0.D0,  y, 0.D0, x /), (/ 3,3 /) ))
+  cell%trigmat = matmul(matmul(My,Mx),cell%dsm)
+end if
 
 end subroutine CalcMatrices
 

@@ -112,6 +112,7 @@ end function Kdelta
 !> @date   04/29/13 MDG 1.0 original
 !> @date   06/09/14 MDG 2.0 added khead and cell as arguments
 !> @date   06/19/14
+!> @date   08/25/15 MDG 3.0 modified symmetry handling to full point group, with doubled Lambert projection
 !--------------------------------------------------------------------------
 subroutine Calckvectors(khead,cell,k,ga,ktmax,npx,npy,numk,isym,ijmax,mapmode,usehex)
 
@@ -139,7 +140,7 @@ logical,INTENT(IN),OPTIONAL             :: usehex       !< hexagonal mode for Ro
 
 integer(kind=irg)                       :: istat,i,j,istart,iend,jstart,jend, imin, imax, jmin, jmax
 real(kind=dbl)                          :: glen, gan(3), gperp(3), kstar(3), delta
-logical                                 :: hexgrid = .FALSE.
+logical                                 :: hexgrid = .FALSE., yes = .TRUE., flip = .TRUE.
 character(3)                            :: grid
 type(kvectorlist),pointer               :: ktail, ktmp
 
@@ -407,19 +408,20 @@ end if ! mapmode.eq.'Standard' or 'StandardConical'
 
 if (mapmode.eq.'RoscaLambert') then 
    if (usehex) then             ! hexagonal grid step size
-      delta =  2.D0*dsqrt(cPi)/3.0D0**0.75D0/dble(npx)
+      delta =  LPs%preg / dble(npx)
       hexgrid = .TRUE.
    else                         ! square grid step size
-      delta = dsqrt(cPi*0.5D0)/dble(npx)
+      delta = LPs%sPio2 / dble(npx)
       hexgrid = .FALSE.
    end if
 
 ! allocate the head of the linked list
    allocate(khead,stat=istat)                   ! allocate new value
    if (istat.ne.0) call FatalError('Calckvectors',' unable to allocate khead pointer')
-   ktail => khead                       ! tail points to new value
+   ktail => khead                               ! tail points to new value
    nullify(ktail%next)                          ! nullify next in new value
    numk = 1                                     ! keep track of number of k-vectors so far
+   ktail%hs = 1                                 ! this lies in the Northern Hemisphere
    ktail%i = 0                                  ! i-index of beam
    ktail%j = 0                                  ! j-index of beam
    kstar = (/ 0.0, 0.0, 1.0 /)                  ! we always use c* as the center of the RoscaLambert projection
@@ -429,10 +431,31 @@ if (mapmode.eq.'RoscaLambert') then
    ktail%k = matmul(transpose(cell%dsm),kstar)
    ktail%kn = 1.0/cell%mLambda
 
-! deal with each Laue group symmetry separately
+! MDG: as of 8/25/15, we no longer use the Laue groups to determine the set of independent wave vectors,
+! but instead we use the complete point group symmetry, as it should be.  Upon reflection, using
+! the Laue groups was equivalent to implicitly using Friedel's law, which makes all diffraction patterns
+! centrosymmetric, and that is not correct for EBSD. So, the symbol isym now encodes the full point group,
+! not the Laue group.  This will require a modification in each calling program as well.
+
+! in addition, the modified Lambert projection will now require two hemispheres (NH and SH). We can handle this
+! by means of an optional argument to the AddkVector routine; when the argument is present, the -k_z version
+! of the direction is also added to the list
+
+! deal with each point group symmetry separately or in sets, depending on the value of isym
  select case (isym)
  
-   case (1)  ! triclinic symmetry
+   case (1)  ! triclinic 1
+        istart = -npx
+        iend = npx
+        jstart = -npy
+        jend = npy
+          do j=jstart,jend
+            do i=istart,iend   ! 
+                call AddkVector(ktail,cell,numk,delta,i,j,addSH = yes)
+            end do
+          end do
+
+   case (2)  ! triclinic -1
         istart = -npx
         iend = npx
         jstart = -npy
@@ -443,18 +466,40 @@ if (mapmode.eq.'RoscaLambert') then
             end do
           end do
 
-  case (2)   !  monoclinic symmetry
+  case (3)   !  monoclinic 2
+        istart = 0
+        iend = npx
+        jstart = -npy
+        jend = npy
+          do j=jstart,jend
+           do i=istart,iend   ! 
+                call AddkVector(ktail,cell,numk,delta,i,j, addSH = yes)
+           end do
+          end do
+
+  case (4)   !  monoclinic m
         istart = -npx
         iend = npx
         jstart = 0
         jend = npy
           do j=jstart,jend
            do i=istart,iend   ! 
-                call AddkVector(ktail,cell,numk,delta,i,j)
+                call AddkVector(ktail,cell,numk,delta,i,j, addSH = yes)
            end do
           end do
 
-  case (3,4,10)  ! orthorhombic mmm, tetragonal 4/m, cubic m-3
+  case (5)  ! monoclinic 2/m, orthorhombic 222, mm2, tetragonal 4, -4
+        istart = 0
+        iend = npx
+        jstart = 0
+        jend = npy
+          do j=jstart,jend
+           do i=istart,iend   ! 
+                call AddkVector(ktail,cell,numk,delta,i,j, addSH = yes)
+           end do
+          end do
+
+  case (6)  ! orthorhombic mmm, tetragonal 4/m, 422, -4m2, cubic m-3, 432 (for now)
         istart = 0
         iend = npx
         jstart = 0
@@ -465,20 +510,67 @@ if (mapmode.eq.'RoscaLambert') then
            end do
           end do
 
-  case (5,11)  ! tetragonal 4/mmm, cubic m-3m
+  case (7)  ! tetragonal 4mm
         istart = 0
         iend = npx
         jstart = 0
-        jend = npy
+        jend = npx
+          do i=istart,iend
+           do j=jstart,i   ! 
+                call AddkVector(ktail,cell,numk,delta,i,j, addSH = yes)
+           end do
+          end do
+
+  case (8)  ! tetragonal -42m, cubic -43m (for now)
+        istart = 0
+        iend = npx
+        jstart = -npx
+        jend = npx
+          do i=istart,iend
+           do j=-i, i   ! 
+                call AddkVector(ktail,cell,numk,delta,i,j)
+           end do
+          end do
+
+  case (9)  ! tetragonal 4/mmm, cubic m-3m (for now)
+        istart = 0
+        iend = npx
+        jstart = 0
+        jend = npx
           do i=istart,iend
            do j=jstart,i   ! 
                 call AddkVector(ktail,cell,numk,delta,i,j)
            end do
           end do
 
-  case (6,7)   ! npy is now npyhex !
+! cases 10 through 19 are all on a hexagonal grid...
+! npy is now npyhex !!!
+
+  case (10)   ! hexagonal 3
+        istart = 0
+        iend = npx
+        jstart = 0
+        jend = npy
+          do j=jstart,jend
+            do i=istart,iend   ! 
+                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid, addSH = yes)
+            end do
+          end do
+
+  case (11)   ! rhombohedral 3
         istart = 0
         iend = npy
+        jstart = 0
+        jend = npx
+          do j=jstart,jend
+            do i=istart,iend   ! 
+                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid, addSH = yes, flip = flip)
+            end do
+          end do
+
+  case (12)   ! hexagonal -3, 321, -6, rhombohedral 32
+        istart = 0
+        iend = npx
         jstart = 0
         jend = npy
           do j=jstart,jend
@@ -487,39 +579,72 @@ if (mapmode.eq.'RoscaLambert') then
             end do
           end do
 
-  case (8)   ! npy is now npyhex !
+  case (13)   ! rhombohedral -3, hexagonal 312
         istart = 0
         iend = npy
+        jstart = 0
+        jend = npx
+          do j=jstart,jend
+            do i=istart,iend   ! 
+                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid, flip = flip)
+            end do
+          end do
+
+  case (14)   ! hexagonal 3m1, rhombohedral 3m
+        istart = 0
+        iend = npx
         jstart = 0
         jend = npy
           do j=jstart,jend
-            do i=j,iend   ! 
-                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
+            do i=j/2,j   ! 
+                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid, addSH = yes)
             end do
           end do
 
-  case (9)   ! npy is now npyhex !
+  case (15)   ! hexagonal 31m, 6
         istart = 0
-        iend = npx   ! was npy
+        iend = npx
         jstart = 0
-        jend = npx   ! was npy
+        jend = npy
           do j=jstart,jend
-            do i=2*j,iend   ! 
-                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
+            do i=j/2,j   ! 
+                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid, addSH = yes, flip=flip)
             end do
           end do
 
-  case (12)   ! npy is now npyhex !  This is the second setting of Laue group -3m.
-        istart = 0
-        iend = npy
-        jstart = 0
-        jend = npy/2
-          do j=jstart,jend
-            do i=2*j,iend   ! 
-                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
-                call AddkVector(ktail,cell,numk,delta,i-j,-j,hexgrid)
-            end do
-          end do
+!  case (8)   
+!        istart = 0
+!        iend = npy
+!        jstart = 0
+!        jend = npy
+!          do j=jstart,jend
+!            do i=j,iend   ! 
+!                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
+!            end do
+!          end do
+
+!  case (9)   
+!        istart = 0
+!        iend = npx   ! was npy
+!        jstart = 0
+!        jend = npx   ! was npy
+!          do j=jstart,jend
+!            do i=2*j,iend   ! 
+!                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
+!            end do
+!          end do
+
+!  case (12)   
+!        istart = 0
+!        iend = npy
+!        jstart = 0
+!        jend = npy/2
+!          do j=jstart,jend
+!            do i=2*j,iend   ! 
+!                call AddkVector(ktail,cell,numk,delta,i,j,hexgrid)
+!                call AddkVector(ktail,cell,numk,delta,i-j,-j,hexgrid)
+!            end do
+!          end do
 
  end select
 
@@ -826,18 +951,25 @@ end function GetSextant
 !> @param i x image coordinate 
 !> @param j y image coordinate 
 !> @param usehex (optional) indicates hexagonal sampling if present
+!> @param addSH (optional) indicates if Southern Hemisphere sampling is needed
+!> @param flip (optional) for rhombohedral sampling
 !
 !> @date   11/21/12 MDG 1.0 original 
 !> @date   04/29/13 MDG 1.1 modified for kvectors module
 !> @date   06/09/14 MDG 2.0 added ktail as argument
+!> @date   08/25/15 MDG 2.1 added addSH as optional argument
+!> @date   08/27/15 MDG 2.2 added flip for special case of rhombohedral sampling
+!> @date   08/28/15 MDG 2.3 mappings replaced with calls to Lambert module (significant simplification of code)
 !--------------------------------------------------------------------------
-subroutine AddkVector(ktail,cell,numk,delta,i,j,usehex)
+subroutine AddkVector(ktail,cell,numk,delta,i,j,usehex,addSH,flip)
 
 use io
 use typedefs
 use constants
 use error
 use diffraction
+use crystal
+use Lambert
 use crystal
 
 IMPLICIT NONE
@@ -849,103 +981,84 @@ real(kind=dbl),INTENT(IN)               :: delta
 integer(kind=irg),INTENT(IN)            :: i
 integer(kind=irg),INTENT(IN)            :: j
 logical,INTENT(IN),OPTIONAL             :: usehex
+logical,INTENT(IN),OPTIONAL             :: addSH
+logical,INTENT(IN),OPTIONAL             :: flip
 
-
-integer(kind=irg)                       :: istat, ks, ii
-real(kind=dbl)                          :: kstar(3), x, y, rr, q, iPi, XX, YY, xp, yp
-logical                                 :: goahead, hex
+integer(kind=irg)                       :: istat, ks, ii, ierr
+real(kind=dbl)                          :: kstar(3), xy(2)
+logical                                 :: hex
 real(kind=dbl),parameter                :: srt = 0.86602540D0           ! sqrt(3.D0)/2.D0
-real(kind=dbl),parameter                :: isrt = 0.577350269D0         ! 1.D0/sqrt(3.D0)
-real(kind=dbl),parameter                :: rtt = 1.7320508076D0         !  sqrt(3)
-real(kind=dbl),parameter                :: prea = 0.525037568D0         !  3^(1/4)/sqrt(2pi)
-real(kind=dbl),parameter                :: preb = 1.050075136D0         !  3^(1/4)sqrt(2/pi)
-real(kind=dbl),parameter                :: prec = 0.90689968D0          !  pi/2sqrt(3)
-real(kind=dbl),parameter                :: pred = 2.09439510D0          !  2pi/3
 
-! [06/09/14] all this needs to be replaced with calls to Lambert module !!!
-
-! initalize some parameters
-iPi = 1.D0/cPi  ! inverse of pi
-goahead = .FALSE.
-
-! hexagonal sampling or not?
+! project the coordinate up to the sphere, to get a unit 3D vector kstar in cartesian space
 if (present(usehex)) then
-  x = (i - j*0.5)*delta
-  y = j*delta*srt
+  if (present(flip)) then
+   xy = (/ dble(j)*srt, -(dble(i)-dble(j)*0.5D0) /) * delta
+  else
+   xy = (/ dble(i)-dble(j)*0.5D0, dble(j)*srt /) * delta
+  end if
+  kstar = LambertHexToSphere(xy,ierr)
   hex = .TRUE.
 else
-  x = i*delta
-  y = j*delta
+  xy = (/ dble(i), dble(j) /) * delta
+  kstar = LambertSquareToSphere(xy, ierr)
   hex = .FALSE.
 end if
 
-! r^2
-rr = x*x+y*y
-
-! this is the more correct mapping from a uniform square grid to a sphere via an equal area map
-! to the 2D circle first; it is computationally slightly longer due to the trigonometric function calls
-! but it is mathematically more correct.  We do distinguish here between the square and hexagon
-! projections; Note that the hexagonal case must be mirrored x <-> y with respect to the 
-! analytical derivation in the MSMSE paper due to a rotation of the hexagonal cell.
-
-if ( maxval(abs( (/i,j/) )).ne.0 ) then  ! skip (0,0) 
-      if (hex.eqv..FALSE.) then  ! we're projecting from a square array
-! decide which equation to use  [ (8) or (9) from Rosca's paper, with r=1 ]
-             if (dabs(x).le.dabs(y)) then
-                 q = 2.D0*y*iPi*dsqrt(cPi-y*y)
-                  kstar = (/ q*dsin(x*cPi*0.25D0/y), q*dcos(x*cPi*0.25D0/y), 1.D0-2.D0*y*y*iPi /)  
-             else
-                  q = 2.D0*x*iPi*dsqrt(cPi-x*x)
-                  kstar = (/ q*dcos(y*cPi*0.25D0/x), q*dsin(y*cPi*0.25D0/x), 1.D0-2.D0*x*x*iPi /)  
-             end if
-             goahead = .TRUE.
-      end if
-      if (hex.eqv..TRUE.) then  ! we're projecting from a hexagonal array
-! decide which sextant the point (i,j) is located in.
-          ks = GetSextant(x,y)
-          select case (ks)
-          case (0,3)
-                XX = preb*y*dcos(x*prec/y)
-                YY = preb*y*dsin(x*prec/y)
-          case (1,4)
-                xp = y+rtt*x
-                yp = y*pred/xp
-                XX = prea*xp*dsin(yp)
-                YY = prea*xp*dcos(yp)
-          case (2,5)
-                xp = y-rtt*x
-                yp = y*pred/xp
-                XX = prea*xp*dsin(yp)
-                YY = -prea*xp*dcos(yp)    
-          end select
-          q = XX**2+YY**2
-          kstar = (/ 0.5D0*XX*dsqrt(4.D0-q), 0.5D0*YY*dsqrt(4.D0-q),1.D0-0.5D0*q /)
-          goahead = .TRUE.
-      end if
-else
-    kstar = (/0.0,0.0,1.0/)
-    goahead = .TRUE.
-end if 
- 
-if (goahead) then 
+! add this vector to the linked list
      allocate(ktail%next,stat=istat)                    ! allocate new value
      if (istat.ne.0) call FatalError('Addkvector:',' unable to allocate ktail pointer')
      ktail => ktail%next                                ! tail points to new value
      nullify(ktail%next)                                ! nullify next in new value
      numk = numk + 1                                    ! keep track of number of k-vectors so far
-     if (hex) then                                   ! transform the hex coordinates to square-array coordinates
-       ktail%i = i - j/2+mod(j,2)/2             ! i-index of beam
+     ktail%hs = 1                                       ! which hemisphere (Northern = 1, Southern = -1)
+     if (hex) then                                      ! transform the hex coordinates to square-array coordinates
+      if (present(flip)) then 
+       ktail%i = j                                      ! i-index of beam
+       ktail%j = -(i - j/2)+mod(j,2)/2                  ! j-index of beam
+      else
+       ktail%i = i - j/2+mod(j,2)/2                     ! i-index of beam
        ktail%j = j                                      ! j-index of beam
+      end if
      else                                               ! leave the square coordinates unchanged
        ktail%i = i                                      ! i-index of beam
        ktail%j = j                                      ! j-index of beam
      end if 
      call NormVec(cell,kstar,'c')                       ! normalize incident direction in cartesian space
-     kstar = kstar/cell%mLambda                              ! divide by wavelength
+     kstar = kstar/cell%mLambda                         ! divide by wavelength
 ! and transform to reciprocal crystal space using the direct structure matrix
-     ktail%k = matmul(transpose(cell%dsm),kstar)
+     !ktail%k = matmul(transpose(cell%dsm),kstar)
+     call TransSpace(cell, kstar, ktail%k, 'c', 'r')
      ktail%kn = 1.0/cell%mLambda
-end if
+
+! do we also need to add a Southern Hemisphere vector ?
+     if (present(addSH)) then
+       if (addSH.eqv..TRUE.) then
+         allocate(ktail%next,stat=istat)                    ! allocate new value
+         if (istat.ne.0) call FatalError('Addkvector:',' unable to allocate ktail pointer')
+         ktail => ktail%next                                ! tail points to new value
+         nullify(ktail%next)                                ! nullify next in new value
+         numk = numk + 1                                    ! keep track of number of k-vectors so far
+         ktail%hs = -1                                      ! which hemisphere (Northern = 1, Southern = -1)
+         if (hex) then                                      ! transform the hex coordinates to square-array coordinates
+          if (present(flip)) then 
+           ktail%i = j                                      ! i-index of beam
+           ktail%j = -(i - j/2)+mod(j,2)/2                  ! j-index of beam
+          else
+           ktail%i = i - j/2+mod(j,2)/2                     ! i-index of beam
+           ktail%j = j                                      ! j-index of beam
+          end if
+         else                                               ! leave the square coordinates unchanged
+           ktail%i = i                                      ! i-index of beam
+           ktail%j = j                                      ! j-index of beam
+         end if 
+! get the Southern hemisphere version of kstar
+         kstar(3) = -kstar(3)
+! and transform to reciprocal crystal space using the direct structure matrix
+         !ktail%k = matmul(transpose(cell%dsm),kstar)
+         call TransSpace(cell, kstar, ktail%k, 'c', 'r')
+         ktail%kn = 1.0/cell%mLambda
+       end if
+     end if
 
 end subroutine AddkVector
 

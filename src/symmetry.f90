@@ -2303,4 +2303,87 @@ end if
 
 end subroutine CheckPatternSymmetry
 
+!--------------------------------------------------------------------------
+!
+! FUNCTION: getHexvsRho
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief convert a 3D point group number to a SamplingType for trigonal symmetry
+!
+!> @param cell unit cell pointer
+!> @param pgnum point group number
+!
+!> @date  08/25/15 MDG 1.0 original
+!> @date  08/26/15 MDG 1.1 added point group cases 14 and 26
+!--------------------------------------------------------------------------
+recursive function getHexvsRho(cell,pgnum) result(stnum)
+
+use local
+use constants
+use crystal
+
+IMPLICIT NONE
+
+type(unitcell),pointer                  :: cell
+integer(kind=irg),INTENT(IN)            :: pgnum
+integer(kind=irg)                       :: stnum
+
+! Is this a trigonal group
+if (cell%SG%SYM_trigonal.eqv..TRUE.) then ! yes, it is
+  if (cell%xtal_system.eq.5) then ! so check the crystal system; if trigonal then ...
+    if (pgnum.eq.16) stnum = 11
+    if (pgnum.eq.17) stnum = 13
+    if (pgnum.eq.18) stnum = 12
+    if (pgnum.eq.19) stnum = 14
+    if (pgnum.eq.20) stnum = 16
+  else    ! it is the hexagonal setting, so we have some checking to do
+    if (pgnum.eq.16) stnum = 10
+    if (pgnum.eq.17) stnum = 12
+    if (pgnum.eq.18) then
+      if ((cell%SYM_SGnum.eq.149).or.(cell%SYM_SGnum.eq.151).or.(cell%SYM_SGnum.eq.153)) then
+        stnum = 13
+      else
+        stnum = 12
+      end if
+    end if
+    if (pgnum.eq.19) then
+      if ((cell%SYM_SGnum.eq.156).or.(cell%SYM_SGnum.eq.158).or.(cell%SYM_SGnum.eq.160)) then
+        stnum = 14
+      else
+        stnum = 15
+      end if
+    end if
+    if (pgnum.eq.20) then
+      if ((cell%SYM_SGnum.eq.162).or.(cell%SYM_SGnum.eq.163)) then
+        stnum = 17
+      else
+        stnum = 16
+      end if
+    end if
+  end if
+else
+! this must be either point group 14 or 26, each with two settings
+  if (pgnum.eq.14) then
+    if ((cell%SYM_SGnum.ge.115).and.(cell%SYM_SGnum.le.120)) then
+      stnum = 6
+    else
+      stnum = 8
+    end if
+  end if
+  if (pgnum.eq.26) then
+    if ((cell%SYM_SGnum.eq.187).or.(cell%SYM_SGnum.eq.188)) then
+      stnum = 16
+    else
+      stnum = 17
+    end if
+  end if
+end if
+
+end function getHexvsRho
+
+
+
+
+
 end module
