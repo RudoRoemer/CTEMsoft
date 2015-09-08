@@ -66,6 +66,7 @@ contains
 !> @date 01/10/14 MDG 1.0 original
 !> @date 06/10/14 MDG 2.0 rewrite without global variables
 !> @date 08/14/15 MDG 2.1 increased threshold ddt for double diffraction spots
+!> @date 09/08/15 MDG 2.2 added LUTqg array to cell
 !--------------------------------------------------------------------------
 recursive subroutine Initialize_Cell(cell,Dyn,rlp,xtalname, dmin, voltage, verbose)
 
@@ -144,6 +145,9 @@ logical                                    :: loadingfile
  allocate(cell%LUT(-2*imh:2*imh,-2*imk:2*imk,-2*iml:2*iml),stat=istat)
  if (istat.ne.0) call FatalError('InitializeCell:',' unable to allocate cell%LUT array')
  cell%LUT = dcmplx(0.D0,0.D0)
+ allocate(cell%LUTqg(-2*imh:2*imh,-2*imk:2*imk,-2*iml:2*iml),stat=istat)
+ if (istat.ne.0) call FatalError('InitializeCell:',' unable to allocate cell%LUTqg array')
+ cell%LUTqg = dcmplx(0.D0,0.D0)
  
 ! allocate an array that keeps track of potential double diffraction reflections
  allocate(cell%dbdiff(-2*imh:2*imh,-2*imk:2*imk,-2*iml:2*iml),stat=istat)
@@ -172,6 +176,7 @@ logical                                    :: loadingfile
  
 ! and add this reflection to the look-up table
  cell%LUT(0,0,0) = rlp%Ucg
+ cell%LUTqg(0,0,0) = rlp%qg
 
  if (present(verbose)) then
   if (verbose) then
@@ -190,6 +195,7 @@ izl:   do iz=-2*iml,2*iml
 ! add the reflection to the look up table
            call CalcUcg(cell,rlp,gg )
            cell%LUT(ix, iy, iz) = rlp%Ucg
+           cell%LUTqg(ix, iy, iz) = rlp%qg
 ! flag this reflection as a double diffraction candidate if cabs(Ucg)<ddt threshold
            if (cabs(rlp%Ucg).le.ddt) then 
              cell%dbdiff(ix,iy,iz) = .TRUE.
@@ -285,7 +291,6 @@ type(reflisttype),pointer                       :: rltail
 
 ! now compute |sg|/|U_g|/lambda for the other allowed reflections; if this parameter is less than
 ! the threshhold, rBethe_i, then add the reflection to the list of potential reflections
-! note that this uses the older form of the Bethe Potential truncation parameters for now
 ixl: do ix=-imh,imh
 iyl:  do iy=-imk,imk
 izl:   do iz=-iml,iml

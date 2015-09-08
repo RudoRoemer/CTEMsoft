@@ -375,12 +375,14 @@ end subroutine EBSDreadMCfile
 !> @date 06/24/14  MDG 1.0 original
 !> @date 04/02/15  MDG 2.0 changed program input & output to HDF format
 !> @date 09/01/15  MDG 3.0 changed Lambert maps to Northern + Southern maps; lots of changes...
+!> @date 09/03/15  MDG 3.1 removed support for old file format (too difficult to maintain after above changes)
 !--------------------------------------------------------------------------
 subroutine EBSDreadMasterfile(enl, master, mfile, verbose)
 
 use NameListTypedefs
 use files
 use io
+use error
 use HDF5
 use HDFsupport
 
@@ -419,9 +421,8 @@ if (PRESENT(mfile)) then
 else
   masterfile = trim(EMdatapathname)//trim(enl%masterfile)
 end if
-! first, we need to check whether or not the input file is of the HDF5 forat type; if
-! it is, we read it accordingly, otherwise we use the old binary format.
-!
+
+! is this a propoer HDF5 file ?
 call h5fis_hdf5_f(trim(masterfile), stat, hdferr)
 
 if (stat) then 
@@ -507,43 +508,8 @@ if (stat) then
   call h5close_f(hdferr)
 
 else
-!====================================
-! ----- Read energy-dispersed Lambert projections (master pattern)
-! this has been updated on 3/26/14 to accommodate the new EBSDmaster file format
-! [old data format will be deleted in version 4.0]
-!====================================
-  open(unit=dataunit,file=trim(masterfile),status='old',form='unformatted')
-  read (dataunit) enl%Masterprogname
-! read the version number
-  read (dataunit) enl%Masterscversion
-! then the name of the crystal data file
-  read (dataunit) enl%Masterxtalname
-! then the name of the corresponding Monte Carlo data file
-  read (dataunit) enl%Masterenergyfile
-! energy information and array size    
-  read (dataunit) enl%npx,enl%npy,enl%nE,enl%numset
-! make sure that MC and Master results are compatible
-  if (enl%numEbins.ne.enl%nE) then
-    call Message('Energy histogram and Lambert stack have different energy dimension; aborting program', frm = "(A)")
-!   write (*,*) 'energy histogram = ',shape(accum_e)
-!   write (*,*) 'Lambert stack = ', nE, npx, npy
-    stop
-  end if
-  allocate(master%sr(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE),srtmp(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE,enl%numset), &
-           EkeVs(enl%nE),atomtype(enl%numset),stat=istat)
-  read (dataunit) EkeVs
-  read (dataunit) atomtype
-  deallocate(EkeVs, atomtype)   ! arrays are only needed by IDL visualization routine
-! is this a regular (square) or hexagonal projection ?
-  read (dataunit) enl%sqorhe
-! and finally the results array
-  read (dataunit) srtmp
-! convert to a smaller array by summing over all atom types 
-! [in a later version of the program we might allow for the 
-! user to request an element specific EBSD pattern calculation]
-  master%sr = sum(srtmp,4)
-  deallocate(srtmp)
-  close(unit=dataunit,status='keep')
+  masterfile = 'File '//trim(masterfile)//' is not an HDF5 file'
+  call FatalError('EBSDreadMasterfile',masterfile)
 end if
 !====================================
 
@@ -564,12 +530,14 @@ end subroutine EBSDreadMasterfile
 !
 !> @date 06/24/14  MDG 1.0 original
 !> @date 04/02/15  MDG 2.0 changed program input & output to HDF format
+!> @date 09/03/15  MDG 2.1 removed old file format support
 !--------------------------------------------------------------------------
 subroutine EBSDreadMasterfile_overlap(enl, master, mfile, verbose)
 
 use NameListTypedefs
 use files
 use io
+use error
 use HDF5
 use HDFsupport
 
@@ -608,9 +576,7 @@ else
   masterfile = trim(EMdatapathname)//trim(enl%masterfile)
 end if
 
-! first, we need to check whether or not the input file is of the HDF5 forat type; if
-! it is, we read it accordingly, otherwise we use the old binary format.
-!
+! first, we need to check whether or not the input file is of the HDF5 forat type
 call h5fis_hdf5_f(trim(masterfile), stat, hdferr)
 
 if (stat) then 
@@ -652,10 +618,16 @@ if (stat) then
   enl%sqorhe = trim(stringarray(1))
   deallocate(stringarray)
 
-  dataset = 'sr'
+  dataset = 'mLPNH'
   srtmp = HDF_readDatasetFloatArray4D(dataset, dims4, HDF_head)
-  allocate(master%sr(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE),stat=istat)
-  master%sr = sum(srtmp,4)
+  allocate(master%mLPNH(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE),stat=istat)
+  master%mLPNH = sum(srtmp,4)
+  deallocate(srtmp)
+
+  dataset = 'mLPSH'
+  srtmp = HDF_readDatasetFloatArray4D(dataset, dims4, HDF_head)
+  allocate(master%mLPSH(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE),stat=istat)
+  master%mLPSH = sum(srtmp,4)
   deallocate(srtmp)
 
   dataset = 'xtalname'
@@ -684,35 +656,8 @@ if (stat) then
   call h5close_f(hdferr)
 
 else
-!====================================
-! ----- Read energy-dispersed Lambert projections (master pattern)
-! this has been updated on 3/26/14 to accommodate the new EBSDmaster file format
-!====================================
-  open(unit=dataunit,file=trim(masterfile),status='old',form='unformatted')
-  read (dataunit) enl%Masterprogname
-! read the version number
-  read (dataunit) enl%Masterscversion
-! then the name of the crystal data file
-  read (dataunit) enl%Masterxtalname
-! then the name of the corresponding Monte Carlo data file
-  read (dataunit) enl%Masterenergyfile
-! energy information and array size    
-  read (dataunit) enl%npx,enl%npy,enl%nE,enl%numset
-  allocate(master%sr(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE),srtmp(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE,enl%numset), &
-           EkeVs(enl%nE),atomtype(enl%numset),stat=istat)
-  read (dataunit) EkeVs
-  read (dataunit) atomtype
-  deallocate(EkeVs, atomtype)   ! arrays are only needed by IDL visualization routine
-! is this a regular (square) or hexagonal projection ?
-  read (dataunit) enl%sqorhe
-! and finally the results array
-  read (dataunit) srtmp
-! convert to a smaller array by summing over all atom types 
-! [in a later version of the program we might allow for the 
-! user to request an element specific EBSD pattern calculation]
-  master%sr = sum(srtmp,4)
-  deallocate(srtmp)
-  close(unit=dataunit,status='keep')
+  masterfile = 'File '//trim(masterfile)//' is not an HDF5 file'
+  call FatalError('EBSDreadMasterfile_overlap',masterfile)
 end if
 !====================================
 
@@ -894,6 +839,7 @@ end subroutine EBSDGenerateDetector
 !
 !> @date 04/16/15  SS 1.0 original
 !> @date 04/20/15 MDG 1.1 minor edits
+!> @date 09/03/15 MDG 1.2 added support for Northern and Southern Lambert hemispheres
 !--------------------------------------------------------------------------
 subroutine TwinCubicMasterPattern(enl,master)
 
@@ -911,20 +857,22 @@ IMPLICIT NONE
 type(EBSDNameListType),INTENT(INOUT)                :: enl
 type(EBSDMasterType),pointer                        :: master
 
-real(kind=dbl),allocatable                          :: master_twin(:,:,:)
+real(kind=dbl),allocatable                          :: master_twinNH(:,:,:), master_twinSH(:,:,:)
 type(EBSDLargeAccumType),pointer                    :: acc
 logical                                             :: verbose
 real(kind=dbl)                                      :: q(4),Lamproj(2),dc(3),dc_new(3),dx,dy,dxm,dym,ixy(2),scl
 integer(kind=irg)                                   :: nix,niy,nixp,niyp
 integer(kind=irg)                                   :: ii,jj,kk,ierr,istat,pp,qq
 
-allocate(master_twin(-enl%npx:enl%npx,-enl%npy:enl%npy,1:enl%nE),stat=istat)
+allocate(master_twinNH(-enl%npx:enl%npx,-enl%npy:enl%npy,1:enl%nE),stat=istat)
+allocate(master_twinSH(-enl%npx:enl%npx,-enl%npy:enl%npy,1:enl%nE),stat=istat)
 
 q = (/ dsqrt(3.D0)/2.D0,1/dsqrt(3.D0)/2.D0,1/dsqrt(3.D0)/2.D0,1/dsqrt(3.D0)/2.D0 /)
 
 scl = float(enl%npx) ! / LPs%sPio2 [removed 09/01/15 by MDG for new Lambert module]
 
-    master_twin = 0.0
+    master_twinNH = 0.0
+    master_twinSH = 0.0
     do jj = -enl%npx,enl%npx
         do kk = -enl%npy,enl%npy
 
@@ -949,11 +897,14 @@ scl = float(enl%npx) ! / LPs%sPio2 [removed 09/01/15 by MDG for new Lambert modu
             dxm = 1.0 - dx
             dym = 1.0 - dy
 
-            master_twin(jj,kk,1:enl%nE) = master%sr(nix,niy,1:enl%nE)*dxm*dym + master%sr(nixp,niy,1:enl%nE)*dx*dym + &
-                                    master%sr(nix,niyp,1:enl%nE)*dxm*dy + master%sr(nixp,niyp,1:enl%nE)*dx*dy
+            master_twinNH(jj,kk,1:enl%nE) = master%mLPNH(nix,niy,1:enl%nE)*dxm*dym + master%mLPNH(nixp,niy,1:enl%nE)*dx*dym + &
+                                    master%mLPNH(nix,niyp,1:enl%nE)*dxm*dy + master%mLPNH(nixp,niyp,1:enl%nE)*dx*dy
+            master_twinSH(jj,kk,1:enl%nE) = master%mLPSH(nix,niy,1:enl%nE)*dxm*dym + master%mLPSH(nixp,niy,1:enl%nE)*dx*dym + &
+                                    master%mLPSH(nix,niyp,1:enl%nE)*dxm*dy + master%mLPSH(nixp,niyp,1:enl%nE)*dx*dy
         end do
     end do
-master%sr = 0.5D0 * (master_twin + master%sr)
+master%mLPNH = 0.5D0 * (master_twinNH + master%mLPNH)
+master%mLPSH = 0.5D0 * (master_twinSH + master%mLPSH)
 
 call Message(' -> completed superimposing twin and regular master patterns', frm = "(A)")
 
@@ -972,6 +923,7 @@ end subroutine TwinCubicMasterPattern
 !> @param q unit quaternion providing the necessary rotation
 !
 !> @date 04/20/15 MDG 1.0 original, based on Saransh's twin routine above
+!> @date 09/03/15 MDG 1.2 added support for Northern and Southern Lambert hemispheres
 !--------------------------------------------------------------------------
 subroutine OverlapMasterPattern(enl,master,q)
 
@@ -990,19 +942,21 @@ type(EBSDNameListType),INTENT(INOUT)                :: enl
 type(EBSDMasterType),pointer                        :: master
 real(kind=dbl),INTENT(IN)                           :: q(4)
 
-real(kind=dbl),allocatable                          :: master_rotated(:,:,:)
+real(kind=dbl),allocatable                          :: master_rotatedNH(:,:,:), master_rotatedSH(:,:,:)
 type(EBSDLargeAccumType),pointer                    :: acc
 logical                                             :: verbose
 real(kind=dbl)                                      :: Lamproj(2),dc(3),dc_new(3),dx,dy,dxm,dym,ixy(2),scl
 integer(kind=irg)                                   :: nix,niy,nixp,niyp
 integer(kind=irg)                                   :: ii,jj,kk,ierr,istat,pp,qq
 
-allocate(master_rotated(-enl%npx:enl%npx,-enl%npy:enl%npy,1:enl%nE),stat=istat)
+allocate(master_rotatedNH(-enl%npx:enl%npx,-enl%npy:enl%npy,1:enl%nE),stat=istat)
+allocate(master_rotatedSH(-enl%npx:enl%npx,-enl%npy:enl%npy,1:enl%nE),stat=istat)
 
 scl = float(enl%npx) ! / LPs%sPio2 [ removed on 09/01/15 by MDG for new Lambert module]
 
 do ii = 1,enl%nE
-    master_rotated = 0.0
+    master_rotatedNH = 0.0
+    master_rotatedSH = 0.0
     do jj = -enl%npx,enl%npx
         do kk = -enl%npy,enl%npy
 
@@ -1027,12 +981,15 @@ do ii = 1,enl%nE
             dxm = 1.0 - dx
             dym = 1.0 - dy
 
-            master_rotated(jj,kk,ii) = master%sr(nix,niy,ii)*dxm*dym + master%sr(nixp,niy,ii)*dx*dym + &
-                                       master%sr(nix,niyp,ii)*dxm*dy + master%sr(nixp,niyp,ii)*dx*dy
+            master_rotatedNH(jj,kk,1:enl%nE) = master%mLPNH(nix,niy,1:enl%nE)*dxm*dym + master%mLPNH(nixp,niy,1:enl%nE)*dx*dym + &
+                                    master%mLPNH(nix,niyp,1:enl%nE)*dxm*dy + master%mLPNH(nixp,niyp,1:enl%nE)*dx*dy
+            master_rotatedSH(jj,kk,1:enl%nE) = master%mLPSH(nix,niy,1:enl%nE)*dxm*dym + master%mLPSH(nixp,niy,1:enl%nE)*dx*dym + &
+                                    master%mLPSH(nix,niyp,1:enl%nE)*dxm*dy + master%mLPSH(nixp,niyp,1:enl%nE)*dx*dy
         end do
     end do
 end do
-master%sr = 0.5D0 * (master_rotated + master%sr)
+master%mLPNH = 0.5D0 * (master_rotatedNH + master%mLPNH)
+master%mLPSH = 0.5D0 * (master_rotatedSH + master%mLPSH)
 
 call Message(' -> completed superimposing rotated and regular master patterns', frm = "(A)")
 

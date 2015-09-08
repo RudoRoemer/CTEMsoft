@@ -565,11 +565,11 @@ energyloop: do iE=numEbins,1,-1
    nullify(khead)
    if (usehex) then
     call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,emnl%npx,npy,numk, &
-                isym,ijmax,'RoscaLambert',usehex)
+                SamplingType,ijmax,'RoscaLambert',usehex)
    else 
 ! Calckvectors(k,ga,ktmax,npx,npy,numk,isym,ijmax,mapmode,usehex)
     call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,emnl%npx,npy,numk, &
-                isym,ijmax,'RoscaLambert',usehex)
+                SamplingType,ijmax,'RoscaLambert',usehex)
    end if
    io_int(1)=numk
    call WriteValue('# independent beam directions to be considered = ', io_int, 1, "(I8)")

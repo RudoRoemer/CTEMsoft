@@ -45,6 +45,7 @@
 !> @date  06/24/14  MDG 4.0 removal of all global variables; separation of nml from computation; OpenMP
 !> @date  03/10/15  MDG 4.1 added output format selector
 !> @date  04/02/15  MDG 5.0 changed program input & output to HDF format
+!> @date  09/01/15  MDG 5.1 change from single to double Lambert master patterns (lots of changes)
 ! ###################################################################
 
 program EMEBSD
@@ -177,6 +178,7 @@ end program EMEBSD
 !> @date 03/20/15  MDG 5.4 corrected out-of-bounds error in EBSDpattern array
 !> @date 04/07/15  MDG 5.5 added HDF-formatted output
 !> @date 05/08/15  MDG 5.6 added support for hexagonal/trigonal master pattern interpolation
+!> @date 09/01/15  MDG 6.0 changed Lambert patterns to Northern+Southern hemisphere...
 !--------------------------------------------------------------------------
 subroutine ComputeEBSDPatterns(enl, angles, acc, master, progname, nmldeffile)
 
@@ -417,11 +419,13 @@ end if
 ! determine the scale factor for the Lambert interpolation; the square has
 ! an edge length of 2 x sqrt(pi/2), and a different scale factor for the 
 ! hexagonal/trigonal case
-  if (enl%sqorhe.eq.'square') then 
-    scl = dble(enl%npx) / LPs%sPio2
-  else
-    scl = dble(enl%npx) / LPs%preg
-  end if
+! This has been changed on 09/01/15 to accommodate the new Lambert module]
+! if (enl%sqorhe.eq.'square') then 
+!   scl = dble(enl%npx) / LPs%sPio2
+! else
+!   scl = dble(enl%npx) / LPs%preg
+! end if
+  scl = dble(enl%npx) 
 
 
 ! set the number of OpenMP threads and allocate the corresponding number of random number streams
@@ -477,10 +481,10 @@ do ibatch=1,nbatches+1
             do j=1,enl%numsy
 ! do the active coordinate transformation for this euler angle
               dc = quat_Lp(angles%quatang(1:4,jang),  (/ master%rgx(i,j),master%rgy(i,j),master%rgz(i,j) /) )
-! make sure the third one is positive; if not, switch all 
+! make sure the third one is positive; if not, switch all       <----- this may need to be revised !!!
               dc = dc/dsqrt(sum(dc*dc))
               if (dc(3).lt.0.D0) dc = -dc
-! convert these direction cosines to coordinates in the Rosca-Lambert projection
+! convert these direction cosines to coordinates in the Rosca-Lambert projection (always square projection !!!)
               if (enl%sqorhe.eq.'square') then
                 ixy = scl * LambertSphereToSquare( dc, istat )
               else

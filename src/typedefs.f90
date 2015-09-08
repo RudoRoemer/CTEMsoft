@@ -53,6 +53,7 @@
 !> @date   08/25/15 MDG 4.5 added PGSamplingType conversion array for master pattern computations
 !> @date   08/27/15 MDG 4.6 added component to kvectorlist
 !> @date   08/30/15 MDG 4.7 added trigmat to unitcell type
+!> @date   09/08/15 MDG 4.8 added LUTqg to cell
 !--------------------------------------------------------------------------
 module typedefs
 
@@ -513,6 +514,7 @@ type reflisttype
                                    thetag             ! phase angle, needed for ECCI simulations
   logical                       :: strong, weak       ! is this a strong beam or not; both .FALSE. means 'do not consider'
   complex(kind=dbl)             :: Ucg                  ! Fourier coefficient, copied from cell%LUT
+  complex(kind=dbl)             :: qg                  ! scaled Fourier coefficient, copied from cell%LUTqg
   type(reflisttype),pointer     :: next                 ! connection to next entry in master linked list
   type(reflisttype),pointer     :: nexts                ! connection to next strong entry in linked list
   type(reflisttype),pointer     :: nextw                ! connection to next weak entry in linked list
@@ -640,6 +642,7 @@ type unitcell
   logical                              :: hexset
   real(kind=dbl),allocatable           :: apos(:,:,:)
   complex(kind=dbl),allocatable        :: LUT(:,:,:)
+  complex(kind=dbl),allocatable        :: LUTqg(:,:,:)
   logical,allocatable                  :: dbdiff(:,:,:)
   logical                              :: nonsymmorphic
   type(symdata)                        :: SG

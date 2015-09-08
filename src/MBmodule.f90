@@ -400,6 +400,7 @@ end subroutine CalcKthick
 !> @date 03/05/14  MDG 1.0 original (used to be in-line in ECP and ECCI programs)
 !> @date 03/11/14  MDG 1.1 converted to diagonal Sgh array only
 !> @date 06/19/14  MDG 2.0 no globals, taken out of EMECCI.f90
+!> @date 09/07/15  MDG 2.1 added zeroing of Sgh array
 !--------------------------------------------------------------------------
 recursive subroutine CalcSgh(cell,reflist,nn,numset,Sgh,nat)
 
@@ -426,6 +427,7 @@ real(kind=dbl)                          :: ctmp(192,3),arg, tpi
 type(reflisttype),pointer               :: rltmpa, rltmpb
 
   tpi = 2.D0 * cPi
+  Sgh = dcmplx(0.D0,0.D0)
 
 ! for each special position we need to compute its contribution to the Sgh array
   do ip=1,cell % ATOM_ntype
@@ -433,6 +435,7 @@ type(reflisttype),pointer               :: rltmpa, rltmpb
     nat(ip) = cell%numat(ip)
 ! get Zn-squared for this special position, and include the site occupation parameter as well
     Znsq = float(cell%ATOM_type(ip))**2 * cell%ATOM_pos(ip,4)
+
 ! loop over all contributing reflections
 ! ir is the row index
     rltmpa => reflist%next    ! point to the front of the list
@@ -452,7 +455,6 @@ type(reflisttype),pointer               :: rltmpa, rltmpb
 ! on anything in particular, so we assume it is 1. 
         do ikk=1,n
 ! get the argument of the complex exponential
-!         arg = tpi*sum(kkk(1:3)*ctmp(ikk,1:3))
           arg = tpi*sum(kkk(1:3)*cell%apos(ip,ikk,1:3))
           carg = dcmplx(dcos(arg),dsin(arg))
 ! multiply with the prefactor and add
@@ -689,19 +691,27 @@ end subroutine CalcLgh
 !
 !> @brief compute the dynamical matrix, including Bethe potentials
 !
+!> details We compute the dynamical matrix as the structure matrix A, with 
+!> the q_g elements along the off-diagonal; the reaso nfor this is the fact
+!> that this approach leads to a dynamical matrix that is shift invariant.
+!> A conversion to the Bloch wave dynamical matrix can be obtained by setting 
+!> the optional keyword BlochMode
+!
 !> @param cell unit cell pointer
 !> @param listroot top of the main reflection list
 !> @param listrootw top of the weak reflection list
 !> @param Dyn dynamical scattering structure
 !> @param nns number of strong reflections
 !> @param nnw number of weak reflections
+!> @param BlochMode [optional] Bloch or Struc
 !
 !> @date  04/22/14 MDG 1.0 new library version
 !> @date  06/15/14 MDG 2.0 updated for removal of globals
 !> @date  06/17/14 MDG 2.1 added listroot pointers etc to accommodate multiple threads
 !> @date  06/18/14 MDG 2.2 corrected some pointer allocation errors in other routines; this one now works fine.
+!> @date  09/08/15 MDG 3.0 rewrite to allow either dynamical matrix type (Bloch/structure matrix) to be generated
 !--------------------------------------------------------------------------
-recursive subroutine GetDynMat(cell, listroot, listrootw, rlp, DynMat, nns, nnw)
+recursive subroutine GetDynMat(cell, listroot, listrootw, rlp, DynMat, nns, nnw, BlochMode)
 
 use local
 use typedefs
@@ -721,18 +731,33 @@ type(gnode),INTENT(INOUT)        :: rlp
 complex(kind=dbl),INTENT(INOUT)  :: DynMat(nns,nns)
 integer(kind=irg),INTENT(IN)     :: nns
 integer(kind=irg),INTENT(IN)     :: nnw
+character(5),INTENT(IN),OPTIONAL :: BlochMode   ! 'Bloch' or 'Struc'
 
-complex(kind=dbl)                :: czero, ughp, uhph, weaksum 
+complex(kind=dbl)                :: czero, ughp, uhph, weaksum, cv 
 real(kind=dbl)                   :: weaksgsum
 real(kind=sgl)                   :: Upz
 integer(kind=sgl)                :: ir, ic, ll(3), istat, wc
 type(reflisttype),pointer        :: rlr, rlc, rlw
+character(1)                     :: AorD
 
 czero = cmplx(0.0,0.0,dbl)      ! complex zero
 
 nullify(rlr)
 nullify(rlc)
 nullify(rlw)
+
+! if BlochMode is absent, then we compute the Bloch dynamical matrix D directly
+! if Blochmode = Struc, we compute the structure matrix A directly
+! if Blochmode = Bloch, we do compute the structure matrix A and convert it to D
+! [in the absence of the BlochMode keyword, the dynamical matrix D
+! will not be invariant to origin shifts; A, on the other hand, is always shift
+! invariant, so that D derived from A will also be shift invariant]
+
+AorD = 'D'
+if (present(Blochmode)) AorD = 'A'
+
+! Standard Bloch wave mode
+if (AorD.eq.'D') then
 
         DynMat = czero
         call CalcUcg(cell, rlp, (/0,0,0/) )
@@ -792,6 +817,80 @@ nullify(rlw)
           rlr => rlr%nexts
           ir = ir+1
         end do
+
+else ! AorD = 'A' so we need to compute the structure matrix using LUTqg ... 
+
+        DynMat = czero
+        call CalcUcg(cell, rlp, (/0,0,0/) )
+        Upz = rlp%Vpmod
+
+        rlr => listroot%next
+        ir = 1
+        do
+          if (.not.associated(rlr)) EXIT
+          rlc => listroot%next
+          ic = 1
+          do
+          if (.not.associated(rlc)) EXIT
+          if (ic.ne.ir) then  ! not a diagonal entry
+! here we need to do the Bethe corrections if necessary
+            if (nnw.ne.0) then
+              weaksum = czero
+              rlw => listrootw
+              do
+               if (.not.associated(rlw)) EXIT
+               ll = rlr%hkl - rlw%hkl
+               ughp = cell%LUT(ll(1),ll(2),ll(3)) 
+               ll = rlw%hkl - rlc%hkl
+               uhph = cell%LUT(ll(1),ll(2),ll(3)) 
+               weaksum = weaksum +  ughp * uhph *cmplx(1.D0/rlw%sg,0.0,dbl)
+               rlw => rlw%nextw
+              end do
+!        ! and correct the dynamical matrix element to become a Bethe potential coefficient
+              ll = rlr%hkl - rlc%hkl
+              DynMat(ir,ic) = cell%LUT(ll(1),ll(2),ll(3))  - cmplx(0.5D0*cell%mLambda,0.0D0,dbl)*weaksum
+             else
+              ll = rlr%hkl - rlc%hkl
+              DynMat(ir,ic) = cell%LUT(ll(1),ll(2),ll(3))
+            end if
+          else  ! it is a diagonal entry, so we need the excitation error and the absorption length
+! determine the total contribution of the weak beams
+            if (nnw.ne.0) then
+              weaksgsum = 0.D0
+              rlw => listrootw
+              do
+               if (.not.associated(rlw)) EXIT
+                ll = rlr%hkl - rlw%hkl
+                ughp = cell%LUT(ll(1),ll(2),ll(3)) 
+                weaksgsum = weaksgsum +  cdabs(ughp)**2/rlw%sg
+                rlw => rlw%nextw
+              end do
+              weaksgsum = weaksgsum * cell%mLambda/2.D0
+              DynMat(ir,ir) = cmplx(2.D0*rlr%sg/cell%mLambda-weaksgsum,Upz,dbl)
+            else
+              DynMat(ir,ir) = cmplx(2.D0*rlr%sg/cell%mLambda,Upz,dbl)
+            end if           
+        
+           end if       
+           rlc => rlc%nexts
+           ic = ic + 1
+          end do        
+          rlr => rlr%nexts
+          ir = ir+1
+        end do
+
+
+
+
+end if 
+
+
+if (present(BlochMode)) then
+  if (BlochMode.eq.'Bloch') then
+    cv = cmplx(0.D0,-1.D0/cPi/cell%mLambda)
+    DynMat = DynMat * cv
+  end if
+end if
 
 end subroutine GetDynMat
 
