@@ -122,10 +122,12 @@ end subroutine MakeRefList
 !> @date  01/10/14 MDG 4.0 account for new version of cell type
 !> @date  06/09/14 MDG 4.1 added rltail and cell as arguments
 !> @date  06/17/14 MDG 4.2 modification for separate reflist pointers
+!> @date  09/08/15 MDG 4.3 added qg entry
 !--------------------------------------------------------------------------
 recursive subroutine AddReflection(rltail,listroot,cell,nref,hkl)
 
 use error
+use constants
 use diffraction
 
 IMPLICIT NONE
@@ -157,7 +159,7 @@ integer(kind=irg)               :: istat
  rltail%num = nref                              ! store reflection number
  rltail%hkl = hkl                               ! store Miller indices
  rltail%Ucg = cell%LUT( hkl(1), hkl(2), hkl(3) ) ! store Ucg  in the list
- rltail%qg = cell%LUTqg( hkl(1), hkl(2), hkl(3) ) ! store qg  in the list
+ rltail%qg = cell%LUTqg( hkl(1), hkl(2), hkl(3) ) ! store pi/qg  in the list
  rltail%famnum = 0                              ! init this value for Prune_ReflectionList
 ! rltail%Ucgmod = cabs(rlp%Ucg)                 ! added on 2/29/2012 for Bethe potential computations
 ! rltail%sangle = 1000.0*dble(CalcDiffAngle(hkl(1),hkl(2),hkl(3)))    ! added 4/18/2012 for EIC project HAADF/BF tomography simulations

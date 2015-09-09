@@ -188,7 +188,7 @@ EMdatapathname = getenv('EMdatapathname')
   WIDGET_CONTROL, SET_VALUE=EBSDdata.mpgridmode, EBSDwidget_s.mpgridmode
 
 ; and finally the results array
-  dset_id = H5D_open(group_id,'sr')
+  dset_id = H5D_open(group_id,'mLPNH')
   MParray = H5D_read(dset_id) 
   H5D_close,dset_id
   if (EBSDdata.numset gt 1) then MParraysum = total(MParray,4) else MParraysum = MParray

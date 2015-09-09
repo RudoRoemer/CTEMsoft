@@ -455,7 +455,7 @@ type(reflisttype),pointer               :: rltmpa, rltmpb
 ! on anything in particular, so we assume it is 1. 
         do ikk=1,n
 ! get the argument of the complex exponential
-          arg = tpi*sum(kkk(1:3)*cell%apos(ip,ikk,1:3))
+          arg = tpi*sum(dble(kkk(1:3))*cell%apos(ip,ikk,1:3))
           carg = dcmplx(dcos(arg),dsin(arg))
 ! multiply with the prefactor and add
           Sgh(ir,ic,ip) = Sgh(ir,ic,ip) + carg * dcmplx(DBWF,0.D0)
@@ -509,6 +509,7 @@ real(kind=dbl)                          :: ctmp(192,3),arg, tpi
 type(reflisttype),pointer               :: rltmpa, rltmpb
 
 tpi = 2.D0 * cPi
+Sgh = dcmplx(0.D0,0.D0)
 
 ! for each special position we need to compute its contribution to the Sgh array
 do ip=1,cell % ATOM_ntype
@@ -571,6 +572,7 @@ end subroutine CalcSghMaster
 !> @date 07/04/01  MDG 2.0 f90
 !> @date 06/19/14  MDG 3.0 no globals
 !> @date 06/23/14  MDG 4.0 moved to MBmodule
+!> @date 09/09/15  MDG 4.1 verification of matrix multiplications after Silicon pattern issues
 ! ###################################################################
 recursive subroutine CalcLgh(DMat,Lgh,thick,kn,nn,gzero,depthstep,lambdaE,izz)
 
@@ -592,7 +594,7 @@ real(kind=dbl),INTENT(IN)           :: depthstep
 real(kind=sgl),INTENT(IN)           :: lambdaE(izz)
 integer(kind=irg),INTENT(IN)        :: izz
 
-integer                             :: i,j, iz
+integer                             :: i,j,k, iz
 complex(kind=dbl)                   :: CGinv(nn,nn), Minp(nn,nn), tmp3(nn,nn)
 
 real(kind=dbl)                      :: tpi, dzt
@@ -663,22 +665,22 @@ integer(kind=sgl)                   :: LWORK
 
 tpi = 2.D0*cPi*depthstep
 dzt = depthstep/thick
- do i=1,nn
-  do j=1,nn
-     q =  cmplx(0.D0,0.D0)
-     qold = tpi * dcmplx(aimag(W(i))+aimag(W(j)),real(W(i))-real(W(j)))
+ do j=1,nn
+  do k=1,nn
+     q =  dcmplx(0.D0,0.D0)
+     qold = dcmplx(tpi*(aimag(W(j))+aimag(W(k))),tpi*(real(W(j))-real(W(k))))
      do iz = 1,izz
        q = q + dble(lambdaE(iz)) * cdexp( - qold * dble(iz) ) !MNS changed cexp to cdexp to be compatible with gfortran
      end do
-     Ijk(i,j) = conjg(CGinv(i,gzero)) * q * CGinv(j,gzero)
+     Ijk(j,k) = conjg(CGinv(j,gzero)) * q * CGinv(k,gzero)
   end do
  end do
 
 Ijk = Ijk * dzt
 
-! then the summations for Lgh and kin
-tmp3 = matmul(CGG,transpose(Ijk)) 
-Lgh = matmul(tmp3,transpose(conjg(CGG)))
+! then the matrix multiplications to obtain Lgh 
+tmp3 = matmul(conjg(CGG),Ijk) 
+Lgh = matmul(tmp3,transpose(CGG))
 
 end subroutine CalcLgh
 
@@ -733,14 +735,16 @@ integer(kind=irg),INTENT(IN)     :: nns
 integer(kind=irg),INTENT(IN)     :: nnw
 character(5),INTENT(IN),OPTIONAL :: BlochMode   ! 'Bloch' or 'Struc'
 
-complex(kind=dbl)                :: czero, ughp, uhph, weaksum, cv 
-real(kind=dbl)                   :: weaksgsum
+complex(kind=dbl)                :: czero, ughp, uhph, weaksum, cv, Agh, Ahgp, Ahmgp, Ahg, weakdiagsum, pq0, Ahh, Agpgp, ccpi 
+real(kind=dbl)                   :: weaksgsum, tpi
 real(kind=sgl)                   :: Upz
 integer(kind=sgl)                :: ir, ic, ll(3), istat, wc
 type(reflisttype),pointer        :: rlr, rlc, rlw
 character(1)                     :: AorD
 
 czero = cmplx(0.0,0.0,dbl)      ! complex zero
+tpi = 2.D0 * cPi
+ccpi = complex(cPi,0.0D0)
 
 nullify(rlr)
 nullify(rlc)
@@ -761,7 +765,7 @@ if (AorD.eq.'D') then
 
         DynMat = czero
         call CalcUcg(cell, rlp, (/0,0,0/) )
-        Upz = rlp%Vpmod
+        Upz = rlp%Upmod
 
         rlr => listroot%next
         ir = 1
@@ -820,9 +824,12 @@ if (AorD.eq.'D') then
 
 else ! AorD = 'A' so we need to compute the structure matrix using LUTqg ... 
 
+! note that the factor of i pi is added in at the end...
         DynMat = czero
         call CalcUcg(cell, rlp, (/0,0,0/) )
-        Upz = rlp%Vpmod
+        pq0 = complex(0.D0,1.D0/rlp%xgp)
+
+write (*,*) ' pq0 = ', pq0, rlp%xgp,rlp%Upmod
 
         rlr => listroot%next
         ir = 1
@@ -840,35 +847,41 @@ else ! AorD = 'A' so we need to compute the structure matrix using LUTqg ...
               do
                if (.not.associated(rlw)) EXIT
                ll = rlr%hkl - rlw%hkl
-               ughp = cell%LUT(ll(1),ll(2),ll(3)) 
+               Agh = cell%LUTqg(ll(1),ll(2),ll(3)) 
                ll = rlw%hkl - rlc%hkl
-               uhph = cell%LUT(ll(1),ll(2),ll(3)) 
-               weaksum = weaksum +  ughp * uhph *cmplx(1.D0/rlw%sg,0.0,dbl)
+               Ahgp = cell%LUTqg(ll(1),ll(2),ll(3)) 
+! denominator Ahh - Ag'g'
+               Ahh = complex(2.D0 * rlw%sg,0.D0) + pq0
+               Agpgp = complex(2.D0 * rlc%sg,0.D0) + pq0
+               weaksum = weaksum +  Agh * Ahgp / (Ahh - Agpgp)
                rlw => rlw%nextw
               end do
-!        ! and correct the dynamical matrix element to become a Bethe potential coefficient
+! and correct the dynamical matrix element to become a Bethe potential coefficient
               ll = rlr%hkl - rlc%hkl
-              DynMat(ir,ic) = cell%LUT(ll(1),ll(2),ll(3))  - cmplx(0.5D0*cell%mLambda,0.0D0,dbl)*weaksum
+              DynMat(ir,ic) = cell%LUTqg(ll(1),ll(2),ll(3))  -  weaksum
              else
               ll = rlr%hkl - rlc%hkl
-              DynMat(ir,ic) = cell%LUT(ll(1),ll(2),ll(3))
+              DynMat(ir,ic) = cell%LUTqg(ll(1),ll(2),ll(3))
             end if
           else  ! it is a diagonal entry, so we need the excitation error and the absorption length
 ! determine the total contribution of the weak beams
             if (nnw.ne.0) then
-              weaksgsum = 0.D0
+              weakdiagsum = 0.D0
               rlw => listrootw
               do
                if (.not.associated(rlw)) EXIT
                 ll = rlr%hkl - rlw%hkl
-                ughp = cell%LUT(ll(1),ll(2),ll(3)) 
-                weaksgsum = weaksgsum +  cdabs(ughp)**2/rlw%sg
+                Agh = cell%LUTqg(ll(1),ll(2),ll(3)) 
+                Ahg = cell%LUTqg(-ll(1),-ll(2),-ll(3)) 
+! denominator Ahh - Agg
+                Ahh = complex(2.D0 * rlw%sg,0.D0) + pq0
+                Agpgp = complex(2.D0 * rlr%sg,0.D0) + pq0
+                weakdiagsum = weakdiagsum +  Agh * Ahg  / (Ahh - Agpgp)
                 rlw => rlw%nextw
               end do
-              weaksgsum = weaksgsum * cell%mLambda/2.D0
-              DynMat(ir,ir) = cmplx(2.D0*rlr%sg/cell%mLambda-weaksgsum,Upz,dbl)
+              DynMat(ir,ir) = complex( 2.D0 * rlr%sg, 0.D0) + pq0 - weakdiagsum
             else
-              DynMat(ir,ir) = cmplx(2.D0*rlr%sg/cell%mLambda,Upz,dbl)
+              DynMat(ir,ir) = complex( 2.D0 * rlr%sg, 0.D0) + pq0 
             end if           
         
            end if       
@@ -878,17 +891,16 @@ else ! AorD = 'A' so we need to compute the structure matrix using LUTqg ...
           rlr => rlr%nexts
           ir = ir+1
         end do
-
-
-
-
+        DynMat = DynMat * ccpi ! complex(0.D0, cPi)
 end if 
 
 
 if (present(BlochMode)) then
   if (BlochMode.eq.'Bloch') then
-    cv = cmplx(0.D0,-1.D0/cPi/cell%mLambda)
+!   cv = cmplx(0.D0,-1.D0/cPi/cell%mLambda)
+    cv = cmplx(1.D0/cPi/cell%mLambda,0.D0)
     DynMat = DynMat * cv
+write (*,*) 'matrix scaling factor ',cv
   end if
 end if
 

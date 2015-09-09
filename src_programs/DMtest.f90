@@ -50,6 +50,7 @@ use initializers
 use diffraction
 use gvectors
 use kvectors
+use constants
 use symmetry
 use MBmodule
 use io
@@ -70,11 +71,12 @@ real(kind=dbl)                  :: depthstep, th
 integer(kind=irg)               :: npx, npy, isym, numk, ijmax, nref1, nref2, i, j, nns1, nns2, nnw1, nnw2, numset, nt, izz, gzero
 logical                         :: verbose
 character(fnlen)                :: progname, progdesc, xtalname1, xtalname2
-complex(kind=dbl),allocatable   :: Sgh1(:,:,:), Sgh2(:,:,:)
+complex(kind=dbl),allocatable   :: Sgh1(:,:,:), Sgh2(:,:,:), S1(:,:), S2(:,:)
 complex(kind=dbl),allocatable   :: Lgh1(:,:), Lgh2(:,:)
 integer(kind=irg),allocatable   :: nat1(:), nat2(:)
-complex(kind=dbl)               :: sum1, sum2
+complex(kind=dbl)               :: sum1, sum2, cv
 real(kind=sgl),allocatable      :: inten1(:,:), inten2(:,:)
+character(5)                    :: BlochMode
 
 progname = 'DMtest.f90'
 progdesc = 'test program for dynamical matrices'
@@ -98,11 +100,33 @@ verbose = .TRUE.
 call Initialize_Cell(cell1,Dyn1,rlp1, xtalname1, dmin, voltage, verbose)
 call Initialize_Cell(cell2,Dyn2,rlp2, xtalname2, dmin, voltage, verbose)
 
+write (*,*) 'scaling factor = ',2.0 * sngl(cRestmass*cCharge/cPlanck**2)*1.0E-18
+
+write (*,*) 'cell 1'
+do i=0,6
+  do j=0,6
+    call CalcUcg(cell1, rlp1, (/ i, j, 0 /))
+    if (abs(real(rlp1%Ucg)).gt.0.001) then
+      write (*,*) rlp1%hkl, rlp1%Ucg, rlp1%qg, rlp1%Vmod, rlp1%Vphase, rlp1%Vpmod, rlp1%VPphase
+    end if
+  end do
+end do
+write (*,*) 'cell 2'
+do i=0,6
+  do j=0,6
+    call CalcUcg(cell2, rlp2, (/ i, j, 0 /))
+    if (abs(real(rlp2%Ucg)).gt.0.001) then
+      write (*,*) rlp2%hkl, rlp2%Ucg, rlp2%qg, rlp2%Vmod, rlp2%Vphase, rlp2%Vpmod, rlp2%VPphase
+    end if
+  end do
+end do
+
+
 ! pick an incident beam direction 
 isym = 9
-k = (/ 0.0, 1.0, 1.0 /)
+k = (/ 0.0, 0.0, 1.0 /)
 klaue = (/ 0.0, 0.0 /)
-ga = (/ 1.0, 0.0, 0.0 /)
+ga = (/ 1.0,  0.0, 0.0 /)
 ktmax = 0.0
 npx = 0
 npy = 0 
@@ -112,9 +136,12 @@ write (*,*) 'number of beams selected : ',numk, khead%k
 
 ! determine g-vector lists 
 write (*,*) 'Bethe = ', BetheParameters%c1, BetheParameters%c2, BetheParameters%c3
+BetheParameters%c1 = 10.0
+BetheParameters%c2 = 10.0
+BetheParameters%c3 = 10.0
 
 FN = sngl(khead%k)
-dmin = 0.09
+dmin = 0.08
 call Initialize_ReflectionList(cell1, reflist1, BetheParameters, FN, sngl(khead%k), dmin, nref1, verbose)
 call Initialize_ReflectionList(cell2, reflist2, BetheParameters, FN, sngl(khead%k), dmin, nref2, verbose)
 write (*,*) 'number of g-vectors in list ',nref1, nref2
@@ -144,21 +171,63 @@ call Apply_BethePotentials(cell2, reflist2, firstw2, BetheParameters, nref2, nns
 write (*,*) 'strong/weak 2: ',nns2,nnw2
 allocate(DynMat1(nns1,nns1))
 
+
 ! generate the dynamical matrix
 call GetDynMat(cell1, reflist1, firstw1, rlp1, DynMat1, nns1, nnw1)
 
-write (*,*) 'Dynamical matrix 1'
-do i=1,4
+write (*,*) 'Dynamical matrix 1 regular Bloch'
+do i=1,6
   write (*,*) (DynMat1(i,j),j=1,4)
 end do
 
+!BlochMode = 'Struc'
+!call GetDynMat(cell1, reflist1, firstw1, rlp1, DynMat1, nns1, nnw1, BlochMode)
+!
+!write (*,*) 'Dynamical matrix 1 Structure Matrix'
+!do i=1,6
+!  write (*,*) (DynMat1(i,j),j=1,4)
+!end do
+!
+!BlochMode = 'Bloch'
+!call GetDynMat(cell1, reflist1, firstw1, rlp1, DynMat1, nns1, nnw1, BlochMode)
+!
+!write (*,*) 'Dynamical matrix 1 Bloch from Structure Matrix'
+!do i=1,6
+!  write (*,*) (DynMat1(i,j),j=1,4)
+!end do
+!
 allocate(DynMat2(nns2,nns2))
 call GetDynMat(cell2, reflist2, firstw2, rlp2, DynMat2, nns2, nnw2)
 
-write (*,*) 'Dynamical matrix 2'
-do i=1,4
+write (*,*) 'Dynamical matrix 2 regular Bloch'
+do i=1,6
   write (*,*) (DynMat2(i,j),j=1,4)
 end do
+!cv = complex(cPi * cell1%mLambda,0.D0)
+!write (*,*) 'Dynamical matrix 2 transformed to Structure Matrix'
+!do i=1,6
+!  write (*,*) (DynMat2(i,j) * cv,j=1,4)
+!end do
+!
+!BlochMode = 'Struc'
+!call GetDynMat(cell2, reflist2, firstw2, rlp2, DynMat2, nns2, nnw2, BlochMode)
+!
+!write (*,*) 'Dynamical matrix 2 Structure Matrix'
+!do i=1,6
+!  write (*,*) (DynMat2(i,j),j=1,4)
+!end do
+!
+!BlochMode = 'Bloch'
+!call GetDynMat(cell2, reflist2, firstw2, rlp2, DynMat2, nns2, nnw2, BlochMode)
+!
+!write (*,*) 'Dynamical matrix 2 Bloch from Structure Matrix'
+!do i=1,6
+!  write (*,*) (DynMat2(i,j),j=1,4)
+!end do
+!
+
+
+
 
 
 ! get the eigenvalues etc for the Bloch wave approach and compute intensities for some thickness
@@ -224,6 +293,7 @@ end do
 sum1 = cmplx(0.D0,0.D0)
 sum2 = cmplx(0.D0,0.D0)
 
+write (*,*) 'differences in Lgh arrays : '
 do i=1,nns1
   do j=1,nns1
     if (abs(Lgh1(i,j)-Lgh2(i,j)).gt.0.0001) write (*,*) i,j,Lgh1(i,j),' <-> ',Lgh2(i,j)
@@ -233,6 +303,22 @@ do i=1,nns1
 end do
 
 write (*,*) 'Total sum = ', sum1, sum2
+
+
+allocate(S1(nns1,nns1), S2(nns2,nns2))
+
+S1 = Sgh1(:,:,1)
+S2 = Sgh2(:,:,1)
+
+write (*,*) 'symmetry test : '
+write (*,*) 'Sgh1 : ',sum(S1 - transpose(S1))
+write (*,*) 'Sgh2 : ',sum(S2 - transpose(S2))
+write (*,*) 'Lgh1 : ',sum(Lgh1 - transpose(Lgh1))
+write (*,*) 'Lgh2 : ',sum(Lgh2 - transpose(Lgh2))
+
+write (*,*) 'cross differences '
+write (*,*) 'Sgh : ',sum(S1 - S2)
+write (*,*) 'Lgh : ',sum(Lgh1 - Lgh2)
 
 end program DMtest
 
