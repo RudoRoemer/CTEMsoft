@@ -40,7 +40,8 @@ function(AddHDF5CopyInstallRules)
       ADD_CUSTOM_TARGET(ZZ_${Z_LIBVAR}_DLL_${TYPE}-Copy ALL
                           COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LibPath}
                           ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${INTER_DIR}/
-                          COMMENT "  Copy: ${LibPath}\n    To: ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${INTER_DIR}/")
+                          # COMMENT "  Copy: ${LibPath} To: ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${INTER_DIR}/"
+                          )
       set_target_properties(ZZ_${Z_LIBVAR}_DLL_${TYPE}-Copy PROPERTIES FOLDER ZZ_COPY_FILES)
 
     endif()
@@ -68,7 +69,8 @@ function(AddHDF5CopyInstallRules)
       ADD_CUSTOM_TARGET(ZZ_${Z_LIBVAR}_SYMLINK_${TYPE}-Copy ALL
                           COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SYMLINK_PATH}
                           ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${INTER_DIR}/
-                          COMMENT "  Copy: ${SYMLINK_PATH}\n    To: ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${INTER_DIR}/")
+                          # COMMENT "  Copy: ${SYMLINK_PATH} To: ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${INTER_DIR}/"
+                          )
       set_target_properties(ZZ_${Z_LIBVAR}_SYMLINK_${TYPE}-Copy PROPERTIES FOLDER ZZ_COPY_FILES)
 
     endif()
@@ -91,28 +93,32 @@ if( "${HDF5_INSTALL}" STREQUAL "")
                       pass in the -DHDF5_INSTALL=.... or set the HDF5_INSTALL environment variable.")
 endif()
 
-if(WIN32)
-    set(ENV{HDF5_ROOT_DIR_HINT} "${HDF5_INSTALL}/cmake/hdf5")
-    set(ENV{HDF5_ROOT} "${HDF5_INSTALL}")
-    set(CMAKE_MODULE_PATH ${HDF5_INSTALL}/cmake/hdf5 ${CMAKE_MODULE_PATH})
-else()
-    set(ENV{HDF5_ROOT_DIR_HINT} "${HDF5_INSTALL}/share/cmake")
-    set(ENV{HDF5_ROOT} "${HDF5_INSTALL}")
-    set(CMAKE_MODULE_PATH ${HDF5_INSTALL}/share/cmake/hdf5 ${CMAKE_MODULE_PATH})
-endif()
+# We used to set the CMAKE_MODULE_PATH but HDF5 is changing where they put the 
+# cmake files from HDF5 1.8.14 to 1.8.15 so we are going to ask the user to set 
+# the CMAKE_MODULE_PATH in their DREAM3D_SDK.cmake file instead.
+#if(WIN32)
+    #set(ENV{HDF5_ROOT_DIR_HINT} "${HDF5_INSTALL}/cmake/hdf5")
+    #set(ENV{HDF5_ROOT} "${HDF5_INSTALL}")
+    #set(CMAKE_MODULE_PATH ${HDF5_INSTALL}/cmake/hdf5 ${CMAKE_MODULE_PATH})
+#else()
+    #set(ENV{HDF5_ROOT_DIR_HINT} "${HDF5_INSTALL}/share/cmake")
+    #set(ENV{HDF5_ROOT} "${HDF5_INSTALL}")
+    #set(CMAKE_MODULE_PATH ${HDF5_INSTALL}/share/cmake/hdf5 ${CMAKE_MODULE_PATH})
+#endif()
 
-find_package(HDF5)
+find_package(HDF5 NAMES hdf5)
 if(HDF5_FOUND)
-  
+
   GET_FILENAME_COMPONENT (HDF5_LIBRARY_DIRS "${HDF5_INCLUDE_DIRS}" PATH)
   set(HDF5_LIBRARY_DIRS ${HDF5_LIBRARY_DIRS}/lib)
   file(APPEND ${CMP_PLUGIN_SEARCHDIR_FILE} "${HDF5_LIBRARY_DIRS};")
   # Add the library directory to the file that has all the search directories stored in it.
 
   include_directories(${HDF5_INCLUDE_DIRS} )
-  
+
   message(STATUS "HDF5 Location: ${HDF5_INSTALL}")
   message(STATUS "HDF5 Version: ${HDF5_VERSION_STRING}")
+  message(STATUS "HDF5 LIBRARY DIR: ${HDF5_LIBRARY_DIRS}")
   if(MSVC_IDE)
     set(BUILD_TYPES Debug Release)
   else()
@@ -129,6 +135,8 @@ if(HDF5_FOUND)
                         LIBNAME hdf5_cpp
                         TYPES ${BUILD_TYPES})
   endif()
+
+  set(HDF5_COMPONENTS hdf5)
 
 
 ELSE(HDF5_FOUND)
