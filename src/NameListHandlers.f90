@@ -342,6 +342,7 @@ end subroutine GetMCNameList
 !> @param mcnl Monte Carloname list structure
 !
 !> @date 06/18/14  SS 1.0 new routine
+!> @date 09/09/15 MDG 1.1 added devid (GPU device id)
 !--------------------------------------------------------------------------
 subroutine GetMCCLNameList(nmlfile, mcnl, initonly)
 
@@ -360,6 +361,7 @@ integer(kind=irg)       :: numsx
 integer(kind=irg)       :: globalworkgrpsz
 integer(kind=irg)       :: num_el
 integer(kind=irg)       :: totnum_el
+integer(kind=irg)       :: devid
 real(kind=dbl)          :: sig
 real(kind=dbl)          :: omega
 real(kind=dbl)          :: EkeV
@@ -374,7 +376,7 @@ character(fnlen)        :: mode
 
 ! define the IO namelist to facilitate passing variables to the program.
 namelist  / MCCLdata / stdout, xtalname, sig, numsx, num_el, globalworkgrpsz, EkeV, &
-dataname, totnum_el, Ehistmin, Ebinsize, depthmax, depthstep, omega, MCmode, mode
+dataname, totnum_el, Ehistmin, Ebinsize, depthmax, depthstep, omega, MCmode, mode, devid
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 stdout = 6
@@ -382,6 +384,7 @@ numsx = 1501
 globalworkgrpsz = 100
 num_el = 10
 totnum_el = 100000
+devid = 1
 sig = 70.D0
 omega = 0.D0
 EkeV = 30.D0
@@ -416,6 +419,7 @@ mcnl%numsx = numsx
 mcnl%globalworkgrpsz = globalworkgrpsz
 mcnl%num_el = num_el
 mcnl%totnum_el = totnum_el
+mcnl%devid = devid
 mcnl%sig = sig
 mcnl%omega = omega
 mcnl%EkeV = EkeV
@@ -574,9 +578,10 @@ integer(kind=irg)       :: nthreads
 real(kind=sgl)          :: dmin
 character(fnlen)        :: energyfile
 character(fnlen)        :: outname
+logical                 :: restart
 
 ! define the IO namelist to facilitate passing variables to the program.
-namelist /EBSDmastervars/ dmin,npx,nthreads,outname,energyfile,Esel
+namelist /EBSDmastervars/ dmin,npx,nthreads,outname,energyfile,Esel,restart
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 stdout = 6
@@ -586,6 +591,7 @@ Esel = -1                       ! selected energy value for single energy run
 dmin = 0.025                    ! smallest d-spacing to include in dynamical matrix [nm]
 energyfile = 'undefined'        ! default filename for z_0(E_e) data from EMMC Monte Carlo simulations
 outname = 'EBSDmasterout.data'  ! default filename for final output
+restart = .FALSE.               ! when .TRUE. an existing file will be assumed 
 
 if (present(initonly)) then
   if (initonly) skipread = .TRUE.
@@ -611,6 +617,7 @@ emnl%nthreads = nthreads
 emnl%dmin = dmin
 emnl%energyfile = energyfile
 emnl%outname = outname
+emnl%restart = restart
 
 end subroutine GetEBSDMasterNameList
 

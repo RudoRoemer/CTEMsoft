@@ -502,6 +502,7 @@ end subroutine JSONwriteMCNameList
 !> @param mcnl Monte Carlo name list structure
 !
 !> @date 03/21/15 MDG 1.0 new routine
+!> @date 09/09/15 MDG 1.1 added devid
 !--------------------------------------------------------------------------
 subroutine JSONwriteMCCLNameList(mcnl, jsonname, error_cnt)
 
@@ -515,7 +516,7 @@ integer(kind=irg),INTENT(INOUT)                       :: error_cnt
 
 type(json_value),pointer                              :: p, inp
 
-integer(kind=irg),parameter                           :: n_int = 5, n_real = 7
+integer(kind=irg),parameter                           :: n_int = 6, n_real = 7
 integer(kind=irg)                                     :: io_int(n_int)
 real(kind=dbl)                                        :: io_real(n_real)
 character(20)                                         :: intlist(n_int), reallist(n_real)
@@ -527,12 +528,13 @@ namelistname = 'MCCLdata'
 call JSON_initpointers(p, inp, jsonname, namelistname, error_cnt)
 
 ! write all the single integers
-io_int = (/ mcnl%stdout, mcnl%numsx, mcnl%globalworkgrpsz, mcnl%num_el, mcnl%totnum_el /)
+io_int = (/ mcnl%stdout, mcnl%numsx, mcnl%globalworkgrpsz, mcnl%num_el, mcnl%totnum_el, mcnl%devid /)
 intlist(1) = 'stdout'
 intlist(2) = 'numsx'
 intlist(3) = 'globalworkgrpsz'
 intlist(4) = 'num_el'
 intlist(5) = 'totnum_el'
+intlist(6) = 'devid'
 call JSON_writeNMLintegers(inp, io_int, intlist, n_int, error_cnt)
 
 ! write all the single doubles
@@ -2163,11 +2165,12 @@ end subroutine JSONreadMCNameList
 !
 !> @brief read namelist file and fill mcnl structure (used by EMMCCL.f90)
 !
-!> @param mcnl Monte Carloname list structure
+!> @param mcnl Monte Carlo name list structure
 !> @param jsonname input file name
 !> @param error_cnt total number of errors encountered by json routines
 !
 !> @date 08/19/15  MDG 1.0 new routine
+!> @date 09/09/15  MDG 1.1 added devid
 !--------------------------------------------------------------------------
 subroutine JSONreadMCCLNameList(mcnl, jsonname, error_cnt)
 
@@ -2213,6 +2216,8 @@ else
   call JSONreadInteger(json, ep, mcnl%num_el, defmcnl%num_el)
   ep = 'MCCLdata.totnum_el'
   call JSONreadInteger(json, ep, mcnl%totnum_el, defmcnl%totnum_el)
+  ep = 'MCCLdata.devid'
+  call JSONreadInteger(json, ep, mcnl%devid, defmcnl%devid)
 
   ep = 'MCCLdata.sig'
   call JSONreadDouble(json, ep, mcnl%sig, defmcnl%sig)
@@ -2405,6 +2410,9 @@ else
   call JSONreadString(json, ep, emnl%energyfile, defemnl%energyfile)
   ep = 'EBSDmastervars.outname'
   call JSONreadString(json, ep, emnl%outname, defemnl%outname)
+
+  ep = 'EBSDmastervars.restart'
+  call JSONreadLogical(json, ep, emnl%restart, defemnl%restart)
 end if
 
 call json%destroy(); call JSON_failtest(error_cnt)

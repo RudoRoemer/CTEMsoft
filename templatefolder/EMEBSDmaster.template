@@ -8,6 +8,8 @@ outname = 'EBSDmasterout.h5'
 ! name of the energy statistics file produced by CTEMMC program [note that
 ! this file will also contain parameters such as the microscope accelerating voltage]
 energyfile = 'MCoutput.h5'
+! restart computation ?
+restart = .FALSE.
 ! number of OpenMP threads
 nthreads = 2
 /

@@ -405,6 +405,7 @@ end subroutine HDFwriteMCNameList
 !> @param mcnl Monte Carlon ame list structure
 !
 !> @date 03/21/15 MDG 1.0 new routine
+!> @date 09/09/15 MDG 1.1 added devid (GPU device id)
 !--------------------------------------------------------------------------
 subroutine HDFwriteMCCLNameList(HDF_head, mcnl)
 
@@ -415,7 +416,7 @@ IMPLICIT NONE
 type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
 type(MCCLNameListType),INTENT(INOUT)                  :: mcnl
 
-integer(kind=irg),parameter                           :: n_int = 5, n_real = 7
+integer(kind=irg),parameter                           :: n_int = 6, n_real = 7
 integer(kind=irg)                                     :: hdferr,  io_int(n_int)
 real(kind=dbl)                                        :: io_real(n_real)
 character(20)                                         :: intlist(n_int), reallist(n_real)
@@ -426,12 +427,13 @@ character(fnlen,kind=c_char)                          :: line2(1)
 hdferr = HDF_createGroup('MCCLNameList',HDF_head)
 
 ! write all the single integers
-io_int = (/ mcnl%stdout, mcnl%numsx, mcnl%globalworkgrpsz, mcnl%num_el, mcnl%totnum_el /)
+io_int = (/ mcnl%stdout, mcnl%numsx, mcnl%globalworkgrpsz, mcnl%num_el, mcnl%totnum_el, mcnl%devid /)
 intlist(1) = 'stdout'
 intlist(2) = 'numsx'
 intlist(3) = 'globalworkgrpsz'
 intlist(4) = 'num_el'
 intlist(5) = 'totnum_el'
+intlist(6) = 'devid'
 call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
 ! write all the single doubles
@@ -579,8 +581,8 @@ IMPLICIT NONE
 type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
 type(EBSDMasterNameListType),INTENT(INOUT)            :: emnl
 
-integer(kind=irg),parameter                           :: n_int = 4, n_real = 1
-integer(kind=irg)                                     :: hdferr,  io_int(n_int)
+integer(kind=irg),parameter                           :: n_int = 5, n_real = 1
+integer(kind=irg)                                     :: hdferr,  io_int(n_int), restart
 real(kind=sgl)                                        :: io_real(n_real)
 character(20)                                         :: intlist(n_int), reallist(n_real)
 character(fnlen)                                      :: dataset
@@ -590,11 +592,17 @@ character(fnlen,kind=c_char)                          :: line2(1)
 hdferr = HDF_createGroup('EBSDMasterNameList',HDF_head)
 
 ! write all the single integers
-io_int = (/ emnl%stdout, emnl%npx, emnl%Esel, emnl%nthreads /)
+if (emnl%restart) then 
+  restart = 1
+else 
+  restart = 0
+end if
+io_int = (/ emnl%stdout, emnl%npx, emnl%Esel, emnl%nthreads, restart /)
 intlist(1) = 'stdout'
 intlist(2) = 'npx'
 intlist(3) = 'Esel'
 intlist(4) = 'nthreads'
+intlist(5) = 'restart'
 call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
 ! write a single real

@@ -106,6 +106,7 @@ type MCCLNameListType
         integer(kind=irg)       :: globalworkgrpsz
         integer(kind=irg)       :: num_el
         integer(kind=irg)       :: totnum_el
+        integer(kind=irg)       :: devid
         real(kind=dbl)          :: sig
         real(kind=dbl)          :: omega
         real(kind=dbl)          :: EkeV
@@ -152,6 +153,7 @@ type EBSDMasterNameListType
         real(kind=sgl)          :: dmin
         character(fnlen)        :: energyfile
         character(fnlen)        :: outname
+        logical                 :: restart
 end type EBSDMasterNameListType
 
 ! namelist for the EMEBSD program

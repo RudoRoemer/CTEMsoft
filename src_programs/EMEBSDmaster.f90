@@ -120,6 +120,7 @@ end program EMEBSDmaster
 !> @date 04/27/15  MDG 5.5 reactivate the hexagonal code; needs to be debugged
 !> @date 05/08/15  MDG 5.6 added automated conversion from hexagonal to square Lambert; debugged
 !> @date 09/01/15  MDG 6.0 changed symmetry to full point group and two Lambert hemispheres for output
+!> @date 09/09/15  MDG 6.1 started to add a "restart" mode, so that long runs can be interrupted and restarted
 !--------------------------------------------------------------------------
 subroutine ComputeMasterPattern(emnl, progname, nmldeffile)
 
@@ -157,7 +158,7 @@ integer(HSIZE_T)        :: dims4(4), cnt4(4), offset4(4)
 integer(kind=irg)       :: isym,i,j,ik,npy,ipx,ipy,ipz,debug,iE,izz, izzmax, iequiv(3,48), nequiv, num_el, MCnthreads, & ! counters
                            numk, & ! number of independent incident beam directions
                            ir,nat(100),kk(3), skip, ijmax, one, NUMTHREADS, TID, SamplingType, &
-                           numset,n,ix,iy,iz, io_int(6), nns, nnw, nref,  &
+                           numset,n,ix,iy,iz, io_int(6), nns, nnw, nref, Estart, &
                            istat,gzero,ic,ip,ikk, totstrong, totweak, jh, ierr, nix, niy, nixp, niyp     ! counters
 real(kind=dbl)          :: tpi,Znsq, kkl, DBWF, kin, delta, h, lambda, omtl, srt, dc(3), xy(2), edge, scl, tmp, dx, dxm, dy, dym !
 real(kind=sgl)          :: io_real(5), selE, kn, FN(3), kkk(3)
@@ -169,7 +170,7 @@ logical                 :: usehex, switchmirror, verbose
 character(fnlen)        :: xtalname
 
 ! Monte Carlo derived quantities
-integer(kind=irg)       :: numEbins, numzbins, nsx, nsy, hdferr, nlines    ! variables used in MC energy file
+integer(kind=irg)       :: numEbins, numzbins, nsx, nsy, hdferr, nlines, lastEnergy    ! variables used in MC energy file
 real(kind=dbl)          :: EkeV, Ehistmin, Ebinsize, depthmax, depthstep, etotal ! enery variables from MC program
 integer(kind=irg),allocatable :: accum_e(:,:,:), accum_z(:,:,:,:), thick(:), acc_z(:,:,:,:)
 real(kind=sgl),allocatable :: lambdaE(:,:)
@@ -436,16 +437,51 @@ deallocate(accum_z)
 
 
 !=============================================
+! should we create a new file or open an existing file?
+!=============================================
+lastEnergy = -1
+if (emnl%restart.eqv..TRUE.) then
+! in this case we need to check whether or not the file exists, then open
+! it and read the value of the last energy level that was simulated and written
+! to that file; if this level is different from the lowest energy level we 
+! know that there is at least one more level to be simulated.  If it is equal,
+! then we can abort the program here.
+
+  inquire(file=trim(emnl%outname), exist=f_exists)
+  if (.not.f_exists) then 
+    call FatalError('ComputeMasterPattern','restart HDF5 file does not exist')
+  end if
+  
+!=============================================
+! open the existing HDF5 file 
+!=============================================
+  nullify(HDF_head)
+! Initialize FORTRAN interface.
+  call h5open_f(hdferr)
+
+! Create a new file using the default properties.
+  outname = trim(EMdatapathname)//trim(emnl%outname)
+  readonly = .TRUE.
+  hdferr =  HDF_openFile(outname, HDF_head, readonly)
+
+! all we need to get from the file is the lastEnergy parameter
+! then the remainder of the data in a EMData group
+  groupname = 'EMData'
+  hdferr = HDF_openGroup(groupname, HDF_head)
+
+  dataset = 'lastEnergy'
+  lastEnergy = HDF_readDatasetInteger(dataset, HDF_head)
+
+  call HDF_pop(HDF_head,.TRUE.)
+
+! and close the fortran hdf interface
+  call h5close_f(hdferr)
+
+else
+
+!=============================================
 ! create the HDF5 output file
 !=============================================
-! delete the file if it already exists
-! inquire(file=trim(emnl%outname), exist=f_exists)
-
-! if (f_exists) then
-!   open(unit=dataunit, file=trim(emnl%outname), status='old',form='unformatted')
-!   close(unit=dataunit, status='delete')
-!   call Message('Old HDF file deleted')
-! end if
 
   nullify(HDF_head)
 ! Initialize FORTRAN interface.
@@ -488,6 +524,9 @@ deallocate(accum_z)
   dataset = 'numset'
   hdferr = HDF_writeDatasetInteger(dataset, numset, HDF_head)
 
+  dataset = 'lastEnergy'
+  hdferr = HDF_writeDatasetInteger(dataset, lastEnergy, HDF_head)
+  
   if (emnl%Esel.eq.-1) then
     dataset = 'numEbins'
     hdferr = HDF_writeDatasetInteger(dataset, numEbins, HDF_head)
@@ -532,13 +571,30 @@ deallocate(accum_z)
 ! and close the fortran hdf interface
  call h5close_f(hdferr)
 
+end if
+
+!=============================================
+!=============================================
+! figure out what the start energy value is for the energyloop
+if (lastEnergy.ne.-1) then
+  Estart = lastEnergy-1
+  if (Estart.eq.0) then 
+    call Message('All energy levels are present in the HDF5 file')
+    call Message('No further computations needed.')
+    stop
+  end if
+else
+  Estart = numEbins
+end if
+
+
 !=============================================
 !=============================================
 ! ---------- from here on, we need to repeat the entire computation for each energy value
 ! so this is where we could in principle implement an OpenMP approach; alternatively, 
 ! we could do the inner loop over the incident beam directions in OpenMP (probably simpler)
 
-energyloop: do iE=numEbins,1,-1
+energyloop: do iE=Estart,1,-1
 ! is this a single-energy run ?
    if (emnl%Esel.ne.-1) then
      if (emnl%Esel.ne.iE) CYCLE energyloop
@@ -582,17 +638,12 @@ energyloop: do iE=numEbins,1,-1
   karray(1:3,1) = sngl(ktmp%k(1:3))
   karray(4,1) = sngl(ktmp%kn)
   kij(1:3,1) = (/ ktmp%i, ktmp%j, ktmp%hs /)
-!open(unit=dataunit,file='kvecs.txt',status='unknown',form='formatted')
-!ik = 1
-!write(dataunit,"(I5,'->',2(F14.5,','),F14.5)") ik, karray(1:3,ik)
    do ik=2,numk
      ktmp => ktmp%next
      karray(1:3,ik) = sngl(ktmp%k(1:3))
      karray(4,ik) = sngl(ktmp%kn)
      kij(1:3,ik) = (/ ktmp%i, ktmp%j, ktmp%hs /)
-!write(dataunit,"(I5,'->',2(F14.5,','),F14.5)") ik, karray(1:3,ik)
    end do
-!close(unit=dataunit,status='keep')
 ! and remove the linked list
   call Delete_kvectorlist(khead)
 
@@ -786,6 +837,10 @@ end if
   
   groupname = 'EMData'
   hdferr = HDF_openGroup(groupname, HDF_head)
+
+! update the current energy level counter, so that the restart option will function
+  dataset = 'lastEnergy'
+  hdferr = HDF_writeDataSetInteger(dataset, iE, HDF_head, overwrite)
 
 ! add data to the hyperslab
   dataset = 'mLPNH'

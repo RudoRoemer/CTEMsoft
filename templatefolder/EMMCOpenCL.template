@@ -2,7 +2,7 @@
 ! only bse1 or full simulation
 mode = 'full' ! 'bse1' or 'full'
 ! name of the crystal structure file
-xtalname = 'Si.xtal'
+xtalname = 'undefined'
 ! sample tilt angle from horizontal [degrees]
 sig = 70.0
 ! sample tilt angle around RD axis [degrees]
@@ -11,6 +11,8 @@ omega = 0.0
 numsx = 501
 ! number of incident electrons per thread
 num_el = 10
+! GPU device ID selector 
+devid = 1
 ! number of work items (depends on GPU card; leave unchanged)
 globalworkgrpsz = 150
 ! total number of incident electrons

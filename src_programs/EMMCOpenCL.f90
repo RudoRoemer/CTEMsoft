@@ -81,6 +81,7 @@ end program EMMCOpenCL
 !> @date 03/26/15  MDG 5.0 all output now in HDF5 format 
 !> @date 05/05/15  MDG 5.1 removed getenv() call; replaced by global path string
 !> @date 09/01/15  MDG 5.2 modifications due to Lambert module changes
+!> @date 09/09/15  MDG 5.3 added devid selector (GPU device ID) to namelist
 !--------------------------------------------------------------------------
 subroutine DoMCsimulation(mcnl, progname, nmldeffile)
 
@@ -241,13 +242,13 @@ call clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, device, num, ierr)
 if(ierr /= CL_SUCCESS) stop "Cannot get CL device."
 
 ! get the device name and print it
-call clGetDeviceInfo(device(2), CL_DEVICE_NAME, info, ierr)
+call clGetDeviceInfo(device(mcnl%devid), CL_DEVICE_NAME, info, ierr)
 write(6,*) "CL device: ", info
 
 ! create the context and the command queue
-context = clCreateContext(platform, device(2), ierr)
+context = clCreateContext(platform, device(mcnl%devid), ierr)
 if(ierr /= CL_SUCCESS) stop "Cannot create context"
-command_queue = clCreateCommandQueue(context, device(2), CL_QUEUE_PROFILING_ENABLE, ierr)
+command_queue = clCreateCommandQueue(context, device(mcnl%devid), CL_QUEUE_PROFILING_ENABLE, ierr)
 if(ierr /= CL_SUCCESS) stop "Cannot create command queue"
 
 
@@ -278,7 +279,7 @@ if(ierr /= CL_SUCCESS) stop 'Error: cannot create program from source.'
 call clBuildProgram(prog, '-cl-no-signed-zeros', ierr)
 
 ! get the compilation log
-call clGetProgramBuildInfo(prog, device(2), CL_PROGRAM_BUILD_LOG, source, irec)
+call clGetProgramBuildInfo(prog, device(mcnl%devid), CL_PROGRAM_BUILD_LOG, source, irec)
 if(len(trim(source)) > 0) print*, trim(source)
 
 if(ierr /= CL_SUCCESS) stop 'Error: program build failed.'
