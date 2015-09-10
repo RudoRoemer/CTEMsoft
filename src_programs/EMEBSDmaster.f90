@@ -686,6 +686,7 @@ energyloop: do iE=Estart,1,-1
 ! ---------- end of "create the master reflection list"
 !=============================================
 
+
 ! determine strong and weak reflections
      nullify(firstw)
      nns = 0

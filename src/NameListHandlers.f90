@@ -650,6 +650,7 @@ logical                                 :: skipread = .FALSE.
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: npx
 integer(kind=irg)       :: Esel
+integer(kind=irg)       :: nthreads
 real(kind=sgl)          :: fn(3)
 real(kind=sgl)          :: startthick
 real(kind=sgl)          :: dmin
@@ -662,13 +663,14 @@ logical                 :: distort
 
 ! define the IO namelist to facilitate passing variables to the program.
 namelist /ECPmastervars/ stdout, startthick, dmin, fn, abcdist, albegadist, compmode, &
-    distort, outname, energyfile, Esel, npx
+    distort, outname, energyfile, Esel, npx, nthreads
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 stdout = 6
 startthick = 2.0
 fn = (/0.0, 0.0, 1.0/)
 Esel = -1                       ! selected energy value for single energy run
+nthreads = 1
 dmin = 0.025                    ! smallest d-spacing to include in dynamical matrix [nm]
 npx = 256
 abcdist = (/0.4, 0.4, 0.4/)
@@ -698,6 +700,7 @@ end if
 ecpnl%stdout = stdout
 ecpnl%Esel = Esel
 ecpnl%npx = npx
+ecpnl%nthreads = nthreads
 ecpnl%startthick = startthick
 ecpnl%fn = fn
 ecpnl%abcdist = abcdist

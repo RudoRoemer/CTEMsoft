@@ -734,7 +734,7 @@ integer(kind=irg),INTENT(INOUT)                       :: error_cnt
 
 type(json_value),pointer                              :: p, inp
 
-integer(kind=irg),parameter                           :: n_int = 3, n_real = 2
+integer(kind=irg),parameter                           :: n_int = 4, n_real = 2
 integer(kind=irg)                                     :: io_int(n_int)
 real(kind=dbl)                                        :: io_real(n_real)
 character(20)                                         :: intlist(n_int), reallist(n_real)
@@ -746,10 +746,11 @@ namelistname = 'ECPmastervars'
 call JSON_initpointers(p, inp, jsonname, namelistname, error_cnt)
 
 ! write all the single integers
-io_int = (/ ecpnl%stdout, ecpnl%Esel, ecpnl%npx /)
+io_int = (/ ecpnl%stdout, ecpnl%Esel, ecpnl%npx, ecpnl%nthreads /)
 intlist(1) = 'stdout'
 intlist(2) = 'Esel'
 intlist(3) = 'npx'
+intlist(4) = 'nthreads'
 call JSON_writeNMLintegers(inp, io_int, intlist, n_int, error_cnt)
 
 dataset = 'distort'
@@ -2473,6 +2474,8 @@ else
   call JSONreadInteger(json, ep, ecpnl%npx, defecpnl%npx)
   ep = 'ECPmastervars.Esel'
   call JSONreadInteger(json, ep, ecpnl%Esel, defecpnl%Esel)
+  ep = 'ECPmastervars.nthreads'
+  call JSONreadInteger(json, ep, ecpnl%nthreads, defecpnl%nthreads)
 
   ep = 'ECPmastervars.startthick'
   call JSONreadReal(json, ep, ecpnl%startthick, defecpnl%startthick)
