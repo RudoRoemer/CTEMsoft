@@ -440,6 +440,8 @@ deallocate(accum_z)
 ! should we create a new file or open an existing file?
 !=============================================
 lastEnergy = -1
+outname = trim(EMdatapathname)//trim(emnl%outname)
+
 if (emnl%restart.eqv..TRUE.) then
 ! in this case we need to check whether or not the file exists, then open
 ! it and read the value of the last energy level that was simulated and written
@@ -447,7 +449,9 @@ if (emnl%restart.eqv..TRUE.) then
 ! know that there is at least one more level to be simulated.  If it is equal,
 ! then we can abort the program here.
 
-  inquire(file=trim(emnl%outname), exist=f_exists)
+  write (*,*) 'Searching for ->',trim(outname),'<-'
+
+  inquire(file=trim(outname), exist=f_exists)
   if (.not.f_exists) then 
     call FatalError('ComputeMasterPattern','restart HDF5 file does not exist')
   end if
@@ -460,12 +464,10 @@ if (emnl%restart.eqv..TRUE.) then
   call h5open_f(hdferr)
 
 ! Create a new file using the default properties.
-  outname = trim(EMdatapathname)//trim(emnl%outname)
   readonly = .TRUE.
   hdferr =  HDF_openFile(outname, HDF_head, readonly)
 
 ! all we need to get from the file is the lastEnergy parameter
-! then the remainder of the data in a EMData group
   groupname = 'EMData'
   hdferr = HDF_openGroup(groupname, HDF_head)
 
@@ -488,7 +490,6 @@ else
   call h5open_f(hdferr)
 
 ! Create a new file using the default properties.
-  outname = trim(EMdatapathname)//trim(emnl%outname)
   hdferr =  HDF_createFile(outname, HDF_head)
 
 ! write the EMheader to the file
@@ -687,8 +688,6 @@ energyloop: do iE=Estart,1,-1
      call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, kkk, emnl%dmin, nref, verbose)
 ! ---------- end of "create the master reflection list"
 !=============================================
-
-! lines copied from EMKossel, may need to be modified ... 
 
 ! determine strong and weak reflections
      nullify(firstw)
