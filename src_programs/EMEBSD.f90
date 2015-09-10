@@ -241,7 +241,7 @@ real(kind=dbl)                          :: ixy(2), tmp
 real(kind=sgl),allocatable              :: mask(:,:), lx(:), ly(:)
 character(len=1),allocatable            :: batchpatterns(:,:,:), bpat(:,:)
 integer(kind=irg),allocatable           :: acc_array(:,:)
-real(kind=sgl),allocatable              :: master_array(:,:), wf(:) 
+real(kind=sgl),allocatable              :: master_arrayNH(:,:), master_arraySH(:,:), wf(:) 
 character(len=3)                        :: outputformat
 
 ! parameter for random number generator
@@ -409,11 +409,14 @@ if (enl%energyaverage.eq.1) then
   wf = wf/sum(wf)
 
 ! this is a straightforward sum; we should probably do a weighted sum instead
-  allocate(master_array(-enl%npx:enl%npx,-enl%npy:enl%npy))
+  allocate(master_arrayNH(-enl%npx:enl%npx,-enl%npy:enl%npy))
+  allocate(master_arraySH(-enl%npx:enl%npx,-enl%npy:enl%npy))
   do k=Emin,Emax
-    master%sr(-enl%npx:enl%npx,-enl%npy:enl%npy,k) = master%sr(-enl%npx:enl%npx,-enl%npy:enl%npy,k) * wf(k)
+    master%mLPNH(-enl%npx:enl%npx,-enl%npy:enl%npy,k) = master%mLPNH(-enl%npx:enl%npx,-enl%npy:enl%npy,k) * wf(k)
+    master%mLPSH(-enl%npx:enl%npx,-enl%npy:enl%npy,k) = master%mLPSH(-enl%npx:enl%npx,-enl%npy:enl%npy,k) * wf(k)
   end do
-  master_array = sum(master%sr,3)
+  master_arrayNH = sum(master%mLPNH,3)
+  master_arraySH = sum(master%mLPSH,3)
 end if
 
 ! determine the scale factor for the Lambert interpolation; the square has
@@ -481,18 +484,10 @@ do ibatch=1,nbatches+1
             do j=1,enl%numsy
 ! do the active coordinate transformation for this euler angle
               dc = quat_Lp(angles%quatang(1:4,jang),  (/ master%rgx(i,j),master%rgy(i,j),master%rgz(i,j) /) )
-! make sure the third one is positive; if not, switch all       <----- this may need to be revised !!!
+! normalize dc
               dc = dc/dsqrt(sum(dc*dc))
-              if (dc(3).lt.0.D0) dc = -dc
 ! convert these direction cosines to coordinates in the Rosca-Lambert projection (always square projection !!!)
-              if (enl%sqorhe.eq.'square') then
-                ixy = scl * LambertSphereToSquare( dc, istat )
-              else
-                ixy = scl * LambertSphereToHex( dc, istat )
-                tmp = ixy(1)
-                ixy(1) = ixy(2)
-                ixy(2) = tmp
-              end if
+              ixy = scl * LambertSphereToSquare( dc, istat )
 
               if (istat.eq.0) then 
 ! four-point interpolation (bi-quadratic)
@@ -512,23 +507,50 @@ do ibatch=1,nbatches+1
                 if (enl%energyaverage.eq.1) then
                   if (enl%spatialaverage .eq. 'y') then
                     write(*,*) 'Cannot simultaneously use both energyaverage and spatial average..setting spatialaverage to n'
+                    enl%spatialaverage = 'n'
                   end if
-                  EBSDpattern(i,j) = EBSDpattern(i,j) + acc_array(i,j) * ( master_array(nix,niy) * dxm * dym + &
-                                             master_array(nixp,niy) * dx * dym + master_array(nix,niyp) * dxm * dy + &
-                                             master_array(nixp,niyp) * dx * dy )
+! are we in the Northern or Southern hemisphere ?
+                  if (dc(3).gt.0.0) then 
+                    EBSDpattern(i,j) = EBSDpattern(i,j) + acc_array(i,j) * ( master_arrayNH(nix,niy) * dxm * dym + &
+                                             master_arrayNH(nixp,niy) * dx * dym + master_arrayNH(nix,niyp) * dxm * dy + &
+                                             master_arrayNH(nixp,niyp) * dx * dy )
+                  else
+                    EBSDpattern(i,j) = EBSDpattern(i,j) + acc_array(i,j) * ( master_arraySH(nix,niy) * dxm * dym + &
+                                             master_arraySH(nixp,niy) * dx * dym + master_arraySH(nix,niyp) * dxm * dy + &
+                                             master_arraySH(nixp,niyp) * dx * dy )
+                  end if
+
                 else
-                  if (enl%spatialaverage .eq. 'n') then
-                     do k=Emin,Emax 
-                       EBSDpattern(i,j) = EBSDpattern(i,j) + acc%accum_e_detector(k,i,j) * ( master%sr(nix,niy,k) * dxm * dym + &
-                                               master%sr(nixp,niy,k) * dx * dym + master%sr(nix,niyp,k) * dxm * dy + &
-                                               master%sr(nixp,niyp,k) * dx * dy )
-                     end do
-                  else if (enl%spatialaverage .eq. 'y') then
-                     do k=Emin,Emax 
-                        EBSDpattern(i,j) = EBSDpattern(i,j) + energywf(k) * ( master%sr(nix,niy,k) * dxm * dym + &
-                                               master%sr(nixp,niy,k) * dx * dym + master%sr(nix,niyp,k) * dxm * dy + &
-                                               master%sr(nixp,niyp,k) * dx * dy )
-                     end do
+
+! are we in the Northern or Southern hemisphere ?
+                  if (dc(3).gt.0.0) then 
+                   if (enl%spatialaverage .eq. 'n') then
+                    do k=Emin,Emax 
+                     EBSDpattern(i,j) = EBSDpattern(i,j) + acc%accum_e_detector(k,i,j) * ( master%mLPNH(nix,niy,k) * dxm * dym +&
+                                        master%mLPNH(nixp,niy,k) * dx * dym + master%mLPNH(nix,niyp,k) * dxm * dy + &
+                                        master%mLPNH(nixp,niyp,k) * dx * dy )
+                    end do
+                   else if (enl%spatialaverage .eq. 'y') then
+                    do k=Emin,Emax 
+                     EBSDpattern(i,j) = EBSDpattern(i,j) + energywf(k) * ( master%mLPNH(nix,niy,k) * dxm * dym + &
+                                        master%mLPNH(nixp,niy,k) * dx * dym + master%mLPNH(nix,niyp,k) * dxm * dy + &
+                                        master%mLPNH(nixp,niyp,k) * dx * dy )
+                    end do
+                   end if
+                  else
+                   if (enl%spatialaverage .eq. 'n') then
+                    do k=Emin,Emax 
+                     EBSDpattern(i,j) = EBSDpattern(i,j) + acc%accum_e_detector(k,i,j) * ( master%mLPSH(nix,niy,k) * dxm * dym +&
+                                        master%mLPSH(nixp,niy,k) * dx * dym + master%mLPSH(nix,niyp,k) * dxm * dy + &
+                                        master%mLPSH(nixp,niyp,k) * dx * dy )
+                    end do
+                   else if (enl%spatialaverage .eq. 'y') then
+                    do k=Emin,Emax 
+                     EBSDpattern(i,j) = EBSDpattern(i,j) + energywf(k) * ( master%mLPSH(nix,niy,k) * dxm * dym + &
+                                        master%mLPSH(nixp,niy,k) * dx * dym + master%mLPSH(nix,niyp,k) * dxm * dy + &
+                                        master%mLPSH(nixp,niyp,k) * dx * dy )
+                    end do
+                   end if
                   end if
 
   

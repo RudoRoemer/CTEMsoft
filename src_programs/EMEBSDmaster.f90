@@ -449,8 +449,6 @@ if (emnl%restart.eqv..TRUE.) then
 ! know that there is at least one more level to be simulated.  If it is equal,
 ! then we can abort the program here.
 
-  write (*,*) 'Searching for ->',trim(outname),'<-'
-
   inquire(file=trim(outname), exist=f_exists)
   if (.not.f_exists) then 
     call FatalError('ComputeMasterPattern','restart HDF5 file does not exist')
@@ -624,14 +622,13 @@ energyloop: do iE=Estart,1,-1
     call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,emnl%npx,npy,numk, &
                 SamplingType,ijmax,'RoscaLambert',usehex)
    else 
-! Calckvectors(k,ga,ktmax,npx,npy,numk,isym,ijmax,mapmode,usehex)
     call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,emnl%npx,npy,numk, &
                 SamplingType,ijmax,'RoscaLambert',usehex)
    end if
    io_int(1)=numk
    call WriteValue('# independent beam directions to be considered = ', io_int, 1, "(I8)")
 
-! convert the kvector linked list into arrays for OpenMP
+! convert part of the kvector linked list into arrays for OpenMP
   allocate(karray(4,numk), kij(3,numk),stat=istat)
 ! point to the first beam direction
   ktmp => khead
@@ -760,11 +757,8 @@ energyloop: do iE=Estart,1,-1
 
   deallocate(karray, kij)
 
-! Finally, if this was sampled on a hexagonal array, we need to do barycentric interpolation
-! to the standard square array for final output and use of the subsequent program.
-! [this interpolation scheme must be verified; it is possible that there is an off-by-one error somewhere ...]
 if (usehex) then
-! and finally, we convert the hexgonally sampled array to a square Lambert projection which will be used 
+! and finally, we convert the hexagonally sampled array to a square Lambert projection which will be used 
 ! for all EBSD pattern interpolations;  we need to do this for both the Northern and Southern hemispheres
 
 ! we begin by allocating auxiliary arrays to hold copies of the hexagonal data; the original arrays will
