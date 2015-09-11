@@ -826,10 +826,8 @@ else ! AorD = 'A' so we need to compute the structure matrix using LUTqg ...
 
 ! note that the factor of i pi is added in at the end...
         DynMat = czero
-        call CalcUcg(cell, rlp, (/0,0,0/) )
+        call CalcUcg(cell, rlp, (/0,0,0/),applyqgshift=.TRUE. )
         pq0 = complex(0.D0,1.D0/rlp%xgp)
-
-write (*,*) ' pq0 = ', pq0, rlp%xgp,rlp%Upmod
 
         rlr => listroot%next
         ir = 1
@@ -897,10 +895,8 @@ end if
 
 if (present(BlochMode)) then
   if (BlochMode.eq.'Bloch') then
-!   cv = cmplx(0.D0,-1.D0/cPi/cell%mLambda)
     cv = cmplx(1.D0/cPi/cell%mLambda,0.D0)
     DynMat = DynMat * cv
-write (*,*) 'matrix scaling factor ',cv
   end if
 end if
 
