@@ -632,7 +632,7 @@ if (calcmode.ne.'BLOCHBETHE') then
           allocate(Dyn%DynMat(cell%DynNbeams,cell%DynNbeams),stat=istat)
           Dyn%DynMat = czero
 ! get the absorption coefficient
-          call CalcUcg(cell, rlp, (/0,0,0/) )
+          call CalcUcg(cell, rlp, (/0,0,0/),applyqgshift=.TRUE. )
           Dyn%Upz = rlp%Vpmod
 
 ! are we supposed to fill the off-diagonal part ?
@@ -647,7 +647,7 @@ if (calcmode.ne.'BLOCHBETHE') then
 ! compute Fourier coefficient of electrostatic lattice potential 
              gh = rltmpa%hkl - rltmpb%hkl
              if (calcmode.eq.'D-H-W') then
-              call CalcUcg(cell, rlp,gh)
+              call CalcUcg(cell, rlp,gh,applyqgshift=.TRUE.)
               Dyn%DynMat(ir,ic) = pre*rlp%qg
              else
               Dyn%DynMat(ir,ic) = cell%LUT(gh(1),gh(2),gh(3))

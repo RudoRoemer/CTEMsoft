@@ -648,7 +648,7 @@ IMPLICIT NONE
 type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
 type(ECPMasterNameListType),INTENT(INOUT)             :: ecpnl
 
-integer(kind=irg),parameter                           :: n_int = 4, n_real = 2
+integer(kind=irg),parameter                           :: n_int = 5, n_real = 2
 integer(kind=irg)                                     :: hdferr, io_int(n_int), distort
 real(kind=dbl)                                        :: io_real(n_real)
 character(20)                                         :: intlist(n_int), reallist(n_real)
@@ -665,11 +665,12 @@ if (ecpnl%distort) then
 else 
   distort = 0
 end if
-io_int = (/ ecpnl%stdout, ecpnl%Esel, ecpnl%npx, distort /)
+io_int = (/ ecpnl%stdout, ecpnl%Esel, ecpnl%npx, ecpnl%nthreads, distort /)
 intlist(1) = 'stdout'
 intlist(2) = 'Esel'
 intlist(3) = 'npx'
-intlist(4) = 'distort'
+intlist(4) = 'nthreads'
+intlist(5) = 'distort'
 call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
 ! integer vectors

@@ -380,6 +380,7 @@ end function
 !> @param cell unit cell pointer
 !> @param rlp reciprocal lattice point
 !> @param hkl  Miller indices
+!> @param applyqgshift [optional] multiply qg by exp[i theta_g] if present and .TRUE.
 !
 !> @note CalcPositions must be called before calling this routine
 !
@@ -391,8 +392,9 @@ end function
 !> @date  01/10/14 MDG 4.0 new cell type
 !> @date  06/09/14 MDG 4.1 added cell as argument
 !> @date  12/02/14 MDG 4.2 added voltage as argument
+!> @date  09/11/15 MDG 4.3 added optional argument
 !--------------------------------------------------------------------------
-recursive subroutine CalcUcg(cell,rlp,hkl)
+recursive subroutine CalcUcg(cell,rlp,hkl,applyqgshift)
 
 use crystal
 use symmetry
@@ -404,6 +406,7 @@ IMPLICIT NONE
 type(unitcell),pointer          :: cell
 type(gnode),INTENT(INOUT)       :: rlp
 integer(kind=irg),INTENT(IN)    :: hkl(3)               !< Miller indices
+logical,OPTIONAL,INTENT(IN)     :: applyqgshift
 
 integer(kind=irg)               :: j,absflg,m,ii
 real(kind=sgl)                  :: s,twopi,arg,swk,dwwk,pref,ul,pre,preg,sct,fs,fsp
@@ -622,8 +625,14 @@ if (rlp%method.eq.'WK') then
 
  if (rlp%absorption.eqv..TRUE.) then 
   rlp%ar = rlp%xgp/rlp%xg
-  arg = rlp%Vpphase-rlp%Vphase
-  rlp%qg = cmplx(1.0/rlp%xg-sin(arg)/rlp%xgp,cos(arg)/rlp%xgp)
+  if (present(applyqgshift)) then
+    if (applyqgshift.eqv..TRUE.) then
+      rlp%qg = cmplx(cos(rlp%Vphase)/rlp%xg-sin(rlp%Vpphase)/rlp%xgp,cos(rlp%Vpphase)/rlp%xgp+sin(rlp%Vphase)/rlp%xg))
+    end if
+  else
+    arg = rlp%Vpphase-rlp%Vphase
+    rlp%qg = cmplx(1.0/rlp%xg-sin(arg)/rlp%xgp,cos(arg)/rlp%xgp)
+  end if
  else
   rlp%ar = 0.0
   rlp%qg = cmplx(1.0/rlp%xg,0.0)

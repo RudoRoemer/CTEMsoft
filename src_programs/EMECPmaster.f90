@@ -36,8 +36,9 @@
 !
 !> @brief Zone axis electron channeling master patterns
 !
-!> @date 07/23/14 SS 1.0 rewrite master pattern
-!> @date 05/06/15 SS 1.1 added OpenMP and made master pattern site specific
+!> @date 07/23/14  SS 1.0 rewrite master pattern
+!> @date 05/06/15  SS 1.1 added OpenMP and made master pattern site specific
+!> @date 09/10/15 MDG 1.2 updated Lambert and symmetry stuff
 !--------------------------------------------------------------------------
 
 program EMECPmaster
@@ -82,6 +83,7 @@ end program EMECPmaster
 !
 !> @date 07/23/14  SS  1.0 original
 !> @date 06/05/15  SS  1.1 added OpenMP support and HDF5 support
+!> @date 09/10/15 MDG  1.2 updated Lambert and symmetry stuff
 !--------------------------------------------------------------------------
 subroutine ECmasterpattern(ecpnl, progname, nmldeffile)
 
@@ -122,22 +124,22 @@ integer(kind=irg), allocatable :: acc_z(:,:,:,:),accum_z(:,:,:,:) ! reading from
 integer(kind=irg)       :: io_int_sgl(1), io_int(6) ! integer output variable
 real(kind=dbl)          :: io_real(5) ! real output variable
 
-integer(kind=irg)       :: i, j, isym, pgnum ! variables for point group and Laue group
+integer(kind=irg)       :: i, j, isym, pgnum, SamplingType ! variables for point group and Laue group
 integer(kind=irg),parameter     :: LaueTest(11) = (/ 149, 151, 153, 156, 158, 160, 161, 164, 165, 166, 167 /)  ! space groups with 2 or mirror at 30 degrees
 integer(kind=irg)       :: npyhex, ijmax, numk, skip ! parameters for calckvectors and calcwavelength subroutine
 
 integer(kind=irg)       :: ga(3), gb(3) ! shortest reciprocal lattice vector for zone axis
-real(kind=sgl), allocatable :: thick(:), sr(:,:,:), lambdaZ(:), klist(:,:), knlist(:)
+real(kind=sgl), allocatable :: thick(:), mLPNH(:,:,:), mLPSH(:,:,:), svals(:), lambdaZ(:), klist(:,:), knlist(:), masterSP(:,:,:)
 real(kind=dbl)          :: intthick
 complex(kind=dbl),allocatable   :: Lgh(:,:),Sgh(:,:),Sghtmp(:,:,:)
 complex(kind=dbl),allocatable   :: DynMat(:,:)
 complex(kind=dbl)       :: czero
 
 integer(kind=irg)       :: nt, nns, nnw, tots, totw ! thickness array and BetheParameters strong and weak beams
-real(kind=sgl)          :: FN(3), kk(3), fnat, kn
-integer(kind=irg)       :: numset, nref, ipx, ipy, iequiv(2,12), nequiv, ip, jp, izz, IE, iz, one,ierr
+real(kind=sgl)          :: FN(3), kk(3), fnat, kn, Radius, xy(2)
+integer(kind=irg)       :: numset, nref, ipx, ipy, ipz, iequiv(3,48), nequiv, ip, jp, izz, IE, iz, one,ierr
 integer(kind=irg),allocatable   :: kij(:,:), nat(:)
-real(kind=dbl)          :: res(2)
+real(kind=dbl)          :: res(2), xyz(3)
 
 character(fnlen)        :: oldprogname, energyfile, outname
 character(fnlen)        :: xtalname, groupname
@@ -166,6 +168,25 @@ integer(kind=irg)                   :: nthreads,TID,ix,hdferr,num_el,etotal, nli
 type(HDFobjectStackType),pointer    :: HDF_head
 character(fnlen)                    :: dataset, instring
 integer(HSIZE_T)                    :: dims4(4), cnt4(4), offset4(4), dims3(3), cnt3(3), offset3(3)
+
+interface
+  function InterpolateLambert(dc, master, npx, nf) result(res)
+
+  use local
+  use Lambert
+  use EBSDmod
+  use constants
+  
+  IMPLICIT NONE
+  
+  real(kind=dbl),INTENT(INOUT)            :: dc(3)
+  real(kind=sgl),INTENT(IN)               :: master(-npx:npx,-npx:npx, 1:nf)
+  integer(kind=irg),INTENT(IN)            :: npx 
+  integer(kind=irg),INTENT(IN)            :: nf
+  real(kind=sgl)                          :: res(nf)
+  end function InterpolateLambert
+
+end interface
 
 
 
@@ -288,6 +309,9 @@ call Message(' -> completed reading '//trim(ecpnl%energyfile), frm = "(A//)")
 ! completed reading monte carlo file
 !=============================================
 
+!=============================================
+!=============================================
+! crystallography section
 nullify(cell)
 allocate(cell)
 
@@ -295,39 +319,46 @@ allocate(cell)
 verbose = .TRUE.
 call Initialize_Cell(cell,Dyn,rlp, xtalname, ecpnl%dmin, sngl(1000.0*EkeV),verbose)
 
-! determine the point group and Laue group number
-j=0
-do i=1,32
-    if (SGPG(i).le.cell%SYM_SGnum) j=i
-end do
-isym = j
-pgnum = j
+! determine the point group number
+ j=0
+ do i=1,32
+  if (SGPG(i).le.cell%SYM_SGnum) j=i
+ end do
+ isym = j
 
-isym = PGLaueinv(isym)
+! here is new code dealing with all the special cases (quite a few more compared to the 
+! Laue group case)...  isym is the point group number. Once the symmetry case has been
+! fully determined (taking into account things like 31m and 3m1 an such), then the only places
+! that symmetry is handled are the modified Calckvectors routine, and the filling of the modified
+! Lambert projections after the dynamical simulation step.  We are also changing the name of the 
+! sr array (or srhex) to mLPNH and mLPSH (modified Lambert Projection Northern/Southern Hemisphere),
+! and we change the output HDF5 file a little as well. We need to make sure that the EMEBSD program
+! issues a warning when an old format HDF5 file is read.  
 
-! If the Laue group is # 7, then we need to determine the orientation of the mirror plane.
-! The second orientation of the mirror plane is represented by "Laue group" # 12 in this program.
-switchmirror = .FALSE.
-if (isym.eq.7) then
-    do i=1,11
-        if (cell%SYM_SGnum.eq.LaueTest(i)) switchmirror = .TRUE.
-    end do
+! Here, we encode isym into a new number that describes the sampling scheme; the new schemes are 
+! described in detail in the EBSD manual pdf file.
+
+SamplingType = PGSamplingType(isym)
+
+! next, intercept the special cases (hexagonal vs. rhombohedral cases that require special treatment)
+if (SamplingType.eq.-1) then 
+  SamplingType = getHexvsRho(cell,isym)
 end if
 
-if (switchmirror) then
-    isym = 12
-    call Message(' Switching computational wedge to second setting for this space group', frm = "(A)")
-end if
-
-write (*,*) ' Laue group # ',isym, PGTHD(j)
-
-! if this point group is trigonal or hexagonal, we need to switch usehex to .TRUE. so that
+! if the point group is trigonal or hexagonal, we need to switch usehex to .TRUE. so that
 ! the program will use the hexagonal sampling method
 usehex = .FALSE.
-if (((isym.ge.6).and.(isym.le.9)).or.(isym.eq.12)) usehex = .TRUE.
+if ((cell%xtal_system.eq.4).or.(cell%xtal_system.eq.5)) usehex = .TRUE.
+
 
 if(usehex)  npyhex = nint(2.0*float(ecpnl%npx)/sqrt(3.0))
 ijmax = float(ecpnl%npx)**2   ! truncation value for beam directions
+
+write (*,*) 'space group sampling type = ',SamplingType
+
+! ---------- end of symmetry and crystallography section
+!=============================================
+!=============================================
 
 
 !=============================================
@@ -338,12 +369,11 @@ ijmax = float(ecpnl%npx)**2   ! truncation value for beam directions
 ! numk is the total number of k-vectors to be included in this computation;
 nullify(khead)
 if (usehex) then
-call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,ecpnl%npx,npyhex,numk, &
-isym,ijmax,'RoscaLambert',usehex)
+  call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,ecpnl%npx,npyhex,numk, &
+  SamplingType,ijmax,'RoscaLambert',usehex)
 else
-! Calckvectors(k,ga,ktmax,npx,npy,numk,isym,ijmax,mapmode,usehex)
-call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,ecpnl%npx,ecpnl%npx,numk, &
-isym,ijmax,'RoscaLambert',usehex)
+  call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,ecpnl%npx,ecpnl%npx,numk, &
+  SamplingType,ijmax,'RoscaLambert',usehex)
 end if
 io_int_sgl(1)=numk
 
@@ -352,7 +382,7 @@ call WriteValue('# independent beam directions to be considered = ', io_int_sgl,
 ktmp => khead
 czero = cmplx(0.D0, 0.D0)
 ! force dynamical matrix routine to read new Bethe parameters from file
-call Set_Bethe_Parameters(BetheParameters,.TRUE.)
+!call Set_Bethe_Parameters(BetheParameters,.TRUE.)
 
 nt = nint((depthmax - ecpnl%startthick)/depthstep)
 allocate(thick(nt))
@@ -371,25 +401,23 @@ izz = numzbins
 
 allocate(lambdaZ(1:izz),stat=istat)
 allocate(nat(numset),stat=istat)
-allocate(kij(2,numk),stat=istat)
+allocate(kij(3,numk),stat=istat)
 allocate(klist(3,numk),knlist(numk),stat=istat)
 
 do iz=1,izz
     lambdaZ(iz) = float(sum(accum_z(:,iz,:,:)))/etotal
 end do
 
-kij(1:2,1) = (/ ktmp%i, ktmp%j /)
+kij(1:3,1) = (/ ktmp%i, ktmp%j, ktmp%hs /)
 klist(1:3,1) = ktmp%k
 knlist(1) = ktmp%kn
 
 do i = 2,numk
     ktmp => ktmp%next
-    kij(1:2,i) = (/ ktmp%i, ktmp%j /)
+    kij(1:3,i) = (/ ktmp%i, ktmp%j, ktmp%hs /)
     klist(1:3,i) = ktmp%k
     knlist(i) = ktmp%kn
 end do
-
-open(unit=11,file="test.txt",action="write")
 
 ktmp => khead
 
@@ -398,15 +426,18 @@ fnat = 1.0/float(sum(cell%numat(1:numset)))
 intthick = dble(depthmax)
 
 outname = trim(EMdatapathname)//trim(ecpnl%outname)
-allocate(sr(2*ecpnl%npx+1,2*ecpnl%npx+1,numset),stat=istat)
-sr = 0.0
+allocate(mLPNH(-ecpnl%npx:ecpnl%npx,-ecpnl%npx:ecpnl%npx,numset),stat=istat)
+allocate(mLPSH(-ecpnl%npx:ecpnl%npx,-ecpnl%npx:ecpnl%npx,numset),stat=istat)
+allocate(masterSP(-ecpnl%npx:ecpnl%npx,-ecpnl%npx:ecpnl%npx,numset))
+mLPNH = 0.0
+mLPSH = 0.0
+masterSP = 0.0
 
 nullify(HDF_head)
 ! Initialize FORTRAN interface.
 call h5open_f(hdferr)
 
 ! Create a new file using the default properties.
-outname = trim(EMdatapathname)//trim(ecpnl%outname)
 hdferr =  HDF_createFile(outname, HDF_head)
 
 ! write the EMheader to the file
@@ -458,23 +489,41 @@ hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
 end if
 
 ! create the hyperslab and write zeroes to it for now
-dataset = 'sr'
+dataset = 'mLPNH'
 dims3 = (/  2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
-cnt3 = (/ 2*ecpnl%npx+1, 2*ecpnl%npx+1, 1 /)
+cnt3 = (/ 2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
 offset3 = (/ 0, 0, 0/)
-hdferr = HDF_writeHyperslabFloatArray3D(dataset, sr, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head)
+hdferr = HDF_writeHyperslabFloatArray3D(dataset, mLPNH, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head)
+
+dataset = 'mLPSH'
+dims3 = (/  2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
+cnt3 = (/ 2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
+offset3 = (/ 0, 0, 0/)
+hdferr = HDF_writeHyperslabFloatArray3D(dataset, mLPSH, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head)
+
+dataset = 'masterSP'
+dims3 = (/  2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
+cnt3 = (/ 2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
+offset3 = (/ 0, 0, 0/)
+hdferr = HDF_writeHyperslabFloatArray3D(dataset, masterSP, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head)
 
 call HDF_pop(HDF_head,.TRUE.)
 
 ! and close the fortran hdf interface
 call h5close_f(hdferr)
 
+lambdaZ = lambdaZ * 10000.0
+
+  call OMP_SET_NUM_THREADS(ecpnl%nthreads)
+  io_int(1) = ecpnl%nthreads
+  call WriteValue(' Attempting to set number of threads to ',io_int, 1, frm = "(I4)")
+
 
 !!$OMP PARALLEL default(shared) COPYIN(rlp) &
 !$OMP PARALLEL COPYIN(rlp) &
 !$OMP& PRIVATE(DynMat,Sgh,Sghtmp,Lgh,i,FN,TID,kn,ipx,ipy,ix,ip,iequiv,nequiv,reflist,firstw) &
-!$OMP& PRIVATE(kk,nns,nnw,nref,nat,io_int,io_int_sgl,nthreads) &
-!$OMP& SHARED(sr,tots,totw)
+!$OMP& PRIVATE(kk,nns,nnw,nref,nat,io_int,io_int_sgl,nthreads,svals) 
+!!!!$OMP& SHARED(mLPNH,mLPSH,tots,totw)
 
 nthreads = OMP_GET_NUM_THREADS()
 TID = OMP_GET_THREAD_NUM()
@@ -483,6 +532,7 @@ io_int_sgl(1) = nthreads
 
 if (TID .eq. 0) call WriteValue('Setting number of threads to ', io_int_sgl, 1, "(I8)")
 
+allocate(svals(numset))
 
 !$OMP DO SCHEDULE(DYNAMIC)
 
@@ -495,6 +545,9 @@ beamloop: do i = 1, numk
     call Initialize_ReflectionList(cell, reflist, BetheParameters, FN, kk, ecpnl%dmin, nref)
 
 ! determine strong and weak reflections
+    nullify(firstw)
+    nns = 0
+    nnw = 0
     call Apply_BethePotentials(cell, reflist, firstw, BetheParameters, nref, nns, nnw)
 
     allocate(DynMat(nns,nns))
@@ -502,21 +555,15 @@ beamloop: do i = 1, numk
     call GetDynMat(cell, reflist, firstw, rlp, DynMat, nns, nnw)
 
 ! then we need to initialize the Sgh and Lgh arrays
-    !if (allocated(Sgh)) deallocate(Sgh)
     if (allocated(Lgh)) deallocate(Lgh)
     if (allocated(Sghtmp)) deallocate(Sghtmp)
 
     allocate(Sghtmp(nns,nns,numset),Lgh(nns,nns))
 
-    !Sgh = czero
     Lgh = czero
     Sghtmp = czero
     nat = 0
-
     call CalcSgh(cell,reflist,nns,numset,Sghtmp,nat)
-! sum Sghtmp over the sites
-    !Sgh = sum(Sghtmp,3)
-
 
 ! solve the dynamical eigenvalue equation
     kn = knlist(i)
@@ -524,61 +571,72 @@ beamloop: do i = 1, numk
     call CalcLgh(DynMat,Lgh,intthick,dble(kn),nns,gzero,depthstep,lambdaZ,izz)
     deallocate(DynMat)
 
+! dynamical contributions
+     svals = 0.0
+     do ix=1,numset
+       svals(ix) = real(sum(Lgh(1:nns,1:nns)*Sghtmp(1:nns,1:nns,ix)))
+     end do
+     svals = svals/float(sum(nat(1:numset)))
+
 ! and store the resulting values
 
-!print*, iequiv(1,:)
-
-!print*, nequiv, isym
-!print*, iequiv(1,:)
     ipx = kij(1,i)
     ipy = kij(2,i)
+    ipz = kij(3,i)
 
-!$OMP CRITICAL
-    if (isym.ne.1) then
-        call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
-        iequiv(1,1:nequiv) = iequiv(1,1:nequiv) + ecpnl%npx + 1
-        iequiv(2,1:nequiv) = iequiv(2,1:nequiv) + ecpnl%npx + 1
-        do ix = 1,numset
-            do ip=1,nequiv
-                sr(iequiv(1,ip),iequiv(2,ip),ix) = real(sum(Lgh(1:nns,1:nns)*Sghtmp(1:nns,1:nns,ix)))/float(sum(nat(1:numset)))
-            end do
-        end do
+    if (usehex) then 
+      call Apply3DPGSymmetry(cell,ipx,ipy,ipz,ecpnl%npx,iequiv,nequiv,usehex)
     else
-        do ix = 1,numset
-            sr(ipx+ecpnl%npx+1,ipy+ecpnl%npx+1,ix) = real(sum(Lgh(1:nns,1:nns)*Sghtmp(1:nns,1:nns,ix)))/float(sum(nat(1:numset)))
-        end do
+      if ((cell%SYM_SGnum.ge.195).and.(cell%SYM_SGnum.le.230)) then
+        call Apply3DPGSymmetry(cell,ipx,ipy,ipz,ecpnl%npx,iequiv,nequiv,cubictype=SamplingType)
+      else
+        call Apply3DPGSymmetry(cell,ipx,ipy,ipz,ecpnl%npx,iequiv,nequiv)
+      end if
     end if
+!$OMP CRITICAL
+    do ix=1,nequiv
+      if (iequiv(3,ix).eq.-1) mLPSH(iequiv(1,ix),iequiv(2,ix),1:numset) = svals(1:numset)
+      if (iequiv(3,ix).eq.1) mLPNH(iequiv(1,ix),iequiv(2,ix),1:numset) = svals(1:numset)
+    end do
+!$OMP END CRITICAL
 
     totw = totw + nnw
     tots = tots + nns
 
-!$OMP END CRITICAL
-
-        deallocate(Lgh, Sghtmp)
+    deallocate(Lgh, Sghtmp)
 
     if (mod(i,2500).eq.0) then
         io_int(1) = i
         call WriteValue('  completed beam direction ',io_int, 1, "(I8)")
-! write(*,*) minval(sr),maxval(sr)
     end if
 
     call Delete_gvectorlist(reflist)
-    !write(dataunit) ktmp%k
-! and finally the results array
-    !write (dataunit) sr
 
 end do beamloop
 
 !$OMP END PARALLEL
 
-! since these computations can take a long time, here we store
-! all the output at the end of each pass through the energyloop.
-
-
 io_int(1) = nint(float(tots)/float(numk))
 call WriteValue(' -> Average number of strong reflections = ',io_int, 1, "(I5)")
 io_int(1) = nint(float(totw)/float(numk))
 call WriteValue(' -> Average number of weak reflections   = ',io_int, 1, "(I5)")
+
+
+  Radius = 1.0
+  do i=-ecpnl%npx,ecpnl%npx 
+    do j=-ecpnl%npx,ecpnl%npx 
+      xy = (/ float(i), float(j) /) / float(ecpnl%npx)
+      xyz = StereoGraphicInverse( xy, ierr, Radius )
+      if (ierr.ne.0) then 
+        masterSP(i,j,1:numset) = 0.0
+      else
+        masterSP(i,j,1:numset) = InterpolateLambert(xyz, mLPNH, ecpnl%npx, numset)
+      end if
+    end do
+  end do
+
+
+
 
 ! and here is where the major changes are for this version 5.0: all output now in HDF5 format
 call timestamp(timestring=tstre)
@@ -600,24 +658,32 @@ hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head, overwrite)
 
 call HDF_pop(HDF_head)
 
-do ix = 1,numset
-
     groupname = 'EMData'
     hdferr = HDF_openGroup(groupname, HDF_head)
 
 ! add data to the hyperslab
-    dataset = 'sr'
+    dataset = 'mLPNH'
     dims3 = (/  2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
-    cnt3 = (/ 2*ecpnl%npx+1, 2*ecpnl%npx+1, 1/)
-    offset3 = (/ 0, 0, ix-1 /)
-    hdferr = HDF_writeHyperslabFloatArray3D(dataset, sr, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head, insert)
+    cnt3 = (/ 2*ecpnl%npx+1, 2*ecpnl%npx+1, numset/)
+    offset3 = (/ 0, 0, 0 /)
+    hdferr = HDF_writeHyperslabFloatArray3D(dataset, mLPNH, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head, insert)
+
+    dataset = 'mLPSH'
+    dims3 = (/  2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
+    cnt3 = (/ 2*ecpnl%npx+1, 2*ecpnl%npx+1, numset/)
+    offset3 = (/ 0, 0, 0 /)
+    hdferr = HDF_writeHyperslabFloatArray3D(dataset, mLPSH, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head, insert)
+
+    dataset = 'masterSP'
+    dims3 = (/  2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
+    cnt3 = (/ 2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
+    offset3 = (/ 0, 0, 0/)
+    hdferr = HDF_writeHyperslabFloatArray3D(dataset, masterSP, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head)
 
     call HDF_pop(HDF_head,.TRUE.)
 
 ! and close the fortran hdf interface
     call h5close_f(hdferr)
-
-end do
 
 if ((ecpnl%Esel.eq.-1).and.(ix.eq.1)) then
     call Message('Final data stored in file '//trim(ecpnl%outname), frm = "(A/)")
@@ -625,3 +691,52 @@ end if
 
 
 end subroutine ECmasterpattern
+
+
+function InterpolateLambert(dc, master, npx, nf) result(res)
+
+use local
+use Lambert
+use EBSDmod
+use constants
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(INOUT)            :: dc(3)
+real(kind=sgl),INTENT(IN)               :: master(-npx:npx,-npx:npx, 1:nf)
+integer(kind=irg),INTENT(IN)            :: npx 
+integer(kind=irg),INTENT(IN)            :: nf
+real(kind=sgl)                          :: res(nf)
+
+integer(kind=irg)                       :: nix, niy, nixp, niyp, istat
+real(kind=sgl)                          :: xy(2), dx, dy, dxm, dym, scl
+
+scl = float(npx) 
+
+if (dc(3).lt.0.0) dc = -dc
+
+! convert direction cosines to lambert projections
+xy = scl * LambertSphereToSquare( dc, istat )
+res = 0.0
+
+if (istat.eq.0) then 
+! interpolate intensity from the neighboring points
+  nix = floor(xy(1))
+  niy = floor(xy(2))
+  nixp = nix+1
+  niyp = niy+1
+  if (nixp.gt.npx) nixp = nix
+  if (niyp.gt.npx) niyp = niy
+  dx = xy(1) - nix
+  dy = xy(2) - niy
+  dxm = 1.0 - dx
+  dym = 1.0 - dy
+  
+  res(1:nf) = master(nix,niy,1:nf)*dxm*dym + master(nixp,niy,1:nf)*dx*dym + &
+        master(nix,niyp,1:nf)*dxm*dy + master(nixp,niyp,1:nf)*dx*dy
+end if
+
+end function InterpolateLambert
+
+
+

@@ -165,7 +165,7 @@ logical                                    :: loadingfile
 
 ! first, we deal with the transmitted beam
  gg = (/ 0,0,0 /)
- call CalcUcg(cell,rlp,gg)   
+ call CalcUcg(cell,rlp,gg,applyqgshift=.TRUE.)  
  Dyn%Upz = rlp%Vpmod         ! U'0 normal absorption parameter 
  if (present(verbose)) then
   if (verbose) then
@@ -193,7 +193,7 @@ izl:   do iz=-2*iml,2*iml
         gg = (/ ix, iy, iz /)
         if (IsGAllowed(cell,gg)) then  ! is this reflection allowed by lattice centering ?
 ! add the reflection to the look up table
-           call CalcUcg(cell,rlp,gg )
+           call CalcUcg(cell,rlp,gg,applyqgshift=.TRUE.)
            cell%LUT(ix, iy, iz) = rlp%Ucg
            cell%LUTqg(ix, iy, iz) = rlp%qg
 ! flag this reflection as a double diffraction candidate if cabs(Ucg)<ddt threshold

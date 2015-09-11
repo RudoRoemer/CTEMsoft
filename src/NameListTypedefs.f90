@@ -306,6 +306,7 @@ type ECPMasterNameListType
     integer(kind=irg)       :: stdout
     integer(kind=irg)       :: npx
     integer(kind=irg)       :: Esel
+    integer(kind=irg)       :: nthreads
     real(kind=sgl)          :: fn(3)
     real(kind=sgl)          :: startthick
     real(kind=sgl)          :: dmin
