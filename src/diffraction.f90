@@ -627,7 +627,7 @@ if (rlp%method.eq.'WK') then
   rlp%ar = rlp%xgp/rlp%xg
   if (present(applyqgshift)) then
     if (applyqgshift.eqv..TRUE.) then
-      rlp%qg = cmplx(cos(rlp%Vphase)/rlp%xg-sin(rlp%Vpphase)/rlp%xgp,cos(rlp%Vpphase)/rlp%xgp+sin(rlp%Vphase)/rlp%xg))
+      rlp%qg = cmplx(cos(rlp%Vphase)/rlp%xg-sin(rlp%Vpphase)/rlp%xgp,cos(rlp%Vpphase)/rlp%xgp+sin(rlp%Vphase)/rlp%xg)
     end if
   else
     arg = rlp%Vpphase-rlp%Vphase
