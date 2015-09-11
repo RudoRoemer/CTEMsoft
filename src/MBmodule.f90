@@ -425,13 +425,13 @@ real(kind=sgl)                          :: Znsq, DBWF, kkl
 complex(kind=dbl)                       :: carg
 real(kind=dbl)                          :: ctmp(192,3),arg, tpi
 type(reflisttype),pointer               :: rltmpa, rltmpb
-
+  
   tpi = 2.D0 * cPi
   Sgh = dcmplx(0.D0,0.D0)
-
+  allocate(carg2(nn,nn))
+  carg2 = dcmplx(0.D0,0.D0)
 ! for each special position we need to compute its contribution to the Sgh array
   do ip=1,cell % ATOM_ntype
-    call CalcOrbit(cell,ip,n,ctmp)
     nat(ip) = cell%numat(ip)
 ! get Zn-squared for this special position, and include the site occupation parameter as well
     Znsq = float(cell%ATOM_type(ip))**2 * cell%ATOM_pos(ip,4)
@@ -443,7 +443,9 @@ type(reflisttype),pointer               :: rltmpa, rltmpb
 ! ic is the column index
       rltmpb => reflist%next    ! point to the front of the list
       do ic=1,nn
+        call CalcUcg(cell, rlpb, rltmpb%hkl )
         kkk = rltmpb%hkl - rltmpa%hkl
+        deltheta = rlpb%Vphase - rlpa%Vphase
 ! We'll assume isotropic Debye-Waller factors for now ...
 ! That means we need the square of the length of s=  kk^2/4
         kkl = 0.25 * CalcLength(cell,float(kkk),'r')**2
@@ -463,10 +465,9 @@ type(reflisttype),pointer               :: rltmpa, rltmpb
         rltmpb => rltmpb%nexts  ! move to next column-entry
       end do
      rltmpa => rltmpa%nexts  ! move to next row-entry
-   end do  
+   end do
   end do
-  
-end subroutine CalcSgh
+  end subroutine CalcSgh
 
 !--------------------------------------------------------------------------
 !
@@ -829,7 +830,7 @@ else ! AorD = 'A' so we need to compute the structure matrix using LUTqg ...
         call CalcUcg(cell, rlp, (/0,0,0/) )
         pq0 = complex(0.D0,1.D0/rlp%xgp)
 
-write (*,*) ' pq0 = ', pq0, rlp%xgp,rlp%Upmod
+!write (*,*) ' pq0 = ', pq0, rlp%xgp,rlp%Upmod
 
         rlr => listroot%next
         ir = 1
@@ -900,7 +901,7 @@ if (present(BlochMode)) then
 !   cv = cmplx(0.D0,-1.D0/cPi/cell%mLambda)
     cv = cmplx(1.D0/cPi/cell%mLambda,0.D0)
     DynMat = DynMat * cv
-write (*,*) 'matrix scaling factor ',cv
+!write (*,*) 'matrix scaling factor ',cv
   end if
 end if
 
@@ -917,10 +918,8 @@ end subroutine GetDynMat
 !
 !> @param cell unit cell pointer
 !> @param listroot top of the main reflection list
-!> @param listrootw top of the weak reflection list
-!> @param Dyn dynamical scattering structure
-!> @param nns number of strong reflections
-!> @param nnw number of weak reflections
+!> @param DynMat dynamical scattering structure
+!> @param nref number of strong reflections
 !
 !> @date  04/22/14 MDG 1.0 new library version
 !> @date  06/15/14 MDG 2.0 updated for removal of globals
@@ -1138,7 +1137,7 @@ do ii = 1,nns_film
 
     refliststrongtmp2 => refliststrong_subs
     do jj = 1,nns_film
-!if (ii .eq. jj) then
+!if (ii .ge. jj) then
         nns2 = refliststrongtmp2%nns
 
         Sg = czero
@@ -1206,11 +1205,12 @@ do ii = 1,nns_film
 
         Sigmagg(ii,jj) = real(sum(Lhhp(1:nns1,1:nns2)*Shhp(1:nns1,1:nns2)))
         Sigmagg(ii,jj) = Sigmagg(ii,jj)/4.0!/dcmplx(dble(substhickness),0.D0)
-!print*,'Function call = ',Sigmagg(ii,jj)
+!        if (ii .ne. jj) Sigmagg(jj,ii) = Sigmagg(ii,jj)
+!print*,'Beam #',ii,'for function; sigmagg = ' = ',Sigmagg(ii,jj)
 !stop
 !end if
 
-!end if
+end if
         refliststrongtmp2 => refliststrongtmp2%next
     end do
     
