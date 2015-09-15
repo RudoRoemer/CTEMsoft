@@ -678,7 +678,7 @@ call HDF_pop(HDF_head)
     dims3 = (/  2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
     cnt3 = (/ 2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
     offset3 = (/ 0, 0, 0/)
-    hdferr = HDF_writeHyperslabFloatArray3D(dataset, masterSP, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head)
+    hdferr = HDF_writeHyperslabFloatArray3D(dataset, masterSP, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head, insert)
 
     call HDF_pop(HDF_head,.TRUE.)
 

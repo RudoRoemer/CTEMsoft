@@ -136,7 +136,7 @@ While there is no basic reason why this code should not work on Windows and Linu
 It would be interesting to see some of this code implemented in a super computer setting, since many of the routines should be quite parallellizable.  Where possible, computations
 are carried out using OpenMP directives, so that multiple cores can be used.  The Monte Carlo code uses OpenCL to run on a GPU card, if one is avallable.
 
-The \ctp\ package is entirely written in f03 and uses several of the newer commands available in the 95 and 2013 versions.
+The \ctp\ package is entirely written in f03 and uses several of the newer features available in the 95 and 2013 versions.
 The source code is extensively commented, using regular comment lines, but also using DOxygen documentation generation commands.  Hence
 there exists an extensive on-line documentation of all variables, variable types, modules, subroutines, functions, etc. for the latest version 
 of the code.  For selected programs, more extensive manual pages are available.  If interested, please contact the author for further information.
@@ -154,8 +154,9 @@ In version 3.x, we have made the following changes:
 	\item \textsf{EMmkxtal} now employs the HDF5 output format for the .xtal files.
 	\item \textsf{EMMCOpenCL} now uses an OpenCL kernel routine to perform the Monte Carlo simulation on a GPU, if one is available.  This results in significant acceleration compared to the single CPU or multi-core CPU routines from version 2.0.  Speed up factors of between $200\times$ and $300\times$ have been measured with respect to the single CPU code.
 %	\item \textsf{EMEBSDmaster} has been rewritten using the scattering matrix approach instead of the more traditional Bloch wave approach.  As a result, the bulk of the computation can once again be shifted onto a GPU; the GPU computes the exponential of the dynamical matrix using the modified/optimized Taylor expansion approach created by C. Koch and co-workers.
-	\item \textsf{EMEBSDmaster} has been rewritten using OpenMP directives and is hence significantly faster than before.
-	\item \textsf{EMEBSD}, for now, remains unchanged, except for the symmetry handling which now includes full support for the hexagonal Lambert grid.
+	\item \textsf{EMEBSDmaster} has been rewritten using OpenMP directives and is hence significantly faster than before; despite this rewrite, this program 
+	remains the main computational bottleneck.  The program now uses both Northern and Southern hemispheres for the representation of the master patterns; this is a change with respect to the older version, but it allows the programs to be valid for all crystallographic symmetries (with the exception of the rhombohedral setting of the trigonal system, which remains to be implemented).
+	\item \textsf{EMEBSD}, remains mostly unchanged, with minor modifications.
 	\item HDF5 support: all three programs now use HDF5 as their output format.
 \end{itemize}
 
@@ -313,107 +314,113 @@ which causes a bit of a problem.  In addition, for both the tetragonal and hexag
 that has two settings ($\bar{4}2m/\bar{4}m2$ and $\bar{6}m2/\bar{6}2m$), and this must be taken into account when deciding 
 what the asymmetric unit is for k-space sampling.
 
-Fig.~\ref{fig:xxx} shows the $42$ cases for all point group settings; for each case, two circles are shown, representing the 
-stereographic projections of the Northern and Southern hemispheres, labeled $NH$ and $SH$; the number between the two
-circles is the point group number.  The number on the left indicates the case number, whereas the number to the right of $SH$
-indicates the unique case number; several cases end up having the same sampling scheme.  So, in total, there are XX unique
+Fig.~\ref{fig:hemispheres} shows the $42$ cases for all point group settings; for each case, two circles are shown, representing the 
+stereographic projections of the Northern and Southern hemispheres, labeled $NH$ and $SH$; the green number between the two
+circles is the point group number.  The black number on the left indicates the case number, whereas the red number to the right of $SH$
+indicates the unique case number; several cases end up having the same sampling scheme.  So, in total, there are 19 unique
 sampling schemes; these are implemented in the \textsf{kvectors} module.  To determine the proper sampling scheme, the 
 \textsf{EMEBSDmaster} program uses both the space group number and the point group symmetry; this is all done automatically
-behind the scenes.  
+behind the scenes.  In cases where the SH projection is blank, this means that all points in this projection are generated from the 
+corresponding NH section by symmetry operations.
 
-For the rhombohedral setting of the trigonal space groups, a problem arises: the three-fold rotation axis lies along the 
-trigonal $[111]$ direction, not along the $\mathbf{c}^{\ast}$ axis, as is the case for nearly all other symmetry groups. To apply the 
-symmetry operations in the context of the master pattern approach, we must rotate the asymmetric sampling unit to fall 
-around the threefold axis, but this axis does not lie at the center of the master pattern. This is not an easy case to implement.
-On the one hand, the hexagonal Lambert projection requires the three-fold axis to lie at the pattern center. On the other hand,
-for a given set of trigonal lattice parameters, $(a,\alpha)$, in rhombohedral setting, in the standard crystallographic orientation
-the $\mathbf{c}^{\ast}$ axis will lie at the pattern center.  To properly apply the trigonal symmetry, we must determine the 
-transformation that takes a $\mathbf{k}$ vector between the two coordinate systems.  The $\mathbf{a}$ and $\mathbf{b}$ axes
-lie in the plane of the Lambert projection, with an angle $\alpha$ between them.  It is not too difficult to figure out how to
-map the rhombohedral system onto the hexagonal Lambert grid.  First, the $[111]_r$ direction must be rotated into the $x-z$
-plane by a counterclockwise rotation around the $x$ axis by an angle that depends on the rhombohedral $\alpha$ angle; the 
-corresponding rotation matrix is given by:
-\begin{equation}
-	R_x(\alpha) = \left(\begin{array}{ccc}
-	1 & 0 & 0\\
-	0 & x & -\sqrt{1-x^2}\\
-	0 & \sqrt{1-x^2} & x\end{array}\right)\qquad\text{with}\quad x\equiv\frac{1}{2}\sec\frac{\alpha}{2}.
-\end{equation}
-Then the rotated $[111]_r$ must be rotated clockwise around the $y$ axis by the following matrix:
-\begin{equation}
-	R_y(\alpha) = \left(\begin{array}{ccc}
-	y & 0 & -\sqrt{1-y^2}\\
-	0 & 1 & 0\\
-	\sqrt{1-y^2} & 0 & y\end{array}\right)\qquad\text{with}\quad y\equiv\frac{2}{\sqrt{3}}\sin\frac{\alpha}{2}.
-\end{equation}
-The complete transformation matrix (called \textsf{trigmat} in the \textsf{cell} structure), is then given by
-the product:
-\begin{equation}
-	t = R_y(\alpha) R_x(\alpha) d(a,\alpha)
-\end{equation}
-where $d(a,\alpha)$ is the direct structure matrix for the rhombohedral system:
-\begin{equation}
-	d(a,\alpha)\equiv = a\left(\begin{array}{ccc}
-	1 & \cos\alpha & \cos\alpha \\
-	0 & \sin\alpha & -\cos\alpha\tan\frac{\alpha}{2}\\
-	0 & 0 & \tan\frac{\alpha}{2}\sqrt{2\cos\alpha+1}\end{array}\right).
-\end{equation}
-Application of the matrix $t$ to the rhombohedral direction $[111]_r$ produces a vector along the $z$ direction normal to the 
-hexagonal Lambert projection; application to $[100]_r$ produces a vector in the $x-z$ plane.
+Note that for the cubic symmetry groups, we use lower symmetry cases to make sure that the complete square Lambert array
+is properly filled without interpolations.  This means that cubic symmetry takes longer to compute than it should, and we are 
+actively researching alternative approaches that would permit the highest possible resolution Lambert projections for the 
+shortest possible execution time.
 
-
-Fig.~\ref{fig:Laue-hemispheres} shows the nine unique asymmetric units for the $11$ Laue groups; six of them will be sampled on a square grid 
-(orange units), the other $3$ on a hexagonal grid.  The symbols labeling each stereographic circle represent the Laue point group,
-followed by the point group order.  
+For the (obverse) rhombohedral setting of the trigonal space groups, the implementation of the Lambert projections has 
+not yet been worked out; this should not be a problem, since those space groups can always be treated in the hexagonal
+setting.  A full symmetry implementation for the obverse rhombohedral case will become available in one of the next releases
+of \textsf{EMsoft}.  The main issue preventing a simple implementation is the fact that the center axis of the Lambert projection
+is always taken along $\mathbf{c}^{\ast}$, whereas the highest symmetry rotation axis in the rhombohedral case lies along the 
+$[111]_r$ direction, which obviously does not coincide with $\mathbf{c}^{\ast}$.  This will require special treatment, most likely 
+via the coordinate transformation relating the rhombohedral and hexagonal settings (not difficult, but sufficiently different 
+from the treatment of the other point groups that some special code will be required).
 
 \begin{figure}[t]
 \centering\leavevmode
-\epsffile{figs/Laue-hemispheres}
-\caption{\label{fig:Laue-hemispheres}Asymmetric units for the $11$ Laue groups, drawn on stereographic projections.}
+\epsfxsize=6.5in\epsffile{figs/hemispheres}
+\caption{\label{fig:hemispheres}Asymmetric units for the $32$ point groups, drawn on Northern and Southern stereographic projections.}
 \end{figure}
 
-The real space direction $\mathbf{a}_1$ is parellel to the $X$ axis of the sampling grid, and the reciprocal $\mathbf{a}_3^{\ast}$ direction
-is normal to the sampling grid.  All other directions are then uniquely fixed.  The square grid has its own planar symmetry group $4mm$,
-which is compatible with all of the Laue groups on the top two rows.  If we consider the Laue group $m\bar{3}$, then 
-we will run into a problem with the implementation of the three-fold rotation axis.  The points that are equivalent with the simulated points
-inside the shaded area will not, in general, fall on grid points.  Because of this, we must perform the EBSD simulations for all grid points
-corresponding to an octant of the projection sphere for all Laue symmetries of $mmm$, $4/m$ and $m\bar{3}$, resulting in a symmetry speed-up by a factor $4$.  For Laue groups 
-$4/mmm$ and $m\bar{3}m$, we use the $45^{\circ}$ wedge shape, resulting in a speed-up by a factor of $8$.  For the triclinic and monoclinic cases we use the entire hemisphere
-or half a hemisphere, respectively.
-For the hexagonal sampling grid, the proper choices are obvious from the drawing, and make use of the hexagonal modified Lambert mapping described
-in the previous section.
+%
+%For the rhombohedral setting of the trigonal space groups, a problem arises: the three-fold rotation axis lies along the 
+%trigonal $[111]$ direction, not along the $\mathbf{c}^{\ast}$ axis, as is the case for nearly all other symmetry groups. To apply the 
+%symmetry operations in the context of the master pattern approach, we must rotate the asymmetric sampling unit to fall 
+%around the threefold axis, but this axis does not lie at the center of the master pattern. This is not an easy case to implement.
+%On the one hand, the hexagonal Lambert projection requires the three-fold axis to lie at the pattern center. On the other hand,
+%for a given set of trigonal lattice parameters, $(a,\alpha)$, in rhombohedral setting, in the standard crystallographic orientation
+%the $\mathbf{c}^{\ast}$ axis will lie at the pattern center.  To properly apply the trigonal symmetry, we must determine the 
+%transformation that takes a $\mathbf{k}$ vector between the two coordinate systems.  The $\mathbf{a}$ and $\mathbf{b}$ axes
+%lie in the plane of the Lambert projection, with an angle $\alpha$ between them.  It is not too difficult to figure out how to
+%map the rhombohedral system onto the hexagonal Lambert grid.  First, the $[111]_r$ direction must be rotated into the $x-z$
+%plane by a counterclockwise rotation around the $x$ axis by an angle that depends on the rhombohedral $\alpha$ angle; the 
+%corresponding rotation matrix is given by:
+%\begin{equation}
+%	R_x(\alpha) = \left(\begin{array}{ccc}
+%	1 & 0 & 0\\
+%	0 & x & -\sqrt{1-x^2}\\
+%	0 & \sqrt{1-x^2} & x\end{array}\right)\qquad\text{with}\quad x\equiv\frac{1}{2}\sec\frac{\alpha}{2}.
+%\end{equation}
+%Then the rotated $[111]_r$ must be rotated clockwise around the $y$ axis by the following matrix:
+%\begin{equation}
+%	R_y(\alpha) = \left(\begin{array}{ccc}
+%	y & 0 & -\sqrt{1-y^2}\\
+%	0 & 1 & 0\\
+%	\sqrt{1-y^2} & 0 & y\end{array}\right)\qquad\text{with}\quad y\equiv\frac{2}{\sqrt{3}}\sin\frac{\alpha}{2}.
+%\end{equation}
+%The complete transformation matrix (called \textsf{trigmat} in the \textsf{cell} structure), is then given by
+%the product:
+%\begin{equation}
+%	t = R_y(\alpha) R_x(\alpha) d(a,\alpha)
+%\end{equation}
+%where $d(a,\alpha)$ is the direct structure matrix for the rhombohedral system:
+%\begin{equation}
+%	d(a,\alpha)\equiv = a\left(\begin{array}{ccc}
+%	1 & \cos\alpha & \cos\alpha \\
+%	0 & \sin\alpha & -\cos\alpha\tan\frac{\alpha}{2}\\
+%	0 & 0 & \tan\frac{\alpha}{2}\sqrt{2\cos\alpha+1}\end{array}\right).
+%\end{equation}
+%Application of the matrix $t$ to the rhombohedral direction $[111]_r$ produces a vector along the $z$ direction normal to the 
+%hexagonal Lambert projection; application to $[100]_r$ produces a vector in the $x-z$ plane.
 
-\subsection{Barycentric Coordinates \label{sec:barycentric}}
+\subsection{Hexagonal Lambert patterns \label{sec:hexagonal}}
 For the hexagonal and trigonal Laue symmetries, the \textsf{EMEBSDmaster} program samples the electron beam directions on 
 a hexagonal grid, so that the symmetry elements can be implemented properly.  Subsequently, this grid is transformed to a standard
-square grid for further processing in the \textsf{EMEBSD} program.  The transformation is performed using barycentric coordinates\footnote{See, for
-instance, \textit{http://en.wikipedia.org/wiki/Barycentric\_coordinate\_system} or \textit{http://mathworld.wolfram.com/ BarycentricCoordinates.html} for details.}
-for the interpolation.  Referring to the hexagonal and square grids in Fig.~\ref{fig:bary}, 
-the interpolated intensity $I_p(h)$ in a point that lies a 
-distance $h$ above the base $1$--$2$ of a triangle with top $3$ is given by:
-\[
-	I_p(h) = (I_1+I_2)\lambda+(1-2\lambda) I_3\quad\text{with}\quad \lambda=\frac{1}{2} - \frac{h}{\delta\sqrt{3}},
-\]
-where $\delta$ is the step size along the horizontal direction.  The hexagonal grid points $(i,j)$ then 
-lie on cartesian positions with coordinates $(x,y)=(i_h\delta-j_h\delta/2,j_h\delta\sqrt{3}/2)$.  With the exception of 
-the grid points with $j_h=0$, the value of $h$ is always non-zero.  It is not too difficult to distinguish between
-triangles with apex $3$ pointing upward or downward.
+square grid for further processing in the \textsf{EMEBSD} program.  This transformation is achieved by going through the square grid, 
+for each point determining the unit vector on the projection hemisphere, and then projecting down into the hexagonal grid using 
+bilinear interpolation.  The output of the \textsf{EMEBSDmaster} program is all encoded on the square Lambert grid; the hexagonal
+grid is only used inside this program and is not visible to the user.
 
-\begin{figure}[h]
-\centering
-\includegraphics[width=4in]{figs/bary}
-\caption{Correspondence between hexagonal and square sampling grids used for barycentric interpolation.} \label{fig:bary}
-\end{figure}
 
-Summarizing, the master pattern for structures with hexagonal or trigonal symmetry is computed by sampling incident beam directions
-on a hexagonal grid (limited to the corresponding asymmetric unit); these grid points correspond to incident beam directions according 
-to the modified Lambert mapping introduced in section~\ref{sec:Lambert}.  Once all EBSD intensities have been computed, the symmetry
-elements are applied, and the hexagonal grid is interpolated onto a standard square grid using the barycentric approach described above.
-From then on, there is no further need for a distinction between hexagonal/trigonal and other symmetries (i.e., only the master pattern
-computation in \textsf{EMEBSDmaster} needs to distinguish between the different Laue symmetries).
-
-{\color{blue}Note that at the time of writing of this manual, the hexagonal/trigonal case is not yet completely validated; this is ongoing work
-and the source files will be updated if modifications are needed.}
+%e transformation is performed using barycentric coordinates\footnote{See, for
+%instance, \textit{http://en.wikipedia.org/wiki/Barycentric\_coordinate\_system} or \textit{http://mathworld.wolfram.com/ BarycentricCoordinates.html} for details.}
+%for the interpolation.  Referring to the hexagonal and square grids in Fig.~\ref{fig:bary}, 
+%the interpolated intensity $I_p(h)$ in a point that lies a 
+%distance $h$ above the base $1$--$2$ of a triangle with top $3$ is given by:
+%\[
+%	I_p(h) = (I_1+I_2)\lambda+(1-2\lambda) I_3\quad\text{with}\quad \lambda=\frac{1}{2} - \frac{h}{\delta\sqrt{3}},
+%\]
+%where $\delta$ is the step size along the horizontal direction.  The hexagonal grid points $(i,j)$ then 
+%lie on cartesian positions with coordinates $(x,y)=(i_h\delta-j_h\delta/2,j_h\delta\sqrt{3}/2)$.  With the exception of 
+%the grid points with $j_h=0$, the value of $h$ is always non-zero.  It is not too difficult to distinguish between
+%triangles with apex $3$ pointing upward or downward.
+%
+%\begin{figure}[h]
+%\centering
+%\includegraphics[width=4in]{figs/bary}
+%\caption{Correspondence between hexagonal and square sampling grids used for barycentric interpolation.} \label{fig:bary}
+%\end{figure}
+%
+%Summarizing, the master pattern for structures with hexagonal or trigonal symmetry is computed by sampling incident beam directions
+%on a hexagonal grid (limited to the corresponding asymmetric unit); these grid points correspond to incident beam directions according 
+%to the modified Lambert mapping introduced in section~\ref{sec:Lambert}.  Once all EBSD intensities have been computed, the symmetry
+%elements are applied, and the hexagonal grid is interpolated onto a standard square grid using the barycentric approach described above.
+%From then on, there is no further need for a distinction between hexagonal/trigonal and other symmetries (i.e., only the master pattern
+%computation in \textsf{EMEBSDmaster} needs to distinguish between the different Laue symmetries).
+%
+%{\color{blue}Note that at the time of writing of this manual, the hexagonal/trigonal case is not yet completely validated; this is ongoing work
+%and the source files will be updated if modifications are needed.}
 
 \newpage
 \subsection{Monte Carlo Simulations \label{sec:MC}}
