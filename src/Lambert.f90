@@ -143,8 +143,10 @@ end interface
 !
 
 ! auxiliary private functions for the cube to sphere mappings
-private :: GetPyramidSingle
-private :: GetPyramidDouble
+!private :: GetPyramidSingle
+!private :: GetPyramidDouble
+public:: GetPyramidSingle
+public:: GetPyramidDouble
 
 
 ! here we also add the simple stereographic projection
@@ -932,7 +934,6 @@ integer(kind=irg)               :: p
 eps = 1.0D-8
 
 ierr = 0
-!if (maxval(dabs(xyzin)).gt.LPs%ap/2.D0) then
 if (maxval(dabs(xyzin)).gt.(LPs%ap/2.D0+eps)) then
   res = (/ 0.D0, 0.D0, 0.D0 /)
   ierr = 1
@@ -962,14 +963,16 @@ else
     LamXYZ = (/ 0.D0, 0.D0, LPs%pref * XYZ(3) /)
   else  ! this is a general grid point
     if (dabs(XYZ(2)).le.dabs(XYZ(1))) then
-      c = dcos(LPs%pi12 * XYZ(2)/XYZ(1))
-      s = dsin(LPs%pi12 * XYZ(2)/XYZ(1))
+      q = LPs%pi12 * XYZ(2)/XYZ(1)
+      c = dcos(q)
+      s = dsin(q)
       q = LPs%prek * XYZ(1) / dsqrt(LPs%r2-c)
       T1 = (LPs%r2*c - 1.D0) * q
       T2 = LPs%r2 * s * q
     else
-      c = dcos(LPs%pi12 * XYZ(1)/XYZ(2))
-      s = dsin(LPs%pi12 * XYZ(1)/XYZ(2))
+      q = LPs%pi12 * XYZ(1)/XYZ(2)
+      c = dcos(q)
+      s = dsin(q)
       q = LPs%prek * XYZ(2) / dsqrt(LPs%r2-c)
       T1 = LPs%r2 * s * q
       T2 = (LPs%r2*c - 1.D0) * q

@@ -73,12 +73,12 @@ IMPLICIT NONE
 ! quat_LPstar ALWAYS returns a passive result.
 
 ! Uncomment these for an alternative way of doing things
-real(kind=sgl), parameter :: epsijk = -1.0
-real(kind=dbl), parameter :: epsijkd = -1.D0
+!real(kind=sgl), parameter :: epsijk = -1.0
+!real(kind=dbl), parameter :: epsijkd = -1.D0
 
 ! uncomment these for the Morawiec version.
-!real(kind=sgl), parameter :: epsijk = 1.0
-!real(kind=dbl), parameter :: epsijkd = 1.D0
+real(kind=sgl), parameter :: epsijk = 1.0
+real(kind=dbl), parameter :: epsijkd = 1.D0
 
 ! In the first case, epsijk=-1, the rotation 120@[111] will result in 
 ! an axis angle pair of [111], 2pi/3.  In the second case, the axis-angle 
@@ -243,11 +243,6 @@ type LambertParametersType
 end type LambertParametersType
 
 type(LambertParametersType)        :: LPs
-
-
-
-
-! Following numbers are coefficients used to calculate the exponential of a matrix
 
 
 ! The following two arrays are used to determine the FZtype (FZtarray) and primary rotation axis order (FZoarray)
