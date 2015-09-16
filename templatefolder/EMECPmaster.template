@@ -7,18 +7,8 @@ stdout = 6
 npx = 1024
 ! smallest d-spacing to take into account [nm]
 dmin = 0.05
-! foil normal
-fn = 0,0,1
 ! Data storage options
 Esel = -1
-! starting thickness [nm]
-startthick = 2.0
-! should a distorted unit cell be used ? (.FALSE. or .TRUE.)
-distort = .FALSE.
-! distorted lattice parameters [nm]
-abcdist = 0.4, 0.4, 0.4
-! distorted lattice angles [degrees]
-albegadist = 90.0, 90.0, 90.0
 ! name of output file (to be read by IDL visualization routine)
 outname = 'ECPmasterout.data'
 ! name of the energy statistics file produced by CTEMMC program [note that

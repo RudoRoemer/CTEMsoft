@@ -52,7 +52,8 @@ IMPLICIT NONE
 public :: SampleRFZ, IsinsideFZ, CubochoricNeighbors
 
 ! logical functions to determine if point is inside specific FZ
-private :: insideCyclicFZ, insideDihedralFZ, insideCubicFZ
+!private :: insideCyclicFZ, insideDihedralFZ, insideCubicFZ
+public:: insideCyclicFZ, insideDihedralFZ, insideCubicFZ
 
 
 contains
@@ -311,6 +312,7 @@ end function insideCubicFZ
 !
 !> @date 05/12/14  MDG 1.0 original
 !> @date 10/02/14  MDG 2.0 rewrite, removed all globals, added function arguments
+!> @date 09/15/15  MDG 2.1 removed explicit origin allocation; changed while to do loops.
 !--------------------------------------------------------------------------
 recursive subroutine SampleRFZ(nsteps,pgnum,FZcnt,FZlist)
 
@@ -325,15 +327,14 @@ integer(kind=irg), INTENT(IN)        :: pgnum
 integer(kind=irg),INTENT(OUT)        :: FZcnt                ! counts number of entries in linked list
 type(FZpointd),pointer,INTENT(OUT)   :: FZlist               ! pointers
 
-real(kind=dbl)                       :: x, y, z, s, rod(4), delta, rval
+real(kind=dbl)                       :: x, y, z, rod(4), delta
 type(FZpointd), pointer              :: FZtmp, FZtmp2
-integer(kind=irg)                    :: FZtype, FZorder
+integer(kind=irg)                    :: FZtype, FZorder, i, j, k
+logical                              :: b
 
-! cube semi-edge length
-s = 0.5D0 * LPs%ap
-
+! cube semi-edge length s = 0.5D0 * LPs%ap
 ! step size for sampling of grid; total number of samples = (2*nsteps+1)**3
-delta = s/dble(nsteps)
+delta = (0.5D0 * LPs%ap) / dble(nsteps)
 
 ! set the counter to zero
 FZcnt = 0
@@ -353,53 +354,46 @@ else
   nullify(FZlist)
 end if
 
-! we always want the identity rotation to be the first one on the list
-! it is automatically skipped later on...
-allocate(FZlist)
-FZtmp => FZlist
-nullify(FZtmp%next)
-FZtmp%rod = (/ 0.D0, 0.D0, 0.D0, 0.D0 /)
-FZcnt = 1
-
 ! determine which function we should call for this point group symmetry
 FZtype = FZtarray(pgnum)
 FZorder = FZoarray(pgnum)
 
-
 ! loop over the cube of volume pi^2; note that we do not want to include
 ! the opposite edges/facets of the cube, to avoid double counting rotations
 ! with a rotation angle of 180 degrees.  This only affects the cyclic groups.
-x = -s
-do while (x.lt.s)
-  y = -s
-  do while (y.lt.s)
-    z = -s
-    do while (z.lt.s)
+
+ do i=-nsteps,nsteps-1
+  x = dble(i)*delta
+  do j=-nsteps,nsteps-1
+   y = dble(j)*delta
+   do k=-nsteps,nsteps-1
+    z = dble(k)*delta
 
 ! convert to Rodrigues representation
       rod = cu2ro( (/ x, y, z /) )
 
 ! If insideFZ=.TRUE., then add this point to the linked list FZlist and keep
 ! track of how many points there are on this list
-       if (IsinsideFZ(rod,FZtype,FZorder)) then 
-        allocate(FZtmp%next)
-        FZtmp => FZtmp%next
-        nullify(FZtmp%next)
-        FZtmp%rod = rod
-        FZcnt = FZcnt + 1
+       b = IsinsideFZ(rod,FZtype,FZorder)
+       if (b) then 
+        if (.not.associated(FZlist)) then
+          allocate(FZlist)
+          FZtmp => FZlist
+          nullify(FZtmp%next)
+          FZcnt = 1
+          FZtmp%rod = rod
+        else
+          allocate(FZtmp%next)
+          FZtmp => FZtmp%next
+          nullify(FZtmp%next)
+          FZtmp%rod = rod
+          FZcnt = FZcnt + 1
+        end if
        end if
 
-    z = z + delta
   end do
-  y = y + delta
  end do
- x = x + delta
 end do
-
-! that's it.
-!write (*,*) 'pgnum, nsteps, delta, s = ',pgnum, nsteps,delta,s
-!write (*,*) 'FZtype, FZorder = ',FZtype,FZorder
-!write (*,*) 'FZcnt = ',FZcnt
 
 end subroutine SampleRFZ
 

@@ -112,7 +112,7 @@ character(fnlen)                        :: energyfile
 integer(kind=irg)                       :: npx,npy,numset,istat,val
 integer(kind=irg),allocatable           :: ATOM_type(:)
 real(kind=dbl)                          :: EkeV
-real(kind=sgl)                          :: dmin
+real(kind=sgl)                          :: dmin, FN(3)
 real(kind=sgl),allocatable              :: sr(:,:)
 
 type(unitcell), pointer                 :: cell
@@ -194,7 +194,7 @@ rotmat(2,:) = (/0.0,1.0,0.0/)
 rotmat(3,:) = (/0.0,0.0,1.0/)
 
 
-call CalckvectorsECP(khead,cell,rotmat,ecpnl%thetac,ecpnl%npix,ecpnl%npix,numk) !Here lies the problem
+call CalckvectorsECP(khead,cell,rotmat,ecpnl%thetac,ecpnl%npix,ecpnl%npix,numk,FN) !Here lies the problem
 allocate(kij(2,numk),stat=istat)
 
 ktmp => khead

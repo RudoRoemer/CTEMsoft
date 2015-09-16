@@ -712,6 +712,7 @@ end subroutine CalcLgh
 !> @date  06/17/14 MDG 2.1 added listroot pointers etc to accommodate multiple threads
 !> @date  06/18/14 MDG 2.2 corrected some pointer allocation errors in other routines; this one now works fine.
 !> @date  09/08/15 MDG 3.0 rewrite to allow either dynamical matrix type (Bloch/structure matrix) to be generated
+!> @date  09/14/15 SS  3.1 added exp(-pi/xgp) to the diagonal elements of the bloch dynamical matrix
 !--------------------------------------------------------------------------
 recursive subroutine GetDynMat(cell, listroot, listrootw, rlp, DynMat, nns, nnw, BlochMode)
 
@@ -736,7 +737,7 @@ integer(kind=irg),INTENT(IN)     :: nnw
 character(5),INTENT(IN),OPTIONAL :: BlochMode   ! 'Bloch' or 'Struc'
 
 complex(kind=dbl)                :: czero, ughp, uhph, weaksum, cv, Agh, Ahgp, Ahmgp, Ahg, weakdiagsum, pq0, Ahh, Agpgp, ccpi 
-real(kind=dbl)                   :: weaksgsum, tpi
+real(kind=dbl)                   :: weaksgsum, tpi, Pioxgp
 real(kind=sgl)                   :: Upz
 integer(kind=sgl)                :: ir, ic, ll(3), istat, wc
 type(reflisttype),pointer        :: rlr, rlc, rlw
@@ -766,6 +767,7 @@ if (AorD.eq.'D') then
         DynMat = czero
         call CalcUcg(cell, rlp, (/0,0,0/) )
         Upz = rlp%Upmod
+        Pioxgp = cPi/rlp%xgp
 
         rlr => listroot%next
         ir = 1
@@ -809,9 +811,10 @@ if (AorD.eq.'D') then
                 rlw => rlw%nextw
               end do
               weaksgsum = weaksgsum * cell%mLambda/2.D0
-              DynMat(ir,ir) = cmplx(2.D0*rlr%sg/cell%mLambda-weaksgsum,Upz,dbl)
+              DynMat(ir,ir) = cmplx(2.D0*rlr%sg/cell%mLambda-weaksgsum,Upz,dbl)*exp(-Pioxgp)
             else
-              DynMat(ir,ir) = cmplx(2.D0*rlr%sg/cell%mLambda,Upz,dbl)
+              DynMat(ir,ir) = cmplx(2.D0*rlr%sg/cell%mLambda,Upz,dbl)*exp(-Pioxgp)
+
             end if           
         
            end if       
@@ -1134,7 +1137,7 @@ do ii = 1,nns_film
 
     refliststrongtmp2 => refliststrong_subs
     do jj = 1,nns_film
-!if (ii .ge. jj) then
+      if (ii .ge. jj) then
         nns2 = refliststrongtmp2%nns
 
         Sg = czero
@@ -1158,8 +1161,8 @@ do ii = 1,nns_film
         Shhp = czero
         Lhhp = czero
 
-        arg1(1:3) = -2.0*cPi*(refliststrongtmp2%kg - refliststrongtmp1%kg) ! 2*pi*(kg - kgprime)
-!if (ii .eq. 2 ) then
+        arg1(1:3) = -2.0*cPi*(refliststrongtmp2%kg - refliststrongtmp1%kg) ! -2*pi*(kg - kgprime)
+
 ! calculation of Lhh for a pair of incident wavevectors g and gprime
         do kk=1,substhickness
            ampl1(1:nns1) = matmul(refliststrongtmp1%DynMat,Sg)
@@ -1172,9 +1175,6 @@ do ii = 1,nns_film
            Sgp(1:nns1) = ampl2(1:nns2)
 
         end do
-!print*,Lhhp(1,1:5)
-!stop
-!end if
 
 ! calculation of Shh for a pair of incident wavevectors g and gprime
 
@@ -1201,12 +1201,10 @@ do ii = 1,nns_film
 
 
         Sigmagg(ii,jj) = real(sum(Lhhp(1:nns1,1:nns2)*Shhp(1:nns1,1:nns2)))
-        Sigmagg(ii,jj) = Sigmagg(ii,jj)/4.0!/dcmplx(dble(substhickness),0.D0)
-!print*,'Function call = ',Sigmagg(ii,jj)
-!stop
-!end if
+        Sigmagg(ii,jj) = Sigmagg(ii,jj)/4.0
+        if (ii .ne. jj) Sigmagg(jj,ii) = Sigmagg(ii,jj)
 
-!end if
+      end if
         refliststrongtmp2 => refliststrongtmp2%next
     end do
     
@@ -1214,173 +1212,6 @@ do ii = 1,nns_film
 end do
 
 end subroutine CalcsigmaggSubstrate
-
-!--------------------------------------------------------------------------
-!
-! SUBROUTINE: CalcSigmaggSubstrate
-!
-!> @author Saransh Singh, Carnegie Mellon University
-!
-!> @brief compute dynamical contribution array array for EBSD, ECCI and ECP simulations for a film+substrate system
-!
-!> @cell_subs unit cell ponter of substrate
-!> @param nn dimension of array i.e. number of strong beams
-!> @param nnk number of incident beams on the substrate
-!> @param ScatMat Scattering matrix for the substrate
-!> @param Sg initial beam amplitudes for all the incident beams
-!> @param sigmagg output array
-!> @param nt number of thickness values
-!> @param thick array of thickness values
-!> @param lambdaZ array of weight factors
-!> @param filmthickness
-!
-!> @date 03/05/14  MDG 1.0 original (used to be in-line in ECP and ECCI programs)
-!> @date 03/11/14  MDG 1.1 converted to diagonal Sgh array only
-!> @date 06/19/14  MDG 2.0 no globals, taken out of EMECCI.f90
-!> @date 11/29/14  SS  3.0 extended to film+substrate system
-!--------------------------------------------------------------------------
-
-!recursive subroutine CalcSigmaggSubstrate(cell_subs,nnk,refliststrong_subs,Sg,Sigmagg,nt,thick,lambdaZ,filmthickness,nat,numset)
-
-!use local
-!use io
-!use files
-!use diffraction
-!use constants
-!use math
-!use symmetry
-!use crystal
-
-!IMPLICIT NONE
-
-!type(unitcell),pointer                      :: cell_subs
-!integer(kind=irg),INTENT(IN)                :: nnk
-!integer(kind=irg),INTENT(IN)                :: nt
-!type(refliststrongsubstype),pointer         :: refliststrong_subs
-!complex(kind=dbl),INTENT(IN)                :: Sg(nnk)
-!real(kind=dbl),INTENT(OUT)                  :: Sigmagg(nnk,nnk)
-!real(kind=sgl),INTENT(IN)                   :: thick(nt)
-!real(kind=sgl),INTENT(IN)                   :: lambdaZ(nt)
-!integer(kind=irg),INTENT(IN)                :: filmthickness,numset
-!integer(kind=irg),INTENT(INOUT)             :: nat(numset)
-
-!integer(kind=irg)                           :: ii,jj,kk,ll,mm,pp,qq,nns1,nns2,istat,lmm1,lmm2
-!complex(kind=dbl),allocatable               :: mat1(:),mat2(:),Minp1(:,:),Minp2(:,:),Lhh(:,:)
-!type(refliststrongsubstype),pointer         :: rltmpa,rltmpb
-!complex(kind=dbl),allocatable               :: ScatMat1(:,:),ScatMat2(:,:),S01(:),S02(:),Shh(:,:)
-!real(kind=sgl)                              :: dthick,delh(3),delkg(3),s
-!real(kind=dbl)                              :: tpi,ctmp(192,3),Znsq,arg1(3),arg2(3),arg3,arg4
-!integer(kind=irg)                           :: n,sar1,sar2
-!real(kind=sgl),allocatable                  :: hlist1(:,:),hlist2(:,:)
-
-
-!tpi = 2.D0*cPi
-!dthick = thick(2)-thick(1)
-!Sigmagg = 0.D0
-!nullify(rltmpa)
-!nullify(rltmpb)
-!nns1 = 0
-!nns2 = 0
-!print*,"Starting main loop"
-! setting initial amplitude of the beam
-!rltmpa => refliststrong_subs
-!do ii = 1,nnk
-!    nns1 = rltmpa%nns
-!    if (allocated(ScatMat1)) deallocate(ScatMat1)
-!    if (allocated(Minp1)) deallocate(Minp1)
-!    if (allocated(S01)) deallocate(S01)
-!    if (allocated(mat1)) deallocate(mat1)
-!    if (allocated(hlist1)) deallocate(hlist1)
-!    allocate(ScatMat1(nns1,nns1),Minp1(nns1,nns1),S01(nns1),mat1(nns1),hlist1(nns1,3),stat=istat)
-!    ScatMat1 = dcmplx(0.D0,0.D0)
-!    Minp1 = dcmplx(0.D0,0.D0)
-!    Minp1 = rltmpa%DynMat!*dcmplx(0.D0,cPi * cell_subs%mLambda)
-
-!    hlist1 = 0.0
-!    hlist1(:,:) = rltmpa%hlist(:,:)
-    !print*,"Starting exponential calculation"
-!    call MatrixExponential(Minp1, ScatMat1, dble(dthick), 'Pade', nns1)
-    !print*,"Exponential calculation done"
-!    S01 = dcmplx(0.D0,0.D0)
-!    mat1 = dcmplx(0.D0,0.D0)
-!    S01(1) = Sg(ii)
-!print*,S01(1)
-    !print*,"entering inner loop for outer loop #",ii
-    !mat1(:,1) = S01(:) ! the first incident beam
-!if (associated(rltmpa)) print*,ii,rltmpa%nns
-!print*,rltmpa%kg,rltmpa%nns
-
-!    rltmpb => refliststrong_subs
-!    do jj = 1,nnk
-!        nns2 = rltmpb%nns
-!        if (allocated(ScatMat2)) deallocate(ScatMat2)
-!        if (allocated(Minp2)) deallocate(Minp2)
-!        if (allocated(S02)) deallocate(S02)
-!        if (allocated(mat2)) deallocate(mat2)
-!        if (allocated(hlist2)) deallocate(hlist2)
-!        allocate(ScatMat2(nns2,nns2),Minp2(nns2,nns2),S02(nns2),mat2(nns2),hlist2(nns2,3),stat=istat)
-!        ScatMat2 = dcmplx(0.D0,0.D0)
-!        Minp2 = dcmplx(0.D0,0.D0)
-!        mat2 = dcmplx(0.D0,0.D0)
-!        hlist2 = 0.0
-!        Minp2 = rltmpb%DynMat!*dcmplx(0.D0,cPi * cell_subs%mLambda)
-!        hlist2(:,:) = rltmpb%hlist(:,:)
-!        call MatrixExponential(Minp2, ScatMat2, dble(dthick), 'Pade', nns2)
-!        S02 = dcmplx(0.D0,0.D0)
-!        S02(1) = Sg(jj)
-!if (ii .eq. jj) print*,S01(1),S02(1)
-        !mat2(:,1) = S02(:)
-!        if (allocated(Shh)) deallocate(Shh)
-!        allocate(Shh(nns1,nns2),stat=istat)
-!        Shh = dcmplx(0.D0,0.D0)
-!        arg1 = tpi*(rltmpa%kg-rltmpb%kg)
-        !print*,"Starting CalcShh"
-!        do ll = 1,cell_subs%ATOM_ntype
-!            call CalcOrbit(cell_subs,ll,n,ctmp)
-!            nat(ll) = cell_subs%numat(ll)
-! get Zn-squared for this special position, and include the site occupation parameter as well
-!            Znsq = float(cell_subs%ATOM_type(ll))**2 *cell_subs%ATOM_pos(ll,4)
-!            do pp = 1,nns2
-!                do kk = 1,nns1
-!                    do qq = 1,n
-!                        s = 0.25*CalcLength(cell_subs,hlist1(kk,1:3)-hlist2(pp,1:3),'r')**2
-!                        arg2 = tpi*(hlist1(kk,1:3)-hlist2(pp,1:3))
-!                        arg3 = sum(arg1(1:3)*cell_subs%apos(ll,qq,1:3))
-!                        arg4 = sum(arg2(1:3)*cell_subs%apos(ll,qq,1:3))
-!                        Shh(kk,pp) = Shh(kk,pp) + Znsq*exp(-cell_subs%ATOM_pos(ll,5)*s)*dcmplx(dcos(arg3+arg4),dsin(arg3+arg4))
-!                    end do
-!                end do
-!            end do
-!        end do
-!if((ii .eq. 1 .and. jj .eq. 2) .or. (ii .eq. 2 .and. jj .eq. 1)) then
-!print*,'ii,jj,Shh = ',ii,jj,Shh(1,1:5)
-!end if
-        !print*,"Finished CalcShh....Starting CalcLhh"
-!        if (allocated(Lhh)) deallocate(Lhh)
-!        allocate(Lhh(1:nns1,1:nns2),stat=istat)
-!        Lhh = dcmplx(0.D0,0.D0)
-!        do mm = 1,nt-filmthickness
-!            mat1 = matmul(ScatMat1,S01)
-!            mat2 = matmul(ScatMat2,S02)
-!            do lmm2 = 1,nns2
-!                do lmm1 = 1,nns1
-!                    Lhh(lmm1,lmm2) = Lhh(lmm1,lmm2) + lambdaZ(mm+filmthickness)*conjg(mat2(lmm2))*mat1(lmm1)*dthick
-!                end do
-!            end do
-!            S01 = mat1
-!            S02 = mat2
-            !print*,"Finished CalcLhh"
-
-!        end do
-!        Sigmagg(ii,jj) = real(sum(Lhh(1:nns1,1:nns2)*Shh(1:nns1,1:nns2))) ! discrete integration
-!        rltmpb => rltmpb%next
-    !print*,"One beam with all the beams complete"
-!    end do
-!    rltmpa => rltmpa%next
-!end do
-!Sigmagg = Sigmagg/(float(nt-filmthickness)) ! average depth integrated intensity
-
-!end subroutine CalcSigmaggSubstrate
 
 !--------------------------------------------------------------------------
 !
@@ -1441,7 +1272,7 @@ call Set_Bethe_Parameters(BetheParameters,.TRUE.)
 
 rltmpa => reflist_film%next
 kg = k0 + float(rltmpa%hkl) + rltmpa%sg*sngl(FN)
-kg1 = Convert_kgs_to_Substrate(cell_film, cell_subs,kg, TTinv,sngl(FN))
+kg1 = Convert_kgs_to_Substrate(cell_film,cell_subs,kg,TTinv,sngl(FN))
 
 ! calculate reflection list and dynamical matrix
 call Initialize_ReflectionList(cell_subs, reflist_subs, BetheParameters, sngl(FN), kg1, dmin, nref_subs)
@@ -1483,18 +1314,27 @@ end do
 rltmpa => rltmpa%nexts
 
 do ii = 1,nns_film-1
-    kg = k0 + float(rltmpa%hkl) + (rltmpa%sg)*sngl(FN)
-    kg1 = Convert_kgs_to_Substrate(cell_film, cell_subs,kg, TTinv,sngl(FN))
+
+    kg = k0 + float(rltmpa%hkl) + (rltmpa%sg)*sngl(FN) !kg = k0 + g + sg*FN
+
+    kg1 = Convert_kgs_to_Substrate(cell_film, cell_subs,kg, TTinv,sngl(FN)) ! go to substrate frame
+
+! initialize reflection list, apply bethe perturbation and get corresponding dynamical matrices
+
     call Initialize_ReflectionList(cell_subs, reflist_subs, BetheParameters, sngl(FN), kg1, sngl(dmin), nref_subs)
+
     call Apply_BethePotentials(cell_subs, reflist_subs, firstw_subs, BetheParameters, nref_subs, nns_subs, nnw_subs)
+
     allocate(refliststrong_subs_tmp%next,stat=istat) 
+
     refliststrong_subs_tmp => refliststrong_subs_tmp%next
+
     allocate(refliststrong_subs_tmp%hlist(nns_subs,3),stat=istat)
     allocate(refliststrong_subs_tmp%DynMat(nns_subs,nns_subs),stat=istat)
     nullify(refliststrong_subs_tmp%next)
 
     call GetDynMat(cell_subs,reflist_subs,firstw_subs,rlp_subs,refliststrong_subs_tmp%DynMat,nns_subs,nnw_subs)
- 
+    
     refliststrong_subs_tmp%kg(1:3) = kg1(1:3)
     refliststrong_subs_tmp%nns = nns_subs
     refliststrong_subs_tmp%DynMat = refliststrong_subs_tmp%DynMat*dcmplx(0.D0,cPi*cell_subs%mLambda)
@@ -1503,8 +1343,12 @@ do ii = 1,nns_film-1
     allocate(ScatMat(nns_subs,nns_subs),stat=istat)
     if(istat .ne. 0) stop 'Cannot allocate memory for scattering matrix'
 
+! take exponential of structure matrix to get scattering matrix
+
     call MatrixExponential(refliststrong_subs_tmp%DynMat,ScatMat,dthick,'Pade',nns_subs)
     refliststrong_subs_tmp%DynMat = ScatMat
+
+! save list of reflections for this incident beam
 
     rltmpb => reflist_subs%next
     do jj = 1,nns_subs
@@ -1514,9 +1358,6 @@ do ii = 1,nns_film-1
 
     rltmpa => rltmpa%nexts
 
-!print*,'kg = ',kg1
-!print*,'No. of strong beams = ',nns_subs
-!print*,'Max val in dynmat = ',maxval(abs(refliststrong_subs_tmp%DynMat))
 
 end do
 
