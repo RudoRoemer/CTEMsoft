@@ -37,6 +37,7 @@
 !
 !> @date  06/24/14  MDG 1.0 original, lifted from EMEBSD.f90 to simplify code
 !> @date  09/01/15  MDG 1.1 modified EBSDMasterType definition to accommodate multiple Lambert maps
+!> @date  09/15/15  SS  added accum_z to EBSDLargeAccumType
 !--------------------------------------------------------------------------
 module EBSDmod
 
@@ -50,7 +51,7 @@ type EBSDAngleType
 end type EBSDAngleType
 
 type EBSDLargeAccumType
-        integer(kind=irg),allocatable   :: accum_e(:,:,:)
+        integer(kind=irg),allocatable   :: accum_e(:,:,:),accum_z(:,:,:,:)
         real(kind=irg),allocatable      :: accum_e_detector(:,:,:)
 end type EBSDLargeAccumType
 
@@ -184,6 +185,7 @@ end subroutine EBSDreadangles
 !> @date 11/18/14  MDG 1.1 removed enl%MCnthreads from file read
 !> @date 04/02/15  MDG 2.0 changed program input & output to HDF format
 !> @date 04/29/15  MDG 2.1 add optional parameter efile
+!> @date 09/15/15  SS  2.2 added accum_z reading 
 !--------------------------------------------------------------------------
 subroutine EBSDreadMCfile(enl,acc,efile,verbose)
 
@@ -202,11 +204,11 @@ logical,INTENT(IN),OPTIONAL             :: verbose
 
 integer(kind=irg)                       :: istat, hdferr, nlines, nx
 logical                                 :: stat, readonly
-integer(HSIZE_T)                        :: dims3(3)
+integer(HSIZE_T)                        :: dims3(3),dims4(4)
 character(fnlen)                        :: groupname, dataset, energyfile 
 character(fnlen),allocatable            :: stringarray(:)
 
-integer(kind=irg),allocatable           :: acc_e(:,:,:)
+integer(kind=irg),allocatable           :: acc_e(:,:,:),acc_z(:,:,:,:)
 
 type(HDFobjectStackType),pointer        :: HDF_head
 
@@ -217,6 +219,8 @@ if (PRESENT(efile)) then
 else
   energyfile = trim(Emdatapathname)//trim(enl%energyfile)
 end if
+
+allocate(acc)
 
 ! first, we need to check whether or not the input file is of the HDF5 format type; if
 ! it is, we read it accordingly, otherwise we use the old binary format.
@@ -315,6 +319,12 @@ if (stat) then
   allocate(acc%accum_e(1:dims3(1),-nx:nx,-nx:nx))
   acc%accum_e = acc_e
   deallocate(acc_e)
+
+  dataset = 'accum_z'
+  acc_z = HDF_readDatasetIntegerArray4D(dataset, dims4, HDF_head)
+  allocate(acc%accum_z(1:dims4(1),1:dims4(2),1:dims4(3),1:dims4(4)))
+  acc%accum_z = acc_z
+  deallocate(acc_z)
 
 ! and close everything
   call HDF_pop(HDF_head,.TRUE.)

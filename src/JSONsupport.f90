@@ -721,6 +721,7 @@ end subroutine JSONwriteEBSDMasterNameList
 !> @param error_cnt total number of errors encountered by json routines
 !
 !> @date 08/12/15 MDG 1.0 new routine
+!> @date 09/15/15 SS  1.1 changes after clean up of ECPmasterListType
 !--------------------------------------------------------------------------
 subroutine JSONwriteECPMasterNameList(ecpnl, jsonname, error_cnt)
 
@@ -734,7 +735,7 @@ integer(kind=irg),INTENT(INOUT)                       :: error_cnt
 
 type(json_value),pointer                              :: p, inp
 
-integer(kind=irg),parameter                           :: n_int = 4, n_real = 2
+integer(kind=irg),parameter                           :: n_int = 4, n_real = 1
 integer(kind=irg)                                     :: io_int(n_int)
 real(kind=dbl)                                        :: io_real(n_real)
 character(20)                                         :: intlist(n_int), reallist(n_real)
@@ -753,25 +754,25 @@ intlist(3) = 'npx'
 intlist(4) = 'nthreads'
 call JSON_writeNMLintegers(inp, io_int, intlist, n_int, error_cnt)
 
-dataset = 'distort'
-call json_add(inp, dataset, ecpnl%distort); call JSON_failtest(error_cnt)
+!dataset = 'distort'
+!call json_add(inp, dataset, ecpnl%distort); call JSON_failtest(error_cnt)
 
 ! integer vectors
-dataset = 'fn'
-call json_add(inp, dataset, dble(ecpnl%fn)); call JSON_failtest(error_cnt)
+!dataset = 'fn'
+!call json_add(inp, dataset, dble(ecpnl%fn)); call JSON_failtest(error_cnt)
 
 ! write all the single doubles
-io_real = (/ ecpnl%dmin, ecpnl%startthick /)
+io_real = (/ ecpnl%dmin /)
 reallist(1) = 'dmin'
-reallist(2) = 'startthick' 
+!reallist(2) = 'startthick' 
 call JSON_writeNMLdoubles(inp, io_real, reallist, n_real, error_cnt)
 
 ! 3-vectors (real)
-dataset = 'abcdist'
-call json_add(inp, dataset, dble(ecpnl%abcdist)); call JSON_failtest(error_cnt)
+!dataset = 'abcdist'
+!call json_add(inp, dataset, dble(ecpnl%abcdist)); call JSON_failtest(error_cnt)
 
-dataset = 'albegadist'
-call json_add(inp, dataset, dble(ecpnl%albegadist)); call JSON_failtest(error_cnt)
+!dataset = 'albegadist'
+!call json_add(inp, dataset, dble(ecpnl%albegadist)); call JSON_failtest(error_cnt)
 
 ! write all the strings
 dataset = 'outname'
@@ -787,7 +788,7 @@ call json_add(inp, dataset, ecpnl%compmode); call JSON_failtest(error_cnt)
 call JSON_cleanuppointers(p, inp, jsonname, error_cnt)
 
 end subroutine JSONwriteECPMasterNameList
-
+!
 !--------------------------------------------------------------------------
 !
 ! SUBROUTINE:JSONwriteEBSDNameList
@@ -903,6 +904,7 @@ end subroutine JSONwriteEBSDNameList
 !> @param error_cnt total number of errors encountered by json routines
 !
 !> @date 08/12/15 MDG 1.0 new routine
+!> @date 09/15/15 SS  1.1 changes after modification of ECPListType
 !--------------------------------------------------------------------------
 subroutine JSONwriteECPNameList(ecpnl, jsonname, error_cnt)
 
@@ -916,7 +918,7 @@ integer(kind=irg),INTENT(INOUT)                       :: error_cnt
 
 type(json_value),pointer                              :: p, inp
 
-integer(kind=irg),parameter                           :: n_int = 4, n_real = 8
+integer(kind=irg),parameter                           :: n_int = 3, n_real = 5
 integer(kind=irg)                                     :: io_int(n_int)
 real(kind=sgl)                                        :: io_real(n_real)
 character(20)                                         :: intlist(n_int), reallist(n_real)
@@ -928,11 +930,10 @@ namelistname = 'ECPlist'
 call JSON_initpointers(p, inp, jsonname, namelistname, error_cnt)
 
 ! write all the single integers
-io_int = (/ ecpnl%stdout, ecpnl%numthick, ecpnl%npix, ecpnl%nthreads /)
+io_int = (/ ecpnl%stdout, ecpnl%nthreads, ecpnl%npix /)
 intlist(1) = 'stdout'
-intlist(2) = 'numthick'
+intlist(2) = 'nthreads'
 intlist(3) = 'npix'
-intlist(4) = 'nthreads'
 call JSON_writeNMLintegers(inp, io_int, intlist, n_int, error_cnt)
 
 ! integer vectors
@@ -954,17 +955,17 @@ call json_add(inp, dataset, ecpnl%tF); call JSON_failtest(error_cnt)
 dataset = 'tS'
 call json_add(inp, dataset, ecpnl%tS); call JSON_failtest(error_cnt)
 
+!dataset = 'eu'
+!call json_add(inp, dataset, ecpnl%eu); call JSON_failtest(error_cnt)
+
 ! write all the single reals
-io_real = (/ ecpnl%voltage, ecpnl%dmin, ecpnl%ktmax, ecpnl%thetac, ecpnl%startthick, ecpnl%thickinc, ecpnl%zintstep, &
+io_real = (/ ecpnl%dmin, ecpnl%thetac, ecpnl%startthick, ecpnl%thickinc, &
              ecpnl%filmthickness /)
-reallist(1) = 'voltage'
-reallist(2) = 'dmin'
-reallist(3) = 'ktmax'
-reallist(4) = 'thetac'
-reallist(5) = 'startthick'
-reallist(6) = 'thickinc'
-reallist(7) = 'zintstep'
-reallist(8) = 'filmthickness'
+reallist(1) = 'dmin'
+reallist(2) = 'thetac'
+reallist(3) = 'startthick'
+reallist(4) = 'thickinc'
+reallist(5) = 'filmthickness'
 call JSON_writeNMLreals(inp, io_real, reallist, n_real, error_cnt)
 
 ! write all the strings
@@ -974,14 +975,24 @@ call json_add(inp, dataset, ecpnl%compmode); call JSON_failtest(error_cnt)
 dataset = 'energyfile'
 call json_add(inp, dataset, ecpnl%energyfile); call JSON_failtest(error_cnt)
 
-dataset = 'outname'
-call json_add(inp, dataset, ecpnl%outname); call JSON_failtest(error_cnt)
+dataset = 'masterfile'
+call json_add(inp, dataset, ecpnl%masterfile); call JSON_failtest(error_cnt)
+
+dataset = 'datafile'
+call json_add(inp, dataset, ecpnl%datafile); call JSON_failtest(error_cnt)
 
 dataset = 'xtalname'
 call json_add(inp, dataset, ecpnl%xtalname); call JSON_failtest(error_cnt)
 
 dataset = 'xtalname2'
 call json_add(inp, dataset, ecpnl%xtalname2); call JSON_failtest(error_cnt)
+
+dataset = 'filmfile'
+call json_add(inp, dataset, ecpnl%filmfile); call JSON_failtest(error_cnt)
+
+dataset = 'subsfile'
+call json_add(inp, dataset, ecpnl%subsfile); call JSON_failtest(error_cnt)
+
 
 ! and then we write the file and clean up
 call JSON_cleanuppointers(p, inp, jsonname, error_cnt)
@@ -2433,6 +2444,7 @@ end subroutine JSONreadEBSDMasterNameList
 !> @param error_cnt total number of errors encountered by json routines
 !
 !> @date 08/20/15  MDG 1.0 new routine
+!> @date 09/15/15  SS  1.1 changes after clean up of ECPmasterListType
 !--------------------------------------------------------------------------
 subroutine JSONreadECPMasterNameList(ecpnl, jsonname, error_cnt)
 
@@ -2477,17 +2489,17 @@ else
   ep = 'ECPmastervars.nthreads'
   call JSONreadInteger(json, ep, ecpnl%nthreads, defecpnl%nthreads)
 
-  ep = 'ECPmastervars.startthick'
-  call JSONreadReal(json, ep, ecpnl%startthick, defecpnl%startthick)
+  !ep = 'ECPmastervars.startthick'
+  !call JSONreadReal(json, ep, ecpnl%startthick, defecpnl%startthick)
   ep = 'ECPmastervars.dmin'
   call JSONreadReal(json, ep, ecpnl%dmin, defecpnl%dmin)
 
-  ep = 'ECPmastervars.fn'
-  call JSONreadRealVec(json, ep, ecpnl%fn, defecpnl%fn, size(ecpnl%fn))
-  ep = 'ECPmastervars.abcdist'
-  call JSONreadRealVec(json, ep, ecpnl%abcdist, defecpnl%abcdist, size(ecpnl%abcdist))
-  ep = 'ECPmastervars.albegadist'
-  call JSONreadRealVec(json, ep, ecpnl%albegadist, defecpnl%albegadist, size(ecpnl%albegadist))
+  !ep = 'ECPmastervars.fn'
+  !call JSONreadRealVec(json, ep, ecpnl%fn, defecpnl%fn, size(ecpnl%fn))
+  !ep = 'ECPmastervars.abcdist'
+  !call JSONreadRealVec(json, ep, ecpnl%abcdist, defecpnl%abcdist, size(ecpnl%abcdist))
+  !ep = 'ECPmastervars.albegadist'
+  !call JSONreadRealVec(json, ep, ecpnl%albegadist, defecpnl%albegadist, size(ecpnl%albegadist))
 
   ep = 'ECPmastervars.compmode'
   call JSONreadString(json, ep, ecpnl%compmode, defecpnl%compmode)
@@ -2496,8 +2508,8 @@ else
   ep = 'ECPmastervars.outname'
   call JSONreadString(json, ep, ecpnl%outname, defecpnl%outname)
 
-  ep = 'ECPmastervars.distort'
-  call JSONreadLogical(json, ep, ecpnl%distort, defecpnl%distort)
+  !ep = 'ECPmastervars.distort'
+  !call JSONreadLogical(json, ep, ecpnl%distort, defecpnl%distort)
 end if
 
 call json%destroy(); call JSON_failtest(error_cnt)

@@ -638,6 +638,7 @@ end subroutine HDFwriteEBSDMasterNameList
 !> @param ecpnl ECP master name list structure
 !
 !> @date 03/22/15 MDG 1.0 new routine
+!> @date 09/15/15 SS  1.1 changes after clean up of ECPmasterNameList
 !--------------------------------------------------------------------------
 subroutine HDFwriteECPMasterNameList(HDF_head, ecpnl)
 
@@ -648,7 +649,7 @@ IMPLICIT NONE
 type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
 type(ECPMasterNameListType),INTENT(INOUT)             :: ecpnl
 
-integer(kind=irg),parameter                           :: n_int = 5, n_real = 2
+integer(kind=irg),parameter                           :: n_int = 4, n_real = 1
 integer(kind=irg)                                     :: hdferr, io_int(n_int), distort
 real(kind=dbl)                                        :: io_real(n_real)
 character(20)                                         :: intlist(n_int), reallist(n_real)
@@ -660,38 +661,38 @@ hdferr = HDF_createGroup('ECPMasterNameList',HDF_head)
 
 ! write all the single integers
 ! distort is a logical, for which there is no real HDF_NATIVE_anything conversion, so we'll store it as a 1 or 0
-if (ecpnl%distort) then 
-  distort = 1
-else 
-  distort = 0
-end if
-io_int = (/ ecpnl%stdout, ecpnl%Esel, ecpnl%npx, ecpnl%nthreads, distort /)
+!if (ecpnl%distort) then 
+!  distort = 1
+!else 
+!  distort = 0
+!end if
+
+io_int = (/ ecpnl%stdout, ecpnl%Esel, ecpnl%npx, ecpnl%nthreads /)
 intlist(1) = 'stdout'
 intlist(2) = 'Esel'
 intlist(3) = 'npx'
 intlist(4) = 'nthreads'
-intlist(5) = 'distort'
+!intlist(5) = 'distort'
 call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
 ! integer vectors
-dataset = 'fn'
-hdferr = HDF_writeDatasetFloatArray1D(dataset, ecpnl%fn, 3, HDF_head)
-if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPMasterNameList: unable to create fn dataset',.TRUE.)
+!dataset = 'fn'
+!hdferr = HDF_writeDatasetFloatArray1D(dataset, ecpnl%fn, 3, HDF_head)
+!if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPMasterNameList: unable to create fn dataset',.TRUE.)
 
 ! write all the single doubles
-io_real = (/ ecpnl%dmin, ecpnl%startthick /)
+io_real = (/ ecpnl%dmin /)
 reallist(1) = 'dmin'
-reallist(2) = 'startthick' 
 call HDF_writeNMLdbles(HDF_head, io_real, reallist, n_real)
 
 ! 3-vectors (real)
-dataset = 'abcdist'
-hdferr = HDF_writeDatasetFloatArray1D(dataset, ecpnl%abcdist, 3, HDF_head)
-if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPMasterNameList: unable to create abcdist dataset',.TRUE.)
+!dataset = 'abcdist'
+!hdferr = HDF_writeDatasetFloatArray1D(dataset, ecpnl%abcdist, 3, HDF_head)
+!if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPMasterNameList: unable to create abcdist dataset',.TRUE.)
 
-dataset = 'albegadist'
-hdferr = HDF_writeDatasetFloatArray1D(dataset, ecpnl%albegadist, 3, HDF_head)
-if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPMasterNameList: unable to create albegadist dataset',.TRUE.)
+!dataset = 'albegadist'
+!hdferr = HDF_writeDatasetFloatArray1D(dataset, ecpnl%albegadist, 3, HDF_head)
+!if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPMasterNameList: unable to create albegadist dataset',.TRUE.)
 
 ! write all the strings
 dataset = 'outname'
@@ -842,6 +843,7 @@ end subroutine HDFwriteEBSDNameList
 !> @param ecpnl ECP namelist structure
 !
 !> @date 03/22/15 MDG 1.0 new routine
+!> @date 09/15/15 SS  1.1 changes after updating ECPNameListType
 !--------------------------------------------------------------------------
 subroutine HDFwriteECPNameList(HDF_head, ecpnl)
 
@@ -852,7 +854,7 @@ IMPLICIT NONE
 type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
 type(ECPNameListType),INTENT(INOUT)                   :: ecpnl
 
-integer(kind=irg),parameter                           :: n_int = 4, n_real = 8
+integer(kind=irg),parameter                           :: n_int = 3, n_real = 5
 integer(kind=irg)                                     :: hdferr,  io_int(n_int)
 real(kind=sgl)                                        :: io_real(n_real)
 character(20)                                         :: intlist(n_int), reallist(n_real)
@@ -863,11 +865,11 @@ character(fnlen,kind=c_char)                          :: line2(1)
 hdferr = HDF_createGroup('ECPNameList',HDF_head)
 
 ! write all the single integers
-io_int = (/ ecpnl%stdout, ecpnl%numthick, ecpnl%npix, ecpnl%nthreads /)
+io_int = (/ ecpnl%stdout, ecpnl%nthreads, ecpnl%npix /)
 intlist(1) = 'stdout'
-intlist(2) = 'numthick'
+intlist(2) = 'nthreads'
 intlist(3) = 'npix'
-intlist(4) = 'nthreads'
+
 call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
 ! integer vectors
@@ -895,17 +897,18 @@ dataset = 'tS'
 hdferr = HDF_writeDatasetIntegerArray1D(dataset, ecpnl%tS, 3, HDF_head)
 if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPNameList: unable to create tS dataset',.TRUE.)
 
+dataset = 'eu'
+hdferr = HDF_writeDatasetfloatArray1D(dataset, ecpnl%eu, 3, HDF_head)
+if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPNameList: unable to create tS dataset',.TRUE.)
+
 ! write all the single reals
-io_real = (/ ecpnl%voltage, ecpnl%dmin, ecpnl%ktmax, ecpnl%thetac, ecpnl%startthick, ecpnl%thickinc, ecpnl%zintstep, &
+io_real = (/ ecpnl%dmin, ecpnl%thetac, ecpnl%startthick, ecpnl%thickinc, &
              ecpnl%filmthickness /)
-reallist(1) = 'voltage'
-reallist(2) = 'dmin'
-reallist(3) = 'ktmax'
-reallist(4) = 'thetac'
-reallist(5) = 'startthick'
-reallist(6) = 'thickinc'
-reallist(7) = 'zintstep'
-reallist(8) = 'filmthickness'
+reallist(1) = 'dmin'
+reallist(2) = 'thetac'
+reallist(3) = 'startthick'
+reallist(4) = 'thickinc'
+reallist(5) = 'filmthickness'
 call HDF_writeNMLreals(HDF_head, io_real, reallist, n_real)
 
 ! write all the strings
@@ -919,10 +922,10 @@ line2(1) = ecpnl%energyfile
 hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head)
 if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPNameList: unable to create energyfile dataset',.TRUE.)
 
-dataset = 'outname'
-line2(1) = ecpnl%outname
+dataset = 'datafile'
+line2(1) = ecpnl%datafile
 hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head)
-if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPNameList: unable to create outname dataset',.TRUE.)
+if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPNameList: unable to create datafile dataset',.TRUE.)
 
 dataset = 'xtalname'
 line2(1) = ecpnl%xtalname
@@ -933,6 +936,22 @@ dataset = 'xtalname2'
 line2(1) = ecpnl%xtalname2
 hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head)
 if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPNameList: unable to create xtalname2 dataset',.TRUE.)
+
+dataset = 'masterfile'
+line2(1) = ecpnl%masterfile
+hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head)
+if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPNameList: unable to create masterfile dataset',.TRUE.)
+
+dataset = 'filmfile'
+line2(1) = ecpnl%filmfile
+hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head)
+if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPNameList: unable to create filmfile dataset',.TRUE.)
+
+dataset = 'subsfile'
+line2(1) = ecpnl%subsfile
+hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head)
+if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPNameList: unable to create subsfile dataset',.TRUE.)
+
 
 ! and pop this group off the stack
 call HDF_pop(HDF_head)

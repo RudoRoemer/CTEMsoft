@@ -1263,7 +1263,7 @@ end subroutine Delete_kvectorlist
 !
 !> @date   08/25/14 SS 1.0 original
 !--------------------------------------------------------------------------
-subroutine CalckvectorsECP(khead,cell,rotmat,thetac,npx,npy,numk)
+subroutine CalckvectorsECP(khead,cell,rotmat,thetac,npx,npy,numk,FN)
 
 use io
 use local
@@ -1281,6 +1281,7 @@ real(kind=sgl),INTENT(IN)               :: rotmat(3,3)         !< initial wave v
 real(kind=sgl),INTENT(IN)               :: thetac        !< half angle of cone of incident beam directions in degrees
 integer(kind=irg),INTENT(IN)            :: npx          !< number of kvectors along x
 integer(kind=irg),INTENT(IN)            :: npy          !< number of kvectors along y
+real(kind=sgl),INTENT(IN)               :: FN(3)        ! foil normal in reciprocal frame
 integer(kind=irg),INTENT(OUT)           :: numk
 real(kind=dbl),parameter                :: DtoR = 0.01745329251D0
 real(kind=sgl)                          :: delta,thetacr,ktmax
@@ -1295,7 +1296,8 @@ end if
 k = (/0.0,0.0,1.0/)
 k = k/cell%mLambda
 thetacr = DtoR*thetac
-call TransSpace(cell,k,kk,'r','c')
+kk = k
+
 ktmax = tan(thetacr)*sqrt(sum(kk**2))
 delta = 2.0*ktmax/(2.0*float(npx)+1.0)
 imin = -npx
@@ -1319,11 +1321,9 @@ ktail%k = matmul(rotmat,kk)
 k = ktail%k
 call TransSpace(cell,k,krec,'c','r')
 ktail%k = krec
-!kcent = ktail%k
-!print*,ktail%k
-kkk = CalcDot(cell,sngl(ktail%k),kcart,'c')			! normal component
+
+kkk = CalcDot(cell,sngl(ktail%k),FN,'r')                ! normal component
 ktail%kn = kkk
-!call NormVec(cell,ktail%k,'c')
 
 do i = imin,imax
     do j = jmin,jmax
@@ -1336,10 +1336,10 @@ do i = imin,imax
             ktail%j = j
             ktail%kt = (/delta*i,delta*j,0.0/)
             ktail%k = ktail%kt + kk
+            call NormVec(cell,ktail%k,'c')
+            ktail%k = ktail%k/cell%mLambda
             ktail%kt = matmul(rotmat,ktail%kt)
             ktail%k = matmul(rotmat,ktail%k)
-            kkk = CalcDot(cell,sngl(ktail%k),kcart,'c')
-            ktail%kn = kkk
             k = ktail%k
             call TransSpace(cell,k,krec,'c','r')
             ktail%k = krec
@@ -1347,6 +1347,9 @@ do i = imin,imax
             k = ktail%kt
             call TransSpace(cell,k,krec,'c','r')
             ktail%kt = krec
+            kkk = CalcDot(cell,sngl(ktail%k),FN,'r')
+            ktail%kn = kkk
+
         !end if
     end do
 end do
