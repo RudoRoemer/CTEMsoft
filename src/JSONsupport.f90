@@ -44,14 +44,42 @@ module JSONsupport
 
 use local
 use typedefs
+use, intrinsic :: iso_fortran_env , only: error_unit, wp => real64
 use NameListTypedefs
 use json_module
-use, intrinsic :: iso_fortran_env , only: error_unit, wp => real64
 
 IMPLICIT NONE
 
 contains
 
+! these are the jsonfortran public functions from jsonmodule.mod
+!
+!    public :: json_add                   ! add data to a JSON structure
+!    public :: json_check_for_errors      ! check for error and get error message
+!    public :: json_clear_exceptions      ! clear exceptions
+!    public :: json_count                 ! count the number of children
+!    public :: json_create_array          ! allocate a json_value array
+!    public :: json_create_double         ! allocate a json_value double
+!    public :: json_create_integer        ! allocate a json_value integer
+!    public :: json_create_logical        ! allocate a json_value logical
+!    public :: json_create_null           ! allocate a json_value null
+!    public :: json_create_object         ! allocate a json_value object
+!    public :: json_create_string         ! allocate a json_value string
+!    public :: json_destroy               ! clear a JSON structure (destructor)
+!    public :: json_failed                ! check for error
+!    public :: json_get                   ! get data from the JSON structure
+!    public :: json_get_child             ! get a child of a json_value
+!    public :: json_info                  ! get info about a json_value
+!    public :: json_initialize            ! to initialize the module
+!    public :: json_parse                 ! read a JSON file and populate the structure
+!    public :: json_print                 ! print the JSON structure to a file
+!    public :: json_print_to_string       ! write the JSON structure to a string
+!    public :: json_remove                ! remove from a JSON structure
+!    public :: json_remove_if_present     ! remove from a JSON structure (if it is present)
+!    public :: json_update                ! update a value in a JSON structure
+!    public :: json_traverse              ! to traverse all elements of a JSON structure
+!    public :: json_print_error_message   !
+!    public :: to_unicode                 ! Function to convert from 'DEFAULT' to 'ISO_10646' strings
 
 !--------------------------------------------------------------------------
 !

@@ -234,7 +234,7 @@ real(kind=sgl),parameter                :: dtor = 0.0174533  ! convert from degr
 real(kind=dbl),parameter                :: nAmpere = 6.241D+18   ! Coulomb per second
 integer(kind=irg),parameter             :: storemax = 20        ! number of EBSD patterns stored in one output block
 integer(kind=irg)                       :: Emin, Emax      ! various parameters
-real(kind=dbl)                          :: dc(3), scl           ! direction cosine array
+real(kind=dbl)                          :: dc(3), scl, nel           ! direction cosine array
 real(kind=dbl)                          :: sx, dx, dxm, dy, dym, rhos, x         ! various parameters
 real(kind=dbl)                          :: ixy(2), tmp
 
@@ -280,7 +280,10 @@ Emax = nint((enl%energymax - enl%Ehistmin)/enl%Ebinsize) +1
 if (Emax.lt.1)  Emax=1
 if (Emax.gt.enl%numEbins)  Emax=enl%numEbins
 
-num_el = nint(sum(acc%accum_e_detector))
+nel = sum(acc%accum_e_detector)
+num_el = nint(nel)
+
+write (*,*) 'nel, num_el ',nel, num_el
 allocate(energywf(Emin:Emax),stat=istat)
 energywf = 0.0
 
@@ -299,7 +302,7 @@ energywf = energywf/sum(energywf)
 
 
 ! intensity prefactor
-  prefactor = 0.25D0 * nAmpere * enl%beamcurrent * enl%dwelltime * 1.0D-15/ dble(num_el)
+  prefactor = 0.25D0 * nAmpere * enl%beamcurrent * enl%dwelltime * 1.0D-15/ nel
 !====================================
 
 !====================================
@@ -398,6 +401,7 @@ else
   end if
 end if
 
+
 ! for dictionary computations, the patterns are usually rather small, so perhaps the explicit 
 ! energy sums can be replaced by an averaged approximate approach, in which all the energy bins
 ! are added together from the start, and all the master patterns are totaled as well...
@@ -417,7 +421,15 @@ if (enl%energyaverage.eq.1) then
   end do
   master_arrayNH = sum(master%mLPNH,3)
   master_arraySH = sum(master%mLPSH,3)
+
+write (*,*) 'max value of master_array*H = ',maxval(master_arrayNH),maxval(master_arraySH)
 end if
+
+write (*,*) 'max val master%mLP*H  = ',maxval(master%mLPNH), maxval(master%mLPSH)
+write (*,*) enl%spatialaverage, enl%energyaverage
+write (*,*) maxval(acc%accum_e_detector)
+write (*,*) 'prefactor = ',prefactor
+
 
 ! determine the scale factor for the Lambert interpolation; the square has
 ! an edge length of 2 x sqrt(pi/2), and a different scale factor for the 

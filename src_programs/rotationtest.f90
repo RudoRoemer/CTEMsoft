@@ -13,6 +13,7 @@ real(kind=dbl)        :: ieu(3), oeu(3), iro(4), oro(4), iho(3), oho(3), icu(3),
 real(kind=dbl)        :: iax(4), oax(4), iqu(4), oqu(4), ivec(3), ovec(3), s, r(3)
 real(kind=dbl)        :: iom(3,3), oom(3,3), omm(3,3), diff, diffmax, dtor, aux, omega
 real(kind=dbl),allocatable :: rots(:,:)
+real(kind=sgl)          :: ieus(3)
 integer(kind=irg)     :: tcnt, rcnt, i, ierr
 type(orientationtyped):: ot
 logical               :: verbose, c1, c2
@@ -26,6 +27,40 @@ real(kind=dbl)                  :: res(3)
 real(kind=dbl)                  :: XYZ(3), sXYZ(3), T1, T2, c, q, LamXYZ(3), eps
 integer(kind=irg)               :: p
 
+
+ieus = (/ 0.00000000,     0.166579649,     0.314159274  /)
+write (*,*) 'eu               = ',ieus
+write (*,*) 'eu2ax(eu)        = ',eu2ax(ieus)
+write (*,*) 'ax2eu(eu2ax(eu)) = ',ax2eu(eu2ax(ieus))
+write (*,*) '-----'
+
+ieu = (/ 0.0000000000000000D0,       0.16657965000000000D0,      0.31415926999999999D0 /)
+write (*,*) 'eu               = ',ieu
+write (*,*) 'eu2ax(eu)        = ',eu2ax(ieu)
+write (*,*) 'ax2eu(eu2ax(eu)) = ',ax2eu(eu2ax(ieu))
+write (*,*) '-----'
+
+stop
+
+ieu = (/ 0.0D0, 0.15707964D0, cPi*0.1D0 /)
+write (*,*) 'eu               = ',ieu
+write (*,*) 'eu2ax(eu)        = ',eu2ax(ieu)
+write (*,*) 'ax2eu(eu2ax(eu)) = ',ax2eu(eu2ax(ieu))
+write (*,*) '-----'
+
+ieu = (/ 0.0D0, 2.5132742D0, 1.2566371D0 /)
+write (*,*) 'eu               = ',ieu
+write (*,*) 'eu2ax(eu)        = ',eu2ax(ieu)
+write (*,*) 'ax2eu(eu2ax(eu)) = ',ax2eu(eu2ax(ieu))
+write (*,*) '-----'
+
+ieu = (/ cPi*0.1D0, 0.15707964D0, 0.D00 /)
+write (*,*) 'eu               = ',ieu
+write (*,*) 'eu2ax(eu)        = ',eu2ax(ieu)
+write (*,*) 'ax2eu(eu2ax(eu)) = ',ax2eu(eu2ax(ieu))
+write (*,*) '-----'
+
+stop
 
 nullify(FZlist)
 

@@ -139,18 +139,18 @@ cmake_add_fortran_subdirectory(src_sampleRFZ
 )
 
 ## THIS WILL BE NEEDED FOR WINDOWS
-include(CMakeAddFortranSubdirectory)
+#include(CMakeAddFortranSubdirectory)
 # add the lapack subdirectory as a fortran project
 # the subdir is lapack, the project is LAPACK
-cmake_add_fortran_subdirectory(Apps
-  NO_EXTERNAL_INSTALL
-  PROJECT CFBridge  # project name in toplevel CMakeLists.txt in lapack
+#cmake_add_fortran_subdirectory(Apps
+#  NO_EXTERNAL_INSTALL
+#  PROJECT CFBridge  # project name in toplevel CMakeLists.txt in lapack
   #ARCHIVE_DIR lapack/lib # .lib location relative to root binary tree
   #RUNTIME_DIR lapack/bin # .dll location relative to root binary tree
-  LIBRARIES  
-  LINK_LIBRARIES SampleRFZLib
-  LINK_LIBS  SampleRFZLib
-)
+#  LIBRARIES  
+#  LINK_LIBRARIES SampleRFZLib
+#  LINK_LIBS  SampleRFZLib
+#)
 
 #ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/src ${PROJECT_BINARY_DIR}/src)
 ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/src_programs ${PROJECT_BINARY_DIR}/src_programs)
