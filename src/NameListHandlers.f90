@@ -634,6 +634,7 @@ end subroutine GetEBSDMasterNameList
 !
 !> @date 06/19/14  SS 1.0 new routine
 !> @date 08/12/15 MDG 1.1 correction of type for startthick and fn(3)
+!> @date 09/15/15  SS 1.2 clean up of the subroutine
 !--------------------------------------------------------------------------
 subroutine GetECPMasterNameList(nmlfile, ecpnl, initonly)
 
@@ -641,42 +642,32 @@ use error
 
 IMPLICIT NONE
 
-character(fnlen),INTENT(IN)                     :: nmlfile
+character(fnlen),INTENT(IN)                    :: nmlfile
 type(ECPMasterNameListType),INTENT(INOUT)      :: ecpnl
-logical,OPTIONAL,INTENT(IN)             :: initonly
+logical,OPTIONAL,INTENT(IN)                    :: initonly
 
-logical                                 :: skipread = .FALSE.
+logical                                        :: skipread = .FALSE.
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: npx
 integer(kind=irg)       :: Esel
 integer(kind=irg)       :: nthreads
-real(kind=sgl)          :: fn(3)
-real(kind=sgl)          :: startthick
 real(kind=sgl)          :: dmin
-real(kind=sgl)          :: abcdist(3)
-real(kind=sgl)          :: albegadist(3)
 character(fnlen)        :: compmode
 character(fnlen)        :: energyfile
 character(fnlen)        :: outname
-logical                 :: distort
 
 ! define the IO namelist to facilitate passing variables to the program.
-namelist /ECPmastervars/ stdout, startthick, dmin, fn, abcdist, albegadist, compmode, &
-    distort, outname, energyfile, Esel, npx, nthreads
+namelist /ECPmastervars/ stdout, dmin, compmode, &
+    outname, energyfile, Esel, npx, nthreads
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 stdout = 6
-startthick = 2.0
-fn = (/0.0, 0.0, 1.0/)
 Esel = -1                       ! selected energy value for single energy run
 nthreads = 1
-dmin = 0.025                    ! smallest d-spacing to include in dynamical matrix [nm]
+dmin = 0.04                    ! smallest d-spacing to include in dynamical matrix [nm]
 npx = 256
-abcdist = (/0.4, 0.4, 0.4/)
-albegadist = (/90.0, 90.0, 90.0/)
 compmode = 'Blochwv'
-distort = .FALSE.
 energyfile = 'undefined'        ! default filename for z_0(E_e) data from EMMC Monte Carlo simulations
 outname = 'ECPmasterout.data'  ! default filename for final output
 
@@ -701,13 +692,8 @@ ecpnl%stdout = stdout
 ecpnl%Esel = Esel
 ecpnl%npx = npx
 ecpnl%nthreads = nthreads
-ecpnl%startthick = startthick
-ecpnl%fn = fn
-ecpnl%abcdist = abcdist
-ecpnl%albegadist = albegadist
 ecpnl%dmin = dmin
 ecpnl%compmode = compmode
-ecpnl%distort = distort
 ecpnl%energyfile = energyfile
 ecpnl%outname = outname
 
@@ -979,34 +965,32 @@ logical                                 :: skipread = .FALSE.
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: k(3)
 integer(kind=irg)       :: fn(3)
-integer(kind=irg)       :: numthick
-integer(kind=irg)       :: npix
 integer(kind=irg)       :: nthreads
+integer(kind=irg)       :: npix
 integer(kind=irg)       :: gF(3)
 integer(kind=irg)       :: gS(3)
 integer(kind=irg)       :: tF(3)
 integer(kind=irg)       :: tS(3)
-real(kind=sgl)          :: voltage
+real(kind=sgl)          :: eu(3)
 real(kind=sgl)          :: dmin
-real(kind=sgl)          :: ktmax
 real(kind=sgl)          :: thetac
 real(kind=sgl)          :: startthick
 real(kind=sgl)          :: thickinc
-real(kind=sgl)          :: zintstep
 real(kind=sgl)          :: filmthickness
 character(7)            :: compmode
-character(fnlen)        :: outname
 character(fnlen)        :: xtalname
 character(fnlen)        :: xtalname2
 character(fnlen)        :: energyfile
 character(fnlen)        :: filmfile
 character(fnlen)        :: subsfile
+character(fnlen)        :: masterfile
+character(fnlen)        :: datafile
 
 
 ! namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, distort, abcdist, albegadist, ktmax, &
-namelist /ECPlist/ stdout, xtalname, xtalname2, voltage, k, fn, dmin, ktmax, filmthickness, &
-                   startthick, thickinc, nthreads, numthick, npix, outname, thetac, compmode, zintstep, &
-                   gF, gS, tF, tS, energyfile, filmfile, subsfile
+namelist /ECPlist/ stdout, xtalname, xtalname2, k, fn, dmin, filmthickness, &
+                   startthick, thickinc, nthreads, thetac, compmode, npix, eu, &
+                   gF, gS, tF, tS, energyfile, filmfile, subsfile, masterfile, datafile
 
 ! default values
 stdout = 6                              ! standard output
@@ -1016,24 +1000,22 @@ gF = (/ 0, 0, 0 /)                      ! plane normal in film
 gS = (/ 0, 0, 0 /)                      ! plane normal in substrate
 tF = (/ 0, 0, 0 /)                      ! direction in film
 tS = (/ 0, 0, 0 /)                      ! direction in substrate
-numthick = 10                           ! number of increments
-npix = 256                              ! output arrays will have size npix x npix
+eu = (/0.0,0.0,0.0/)                    ! euler angle triplet
+npix = 200                              ! number of pixels in final image
 nthreads = 1                            ! number of OpenMP threads
-voltage = 30000.0                       ! acceleration voltage [V]
 dmin = 0.025                            ! smallest d-spacing to include in dynamical matrix [nm]
-ktmax = 0.0                             ! beam convergence in units of |g_a|
 thetac = 0.0                            ! beam convergence in mrad (either ktmax or thetac must be given)
-startthick = 2.0                        ! starting thickness [nm]
-thickinc = 2.0                          ! thickness increment
-zintstep = 1.0                          ! integration step size for ScatMat mode
+startthick = 0.0                        ! starting thickness [nm]
+thickinc = 0.0                          ! thickness increment
 filmthickness = 0.0                     ! 0.0 if there is no film
 compmode = 'Blochwv'                    ! 'Blochwv' or 'ScatMat' solution mode (Bloch is default)
-outname = 'ecp.data'                    ! output filename
 xtalname = 'undefined'                  ! initial value to check that the keyword is present in the nml file
 xtalname2 = 'undefined'                 ! initial value for substrate structure name
 energyfile = 'undefined'
 filmfile = 'undefined'
 subsfile = 'undefined'
+masterfile = 'undefined'
+datafile = 'undefined'
 
 if (present(initonly)) then
   if (initonly) skipread = .TRUE.
@@ -1058,24 +1040,23 @@ ecpnl%gF = gF
 ecpnl%gS = gS
 ecpnl%tF = tF
 ecpnl%tS = tS
-ecpnl%numthick = numthick
 ecpnl%npix = npix
+ecpnl%eu = eu
 ecpnl%nthreads = nthreads
-ecpnl%voltage = voltage
 ecpnl%dmin = dmin
-ecpnl%ktmax = ktmax
 ecpnl%thetac = thetac
 ecpnl%startthick = startthick
 ecpnl%thickinc = thickinc
-ecpnl%zintstep = zintstep
 ecpnl%filmthickness = filmthickness
 ecpnl%compmode = compmode
-ecpnl%outname = outname
+ecpnl%datafile = datafile
 ecpnl%xtalname = xtalname
 ecpnl%xtalname2 = xtalname2
 ecpnl%energyfile = energyfile
 ecpnl%filmfile = filmfile
 ecpnl%subsfile = subsfile
+ecpnl%masterfile = masterfile
+
 
 end subroutine GetECPNameList
 

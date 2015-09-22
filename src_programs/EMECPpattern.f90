@@ -97,10 +97,15 @@ use error
 use io
 use files
 use diffraction
+use EBSDmod
+use omp_lib
 
 IMPLICIT NONE
 
-type(ECPpatternNameListType),INTENT(IN)        :: ecpnl
+type(EBSDNameListType)                  :: enl
+type(EBSDMasterType),pointer            :: master
+
+type(ECPpatternNameListType),INTENT(IN) :: ecpnl
 character(fnlen),INTENT(IN)             :: progname
 
 character(fnlen)                        :: oldprogname, masterfile, outname, testfile
@@ -123,8 +128,10 @@ type(kvectorlist),pointer               :: khead,ktmp
 integer(kind=irg)                       :: numk,nix,niy,i,j,ierr,ipx,ipy
 real(kind=dbl)                          :: scl,x,dx,dy,dxm,dym
 real(kind=dbl)                          :: dc(3),ixy(2)
+real(kind=sgl)                          :: rotmat(3,3),FN(3)
 integer(kind=irg),allocatable           :: kij(:,:)
 real(kind=sgl),allocatable              :: ecp(:,:)
+
 
 
 !=================================================================
@@ -135,7 +142,12 @@ real(kind=sgl),allocatable              :: ecp(:,:)
 call Message('opening '//trim(ecpnl%masterfile), frm = "(A)" )
 
 masterfile = trim(EMdatapathname)//trim(ecpnl%masterfile)
-open(dataunit,file=trim(masterfile),status='unknown',form='unformatted')
+
+enl%masterfile = masterfile
+
+call EBSDreadMasterfile(enl, master, verbose=.TRUE.)
+
+!open(dataunit,file=trim(masterfile),status='unknown',form='unformatted')
 
 ! lines from EMECPmaster.f90... these are the things we need to read in...
 ! write (dataunit) progname
@@ -154,20 +166,27 @@ open(dataunit,file=trim(masterfile),status='unknown',form='unformatted')
 !! finally the masterpattern array
 ! write (dataunit) sr
 
-read (dataunit) oldprogname
-read (dataunit) oldscversion
-read (dataunit) xtalname
-read (dataunit) energyfile
+!read (dataunit) oldprogname
+!read (dataunit) oldscversion
+!read (dataunit) xtalname
+!read (dataunit) energyfile
 
-read (dataunit) npx,npy,numset
-read (dataunit) EkeV
-read (dataunit) dmin
+!read (dataunit) npx,npy,numset
+!read (dataunit) EkeV
+!read (dataunit) dmin
 
-allocate(ATOM_type(1:numset))
-read (dataunit) ATOM_type
+!allocate(ATOM_type(1:numset))
+!read (dataunit) ATOM_type
+
+!read (dataunit) sr
+
+npx = enl%npx
+npy = enl%npy
+EkeV = enl%EkeV
 
 allocate(sr(-npx:npx,-npy:npy),stat=istat)
-read (dataunit) sr
+
+sr = sum(master%mLPNH,3)
 
 close(dataunit,status='keep')
 call Message(' -> completed reading '//trim(ecpnl%masterfile), frm = "(A)")
@@ -188,13 +207,22 @@ nullify(khead)
 nullify(ktmp)
 allocate(khead)
 numk = 0
+rotmat(1,:) = (/1.0,0.0,0.0/)
+rotmat(2,:) = (/0.0,1.0,0.0/)
+rotmat(3,:) = (/0.0,0.0,1.0/)
+
+FN = (/0.0,0.0,1.0/)
+call NormVec(cell,FN,'r')
+
+call CalckvectorsECP(khead,cell,rotmat,ecpnl%thetac,ecpnl%npix,ecpnl%npix,numk,FN)
+
 
 call CalckvectorsECP(khead,cell,ecpnl%k,ecpnl%thetac,ecpnl%npix,ecpnl%npix,numk)
 allocate(kij(2,numk),stat=istat)
 
 ktmp => khead
-kij(1:2,1) = (/ ktmp%i, ktmp%j /)
 
+kij(1:2,1) = (/ ktmp%i, ktmp%j /)
 do i = 2,numk
     ktmp => ktmp%next
     kij(1:2,i) = (/ ktmp%i, ktmp%j /)
@@ -204,8 +232,6 @@ end do
 ! determine the scale factor for the Lambert interpolation; the square has
 ! an edge length of 2 x sqrt(pi/2)
 scl = float(npx)/1.25331413732D0
-!print*,"success..."
-
 
 allocate(ecp(-ecpnl%npix:ecpnl%npix,-ecpnl%npix:ecpnl%npix),stat=istat)
 ecp = 0.0

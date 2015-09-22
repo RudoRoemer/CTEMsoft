@@ -77,13 +77,14 @@ end program EMECPmaster
 !
 ! SUBROUTINE:ECmasterpattern
 !
-!> @author Marc De Graef/Saransh Singh, Carnegie Mellon University
+!> @author Saransh Singh, Carnegie Mellon University
 !
 !> @brief compute a master electron channeling pattern
 !
 !> @date 07/23/14  SS  1.0 original
 !> @date 06/05/15  SS  1.1 added OpenMP support and HDF5 support
 !> @date 09/10/15 MDG  1.2 updated Lambert and symmetry stuff
+!> @date 09/15/15  SS  1.3 corrected small bug in writing stereo projection to h5 file
 !--------------------------------------------------------------------------
 subroutine ECmasterpattern(ecpnl, progname, nmldeffile)
 
@@ -448,7 +449,7 @@ groupname = "NMLfiles"
 hdferr = HDF_createGroup(groupname, HDF_head)
 
 ! read the text file and write the array to the file
-dataset = 'EBSDmasterNML'
+dataset = 'ECPmasterNML'
 hdferr = HDF_writeDatasetTextFile(dataset, nmldeffile, HDF_head)
 
 ! leave this group
@@ -510,13 +511,13 @@ hdferr = HDF_writeHyperslabFloatArray3D(dataset, masterSP, dims3, offset3, cnt3(
 call HDF_pop(HDF_head,.TRUE.)
 
 ! and close the fortran hdf interface
-call h5close_f(hdferr)
+!call h5close_f(hdferr)
 
-lambdaZ = lambdaZ * 10000.0
+!lambdaZ = lambdaZ * 10000.0
 
-  call OMP_SET_NUM_THREADS(ecpnl%nthreads)
-  io_int(1) = ecpnl%nthreads
-  call WriteValue(' Attempting to set number of threads to ',io_int, 1, frm = "(I4)")
+call OMP_SET_NUM_THREADS(ecpnl%nthreads)
+io_int(1) = ecpnl%nthreads
+call WriteValue(' Attempting to set number of threads to ',io_int, 1, frm = "(I4)")
 
 
 !!$OMP PARALLEL default(shared) COPYIN(rlp) &
@@ -637,7 +638,6 @@ call WriteValue(' -> Average number of weak reflections   = ',io_int, 1, "(I5)")
 
 
 
-
 ! and here is where the major changes are for this version 5.0: all output now in HDF5 format
 call timestamp(timestring=tstre)
 
@@ -658,32 +658,32 @@ hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head, overwrite)
 
 call HDF_pop(HDF_head)
 
-    groupname = 'EMData'
-    hdferr = HDF_openGroup(groupname, HDF_head)
+groupname = 'EMData'
+hdferr = HDF_openGroup(groupname, HDF_head)
 
 ! add data to the hyperslab
-    dataset = 'mLPNH'
-    dims3 = (/  2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
-    cnt3 = (/ 2*ecpnl%npx+1, 2*ecpnl%npx+1, numset/)
-    offset3 = (/ 0, 0, 0 /)
-    hdferr = HDF_writeHyperslabFloatArray3D(dataset, mLPNH, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head, insert)
+dataset = 'mLPNH'
+dims3 = (/  2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
+cnt3 = (/ 2*ecpnl%npx+1, 2*ecpnl%npx+1, numset/)
+offset3 = (/ 0, 0, 0 /)
+hdferr = HDF_writeHyperslabFloatArray3D(dataset, mLPNH, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head, insert)
 
-    dataset = 'mLPSH'
-    dims3 = (/  2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
-    cnt3 = (/ 2*ecpnl%npx+1, 2*ecpnl%npx+1, numset/)
-    offset3 = (/ 0, 0, 0 /)
-    hdferr = HDF_writeHyperslabFloatArray3D(dataset, mLPSH, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head, insert)
+dataset = 'mLPSH'
+dims3 = (/  2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
+cnt3 = (/ 2*ecpnl%npx+1, 2*ecpnl%npx+1, numset/)
+offset3 = (/ 0, 0, 0 /)
+hdferr = HDF_writeHyperslabFloatArray3D(dataset, mLPSH, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head, insert)
 
-    dataset = 'masterSP'
-    dims3 = (/  2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
-    cnt3 = (/ 2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
-    offset3 = (/ 0, 0, 0/)
-    hdferr = HDF_writeHyperslabFloatArray3D(dataset, masterSP, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head, insert)
+dataset = 'masterSP'
+dims3 = (/  2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
+cnt3 = (/ 2*ecpnl%npx+1, 2*ecpnl%npx+1, numset /)
+offset3 = (/ 0, 0, 0/)
+hdferr = HDF_writeHyperslabFloatArray3D(dataset, masterSP, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head, insert)
 
-    call HDF_pop(HDF_head,.TRUE.)
+call HDF_pop(HDF_head,.TRUE.)
 
 ! and close the fortran hdf interface
-    call h5close_f(hdferr)
+call h5close_f(hdferr)
 
 if ((ecpnl%Esel.eq.-1).and.(ix.eq.1)) then
     call Message('Final data stored in file '//trim(ecpnl%outname), frm = "(A/)")

@@ -254,31 +254,55 @@ type ECPNameListType
         integer(kind=irg)       :: stdout
         integer(kind=irg)       :: k(3)
         integer(kind=irg)       :: fn(3)
-        integer(kind=irg)       :: numthick
-        integer(kind=irg)       :: npix
         integer(kind=irg)       :: nthreads
+        integer(kind=irg)       :: npix
         integer(kind=irg)       :: gF(3)
         integer(kind=irg)       :: gS(3)
         integer(kind=irg)       :: tF(3)
         integer(kind=irg)       :: tS(3)
-        real(kind=sgl)          :: voltage
-        real(kind=sgl)          :: dmin
-        real(kind=sgl)          :: ktmax
+        real(kind=sgl)          :: eu(3)
         real(kind=sgl)          :: thetac
         real(kind=sgl)          :: startthick
         real(kind=sgl)          :: thickinc
-        real(kind=sgl)          :: zintstep
         real(kind=sgl)          :: filmthickness
-!       real(kind=dbl)          :: abcdist(3)
-!       real(kind=dbl)          :: albegadist(3)
-!       logical                 :: distort
         character(7)            :: compmode
-        character(fnlen)        :: outname
         character(fnlen)        :: xtalname
         character(fnlen)        :: xtalname2
         character(fnlen)        :: energyfile
         character(fnlen)        :: filmfile
         character(fnlen)        :: subsfile
+        character(fnlen)        :: masterfile
+        character(fnlen)        :: datafile
+! everything below here is not part of the namelist input structure, but is used to pass arguments to subroutines
+        integer(kind=irg)       :: numangles
+        integer(kind=irg)       :: numEbins
+        integer(kind=irg)       :: numzbins 
+        integer(kind=irg)       :: nsx
+        integer(kind=irg)       :: nsy
+        integer(kind=irg)       :: num_el
+        integer(kind=irg)       :: MCnthreads
+        integer(kind=irg)       :: npx
+        integer(kind=irg)       :: npy
+        integer(kind=irg)       :: nE
+        integer(kind=irg)       :: numset
+        real(kind=dbl)          :: EkeV
+        real(kind=dbl)          :: Ehistmin 
+        real(kind=dbl)          :: Ebinsize 
+        real(kind=dbl)          :: depthmax
+        real(kind=dbl)          :: depthstep
+        real(kind=sgl)          :: dmin
+        real(kind=dbl)          :: MCsig
+        real(kind=dbl)          :: MComega
+        character(4)            :: MCmode       ! Monte Carlo mode
+        character(5)            :: anglemode    ! 'quats' or 'euler' for angular input
+        character(6)            :: sqorhe       ! from Master file, square or hexagonal Lambert projection
+        character(8)            :: MCscversion
+        character(8)            :: Masterscversion
+        character(fnlen)        :: Masterprogname
+        character(fnlen)        :: Masterxtalname 
+        character(fnlen)        :: Masterenergyfile
+        character(fnlen)        :: MCprogname 
+        character(fnlen)        :: MCxtalname
 end type ECPNameListType
 
 
@@ -307,15 +331,10 @@ type ECPMasterNameListType
     integer(kind=irg)       :: npx
     integer(kind=irg)       :: Esel
     integer(kind=irg)       :: nthreads
-    real(kind=sgl)          :: fn(3)
-    real(kind=sgl)          :: startthick
     real(kind=sgl)          :: dmin
-    real(kind=sgl)          :: abcdist(3)
-    real(kind=sgl)          :: albegadist(3)
     character(fnlen)        :: compmode
     character(fnlen)        :: energyfile
     character(fnlen)        :: outname
-    logical                 :: distort
 end type ECPMasterNameListType
 
 !namelist for the EMECP program
