@@ -767,7 +767,7 @@ if (AorD.eq.'D') then
         DynMat = czero
         call CalcUcg(cell, rlp, (/0,0,0/) )
         Upz = rlp%Upmod
-        Pioxgp = cPi/rlp%xgp
+        !Pioxgp = cPi/rlp%xgp
 
         rlr => listroot%next
         ir = 1
@@ -811,9 +811,9 @@ if (AorD.eq.'D') then
                 rlw => rlw%nextw
               end do
               weaksgsum = weaksgsum * cell%mLambda/2.D0
-              DynMat(ir,ir) = cmplx(2.D0*rlr%sg/cell%mLambda-weaksgsum,Upz,dbl)*exp(-Pioxgp)
+              DynMat(ir,ir) = cmplx(2.D0*rlr%sg/cell%mLambda-weaksgsum,Upz,dbl)
             else
-              DynMat(ir,ir) = cmplx(2.D0*rlr%sg/cell%mLambda,Upz,dbl)*exp(-Pioxgp)
+              DynMat(ir,ir) = cmplx(2.D0*rlr%sg/cell%mLambda,Upz,dbl)
 
             end if           
         
@@ -1233,10 +1233,11 @@ end subroutine CalcsigmaggSubstrate
 !
 !> @date   12/01/14 SS 1.0 original
 !> @date   09/01/15 SS 1.1 matrix exponential performed in this subroutine now
+!> @date   09/21/15 SS 1.2 added FN_film and FN_subs as substrate, now everything seems to be correct
 !--------------------------------------------------------------------------
 
 recursive subroutine GetStrongBeamsSubs(cell_film,cell_subs,reflist_film,refliststrong_subs,&
-k0,FN,nns_film,dmin,TTinv,rlp_subs,dthick)
+k0,FN_film,FN_subs,nns_film,dmin,TTinv,rlp_subs,dthick)
 
 
 use typedefs
@@ -1253,7 +1254,7 @@ type(unitcell),pointer                  :: cell_film,cell_subs
 type(reflisttype),pointer               :: reflist_film
 type(refliststrongsubstype),pointer     :: refliststrong_subs
 real(kind=sgl),INTENT(IN)               :: k0(3),dmin
-real(kind=dbl),INTENT(IN)               :: FN(3)
+real(kind=dbl),INTENT(IN)               :: FN_film(3),FN_subs(3)
 real(kind=sgl),INTENT(IN)               :: TTinv(3,3)
 integer(kind=irg),INTENT(IN)            :: nns_film
 real(kind=dbl),INTENT(IN)               :: dthick
@@ -1271,11 +1272,11 @@ call Set_Bethe_Parameters(BetheParameters,.TRUE.)
 ! convert to substrate reference frame
 
 rltmpa => reflist_film%next
-kg = k0 + float(rltmpa%hkl) + rltmpa%sg*sngl(FN)
-kg1 = Convert_kgs_to_Substrate(cell_film,cell_subs,kg,TTinv,sngl(FN))
+kg = k0 + float(rltmpa%hkl) + rltmpa%sg*sngl(FN_film)
+kg1 = Convert_kgs_to_Substrate(cell_film,cell_subs,kg,TTinv,sngl(FN_subs))
 
 ! calculate reflection list and dynamical matrix
-call Initialize_ReflectionList(cell_subs, reflist_subs, BetheParameters, sngl(FN), kg1, dmin, nref_subs)
+call Initialize_ReflectionList(cell_subs, reflist_subs, BetheParameters, sngl(FN_subs), kg1, dmin, nref_subs)
 
 call Apply_BethePotentials(cell_subs, reflist_subs, firstw_subs, BetheParameters, nref_subs, nns_subs, nnw_subs)
 
@@ -1315,13 +1316,13 @@ rltmpa => rltmpa%nexts
 
 do ii = 1,nns_film-1
 
-    kg = k0 + float(rltmpa%hkl) + (rltmpa%sg)*sngl(FN) !kg = k0 + g + sg*FN
+    kg = k0 + float(rltmpa%hkl) + (rltmpa%sg)*sngl(FN_film) !kg = k0 + g + sg*FN
 
-    kg1 = Convert_kgs_to_Substrate(cell_film, cell_subs,kg, TTinv,sngl(FN)) ! go to substrate frame
+    kg1 = Convert_kgs_to_Substrate(cell_film, cell_subs,kg, TTinv,sngl(FN_subs)) ! go to substrate frame
 
 ! initialize reflection list, apply bethe perturbation and get corresponding dynamical matrices
 
-    call Initialize_ReflectionList(cell_subs, reflist_subs, BetheParameters, sngl(FN), kg1, sngl(dmin), nref_subs)
+    call Initialize_ReflectionList(cell_subs, reflist_subs, BetheParameters, sngl(FN_subs), kg1, sngl(dmin), nref_subs)
 
     call Apply_BethePotentials(cell_subs, reflist_subs, firstw_subs, BetheParameters, nref_subs, nns_subs, nnw_subs)
 

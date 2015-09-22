@@ -1657,11 +1657,13 @@ end subroutine GetOR
 !> @date   12/20/13 MDG 1.0 first version, used for EMoverlap and EMorient
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !> @date   06/05/14 MDG 4.1 modification for cell pointers
+!> @date   09/21/15 SS  4.2 correction in final step (buggy lines commented out and new lines marked)
 !--------------------------------------------------------------------------
 function ComputeOR(orel, cellA, cellB, direction) result(TT)
 
 use math
 use io
+use error
 
 IMPLICIT NONE
 
@@ -1684,10 +1686,10 @@ integer(kind=irg)               :: i
  E(1,1:3)=r(1:3)
  E(2,1:3)=p(1:3)
  E(3,1:3)=orel % tA(1:3)
- if (direction.eq.'AB') then
-   call mInvert(dble(E),dE,.FALSE.)
-   E = sngl(dE)
- end if
+ !if (direction.eq.'AB') then
+ !  call mInvert(dble(E),dE,.FALSE.)
+ !  E = sngl(dE)
+ !end if
 
 ! compute E-prime matrix 
  call TransSpace(cellB, orel % gB,r,'r','d')
@@ -1698,16 +1700,26 @@ integer(kind=irg)               :: i
  Ep(1,1:3)=r(1:3)
  Ep(2,1:3)=p(1:3)
  Ep(3,1:3)=orel % tB(1:3)
- if (direction.eq.'BA') then
-   call mInvert(dble(Ep),dE,.FALSE.)
-   Ep = sngl(dE)
- end if
+ !if (direction.eq.'BA') then
+ !  call mInvert(dble(Ep),dE,.FALSE.)
+ !  Ep = sngl(dE)
+ !end if
 
-! and multiply both matrices to get transformation matrix M
+! and multiply E^(-1)Ep or Ep^(-1)E matrices to get transformation matrix M
  if (direction.eq.'BA') then
+!=============NEW==================
+   call mInvert(dble(Ep),dE,.FALSE.)
+   Ep = sngl(dE) 
+!==================================
    TT = matmul(Ep,E)
- else
+ else if (direction .eq. 'AB') then
+!=============NEW==================
+   call mInvert(dble(E),dE,.FALSE.)
+   E = sngl(dE)
+!==================================   
    TT = matmul(E,Ep)
+ else
+   call FatalError('ComputeOR','Unknown direction specified')
  end if
 
 end function ComputeOR
