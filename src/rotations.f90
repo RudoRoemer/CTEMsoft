@@ -105,6 +105,7 @@
 !> @date 03/12/15 MDG 3.8 correction of Rodrigues representation for identity rotation -> [0,0,epsijk,0]
 !> @date 03/16/15 MDG 3.9 added quat_average routine
 !> @date 04/17/15 MDG 3.91 simplification to qu2eu routines
+!> @date 09/23/15 MDG 3.92 changes to .eq. tests on reals; replaced all by close_enough calls
 !--------------------------------------------------------------------------
 module rotations
 
@@ -505,9 +506,81 @@ interface print_orientation
         module procedure print_orientation_d
 end interface
 
+! numerical comparison test of two reals
+private :: close_enough
+interface close_enough
+        module procedure close_enough
+        module procedure close_enough_d
+end interface
 
 
 contains
+
+!--------------------------------------------------------------------------
+!
+! Function: close_enough
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief compares two reals and returns .TRUE. is they are closer than machine precision
+!
+!> @param a (single precision)  
+!> @param b (single precision)  
+! 
+!> @date 9/23/15 MDG 1.0 original
+!--------------------------------------------------------------------------
+recursive function close_enough(a,b) result(res)
+
+use local
+use constants
+use error
+
+IMPLICIT NONE
+
+real(kind=sgl),INTENT(IN)       :: a
+real(kind=sgl),INTENT(IN)       :: b
+logical                         :: res
+
+real(kind=sgl)                  :: eps = epsilon(1.0) 
+
+res = .FALSE.
+if (abs(a-b).lt.eps) res = .TRUE.
+
+end function close_enough
+
+!--------------------------------------------------------------------------
+!
+! Function: close_enough_d
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief compares two reals and returns .TRUE. is they are closer than machine precision
+!
+!> @param a (double precision)  
+!> @param b (double precision)  
+! 
+!> @date 9/23/15 MDG 1.0 original
+!--------------------------------------------------------------------------
+recursive function close_enough_d(a,b) result(res)
+
+use local
+use constants
+use error
+
+IMPLICIT NONE
+
+real(kind=dbl),INTENT(IN)       :: a
+real(kind=dbl),INTENT(IN)       :: b
+logical                         :: res
+
+real(kind=sgl)                  :: eps = epsilon(1.0D0) 
+
+res = .FALSE.
+if (dabs(a-b).lt.eps) res = .TRUE.
+
+end function close_enough_d
+
+
 
 !--------------------------------------------------------------------------
 !
@@ -1619,6 +1692,7 @@ end function eu2om_d
 !> @date 8/12/13   MDG 1.0 original
 !> @date 7/23/14   MDG 2.0 explicit implementation
 !> @date 7/23/14   MDG 2.1 exception for zero rotation angle
+!> @date 9/23/15   MDG 2.2 moved alphe.lt.0 test inside else statement
 !--------------------------------------------------------------------------
 recursive function eu2ax(e) result(res)
 
@@ -1634,7 +1708,7 @@ sig = 0.5*(e(1)+e(3))
 del = 0.5*(e(1)-e(3))
 tau = sqrt(t*t+sin(sig)**2)
 
-if (sig.eq.sngl(cPi)*0.5) then  ! Infinity 
+if (close_enough(sig,sngl(cPi)*0.5)) then  ! Infinity 
   alpha = sngl(cPi)
 else
   alpha = 2.0 * atan(tau/cos(sig))
@@ -1647,10 +1721,10 @@ else
 ! passive axis-angle pair so a minus sign in front
         res(1:3) = - epsijk * (/ t*cos(del), t*sin(del), sin(sig) /) / tau
         res(4) = alpha
-end if
 
 ! make sure alpha is positive
-if (alpha.lt.0.0) res = -res
+        if (alpha.lt.0.0) res = -res
+end if
 
 end function eu2ax
 
@@ -1667,6 +1741,7 @@ end function eu2ax
 ! 
 !> @date 8/12/13   MDG 1.0 original
 !> @date 7/23/14   MDG 1.1 exception for zero rotation angle
+!> @date 9/23/15   MDG 2.2 moved alphe.lt.0 test inside else statement
 !--------------------------------------------------------------------------
 recursive function eu2ax_d(e) result(res)
 
@@ -1682,7 +1757,7 @@ sig = 0.5D0*(e(1)+e(3))
 del = 0.5D0*(e(1)-e(3))
 tau = dsqrt(t*t+dsin(sig)**2)
 
-if (sig.eq.cPi*0.5D0) then  ! Infinity 
+if (close_enough(sig,cPi*0.5D0)) then  ! Infinity 
   alpha = cPi
 else
   alpha = 2.D0 * datan(tau/dcos(sig))
@@ -1695,10 +1770,10 @@ else
 ! passive axis-angle pair so a minus sign in front
         res(1:3) = - epsijkd *(/ t*dcos(del), t*dsin(del), dsin(sig) /) / tau
         res(4) = alpha
-end if
 
 ! make sure alpha is positive
-if (alpha.lt.0.D0) res = -res
+        if (alpha.lt.0.D0) res = -res
+end if
 
 end function eu2ax_d
 
@@ -1738,7 +1813,7 @@ if (abs(t-sngl(cPi)).lt.thr) then
   return
 end if
  
-if (t.eq.0.0) then 
+if (close_enough(t,0.0)) then 
   res = (/ 0.0, 0.0, epsijk, 0.0 /)
 else
   res(4) = tan(t*0.5)
@@ -1782,7 +1857,7 @@ if (abs(t-cPi).lt.thr) then
   return
 end if
  
-if (t.eq.0.D0) then 
+if (close_enough(t,0.D0)) then 
   res = (/ 0.D0, 0.D0, epsijkd, 0.D0 /)
 else
   res(4) = dtan(t*0.5D0)
@@ -1906,14 +1981,14 @@ real(kind=sgl),INTENT(IN)       :: o(3,3)               !< orientation matrix
 real(kind=sgl)                  :: res(3), zeta
 real(kind=dbl),parameter        :: thr = 1.0D-6
 
-if (abs((abs(o(3,3))-1.D0)).gt.thr) then
+if (.not.close_enough(abs(o(3,3)),1.0)) then
         res(2) = acos(o(3,3))
         zeta = 1.0/sqrt(1.0-o(3,3)**2)
         res(1) = atan2(o(3,1)*zeta,-o(3,2)*zeta)
         res(3) = atan2(o(1,3)*zeta, o(2,3)*zeta)
 else
 ! we arbitrarily assign the entire angle to phi_1
-        if (o(3,3).eq.1.0) then
+        if (close_enough(o(3,3),1.0)) then
                 res(1) = atan2( o(1,2),o(1,1))
                 res(2) = 0.0
                 res(3) = 0.0
@@ -1957,14 +2032,14 @@ real(kind=dbl),INTENT(IN)       :: o(3,3)               !< orientation matrix
 real(kind=dbl)                  :: res(3), zeta
 real(kind=dbl),parameter        :: thr = 1.0D-8
 
-if (abs((abs(o(3,3))-1.D0)).gt.thr) then
+if (.not.close_enough(dabs(o(3,3)),1.D0)) then
         res(2) = dacos(o(3,3))
         zeta = 1.D0/dsqrt(1.D0-o(3,3)**2)
         res(1) = datan2(o(3,1)*zeta,-o(3,2)*zeta)
         res(3) = datan2(o(1,3)*zeta, o(2,3)*zeta)
 else
 ! we arbitrarily assign the entire angle to phi_1
-        if (abs(o(3,3)-1.D0).lt.thr) then
+        if (close_enough(o(3,3),1.D0)) then
                 res(1) = datan2( o(1,2),o(1,1))
                 res(2) = 0.D0
                 res(3) = 0.D0
@@ -2119,8 +2194,8 @@ q03 = qq(1)**2+qq(4)**2
 q12 = qq(2)**2+qq(3)**2
 chi = sqrt(q03*q12)
 
-if (chi.eq.0.0) then
-  if (q12.eq.0.0) then 
+if (close_enough(chi,0.0)) then
+  if (close_enough(q12,0.0)) then 
     Phi = 0.0
     phi2 = 0.0                  ! arbitrarily due to degeneracy
     phi1 = atan2(-epsijk*2.0*qq(1)*qq(4),qq(1)**2-qq(4)**2)
@@ -2177,8 +2252,8 @@ q03 = qq(1)**2+qq(4)**2
 q12 = qq(2)**2+qq(3)**2
 chi = dsqrt(q03*q12)
 
-if (chi.eq.0.D0) then
-  if (q12.eq.0.D0) then 
+if (close_enough(chi,0.D0)) then
+  if (close_enough(q12,0.D0)) then 
     Phi = 0.D0
     phi2 = 0.D0                  ! arbitrarily due to degeneracy
     phi1 = datan2(-epsijk*2.D0*qq(1)*qq(4),qq(1)**2-qq(4)**2)
@@ -2303,7 +2378,7 @@ real(kind=sgl),parameter        :: thr = 1.0E-6
 
 ! normalize h and store the magnitude
 hmag = sum(h*h)
-if (hmag.eq.0.0) then
+if (close_enough(hmag,0.0)) then
   res = (/ 0.0, 0.0, 1.0, 0.0 /)
 else
   hm = hmag
@@ -2356,7 +2431,7 @@ real(kind=dbl),parameter        :: thr = 1.0E-8
 
 ! normalize h and store the magnitude
 hmag = sum(h*h)
-if (hmag.eq.0.D0) then
+if (close_enough(hmag,0.D0)) then
   res = (/ 0.D0, 0.D0, 1.D0, 0.D0 /)
 else
   hm = hmag
@@ -2421,7 +2496,7 @@ character(1)                            :: JOBVL, JOBVR
  if (t.lt.-1.0) t = -1.0
  res(4) = acos(t)
 
-if (res(4).eq.0.0) then
+if (close_enough(res(4),0.0)) then
   res(1:3) = (/ 0.0, 0.0, 1.0 /)
   return
 else
@@ -2500,7 +2575,7 @@ character(1)                            :: JOBVL, JOBVR
  if (t.lt.-1.D0) t = -1.D0
  res(4) = dacos(t)
 
-if (res(4).eq.0.D0) then
+if (close_enough(res(4),0.D0)) then
   res(1:3) = (/ 0.D0, 0.D0, 1.D0 /)
   return
 else
@@ -2565,7 +2640,7 @@ real(kind=sgl)                  :: ta, angle
 
 ta = r(4)
 
-if (ta.eq.0.0) then 
+if (close_enough(ta,0.0)) then 
   res = (/ 0.0, 0.0, 1.0, 0.0 /)
   return
 end if
@@ -2608,7 +2683,7 @@ real(kind=dbl)                  :: ta, angle
 
 ta = r(4)
 
-if (ta.eq.0.D0) then 
+if (close_enough(ta,0.D0)) then 
   res = (/ 0.D0, 0.D0, 1.D0, 0.D0 /)
   return
 end if
@@ -2650,7 +2725,7 @@ real(kind=sgl)                          :: res(4)
 real(kind=sgl)                          :: t
 real(kind=sgl),parameter                :: thr = 1.0E-7
 
-if (a(4).eq.0.0) then
+if (close_enough(a(4),0.0)) then
   res = (/ 0.0, 0.0, epsijk, 0.0 /)
   return
 end if
@@ -2659,6 +2734,7 @@ res(1:3) =  a(1:3)
 
 ! we need to deal with the 180 degree case
 if (abs(a(4)-sngl(cPi)).lt.thr) then
+!if (close_enough(abs(a(4)-sngl(cPi)),0.0)) then
   res(4) = infty
 else
   res(4) = tan( a(4) * 0.5 )
@@ -2701,6 +2777,7 @@ res(1:3) =  a(1:3)
 
 ! we need to deal with the 180 degree case
 if (dabs(a(4)-cPi).lt.thr) then
+!if (close_enough(dabs(a(4)-cPi),0.D0)) then
   res(4) = infty
 else
   res(4) = dtan( a(4) * 0.5D0 )
@@ -2732,7 +2809,7 @@ real(kind=sgl), INTENT(IN)              :: a(4)
 real(kind=sgl)                          :: res(4), c, s
 
 
-if (a(4).eq.0.0) then
+if (close_enough(a(4),0.0)) then
         res = (/ 1.0, 0.0, 0.0, 0.0 /)
 else
         c = cos(a(4)*0.5)
@@ -2764,7 +2841,7 @@ real(kind=dbl), INTENT(IN)              :: a(4)
 real(kind=dbl)                          :: res(4), c, s
 
 
-if (a(4).eq.0.D0) then
+if (close_enough(a(4),0.D0)) then
         res = (/ 1.D0, 0.D0, 0.D0, 0.D0 /)
 else
         c = dcos(a(4)*0.5D0)
@@ -2800,7 +2877,7 @@ real(kind=sgl), INTENT(IN)              :: r(4)
 real(kind=sgl)                          :: res(3), rv, f, t
 
 rv = sum(r(1:3)*r(1:3))
-if (rv.eq.0.0) then
+if (close_enough(rv,0.0)) then
         res = (/ 0.0, 0.0, 0.0 /)
         return
 end if
@@ -2839,7 +2916,7 @@ real(kind=dbl), INTENT(IN)              :: r(4)
 real(kind=dbl)                          :: res(3), rv, f, t
 
 rv = sum(r(1:3)*r(1:3))
-if (rv.eq.0.D0) then
+if (close_enough(rv,0.D0)) then
         res = (/ 0.D0, 0.D0, 0.D0 /)
         return
 end if
@@ -3104,7 +3181,7 @@ real(kind=sgl)                          :: res(4), omega, s
 
 omega = 2.0 * acos(q(1))
 ! if the angle equals zero, then we return the rotation axis as [001]
-if (omega.eq.0.0) then
+if (close_enough(omega,0.0)) then
   res = (/ 0.0, 0.0, 1.0, 0.0 /)
 else
   if (q(1).ne.0.0) then
@@ -3141,7 +3218,7 @@ real(kind=dbl)                          :: res(4), omega, s
 
 omega = 2.D0 * dacos(q(1))
 ! if the angle equals zero, then we return the rotation axis as [001]
-if (omega.eq.0.D0) then
+if (close_enough(omega,0.D0)) then
   res = (/ 0.D0, 0.D0, 1.D0, 0.D0 /)
 else
   if (q(1).ne.0.D0) then
@@ -3262,7 +3339,7 @@ real(kind=sgl), INTENT(IN)              :: q(4)
 real(kind=sgl)                          :: res(3), omega, s, f
 
 omega = 2.0 * acos(q(1))
-if (omega.eq.0.0) then
+if (close_enough(omega,0.0)) then
         res = (/ 0.0, 0.0, 0.0 /)
 else
         res = q(2:4)
@@ -3296,7 +3373,7 @@ real(kind=dbl), INTENT(IN)              :: q(4)
 real(kind=dbl)                          :: res(3), omega, s, f
 
 omega = 2.D0 * dacos(q(1))
-if (omega.eq.0.D0) then
+if (close_enough(omega,0.D0)) then
         res = (/ 0.D0, 0.D0, 0.D0 /)
 else
         res = q(2:4)
