@@ -14,16 +14,16 @@ integer(kind=irg)       :: n_errors
 character(fnlen)        :: nmlfile, jsonname
 type(KosselNameListType):: knl
 type(MCCLNameListType)  :: mcnl
+type(EBSDNameListType)  :: enl
 
 
 ! read a MCOpenCL input file
-nmlfile = 'EMMCOpenCL.nml'
-call GetMCCLNameList(nmlfile, mcnl)
+nmlfile = 'EMEBSD.nml'
+call GetEBSDNameList(nmlfile, enl)
 
 ! and write it to json format
-nmlfile = 'EMMCOpenCL.nml'
-jsonname = 'EMMCOpenCL.json'
-call JSONwriteMCCLNameList(mcnl, jsonname, n_errors)
+jsonname = 'EMEBSD.json'
+call JSONwriteEBSDNameList(enl, jsonname, n_errors)
 
 
 stop

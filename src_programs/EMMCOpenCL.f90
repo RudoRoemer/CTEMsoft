@@ -32,12 +32,14 @@ use local
 use files
 use NameListTypedefs
 use NameListHandlers
+use JSONsupport
 use io
 
 IMPLICIT NONE
 
 character(fnlen)                        :: nmldeffile, progname, progdesc
 type(MCCLNameListType)                  :: mcnl
+integer(kind=irg)                       :: res, error_cnt
 
 nmldeffile = 'EMMCOpenCL.nml'
 progname = 'EMMCOpenCL.f90'
@@ -49,8 +51,13 @@ call EMsoft(progname, progdesc)
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,1,(/ 42 /), progname)
 
-! deal with the namelist stuff
-call GetMCCLNameList(nmldeffile,mcnl)
+! deal with the namelist stuff, either .nml or .json format
+res = index(nmldeffile,'.nml',kind=irg)
+if (res.eq.0) then
+  call JSONreadMCCLNameList(mcnl, nmldeffile, error_cnt)
+else
+  call GetMCCLNameList(nmldeffile,mcnl)
+end if
 
 ! perform a Monte Carlo simulation
 write (*,*) 'namelist contents : ',mcnl

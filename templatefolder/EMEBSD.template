@@ -23,7 +23,7 @@ anglefile = 'testeuler.txt'
 ! 'tsl' or 'hkl' Euler angle convention parameter
 eulerconvention = 'tsl'
 ! name of EBSD master output file
-FZfile = 'master.h5'
+masterfile = 'master.h5'
 ! name of Monte Carlo output file
 energyfile = 'MC.h5'
 ! name of output file
