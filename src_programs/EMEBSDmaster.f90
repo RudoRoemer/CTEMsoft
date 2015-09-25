@@ -75,6 +75,7 @@ IMPLICIT NONE
 
 character(fnlen)                        :: nmldeffile, progname, progdesc
 type(EBSDMasterNameListType)            :: emnl
+integer(kind=irg)                       :: res, error_cnt
 
 nmldeffile = 'EMEBSDmaster.nml'
 progname = 'EMEBSDmaster.f90'
@@ -86,8 +87,13 @@ call EMsoft(progname, progdesc)
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,1,(/ 21 /), progname)
 
-! deal with the namelist stuff
-call GetEBSDMasterNameList(nmldeffile,emnl)
+! deal with the namelist stuff, either .nml or .json format
+res = index(nmldeffile,'.nml',kind=irg)
+if (res.eq.0) then
+  call JSONreadEBSDmasterNameList(emnl, nmldeffile, error_cnt)
+else
+  call GetEBSDMasterNameList(nmldeffile,emnl)
+end if
 
 ! generate a set of master EBSD patterns
  call ComputeMasterPattern(emnl, progname, nmldeffile)

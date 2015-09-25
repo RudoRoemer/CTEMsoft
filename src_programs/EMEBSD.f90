@@ -46,6 +46,7 @@
 !> @date  03/10/15  MDG 4.1 added output format selector
 !> @date  04/02/15  MDG 5.0 changed program input & output to HDF format
 !> @date  09/01/15  MDG 5.1 change from single to double Lambert master patterns (lots of changes)
+!> @date  09/26/15  MDG 5.2 added json support for nml file
 ! ###################################################################
 
 program EMEBSD
@@ -67,7 +68,7 @@ type(EBSDAngleType),pointer            :: angles
 type(EBSDLargeAccumType),pointer       :: acc
 type(EBSDMasterType),pointer           :: master
 
-
+integer(kind=irg)                      :: res, error_cnt
 integer(kind=irg)                      :: istat
 logical                                :: verbose
 
@@ -111,8 +112,13 @@ call EMsoft(progname, progdesc)
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,1,(/ 22 /), progname)
 
-! deal with the namelist stuff
-call GetEBSDNameList(nmldeffile,enl)
+! deal with the namelist stuff, either .nml or .json format
+res = index(nmldeffile,'.nml',kind=irg)
+if (res.eq.0) then
+  call JSONreadEBSDNameList(enl, nmldeffile, error_cnt)
+else
+  call GetEBSDNameList(nmldeffile,enl)
+end if
 
 ! this program needs a lot of data, and it also should be integrated 
 ! with Dream.3D, so we need to make sure that all data is loaded outside
