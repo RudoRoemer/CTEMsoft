@@ -228,7 +228,7 @@ if (pathstring.eq.'') then ! try the EMsoftConfig.json file
 
 ! get the user's home directory to prepend to the config file name
   call getenv("HOME",dirstring)
-  jsonname = trim(dirstring)//'/.EMsoft/EMsoftConfig.json'
+  jsonname = trim(dirstring)//'/.config/EMsoft/EMsoftConfig.json'
 
 ! and load the file
   call json%load_file(filename = trim(jsonname))
