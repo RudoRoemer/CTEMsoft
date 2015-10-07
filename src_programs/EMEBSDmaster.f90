@@ -68,6 +68,8 @@ program EMEBSDmaster
 use local
 use NameListTypedefs
 use NameListHandlers
+use JSONsupport
+use json_module
 use files
 use io
 

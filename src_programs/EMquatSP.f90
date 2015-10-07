@@ -79,7 +79,7 @@ character(1),allocatable        :: outarray(:)
 real(kind=dbl)                  :: x1y1(2), x2y2(2), s1, s2
 
 type(dicttype),pointer          :: dict
-real(kind=dbl)                  :: qu(4), c, s, rod(4), n, delta, qq(4)
+real(kind=dbl)                  :: qu(4), c, s, rod(4), n, delta, qq(4), dtor
 real(kind=sgl)                  :: x, y, z, xfrac, yfrac, zfrac, tpi, eu(3), ho(3), cu(3), m, ma, sh, sc !, sig
                                 
 character(fnlen)                :: eulerdatafile, cubefile, DF3file, povrayfile
@@ -87,8 +87,11 @@ character(6)                    :: FZmode               ! 'Random', 'FullSP', 'D
 character(1)                    :: circles,verbose      ! 'y' or 'n'
 logical                         :: povray
 
+
+
 namelist /Stereogram/ eulerdatafile, cubefile, pgnum, FZmode, verbose, np, npix, povray, povrayfile, DF3file
 
+dtor = cPi/180.D0
 eulerdatafile = 'empty'
 cubefile = 'empty'
 pgnum = 32
@@ -224,7 +227,7 @@ end if
 
 
 if ((FZmode.ne.'DrawFZ').and.(FZmode.ne.'Random')) then 
-  open(unit=dataunit,file=eulerdatafile,form='unformatted',status='old')
+  open(unit=dataunit,file=trim(eulerdatafile),form='unformatted',status='old')
   read(dataunit) nums
   allocate(eulers(3,nums))
   read(dataunit) eulers
@@ -233,6 +236,7 @@ if ((FZmode.ne.'DrawFZ').and.(FZmode.ne.'Random')) then
   FZtype = FZtarray(dict%pgnum)
   FZorder = FZoarray(dict%pgnum)
   if (verbose.eq.'y') write (*,*) 'number of symmetry operators : ',dict%Nqsym, FZtype, FZorder
+  eulers = eulers * dtor
 end if
 
 if (FZmode.ne.'Random') nquats = nums*dict%Nqsym

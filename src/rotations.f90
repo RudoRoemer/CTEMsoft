@@ -2469,6 +2469,7 @@ end function ho2ax_d
 ! 
 !> @date 8/12/13  MDG 1.0 original
 !> @date 07/08/14 MDG 2.0 replaced by direct solution
+!> @date 09/28/15 MDG 2.1 corrected dgeev -> sgeev
 !--------------------------------------------------------------------------
 recursive function om2ax(om) result(res)
 
@@ -2512,12 +2513,12 @@ else
  JOBVR = 'V'   ! do compute the right eigenvectors
  LWORK = 20   
 
-!     SUBROUTINE DGEEV( JOBVL, JOBVR, N, A, LDA, WR, WI, VL, LDVL, VR,
+!     SUBROUTINE SGEEV( JOBVL, JOBVR, N, A, LDA, WR, WI, VL, LDVL, VR,
 !    $                  LDVR, WORK, LWORK, INFO )
 
 ! call the eigenvalue solver
-  call dgeev(JOBVL,JOBVR,nn,o,LDA,Wr,Wi,VL,LDVL,VR,LDVR,WORK,LWORK,INFO)
-  if (INFO.ne.0) call FatalError('Error in om2ax/dgeev : ','DGEEV return not zero')
+  call sgeev(JOBVL,JOBVR,nn,o,LDA,Wr,Wi,VL,LDVL,VR,LDVR,WORK,LWORK,INFO)
+  if (INFO.ne.0) call FatalError('Error in om2ax/sgeev : ','SGEEV return not zero')
 
 ! next, find the eigenvalue complex(1,0)
   do i=1,3 
