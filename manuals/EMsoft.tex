@@ -51,7 +51,7 @@
 \rhead{}
 
 % Footers
-\lfoot{\textsf{EMsoft--2015} manual, Release 3.0, \today}
+\lfoot{\textsf{EMsoft--2015} manual, Release 3.0-beta, \today}
 \cfoot{}
 \rfoot{\footnotesize Page \thepage\ of \pageref{LastPage}} % "Page 1 of 2"
 
@@ -81,7 +81,7 @@
 \postauthor{\footnotesize \usefont{OT1}{phv}{m}{sl} \color{Black} % Configuration for the institution name
 
 \par\end{center}\HorRule} % Horizontal rule after the title
-\date{Program Manual, Release 3.0, \today}
+\date{Program Manual, Release 3.0-beta, \today}
 
 \newcommand{\ctp}{\textsf{EMsoft}}
 %
@@ -94,12 +94,17 @@
 \newpage
 \section{Introduction}
 This manual describes those aspects of the \ctp\ package that are common to almost all of the programs; it also describes the functionality of 
-the library source code files.  The 2013 version of the source code is based on the original CTEMsoft code from the late 90s and the years 
-leading up to the publication of the CTEM textbook (2003, Cambridge University Press).  While some of the code was described in the 
-book, not everything was subsequently released in the public domain.  In fact, only the code corresponding to Chapters 1 through 7 was 
-released; the remainder exists, but due to time limitations it was never released.  The present version (Release 3.0) aims to correct this issue and also
-provides a significantly upgraded and updated code base.  The name of the package has also been changed from CTEMsoft to \ctp, to reflect the 
-fact that both SEM and TEM codes are part of the library.
+the library source code files.  
+The name of the package has also been changed from CTEMsoft to \ctp, to reflect the fact that both SEM and TEM codes are part of the library.
+In hte present beta release, only the ECP and EBSD programs are made available in Mac OS X executable form.  The source code will
+be made available via GitHub at a later date this Fall.
+
+%The 2013 version of the source code is based on the original CTEMsoft code from the late 90s and the years 
+%leading up to the publication of the CTEM textbook (2003, Cambridge University Press).  While some of the code was described in the 
+%book, not everything was subsequently released in the public domain.  In fact, only the code corresponding to Chapters 1 through 7 was 
+%released; the remainder exists, but due to time limitations it was never released.  The present version (Release 3.0) aims to correct this issue and also
+%provides a significantly upgraded and updated code base.  
+
 
 At the time of writing of this manual, these programs have been successfully compiled on the Mac OS X platform using the public domain gfortran compiler.  
 There is no basic reason why this code should not work on Windows and Linux systems, and efforts are underway
@@ -125,36 +130,71 @@ compiled.
 \ctp\ also makes use of a number of third party libraries and source files, all of them in the public domain.  The most important ones are 
 the LAPACK and associated BLAS libraries, as well as the HDF5 library.  With the help of Mike Jackson and Megna Shah (BlueQuartz.net), the 
 compilation files from version 1.0 have been reworked from old-fashioned
-makefiles to use the more flexible CMake environment; to compile the \ctp\ you must have the following installed on your system:
+makefiles to use the more flexible CMake environment; to compile the \ctp\ you must have the following installed on your system: (to be added later)
 
 
 
 
 \newpage
-\section{Things to do before running any of the programs\label{sec:todo}}
-The programs require that three environment variables be set: \textsf{EMsofttemplates},
-\textsf{EMsoftresources} and \textsf{EMsoftopencl}.  Depending on the UNIX shell that one is using, they must be set in
-the appropriate shell start-up files.
+\section{Installation Instructions\label{sec:todo}}
+In the older version of CTEMsoft, the programs required several environment variables to be set, so
+that all the resource files and such could be located. In the present pre-release, this has been changed
+to a more flexible system that should work on all platforms (OS X, Linux and Windows).  There are 
+only two variables that need to be set in order for the programs to function properly.  They are defined 
+via the \textsf{EMsoftConfig.json} file, located inside the hidden \textsf{.config/EMsoft} folder in the user's 
+home directory.
 
-\begin{itemize}
-\item \textit{csh}: edit the \textsf{.cshrc} file in your home folder and add the following lines:
-\begin{verbatim}
-  setenv EMsofttemplates /some/absolute/path/EMsoft/templatefolder
-  setenv EMsoftresources /some/absolute/path/EMsoft/resources
-  setenv EMsoftopencl /som/absolute/path/EMsoft/opencl
-\end{verbatim}
-\item \textit{bash}: edit the \textsf{.bash\_profile} file in your home folder and add the following lines:
-\begin{verbatim}
-  EMsofttemplates=/some/absolute/path/EMsoft/templatefolder
-  EMsoftresources=/some/absolute/path/EMsoft/resources
-  EMsoftopencl=/some/absolute/path/EMsoft/opencl
-  export EMsofttemplates EMsoftresources EMsoftopencl
-\end{verbatim}
-\end{itemize}
-Make sure that you replace the string \textsf{/some/absolute/path} by the correct path for your system.
-For other shells, please use the appropriate approach to defining shell variables.
+\begin{enumerate}
+\item Place the \textsf{EMsoft.zip} archive somewhere inside your home folder; for instance, if your username is ``me,'' you could create 
+a folder named \textsf{packages} inside the \textsf{/Users/me} folder, and put the archive inside \textsf{/Users/me/packages}.
+Then unpack the archive, which will create en \textsf{EMsoft} folder containing several other folders.
 
-{\color{blue}How is this done on the PC platform?}
+\item Check whether or not the folder \textsf{/opt/local/lib/libgcc} exists on your system; if it does not,
+create it (you will need to execute a \textsf{sudo} command to do so, or ask the system admin to 
+create it for you.  Then, check whether or not the files inside the \textsf{EMsoft/lib} folder are present 
+in the \textsf{/opt/local/lib/libgcc} folder; if they are not, copy them from \textsf{EMsoft/lib}.
+
+\item Check whether or not the \textsf{.config} folder exists in your home folder; if it doesn't exist, create it (don't forget the 
+period in front of the folder name). Then go into this folder and create the \textsf{EMsoft} folder; go into
+that folder and create a \textsf{tmp} folder.  Then, at the same level as the tmp folder, use a text editor to
+create a file with the name \textsf{EMsoftConfig.json} and enter the following four lines:
+\begin{verbatim}
+{
+        "EMsoftpathname" : "/full/path/to/the/top/EMsoft/installation/folder/",
+        "EMdatapathname" : "/full/path/to/the/EMsoft/data/folder/" 
+}
+\end{verbatim}
+Note that the white space at the start of lines 2 and 3 is a tab.  Obvisouly, you will need to change the paths above.
+Typically, the installation folder would be somewhere below your home folder, so on Mac OS X for instance, this 
+could be \textsf{/Users/me/packages/EMsoft/};  note that the path must be terminated with a \textsf{/}.
+The second variable indicates where you will keep your data files, i.e., all the files generated by the \ctp\ programs.
+This folder must be outside of the main \ctp-tree, so that no data will be overwritten when future updates or releases
+become available.  Create a top data folder, for instance \textsf{/Users/me/Data/EMplay/}.  Then, inside this folder,
+create an additional folder with the name \textsf{XtalFolder}; this is where all the crystal structure descriptor files 
+will be kept.  Whenever the user specifies the location of a data file, this location is always a relative pathname
+with respect to the \textsf{EMdatapathname} location;  so, if we have \textsf{EMdatapathname} set to \textsf{/Users/me/Data/EMplay/},
+and we wish to create a data file with absolute pathname \textsf{/Users/me/Data/EMplay/Silicon/EBSDmaster.h5}, then
+the relative pathname will be \textsf{Silicon/EBSDmaster.h5}.  This makes it possible to exchange data files 
+between users or transfer files from one system to another.
+
+\item Adjust the PATH variable so that your shell will find the executables in the \textsf{EMsoft/bin} folder.  You can either do this via your shell setup files (e.g., \textsf{.cshrc}
+or \textsf{.bashrc}), or via the system wide \textsf{/etc/paths} file (which will require \textsf{sudo} access).
+The syntax will depend a little on which shell you are using (for UNIX-based systems).  Note that the UNIX flavor on Mac OS X 
+is not case-sensitive for file and folder names; on all other UNIX-flavored platforms, filenames and folders \textit{are}
+case-sensitive.
+
+\item To view the HDF5 formatted data files, you may wish to install the free HDF5 viewer.  First you need to have Java installed (if it isn’t already):for Mac OS X, go to 
+\begin{verbatim}
+https://java.com/en/download/faq/java_mac.xml
+\end{verbatim}
+to install Java.  Then download the HDF5 viewer app from
+\begin{verbatim}
+http://www.hdfgroup.org/products/java/release/download.html;
+\end{verbatim}
+scroll down to Max OS X.
+The HDF5 files can also be read by any other program that supports this format, e.g., IDL, Matlab, etc...
+\end{enumerate}
+
 
 \newpage
 \section{The general structure of EMsoft programs\label{sec:structure}}
@@ -172,18 +212,18 @@ The arguments  between square brackets are optional, and are defined as follows:
 	of the variable and its units, if appropriate.  The user can then copy the template file to a new file with the namelist (.nml) extension and edit the 
 	file with a regular text editor.  The program will quit after generating the template files.  Each template file contains the default values for each parameter.
 	If this option produces an error, then this is likely due to an incorrect setting of the shell variables in the previous section.
-	\item \textsf{file.nml}: the main namelist file to be used by the program.  If no name is present, then the default filename CTEMprogram.nml will be used.  If the 
+	\item \textsf{file.nml}: the main namelist file to be used by the program.  If no name is present, then the default filename \textsf{EMprogram.nml} will be used.  If the 
 	provided namelist file does not exist, the program will report an error and abort.
 \end{itemize}
 
 The programs in the top half of the table on the last page of this manual function in the way described above; all other programs
-have a simple command line interface, with user prompts for all relevant variables.  Eventually, in the next Release, all programs
-will make use of namelist files and will likely be callable from a single user interface.
+have a simple command line interface, with user prompts for all relevant variables.  Eventually, in a future release, all programs
+will make use of namelist or json input files and will likely be callable from a single user interface.
 
 
 \newpage
-\section{Namelist input files\label{sec:f90input}}
-All user input for the \ctp\ programs is performed via namelist files; this is a special f90 IO format that allows one to list 
+\section{Program input files\label{sec:f90input}}
+All user input for the \ctp\ programs is performed either via namelist files or via json files; the namelist is a special f90 IO format that allows one to list 
 \textit{name-value} pairs in an ordinary text file, and then this file will be read and interpreted by the 
 program.  The basic format of a namelist file is as follows:
 \begin{verbatim}
@@ -198,6 +238,22 @@ to identify the set of variables (this is similar to a \textit{common block} in 
 list of name-value pairs follows.  These can appear in any order, and variables may be omitted from the file, in which case the program
 will use a default value (this value can be found in the template file; see section~\ref{sec:structure}).  The final line of the file must contain a single forward slash
 character, ``/'', to end the namelist.
+
+The json format (JavaScript Object Notation) is an xml-like version of the name-value pairs, and is very similar to the namelist format, with the exception 
+of the presence of curly braces.  For the example namelist file shown above, the equivalent json file would look as follows:
+\begin{verbatim}
+{
+        "nmlname": {
+        	        "var1": val1,
+        	        "var2": val2,
+                ...		
+        }
+}
+\end{verbatim}
+The \ctp\ programs automatically detect which format of input file is used, so either one is fine.  The json formatted input files 
+will in a future release be generated by a number of filters in the \textsf{DREAM.3D} software package, whereas the namelist formatted 
+files must be edited by hand, starting from the template files (created with option -t).\\
+
 
 As a concrete example, consider the namelist file used to define a dislocation:
 \begin{Verbatim}%
@@ -236,18 +292,17 @@ in the namelist file; pairs which are not listed will take on their default valu
 
 One important thing to note: when entering file names and other strings in name list files, one must use single quotes both at the start and at 
 the end of the string.  Some word processing programs have so-called ``smart quotes'' settings, which will introduce a different kind of quote,
-and the fortran programs will not recognize smart quotes as being the same as single quotes.  Therefore, turn of the ``smart quotes'' option
-in your editor before you start editing namelist files.
+and the fortran programs will not recognize smart quotes as being the same as single quotes.  Therefore, turn off the ``smart quotes'' option
+in your editor before you start editing namelist or json files.
 
-
+\newpage
 \section{Generating a crystal structure file\label{sec:f90input5}}
 
 With very few exceptions, all programs in the \ctp\ suite of programs require a crystallographic input file that defines the 
 crystal system, crystal lattice parameters, space group number, and all unique positions in the 
 asymmetric unit along with site occupations and Debye-Waller parameters.  To keep things simple and 
-portable across platforms, structure description files (*.xtal) are small binary files that contain the minimum
-amount of information needed to unambiguously define the complete unit cell.  In a later version of the package, this
-will be replaced by a more standard file format, perhaps one that can be created by the CrystalMaker program.
+portable across platforms, structure description files (*.xtal) are small HDF5-formatted files that contain the minimum
+amount of information needed to unambiguously define the complete unit cell.  
 
 To create a crystal structure description file, one uses the \textsf{EMmkxtal} program, which will prompt
 the user for the crystal system number, the lattice parameters (in nm and degrees), the space group number,
@@ -256,10 +311,8 @@ coordinates (which can be entered as real numbers or as fraction, e.g., $0.5$ or
 occupation parameter (a real number between $0$ and $1$), and the isotropic Debye-Waller factor in nm$^{2}$.
 
 Once all atoms in the asymmetric unit have been entered, the program will ask for a structure file name; we
-recommend that all such files have the extension \textsf{.xtal}, to make them easily recognizable.  You can also
-create a folder that holds all the structure files, and then use an absolute or relative path name to store 
-the file in that folder.
-
+recommend that all such files have the extension \textsf{.xtal}, to make them easily recognizable.  All .xtal files
+will be automatically placed in the \textsf{XtalFolder} inside the main \ctp\ data folder.
 %
 %With very few exceptions, all programs in the \ctp\ suite of programs require a crystallographic input file that defines the 
 %crystal system, crystal lattice parameters, space group number, and all unique positions in the 

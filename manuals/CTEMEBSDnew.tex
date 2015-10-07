@@ -83,7 +83,7 @@
 
 \par\end{center}\HorRule} % Horizontal rule after the title
 \date{Program Manual, v3.0, \today\protect\footnote{This set of programs was developed with financial support from two agencies. 
-The Office of Naval Research sponsored the development of the f90 source code for computation of EBSD patterns in research 
+The Office of Naval Research sponsored the development of the original version 2.0 f90 source code for computation of EBSD patterns in research 
 grant N00014-12-1-0075.  The IDL visualization interface, and the complete version 3.0 and beyond were developed with financial 
 support from an AFOSR/MURI grant FA9550-12-1-0458.}}
 
@@ -131,12 +131,12 @@ In this brief manual, we will try to accomplish the following tasks:
 	\item Explain the use of these programs by means of a few basic examples (section~\ref{sec:examples}).
 \end{enumerate}
 
-At the time of writing of this manual, these programs have been successfully compiled on the Mac OS X platform using the public domain gfortran compiler.  
-While there is no basic reason why this code should not work on Windows and Linux systems, this has not been tried yet.
+At the time of writing of this manual, these programs have been successfully compiled on the Mac OS X platform and on Linux CentOS using the public domain gfortran compiler.  
+While there is no basic reason why this code should not work on Windows systems, this has not been tried yet.
 It would be interesting to see some of this code implemented in a super computer setting, since many of the routines should be quite parallellizable.  Where possible, computations
 are carried out using OpenMP directives, so that multiple cores can be used.  The Monte Carlo code uses OpenCL to run on a GPU card, if one is avallable.
 
-The \ctp\ package is entirely written in f03 and uses several of the newer features available in the 95 and 2013 versions.
+The \ctp\ package is entirely written in f03 and uses some of the newer features available in the 95 and 2013 versions.
 The source code is extensively commented, using regular comment lines, but also using DOxygen documentation generation commands.  Hence
 there exists an extensive on-line documentation of all variables, variable types, modules, subroutines, functions, etc. for the latest version 
 of the code.  For selected programs, more extensive manual pages are available.  If interested, please contact the author for further information.
@@ -149,7 +149,10 @@ of the code.  For selected programs, more extensive manual pages are available. 
 
 \newpage
 \section{Version 3.0 features}
-In version 3.x, we have made the following changes:
+The version 3.0 release represents only a subset of the original CTEMsoft 2.0 release; only SEM-related programs are part of release 3.0.  The other TEM related programs 
+will be added in again with future 3.x releases.
+
+In version 3.0, we have made the following changes:
 \begin{itemize}
 	\item \textsf{EMmkxtal} now employs the HDF5 output format for the .xtal files.
 	\item \textsf{EMMCOpenCL} now uses an OpenCL kernel routine to perform the Monte Carlo simulation on a GPU, if one is available.  This results in significant acceleration compared to the single CPU or multi-core CPU routines from version 2.0.  Speed up factors of between $200\times$ and $300\times$ have been measured with respect to the single CPU code.
@@ -159,11 +162,14 @@ In version 3.x, we have made the following changes:
 	\item \textsf{EMEBSD}, remains mostly unchanged, with minor modifications.
 	\item HDF5 support: all three programs now use HDF5 as their output format.
 \end{itemize}
+In terms of input files, there are now two input formats accepted by the above programs; one is the traditional fortran namelist format, with .nml files containing name-value pairs;
+the other is the json format (JavaScript Object Notation), which is essentially an xml-ized version of the name-value pairs.  The programs above will take either format as input.
+
 
 \newpage
 \section{Electron back-scatter diffraction patterns: the underlying theory\label{sec:theory}}
 As described in detail in a recent paper,\footnote{P.G. Callahan and M. De Graef, \textit{Dynamical Electron Backscatter Diffraction Patterns. Part I: Pattern Simulations}
-Microsc.\ Microanal.\ \textbf{19}, 1255--1265, 2013.} there are three steps to the computation of a realistic (dynamical) EBSP:
+Microsc.\ Microanal.\ \textbf{19}, 1255--1265, 2013.} there are three steps in the computation of a realistic (dynamical) EBSP:
 \begin{itemize}
 	\item Monte Carlo simulation of the energy, depth, and directional distributions of back-scattered electrons;
 	\item Dynamical simulation of the EBSD master pattern (covering all possible directions);
@@ -172,8 +178,7 @@ Microsc.\ Microanal.\ \textbf{19}, 1255--1265, 2013.} there are three steps to t
 
 Before we describe the details of these three steps, we need to introduce a mapping and interpolation technique that is used extensively in all
 three programs as well as in the visualization program: \textit{modified Lambert projections}.  We also need to discuss the 
-symmetry of the scattering problem in terms of the Laue symmetry groups. For projections from hexagonal or trigonal symmetries, we 
-also need to introduce a special version of barycentric coordinates.
+symmetry of the scattering problem in terms of the Laue symmetry groups. 
 
 \subsection{Modified Lambert Projections \label{sec:Lambert}}
 The BSEs that leave a sample that is illuminated by a high energy electron beam typically travel in all possible directions in the hemisphere
@@ -191,7 +196,7 @@ id.\ A63 (DOI: 10.1051/0004-6361/201015278).}
 To also accommodate hexagonal symmetry, we have derived a new mapping scheme that was published recently.\footnote{D. Ro\c{s}ca and M. De Graef, 
 \textit{Area-preserving projections from hexagonal and triangular domains to the sphere and applications to electron back-scatter diffraction pattern simulations}, 
 Modeling and Simulations in Materials Science and Engineering, \textbf{21}, 055021 (2013).}  In this section we briefly discuss both mappings, as well 
-as their implementation, taking into account the Laue crystal symmetries.
+as their implementation, taking into account crystal symmetry.
 
 The main goal of the modified Lambert mappings is to create a bi-directional mapping that preserves the area between either a square grid or a hexagonal
 grid in the plane, and uniform grids on the surface of a sphere.  

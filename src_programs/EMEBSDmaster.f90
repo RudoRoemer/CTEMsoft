@@ -68,6 +68,8 @@ program EMEBSDmaster
 use local
 use NameListTypedefs
 use NameListHandlers
+use JSONsupport
+use json_module
 use files
 use io
 
@@ -439,8 +441,7 @@ deallocate(accum_z)
 
 ! force dynamical matrix routine to read new Bethe parameters from file
 ! this will all be changed with the new version of the Bethe potentials
-!  call Set_Bethe_Parameters(BetheParameters)
-
+  call Set_Bethe_Parameters(BetheParameters)
 
 !=============================================
 ! should we create a new file or open an existing file?
