@@ -919,6 +919,7 @@ end subroutine Compute_DynMat
 !
 !> @param silent optional, if present, then no output
 !> @date   05/08/13 MDG 1.0 original
+!> @date   10/07/15 MDG 1.1 added c1 etc parameters to namelist file
 !--------------------------------------------------------------------------
 subroutine Set_Bethe_Parameters(BetheParameter,silent)
 
@@ -931,14 +932,18 @@ logical,INTENT(IN),OPTIONAL     :: silent
 
 character(fnlen),parameter      :: Bethefilename = 'BetheParameters.nml'
 logical                         :: fexist
-real(kind=sgl)                  :: weakcutoff, cutoff, sgcutoff
+real(kind=sgl)                  :: c1, c2, c3, sgdbdiff, weakcutoff, cutoff, sgcutoff
 
-namelist /BetheList/ weakcutoff, cutoff, sgcutoff
+namelist /BetheList/ c1, c2, c3, sgdbdiff, weakcutoff, cutoff, sgcutoff
 
 ! check for the presence of the namelist file in the current folder
 inquire(file=trim(Bethefilename),exist=fexist)
 
 ! set all default values (must be done here, since nml file may not contain all of them)
+c1 = 8.0_sgl            ! changed from 8 and 12 for a test on 8/14/15
+c2 = 50.0_sgl           !
+c3 = 100.0_sgl          !
+sgdbdiff = 1.00_sgl     !
 weakcutoff = 80.0       ! dimensionless cutoff parameter, smaller = strong, larger = weak
 cutoff = 160.0          ! overall cutoff parameter
 sgcutoff = 0.05         ! sg cutoff for double diffraction reflections
@@ -954,9 +959,13 @@ if (fexist) then ! check for the file in the local folder
  end if
 end if
 
-BetheParameter % weakcutoff = weakcutoff
-BetheParameter % cutoff = cutoff
-BetheParameter % sgcutoff = sgcutoff
+BetheParameter%c1 = c1
+BetheParameter%c2 = c2
+BetheParameter%c3 = c3
+BetheParameter%sgdbdiff = sgdbdiff
+BetheParameter%weakcutoff = weakcutoff
+BetheParameter%cutoff = cutoff
+BetheParameter%sgcutoff = sgcutoff
 
 end subroutine Set_Bethe_Parameters
 
