@@ -82,9 +82,9 @@
 \postauthor{\footnotesize \usefont{OT1}{phv}{m}{sl} \color{Black} % Configuration for the institution name
 
 \par\end{center}\HorRule} % Horizontal rule after the title
-\date{\today\protect\footnote{This document will list thoughts, ideas, and descriptions of things that need to be done in terms of improving the CTEMsoft package.}}
+\date{\today\protect\footnote{This document will list thoughts, ideas, and descriptions of things that need to be done in terms of improving the EMsoft package.}}
 
-\newcommand{\ctp}{\textsf{CTEMsoft-2013}}
+\newcommand{\ctp}{\textsf{EMsoft}}
 %
 
 \begin{document}
@@ -113,6 +113,40 @@ The modified MC code would not be all that different from the current CSDA code;
 \end{itemize}
 Everything else should really remain the same as before.  The difficult question of course is: what should be the criterion for setting the depth multiplier scale? When the 
 threshold level is set for the electron attenuation factor, which value should be used?  
+
+\newpage
+
+\section{Realistic ECP detector model}
+Electron channeling patterns are formed when the incident beam is rastered across a cone with apex on the sample surface;
+for each incident beam direction in the cone, an annular detector surrounding the objective lens integrates the BSE electrons, with the 
+BSE1 electrons carrying the diffraction information and BSE2s forming the (large) background.  In the current formulation of the master 
+pattern calculation, using \textsf{EMECPmaster}, we perform an integration over the depth in the sample, using the Monte Carlo data 
+from the \textsf{EMMCOpenCL} program.  In the current program version, we do not explicitly consider an annular BSE detector.  To improve the
+detector model, we would need to modify the Monte Carlo computation (which is very fast when only BSE1s are considered) to also include
+the effects of a tilted incident beam.  This could be done easily by tilting the incident beam in the same direction as for the EBSD case, (i.e., change the $\sigma$ angle) but over a 
+small angular range, say from $0^{\circ}$ to $15^{\circ}$ (to be set by the user) in steps of $1^{\circ}$.  This would then give rise to a number of BSE1 distribution plots
+from which the appropriate weight factors for the angular integration can be derived.
+
+This is easily done with the current implementation of the Monte Carlo loop; we just need to add a tilt loop and store consecutive
+tilt angles as extra projections, just like the energy planes in the EBSD case.  Then, in the \textsf{EMECP} program, we read 
+these arrays and compute a radial intensity scaling function to get a more realistic BSE1 distribution; this computation will
+require the working distance, and the inner and out annular detector radii, all in mm.  those then lead to the integration bounds
+and we can simply sum all the electrons that will reach the detector.  Once that is completed, then, expecting a smooth function, we
+simply fit a polynomial and create a radially symmetry multiplicative mask.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

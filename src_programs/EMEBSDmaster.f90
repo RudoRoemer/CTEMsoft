@@ -60,8 +60,9 @@
 !> @date  05/03/14  MDG 4.2 test version to resolve bug in the Sgh matrix part (solved)
 !> @date  06/19/14  MDG 4.3 rewrite, removal of all globals, split of namelist handling from computation; add OpenMP
 !> @date  03/26/15  MDG 5.0 all output now in HDF5 format (this is the first converted program)
-!> @date  05/09/15  MDG 5.1 completed conversion from hexagonal Lambert to square Labert
-!> @date  09/01/15  MDG 5.2 updated Lambert sampling to accomodate Northern and Southern hemispheres; changed variable names
+!> @date  05/09/15  MDG 5.1 completed conversion from hexagonal Lambert to square Lambert
+!> @date  09/01/15  MDG 5.2 updated Lambert sampling to accommodate Northern and Southern hemispheres; changed variable names
+!> @date  10/07/15  MDG 5.3 minor cleanup in preparation for release 3.0
 !--------------------------------------------------------------------------
 program EMEBSDmaster
 
@@ -129,6 +130,7 @@ end program EMEBSDmaster
 !> @date 05/08/15  MDG 5.6 added automated conversion from hexagonal to square Lambert; debugged
 !> @date 09/01/15  MDG 6.0 changed symmetry to full point group and two Lambert hemispheres for output
 !> @date 09/09/15  MDG 6.1 started to add a "restart" mode, so that long runs can be interrupted and restarted
+!> @date 10/09/15  MDG 6.2 added BetheParameters and Duration to output HDF5 file
 !--------------------------------------------------------------------------
 subroutine ComputeMasterPattern(emnl, progname, nmldeffile)
 
@@ -169,7 +171,7 @@ integer(kind=irg)       :: isym,i,j,ik,npy,ipx,ipy,ipz,debug,iE,izz, izzmax, ieq
                            numset,n,ix,iy,iz, io_int(6), nns, nnw, nref, Estart, &
                            istat,gzero,ic,ip,ikk, totstrong, totweak, jh, ierr, nix, niy, nixp, niyp     ! counters
 real(kind=dbl)          :: tpi,Znsq, kkl, DBWF, kin, delta, h, lambda, omtl, srt, dc(3), xy(2), edge, scl, tmp, dx, dxm, dy, dym !
-real(kind=sgl)          :: io_real(5), selE, kn, FN(3), kkk(3)
+real(kind=sgl)          :: io_real(5), selE, kn, FN(3), kkk(3), tstart, tstop, bp(4)
 real(kind=sgl),allocatable      :: EkeVs(:), svals(:), auxNH(:,:,:,:), auxSH(:,:,:,:)  ! results
 real(kind=sgl),allocatable      :: mLPNH(:,:,:,:), mLPSH(:,:,:,:)  ! results
 complex(kind=dbl)               :: czero
@@ -209,6 +211,7 @@ type(HDFobjectStackType),pointer  :: HDF_head
 nullify(HDF_head)
 
 call timestamp(datestring=dstr, timestring=tstrb)
+call cpu_time(tstart)
 
 ! note that the EMMC.f90 program creates a statistical output file that 
 ! must be read by the present program, so that things like energy etc are 
@@ -232,7 +235,6 @@ call Message('opening '//trim(emnl%energyfile), frm = "(A)" )
 ! [since this is no longer a sequential access file, we do not need to read everything, just
 ! the quantities that we need...]
 
-!
 ! Initialize FORTRAN interface.
 !
 call h5open_f(hdferr)
@@ -446,8 +448,8 @@ deallocate(accum_z)
 !=============================================
 ! should we create a new file or open an existing file?
 !=============================================
-lastEnergy = -1
-outname = trim(EMdatapathname)//trim(emnl%outname)
+  lastEnergy = -1
+  outname = trim(EMdatapathname)//trim(emnl%outname)
 
 if (emnl%restart.eqv..TRUE.) then
 ! in this case we need to check whether or not the file exists, then open
@@ -530,6 +532,10 @@ else
   dataset = 'numset'
   hdferr = HDF_writeDatasetInteger(dataset, numset, HDF_head)
 
+  dataset = 'BetheParameters'
+  bp = (/ BetheParameters%c1, BetheParameters%c2, BetheParameters%c3, BetheParameters%sgdbdiff /)
+  hdferr = HDF_writeDatasetFloatArray1D(dataset, bp, 4, HDF_head)
+
   dataset = 'lastEnergy'
   hdferr = HDF_writeDatasetInteger(dataset, lastEnergy, HDF_head)
   
@@ -587,7 +593,7 @@ if (lastEnergy.ne.-1) then
   if (Estart.eq.0) then 
     call Message('All energy levels are present in the HDF5 file')
     call Message('No further computations needed.')
-    stop
+    stop 'Program halted.'
   end if
 else
   Estart = numEbins
@@ -706,8 +712,6 @@ energyloop: do iE=Estart,1,-1
      totstrong = totstrong + nns
      totweak = totweak + nnw
 
-! if (TID.eq.0) write (*,*) ik, FN, nref, nns, nnw
-
 ! then we need to initialize the Sgh and Lgh arrays
      if (allocated(Sgh)) deallocate(Sgh)
      if (allocated(Lgh)) deallocate(Lgh)
@@ -717,13 +721,12 @@ energyloop: do iE=Estart,1,-1
      nat = 0
      call CalcSgh(cell,reflist,nns,numset,Sgh,nat)
 
-! for now, we're disabling the kinematical part
-! solve the dynamical eigenvalue equation for this beam direction  Lgh,thick,kn,nn,gzero,kin,debug
+! solve the dynamical eigenvalue equation for this beam direction  
      kn = karray(4,ik)
      call CalcLgh(DynMat,Lgh,dble(thick(iE)),dble(kn),nns,gzero,depthstep,lambdaE(iE,1:izzmax),izzmax)
      deallocate(DynMat)
 
-! dynamical contributions
+! sum over the element-wise (Hadamard) product of the Lgh and Sgh arrays 
      svals = 0.0
      do ix=1,numset
        svals(ix) = real(sum(Lgh(1:nns,1:nns)*Sgh(1:nns,1:nns,ix)))
@@ -751,7 +754,7 @@ energyloop: do iE=Estart,1,-1
      end do
 !$OMP END CRITICAL
   
-     if (mod(ik,2500).eq.0) then
+     if (mod(ik,5000).eq.0) then
        io_int(1) = ik
        call WriteValue('  completed beam direction ',io_int, 1, "(I8)")
      end if
@@ -833,6 +836,15 @@ end if
   dataset = 'StopTime'
   line2(1) = tstre
   hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head, overwrite)
+
+  call CPU_TIME(tstop)
+  dataset = 'Duration'
+  tstop = tstop - tstart
+  if (iE.eq.numEbins) then 
+    hdferr = HDF_writeDatasetFloat(dataset, tstop, HDF_head)
+  else
+    hdferr = HDF_writeDatasetFloat(dataset, tstop, HDF_head, overwrite)
+  end if
 
   call HDF_pop(HDF_head)
   

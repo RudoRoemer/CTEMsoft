@@ -60,8 +60,6 @@ else
 end if
 
 ! perform a Monte Carlo simulation
-write (*,*) 'namelist contents : ',mcnl
-
 call DoMCsimulation(mcnl, progname, nmldeffile)
 
 end program EMMCOpenCL
@@ -89,6 +87,7 @@ end program EMMCOpenCL
 !> @date 05/05/15  MDG 5.1 removed getenv() call; replaced by global path string
 !> @date 09/01/15  MDG 5.2 modifications due to Lambert module changes
 !> @date 09/09/15  MDG 5.3 added devid selector (GPU device ID) to namelist
+!> @date 10/07/15  MDG 5.4 general cleanup of code in preparation of release 3.0
 !--------------------------------------------------------------------------
 subroutine DoMCsimulation(mcnl, progname, nmldeffile)
 
@@ -146,7 +145,7 @@ real(kind=4),allocatable:: Lamresx(:), Lamresy(:), depthres(:), energyres(:)
 ! final results stored here
 integer(kind=4),allocatable :: accum_e(:,:,:), accum_z(:,:,:,:), rnseeds(:), init_seeds(:)
 integer(kind=4)         :: idxy(2), iE, px, py, iz, nseeds, hdferr ! auxiliary variables
-real(kind=4)            :: cxyz(3), edis, bse, xy(2) ! auxiliary variables
+real(kind=4)            :: cxyz(3), edis, bse, xy(2), tstart, tstop ! auxiliary variables
 real(kind=8)            :: delta,rand
 character(11)           :: dstr
 character(15)           :: tstrb
@@ -167,7 +166,7 @@ character(len = 100)    :: info ! info about the GPU
 integer, parameter      :: iunit = 10
 integer, parameter      :: source_length = 10000000
 character(len = source_length)  :: source
-integer(kind=4)         :: num, ierr, irec, io_int(1), val,val1 ! auxiliary variables
+integer(kind=4)         :: num, ierr, irec, io_int(2), val,val1 ! auxiliary variables
 character(fnlen)        :: groupname, dataset, instring, dataname
 
 
@@ -176,6 +175,7 @@ type(HDFobjectStackType),pointer  :: HDF_head
 nullify(HDF_head)
 
 call timestamp(datestring=dstr, timestring=tstrb)
+call CPU_TIME(tstart)
 
 numsy = mcnl%numsx
 nullify(cell)
@@ -202,7 +202,7 @@ if (mode .eq. 'full') then
 else if (mode .eq. 'bse1') then
     steps = 1
 else
-    stop 'Unknown mode specified in namelist file'
+    stop 'Unknown program mode specified in namelist file'
 end if
 
 
@@ -242,21 +242,21 @@ delta = dble(nx)
 
 ! get the platform ID
 call clGetPlatformIDs(platform, num, ierr)
-if(ierr /= CL_SUCCESS) stop "Cannot get CL platform."
+if(ierr /= CL_SUCCESS) stop "Fatal error: Cannot get CL platform."
 
 ! get the device ID
 call clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, device, num, ierr)
-if(ierr /= CL_SUCCESS) stop "Cannot get CL device."
+if(ierr /= CL_SUCCESS) stop "Fatal error: Cannot get CL device."
 
 ! get the device name and print it
 call clGetDeviceInfo(device(mcnl%devid), CL_DEVICE_NAME, info, ierr)
-write(6,*) "CL device: ", info
+call WriteValue("CL device: ", info)
 
 ! create the context and the command queue
 context = clCreateContext(platform, device(mcnl%devid), ierr)
-if(ierr /= CL_SUCCESS) stop "Cannot create context"
+if(ierr /= CL_SUCCESS) stop "Fatal error: Cannot create context"
 command_queue = clCreateCommandQueue(context, device(mcnl%devid), CL_QUEUE_PROFILING_ENABLE, ierr)
-if(ierr /= CL_SUCCESS) stop "Cannot create command queue"
+if(ierr /= CL_SUCCESS) stop "Fatal error: Cannot create command queue"
 
 
 !=====================
@@ -266,21 +266,21 @@ if(ierr /= CL_SUCCESS) stop "Cannot create command queue"
 ! read the source file
 open(unit = iunit, file = trim(openclpathname)//'EMMC.cl', access='direct', status = 'old', &
         action = 'read', iostat = ierr, recl = 1)
-if (ierr /= 0) stop 'Cannot open file EMMC.cl'
+if (ierr /= 0) stop 'Fatal error: Cannot open file EMMC.cl in opencl kernel folder'
 
 source = ''
 irec = 1
 do
 read(unit = iunit, rec = irec, iostat = ierr) source(irec:irec)
 if (ierr /= 0) exit
-if(irec == source_length) stop 'Error: CL source file is too big'
+if(irec == source_length) stop 'Fatal error: CL source file is too big'
 irec = irec + 1
 end do
 close(unit=iunit)
 
 ! create the program
 prog = clCreateProgramWithSource(context, source, ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot create program from source.'
+if(ierr /= CL_SUCCESS) stop 'Fatal error: cannot create program from opencl source.'
 
 ! build
 call clBuildProgram(prog, '-cl-no-signed-zeros', ierr)
@@ -289,9 +289,10 @@ call clBuildProgram(prog, '-cl-no-signed-zeros', ierr)
 call clGetProgramBuildInfo(prog, device(mcnl%devid), CL_PROGRAM_BUILD_LOG, source, irec)
 if(len(trim(source)) > 0) print*, trim(source)
 
-if(ierr /= CL_SUCCESS) stop 'Error: program build failed.'
+if(ierr /= CL_SUCCESS) stop 'Fatal error: program build failed.'
 
-write(6,*) "Kernel Build Successful...."
+! if we get here, then the kernal was successfully compiled
+call WriteValue('EMMCOpenCL: ','Kernel Build Successful....')
 
 ! finally get the kernel and release the program
 kernel = clCreateKernel(prog, 'MC', ierr)
@@ -304,7 +305,7 @@ allocate(rnseeds(nseeds))
 read(iunit) rnseeds
 close(unit=iunit,status='keep')
 
-if (globalworkgrpsz**2 .gt. nseeds) call FatalError('EMMCOpenCL:','insufficient prime numbers')
+if (globalworkgrpsz**2 .gt. nseeds) call FatalError('EMMCOpenCL:','insufficient prime numbers; reduce globalworkgrpsz parameter')
 
 
 allocate(init_seeds(4*globalworkgrpsz*globalworkgrpsz),stat=istat)
@@ -316,23 +317,22 @@ do i = 1,globalworkgrpsz
         end do
     end do
 end do
-!print*,init_seeds
 
 ! create device memory buffers
 LamX = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for LamX.'
 
 LamY = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for LamY.'
 
 depth = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for depth.'
 
 energy = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for energy.'
 
 seeds = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes, ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory for seeds.'
 
 !call init_random_seed()
 call clEnqueueWriteBuffer(command_queue, seeds, cl_bool(.true.), 0_8, size_in_bytes_seeds, init_seeds(1), ierr)
@@ -341,48 +341,47 @@ mainloop: do i = 1,(totnum_el/num_max+1)
 
 ! set the kernel arguments
     call clSetKernelArg(kernel, 0, LamX, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+    if(ierr /= CL_SUCCESS) stop 'Error: cannot set LamX kernel argument.'
 
     call clSetKernelArg(kernel, 1, LamY, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+    if(ierr /= CL_SUCCESS) stop 'Error: cannot set LamY kernel argument.'
 
     call clSetKernelArg(kernel, 2, EkeV, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+    if(ierr /= CL_SUCCESS) stop 'Error: cannot set EkeV kernel argument.'
 
     call clSetKernelArg(kernel, 3, globalworkgrpsz, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+    if(ierr /= CL_SUCCESS) stop 'Error: cannot set globalworkgrpsz kernel argument.'
 
     call clSetKernelArg(kernel, 4, Ze, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+    if(ierr /= CL_SUCCESS) stop 'Error: cannot set Ze kernel argument.'
 
     call clSetKernelArg(kernel, 5, density, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+    if(ierr /= CL_SUCCESS) stop 'Error: cannot set density kernel argument.'
 
     call clSetKernelArg(kernel, 6, at_wt, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+    if(ierr /= CL_SUCCESS) stop 'Error: cannot set at_wt kernel argument.'
 
     call clSetKernelArg(kernel, 7, num_el, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+    if(ierr /= CL_SUCCESS) stop 'Error: cannot set num_el kernel argument.'
 
     call clSetKernelArg(kernel, 8, seeds, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+    if(ierr /= CL_SUCCESS) stop 'Error: cannot set seeds kernel argument.'
 
     call clSetKernelArg(kernel, 9, sig, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+    if(ierr /= CL_SUCCESS) stop 'Error: cannot set sig kernel argument.'
 
     call clSetKernelArg(kernel, 10, omega, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+    if(ierr /= CL_SUCCESS) stop 'Error: cannot set omega kernel argument.'
 
     call clSetKernelArg(kernel, 11, depth, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+    if(ierr /= CL_SUCCESS) stop 'Error: cannot set depth kernel argument.'
 
     call clSetKernelArg(kernel, 12, energy, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+    if(ierr /= CL_SUCCESS) stop 'Error: cannot set energy kernel argument.'
 
     call clSetKernelArg(kernel, 13, steps, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+    if(ierr /= CL_SUCCESS) stop 'Error: cannot set steps kernel argument.'
 
-!print*, EkeV, globalworkgrpsz, Ze, density, at_wt, num_max, prime, sig, omega
 ! execute the kernel
     call clEnqueueNDRangeKernel(command_queue, kernel, globalsize, localsize, event, ierr)
 
@@ -401,11 +400,9 @@ mainloop: do i = 1,(totnum_el/num_max+1)
         if ((Lamresx(j) .ne. -10.0) .and. (Lamresy(j) .ne. -10.0) &
         .and. (depthres(j) .ne. 10.0) .and. (energyres(j) .ne. 0.0) &
         .and. .not.isnan(Lamresx(j)) .and. .not.isnan(Lamresy(j))) then
-        !& .and. (Lamresx(j) .ne. 0.0) .and. (Lamresy(j) .ne. 0.0) .and. (depthres(j) .ne. 0.0)) then
 ! and get the nearest pixel [ take into account reversal of coordinate frame (x,y) -> (y,-x) ]
             if ((nint(delta*Lamresy(j)) .eq. 0.0) .and. (nint(-delta*Lamresx(j)) .eq. 0.0)) then
                 val1 = val1 + 1
-                !print*,Lamresx(j),Lamresy(j)
             end if
 
             val = val + 1
@@ -414,21 +411,17 @@ mainloop: do i = 1,(totnum_el/num_max+1)
             if (maxval(abs(idxy)).le.nx) then
 ! If Ec larger than Emin, then we should count this electron
                 if (energyres(j).gt.mcnl%Ehistmin) then
-!print *, energyres(j), depthres(j)*1e9, Lamresx(j), Lamresy(j)
-
-                    iE = nint((energyres(j)-mcnl%Ehistmin)/mcnl%Ebinsize)+1
+                  iE = nint((energyres(j)-mcnl%Ehistmin)/mcnl%Ebinsize)+1
 ! first add this electron to the correct exit distance vs. energy bin (coarser than the angular plot)
-                    edis = abs(depthres(j))  ! distance from last scattering point to surface along trajectory
-                    iz = nint(edis/mcnl%depthstep) +1
-                    if ( (iz.gt.0).and.(iz.le.numzbins) ) then
-
-                        px = nint(idxy(1)/10.0)
-                        py = nint(idxy(2)/10.0)
-                        accum_z(iE,iz,px,py) = accum_z(iE,iz,px,py) + 1
-
-                    end if
+                  edis = abs(depthres(j))  ! distance from last scattering point to surface along trajectory
+                  iz = nint(edis/mcnl%depthstep) +1
+                  if ( (iz.gt.0).and.(iz.le.numzbins) ) then
+                    px = nint(idxy(1)/10.0)
+                    py = nint(idxy(2)/10.0)
+                    accum_z(iE,iz,px,py) = accum_z(iE,iz,px,py) + 1
+                  end if
 ! then add it to the modified Lambert accumulator array.
-                    accum_e(iE,idxy(1),idxy(2)) = accum_e(iE,idxy(1),idxy(2)) + 1
+                  accum_e(iE,idxy(1),idxy(2)) = accum_e(iE,idxy(1),idxy(2)) + 1
                 end if
             end if
         end if
@@ -470,6 +463,17 @@ hdferr =  HDF_createFile(dataname, HDF_head)
 ! write the EMheader to the file
 call HDF_writeEMheader(HDF_head, dstr, tstrb, tstre, progname)
 
+! update the duration string
+  groupname = 'EMheader'
+  hdferr = HDF_openGroup(groupname, HDF_head)
+
+  call CPU_TIME(tstop)
+  dataset = 'Duration'
+  tstop = tstop - tstart
+  hdferr = HDF_writeDatasetFloat(dataset, tstop, HDF_head)
+
+  call HDF_pop(HDF_head)
+
 ! create a namelist group to write all the namelist files into
 groupname = "NMLfiles"
 hdferr = HDF_createGroup(groupname, HDF_head)
@@ -502,8 +506,6 @@ hdferr = HDF_writeDatasetInteger(dataset, numzbins, HDF_head)
 dataset = 'totnum_el'
 hdferr = HDF_writeDatasetInteger(dataset, totnum_el, HDF_head)
 
-!allocate(accum_e(numEbins,-nx:nx,-nx:nx),accum_z(numEbins,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
-
 dataset = 'accum_e'
 hdferr = HDF_writeDatasetIntegerArray3D(dataset, accum_e, numEbins, 2*nx+1, 2*nx+1, HDF_head)
 
@@ -517,10 +519,15 @@ call h5close_f(hdferr)
 
 ! and write some infgormation to the console
 bse = real(val)/real(totnum_el)
-print*, "Backscatter yield          = ",bse
-print*, "Total number of incident electrons = ",totnum_el
-print*, "Number of electrons on detector = ",sum(accum_e)
-print*, "Maximum electron in depth and energy bin resp. = ",maxval(accum_z),maxval(accum_e)
+io_real(1) = bse
+call WriteValue("Backscatter yield          = ", io_real, 1)
+io_int(1) = totnum_el
+call WriteValue("Total number of incident electrons = ", io_int, 1)
+io_int(1) = sum(accum_e)
+call WriteValue("Number of BSE electrons = ", io_int, 1)
+io_int(1) = maxval(accum_z)
+io_int(2) = maxval(accum_e)
+call WriteValue("Maximum electron in depth and energy bin resp. = ", io_int, 2)
 !
 !=====================
 ! RELEASE EVERYTHING
@@ -535,6 +542,4 @@ call clReleaseMemObject(depth, ierr)
 call clReleaseMemObject(energy, ierr)
 call clReleaseMemObject(seeds, ierr)
 
-
 end subroutine DoMCsimulation
-

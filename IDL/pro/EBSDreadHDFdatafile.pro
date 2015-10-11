@@ -58,7 +58,7 @@ EMdatapathname = ''
 if keyword_set(MPFILE) then begin
   Core_Print,'Reading data file '+EBSDdata.mpfilename
 
-EMdatapathname = getenv('EMdatapathname')
+EMdatapathname = Core_getenv(/data)
 
 ; first make sure that this is indeed an HDF file
   res = H5F_IS_HDF5(EBSDdata.pathname+'/'+EBSDdata.mpfilename)
