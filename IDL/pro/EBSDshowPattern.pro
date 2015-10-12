@@ -49,7 +49,7 @@ common EBSD_data_common, EBSDdata
 common EBSDpatterns, pattern, image, finalpattern
 common EBSDmasks, circularmask
 
-EMpath = getenv('EMdatapathname')
+EMpath = Core_getenv(/data)
 
 ; check whether the mask needs to be recomputed or not
 s = size(circularmask)
@@ -85,19 +85,21 @@ if not keyword_set(single) then begin
     dims = q[0]
     offset = 24L + EBSDdata.currentpatternID * ( EBSDdata.detnumsx * EBSDdata.detnumsy / dbin^2 +2L ) * 4L 
     q = assoc(1,fltarr(dims[0],dims[1]),offset)
-    pattern = q[0]
+    patterns = q[0]
     close,1
   end else begin  ; this is an HDF5 file
     file_id = H5F_OPEN(EMpath+EBSDdata.EBSDpatternfilename)
     group_id = H5G_OPEN(file_id,'EMData')
     dset_id = H5D_OPEN(group_id,'EBSDpatterns')
-    pattern = H5D_READ(dset_id)
+    patterns = H5D_READ(dset_id)
     H5D_CLOSE,dset_id
     H5G_CLOSE,group_id
     H5F_CLOSE,file_id
   end
 end
 
+sz = size(patterns)
+if (sz[0] eq 3) then pattern = reform(patterns[*,*,EBSDdata.currentpatternID])
 
 ; set the min and max fields
 EBSDdata.Patternmin = min(pattern)

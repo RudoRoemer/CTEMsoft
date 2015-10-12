@@ -46,6 +46,8 @@
 !> @date  03/10/15  MDG 4.1 added output format selector
 !> @date  04/02/15  MDG 5.0 changed program input & output to HDF format
 !> @date  09/01/15  MDG 5.1 change from single to double Lambert master patterns (lots of changes)
+!> @date  09/26/15  MDG 5.2 added json support for nml file
+!> @date  10/07/15  MDG 5.3 minor clean up in preparation for release 3.0
 ! ###################################################################
 
 program EMEBSD
@@ -54,6 +56,7 @@ use local
 use files
 use NameListTypedefs
 use NameListHandlers
+use JSONsupport
 use io
 use EBSDmod
 
@@ -67,7 +70,7 @@ type(EBSDAngleType),pointer            :: angles
 type(EBSDLargeAccumType),pointer       :: acc
 type(EBSDMasterType),pointer           :: master
 
-
+integer(kind=irg)                      :: res, error_cnt
 integer(kind=irg)                      :: istat
 logical                                :: verbose
 
@@ -111,8 +114,13 @@ call EMsoft(progname, progdesc)
 ! deal with the command line arguments, if any
 call Interpret_Program_Arguments(nmldeffile,1,(/ 22 /), progname)
 
-! deal with the namelist stuff
-call GetEBSDNameList(nmldeffile,enl)
+! deal with the namelist stuff, either .nml or .json format
+res = index(nmldeffile,'.nml',kind=irg)
+if (res.eq.0) then
+  call JSONreadEBSDNameList(enl, nmldeffile, error_cnt)
+else
+  call GetEBSDNameList(nmldeffile,enl)
+end if
 
 ! this program needs a lot of data, and it also should be integrated 
 ! with Dream.3D, so we need to make sure that all data is loaded outside
@@ -179,6 +187,7 @@ end program EMEBSD
 !> @date 04/07/15  MDG 5.5 added HDF-formatted output
 !> @date 05/08/15  MDG 5.6 added support for hexagonal/trigonal master pattern interpolation
 !> @date 09/01/15  MDG 6.0 changed Lambert patterns to Northern+Southern hemisphere...
+!> @date 10/11/15  MDG 6.1 correction of error in saving of multiple patterns in GUI mode
 !--------------------------------------------------------------------------
 subroutine ComputeEBSDPatterns(enl, angles, acc, master, progname, nmldeffile)
 
@@ -229,12 +238,12 @@ integer(kind=irg)                       :: nix, niy, binx, biny,num_el, nixp, ni
 integer(kind=irg)                       :: NUMTHREADS, TID   ! number of allocated threads, thread ID
 integer(kind=irg)                       :: istart, istop, ninbatch, nbatches, nremainder, ibatch, nthreads, maskradius
 
-real(kind=sgl)                          :: bindx, sig, ma, mi
+real(kind=sgl)                          :: bindx, sig, ma, mi, tstart, tstop
 real(kind=sgl),parameter                :: dtor = 0.0174533  ! convert from degrees to radians
 real(kind=dbl),parameter                :: nAmpere = 6.241D+18   ! Coulomb per second
 integer(kind=irg),parameter             :: storemax = 20        ! number of EBSD patterns stored in one output block
 integer(kind=irg)                       :: Emin, Emax      ! various parameters
-real(kind=dbl)                          :: dc(3), scl           ! direction cosine array
+real(kind=dbl)                          :: dc(3), scl, nel           ! direction cosine array
 real(kind=dbl)                          :: sx, dx, dxm, dy, dym, rhos, x         ! various parameters
 real(kind=dbl)                          :: ixy(2), tmp
 
@@ -280,7 +289,9 @@ Emax = nint((enl%energymax - enl%Ehistmin)/enl%Ebinsize) +1
 if (Emax.lt.1)  Emax=1
 if (Emax.gt.enl%numEbins)  Emax=enl%numEbins
 
-num_el = nint(sum(acc%accum_e_detector))
+nel = sum(acc%accum_e_detector)
+num_el = nint(nel)
+
 allocate(energywf(Emin:Emax),stat=istat)
 energywf = 0.0
 
@@ -297,9 +308,8 @@ energywf = energywf/sum(energywf)
   biny = enl%numsy/enl%binning
   bindx = 1.0/float(enl%binning)**2
 
-
 ! intensity prefactor
-  prefactor = 0.25D0 * nAmpere * enl%beamcurrent * enl%dwelltime * 1.0D-15/ dble(num_el)
+  prefactor = 0.25D0 * nAmpere * enl%beamcurrent * enl%dwelltime * 1.0D-15/ nel
 !====================================
 
 !====================================
@@ -313,6 +323,7 @@ CALL h5open_f(hdferr)
 
 call timestamp(datestring=dstr, timestring=tstrb)
 tstre = tstrb
+call CPU_TIME(tstart)
 
 ! Create a new file using the default properties.
 datafile = trim(EMdatapathname)//trim(enl%datafile)
@@ -398,6 +409,7 @@ else
   end if
 end if
 
+
 ! for dictionary computations, the patterns are usually rather small, so perhaps the explicit 
 ! energy sums can be replaced by an averaged approximate approach, in which all the energy bins
 ! are added together from the start, and all the master patterns are totaled as well...
@@ -417,6 +429,7 @@ if (enl%energyaverage.eq.1) then
   end do
   master_arrayNH = sum(master%mLPNH,3)
   master_arraySH = sum(master%mLPSH,3)
+
 end if
 
 ! determine the scale factor for the Lambert interpolation; the square has
@@ -571,12 +584,12 @@ do ibatch=1,nbatches+1
 ! if this is a GUI-computation, then we can directly store the current pattern in the output file;
 ! otherwise, we process it and turn it into a byte array of the right binning level.
           dataset = 'EBSDpatterns'
-          offset = (/ 0, 0, ibatch-1 /)
+          offset = (/ 0, 0, iang-1 /)
           hdims = (/ enl%numsx, enl%numsy, enl%numangles /)
           dim0 = enl%numsx
           dim1 = enl%numsy
           dim2 = 1
-          if (ibatch.eq.1) then
+          if (iang.eq.1) then
             hdferr = HDF_writeHyperslabFloatArray3D(dataset, EBSDpattern, hdims, offset, dim0, dim1, dim2, &
                                           HDF_head)
           else
@@ -624,8 +637,6 @@ do ibatch=1,nbatches+1
 ! here we write all the entries in the batchpatterns array to the HDF file as a hyperslab
 dataset = 'EBSDpatterns'
 
-
-
  if (outputformat.eq.'bin') then
   if (ibatch.le.nbatches) then 
    offset = (/ 0, 0, (ibatch-1)*ninbatch*enl%nthreads /)
@@ -633,7 +644,6 @@ dataset = 'EBSDpatterns'
    dim0 = binx
    dim1 = biny
    dim2 = ninbatch*enl%nthreads
-! write (*,*) ibatch,offset,hdims,dim0,dim1,dim2
    if (ibatch.eq.1) then
      hdferr = HDF_writeHyperslabCharArray3D(dataset, batchpatterns, hdims, offset, dim0, dim1, dim2, &
                                           HDF_head)
@@ -647,7 +657,6 @@ dataset = 'EBSDpatterns'
    dim0 = binx
    dim1 = biny
    dim2 = nremainder
-! write (*,*) ibatch,offset,hdims,dim0,dim1,dim2
    if (ibatch.eq.1) then
      hdferr = HDF_writeHyperslabCharArray3D(dataset, batchpatterns(1:binx,1:biny,1:nremainder), hdims, offset, dim0, dim1, dim2, &
                                           HDF_head)
@@ -672,6 +681,11 @@ dataset = 'StopTime'
 line2(1) = tstre
 hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head, overwrite)
 
+call CPU_TIME(tstop)
+dataset = 'Duration'
+tstop = tstop - tstart
+hdferr = HDF_writeDatasetFloat(dataset, tstop, HDF_head)
+
 ! close the datafile
 call HDF_pop(HDF_head,.TRUE.)
 
@@ -680,4 +694,3 @@ call h5close_f(hdferr)
 
 
 end subroutine ComputeEBSDPatterns
-

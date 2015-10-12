@@ -177,7 +177,7 @@ end
  cmd = '/bin/rm '+EBSDdata.pathname+'/'+'EMEBSDtmp.nml'
  spawn, cmd
 
-EMdatapathname = getenv('EMdatapathname')
+EMdatapathname = Core_getenv(/data)
 
 ; next, we need to load the pattern if we are in single mode
 ; we check for HDF5 filetype first 

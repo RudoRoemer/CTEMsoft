@@ -21,8 +21,9 @@
 @Core_WTextE			; generate an editable text widget with a label
 @Core_Print			; print messages to status window and log file
 @Core_WidgetEvent		; general data handler for various widget events
+@Core_getenv                    ; read the environment variable(s)
 ;
-; Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
+; Copyright (c) 2014-2015, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are 

@@ -35,6 +35,8 @@ common EBSDmasks, circularmask
 
 if (EBSDdata.eventverbose eq 1) then help,event,/structure
 
+EMdatapathname = Core_getenv(/data)
+
 ; intercept the detector widget movement here 
 if (event.id eq EBSDwidget_s.patternbase) then begin
   EBSDdata.patternxlocation = event.x
@@ -71,12 +73,18 @@ end else begin
 		de = delist[EBSDdata.imageformat]
 		fn = DIALOG_PICKFILE(/write,default_extension=de,path=EBSDdata.pathname,title='enter prefix for image series file name')
 		fn = strsplit(fn,'.',/extract)
-  		openr,1,EBSDdata.EBSDpatternfilename,/f77
-  		q = assoc(1,lonarr(3),4)
-  		dims = q[0]
-  		q = assoc(1,fltarr(dims[0],dims[1]),20)
+; changed old code to read HDF5 formatted data file [10/11/15, MDG]
+                file_id = H5F_OPEN(EMdatapathname+'/'+EBSDdata.EBSDpatternfilename)
+                group_id = H5G_OPEN(file_id,'EMData')
+                dset_id = H5D_OPEN(group_id,'EBSDpatterns')
+                q = H5D_READ(dset_id)
+print,'data set dimensions'
+help,q
+                H5D_close,dset_id
+                H5G_close,group_id
+                H5F_close,file_id
 		for i=0,EBSDdata.numangles-1 do begin
-  		  pattern = q[i]
+  		  pattern = reform(q[*,*,i])
 		  EBSDshowpattern, /single, /nodisplay
 		  if (EBSDdata.showcircularmask eq 1) then im = finalpattern*byte(circularmask) else im=finalpattern
 		  filename = fn[0]+string(i+1,format="(I5.5)")+'.'+fn[1]

@@ -39,6 +39,7 @@
 !> @date   11/23/13 MDG 1.0 original
 !> @date   08/10/14 MDG 1.1 added GenerateSymmetry call
 !> @date   03/30/15 MDG 2.0 modified output to HDF format
+!> @date   10/07/15 MDG 2.1 minor cleanup in preparation for release 3.0
 !--------------------------------------------------------------------------
 program EMmkxtal
 
@@ -55,7 +56,7 @@ type(unitcell), pointer         :: cell
 character(fnlen)                :: progname, progdesc, fname
 
  progname = 'EMmkxtal.f90'
- progdesc = 'Create an HDF crystal structure file'
+ progdesc = 'Create an HDF crystal structure file and place it in the XtalFolder'
 
  call EMsoft(progname, progdesc)
 

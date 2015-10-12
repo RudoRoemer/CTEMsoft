@@ -4,7 +4,7 @@ compmode = 'Blochwv'  ! 'ScatMat'
 ! output device (6=screen, >10 is fort.## file)
 stdout = 6
 ! no. of pixels in the X and Y direction
-npx = 1024
+npx = 500
 ! smallest d-spacing to take into account [nm]
 dmin = 0.05
 ! Data storage options

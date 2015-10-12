@@ -13,6 +13,7 @@ real(kind=dbl)        :: ieu(3), oeu(3), iro(4), oro(4), iho(3), oho(3), icu(3),
 real(kind=dbl)        :: iax(4), oax(4), iqu(4), oqu(4), ivec(3), ovec(3), s, r(3)
 real(kind=dbl)        :: iom(3,3), oom(3,3), omm(3,3), diff, diffmax, dtor, aux, omega
 real(kind=dbl),allocatable :: rots(:,:)
+real(kind=sgl)          :: ieus(3)
 integer(kind=irg)     :: tcnt, rcnt, i, ierr
 type(orientationtyped):: ot
 logical               :: verbose, c1, c2
@@ -27,55 +28,21 @@ real(kind=dbl)                  :: XYZ(3), sXYZ(3), T1, T2, c, q, LamXYZ(3), eps
 integer(kind=irg)               :: p
 
 
-nullify(FZlist)
+!dtor = cPi/180.D0
+!ieu = (/  180.00000000000000D0, 90.000000000000000D0, 0.0000000000000000D0 /) * dtor
 
-pgnum = 32
-nsteps = 10
-Fzcnt = 0
-call sampleRFZ(nsteps, pgnum, FZcnt, FZlist)
+!ot = init_orientation(ieu, 'eu')
+!iro = ot%rodrigues
+!call print_orientation(ot)
 
-write (*,*) 'FZcnt = ',FZcnt
-
- FZtmp => FZlist                        ! point to the top of the list
- do i = 1, FZcnt                           ! loop over all entries
-   ieu = ro2eu(FZtmp%rod)               ! convert to Euler angles
-   if ((i.lt.10).or.(i.gt.333220)) write (*,*) i,ieu*180.D0/cPi           ! for instance, write eu to a file
-   FZtmp => FZtmp%next                  ! point to the next entry
- end do
+!write (*,*) '                  iro   ', iro
+!write (*,*) '            ro2eu(iro)  ', ro2eu(iro)
+!write (*,*) '      eu2ax(ro2eu(iro)) ', eu2ax(ro2eu(iro))
+!write (*,*) 'ax2ro(eu2ax(ro2eu(iro)))', ax2ro(eu2ax(ro2eu(iro)))
 
 
 
-stop
-
-write (*,*) '--original test angles----'
-ieu = (/ 155.940,       8.50275,       8.53054/)*cPi/180.0
-ot = init_orientation(ieu,'eu')
-call print_orientation(ot)
-
-
-write (*,*) '------'
-iro = (/ -0.0209920D0,   -0.0718092D0,   -0.9971975D0, dtan(164.5135361*cPi/360.D0) /)
-ot = init_orientation(iro, 'ro')
-call print_orientation(ot)
-
-stop
-
-
-write (*,*) '------'
-write (*,*) '------'
-ieu = (/ 214.44878966659633,       58.856774045463325,       124.44878966659435 /)*cPi/180.0
-ot = init_orientation(ieu,'eu')
-call print_orientation(ot)
-
-write (*,*) '------'
-iro = (/ -0.6725618D0,   -0.6725618D0,   -0.3087413D0, dtan(62.2051636*cPi/360.0) /)
-ot = init_orientation(iro, 'ro')
-call print_orientation(ot)
-
-
-
-
-stop
+!stop
 
 ivec = (/ 1.D0, 1.D0, 0.D0 /)
 verbose =  .TRUE.

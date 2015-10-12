@@ -137,7 +137,7 @@ complex(kind=dbl),allocatable   :: DynMat(:,:)
 complex(kind=dbl)       :: czero
 
 integer(kind=irg)       :: nt, nns, nnw, tots, totw ! thickness array and BetheParameters strong and weak beams
-real(kind=sgl)          :: FN(3), kk(3), fnat, kn, Radius, xy(2)
+real(kind=sgl)          :: FN(3), kk(3), fnat, kn, Radius, xy(2), tstart, tstop
 integer(kind=irg)       :: numset, nref, ipx, ipy, ipz, iequiv(3,48), nequiv, ip, jp, izz, IE, iz, one,ierr
 integer(kind=irg),allocatable   :: kij(:,:), nat(:)
 real(kind=dbl)          :: res(2), xyz(3)
@@ -197,10 +197,10 @@ end interface
 nullify(HDF_head)
 
 call timestamp(datestring=dstr, timestring=tstrb)
+call CPU_TIME(tstart)
 
 gzero = 1
 frac = 0.05
-!dataunit = 10
 
 allocate(cell)
 
@@ -296,13 +296,7 @@ call HDF_pop(HDF_head,.TRUE.)
 ! close the fortran interface
 call h5close_f(hdferr)
 
-! print some information to the console
-io_int(1:5) = (/ numEbins, numzbins, nsx, nsy, num_el /)
-call WriteValue(' NumEbins, numzbins, nsx, nsy, num_el',io_int,5,"(4I8,', ',I14)")
 etotal = num_el
-
-io_real(1:5) = (/ EkeV, Ehistmin, Ebinsize, depthmax, depthstep /)
-call WriteValue(' EkeV, Ehistmin, Ebinsize, depthmax, depthstep ',io_real,5,"(4F10.5,',',F10.5)")
 
 call Message(' -> completed reading '//trim(ecpnl%energyfile), frm = "(A//)")
 
@@ -351,11 +345,8 @@ end if
 usehex = .FALSE.
 if ((cell%xtal_system.eq.4).or.(cell%xtal_system.eq.5)) usehex = .TRUE.
 
-
 if(usehex)  npyhex = nint(2.0*float(ecpnl%npx)/sqrt(3.0))
 ijmax = float(ecpnl%npx)**2   ! truncation value for beam directions
-
-write (*,*) 'space group sampling type = ',SamplingType
 
 ! ---------- end of symmetry and crystallography section
 !=============================================
@@ -383,11 +374,11 @@ call WriteValue('# independent beam directions to be considered = ', io_int_sgl,
 ktmp => khead
 czero = cmplx(0.D0, 0.D0)
 ! force dynamical matrix routine to read new Bethe parameters from file
-!call Set_Bethe_Parameters(BetheParameters,.TRUE.)
+call Set_Bethe_Parameters(BetheParameters)
 
-nt = nint((depthmax - ecpnl%startthick)/depthstep)
-allocate(thick(nt))
-thick = ecpnl%startthick + depthstep * (/ (i-1,i=1,nt) /)
+!nt = nint((depthmax - ecpnl%startthick)/depthstep)
+!allocate(thick(nt))
+!thick = ecpnl%startthick + depthstep * (/ (i-1,i=1,nt) /)
 
 nullify(reflist)
 nullify(firstw)
@@ -511,9 +502,7 @@ hdferr = HDF_writeHyperslabFloatArray3D(dataset, masterSP, dims3, offset3, cnt3(
 call HDF_pop(HDF_head,.TRUE.)
 
 ! and close the fortran hdf interface
-!call h5close_f(hdferr)
-
-!lambdaZ = lambdaZ * 10000.0
+call h5close_f(hdferr)
 
 call OMP_SET_NUM_THREADS(ecpnl%nthreads)
 io_int(1) = ecpnl%nthreads
@@ -579,8 +568,7 @@ beamloop: do i = 1, numk
      end do
      svals = svals/float(sum(nat(1:numset)))
 
-! and store the resulting values
-
+! and store the resulting values in all the symmetryically equivalent positions
     ipx = kij(1,i)
     ipy = kij(2,i)
     ipz = kij(3,i)
@@ -606,7 +594,7 @@ beamloop: do i = 1, numk
 
     deallocate(Lgh, Sghtmp)
 
-    if (mod(i,2500).eq.0) then
+    if (mod(i,5000).eq.0) then
         io_int(1) = i
         call WriteValue('  completed beam direction ',io_int, 1, "(I8)")
     end if
@@ -655,6 +643,11 @@ hdferr = HDF_openGroup(groupname, HDF_head)
 dataset = 'StopTime'
 line2(1) = tstre
 hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head, overwrite)
+
+dataset = 'Duration'
+call CPU_TIME(tstop)
+tstop = tstop - tstart
+hdferr = HDF_writeDatasetFloat(dataset, tstop, HDF_head)
 
 call HDF_pop(HDF_head)
 

@@ -188,21 +188,86 @@ end subroutine EMsoft
 !> @param no parameters
 !
 !> @date  05/05/15 MDG 1.0 new routine
+!> @date  09/26/15 MDG 1.1 added .json config support
 !--------------------------------------------------------------------------
 
 subroutine EMsoft_path_init
 
+use json_module
+use, intrinsic :: iso_fortran_env , only: error_unit, wp => real64
+
+
 IMPLICIT NONE
 
-character(fnlen)                        :: pathstring
+character(fnlen)                        :: pathstring, dirstring, ep
+type(json_file)                         :: json
+character(fnlen)                        :: jsonname
+integer(kind=irg)                       :: error_cnt
+character(kind=CK,len=:),allocatable    :: cval
+logical                                 :: found
+
+! first try to get the environment variables using the getenv command; if
+! an empty string is returned, then try to find the .EMsoft/EMsoftConfig.json file;
+! if that fails, then abort the program with an error message.
 
 ! get the environment variables for the EMsoft root and data folders
+pathstring = ''
 call getenv("EMsoftpathname",pathstring)
-EMsoftpathname = trim(pathstring)
+EMsoftpathname = ''
+EMdatapathname = ''
 
-pathstring=''
-call getenv("EMdatapathname",pathstring)
-EMdatapathname = trim(pathstring)
+if (pathstring.eq.'') then ! try the EMsoftConfig.json file
+
+! initialize the json state variables
+  error_cnt = 0
+  call json_initialize()
+  if (json_failed()) then
+    call json_print_error_message(error_unit)
+    stop
+  end if
+
+! get the user's home directory to prepend to the config file name
+  call getenv("HOME",dirstring)
+  jsonname = trim(dirstring)//'/.config/EMsoft/EMsoftConfig.json'
+
+! and load the file
+  call json%load_file(filename = trim(jsonname))
+  if (json_failed()) then    !if there was an error reading the file
+    call json_print_error_message(error_unit)
+    stop
+  end if
+
+! if we find the field 'ep' in the file, then we read its corresponding value
+! if it is not there, then we abort
+  ep = 'EMsoftpathname'
+  call json%get(trim(ep), cval, found)
+  if (.not. found) then
+    write(error_unit,'(A)') 'WARNING: field '//trim(ep)//' not found in json file'
+  else
+    EMsoftpathname = trim(cval)
+  end if
+
+  ep = 'EMdatapathname'
+  call json%get(trim(ep), cval, found)
+  if (.not. found) then
+    write(error_unit,'(A)') 'WARNING: field '//trim(ep)//' not found in json file'
+  else
+    EMdatapathname = trim(cval)
+  end if
+
+  if ((EMsoftpathname.eq.'').or.(EMdatapathname.eq.'')) then
+    write (error_unit,'(A)') 'ERROR: environment variables are undefined; aborting program'
+    stop
+  end if 
+
+! and cleanup
+  call json%destroy()
+else  ! read the other string from the environment variables
+  EMsoftpathname = trim(pathstring)
+  pathstring=''
+  call getenv("EMdatapathname",pathstring)
+  EMdatapathname = trim(pathstring)
+end if
 
 ! define the derived pathname variables (globals)
 templatepathname = trim(EMsoftpathname)//'templatefolder/'

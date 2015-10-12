@@ -1,6 +1,10 @@
 &Bethelist
 ! Do not change the line above !
 !
+c1 = 8.0
+c2 = 50.0
+c3 = 100.0
+sgdbdiff = 1.00    
 ! this cutoff (c2 in the manual) draws the line between strong (smaller) and weak (larger) beams
 weakcutoff = 60.0
 ! this cutoff (c1 in the manual) separates weak reflections from those that will not be considered
