@@ -432,7 +432,7 @@ else
   masterfile = trim(EMdatapathname)//trim(enl%masterfile)
 end if
 
-! is this a propoer HDF5 file ?
+! is this a proper HDF5 file ?
 call h5fis_hdf5_f(trim(masterfile), stat, hdferr)
 
 if (stat) then 
