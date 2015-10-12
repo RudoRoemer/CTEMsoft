@@ -82,6 +82,7 @@ end program EMMCOpenCL
 !> @date 05/05/15  MDG 5.1 removed getenv() call; replaced by global path string
 !> @date 09/01/15  MDG 5.2 modifications due to Lambert module changes
 !> @date 09/09/15  MDG 5.3 added devid selector (GPU device ID) to namelist
+!> @date 10/12/15  SS  5.4 added sample titl series option
 !--------------------------------------------------------------------------
 subroutine DoMCsimulation(mcnl, progname, nmldeffile)
 
@@ -158,11 +159,11 @@ type(cl_event)          :: event
 
 character(len = 100)    :: info ! info about the GPU
 integer, parameter      :: iunit = 10
-integer, parameter      :: source_length = 10000000
+integer, parameter      :: source_length = 100000
 character(len = source_length)  :: source
 integer(kind=4)         :: num, ierr, irec, io_int(1), val,val1 ! auxiliary variables
 character(fnlen)        :: groupname, dataset, instring, dataname
-
+integer(kind=irg)       :: numangle, iang
 
 type(HDFobjectStackType),pointer  :: HDF_head
 
@@ -200,7 +201,7 @@ end if
 
 
 EkeV = mcnl%EkeV
-sig = mcnl%sig*dtoR
+!sig = mcnl%sig*dtoR
 omega = mcnl%omega*dtoR
 globalworkgrpsz = mcnl%globalworkgrpsz
 num_el = mcnl%num_el ! no. of electron simulation by one work item
@@ -213,9 +214,6 @@ localsize = (/ mcnl%globalworkgrpsz/10, mcnl%globalworkgrpsz/10 /)
 numEbins =  int((mcnl%EkeV-mcnl%Ehistmin)/mcnl%Ebinsize)+1
 numzbins =  int(mcnl%depthmax/mcnl%depthstep)+1
 nx = (mcnl%numsx-1)/2
-allocate(accum_e(numEbins,-nx:nx,-nx:nx),accum_z(numEbins,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
-accum_e = 0
-accum_z = 0
 
 allocate(Lamresx(num_max), Lamresy(num_max), depthres(num_max), energyres(num_max), stat=istat)
 Lamresx = 0.0
@@ -224,6 +222,29 @@ depthres = 0.0
 energyres = 0.0
 size_in_bytes = num_max*sizeof(EkeV)
 size_in_bytes_seeds = 4*globalworkgrpsz*globalworkgrpsz*sizeof(EkeV)
+
+if (mcnl%sigstep .ne. 0.D0) then
+   numangle = nint((mcnl%sigstart - mcnl%sigend)/mcnl%sigstep)+1
+else
+   call FatalError('EMMCOpenCL:','zero step size for sigma values')
+end if
+
+if (mode .eq. 'full' .and. numangle .gt. 1) then
+   call FatalError('EMMCOpenCL:','Multiple values of sigma for full (EBSD) mode. &
+   Please specify same sigstart and sigstop value in full mode. ')
+end if
+
+if (mode .eq. 'full') then
+   allocate(accum_e(numEbins,-nx:nx,-nx:nx),accum_z(numEbins,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
+else if (mode .eq. 'bse1') then
+   allocate(accum_e(numangle,-nx:nx,-nx:nx),accum_z(numangle,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
+else
+   call FatalError('EMMCOpenCL:','Unknown mode specified in namelist file')
+end if
+
+accum_e = 0
+accum_z = 0
+
 
 ! changed by MDG [09/01/15] after extensive modifications to Lambert routines
 ! old code delta = dble(nx)/LPs%sPio2
@@ -330,112 +351,145 @@ if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
 !call init_random_seed()
 call clEnqueueWriteBuffer(command_queue, seeds, cl_bool(.true.), 0_8, size_in_bytes_seeds, init_seeds(1), ierr)
 
-mainloop: do i = 1,(totnum_el/num_max+1)
+angleloop: do iang = 1,numangle
+   
+    sig = (mcnl%sigstart + (iang-1)*mcnl%sigstep)*dtoR
+
+    mainloop: do i = 1,(totnum_el/num_max+1)
 
 ! set the kernel arguments
-    call clSetKernelArg(kernel, 0, LamX, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+        call clSetKernelArg(kernel, 0, LamX, ierr)
+        if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-    call clSetKernelArg(kernel, 1, LamY, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+        call clSetKernelArg(kernel, 1, LamY, ierr)
+        if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-    call clSetKernelArg(kernel, 2, EkeV, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+        call clSetKernelArg(kernel, 2, EkeV, ierr)
+        if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-    call clSetKernelArg(kernel, 3, globalworkgrpsz, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+        call clSetKernelArg(kernel, 3, globalworkgrpsz, ierr)
+        if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-    call clSetKernelArg(kernel, 4, Ze, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+        call clSetKernelArg(kernel, 4, Ze, ierr)
+        if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-    call clSetKernelArg(kernel, 5, density, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+        call clSetKernelArg(kernel, 5, density, ierr)
+        if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-    call clSetKernelArg(kernel, 6, at_wt, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+        call clSetKernelArg(kernel, 6, at_wt, ierr)
+        if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-    call clSetKernelArg(kernel, 7, num_el, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+        call clSetKernelArg(kernel, 7, num_el, ierr)
+        if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-    call clSetKernelArg(kernel, 8, seeds, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+        call clSetKernelArg(kernel, 8, seeds, ierr)
+        if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-    call clSetKernelArg(kernel, 9, sig, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+        call clSetKernelArg(kernel, 9, sig, ierr)
+        if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-    call clSetKernelArg(kernel, 10, omega, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+        call clSetKernelArg(kernel, 10, omega, ierr)
+        if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-    call clSetKernelArg(kernel, 11, depth, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+        call clSetKernelArg(kernel, 11, depth, ierr)
+        if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-    call clSetKernelArg(kernel, 12, energy, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+        call clSetKernelArg(kernel, 12, energy, ierr)
+        if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-    call clSetKernelArg(kernel, 13, steps, ierr)
-    if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+        call clSetKernelArg(kernel, 13, steps, ierr)
+        if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
 !print*, EkeV, globalworkgrpsz, Ze, density, at_wt, num_max, prime, sig, omega
 ! execute the kernel
-    call clEnqueueNDRangeKernel(command_queue, kernel, globalsize, localsize, event, ierr)
+        call clEnqueueNDRangeKernel(command_queue, kernel, globalsize, localsize, event, ierr)
 
 ! wait for the commands to finish
-    call clFinish(command_queue, ierr)
+        call clFinish(command_queue, ierr)
 
 ! read the resulting vector from device memory
-    call clEnqueueReadBuffer(command_queue, LamX, cl_bool(.true.), 0_8, size_in_bytes, Lamresx(1), ierr)
-    call clEnqueueReadBuffer(command_queue, LamY, cl_bool(.true.), 0_8, size_in_bytes, Lamresy(1), ierr)
-    call clEnqueueReadBuffer(command_queue, depth, cl_bool(.true.), 0_8, size_in_bytes, depthres(1), ierr)
-    call clEnqueueReadBuffer(command_queue, energy, cl_bool(.true.), 0_8, size_in_bytes, energyres(1), ierr)
+        call clEnqueueReadBuffer(command_queue, LamX, cl_bool(.true.), 0_8, size_in_bytes, Lamresx(1), ierr)
+        call clEnqueueReadBuffer(command_queue, LamY, cl_bool(.true.), 0_8, size_in_bytes, Lamresy(1), ierr)
+        call clEnqueueReadBuffer(command_queue, depth, cl_bool(.true.), 0_8, size_in_bytes, depthres(1), ierr)
+        call clEnqueueReadBuffer(command_queue, energy, cl_bool(.true.), 0_8, size_in_bytes, energyres(1), ierr)
 !    call clEnqueueReadBuffer(command_queue, seeds, cl_bool(.true.), 0_8, size_in_bytes_seeds, init_seeds(1), ierr)
+        if (mode .eq. 'full') then
+           subloopfull: do j = 1, num_max
 
-    subloop: do j = 1, num_max
-
-        if ((Lamresx(j) .ne. -10.0) .and. (Lamresy(j) .ne. -10.0) &
-        .and. (depthres(j) .ne. 10.0) .and. (energyres(j) .ne. 0.0) &
-        .and. .not.isnan(Lamresx(j)) .and. .not.isnan(Lamresy(j))) then
-        !& .and. (Lamresx(j) .ne. 0.0) .and. (Lamresy(j) .ne. 0.0) .and. (depthres(j) .ne. 0.0)) then
+               if ((Lamresx(j) .ne. -10.0) .and. (Lamresy(j) .ne. -10.0) &
+               .and. (depthres(j) .ne. 10.0) .and. (energyres(j) .ne. 0.0) &
+               .and. .not.isnan(Lamresx(j)) .and. .not.isnan(Lamresy(j))) then
 ! and get the nearest pixel [ take into account reversal of coordinate frame (x,y) -> (y,-x) ]
-            if ((nint(delta*Lamresy(j)) .eq. 0.0) .and. (nint(-delta*Lamresx(j)) .eq. 0.0)) then
-                val1 = val1 + 1
-                !print*,Lamresx(j),Lamresy(j)
-            end if
+                   if ((nint(delta*Lamresy(j)) .eq. 0.0) .and. (nint(-delta*Lamresx(j)) .eq. 0.0)) then
+                       val1 = val1 + 1
+                   end if
 
-            val = val + 1
-            idxy = (/ nint(delta*Lamresy(j)), nint(-delta*Lamresx(j)) /)
+                   val = val + 1
+                   idxy = (/ nint(delta*Lamresy(j)), nint(-delta*Lamresx(j)) /)
 
-            if (maxval(abs(idxy)).le.nx) then
+                   if (maxval(abs(idxy)).le.nx) then
 ! If Ec larger than Emin, then we should count this electron
-                if (energyres(j).gt.mcnl%Ehistmin) then
-!print *, energyres(j), depthres(j)*1e9, Lamresx(j), Lamresy(j)
+                       if (energyres(j).gt.mcnl%Ehistmin) then
 
-                    iE = nint((energyres(j)-mcnl%Ehistmin)/mcnl%Ebinsize)+1
+                           iE = nint((energyres(j)-mcnl%Ehistmin)/mcnl%Ebinsize)+1
 ! first add this electron to the correct exit distance vs. energy bin (coarser than the angular plot)
-                    edis = abs(depthres(j))  ! distance from last scattering point to surface along trajectory
-                    iz = nint(edis/mcnl%depthstep) +1
-                    if ( (iz.gt.0).and.(iz.le.numzbins) ) then
+                           edis = abs(depthres(j))  ! distance from last scattering point to surface along trajectory
+                           iz = nint(edis/mcnl%depthstep) +1
+                           if ( (iz.gt.0).and.(iz.le.numzbins) ) then
 
-                        px = nint(idxy(1)/10.0)
-                        py = nint(idxy(2)/10.0)
-                        accum_z(iE,iz,px,py) = accum_z(iE,iz,px,py) + 1
+                               px = nint(idxy(1)/10.0)
+                               py = nint(idxy(2)/10.0)
+                               accum_z(iE,iz,px,py) = accum_z(iE,iz,px,py) + 1
 
-                    end if
+                           end if
 ! then add it to the modified Lambert accumulator array.
-                    accum_e(iE,idxy(1),idxy(2)) = accum_e(iE,idxy(1),idxy(2)) + 1
-                end if
-            end if
+                           accum_e(iE,idxy(1),idxy(2)) = accum_e(iE,idxy(1),idxy(2)) + 1
+                       end if
+                   end if
+               end if
+           end do subloopfull
+       
+        else if (mode .eq. 'bse1') then
+           subloopbse1: do j = 1, num_max
+
+               if ((Lamresx(j) .ne. -10.0) .and. (Lamresy(j) .ne. -10.0) &
+               .and. (depthres(j) .ne. 10.0) .and. (energyres(j) .ne. 0.0) &
+               .and. .not.isnan(Lamresx(j)) .and. .not.isnan(Lamresy(j))) then
+! and get the nearest pixel [ take into account reversal of coordinate frame (x,y) -> (y,-x) ]
+                   if ((nint(delta*Lamresy(j)) .eq. 0.0) .and. (nint(-delta*Lamresx(j)) .eq. 0.0)) then
+                       val1 = val1 + 1
+                   end if
+
+                   val = val + 1
+                   idxy = (/ nint(delta*Lamresy(j)), nint(-delta*Lamresx(j)) /)
+
+                   if (maxval(abs(idxy)).le.nx) then
+! first add this electron to the correct exit distance vs. sigma (coarser than the angular plot)
+                       edis = abs(depthres(j))  ! distance from last scattering point to surface along trajectory
+                       iz = nint(edis/mcnl%depthstep) +1
+                       if ( (iz.gt.0).and.(iz.le.numzbins) ) then
+                           px = nint(idxy(1)/10.0)
+                           py = nint(idxy(2)/10.0)
+                           accum_z(iang,iz,px,py) = accum_z(iang,iz,px,py) + 1
+
+                       end if
+! then add it to the modified Lambert accumulator array.
+                       accum_e(iang,idxy(1),idxy(2)) = accum_e(iang,idxy(1),idxy(2)) + 1
+                   end if
+               end if
+           end do subloopbse1
+         end if
+
+        if (mod(i,50).eq.0) then
+            io_int(1) = i*num_max
+            call WriteValue(' Total number of electrons generated = ',io_int, 1, "(I15)")
+            io_int(1) = sum(accum_e)
+            call WriteValue(' Number of electrons on detector       = ',io_int, 1, "(I15)")
         end if
-    end do subloop
-
-    if (mod(i,50).eq.0) then
-        io_int(1) = i*num_max
-        call WriteValue(' Total number of electrons generated = ',io_int, 1, "(I15)")
-        io_int(1) = sum(accum_e)
-        call WriteValue(' Number of electrons on detector       = ',io_int, 1, "(I15)")
-    end if
 
 
-end do mainloop
+    end do mainloop
+end do angleloop
 
 i = totnum_el/num_max
 
@@ -495,13 +549,25 @@ hdferr = HDF_writeDatasetInteger(dataset, numzbins, HDF_head)
 dataset = 'totnum_el'
 hdferr = HDF_writeDatasetInteger(dataset, totnum_el, HDF_head)
 
+if (mode .eq. 'full') then
+
 !allocate(accum_e(numEbins,-nx:nx,-nx:nx),accum_z(numEbins,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
+    dataset = 'accum_e'
+    hdferr = HDF_writeDatasetIntegerArray3D(dataset, accum_e, numEbins, 2*nx+1, 2*nx+1, HDF_head)
 
-dataset = 'accum_e'
-hdferr = HDF_writeDatasetIntegerArray3D(dataset, accum_e, numEbins, 2*nx+1, 2*nx+1, HDF_head)
+    dataset = 'accum_z'
+    hdferr = HDF_writeDatasetIntegerArray4D(dataset, accum_z, numEbins, numzbins, 2*(nx/10)+1, 2*(nx/10)+1, HDF_head)
 
-dataset = 'accum_z'
-hdferr = HDF_writeDatasetIntegerArray4D(dataset, accum_z, numEbins, numzbins, 2*(nx/10)+1, 2*(nx/10)+1, HDF_head)
+else if (mode .eq. 'bse1') then
+
+!allocate(accum_e(numangle,-nx:nx,-nx:nx),accum_z(numangle,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
+    dataset = 'accum_e'
+    hdferr = HDF_writeDatasetIntegerArray3D(dataset, accum_e, numangle, 2*nx+1, 2*nx+1, HDF_head)
+
+    dataset = 'accum_z'
+    hdferr = HDF_writeDatasetIntegerArray4D(dataset, accum_z, numangle, numzbins, 2*(nx/10)+1, 2*(nx/10)+1, HDF_head)
+
+end if
 
 call HDF_pop(HDF_head,.TRUE.)
 
@@ -509,6 +575,7 @@ call HDF_pop(HDF_head,.TRUE.)
 call h5close_f(hdferr)
 
 ! and write some infgormation to the console
+
 bse = real(val)/real(totnum_el)
 print*, "Backscatter yield          = ",bse
 print*, "Total number of incident electrons = ",totnum_el

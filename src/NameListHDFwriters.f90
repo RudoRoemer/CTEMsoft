@@ -416,7 +416,7 @@ IMPLICIT NONE
 type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
 type(MCCLNameListType),INTENT(INOUT)                  :: mcnl
 
-integer(kind=irg),parameter                           :: n_int = 6, n_real = 7
+integer(kind=irg),parameter                           :: n_int = 6, n_real = 9
 integer(kind=irg)                                     :: hdferr,  io_int(n_int)
 real(kind=dbl)                                        :: io_real(n_real)
 character(20)                                         :: intlist(n_int), reallist(n_real)
@@ -437,14 +437,17 @@ intlist(6) = 'devid'
 call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
 ! write all the single doubles
-io_real = (/ mcnl%sig, mcnl%omega, mcnl%EkeV, mcnl%Ehistmin, mcnl%Ebinsize, mcnl%depthmax, mcnl%depthstep /)
-reallist(1) = 'sig'
-reallist(2) = 'omega'
-reallist(3) = 'EkeV'
-reallist(4) = 'Ehistmin'
-reallist(5) = 'Ebinsize'
-reallist(6) = 'depthmax'
-reallist(7) = 'depthstep'
+io_real = (/ mcnl%sigstart, mcnl%sigend, mcnl%sigstep, mcnl%omega, mcnl%EkeV, mcnl%Ehistmin, &
+             mcnl%Ebinsize, mcnl%depthmax, mcnl%depthstep /)
+reallist(1) = 'sigstart'
+reallist(2) = 'sigend'
+reallist(3) = 'sigstep'
+reallist(4) = 'omega'
+reallist(5) = 'EkeV'
+reallist(6) = 'Ehistmin'
+reallist(7) = 'Ebinsize'
+reallist(8) = 'depthmax'
+reallist(9) = 'depthstep'
 call HDF_writeNMLdbles(HDF_head, io_real, reallist, n_real)
 
 ! write all the strings

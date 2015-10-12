@@ -362,7 +362,9 @@ integer(kind=irg)       :: globalworkgrpsz
 integer(kind=irg)       :: num_el
 integer(kind=irg)       :: totnum_el
 integer(kind=irg)       :: devid
-real(kind=dbl)          :: sig
+real(kind=dbl)          :: sigstart
+real(kind=dbl)          :: sigend
+real(kind=dbl)          :: sigstep
 real(kind=dbl)          :: omega
 real(kind=dbl)          :: EkeV
 real(kind=dbl)          :: Ehistmin
@@ -375,8 +377,9 @@ character(fnlen)        :: dataname
 character(fnlen)        :: mode
 
 ! define the IO namelist to facilitate passing variables to the program.
-namelist  / MCCLdata / stdout, xtalname, sig, numsx, num_el, globalworkgrpsz, EkeV, &
-dataname, totnum_el, Ehistmin, Ebinsize, depthmax, depthstep, omega, MCmode, mode, devid
+namelist  / MCCLdata / stdout, xtalname, sigstart, numsx, num_el, globalworkgrpsz, EkeV, &
+dataname, totnum_el, Ehistmin, Ebinsize, depthmax, depthstep, omega, MCmode, mode, devid, &
+sigend, sigstep
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 stdout = 6
@@ -385,7 +388,9 @@ globalworkgrpsz = 100
 num_el = 10
 totnum_el = 100000
 devid = 1
-sig = 70.D0
+sigstart = 70.D0
+sigend = 70.D0
+sigstep = 1.D0
 omega = 0.D0
 EkeV = 30.D0
 Ehistmin = 5.D0
@@ -420,7 +425,9 @@ mcnl%globalworkgrpsz = globalworkgrpsz
 mcnl%num_el = num_el
 mcnl%totnum_el = totnum_el
 mcnl%devid = devid
-mcnl%sig = sig
+mcnl%sigstart = sigstart
+mcnl%sigend = sigend
+mcnl%sigstep = sigstep
 mcnl%omega = omega
 mcnl%EkeV = EkeV
 mcnl%Ehistmin = Ehistmin

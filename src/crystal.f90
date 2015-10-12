@@ -1976,6 +1976,7 @@ end function GetHOLZcoordinates
 !> @date 11/25/14 MDG 1.0 original
 !> @date 08/19/15 SS  1.1 replaced FN by r in evaluation of tangential 
 !> component and corrected calculation of kgS from p1
+!> @date 09/23/15 commented out a few lines
 !--------------------------------------------------------------------------
 recursive function Convert_kgs_to_Substrate(cell, cellS, kg, TTinv, FN) result(kgS)
 
@@ -2002,8 +2003,9 @@ p = matmul(TTinv,p)
 
 ! convert to cartesian frame and get correct length of wavevector
 call TransSpace(cellS,p,p1,'d','c')
-call NormVec(cellS,p1,'c')
-p1 = p1/cellS%mLambda
+
+!call NormVec(cellS,p1,'c')
+!p1 = p1/cell%mLambda
 
 ! convert foil normal to cartesian frame and get normal component of wavevector
 call TransSpace(cellS,FN,r,'r','c')
@@ -2025,8 +2027,5 @@ p1 = p1/cellS%mLambda
 call TransSpace(cellS,p1,kgS,'c','r')
 
 end function Convert_kgs_to_Substrate
-
-
-
 
 end module crystal

@@ -107,7 +107,9 @@ type MCCLNameListType
         integer(kind=irg)       :: num_el
         integer(kind=irg)       :: totnum_el
         integer(kind=irg)       :: devid
-        real(kind=dbl)          :: sig
+        real(kind=dbl)          :: sigstart
+        real(kind=dbl)          :: sigend
+        real(kind=dbl)          :: sigstep
         real(kind=dbl)          :: omega
         real(kind=dbl)          :: EkeV
         real(kind=dbl)          :: Ehistmin

@@ -516,7 +516,7 @@ integer(kind=irg),INTENT(INOUT)                       :: error_cnt
 
 type(json_value),pointer                              :: p, inp
 
-integer(kind=irg),parameter                           :: n_int = 6, n_real = 7
+integer(kind=irg),parameter                           :: n_int = 6, n_real = 9
 integer(kind=irg)                                     :: io_int(n_int)
 real(kind=dbl)                                        :: io_real(n_real)
 character(20)                                         :: intlist(n_int), reallist(n_real)
@@ -538,14 +538,17 @@ intlist(6) = 'devid'
 call JSON_writeNMLintegers(inp, io_int, intlist, n_int, error_cnt)
 
 ! write all the single doubles
-io_real = (/ mcnl%sig, mcnl%omega, mcnl%EkeV, mcnl%Ehistmin, mcnl%Ebinsize, mcnl%depthmax, mcnl%depthstep /)
-reallist(1) = 'sig'
-reallist(2) = 'omega'
-reallist(3) = 'EkeV'
-reallist(4) = 'Ehistmin'
-reallist(5) = 'Ebinsize'
-reallist(6) = 'depthmax'
-reallist(7) = 'depthstep'
+io_real = (/ mcnl%sigstart, mcnl%sigend, mcnl%sigstep, mcnl%omega, mcnl%EkeV, mcnl%Ehistmin, &
+             mcnl%Ebinsize, mcnl%depthmax, mcnl%depthstep /)
+reallist(1) = 'sigstart'
+reallist(2) = 'sigend'
+reallist(3) = 'sigstep'
+reallist(4) = 'omega'
+reallist(5) = 'EkeV'
+reallist(6) = 'Ehistmin'
+reallist(7) = 'Ebinsize'
+reallist(8) = 'depthmax'
+reallist(9) = 'depthstep'
 call JSON_writeNMLdoubles(inp, io_real, reallist, n_real, error_cnt)
 
 ! write all the strings
@@ -2231,8 +2234,12 @@ else
   ep = 'MCCLdata.devid'
   call JSONreadInteger(json, ep, mcnl%devid, defmcnl%devid)
 
-  ep = 'MCCLdata.sig'
-  call JSONreadDouble(json, ep, mcnl%sig, defmcnl%sig)
+  ep = 'MCCLdata.sigstart'
+  call JSONreadDouble(json, ep, mcnl%sigstart, defmcnl%sigstart)
+  ep = 'MCCLdata.sigend'
+  call JSONreadDouble(json, ep, mcnl%sigend, defmcnl%sigend)
+  ep = 'MCCLdata.sigstep'
+  call JSONreadDouble(json, ep, mcnl%sigstep, defmcnl%sigstep)
   ep = 'MCCLdata.omega'
   call JSONreadDouble(json, ep, mcnl%omega, defmcnl%omega)
   ep = 'MCCLdata.EkeV'

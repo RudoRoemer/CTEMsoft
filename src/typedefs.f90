@@ -537,6 +537,7 @@ type refliststrongsubstype
     real(kind=dbl),allocatable              :: hlist(:,:)
     complex(kind=dbl),allocatable           :: DynMat(:,:)
     real(kind=dbl)                          :: kg(3)
+    real(kind=dbl)                          :: g(3) ! the g vector corresponding to kg
     integer(kind=irg)                       :: nns 
     type(refliststrongsubstype),pointer     :: next ! only strong beams are considered
 end type refliststrongsubstype

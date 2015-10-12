@@ -1115,11 +1115,13 @@ complex(kind=dbl)                           :: czero
 complex(kind=dbl),allocatable               :: Shhp(:,:),Lhhp(:,:)
 real(kind=dbl)                              :: ctmp(192,3),Znsq,arg1(3),arg2(3),arg3,arg4,s
 complex(kind=sgl)                           :: phase1,phase2
+integer(kind=irg),allocatable               :: nat(:)
 
 
 dthick = thick(2) - thick(1)
 Sigmagg = 0.D0
 czero = dcmplx(0.D0,0.D0)
+allocate(nat(1:cell_subs%ATOM_ntype))
 nullify(refliststrongtmp1)
 nullify(refliststrongtmp2)
 
@@ -1137,7 +1139,7 @@ do ii = 1,nns_film
 
     refliststrongtmp2 => refliststrong_subs
     do jj = 1,nns_film
-      if (ii .ge. jj) then
+      if (jj .ge. ii) then
         nns2 = refliststrongtmp2%nns
 
         Sg = czero
@@ -1161,8 +1163,11 @@ do ii = 1,nns_film
         Shhp = czero
         Lhhp = czero
 
-        arg1(1:3) = -2.0*cPi*(refliststrongtmp2%kg - refliststrongtmp1%kg) ! -2*pi*(kg - kgprime)
-
+        arg1(1:3) = (refliststrongtmp2%g(1:3) - refliststrongtmp1%g(1:3)) ! 2*pi*(gprime - g)
+!print*,'ii, tmp1, length = ',ii,refliststrongtmp1%kg,calclength(cell_subs,refliststrongtmp1%kg,'r')
+!print*,'jj, tmp2 ,length = ',jj,refliststrongtmp2%kg,calclength(cell_subs,refliststrongtmp2%kg,'r')
+!print*,'tmp2 - tmp1 = ',refliststrongtmp2%kg - refliststrongtmp1%kg 
+!print*,'' 
 ! calculation of Lhh for a pair of incident wavevectors g and gprime
         do kk=1,substhickness
            ampl1(1:nns1) = matmul(refliststrongtmp1%DynMat,Sg)
@@ -1180,16 +1185,16 @@ do ii = 1,nns_film
 
         do ll = 1,cell_subs%ATOM_ntype
             call CalcOrbit(cell_subs,ll,n,ctmp)
-            !nat(ll) = cell_subs%numat(ll)
+            nat(ll) = cell_subs%numat(ll)
 ! get Zn-squared for this special position, and include the site occupation parameter as well
             Znsq = float(cell_subs%ATOM_type(ll))**2 *cell_subs%ATOM_pos(ll,4)
             do pp = 1,nns1
                 do kk = 1,nns2
                     do qq = 1,n
                         s = 0.25*CalcLength(cell_subs,refliststrongtmp2%hlist(kk,1:3)-refliststrongtmp1%hlist(pp,1:3),'r')**2
-                        arg2 = -2*cPi*(refliststrongtmp2%hlist(kk,1:3)-refliststrongtmp1%hlist(pp,1:3))
-                        arg3 = sum(arg1(1:3)*cell_subs%apos(ll,qq,1:3))
-                        arg4 = sum(arg2(1:3)*cell_subs%apos(ll,qq,1:3))
+                        arg2 = (refliststrongtmp2%hlist(kk,1:3)-refliststrongtmp1%hlist(pp,1:3))
+                        arg3 = 2.0*cPi*sum(arg1(1:3)*cell_subs%apos(ll,qq,1:3))
+                        arg4 = 2.0*cPi*sum(arg2(1:3)*cell_subs%apos(ll,qq,1:3))
                         Shhp(pp,kk) = Shhp(pp,kk) + Znsq*exp(-cell_subs%ATOM_pos(ll,5)*s)*dcmplx(dcos(arg3+arg4),dsin(arg3+arg4))
                     end do
                 end do
@@ -1201,7 +1206,7 @@ do ii = 1,nns_film
 
 
         Sigmagg(ii,jj) = real(sum(Lhhp(1:nns1,1:nns2)*Shhp(1:nns1,1:nns2)))
-        Sigmagg(ii,jj) = Sigmagg(ii,jj)/4.0
+        Sigmagg(ii,jj) = Sigmagg(ii,jj)/float(sum(nat(1:cell_subs%ATOM_ntype)))
         if (ii .ne. jj) Sigmagg(jj,ii) = Sigmagg(ii,jj)
 
       end if
@@ -1272,7 +1277,7 @@ call Set_Bethe_Parameters(BetheParameters,.TRUE.)
 ! convert to substrate reference frame
 
 rltmpa => reflist_film%next
-kg = k0 + float(rltmpa%hkl) + rltmpa%sg*sngl(FN_film)
+kg = k0 + dble(rltmpa%hkl) !+ rltmpa%sg*sngl(FN_film)
 kg1 = Convert_kgs_to_Substrate(cell_film,cell_subs,kg,TTinv,sngl(FN_subs))
 
 ! calculate reflection list and dynamical matrix
@@ -1288,6 +1293,7 @@ allocate(refliststrong_subs_tmp%hlist(nns_subs,3),stat=istat)
 allocate(refliststrong_subs_tmp%DynMat(nns_subs,nns_subs),stat=istat)
 
 refliststrong_subs_tmp%kg(1:3) = kg1(1:3)
+refliststrong_subs_tmp%g(1:3) = dble(rltmpa%hkl)
 refliststrong_subs_tmp%nns = nns_subs
 
 call GetDynMat(cell_subs,reflist_subs,firstw_subs,rlp_subs,refliststrong_subs_tmp%DynMat,nns_subs,nnw_subs)
@@ -1307,7 +1313,7 @@ refliststrong_subs_tmp%DynMat = ScatMat
 
 rltmpb => reflist_subs%next
 do jj = 1,nns_subs
-    refliststrong_subs%hlist(jj,1:3) = float(rltmpb%hkl(1:3))
+    refliststrong_subs%hlist(jj,1:3) = dble(rltmpb%hkl(1:3))
     rltmpb => rltmpb%nexts
 end do
 
@@ -1316,10 +1322,15 @@ rltmpa => rltmpa%nexts
 
 do ii = 1,nns_film-1
 
-    kg = k0 + float(rltmpa%hkl) + (rltmpa%sg)*sngl(FN_film) !kg = k0 + g + sg*FN
+    kg = k0 + dble(rltmpa%hkl) !+ (rltmpa%sg)*sngl(FN_film) !kg = k0 + g + sg*FN
 
     kg1 = Convert_kgs_to_Substrate(cell_film, cell_subs,kg, TTinv,sngl(FN_subs)) ! go to substrate frame
 
+!print*,'k0 = ',k0
+!print*,'hkl = ',dble(rltmpa%hkl)
+!print*,'kg = ',k0+dble(rltmpa%hkl)
+!print*,'kg1 = ',kg1
+!print*,''
 ! initialize reflection list, apply bethe perturbation and get corresponding dynamical matrices
 
     call Initialize_ReflectionList(cell_subs, reflist_subs, BetheParameters, sngl(FN_subs), kg1, sngl(dmin), nref_subs)
@@ -1329,7 +1340,6 @@ do ii = 1,nns_film-1
     allocate(refliststrong_subs_tmp%next,stat=istat) 
 
     refliststrong_subs_tmp => refliststrong_subs_tmp%next
-
     allocate(refliststrong_subs_tmp%hlist(nns_subs,3),stat=istat)
     allocate(refliststrong_subs_tmp%DynMat(nns_subs,nns_subs),stat=istat)
     nullify(refliststrong_subs_tmp%next)
@@ -1337,6 +1347,8 @@ do ii = 1,nns_film-1
     call GetDynMat(cell_subs,reflist_subs,firstw_subs,rlp_subs,refliststrong_subs_tmp%DynMat,nns_subs,nnw_subs)
     
     refliststrong_subs_tmp%kg(1:3) = kg1(1:3)
+    refliststrong_subs_tmp%g(1:3) = dble(rltmpa%hkl)
+
     refliststrong_subs_tmp%nns = nns_subs
     refliststrong_subs_tmp%DynMat = refliststrong_subs_tmp%DynMat*dcmplx(0.D0,cPi*cell_subs%mLambda)
 
@@ -1353,7 +1365,7 @@ do ii = 1,nns_film-1
 
     rltmpb => reflist_subs%next
     do jj = 1,nns_subs
-        refliststrong_subs_tmp%hlist(jj,1:3) = float(rltmpb%hkl(1:3))
+        refliststrong_subs_tmp%hlist(jj,1:3) = dble(rltmpb%hkl(1:3))
         rltmpb => rltmpb%nexts
     end do
 
