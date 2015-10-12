@@ -72,6 +72,8 @@ contains
 !> @date 04/29/15  MDG 2.1 add optional parameter efile
 !> @date 09/15/15  SS  2.2 added accum_z reading 
 !> @date 09/15/15  SS  3.0 made part of ECPmod module
+!> @date 10/12/15  SS  3.1 changes to handle new mc program; old version of mc file
+!>                         not supported anymore
 !--------------------------------------------------------------------------
 subroutine ECPreadMCfile(enl,acc,efile,verbose)
 
@@ -160,8 +162,14 @@ if (stat) then
   dataset = 'depthstep'
   enl%depthstep = HDF_readDatasetDouble(dataset, HDF_head)
 
-  dataset = 'sig'
-  enl%MCsig = HDF_readDatasetDouble(dataset, HDF_head)
+  dataset = 'sigstart'
+  enl%MCsigstart = HDF_readDatasetDouble(dataset, HDF_head)
+
+  dataset = 'sigend'
+  enl%MCsigend = HDF_readDatasetDouble(dataset, HDF_head)
+
+  dataset = 'sigstep'
+  enl%MCsigstep = HDF_readDatasetDouble(dataset, HDF_head)
 
   dataset = 'omega'
   enl%MComega = HDF_readDatasetDouble(dataset, HDF_head)
@@ -212,36 +220,44 @@ if (stat) then
   call h5close_f(hdferr)
 
 else
-!====================================
+!==============================================
 ! ------ read old format Monte Carlo data file
-!====================================
-  if (present(verbose)) call Message('opening '//trim(enl%energyfile), frm = "(A)")
+!==============================================
 
-  open(dataunit,file=trim(energyfile),status='unknown',form='unformatted')
+!==============================================
+! OLD VERSION OF MC FILE NOT SUPPORTED ANYMORE
+! COMMENTING OUT THE FOLLOWING LINES
+! REPLACING WITH FATALERROR COMMENT
+!==============================================
+
+  call FatalError('ECPmod (ECPreadMCfile)','The file is not a h5 file. Old version of MC file not supported anymore!')
+  !if (present(verbose)) call Message('opening '//trim(enl%energyfile), frm = "(A)")
+
+  !open(dataunit,file=trim(energyfile),status='unknown',form='unformatted')
 
 ! read the program identifier
-   read (dataunit) enl%MCprogname
+   !read (dataunit) enl%MCprogname
 ! read the version number
-   read (dataunit) enl%MCscversion
+   !read (dataunit) enl%MCscversion
 ! then the name of the crystal data file
-   read (dataunit) enl%MCxtalname
+   !read (dataunit) enl%MCxtalname
 ! energy information etc...
-   read(dataunit) enl%numEbins, enl%numzbins, enl%nsx, enl%nsy, enl%num_el ! , enl%MCnthreads
-   enl%nsx = (enl%nsx - 1)/2
-   enl%nsy = (enl%nsy - 1)/2
+   !read(dataunit) enl%numEbins, enl%numzbins, enl%nsx, enl%nsy, enl%num_el ! , enl%MCnthreads
+   !enl%nsx = (enl%nsx - 1)/2
+   !enl%nsy = (enl%nsy - 1)/2
 ! more energy information
-   read (dataunit) enl%EkeV, enl%Ehistmin, enl%Ebinsize, enl%depthmax, enl%depthstep
+   !read (dataunit) enl%EkeV, enl%Ehistmin, enl%Ebinsize, enl%depthmax, enl%depthstep
 ! angular information
-   read (dataunit) enl%MCsig, enl%MComega
+   !read (dataunit) enl%MCsig, enl%MComega
 ! Monte Carlo mode ('CSDA' or other)
-   read (dataunit) enl%MCmode
+   !read (dataunit) enl%MCmode
 ! and finally the actual energy histogram (in square Lambert projection format)
-   allocate(acc%accum_z(enl%numEbins,enl%numzbins,-enl%nsx:enl%nsx,-enl%nsy:enl%nsy),stat=istat)
-   read(dataunit) acc%accum_z
-   enl%num_el = sum(acc%accum_z)
+   !allocate(acc%accum_z(enl%numEbins,enl%numzbins,-enl%nsx:enl%nsx,-enl%nsy:enl%nsy),stat=istat)
+   !read(dataunit) acc%accum_z
+   !enl%num_el = sum(acc%accum_z)
 ! we do not need the other array in this energyfile
 ! read(dataunit) accum_z    ! we only need this array for the depth integrations in EMEBSDmaster.f90
-  close(dataunit,status='keep')
+  !close(dataunit,status='keep')
 end if
 
 if (present(verbose)) then

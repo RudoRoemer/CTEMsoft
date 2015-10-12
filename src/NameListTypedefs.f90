@@ -107,6 +107,7 @@ type MCCLNameListType
         integer(kind=irg)       :: num_el
         integer(kind=irg)       :: totnum_el
         integer(kind=irg)       :: devid
+        real(kind=dbl)          :: sig
         real(kind=dbl)          :: sigstart
         real(kind=dbl)          :: sigend
         real(kind=dbl)          :: sigstep
@@ -293,7 +294,9 @@ type ECPNameListType
         real(kind=dbl)          :: depthmax
         real(kind=dbl)          :: depthstep
         real(kind=sgl)          :: dmin
-        real(kind=dbl)          :: MCsig
+        real(kind=dbl)          :: MCsigstart
+        real(kind=dbl)          :: MCsigend
+        real(kind=dbl)          :: MCsigstep
         real(kind=dbl)          :: MComega
         character(4)            :: MCmode       ! Monte Carlo mode
         character(5)            :: anglemode    ! 'quats' or 'euler' for angular input

@@ -224,7 +224,7 @@ size_in_bytes = num_max*sizeof(EkeV)
 size_in_bytes_seeds = 4*globalworkgrpsz*globalworkgrpsz*sizeof(EkeV)
 
 if (mcnl%sigstep .ne. 0.D0) then
-   numangle = nint((mcnl%sigstart - mcnl%sigend)/mcnl%sigstep)+1
+   numangle = nint((mcnl%sigend - mcnl%sigstart)/mcnl%sigstep)+1
 else
    call FatalError('EMMCOpenCL:','zero step size for sigma values')
 end if
@@ -352,7 +352,7 @@ if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
 call clEnqueueWriteBuffer(command_queue, seeds, cl_bool(.true.), 0_8, size_in_bytes_seeds, init_seeds(1), ierr)
 
 angleloop: do iang = 1,numangle
-   
+    write(*,*) 'Starting',iang,'loop for tilt values'
     sig = (mcnl%sigstart + (iang-1)*mcnl%sigstep)*dtoR
 
     mainloop: do i = 1,(totnum_el/num_max+1)

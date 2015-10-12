@@ -406,6 +406,7 @@ end subroutine HDFwriteMCNameList
 !
 !> @date 03/21/15 MDG 1.0 new routine
 !> @date 09/09/15 MDG 1.1 added devid (GPU device id)
+!> @date 10/12/15 SS  1.2 changes to handle new mc program
 !--------------------------------------------------------------------------
 subroutine HDFwriteMCCLNameList(HDF_head, mcnl)
 
@@ -416,10 +417,11 @@ IMPLICIT NONE
 type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
 type(MCCLNameListType),INTENT(INOUT)                  :: mcnl
 
-integer(kind=irg),parameter                           :: n_int = 6, n_real = 9
+integer(kind=irg),parameter                           :: n_int = 6, n_real_bse1 = 9, n_real_full = 7
 integer(kind=irg)                                     :: hdferr,  io_int(n_int)
-real(kind=dbl)                                        :: io_real(n_real)
-character(20)                                         :: intlist(n_int), reallist(n_real)
+real(kind=dbl)                                        :: io_real_bse1(n_real_bse1), io_real_full(n_real_full)
+character(20)                                         :: reallist_bse1(n_real_bse1), reallist_full(n_real_full)
+character(20)                                         :: intlist(n_int)
 character(fnlen)                                      :: dataset, sval(1)
 character(fnlen,kind=c_char)                          :: line2(1)
 
@@ -437,18 +439,31 @@ intlist(6) = 'devid'
 call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
 ! write all the single doubles
-io_real = (/ mcnl%sigstart, mcnl%sigend, mcnl%sigstep, mcnl%omega, mcnl%EkeV, mcnl%Ehistmin, &
+if (mcnl%mode .eq. 'bse1') then
+   io_real_bse1 = (/ mcnl%sigstart, mcnl%sigend, mcnl%sigstep, mcnl%omega, mcnl%EkeV, mcnl%Ehistmin, &
              mcnl%Ebinsize, mcnl%depthmax, mcnl%depthstep /)
-reallist(1) = 'sigstart'
-reallist(2) = 'sigend'
-reallist(3) = 'sigstep'
-reallist(4) = 'omega'
-reallist(5) = 'EkeV'
-reallist(6) = 'Ehistmin'
-reallist(7) = 'Ebinsize'
-reallist(8) = 'depthmax'
-reallist(9) = 'depthstep'
-call HDF_writeNMLdbles(HDF_head, io_real, reallist, n_real)
+   reallist_bse1(1) = 'sigstart'
+   reallist_bse1(2) = 'sigend'
+   reallist_bse1(3) = 'sigstep'
+   reallist_bse1(4) = 'omega'
+   reallist_bse1(5) = 'EkeV'
+   reallist_bse1(6) = 'Ehistmin'
+   reallist_bse1(7) = 'Ebinsize'
+   reallist_bse1(8) = 'depthmax'
+   reallist_bse1(9) = 'depthstep'
+   call HDF_writeNMLdbles(HDF_head, io_real_bse1, reallist_bse1, n_real_bse1)
+else if (mcnl%mode .eq. 'full') then
+   io_real_full = (/ mcnl%sig, mcnl%omega, mcnl%EkeV, mcnl%Ehistmin, &
+             mcnl%Ebinsize, mcnl%depthmax, mcnl%depthstep /)
+   reallist_full(1) = 'sig'
+   reallist_full(2) = 'omega'
+   reallist_full(3) = 'EkeV'
+   reallist_full(4) = 'Ehistmin'
+   reallist_full(5) = 'Ebinsize'
+   reallist_full(6) = 'depthmax'
+   reallist_full(7) = 'depthstep'
+   call HDF_writeNMLdbles(HDF_head, io_real_full, reallist_full, n_real_full)
+end if
 
 ! write all the strings
 dataset = 'MCmode'
