@@ -52,6 +52,12 @@ end type ECPLargeAccumType
 type ECPMasterType
         real(kind=sgl),allocatable      :: mLPNH(:,:) , mLPSH(:,:)
 end type ECPMasterType
+
+type IncidentListECP
+        integer(kind=irg)               :: i, j
+        real(kind=dbl)                  :: k(3)
+        type(IncidentListECP),pointer   :: next
+end type IncidentListECP
  
 contains
 
@@ -82,6 +88,7 @@ use files
 use io
 use HDF5
 use HDFsupport
+use error
 
 IMPLICIT NONE
 
@@ -419,6 +426,79 @@ end if
 if (present(verbose)) call Message(' -> completed reading '//trim(enl%masterfile), frm = "(A)")
 
 end subroutine ECPreadMasterfile
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:EBSDreadMasterfile
+!
+!> @author Saransh Singh/Marc De Graef, Carnegie Mellon University
+!
+!> @brief generate list of incident vectors for interpolation of ECP
+!
+!> @param ecpnl ECP namelist structure
+!> @param klist IncidentListECP pointer
+!> @param rotmat rotation matrix for the microscope to grain reference frame
+!> @param numk number of incident vectors in the linked list
+!
+!> @date 06/24/14  MDG 1.0 original
+!--------------------------------------------------------------------------
+subroutine GetVectorsCone(ecpnl, klist, rotmat, numk)
+
+use local
+use io
+use NameListTypedefs
+use error
+
+type(ECPNameListType),INTENT(IN)                 :: ecpnl
+type(IncidentListECP),pointer                    :: klist, ktmp
+real(kind=dbl),INTENT(IN)                        :: rotmat(3,3)
+integer(kind=irg),INTENT(OUT)                    :: numk
+
+real(kind=dbl)                                   :: kk(3), thetacr, delta, ktmax
+real(kind=dbl),parameter                         :: DtoR = 0.01745329251D0
+integer(kind=irg)                                :: imin, imax, jmin, jmax
+integer(kind=irg)                                :: ii, jj, istat
+
+numk = 0
+kk = (/0.D0,0.D0,1.D0/)
+thetacr = DtoR*ecpnl%thetac
+ktmax = tan(thetacr)
+delta = 2.0*ktmax/(2.0*float(ecpnl%npix)+1.0)
+
+imin = -ecpnl%npix
+imax = ecpnl%npix
+jmin = -ecpnl%npix
+jmax = ecpnl%npix
+
+allocate(klist,stat=istat)
+if (istat .ne. 0) then
+    call FatalError('GetVectorsCone','Failed to allocate klist pointer')
+end if
+
+ktmp => klist
+nullify(ktmp%next)
+ktmp%k(1:3) = matmul(rotmat,kk)
+ktmp%i = 0
+ktmp%j = 0
+numk = numk + 1
+
+do ii = imin, imax
+    do jj = jmin, jmax
+        if (abs(ii) + abs(jj) .ne. 0) then
+           allocate(ktmp%next,stat=istat)
+           ktmp => ktmp%next
+           nullify(ktmp%next)
+           ktmp%k(1:3) = (/delta*ii,delta*jj,0.D0/) + kk
+           ktmp%k = ktmp%k/sqrt(sum(ktmp%k**2))
+           ktmp%k = matmul(rotmat,ktmp%k)
+           ktmp%i = ii
+           ktmp%j = jj
+           numk = numk + 1
+        end if
+    end do
+end do
+
+end subroutine GetVectorsCone
 
 end module ECPmod
 
