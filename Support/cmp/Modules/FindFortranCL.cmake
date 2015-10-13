@@ -4,10 +4,15 @@
 #  FORTRANCL_INCLUDE_DIR - where to find szlib.h, etc.
 #  FORTRANCL_LIBRARIES   - List of libraries when using szlib.
 #  FORTRANCL_FOUND       - True if szlib found.
-MESSAGE(STATUS "Finding FortranCL")
-
 set(FortranCL_DEBUG 0)
+if(FortranCL_DEBUG)
+  MESSAGE(STATUS "Finding FortranCL")
+endif()
 
+# Only set FORTRANCL_INSTALL to the environment variable if it is blank
+if("${FORTRANCL_INSTALL}" STREQUAL "")
+    set(FORTRANCL_INSTALL  $ENV{FORTRANCL_INSTALL})
+endif()
 
 IF (FORTRANCL_INCLUDE_DIR)
   # Already in cache, be silent
@@ -17,14 +22,14 @@ ENDIF (FORTRANCL_INCLUDE_DIR)
 FIND_PATH(FORTRANCL_INCLUDE_DIR cl.mod
   /usr/local/include
   /usr/include
-  $ENV{FORTRANCL_INSTALL}/include
+  ${FORTRANCL_INSTALL}/include
 )
 
 SET(FORTRANCL_LIB_NAMES fortrancl)
 FIND_LIBRARY(FORTRANCL_LIBRARY
   NAMES ${FORTRANCL_LIB_NAMES}
   PATHS /usr/lib /usr/local/lib
-  $ENV{FORTRANCL_INSTALL}/lib
+  ${FORTRANCL_INSTALL}/lib
 )
 
 if(FortranCL_DEBUG)
@@ -43,12 +48,14 @@ ELSE (FORTRANCL_INCLUDE_DIR AND FORTRANCL_LIBRARY)
 ENDIF (FORTRANCL_INCLUDE_DIR AND FORTRANCL_LIBRARY)
 
 IF (FORTRANCL_FOUND)
-  MESSAGE(STATUS "Found FORTRANCL_LIB: ${FORTRANCL_LIBRARY}")
-  MESSAGE(STATUS "Found FORTRANCL_INCLUDE_DIR: ${FORTRANCL_INCLUDE_DIR}")
+  message(STATUS "FortranCL Location: ${FORTRANCL_INSTALL}")
+  message(STATUS "FortranCL Version: Unknown")
+  message(STATUS "FortranCL LIBRARY: ${FORTRANCL_LIBRARY}")
+
 ELSE (FORTRANCL_FOUND)
   IF (FORTRANCL_LIB_FIND_REQUIRED)
     MESSAGE(STATUS "Looked for FortranCL libraries named ${FORTRANCL_LIBS_NAMES}.")
-    MESSAGE(FATAL_ERROR "Could NOT find z library")
+    MESSAGE(FATAL_ERROR "Could NOT find FortranCL library")
   ENDIF (FORTRANCL_LIB_FIND_REQUIRED)
 ENDIF (FORTRANCL_FOUND)
 
