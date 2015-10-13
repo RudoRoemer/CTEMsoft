@@ -981,11 +981,11 @@ intlist(3) = 'npix'
 call JSON_writeNMLintegers(inp, io_int, intlist, n_int, error_cnt)
 
 ! integer vectors
-dataset = 'k'
-call json_add(inp, dataset, ecpnl%k); call JSON_failtest(error_cnt)
+dataset = 'fn_f'
+call json_add(inp, dataset, ecpnl%fn_f); call JSON_failtest(error_cnt)
 
-dataset = 'fn'
-call json_add(inp, dataset, ecpnl%fn); call JSON_failtest(error_cnt)
+dataset = 'fn_s'
+call json_add(inp, dataset, ecpnl%fn_s); call JSON_failtest(error_cnt)
 
 dataset = 'gF'
 call json_add(inp, dataset, ecpnl%gF); call JSON_failtest(error_cnt)
@@ -998,9 +998,6 @@ call json_add(inp, dataset, ecpnl%tF); call JSON_failtest(error_cnt)
 
 dataset = 'tS'
 call json_add(inp, dataset, ecpnl%tS); call JSON_failtest(error_cnt)
-
-!dataset = 'eu'
-!call json_add(inp, dataset, ecpnl%eu); call JSON_failtest(error_cnt)
 
 ! write all the single reals
 io_real = (/ ecpnl%dmin, ecpnl%thetac, ecpnl%startthick, ecpnl%thickinc, &
@@ -1037,6 +1034,11 @@ call json_add(inp, dataset, ecpnl%filmfile); call JSON_failtest(error_cnt)
 dataset = 'subsfile'
 call json_add(inp, dataset, ecpnl%subsfile); call JSON_failtest(error_cnt)
 
+dataset = 'mask'
+call json_add(inp, dataset, ecpnl%mask); call JSON_failtest(error_cnt)
+
+dataset = 'anglefile'
+call json_add(inp, dataset, ecpnl%anglefile); call JSON_failtest(error_cnt)
 
 ! and then we write the file and clean up
 call JSON_cleanuppointers(p, inp, jsonname, error_cnt)

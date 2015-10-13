@@ -540,9 +540,6 @@ call HDF_pop(HDF_head)
 groupname = 'EMData'
 hdferr = HDF_createGroup(groupname, HDF_head)
 
-dataset = 'numEbins'
-hdferr = HDF_writeDatasetInteger(dataset, numEbins, HDF_head)
-
 dataset = 'numzbins'
 hdferr = HDF_writeDatasetInteger(dataset, numzbins, HDF_head)
 
@@ -550,6 +547,9 @@ dataset = 'totnum_el'
 hdferr = HDF_writeDatasetInteger(dataset, totnum_el, HDF_head)
 
 if (mode .eq. 'full') then
+
+    dataset = 'numEbins'
+    hdferr = HDF_writeDatasetInteger(dataset, numEbins, HDF_head)
 
 !allocate(accum_e(numEbins,-nx:nx,-nx:nx),accum_z(numEbins,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
     dataset = 'accum_e'
@@ -559,6 +559,9 @@ if (mode .eq. 'full') then
     hdferr = HDF_writeDatasetIntegerArray4D(dataset, accum_z, numEbins, numzbins, 2*(nx/10)+1, 2*(nx/10)+1, HDF_head)
 
 else if (mode .eq. 'bse1') then
+
+    dataset = 'numangle'
+    hdferr = HDF_writeDatasetInteger(dataset, numangle, HDF_head)
 
 !allocate(accum_e(numangle,-nx:nx,-nx:nx),accum_z(numangle,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
     dataset = 'accum_e'

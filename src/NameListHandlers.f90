@@ -973,8 +973,8 @@ logical,OPTIONAL,INTENT(IN)             :: initonly
 logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)       :: stdout
-integer(kind=irg)       :: k(3)
-integer(kind=irg)       :: fn(3)
+integer(kind=irg)       :: fn_f(3)
+integer(kind=irg)       :: fn_s(3)
 integer(kind=irg)       :: nthreads
 integer(kind=irg)       :: npix
 integer(kind=irg)       :: gF(3)
@@ -995,22 +995,25 @@ character(fnlen)        :: filmfile
 character(fnlen)        :: subsfile
 character(fnlen)        :: masterfile
 character(fnlen)        :: datafile
-
+character(1)            :: mask
+character(fnlen)        :: anglefile
+character(3)            :: eulerconvention
+integer(kind=irg)       :: numangle_anglefile
 
 ! namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, distort, abcdist, albegadist, ktmax, &
-namelist /ECPlist/ stdout, xtalname, xtalname2, k, fn, dmin, filmthickness, &
-                   startthick, thickinc, nthreads, thetac, compmode, npix, eu, &
-                   gF, gS, tF, tS, energyfile, filmfile, subsfile, masterfile, datafile
+namelist /ECPlist/ stdout, xtalname, xtalname2, fn_f, fn_s, dmin, filmthickness, anglefile, &
+                   startthick, thickinc, nthreads, thetac, compmode, npix, mask, eulerconvention, &
+                   gF, gS, tF, tS, energyfile, filmfile, subsfile, masterfile, datafile, &
+                   numangle_anglefile
 
 ! default values
 stdout = 6                              ! standard output
-k = (/ 0, 0, 1 /)                       ! beam direction [direction indices]
-fn = (/ 0, 0, 1 /)                      ! foil normal [direction indices]
+fn_f = (/ 0, 0, 1 /)                       ! beam direction [direction indices]
+fn_s = (/ 0, 0, 1 /)                      ! foil normal [direction indices]
 gF = (/ 0, 0, 0 /)                      ! plane normal in film
 gS = (/ 0, 0, 0 /)                      ! plane normal in substrate
 tF = (/ 0, 0, 0 /)                      ! direction in film
 tS = (/ 0, 0, 0 /)                      ! direction in substrate
-eu = (/0.0,0.0,0.0/)                    ! euler angle triplet
 npix = 200                              ! number of pixels in final image
 nthreads = 1                            ! number of OpenMP threads
 dmin = 0.025                            ! smallest d-spacing to include in dynamical matrix [nm]
@@ -1026,6 +1029,10 @@ filmfile = 'undefined'
 subsfile = 'undefined'
 masterfile = 'undefined'
 datafile = 'undefined'
+mask = 'y'
+anglefile = 'undefined'
+eulerconvention = 'hkl'
+numangle_anglefile = 0
 
 if (present(initonly)) then
   if (initonly) skipread = .TRUE.
@@ -1044,14 +1051,13 @@ if (.not.skipread) then
 end if
 
 ecpnl%stdout = stdout
-ecpnl%k = k
-ecpnl%fn = fn
+ecpnl%fn_f = fn_f
+ecpnl%fn_s = fn_s
 ecpnl%gF = gF
 ecpnl%gS = gS
 ecpnl%tF = tF
 ecpnl%tS = tS
 ecpnl%npix = npix
-ecpnl%eu = eu
 ecpnl%nthreads = nthreads
 ecpnl%dmin = dmin
 ecpnl%thetac = thetac
@@ -1066,7 +1072,10 @@ ecpnl%energyfile = energyfile
 ecpnl%filmfile = filmfile
 ecpnl%subsfile = subsfile
 ecpnl%masterfile = masterfile
-
+ecpnl%mask = mask
+ecpnl%anglefile = anglefile
+ecpnl%numangle_anglefile = numangle_anglefile
+ecpnl%eulerconvention = eulerconvention
 
 end subroutine GetECPNameList
 

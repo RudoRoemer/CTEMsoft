@@ -45,6 +45,10 @@ use typedefs
 
 IMPLICIT NONE
 
+type ECPAngleType
+        real(kind=sgl),allocatable      :: quatang(:,:)
+end type ECPAngleType
+
 type ECPLargeAccumType
         integer(kind=irg),allocatable   :: accum_z(:,:,:,:)
 end type ECPLargeAccumType
@@ -117,7 +121,7 @@ end if
 allocate(acc)
 
 ! first, we need to check whether or not the input file is of the HDF5 format type; if
-! it is, we read it accordingly, otherwise we use the old binary format.
+! it is, we read it accordingly, otherwise we give error. Old format not supported anymore
 !
 call h5fis_hdf5_f(energyfile, stat, hdferr)
 
@@ -148,6 +152,10 @@ if (stat) then
   stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
   enl%MCmode = trim(stringarray(1))
   deallocate(stringarray)
+
+  if(enl%MCmode .ne. 'bse1') then
+     call FatalError('ECPreadMCfile','This file is not bse1 mode. Please input correct HDF5 file')
+  end if
 
   dataset = 'numsx'
   enl%nsx = HDF_readDatasetInteger(dataset, HDF_head)
@@ -206,8 +214,8 @@ if (stat) then
   hdferr = HDF_openGroup(groupname, HDF_head)
 
 ! read data items 
-  dataset = 'numEbins'
-  enl%numEbins = HDF_readDatasetInteger(dataset, HDF_head)
+  dataset = 'numangle'
+  enl%numangle = HDF_readDatasetInteger(dataset, HDF_head)
 
   dataset = 'numzbins'
   enl%numzbins = HDF_readDatasetInteger(dataset, HDF_head)
@@ -277,7 +285,7 @@ end subroutine ECPreadMCfile
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE:EBSDreadMasterfile
+! SUBROUTINE:ECPreadMasterfile
 !
 !> @author Saransh Singh/Marc De Graef, Carnegie Mellon University
 !
@@ -429,7 +437,7 @@ end subroutine ECPreadMasterfile
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE:EBSDreadMasterfile
+! SUBROUTINE:GetVectorsCone
 !
 !> @author Saransh Singh/Marc De Graef, Carnegie Mellon University
 !
@@ -499,6 +507,115 @@ do ii = imin, imax
 end do
 
 end subroutine GetVectorsCone
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:EBSDreadangles
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read angles from an angle file
+!
+!> @param enl EBSD name list structure
+!> @param quatang array of unit quaternions (output)
+!
+!> @date 06/24/14  MDG 1.0 original
+!--------------------------------------------------------------------------
+subroutine EBSDreadangles(enl,angles,verbose)
+
+use NameListTypedefs
+use io
+use files
+use quaternions
+use rotations
+
+IMPLICIT NONE
+
+
+type(ECPNameListType),INTENT(INOUT)     :: enl
+type(ECPAngleType),pointer              :: angles
+logical,INTENT(IN),OPTIONAL             :: verbose
+
+integer(kind=irg)                       :: io_int(1), i
+character(2)                            :: angletype
+real(kind=sgl),allocatable              :: eulang(:,:)   ! euler angle array
+real(kind=sgl)                          :: qax(4)        ! axis-angle rotation quaternion
+
+real(kind=sgl),parameter                :: dtor = 0.0174533  ! convert from degrees to radians
+integer(kind=irg)                       :: istat
+
+
+!====================================
+! get the angular information, either in Euler angles or in quaternions, from a file
+!====================================
+! open the angle file 
+open(unit=dataunit,file=trim(enl%anglefile),status='old',action='read')
+
+! get the type of angle first [ 'eu' or 'qu' ]
+read(dataunit,*) angletype
+if (angletype.eq.'eu') then 
+  enl%anglemode = 'euler'
+else
+  enl%anglemode = 'quats'
+end if
+
+! then the number of angles in the file
+read(dataunit,*) enl%numangle_anglefile
+
+if (present(verbose)) then 
+  io_int(1) = enl%numangle_anglefile
+  call WriteValue('Number of angle entries = ',io_int,1)
+end if
+
+if (enl%anglemode.eq.'euler') then
+! allocate the euler angle array
+  allocate(eulang(3,enl%numangle_anglefile),stat=istat)
+! if istat.ne.0 then do some error handling ... 
+  do i=1,enl%numangle_anglefile
+    read(dataunit,*) eulang(1:3,i)
+  end do
+  close(unit=dataunit,status='keep')
+
+  if (enl%eulerconvention.eq.'hkl') then
+    if (present(verbose)) call Message('  -> converting Euler angles to TSL representation', frm = "(A/)")
+    eulang(1,1:enl%numangle_anglefile) = eulang(1,1:enl%numangle_anglefile) + 90.0
+  end if
+
+! convert the euler angle triplets to quaternions
+  allocate(angles%quatang(4,enl%numangle_anglefile),stat=istat)
+! if (istat.ne.0) then ...
+
+  if (present(verbose)) call Message('  -> converting Euler angles to quaternions', frm = "(A/)")
+  
+  do i=1,enl%numangle_anglefile
+    angles%quatang(1:4,i) = eu2qu(eulang(1:3,i)*dtor)
+  end do
+
+else
+! the input file has quaternions, not Euler triplets
+  allocate(angles%quatang(4,enl%numangle_anglefile),stat=istat)
+  do i=1,enl%numangle_anglefile
+    read(dataunit,*) angles%quatang(1:4,i)
+  end do
+end if
+
+close(unit=dataunit,status='keep')
+
+!====================================
+! Do we need to apply an additional axis-angle pair rotation to all the quaternions ?
+
+!if (enl%axisangle(4).ne.0.0) then
+!  enl%axisangle(4) = enl%axisangle(4) * dtor
+!  qax = ax2qu( enl%axisangle )
+!  do i=1,enl%numangles_
+!    angles%quatang(1:4,i) = quat_mult(qax,angles%quatang(1:4,i))
+!  end do 
+!end if
+
+write (*,*) 'completed reading Euler angles'
+
+end subroutine EBSDreadangles
+
 
 end module ECPmod
 
