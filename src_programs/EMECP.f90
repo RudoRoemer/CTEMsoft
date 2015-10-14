@@ -37,6 +37,7 @@
 !> @brief Electron channeling patterns from master pattern
 !
 !> @date 08/26/14 SS 1.0 f90
+!> @date 13/10/15 SS 2.0 added detector model+new GetVectorCone routine+OpenMP
 !--------------------------------------------------------------------------
 
 program EMECP
@@ -51,7 +52,7 @@ use io
 IMPLICIT NONE
 
 character(fnlen)                        :: nmldeffile, progname, progdesc
-type(ECPpatternNameListType)                   :: ecpnl
+type(ECPpatternNameListType)            :: ecpnl
 
 nmldeffile = 'EMECP.nml'
 progname = 'EMECP.f90'
@@ -71,7 +72,7 @@ call ECpattern(ecpnl, progname)
 
 end program EMECP
 
-!--------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------
 !
 ! SUBROUTINE: ECpattern
 !
@@ -80,7 +81,8 @@ end program EMECP
 !> @brief Electron channeling patterns from master pattern
 !
 !> @date 08/27/14 SS 1.0 f90
-!--------------------------------------------------------------------------
+!> @date 13/10/15 SS 2.0 added detector model+new GetVectorCone routine+OpenMP+hdf5
+!-------------------------------------------------------------------------------------
 subroutine ECpattern(ecpnl, progname)
 
 use local
@@ -92,22 +94,21 @@ use symmetry
 use Lambert
 use initializers
 use constants
-use gvectors
-use kvectors
 use error
 use io
 use files
-use diffraction
+use ECPmod
+use rotations
 
 IMPLICIT NONE
 
 type(ECPpatternNameListType),INTENT(IN) :: ecpnl
 character(fnlen),INTENT(IN)             :: progname
 
-character(fnlen)                        :: oldprogname
-character(fnlen)                        :: xtalname
-character(5)                            :: oldscversion
-character(fnlen)                        :: energyfile
+type(ECPLargeAccumType),pointer         :: acc
+type(ECPMasterType),pointer             :: master
+type(IncidentListECP),pointer           :: khead, ktmp
+real(kind=dbl),allocatable              :: klist(:,:)
 
 integer(kind=irg)                       :: npx,npy,numset,istat,val
 integer(kind=irg),allocatable           :: ATOM_type(:)
@@ -120,7 +121,6 @@ type(gnode)                             :: rlp
 type(DynType)                           :: Dyn
 logical                                 :: verbose
 
-type(kvectorlist),pointer               :: khead,ktmp
 integer(kind=irg)                       :: numk,nix,niy,i,j,ierr,ipx,ipy
 real(kind=dbl)                          :: scl,x,dx,dy,dxm,dym
 real(kind=dbl)                          :: dc(3),ixy(2)
@@ -131,79 +131,40 @@ real(kind=dbl)                          :: time_start,time_end
 
 
 !=================================================================
+! read Monte Carlo output file and extract necessary parameters
+! first, we need to load the data from the output of EMMCOpenCL
+! used in the bse1 mode
+!=================================================================
+
+call Message('opening '//trim(ecpnl%energyfile), frm = "(A)" )
+call  ECPreadMCfile(ecpnl, acc, verbose=.TRUE.)
+call Message(' -> completed reading '//trim(ecpnl%energyfile), frm = "(A)")
+
+!=================================================================
 ! read Master pattern output file and extract necessary parameters
 ! first, we need to load the data from the ECP master program
 !=================================================================
 
 call Message('opening '//trim(ecpnl%masterfile), frm = "(A)" )
-
-open(dataunit,file=trim(ecpnl%masterfile),status='unknown',form='unformatted')
-
-! lines from EMECPmaster.f90... these are the things we need to read in...
-! write (dataunit) progname
-!! write the version number
-! write (dataunit) scversion
-!! then the name of the crystal data file
-! write (dataunit) xtalname
-!! write the name of corresponding Monte Carlo data file
-! write (dataunit) ecpnl%energyfile
-!! energy information etc...
-! write (dataunit) ecpnl%npx,ecpnl%npx,numset
-! write (dataunit) EkeV
-! write (dataunit) ecpnl%dmin
-!! atom type array for asymmetric unit
-! write (dataunit) cell%ATOM_type(1:numset)
-!! finally the masterpattern array
-! write (dataunit) sr
-
-read (dataunit) oldprogname
-read (dataunit) oldscversion
-read (dataunit) xtalname
-read (dataunit) energyfile
-
-read (dataunit) npx,npy,numset
-read (dataunit) EkeV
-read (dataunit) dmin
-
-allocate(ATOM_type(1:numset))
-read (dataunit) ATOM_type
-
-allocate(sr(-npx:npx,-npy:npy),stat=istat)
-read (dataunit) sr
-
-close(dataunit,status='keep')
+call ECPreadMasterfile(ecpnl, master, verbose=.TRUE.)
 call Message(' -> completed reading '//trim(ecpnl%masterfile), frm = "(A)")
 
-!=============================================
-! completed reading master pattern file
-! proceed to crystallography section
-!=============================================
-nullify(cell)
-allocate(cell)
+!=================================================================
+! completed reading the file; generating list of incident vectors
+!=================================================================
 
-! load the crystal structure and compute the Fourier coefficient lookup table
-verbose = .FALSE.
-call Initialize_Cell(cell,Dyn,rlp,xtalname,dmin,sngl(1000.0*EkeV),verbose)
-
-nullify(khead)
-!allocate(khead)
-nullify(ktmp)
 numk = 0
-rotmat(1,:) = (/1.0,0.0,0.0/)
-rotmat(2,:) = (/0.0,1.0,0.0/)
-rotmat(3,:) = (/0.0,0.0,1.0/)
+rotmat = eu2om(ecpnl%eu(1:3))
 
-
-call CalckvectorsECP(khead,cell,rotmat,ecpnl%thetac,ecpnl%npix,ecpnl%npix,numk,FN) !Here lies the problem
-allocate(kij(2,numk),stat=istat)
+call GetVectorsCone(ecpnl, khead, rotmat, numk)
+allocate(kij(2,numk),klist(3,numk),stat=istat)
 
 ktmp => khead
-!kij(1:2,1) = (/ ktmp%i, ktmp%j /)
-i = 1
-do while(associated(ktmp%next))
-    kij(1:2,i) = (/ ktmp%i, ktmp%j /)
-    ktmp => ktmp%next
-    i = i + 1
+! converting to array for OpenMP parallelization
+do i = 1,numk
+   klist(1:3,i) = ktmp%k(1:3)
+   kij(1:2,i) = (/ktmp%i,ktmp%j/)
+   ktmp => ktmp%next
 end do
 
 ! determine the scale factor for the Lambert interpolation; the square has
@@ -212,9 +173,7 @@ scl = float(npx)/LPs%sPio2
 
 allocate(ecp(-ecpnl%npix:ecpnl%npix,-ecpnl%npix:ecpnl%npix),stat=istat)
 ecp = 0.0
-ktmp => khead
-i = 1
-!imageloop: do i = 1,numk
+
 imageloop: do while(associated(ktmp%next))
     dc = ktmp%k(1:3)
 ! make sure the third one is positive; if not, switch all

@@ -255,8 +255,8 @@ end type EBSDoverlapNameListType
 ! ECP structure; note that cell distortions are disabled for now
 type ECPNameListType
         integer(kind=irg)       :: stdout
-        integer(kind=irg)       :: k(3)
-        integer(kind=irg)       :: fn(3)
+        integer(kind=irg)       :: fn_f(3)
+        integer(kind=irg)       :: fn_s(3)
         integer(kind=irg)       :: nthreads
         integer(kind=irg)       :: npix
         integer(kind=irg)       :: gF(3)
@@ -269,6 +269,7 @@ type ECPNameListType
         real(kind=sgl)          :: thickinc
         real(kind=sgl)          :: filmthickness
         character(7)            :: compmode
+        character(1)            :: mask
         character(fnlen)        :: xtalname
         character(fnlen)        :: xtalname2
         character(fnlen)        :: energyfile
@@ -276,8 +277,11 @@ type ECPNameListType
         character(fnlen)        :: subsfile
         character(fnlen)        :: masterfile
         character(fnlen)        :: datafile
+        character(fnlen)        :: anglefile
+        character(3)            :: eulerconvention
+        integer(kind=irg)       :: numangle_anglefile
 ! everything below here is not part of the namelist input structure, but is used to pass arguments to subroutines
-        integer(kind=irg)       :: numangles
+        integer(kind=irg)       :: numangle
         integer(kind=irg)       :: numEbins
         integer(kind=irg)       :: numzbins 
         integer(kind=irg)       :: nsx

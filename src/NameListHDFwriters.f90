@@ -891,12 +891,12 @@ intlist(3) = 'npix'
 call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
 ! integer vectors
-dataset = 'k'
-hdferr = HDF_writeDatasetIntegerArray1D(dataset, ecpnl%k, 3, HDF_head)
+dataset = 'fn_f'
+hdferr = HDF_writeDatasetIntegerArray1D(dataset, ecpnl%fn_f, 3, HDF_head)
 if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPNameList: unable to create k dataset',.TRUE.)
 
-dataset = 'fn'
-hdferr = HDF_writeDatasetIntegerArray1D(dataset, ecpnl%fn, 3, HDF_head)
+dataset = 'fn_s'
+hdferr = HDF_writeDatasetIntegerArray1D(dataset, ecpnl%fn_s, 3, HDF_head)
 if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPNameList: unable to create fn dataset',.TRUE.)
 
 dataset = 'gF'
@@ -913,10 +913,6 @@ if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPNameList: unable to cre
 
 dataset = 'tS'
 hdferr = HDF_writeDatasetIntegerArray1D(dataset, ecpnl%tS, 3, HDF_head)
-if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPNameList: unable to create tS dataset',.TRUE.)
-
-dataset = 'eu'
-hdferr = HDF_writeDatasetfloatArray1D(dataset, ecpnl%eu, 3, HDF_head)
 if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPNameList: unable to create tS dataset',.TRUE.)
 
 ! write all the single reals
@@ -970,6 +966,15 @@ line2(1) = ecpnl%subsfile
 hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head)
 if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPNameList: unable to create subsfile dataset',.TRUE.)
 
+dataset = 'mask'
+line2(1) = ecpnl%mask
+hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head)
+if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPNameList: unable to create mask dataset',.TRUE.)
+
+dataset = 'anglefile'
+line2(1) = ecpnl%anglefile
+hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head)
+if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPNameList: unable to create anglefile dataset',.TRUE.)
 
 ! and pop this group off the stack
 call HDF_pop(HDF_head)
