@@ -1,11 +1,15 @@
 ;@Efitpreferences
 ;@EBSDinit
 ;@EBSDcalc
+@EBSDinit
 @Efitevent
 @EBSDfit_event
+@Efitgetfilename
 @Core_WidgetEvent
 @Core_WidgetChoiceEvent
 @Core_Print
+@Core_getenv
+@Core_LambertSphereToSquare
 
 ;
 ; Copyright (c) 2015, Marc De Graef/Carnegie Mellon University
@@ -59,29 +63,7 @@ common FitParameters, nFit, fitName, defValue, fitValue, fitStep, fitOnOff, fitM
 !EXCEPT = 0
 logmode = 0
 logunit = 10
-
-; number of fitting parameters in this program and associated arrays; new parameters should be added at the end of each array!
 nFit = 8
-fitName = [ ' Scintillator Distance',  $
-            '   Sample omega angle ',  $
-            '         Detector pcx ',  $
-            '         Detector pcy ',  $
-            'Intensity Gamma value ',  $
-            '           Euler phi1 ',  $
-            '            Euler Phi ',  $
-            '           Euler phi2 ']
-fitUserLabel = ['DETL','DETOMEGA','DETXPC','DETYPC','DETGAMMA','DETphi1','DETphi','DETphi2']
-fitStepLabel = ['DETsL','DETsOMEGA','DETsXPC','DETsYPC','DETsGAMMA','DETsphi1','DETsphi','DETsphi2']
-fitOnOffLabel = ['DEToL','DEToOMEGA','DEToXPC','DEToYPC','DEToGAMMA','DETophi1','DETophi','DETophi2']
-fitUpLabel = ['DETuL','DETuOMEGA','DETuXPC','DETuYPC','DETuGAMMA','DETuphi1','DETuphi','DETuphi2']
-fitDownLabel = ['DETdL','DETdOMEGA','DETdXPC','DETdYPC','DETdGAMMA','DETdphi1','DETdphi','DETdphi2']
-fitManualStepLabel = ['DETmL','DETmOMEGA','DETmXPC','DETmYPC','DETmGAMMA','DETmphi1','DETmphi','DETmphi2']
-defValue = fltarr(nFit)
-fitValue = fltarr(nFit)
-fitStep = fltarr(nFit)
-fitOnOff = lonarr(nFit)
-fitManualStep = fltarr(nFit)
-fitManualUpDown = lonarr(nFit)
 
 ; widget structure
 Efitwidget_s = {widgetstruct, $
@@ -123,26 +105,26 @@ Efitdata = {Efitdatastruct, $
                 xlocation:fix(0), $
                 ylocation:fix(0), $
                 mpfilename:'', $
+                energyfilename:'', $
                 expfilename:'', $
-                detdelta:float(0), $
-                dettheta:float(0), $
-                detnumsx:long(0), $
-                detL:float(0), $
+                detdelta:float(25.0), $
+                dettheta:float(10), $
+                detL:float(15000), $
                 detomega:float(0), $
                 detxpc:float(0), $
                 detypc:float(0), $
-                detgamma:float(0), $
+                detgamma:float(0.3), $
                 detphi1:float(0), $
                 detphi:float(0), $
                 detphi2:float(0), $
-                detsL:float(0), $
-                detsomega:float(0), $
-                detsxpc:float(0), $
-                detsypc:float(0), $
-                detsgamma:float(0), $
-                detsphi1:float(0), $
-                detsphi:float(0), $
-                detsphi2:float(0), $
+                detsL:float(100), $
+                detsomega:float(0.5), $
+                detsxpc:float(5.0), $
+                detsypc:float(5.0), $
+                detsgamma:float(0.1), $
+                detsphi1:float(2.0), $
+                detsphi:float(2.0), $
+                detsphi2:float(2.0), $
                 detoL:float(0), $
                 detoomega:float(0), $
                 detoxpc:float(0), $
@@ -151,23 +133,79 @@ Efitdata = {Efitdatastruct, $
                 detophi1:float(0), $
                 detophi:float(0), $
                 detophi2:float(0), $
-                detmL:float(0), $
-                detmomega:float(0), $
-                detmxpc:float(0), $
-                detmypc:float(0), $
-                detmgamma:float(0), $
-                detmphi1:float(0), $
-                detmphi:float(0), $
-                detmphi2:float(0), $
-                detnumsy:long(0), $
-                detbeamcurrent:float(0), $
-                detdwelltime:float(0), $
+                detmL:float(100), $
+                detmomega:float(0.5), $
+                detmxpc:float(5.0), $
+                detmypc:float(5.0), $
+                detmgamma:float(0.1), $
+                detmphi1:float(2.0), $
+                detmphi:float(2.0), $
+                detmphi2:float(2.0), $
+                detbeamcurrent:float(1000), $
+                detdwelltime:float(1000), $
                 detbinning:long(0), $
+                detnumsx:long(0), $
+                detnumsy:long(0), $
                 showcircularmask:long(0), $
                 EulerConvention:long(0), $
                 PatternOrigin:long(0), $
+                Efitroot:'undefined', $
+                mpfilesize:long(0), $
+                patternfilesize:long(0), $
+                patternpathname:'', $
+                pathname:'', $
+                patternfilename:'', $
+                EBSPsuffix:'', $
+                suffix:'', $
+                homefolder:'', $
+                nprefs:long(0), $
+                prefname:'~/.EBSDfitgui.prefs', $
                 test:long(0) }
 
+;------------------------------------------------------------
+;------------------------------------------------------------
+;------------------------------------------------------------
+; number of fitting parameters in this program and associated arrays; new parameters should be added at the end of each array!
+fitName = [ ' Scintillator Distance',  $
+            '   Sample omega angle ',  $
+            '         Detector pcx ',  $
+            '         Detector pcy ',  $
+            'Intensity Gamma value ',  $
+            '           Euler phi1 ',  $
+            '            Euler Phi ',  $
+            '           Euler phi2 ']
+fitUserLabel = ['DETL','DETOMEGA','DETXPC','DETYPC','DETGAMMA','DETphi1','DETphi','DETphi2']
+fitStepLabel = ['DETsL','DETsOMEGA','DETsXPC','DETsYPC','DETsGAMMA','DETsphi1','DETsphi','DETsphi2']
+fitOnOffLabel = ['DEToL','DEToOMEGA','DEToXPC','DEToYPC','DEToGAMMA','DETophi1','DETophi','DETophi2']
+fitUpLabel = ['DETuL','DETuOMEGA','DETuXPC','DETuYPC','DETuGAMMA','DETuphi1','DETuphi','DETuphi2']
+fitDownLabel = ['DETdL','DETdOMEGA','DETdXPC','DETdYPC','DETdGAMMA','DETdphi1','DETdphi','DETdphi2']
+fitManualStepLabel = ['DETmL','DETmOMEGA','DETmXPC','DETmYPC','DETmGAMMA','DETmphi1','DETmphi','DETmphi2']
+defValue = fltarr(nFit)
+fitValue = fltarr(nFit)
+fitValue[0] = Efitdata.detL
+fitValue[1] = Efitdata.detomega
+fitValue[2] = Efitdata.detxpc
+fitValue[3] = Efitdata.detypc
+fitValue[4] = Efitdata.detgamma
+fitStep = fltarr(nFit)
+fitStep[0] = Efitdata.detsL
+fitStep[1] = Efitdata.detsomega
+fitStep[2] = Efitdata.detsxpc
+fitStep[3] = Efitdata.detsypc
+fitStep[4] = Efitdata.detsgamma
+fitStep[5] = Efitdata.detsphi1
+fitStep[6] = Efitdata.detsphi
+fitStep[7] = Efitdata.detsphi2
+fitOnOff = replicate(0L,nFit)
+fitManualStep = fltarr(nFit)
+fitManualStep[0] = Efitdata.detmL
+fitManualStep[1] = Efitdata.detmomega
+fitManualStep[2] = Efitdata.detmxpc
+fitManualStep[3] = Efitdata.detmypc
+fitManualStep[4] = Efitdata.detmgamma
+fitManualStep[5] = Efitdata.detmphi1
+fitManualStep[6] = Efitdata.detmphi
+fitManualStep[7] = Efitdata.detmphi2
 
 ; a few font strings (this will need to be redone for Windows systems)
 fontstr='-adobe-new century schoolbook-bold-r-normal--14-100-100-100-p-87-iso8859-1'
@@ -193,8 +231,8 @@ Efitdata.ylocation = Efitdata.scrdimx / 8.0
 
 ;------------------------------------------------------------
 ; does the preferences file exist ?  If not, create it, otherwise read it
-; this should also fill in some of the default values for the refinable parameters
-;Efitgetpreferences,/noprint
+; this should also fill in some of the default values for the refinable parameters and the stepsizes and such
+Efitgetpreferences,/noprint
 
 ;------------------------------------------------------------
 ; create the top level widget
@@ -268,8 +306,8 @@ Efitwidget_s.mploadfile = WIDGET_BUTTON(file3, $
                                 /FRAME)
 
 Efitwidget_s.mainstop = WIDGET_BUTTON(file3, $
+                                UVALUE='QUIT', $
                                 VALUE='Quit', $
-                                UVALUE='Quit', $
                                 EVENT_PRO='EBSDfit_event', $
                                 SENSITIVE=1, $
                                 /FRAME)

@@ -39,24 +39,33 @@
 ;> for an EBSD pattern; this routine is an IDL copy of the EMEBSD initialization code
 ;
 ;> @date 10/12/15 MDG 1.0 first attempt at a user-friendly interface
+;> @date 10/13/15 MDG 1.1 updated with corrected structure names
 ;--------------------------------------------------------------------------
-pro EBSDinit,d
+pro EBSDinit,initonly=initonly
+
+common Efit_widget_common, Efitwidget_s
+common Efit_data_common, Efitdata
 
 common EBSD_EMsoft, MCxtalname, MCmode, nsx, nsy, EkeV, Ehistmin, Ebinsize, depthmax, depthstep, MCsig, MComega, $
-                    numEbins, numzbins, accum_e, accum_z, Masterenergyfile, npx, npy, nE, numset, mLPNH, mLPSH, Masterxtalname          
+                    numEbins, numzbins, accum_e, accum_z, Masterenergyfile, npx, npy, nnE, numset, mLPNH, mLPSH, Masterxtalname, $
+                    expEBSDpattern, rgx, rgy, rgz, accum_e_detector          
 
+
+if keyword_set(initonly) then goto,skip
+
+Core_Print,'Loading data files'
 
 EMDatapathname = Core_getenv(/data)
 
 ; first read the master file
-file_id = H5F_OPEN(strtrim(EMdatapathname+Efit.masterfilename,2))
+file_id = H5F_OPEN(strtrim(Efitdata.pathname+'/'+Efitdata.mpfilename,2))
 
 group1_id = H5G_OPEN(file_id,'NMLparameters')
-group2_id = H5G_OPEN(file_id,'EBSDMasterNameList')
+group2_id = H5G_OPEN(group1_id,'EBSDMasterNameList')
 
 dset_id = H5D_OPEN(group2_id,'energyfile')
 energyfile = H5D_READ(dset_id)
-Efit.energyfile = energyfile
+Efitdata.energyfilename = energyfile
 H5D_close,dset_id
 
 dset_id = H5D_OPEN(group2_id,'npx')
@@ -70,7 +79,7 @@ H5G_close,group1_id
 group2_id = H5G_OPEN(file_id,'EMData')
 
 dset_id = H5D_OPEN(group2_id,'numEbins')
-nE = H5D_READ(dset_id)
+nnE = H5D_READ(dset_id)
 H5D_close,dset_id
 
 dset_id = H5D_OPEN(group2_id,'numset')
@@ -92,11 +101,13 @@ H5D_close,dset_id
 H5G_close,group2_id
 H5F_close,file_id
 
+Core_Print,'   -> Master Pattern file read'
+
 ; then the Monte Carlo file
-file_id = H5F_OPEN(strtrim(EMdatapathname+Efit.energyfile,2))
+file_id = H5F_OPEN(strtrim(EMdatapathname+'/'+Efitdata.energyfilename,2))
 
 group1_id = H5G_OPEN(file_id,'NMLparameters')
-group2_id = H5G_OPEN(file_id,'MCCLNameList')
+group2_id = H5G_OPEN(group1_id,'MCCLNameList')
 
 dset_id = H5D_OPEN(group2_id,'xtalname')
 MCxtalname = H5D_READ(dset_id)
@@ -133,11 +144,11 @@ depthstep = H5D_READ(dset_id)
 H5D_close,dset_id
 
 dset_id = H5D_OPEN(group2_id,'sig')
-sig = H5D_READ(dset_id)
+MCsig = H5D_READ(dset_id)
 H5D_close,dset_id
 
 dset_id = H5D_OPEN(group2_id,'omega')
-omega = H5D_READ(dset_id)
+MComega = H5D_READ(dset_id)
 H5D_close,dset_id
 
 H5G_close,group2_id
@@ -149,8 +160,8 @@ dset_id = H5D_OPEN(group2_id,'numEbins')
 numEbins = H5D_READ(dset_id)
 H5D_close,dset_id
 
-dset_id = H5D_OPEN(group2_id,'numxbins')
-numxbins = H5D_READ(dset_id)
+dset_id = H5D_OPEN(group2_id,'numzbins')
+numzbins = H5D_READ(dset_id)
 H5D_close,dset_id
 
 dset_id = H5D_OPEN(group2_id,'accum_e')
@@ -164,41 +175,49 @@ H5D_close,dset_id
 H5G_close,group2_id
 H5F_close,file_id
 
+Core_Print,'   -> Monte Carlo file read'
+
+skip:
+
 ; next, pre-compute a number of arrays and parameters  (from EBSDGenerateDetector function)
 ;====================================
 ; ------ generate the detector arrays
 ;====================================
 ; This needs to be done only once for a given detector geometry
-scin_x = - ( Efit.xpc - ( 1.0 - Efit.numsx ) * 0.5 - findgen(Efit.numsx) ) * Efit.delta
-scin_y = ( Efit.ypc - ( 1.0 - Efit.numsy ) * 0.5 - findgen(Efit.numsy) ) * Efit.delta
+scin_x = - ( Efitdata.detxpc - ( 1.0 - Efitdata.detnumsx ) * 0.5 - findgen(Efitdata.detnumsx) ) * Efitdata.detdelta
+scin_y = ( Efitdata.detypc - ( 1.0 - Efitdata.detnumsy ) * 0.5 - findgen(Efitdata.detnumsy) ) * Efitdata.detdelta
+
+rgx = replicate(0.0,Efitdata.detnumsx,Efitdata.detnumsy)
+rgy = rgx
+rgz = rgx
 
 ; auxiliary angle to rotate between reference frames
-alp = 0.5 * !pi - (Efit.MCsig - Efit.thetac) * !dtor
+alp = 0.5 * !pi - (MCsig - Efitdata.dettheta) * !dtor
 ca = cos(alp)
 sa = sin(alp)
 
-cw = cos(Efit.omega * !dtor)
-sw = sin(Efit.omega * !dtor)
+cw = cos(Efitdata.detomega * !dtor)
+sw = sin(Efitdata.detomega * !dtor)
 
 ; compute auxilliary interpolation arrays
-L2 = Efit.L * Efit.L
-for j=0,Efit.numsx-1 do begin
+L2 = Efitdata.detL * Efitdata.detL
+for j=0,Efitdata.detnumsx-1 do begin
   sx = L2 + scin_x[j] * scin_x[j]
-  Ls = -sw * scin_x[j] + Efit.L*cw
-  Lc = cw * scin_x[j] + Efit.L*sw
-  for i=0,Efit.numsy-1 do begin
+  Ls = -sw * scin_x[j] + Efitdata.detL*cw
+  Lc = cw * scin_x[j] + Efitdata.detL*sw
+  for i=0,Efitdata.detnumsy-1 do begin
    rhos = 1.0/sqrt(sx + scin_y[i]^2)
-   Efit.rgx[j,i] = (scin_y[i] * ca + sa * Ls) * rhos
-   Efit.rgy[j,i] = Lc * rhos
-   Efit.rgz[j,i] = (-sa * scin_y[i] + ca * Ls) * rhos
+   rgx[j,i] = (scin_y[i] * ca + sa * Ls) * rhos
+   rgy[j,i] = Lc * rhos
+   rgz[j,i] = (-sa * scin_y[i] + ca * Ls) * rhos
   endfor
 endfor
 
 ; normalize the direction cosines.
-z = 1.0/sqrt(Efit.rgx*Efit.rgx+Efit.rgy*Efit.rgy+Efit.rgz*Efit.rgz)
-Efit.rgx = Efit.rgx*z
-Efit.rgy = Efit.rgy*z
-Efit.rgz = Efit.rgz*z
+z = 1.0/sqrt(rgx^2+rgy^2+rgz^2)
+rgx = rgx*z
+rgy = rgy*z
+rgz = rgz*z
 
 ;====================================
 ; ------ create the equivalent detector energy array
@@ -218,45 +237,43 @@ Efit.rgz = Efit.rgz*z
 
 ; determine the scale factor for the Lambert interpolation; the square has
 ; an edge length of 2 x sqrt(pi/2)
-  scl = float(Efit.numsx) ;  / LPs%sPio2  [removed on 09/01/15 by MDG for new Lambert routines]
+  scl = float(Efitdata.detnumsx) ;  / LPs%sPio2  [removed on 09/01/15 by MDG for new Lambert routines]
 
-; get the indices of the minimum and maximum energy
-  Emin = nint((energymin - Ehistmin)/Ebinsize) +1
-  if (Emin lt 1) then Emin=1
-  if (Emin gt numEbins) then Emin=numEbins
-
-  Emax = nint((energymax - Ehistmin)/Ebinsize) +1
-  if (Emax lt 1) then Emax=1
-  if (Emax gt numEbins) then Emax=numEbins
+; set the indices of the minimum and maximum energy
+  Emin=1
+  Emax=numEbins
 
 ; check for negative array indices !!!! the f90 program does use them, but they do not exist in IDL
 
-  for i=0,Efit.numsx-1 do begin
-    for j=0,Efit.numsy-1 do begin
+  accum_e_detector = fltarr(numEbins,Efitdata.detnumsx,Efitdata.detnumsy)
+
+  for i=0,Efitdata.detnumsx-1 do begin
+    for j=0,Efitdata.detnumsy-1 do begin
 ; do the coordinate transformation for this detector pixel
-       dc = [ Efit.rgx[i,j],Efit.rgy[i,j],Efit.rgz[i,j] ]
+       dc = [ rgx[i,j],rgy[i,j],rgz[i,j] ]
 ; make sure the third one is positive; if not, switch all 
-       if (dc[2] lt 0.0) dc = -dc
+       if (dc[2] lt 0.0) then dc = -dc
 ; convert these direction cosines to coordinates in the Rosca-Lambert projection
-        ixy = scl * LambertSphereToSquare( dc, istat )
+        ixy = scl * Core_LambertSphereToSquare( dc, istat )
         x = ixy[0]
         ixy[0] = ixy[1]
         ixy[1] = -x
-; four-point interpolation (bi-quadratic)
-        nix = fix(Efit.nsumx+ixy[0])-Efit.nsumx
-        niy = fix(Efit.nsumy+ixy[1])-Efit.nsumy
+; four-point interpolation (bi-quadratic) [to be tested]
+        nix = fix(Efitdata.detnumsx+ixy[0]) - 1
+        niy = fix(Efitdata.detnumsy+ixy[1]) - 1 
         dx = ixy[0]-nix
         dy = ixy[1]-niy
         dxm = 1.0-dx
         dym = 1.0-dy
 ; interpolate the intensity 
-          accum_e_detector[0:*,i,j] = accum_e[0:*,nix,niy] * dxm * dym + accum_e[0:*,nix+1,niy] * dx * dym + $
+        accum_e_detector[0:*,i,j] = accum_e[0:*,nix,niy] * dxm * dym + accum_e[0:*,nix+1,niy] * dx * dym + $
                                     accum_e[0:*,nix,niy+1] * dxm * dy + accum_e[0:*,nix+1,niy+1] * dx * dy
     endfor
   endfor 
   accum_e_detector = accum_e_detector * 0.25
 
 
+Core_Print,'   -> detector arrays precomputed'
 
 
 

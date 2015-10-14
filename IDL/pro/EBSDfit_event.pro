@@ -54,14 +54,17 @@ end else begin
   
   CASE eventval OF
         'EXPFILE': begin
-
-; don't forget to activate the Master pattern load button !
+; ask the user to select the data file
+		Efitgetfilename,validfile,/PATTERNFILE
         endcase
 
         'MPFILE': begin
-
+; ask the user to select the data file
+		Efitgetfilename,validfile,/MPFILE
+                if (validfile eq 1) then begin
+                  EBSDinit
+                endif
         endcase
-
 
  	'QUIT': begin
 		Efitwritepreferences
