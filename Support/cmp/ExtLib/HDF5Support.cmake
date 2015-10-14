@@ -78,7 +78,6 @@ function(AddHDF5CopyInstallRules)
   endforeach()
 endfunction()
 
-
 #------------------------------------------------------------------------------
 # Find HDF5 Headers/Libraries
 # HDF5 now comes with everything that is needed for CMake to load
@@ -109,7 +108,7 @@ endif()
 find_package(HDF5 NAMES hdf5)
 if(HDF5_FOUND)
 
-  GET_FILENAME_COMPONENT (HDF5_LIBRARY_DIRS "${HDF5_INCLUDE_DIRS}" PATH)
+  GET_FILENAME_COMPONENT (HDF5_LIBRARY_DIRS "${HDF5_INCLUDE_DIR}" PATH)
   set(HDF5_LIBRARY_DIRS ${HDF5_LIBRARY_DIRS}/lib)
   file(APPEND ${CMP_PLUGIN_SEARCHDIR_FILE} "${HDF5_LIBRARY_DIRS};")
   # Add the library directory to the file that has all the search directories stored in it.

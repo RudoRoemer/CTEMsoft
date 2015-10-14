@@ -1,4 +1,9 @@
 
+if(NOT "${EMSoft_SDK}" STREQUAL "")
+  include("${EMSoft_SDK}/EMSoft.cmake")
+  message(STATUS "EMSoft_SDK Location: ${EMSoft_SDK}")
+endif()
+
 
 cmake_minimum_required (VERSION 2.8.12)
 project (EMsoft C CXX Fortran)
@@ -100,6 +105,23 @@ endif (Fortran_COMPILER_NAME MATCHES "gfortran.*")
 # HDF5 is installed.
 include(${CMP_SOURCE_DIR}/ExtLib/HDF5Support.cmake)
 
+# ---------- Find Json Fortran Headers/Libraries -----------------------
+# Json-Fortran comes with everything that cmake needs to determine the
+# include directories, libraries and other items. One only needs to put
+# the correct path onto the CMAKE_PREFIX_PATH variable.
+find_package(jsonfortran-gnu REQUIRED)
+if( NOT jsonfortran-gnu_FOUND)
+  message(STATUS "jsonfortran is REQUIRED for this project.")
+  message(STATUS "jsonfortran source repository is at https://github.com/jacobwilliams/json-fortran")
+  message(FATAL_ERROR "Please Download, Build and install. After install export the environment variable JSONFORTRAN_INSTALL to point to the installation location.")
+else()
+  GET_FILENAME_COMPONENT (jsonfortran_LIBRARY_DIRS "${jsonfortran_INCLUDE_DIRS}" PATH)
+  set(jsonfortran_LIBRARY_DIRS ${jsonfortran_LIBRARY_DIRS}/lib)
+  message(STATUS "jsonfortran-gnu Location: ${JSONFORTRAN_INSTALL}")
+  message(STATUS "jsonfortran-gnu Version: ${jsonfortran_VERSION}")
+  message(STATUS "jsonfortran-gnu LIBRARY DIR: ${jsonfortran_LIBRARY_DIRS}")
+  include_directories(${jsonfortran_INCLUDE_DIRS})
+endif()
 
 # --------------------------------------------------------------------
 # Generate our ReadMe and License Files

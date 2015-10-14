@@ -24,7 +24,7 @@ macro (Create_exe_and_tll INPUT)
 
 endmacro (Create_exe_and_tll)
 
-
+Create_exe_and_tll(rotfloattest)
 Create_exe_and_tll(EMlacbed)
 Create_exe_and_tll(EMmbcbed)
 Create_exe_and_tll(EMSRdefect) #MP 
@@ -68,6 +68,13 @@ Create_exe_and_tll(jsontest)
 Create_exe_and_tll(pgtest)
 Create_exe_and_tll(DMtest)
 
+#---------------------------------------------------------------------
+# Copy the Rotations.txt file from Resources into the build directory
+ADD_CUSTOM_TARGET(ZZ_RotationsFile-Copy ALL
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${EMsoft_SOURCE_DIR}/resources/rotations.txt"
+                    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${INTER_DIR}/
+                    )
+add_dependencies(rotationtest ZZ_RotationsFile-Copy )
 
 
  # On mac systems, we likely have to link against the vecLib framework
@@ -98,18 +105,8 @@ endif()
 
 include_directories(${FORTRANCL_INCLUDE_DIR})
 
-message(STATUS "FORTRANCL_LIBRARIES: ${FORTRANCL_LIBRARIES}")
-
-
-find_package(jsonfortran REQUIRED)
-if( NOT JSONFORTRAN_FOUND)
-  message(STATUS "jsonfortran is REQUIRED for this project.")
-  message(STATUS "jsonfortran source repository is at https://github.com/jacobwilliams/json-fortran")
-  message(FATAL_ERROR "Please Download, Build and install. After install export the environment variable JSONFORTRAN_INSTALL to point to the installation location.")
-endif()
+#message(STATUS "FORTRANCL_LIBRARIES: ${FORTRANCL_LIBRARIES}")
 #
-include_directories(${JSONFORTRAN_INCLUDE_DIR})
-
 
 ADD_EXECUTABLE(EMMCOpenCL EMMCOpenCL.f90)
 TARGET_LINK_LIBRARIES(EMMCOpenCL ${OPENCL_LIBRARIES} ${LAPACK_LIB} ${FORTRANCL_LIBRARIES} EMSoftLib jsonfortran)
