@@ -283,9 +283,12 @@ ECPpattern = 0.0
 io_int(1) = ecpnl%nthreads
 call WriteValue(' Attempting to set number of threads to ',io_int,1,"(I4)")
 call OMP_SET_NUM_THREADS(ecpnl%nthreads)
+dataset = 'ECPpatterns'
 
 ! use OpenMP to run on multiple cores
-!$OMP PARALLEL PRIVATE(TID,nthreads)
+!$OMP PARALLEL PRIVATE(TID,nthreads,ecpnl,dc,ixy,istat,nix,niy,nixp,niyp,dx,dy,dxm,dym) &
+!$OMP& PRIVATE(ipx,ipy,ECPpattern,bpat,ECPpatternintd,ma,mi,offset,hdims,dim0,dim1,dim2,hdferr) &
+!$OMP& SHARED (idir,numk,angles,kij,master_arrayNH,master_arraySH,mask,dataset,HDF_head,insert)
 
 TID = OMP_GET_THREAD_NUM()
 nthreads = OMP_GET_NUM_THREADS()
@@ -356,8 +359,14 @@ angleloop: do iang = 1,ecpnl%numangle_anglefile
         dim0 = ecpnl%npix
         dim1 = ecpnl%npix
         dim2 = 1
-        hdferr = HDF_writeHyperslabCharArray3D(dataset, bpat, hdims, offset, dim0, dim1, dim2, &
+        if (iang .eq. 1) then
+            hdferr = HDF_writeHyperslabCharArray3D(dataset, bpat, hdims, offset, dim0, dim1, dim2, &
+                                          HDF_head)
+        else
+            hdferr = HDF_writeHyperslabCharArray3D(dataset, bpat, hdims, offset, dim0, dim1, dim2, &
                                           HDF_head, insert)
+        end if
+ 
     end if
 !$OMP END CRITICAL
 
@@ -370,7 +379,7 @@ angleloop: do iang = 1,ecpnl%numangle_anglefile
           dim0 = ecpnl%npix
           dim1 = ecpnl%npix
           dim2 = 1
-          if (iang.eq.1) then
+          if (iang .eq. 1) then
             hdferr = HDF_writeHyperslabFloatArray3D(dataset, ECPpattern, hdims, offset, dim0, dim1, dim2, &
                                           HDF_head)
           else
