@@ -959,6 +959,7 @@ end subroutine GetEBSDoverlapNameList
 !
 !> @date 06/13/14  MDG 1.0 new routine
 !> @date 11/25/14  MDG 2.0 added parameters for film on substrate mode
+!> @date 10/15/15 SS  1.2 changes for release
 !--------------------------------------------------------------------------
 subroutine GetECPNameList(nmlfile, ecpnl, initonly)
 
@@ -981,7 +982,6 @@ integer(kind=irg)       :: gF(3)
 integer(kind=irg)       :: gS(3)
 integer(kind=irg)       :: tF(3)
 integer(kind=irg)       :: tS(3)
-real(kind=sgl)          :: eu(3)
 real(kind=sgl)          :: dmin
 real(kind=sgl)          :: thetac
 real(kind=sgl)          :: startthick
@@ -995,28 +995,30 @@ character(fnlen)        :: filmfile
 character(fnlen)        :: subsfile
 character(fnlen)        :: masterfile
 character(fnlen)        :: datafile
-character(1)            :: mask
+character(1)            :: maskpattern
 character(fnlen)        :: anglefile
 character(3)            :: eulerconvention
 integer(kind=irg)       :: numangle_anglefile
+real(kind=sgl)          :: gammavalue
+character(3)            :: outputformat
 
 ! namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, distort, abcdist, albegadist, ktmax, &
 namelist /ECPlist/ stdout, xtalname, xtalname2, fn_f, fn_s, dmin, filmthickness, anglefile, &
-                   startthick, thickinc, nthreads, thetac, compmode, npix, mask, eulerconvention, &
+                   startthick, thickinc, nthreads, thetac, compmode, npix, maskpattern, eulerconvention, &
                    gF, gS, tF, tS, energyfile, filmfile, subsfile, masterfile, datafile, &
-                   numangle_anglefile
+                   numangle_anglefile, gammavalue, outputformat
 
 ! default values
 stdout = 6                              ! standard output
-fn_f = (/ 0, 0, 1 /)                       ! beam direction [direction indices]
-fn_s = (/ 0, 0, 1 /)                      ! foil normal [direction indices]
+fn_f = (/ 0, 0, 1 /)                    ! beam direction [direction indices]
+fn_s = (/ 0, 0, 1 /)                    ! foil normal [direction indices]
 gF = (/ 0, 0, 0 /)                      ! plane normal in film
 gS = (/ 0, 0, 0 /)                      ! plane normal in substrate
 tF = (/ 0, 0, 0 /)                      ! direction in film
 tS = (/ 0, 0, 0 /)                      ! direction in substrate
 npix = 200                              ! number of pixels in final image
 nthreads = 1                            ! number of OpenMP threads
-dmin = 0.025                            ! smallest d-spacing to include in dynamical matrix [nm]
+dmin = 0.04                             ! smallest d-spacing to include in dynamical matrix [nm]
 thetac = 0.0                            ! beam convergence in mrad (either ktmax or thetac must be given)
 startthick = 0.0                        ! starting thickness [nm]
 thickinc = 0.0                          ! thickness increment
@@ -1029,10 +1031,12 @@ filmfile = 'undefined'
 subsfile = 'undefined'
 masterfile = 'undefined'
 datafile = 'undefined'
-mask = 'y'
+maskpattern = 'y'
 anglefile = 'undefined'
 eulerconvention = 'hkl'
 numangle_anglefile = 0
+gammavalue = 1.0
+outputformat = 'gui'
 
 if (present(initonly)) then
   if (initonly) skipread = .TRUE.
@@ -1072,10 +1076,12 @@ ecpnl%energyfile = energyfile
 ecpnl%filmfile = filmfile
 ecpnl%subsfile = subsfile
 ecpnl%masterfile = masterfile
-ecpnl%mask = mask
+ecpnl%maskpattern = maskpattern
 ecpnl%anglefile = anglefile
 ecpnl%numangle_anglefile = numangle_anglefile
 ecpnl%eulerconvention = eulerconvention
+ecpnl%gammavalue = gammavalue
+ecpnl%outputformat = outputformat
 
 end subroutine GetECPNameList
 

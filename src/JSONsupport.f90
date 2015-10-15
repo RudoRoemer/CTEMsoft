@@ -949,23 +949,28 @@ end subroutine JSONwriteEBSDNameList
 !
 !> @date 08/12/15 MDG 1.0 new routine
 !> @date 09/15/15 SS  1.1 changes after modification of ECPListType
+!> @date 10/15/15 SS  1.2 changes for release
 !--------------------------------------------------------------------------
-subroutine JSONwriteECPNameList(ecpnl, jsonname, error_cnt)
+subroutine JSONwriteECPNameList(ecpnl, jsonname, error_cnt, twolayerflag)
 
 use ISO_C_BINDING
+use error
 
 IMPLICIT NONE
 
 type(ECPNameListType),INTENT(INOUT)                   :: ecpnl
 character(fnlen),INTENT(IN)                           :: jsonname
 integer(kind=irg),INTENT(INOUT)                       :: error_cnt
+logical,INTENT(IN)                                    :: twolayerflag
 
 type(json_value),pointer                              :: p, inp
 
-integer(kind=irg),parameter                           :: n_int = 3, n_real = 5
+integer(kind=irg),parameter                           :: n_int = 2
+integer(kind=irg)                                     :: n_real, istat
 integer(kind=irg)                                     :: io_int(n_int)
-real(kind=sgl)                                        :: io_real(n_real)
-character(20)                                         :: intlist(n_int), reallist(n_real)
+real(kind=sgl),allocatable                            :: io_real(:)
+character(20),allocatable                             :: reallist(:)
+character(20)                                         :: intlist(n_int)
 character(fnlen)                                      :: dataset, namelistname
 character(fnlen,kind=c_char)                          :: line2(1)
 
@@ -974,44 +979,63 @@ namelistname = 'ECPlist'
 call JSON_initpointers(p, inp, jsonname, namelistname, error_cnt)
 
 ! write all the single integers
-io_int = (/ ecpnl%stdout, ecpnl%nthreads, ecpnl%npix /)
-intlist(1) = 'stdout'
-intlist(2) = 'nthreads'
-intlist(3) = 'npix'
+io_int = (/ ecpnl%nthreads, ecpnl%npix /)
+intlist(1) = 'nthreads'
+intlist(2) = 'npix'
 call JSON_writeNMLintegers(inp, io_int, intlist, n_int, error_cnt)
 
+if (twolayerflag) then
 ! integer vectors
-dataset = 'fn_f'
-call json_add(inp, dataset, ecpnl%fn_f); call JSON_failtest(error_cnt)
+    dataset = 'fn_f'
+    call json_add(inp, dataset, ecpnl%fn_f); call JSON_failtest(error_cnt)
 
-dataset = 'fn_s'
-call json_add(inp, dataset, ecpnl%fn_s); call JSON_failtest(error_cnt)
+    dataset = 'fn_s'
+    call json_add(inp, dataset, ecpnl%fn_s); call JSON_failtest(error_cnt)
 
-dataset = 'gF'
-call json_add(inp, dataset, ecpnl%gF); call JSON_failtest(error_cnt)
+    dataset = 'gF'
+    call json_add(inp, dataset, ecpnl%gF); call JSON_failtest(error_cnt)
 
-dataset = 'gS'
-call json_add(inp, dataset, ecpnl%gS); call JSON_failtest(error_cnt)
+    dataset = 'gS'
+    call json_add(inp, dataset, ecpnl%gS); call JSON_failtest(error_cnt)
 
-dataset = 'tF'
-call json_add(inp, dataset, ecpnl%tF); call JSON_failtest(error_cnt)
+    dataset = 'tF'
+    call json_add(inp, dataset, ecpnl%tF); call JSON_failtest(error_cnt)
 
-dataset = 'tS'
-call json_add(inp, dataset, ecpnl%tS); call JSON_failtest(error_cnt)
+    dataset = 'tS'
+    call json_add(inp, dataset, ecpnl%tS); call JSON_failtest(error_cnt)
+
+    n_real = 4
+    allocate(reallist(n_real),io_real(n_real),stat=istat)
+    if (istat .ne. 0) then
+        call FatalError('HDFwriteECPNameList','Cannot allocate the reallist array')
+    end if
 
 ! write all the single reals
-io_real = (/ ecpnl%dmin, ecpnl%thetac, ecpnl%startthick, ecpnl%thickinc, &
-             ecpnl%filmthickness /)
-reallist(1) = 'dmin'
-reallist(2) = 'thetac'
-reallist(3) = 'startthick'
-reallist(4) = 'thickinc'
-reallist(5) = 'filmthickness'
-call JSON_writeNMLreals(inp, io_real, reallist, n_real, error_cnt)
+    io_real = (/ ecpnl%dmin, ecpnl%thetac, &
+             ecpnl%filmthickness, ecpnl%gammavalue /)
+    reallist(1) = 'dmin'
+    reallist(2) = 'thetac'
+    reallist(3) = 'filmthickness'
+    reallist(4) = 'gammavalue'
+    call JSON_writeNMLreals(inp, io_real, reallist, n_real, error_cnt)
 
+else
+
+    n_real = 2
+    allocate(reallist(n_real),io_real(n_real),stat=istat)
+    if (istat .ne. 0) then
+        call FatalError('HDFwriteECPNameList','Cannot allocate the reallist array')
+    end if
+
+! write all the single reals
+    io_real = (/ ecpnl%thetac, &
+                 ecpnl%gammavalue /)
+    reallist(1) = 'thetac'
+    reallist(2) = 'gammavalue'
+    call JSON_writeNMLreals(inp, io_real, reallist, n_real, error_cnt)
+
+end if
 ! write all the strings
-dataset = 'compmode'
-call json_add(inp, dataset, ecpnl%compmode); call JSON_failtest(error_cnt)
 
 dataset = 'energyfile'
 call json_add(inp, dataset, ecpnl%energyfile); call JSON_failtest(error_cnt)
@@ -1025,20 +1049,25 @@ call json_add(inp, dataset, ecpnl%datafile); call JSON_failtest(error_cnt)
 dataset = 'xtalname'
 call json_add(inp, dataset, ecpnl%xtalname); call JSON_failtest(error_cnt)
 
-dataset = 'xtalname2'
-call json_add(inp, dataset, ecpnl%xtalname2); call JSON_failtest(error_cnt)
+if (twolayerflag) then
+    dataset = 'xtalname2'
+    call json_add(inp, dataset, ecpnl%xtalname2); call JSON_failtest(error_cnt)
 
-dataset = 'filmfile'
-call json_add(inp, dataset, ecpnl%filmfile); call JSON_failtest(error_cnt)
+    dataset = 'filmfile'
+    call json_add(inp, dataset, ecpnl%filmfile); call JSON_failtest(error_cnt)
 
-dataset = 'subsfile'
-call json_add(inp, dataset, ecpnl%subsfile); call JSON_failtest(error_cnt)
+    dataset = 'subsfile'
+    call json_add(inp, dataset, ecpnl%subsfile); call JSON_failtest(error_cnt)
+end if
 
-dataset = 'mask'
-call json_add(inp, dataset, ecpnl%mask); call JSON_failtest(error_cnt)
+dataset = 'maskpattern'
+call json_add(inp, dataset, ecpnl%maskpattern); call JSON_failtest(error_cnt)
 
 dataset = 'anglefile'
 call json_add(inp, dataset, ecpnl%anglefile); call JSON_failtest(error_cnt)
+
+dataset = 'outputformat'
+call json_add(inp, dataset, ecpnl%outputformat); call JSON_failtest(error_cnt)
 
 ! and then we write the file and clean up
 call JSON_cleanuppointers(p, inp, jsonname, error_cnt)

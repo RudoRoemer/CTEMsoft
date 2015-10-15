@@ -5,23 +5,39 @@
 !
 ! crystal structure filename
 xtalname = 'undefined'
+! output patterns will be (2*npix+1)^2 in size
+npix = 256
+! half angle of cone for incident beams (degrees)
+thetac = 5.0
+! mask pattern or not; 'y' or 'n'
+maskpattern = 'n'
+! monte carlo input file
+energyfile = 'undefined'
+! master pattern input file
+masterfile = 'undefined'
+! input file for list of angles
+anglefile = 'undefined'
+! euler angle convention in input angle file; 'hkl' or 'tsl'
+eulerconvention = 'hkl'
+! gamma scaling value
+gammavalue = 1.0
+! output format; 'gui' for IDL and 'bin' for dictionary
+outputformat = 'gui'
+! output file (relative path)
+datafile = 'undefined'
+! number of threads for parallel execution
+nthreads = 1
+
+!==============================================================
+! the nml parameters only used in case of two layered structure
+! ignore them for normal ECP calculation
+!==============================================================
+! foil normal of film
+fn_f = 0,0,1
+! foil normal of substrate
+fn_s = 0,0,1
 ! second (substrate) crystal structure filename
 xtalname2 = 'undefined'
-! computational mode 'Blochwv' for Bloch wave, 'ScatMat' for scattering matrix
-compmode = 'Blochwv'  ! 'ScatMat'
-! integration step size (only used for ScatMat mode), typically 1,0 or 0.5 nm
-! make sure zintstep properly divides into the thickness values !
-zintstep = 1.0
-! output device (6=screen, >10 is fort.## file)
-stdout = 6
-! smallest d-spacing to take into account [nm]
-dmin = 0.025
-! microscope accelerating voltage [V]
-voltage = 30000.
-! incident beam direction 
-k = 0,0,1
-! foil normal
-fn = 0,0,1
 ! plane normal in Film
 gF = 0,0,0
 ! plane normal in Substrate
@@ -30,18 +46,12 @@ gS = 0,0,0
 tF = 0,0,0
 ! direction in Substrate
 tS = 0,0,0
-! beam convergence angle in terms of the ratio kt/|g_a| (i.e., kt_max)
-ktmax = 5.0
-! output patterns will be (2*npix+1)^2 in size
-npix = 256
-! number of thicknesses
-numthick = 10
-! starting thickness [nm]
-startthick = 2.0
-! thickness increment [nm]
-thickinc = 2.0
+! smallest d-spacing to take into account [nm]
+dmin = 0.025
 ! film thickness if present  (0.0 if not present)
 filmthickness = 0.0
-! output file name (can be a full pathname)
-outname = 'ecp.data'
+! output file for film signal
+filmfile = 'undefined'
+! output file for substrate signal
+subsfile = 'undefined'
 /
