@@ -107,6 +107,10 @@ if (rs eq 1) then begin
 ; window locations
   	'xlocation': Efitdata.xlocation = float(val)
   	'ylocation': Efitdata.ylocation = float(val)
+  	'xlocationcontrol': Efitdata.xlocationcontrol = float(val)
+  	'ylocationcontrol': Efitdata.ylocationcontrol = float(val)
+  	'xlocationdisplay': Efitdata.xlocationdisplay = float(val)
+  	'ylocationdisplay': Efitdata.ylocationdisplay = float(val)
 
     else: MESSAGE,'unknown option for preferences file'
     endcase

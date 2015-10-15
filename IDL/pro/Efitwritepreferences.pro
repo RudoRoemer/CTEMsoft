@@ -46,7 +46,7 @@ common Efit_data_common, Efitdata
 
 ; prefs file
   openw,1,Efitdata.prefname
-  nprefs = 38
+  nprefs = 40
   Efitdata.nprefs = nprefs
   printf,1,nprefs
   printf,1,'Efitroot::'+Efitdata.Efitroot
@@ -96,6 +96,10 @@ common Efit_data_common, Efitdata
 ; window locations
   printf,1,'xlocation::'+string(Efitdata.xlocation,format="(F6.1)")
   printf,1,'ylocation::'+string(Efitdata.ylocation,format="(F6.1)")
+  printf,1,'xlocationcontrol::'+string(Efitdata.xlocationcontrol,format="(F6.1)")
+  printf,1,'ylocationcontrol::'+string(Efitdata.ylocationcontrol,format="(F6.1)")
+  printf,1,'xlocationdisplay::'+string(Efitdata.xlocationdisplay,format="(F6.1)")
+  printf,1,'ylocationdisplay::'+string(Efitdata.ylocationdisplay,format="(F6.1)")
 ; and close the file
   close,1
 

@@ -1,5 +1,5 @@
 ;
-; Copyright (c) 2013-2014, Marc De Graef/Carnegie Mellon University
+; Copyright (c) 2015, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are 
@@ -26,29 +26,43 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:Core_WidgetChoiceEvent.pro
+; EMsoft:Efit_display_event.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: Core_WidgetChoiceEvent.pro
+; PROGRAM: Efit_display_event.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief Handle a basic widget data entry
+;> @brief main event handler for Efit_display.pro routine
 ;
-;> @date 05/07/14 MDG 1.0 first attempt at a user-friendly interface
+;> @date 10/13/15 MDG 1.0 first attempt at a user-friendly interface
 ;--------------------------------------------------------------------------
-function Core_WidgetChoiceEvent, wid, ptxt, value=value
+pro Efit_display_event,event
 
-common CommonCore, status, logmode, logunit
+common Efit_widget_common, Efitwidget_s
+common Efit_data_common, Efitdata
 
-WIDGET_CONTROL, get_value=val, wid
-dval = long(val[0])
 
-if keyword_set(value) then begin
-  Core_Print, ptxt+string(dval,format="(I2)") 
+if (event.id eq Efitwidget_s.displaybase) then begin
+  Efitdata.xlocationdisplay = event.x
+  Efitdata.ylocationdisplay = event.y-25
 end else begin
-  if (dval eq 0L) then Core_Print, ptxt+'No' else Core_Print, ptxt+'Yes'
+
+  WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
+  
+  CASE eventval OF
+        'CLOSEDISPLAY': begin
+                WIDGET_CONTROL, Efitwidget_s.displaybase, /DESTROY
+        endcase
+        'SAVEPATTERN': begin
+                Core_Print,'to be implemented'
+        endcase
+
+  else: MESSAGE, "Efit_display_event: Event "+eventval+" Unknown"
+
+  endcase
+
 endelse
 
-return, dval
 end
+

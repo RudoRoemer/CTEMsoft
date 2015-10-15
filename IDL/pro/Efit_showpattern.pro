@@ -1,5 +1,5 @@
 ;
-; Copyright (c) 2013-2014, Marc De Graef/Carnegie Mellon University
+; Copyright (c) 2015, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are 
@@ -26,29 +26,30 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:Core_WidgetChoiceEvent.pro
+; EMsoft:Efit_showpattern.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: Core_WidgetChoiceEvent.pro
+; PROGRAM: Efit_showpattern.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief Handle a basic widget data entry
+;> @brief Display a pattern (experimental or simulated or ... )
 ;
-;> @date 05/07/14 MDG 1.0 first attempt at a user-friendly interface
+;> @date 10/15/15 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------
-function Core_WidgetChoiceEvent, wid, ptxt, value=value
+pro Efit_showpattern,dummy
 
-common CommonCore, status, logmode, logunit
+common Efit_widget_common, Efitwidget_s
+common Efit_data_common, Efitdata
 
-WIDGET_CONTROL, get_value=val, wid
-dval = long(val[0])
+common EBSD_EMsoft, MCxtalname, MCmode, nsx, nsy, EkeV, Ehistmin, Ebinsize, depthmax, depthstep, MCsig, MComega, $
+                    numEbins, numzbins, accum_e, accum_z, Masterenergyfile, npx, npy, nnE, numset, mLPNH, mLPSH, Masterxtalname, $
+                    expEBSDpattern, rgx, rgy, rgz, accum_e_detector          
 
-if keyword_set(value) then begin
-  Core_Print, ptxt+string(dval,format="(I2)") 
-end else begin
-  if (dval eq 0L) then Core_Print, ptxt+'No' else Core_Print, ptxt+'Yes'
-endelse
+; for now, let's just do the basic display.
 
-return, dval
+wset,Efitdata.drawID
+tvscl,expEBSDpattern
+
+
 end

@@ -1,12 +1,19 @@
-;@Efitpreferences
-;@EBSDinit
 ;@EBSDcalc
 @EBSDinit
+@Efit_display
+@Efit_display_event
 @Efitevent
+@Efit_control
+@Efit_control_event
 @EBSDfit_event
+@Efitgetpreferences
+@Efitwritepreferences
 @Efitgetfilename
 @Core_WidgetEvent
 @Core_WidgetChoiceEvent
+@Core_Wtext
+@Core_WtextE
+@Core_FitLine
 @Core_Print
 @Core_getenv
 @Core_LambertSphereToSquare
@@ -50,6 +57,13 @@
 ;
 ;> @details 10/12/15 a new GUI to interactively determine the best fit parameters
 ;> for an EBSD pattern.
+;> The idea is to have the main widget offer options for refinement and default
+;> values for detector variables.  Then there is a pattern widget which displays
+;> one of several options: experimental pattern, fitted pattern, difference pattern,
+;> color coded overlap pattern.  These options can be changed during the fitting
+;> portion because they are set from a separate widget window, as is the Cancel 
+;> button.  In addition, the use can manually adjust all the individual parameters
+;> using the + and - buttons, and the simulated pattern will be updated automatically.
 ;
 ;> @date 10/12/15 MDG 1.0 first attempt at a user-friendly interface
 ;--------------------------------------------------------------------------
@@ -68,8 +82,15 @@ nFit = 8
 ; widget structure
 Efitwidget_s = {widgetstruct, $
         	base:long(0), $                    	; base widget ID
+        	controlbase:long(0), $                    	; base widget ID
+        	displaybase:long(0), $                    	; base widget ID
+        	cancelbutton:long(0), $                    	; base widget ID
+                displayoption:long(0), $
+                imageformat:long(0), $
                 logodraw:long(0), $
                 logodrawid:long(0), $
+                draw:long(0), $
+                drawid:long(0), $
                 mpfilename:long(0), $
                 expfilename:long(0), $
                 mploadfile:long(0), $
@@ -104,6 +125,14 @@ Efitdata = {Efitdatastruct, $
                 scrdimy:fix(0), $
                 xlocation:fix(0), $
                 ylocation:fix(0), $
+                xlocationcontrol:fix(0), $
+                ylocationcontrol:fix(0), $
+                xlocationdisplay:fix(0), $
+                ylocationdisplay:fix(0), $
+                imageformat:long(0), $
+                displayoption:long(0), $
+                cancelfit:long(0), $
+                drawID:long(0), $
                 mpfilename:'', $
                 energyfilename:'', $
                 expfilename:'', $

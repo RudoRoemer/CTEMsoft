@@ -1,5 +1,5 @@
 ;
-; Copyright (c) 2013-2014, Marc De Graef/Carnegie Mellon University
+; Copyright (c) 2015, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are 
@@ -26,7 +26,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:Efitevent.pro
+; EMsoft:Efitevent.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: Efitevent.pro
@@ -76,8 +76,12 @@ CASE eventval OF
         'DETophi2' : begin
                 Efitdata.detophi2 = Core_WidgetChoiceEvent( Efitwidget_s.fitOnOff[3],  'Fit Euler phi2 angle? ')
 	endcase
-
-
+        'DISPLAYOPTION' : begin   ; this comes from the Efit_control widget...
+                Efitdata.displayoption = Core_WidgetChoiceEvent( Efitwidget_s.displayoption, 'Set option to ',/value)
+        endcase
+        'PATTERNFORMAT' : begin
+                Efitdata.imageformat = Core_WidgetChoiceEvent( Efitwidget_s.imageformat, 'Set option to ',/value)
+        endcase
 
 else: MESSAGE, "Efitevent: Event User Value Not Found"
 

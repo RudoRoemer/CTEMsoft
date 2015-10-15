@@ -56,6 +56,19 @@ end else begin
         'EXPFILE': begin
 ; ask the user to select the data file
 		Efitgetfilename,validfile,/PATTERNFILE
+; start the controller widget (it if isn't already running)
+                if (XRegistered("Efit_control") EQ 0) then begin
+                  Efit_control
+                endif
+; then start the actual display widget and put the experimental pattern in it...
+; better yet, we can check what the dimensions of the current drawing area are in 
+; case the new experimental pattern has different dimensions...
+                if (XRegistered("Efit_displaybase") NE 0) then begin
+		  WIDGET_CONTROL, Efitwidget_s.displaybase, /DESTROY
+                endif 
+                Efit_display
+; and draw the pattern in the current display mode
+                Efit_showpattern
         endcase
 
         'MPFILE': begin
@@ -69,7 +82,14 @@ end else begin
  	'QUIT': begin
 		Efitwritepreferences
 ; do a general cleanup of potentially open widgets
+                if (XRegistered("Efit_control") NE 0) then begin
+		  WIDGET_CONTROL, Efitwidget_s.controlbase, /DESTROY
+                endif
+                if (XRegistered("Efit_display") NE 0) then begin
+		  WIDGET_CONTROL, Efitwidget_s.displaybase, /DESTROY
+                endif
  		Core_Print,'Quitting program',/blank
+                wait,1.0
 		WIDGET_CONTROL, Efitwidget_s.base, /DESTROY
 		!EXCEPT=1
 	endcase

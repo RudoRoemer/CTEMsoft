@@ -259,8 +259,8 @@ rgz = rgz*z
         ixy[0] = ixy[1]
         ixy[1] = -x
 ; four-point interpolation (bi-quadratic) [to be tested]
-        nix = fix(Efitdata.detnumsx+ixy[0]) - 1
-        niy = fix(Efitdata.detnumsy+ixy[1]) - 1 
+        nix = fix(nsx+ixy[0]) - nsx
+        niy = fix(nsy+ixy[1]) - nsy
         dx = ixy[0]-nix
         dy = ixy[1]-niy
         dxm = 1.0-dx
