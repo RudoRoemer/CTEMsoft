@@ -188,6 +188,7 @@ end program EMEBSD
 !> @date 05/08/15  MDG 5.6 added support for hexagonal/trigonal master pattern interpolation
 !> @date 09/01/15  MDG 6.0 changed Lambert patterns to Northern+Southern hemisphere...
 !> @date 10/11/15  MDG 6.1 correction of error in saving of multiple patterns in GUI mode
+!> @date 10/14/15  SS  6.2 bug fix in binning of pattern
 !--------------------------------------------------------------------------
 subroutine ComputeEBSDPatterns(enl, angles, acc, master, progname, nmldeffile)
 
@@ -603,7 +604,7 @@ do ibatch=1,nbatches+1
          if (enl%binning.ne.1) then 
           do i=1,enl%numsx/enl%binning
             do j=1,enl%numsy/enl%binning
-                binned(i,j) = sum(EBSDpattern((i-1)*enl%binning+1:i*enl%binning,(j-1)*enl%binning:j*enl%binning))
+                binned(i,j) = sum(EBSDpattern((i-1)*enl%binning+1:i*enl%binning,(j-1)*enl%binning+1:j*enl%binning))
             end do
           end do  
 ! and divide by binning^2
