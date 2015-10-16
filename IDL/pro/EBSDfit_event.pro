@@ -79,6 +79,13 @@ end else begin
                 endif
         endcase
 
+        'GOFIT': begin
+Core_Print,'Starting pattern computation'
+                EBSDpattern = EBSDCalc()
+                wset,Efitdata.drawID
+                tvscl,EBSDpattern
+        endcase
+
  	'QUIT': begin
 		Efitwritepreferences
 ; do a general cleanup of potentially open widgets

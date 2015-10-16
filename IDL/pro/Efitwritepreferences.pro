@@ -46,7 +46,7 @@ common Efit_data_common, Efitdata
 
 ; prefs file
   openw,1,Efitdata.prefname
-  nprefs = 40
+  nprefs = 42
   Efitdata.nprefs = nprefs
   printf,1,nprefs
   printf,1,'Efitroot::'+Efitdata.Efitroot

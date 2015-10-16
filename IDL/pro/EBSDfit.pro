@@ -1,4 +1,4 @@
-;@EBSDcalc
+@EBSDcalc
 @EBSDinit
 @Efit_display
 @Efit_display_event
@@ -16,6 +16,9 @@
 @Core_FitLine
 @Core_Print
 @Core_getenv
+@Core_quatmult
+@Core_quat_Lp
+@Core_eu2qu
 @Core_LambertSphereToSquare
 
 ;
@@ -170,6 +173,7 @@ Efitdata = {Efitdatastruct, $
                 detmphi1:float(2.0), $
                 detmphi:float(2.0), $
                 detmphi2:float(2.0), $
+                quaternion:fltarr(4), $
                 detbeamcurrent:float(1000), $
                 detdwelltime:float(1000), $
                 detbinning:long(0), $
