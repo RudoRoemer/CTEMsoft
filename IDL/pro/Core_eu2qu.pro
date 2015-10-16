@@ -1,4 +1,5 @@
-; Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
+;
+; Copyright (c) 2015, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are 
@@ -25,23 +26,40 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:Core_quatmult.pro
-;--------------------------------------------------------------------------
 ;
-; PROGRAM: Core_quatmult.pro
+; Function: eu2qu
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief returns the quaternion product.
+;> @brief Euler angles to quaternion [Morawiec, page 40]
 ;
-;> @date 03/19/14 MDG 1.0 initial version
+;> @note verified 8/5/13
+;
+;> @param e 3 Euler angles in radians 
+; 
+;> @date 08/04/13 MDG 1.0 original
+;> @date 08/07/14 MDG 1.1 verified
+;> @date 03/11/15 MDG 2.0 IDL version
 ;--------------------------------------------------------------------------
-function Core_quatmult, x, y
+function Core_eu2qu,e
 
-qm = [ x[0]*y[0] - x[1]*y[1] - x[2]*y[2] - x[3]*y[3], $
-             x[0]*y[1] + x[1]*y[0] + x[2]*y[3] - x[3]*y[2], $
-             x[0]*y[2] - x[1]*y[3] + x[2]*y[0] + x[3]*y[1], $
-             x[0]*y[3] + x[1]*y[2] - x[2]*y[1] + x[3]*y[0] ]
+;common rotationcommon, LPs, epsijk
+epsijk = 1.0
 
-return,qm
-end
+ee = 0.5*e*!dtor
+
+cPhi = cos(ee[1])
+sPhi = sin(ee[1])
+cm = cos(ee[0]-ee[2])
+sm = sin(ee[0]-ee[2])
+cp = cos(ee[0]+ee[2])
+sp = sin(ee[0]+ee[2])
+
+; passive quaternion
+res = [ cPhi*cp, -epsijk*sPhi*cm, -epsijk*sPhi*sm, -epsijk*cPhi*sp ]
+
+; first component must be positive
+if (res[0] lt 0.D0) then res = -res
+
+return,res
+end ;function Core_eu2qu

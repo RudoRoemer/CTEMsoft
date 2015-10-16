@@ -70,6 +70,7 @@ H5D_close,dset_id
 
 dset_id = H5D_OPEN(group2_id,'npx')
 npx = H5D_READ(dset_id)
+npx = npx[0]
 npy = npx
 H5D_close,dset_id
 
@@ -80,10 +81,12 @@ group2_id = H5G_OPEN(file_id,'EMData')
 
 dset_id = H5D_OPEN(group2_id,'numEbins')
 nnE = H5D_READ(dset_id)
+nnE = nnE[0]
 H5D_close,dset_id
 
 dset_id = H5D_OPEN(group2_id,'numset')
 numset = H5D_READ(dset_id)
+numset = numset[0]
 H5D_close,dset_id
 
 dset_id = H5D_OPEN(group2_id,'mLPNH')
@@ -119,36 +122,44 @@ H5D_close,dset_id
 
 dset_id = H5D_OPEN(group2_id,'numsx')
 nsx = H5D_READ(dset_id)
+nsx = nsx[0]
 nsx = (nsx-1)/2
 nsy = nsx
 H5D_close,dset_id
 
 dset_id = H5D_OPEN(group2_id,'EkeV')
 EkeV = H5D_READ(dset_id)
+EkeV = EkeV[0]
 H5D_close,dset_id
 
 dset_id = H5D_OPEN(group2_id,'Ehistmin')
 Ehistmin = H5D_READ(dset_id)
+Ehistmin = Ehistmin[0]
 H5D_close,dset_id
 
 dset_id = H5D_OPEN(group2_id,'Ebinsize')
 Ebinsize = H5D_READ(dset_id)
+Ebinsize = Ebinsize[0]
 H5D_close,dset_id
 
 dset_id = H5D_OPEN(group2_id,'depthmax')
 depthmax = H5D_READ(dset_id)
+depthmax = depthmax[0]
 H5D_close,dset_id
 
 dset_id = H5D_OPEN(group2_id,'depthstep')
 depthstep = H5D_READ(dset_id)
+depthstep = depthstep[0]
 H5D_close,dset_id
 
 dset_id = H5D_OPEN(group2_id,'sig')
 MCsig = H5D_READ(dset_id)
+MCsig = MCsig[0]
 H5D_close,dset_id
 
 dset_id = H5D_OPEN(group2_id,'omega')
 MComega = H5D_READ(dset_id)
+MComega = MComega[0]
 H5D_close,dset_id
 
 H5G_close,group2_id
@@ -158,10 +169,12 @@ group2_id = H5G_OPEN(file_id,'EMData')
 
 dset_id = H5D_OPEN(group2_id,'numEbins')
 numEbins = H5D_READ(dset_id)
+numEbins = numEbins[0]
 H5D_close,dset_id
 
 dset_id = H5D_OPEN(group2_id,'numzbins')
 numzbins = H5D_READ(dset_id)
+numzbins = numzbins[0]
 H5D_close,dset_id
 
 dset_id = H5D_OPEN(group2_id,'accum_e')
@@ -237,7 +250,7 @@ rgz = rgz*z
 
 ; determine the scale factor for the Lambert interpolation; the square has
 ; an edge length of 2 x sqrt(pi/2)
-  scl = float(Efitdata.detnumsx) ;  / LPs%sPio2  [removed on 09/01/15 by MDG for new Lambert routines]
+  scl = float(nsx) ;  / LPs%sPio2  [removed on 09/01/15 by MDG for new Lambert routines]
 
 ; set the indices of the minimum and maximum energy
   Emin=1

@@ -55,9 +55,29 @@ set(EMSoftLib_SRCS
 	${EMSoftLib_SOURCE_DIR}/YSHmodule.f90
 )
 
+set(EMSoftdyLib_SRCS
+	${EMSoftLib_SOURCE_DIR}/constants.f90
+	${EMSoftLib_SOURCE_DIR}/symmetry.f90
+	${EMSoftLib_SOURCE_DIR}/Lambert.f90
+	${EMSoftLib_SOURCE_DIR}/crystal.f90
+	${EMSoftLib_SOURCE_DIR}/math.f90
+	${EMSoftLib_SOURCE_DIR}/error.f90
+#	${EMSoftLib_SOURCE_DIR}/local.f90
+	${EMSoftLib_BINARY_DIR}/local.f90  # NOTE THIS FILE IS GENERATED DURING CMAKE TIME
+	${EMSoftLib_SOURCE_DIR}/EMdymod.f90
+	${EMSoftLib_SOURCE_DIR}/io.f90
+ 	${EMSoftLib_SOURCE_DIR}/HDFsupport.f90
+	${EMSoftLib_SOURCE_DIR}/quaternions.f90
+	${EMSoftLib_SOURCE_DIR}/rotations.f90
+	${EMSoftLib_SOURCE_DIR}/timing.f90
+	${EMSoftLib_SOURCE_DIR}/typedefs.f90
+)
+
 ADD_LIBRARY(EMSoftLib ${LIB_TYPE} ${EMSoftLib_SRCS})
+ADD_LIBRARY(EMSoftdyLib SHARED ${EMSoftdyLib_SRCS})
 #ADD_LIBRARY(local ${EMSoftLib_SOURCE_DIR}/local.f90)
 TARGET_LINK_LIBRARIES(EMSoftLib blas lapack ${HDF5_LIBRARIES} ${JSONFORTRAN_LIBRARY})
+TARGET_LINK_LIBRARIES(EMSoftdyLib blas lapack ${HDF5_LIBRARIES} ${JSONFORTRAN_LIBRARY})
 
 set(install_dir "tools")
 set(lib_install_dir "lib")

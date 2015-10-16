@@ -25,23 +25,23 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:Core_quatmult.pro
+; CTEMsoft2013:Core_quat_Lp.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: Core_quatmult.pro
+; PROGRAM: Core_quat_Lp.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief returns the quaternion product.
+;> @brief returns the rotated vector x for a quaternion q
 ;
-;> @date 03/19/14 MDG 1.0 initial version
+;> @date 10/15/15 MDG 1.0 initial version (based on quaternion.f90 library routine)
 ;--------------------------------------------------------------------------
-function Core_quatmult, x, y
+function Core_quat_Lp, q, x
 
-qm = [ x[0]*y[0] - x[1]*y[1] - x[2]*y[2] - x[3]*y[3], $
-             x[0]*y[1] + x[1]*y[0] + x[2]*y[3] - x[3]*y[2], $
-             x[0]*y[2] - x[1]*y[3] + x[2]*y[0] + x[3]*y[1], $
-             x[0]*y[3] + x[1]*y[2] - x[2]*y[1] + x[3]*y[0] ]
+qv = [ 0.0, x[0], x[1], x[2] ]   
+qj = q
+qj[1:3] = -qj[1:3]
+rqv = Core_quatmult(q,Core_quatmult(qv,qj) )
 
-return,qm
+return,rqv[1:3]
 end
