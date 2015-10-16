@@ -254,7 +254,7 @@ if (stat) then
   stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
   enl%MCmode = trim(stringarray(1))
   deallocate(stringarray)
-
+  if (enl%MCmode .ne. 'full') call FatalError('EBSDreadMCfile','This file is not in full mode. Please input correct HDF5 file')
   dataset = 'numsx'
   enl%nsx = HDF_readDatasetInteger(dataset, HDF_head)
   enl%nsx = (enl%nsx - 1)/2

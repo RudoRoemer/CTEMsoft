@@ -46,7 +46,7 @@ use typedefs
 IMPLICIT NONE
 
 type ECPAngleType
-        real(kind=sgl),allocatable      :: quatang(:,:)
+        real(kind=dbl),allocatable      :: quatang(:,:)
 end type ECPAngleType
 
 type ECPLargeAccumType
@@ -62,7 +62,8 @@ type IncidentListECP
         real(kind=dbl)                  :: k(3)
         type(IncidentListECP),pointer   :: next
 end type IncidentListECP
- 
+
+
 contains
 
 !--------------------------------------------------------------------------
@@ -439,7 +440,7 @@ end subroutine ECPreadMasterfile
 !
 ! SUBROUTINE:GetVectorsCone
 !
-!> @author Saransh Singh/Marc De Graef, Carnegie Mellon University
+!> @author Saransh Singh, Carnegie Mellon University
 !
 !> @brief generate list of incident vectors for interpolation of ECP
 !
@@ -448,9 +449,9 @@ end subroutine ECPreadMasterfile
 !> @param rotmat rotation matrix for the microscope to grain reference frame
 !> @param numk number of incident vectors in the linked list
 !
-!> @date 06/24/14  MDG 1.0 original
+!> @date 10/12/15  SS 1.0 original
 !--------------------------------------------------------------------------
-subroutine GetVectorsCone(ecpnl, klist, rotmat, numk)
+subroutine GetVectorsCone(ecpnl, klist, numk)
 
 use local
 use io
@@ -459,7 +460,6 @@ use error
 
 type(ECPNameListType),INTENT(IN)                 :: ecpnl
 type(IncidentListECP),pointer                    :: klist, ktmp
-real(kind=dbl),INTENT(IN)                        :: rotmat(3,3)
 integer(kind=irg),INTENT(OUT)                    :: numk
 
 real(kind=dbl)                                   :: kk(3), thetacr, delta, ktmax
@@ -485,7 +485,6 @@ end if
 
 ktmp => klist
 nullify(ktmp%next)
-ktmp%k(1:3) = matmul(rotmat,kk)
 ktmp%i = 0
 ktmp%j = 0
 numk = numk + 1
@@ -498,7 +497,6 @@ do ii = imin, imax
            nullify(ktmp%next)
            ktmp%k(1:3) = (/delta*ii,delta*jj,0.D0/) + kk
            ktmp%k = ktmp%k/sqrt(sum(ktmp%k**2))
-           ktmp%k = matmul(rotmat,ktmp%k)
            ktmp%i = ii
            ktmp%j = jj
            numk = numk + 1
@@ -512,16 +510,16 @@ end subroutine GetVectorsCone
 !
 ! SUBROUTINE:EBSDreadangles
 !
-!> @author Marc De Graef, Carnegie Mellon University
+!> @author Saransh Singh, Carnegie Mellon University
 !
 !> @brief read angles from an angle file
 !
 !> @param enl EBSD name list structure
 !> @param quatang array of unit quaternions (output)
 !
-!> @date 06/24/14  MDG 1.0 original
+!> @date 10/12/15  SS 1.0 original
 !--------------------------------------------------------------------------
-subroutine EBSDreadangles(enl,angles,verbose)
+subroutine ECPreadangles(enl,angles,verbose)
 
 use NameListTypedefs
 use io
@@ -604,6 +602,9 @@ close(unit=dataunit,status='keep')
 !====================================
 ! Do we need to apply an additional axis-angle pair rotation to all the quaternions ?
 
+! commented out for now; needs to be verified
+
+
 !if (enl%axisangle(4).ne.0.0) then
 !  enl%axisangle(4) = enl%axisangle(4) * dtor
 !  qax = ax2qu( enl%axisangle )
@@ -614,8 +615,7 @@ close(unit=dataunit,status='keep')
 
 write (*,*) 'completed reading Euler angles'
 
-end subroutine EBSDreadangles
-
+end subroutine ECPreadangles
 
 end module ECPmod
 
