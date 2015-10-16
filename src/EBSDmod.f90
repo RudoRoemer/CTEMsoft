@@ -194,6 +194,7 @@ use files
 use io
 use HDF5
 use HDFsupport
+use error
 
 IMPLICIT NONE
 
