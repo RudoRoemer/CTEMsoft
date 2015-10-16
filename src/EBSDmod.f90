@@ -251,7 +251,7 @@ if (stat) then
   enl%MCxtalname = trim(stringarray(1))
   deallocate(stringarray)
 
-  dataset = 'MCmode'
+  dataset = 'mode'
   stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
   enl%MCmode = trim(stringarray(1))
   deallocate(stringarray)
@@ -986,41 +986,40 @@ master_out%mLPSH = 0.0
 
 scl = float(enl%npx) ! / LPs%sPio2 [ removed on 09/01/15 by MDG for new Lambert module]
 
-do ii = 1,enl%nE
-    master_rotatedNH = 0.0
-    master_rotatedSH = 0.0
-    do jj = -enl%npx,enl%npx
-        do kk = -enl%npy,enl%npy
+master_rotatedNH = 0.0
+master_rotatedSH = 0.0
+do jj = -enl%npx,enl%npx
+    do kk = -enl%npy,enl%npy
 
-            Lamproj = (/ float(jj)/scl,float(kk)/scl /)
-            dc = LambertSquareToSphere(Lamproj,ierr)
-            dc_new = quat_Lp(q, dc)
-            dc_new = dc_new/sqrt(sum(dc_new**2))
-            if (dc_new(3) .lt. 0.0) dc_new = -dc_new
+        Lamproj = (/ float(jj)/scl,float(kk)/scl /)
+        dc = LambertSquareToSphere(Lamproj,ierr)
+        dc_new = quat_Lp(conjg(q), dc)
+        dc_new = dc_new/sqrt(sum(dc_new**2))
+        if (dc_new(3) .lt. 0.0) dc_new = -dc_new
 
 ! convert direction cosines to lambert projections
-            ixy = scl * LambertSphereToSquare( dc_new, istat )
+        ixy = scl * LambertSphereToSquare( dc_new, istat )
 
 ! interpolate intensity from the neighboring points
-            nix = floor(ixy(1))
-            niy = floor(ixy(2))
-            nixp = nix+1
-            niyp = niy+1
-            if (nixp.gt.enl%npx) nixp = nix
-            if (niyp.gt.enl%npy) niyp = niy
-            dx = ixy(1) - nix
-            dy = ixy(2) - niy
-            dxm = 1.0 - dx
-            dym = 1.0 - dy
+        nix = floor(ixy(1))
+        niy = floor(ixy(2))
+        nixp = nix+1
+        niyp = niy+1
+        if (nixp.gt.enl%npx) nixp = nix
+        if (niyp.gt.enl%npy) niyp = niy
+        dx = ixy(1) - nix
+        dy = ixy(2) - niy
+        dxm = 1.0 - dx
+        dym = 1.0 - dy
 
-            master_rotatedNH(jj,kk,1:enl%nE) = master_in%mLPNH(nix,niy,1:enl%nE)*dxm*dym + master_in%mLPNH(nixp,niy,1:enl%nE)&
+        master_rotatedNH(jj,kk,1:enl%nE) = master_in%mLPNH(nix,niy,1:enl%nE)*dxm*dym + master_in%mLPNH(nixp,niy,1:enl%nE)&
                                     *dx*dym + master_in%mLPNH(nix,niyp,1:enl%nE)*dxm*dy + master_in%mLPNH(nixp,niyp,1:enl%nE)&
                                     *dx*dy
-            master_rotatedSH(jj,kk,1:enl%nE) = master_in%mLPSH(nix,niy,1:enl%nE)*dxm*dym + master_in%mLPSH(nixp,niy,1:enl%nE)&
+        master_rotatedSH(jj,kk,1:enl%nE) = master_in%mLPSH(nix,niy,1:enl%nE)*dxm*dym + master_in%mLPSH(nixp,niy,1:enl%nE)&
                                     *dx*dym + master_in%mLPSH(nix,niyp,1:enl%nE)*dxm*dy + master_in%mLPSH(nixp,niyp,1:enl%nE)*dx*dy
-        end do
     end do
 end do
+
 master_out%mLPNH = (1 - alpha) * master_rotatedNH + alpha * master_in%mLPNH
 master_out%mLPSH = (1 - alpha) * master_rotatedSH + alpha * master_in%mLPSH
 
