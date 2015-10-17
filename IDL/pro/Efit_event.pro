@@ -26,18 +26,18 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; EMsoft:EBSDfit_event.pro
+; EMsoft:Efit_event.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: EBSDfit_event.pro
+; PROGRAM: Efit_event.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief main event handler for EBSDfit.pro program
+;> @brief main event handler for Efit.pro program
 ;
 ;> @date 10/13/15 MDG 1.0 first attempt at a user-friendly interface
 ;--------------------------------------------------------------------------
-pro EBSDfit_event,event
+pro Efit_event,event
 
 common Efit_widget_common, Efitwidget_s
 common Efit_data_common, Efitdata
@@ -75,13 +75,21 @@ end else begin
 ; ask the user to select the data file
 		Efitgetfilename,validfile,/MPFILE
                 if (validfile eq 1) then begin
-                  EBSDinit
+                  Efitinit
+                  WIDGET_CONTROL, Efitwidget_s.gofit, sensitive=1
                 endif
         endcase
 
         'GOFIT': begin
-Core_Print,'Starting pattern computation'
-                EBSDpattern = EBSDCalc()
+Core_Print,'Starting single pattern computation'
+; first convert the Euler angle triplet (in degrees) to a quaternion
+                Efitdata.quaternion = Core_eu2qu( [Efitdata.detphi1, Efitdata.detphi, Efitdata.detphi2] )
+
+; determine whether or not we can re-use the rgx, rgy, rgz arrays in SingleEBSDPattern
+; if the sum of the first four fitOnOff values is zero, and the remainder is not, then recompute = 1 after the first call_external, else 0
+                recompute = 0L
+
+                EBSDpattern = EfitCalc(recompute)
                 wset,Efitdata.drawID
                 tvscl,EBSDpattern
         endcase
@@ -273,7 +281,7 @@ Core_Print,'Starting pattern computation'
 
 
 
-  else: MESSAGE, "EBSDfit_event: Event User Step "+eventval+" Not Found"
+  else: MESSAGE, "Efit_event: Event User Step "+eventval+" Not Found"
 
   endcase
 

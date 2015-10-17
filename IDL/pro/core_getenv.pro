@@ -46,7 +46,7 @@ result = json_parse('~/.config/EMsoft/EMsoftConfig.json',/toarray)
 if keyword_set(data) then begin
   z = result['EMdatapathname']
 end else begin
-  z = result['EMdsoftathname']
+  z = result['EMsoftpathname']
 endelse
 
 return,z

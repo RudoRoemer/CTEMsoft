@@ -1,4 +1,4 @@
-;
+
 ; Copyright (c) 2015, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
@@ -33,7 +33,7 @@
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief generate a widget line for one of the fitting parameters in EBSDfit.pro
+;> @brief generate a widget line for one of the fitting parameters in Efit.pro
 ;
 ;> @date 10/12/15 MDG 1.0 first attempt at a user-friendly interface
 ;--------------------------------------------------------------------------
@@ -51,9 +51,9 @@ line1 = WIDGET_BASE(block2, XSIZE=1200, /ROW)
 ; fit parameter name
 item1 = WIDGET_LABEL(line1, VALUE=fitName[sel], font=fontstr, /ALIGN_LEFT)
 ; current value (editable)
-Efitwidget_s.fitValue[sel] = Core_WTextE(line1,'', fontstr, 10, 25, 10, 1, string(fitValue[sel],format="(F9.2)"), fitUserLabel[sel],'EBSDfit_event')
+Efitwidget_s.fitValue[sel] = Core_WTextE(line1,'', fontstr, 10, 25, 10, 1, string(fitValue[sel],format="(F9.2)"), fitUserLabel[sel],'Efit_event')
 ; initial step size
-Efitwidget_s.fitStep[sel] = Core_WTextE(line1,'', fontstr, 10, 25, 10, 1, string(fitStep[sel],format="(F9.2)"), fitStepLabel[sel],'EBSDfit_event')
+Efitwidget_s.fitStep[sel] = Core_WTextE(line1,'', fontstr, 10, 25, 10, 1, string(fitStep[sel],format="(F9.2)"), fitStepLabel[sel],'Efit_event')
 ; include in fit toggle
 vals = ['No','Yes']
 Efitwidget_s.fitOnOff[sel]= CW_BGROUP(line1, $
@@ -73,7 +73,7 @@ Efitwidget_s.fitManualUp[sel]= WIDGET_BUTTON(line1, $
                                 UVALUE=fitUpLabel[sel], $
                                 VALUE=' + ', $
                                 FONT=fontstrlarge, $
-                                EVENT_PRO='EBSDfit_event', $
+                                EVENT_PRO='Efit_event', $
                                 SENSITIVE=1)
 
 item1 = WIDGET_LABEL(line1, VALUE=' ', font=fontstrlarge, /ALIGN_LEFT)
@@ -81,11 +81,11 @@ Efitwidget_s.fitManualDown[sel]= WIDGET_BUTTON(line1, $
                                 UVALUE=fitDownLabel[sel], $
                                 VALUE=' - ', $
                                 FONT=fontstrlarge, $
-                                EVENT_PRO='EBSDfit_event', $
+                                EVENT_PRO='Efit_event', $
                                 SENSITIVE=1)
 ; manual step size
 item1 = WIDGET_LABEL(line1, VALUE='   ', font=fontstrlarge, /ALIGN_LEFT)
-Efitwidget_s.fitManualStep[sel] = Core_WTextE(line1,'', fontstr, 10, 25, 10, 1, string(fitManualStep[sel],format="(F9.2)"), fitManualStepLabel[sel],'EBSDfit_event')
+Efitwidget_s.fitManualStep[sel] = Core_WTextE(line1,'', fontstr, 10, 25, 10, 1, string(fitManualStep[sel],format="(F9.2)"), fitManualStepLabel[sel],'Efit_event')
 
 
 

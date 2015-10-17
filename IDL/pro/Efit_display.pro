@@ -26,43 +26,102 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; EMsoft:Efit_display_event.pro
+; EMsoft:Efit_display.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: Efit_display_event.pro
+; PROGRAM: Efit_display.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief main event handler for Efit_display.pro routine
+;> @brief Generates a display widget for the simulated EBSD pattern display
 ;
-;> @date 10/13/15 MDG 1.0 first attempt at a user-friendly interface
+;> @date 10/15/15 MDG 1.0 first attempt at a user-friendly interface
 ;--------------------------------------------------------------------------
-pro Efit_display_event,event
+pro Efit_display,dummy
 
 common Efit_widget_common, Efitwidget_s
 common Efit_data_common, Efitdata
 
+; the display widget will have a Close, Save, and Save format option available
+; in addition to the display region.
 
-if (event.id eq Efitwidget_s.displaybase) then begin
-  Efitdata.xlocationdisplay = event.x
-  Efitdata.ylocationdisplay = event.y-25
-end else begin
+; a few font strings (this will need to be redone for Windows systems)
+fontstr='-adobe-new century schoolbook-bold-r-normal--14-100-100-100-p-87-iso8859-1'
+fontstrlarge='-adobe-new century schoolbook-medium-r-normal--20-140-100-100-p-103-iso8859-1'
+fontstrsmall='-adobe-new century schoolbook-medium-r-normal--14-100-100-100-p-82-iso8859-1'
 
-  WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
-  
-  CASE eventval OF
-        'CLOSEDISPLAY': begin
-                WIDGET_CONTROL, Efitwidget_s.displaybase, /DESTROY
-        endcase
-        'SAVEPATTERN': begin
-                Core_Print,'to be implemented'
-        endcase
+;------------------------------------------------------------
+; create the top level widget
+Efitwidget_s.displaybase = WIDGET_BASE(TITLE='Pattern Display Panel', $
+                        /COLUMN, $
+                        XSIZE=max([Efitdata.detnumsx+20,420]), $
+                        /ALIGN_LEFT, $
+			/TLB_MOVE_EVENTS, $
+			EVENT_PRO='Efit_display_event', $
+                        XOFFSET=Efitdata.xlocationdisplay, $
+                        YOFFSET=Efitdata.ylocationdisplay)
 
-  else: MESSAGE, "Efit_display_event: Event "+eventval+" Unknown"
+block0 = WIDGET_BASE(Efitwidget_s.displaybase, $
+			XSIZE=max([Efitdata.detnumsx,400]), $
+			/ALIGN_CENTER, $
+			/ROW)
 
-  endcase
+; a close button
+closedisplaybutton = WIDGET_BUTTON(block0, $
+                                UVALUE='CLOSEDISPLAY', $
+                                VALUE='Close', $
+                                /NO_RELEASE, $
+                                EVENT_PRO='Efit_display_event', $
+                                SENSITIVE=1, $
+                                /FRAME)
 
-endelse
+; a save button
+savepattern = WIDGET_BUTTON(block0, $
+                        VALUE='Save', $
+                        /NO_RELEASE, $
+                        EVENT_PRO='Efit_display_event', $
+                        UVALUE='SAVEPATTERN', $
+                        SENSITIVE=1, $
+                        /FRAME)
+
+; and a format selector
+vals = ['jpeg','tiff','bmp']
+Efitwidget_s.imageformat = CW_BGROUP(block0, $
+                        vals, $
+                        /ROW, $
+                        /NO_RELEASE, $
+                        /EXCLUSIVE, $
+                        FONT=fontstr, $
+                        LABEL_LEFT = 'File Format', $
+                        /FRAME, $
+                        EVENT_FUNC ='Efitevent', $
+                        UVALUE='PATTERNFORMAT', $
+                        SET_VALUE=Efitdata.imageformat)
+
+; finally, the draw area...
+block1 = WIDGET_BASE(Efitwidget_s.displaybase, $
+			XSIZE=Efitdata.detnumsx, $
+			/ALIGN_CENTER, $
+			/COLUMN)
+
+Efitwidget_s.draw = WIDGET_DRAW(block1, $
+			COLOR_MODEL=2, $
+			RETAIN=2, $
+			/FRAME, $
+			/ALIGN_CENTER, $
+			XSIZE=Efitdata.detnumsx, $
+			YSIZE=Efitdata.detnumsy)
+
+;------------------------------------------------------------
+; realize the widget structure
+WIDGET_CONTROL,Efitwidget_s.displaybase,/REALIZE
+
+; realize the draw widgets
+WIDGET_CONTROL, Efitwidget_s.draw, GET_VALUE=drawID
+Efitwidget_s.drawID = drawID
+Efitdata.drawID = drawID
+
+; and hand over control to the xmanager
+XMANAGER,"Efit_display",Efitwidget_s.displaybase,/NO_BLOCK
 
 end
-

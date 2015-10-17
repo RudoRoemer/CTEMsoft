@@ -1,11 +1,11 @@
-@EBSDcalc
-@EBSDinit
+@Efitcalc
+@Efitinit
 @Efit_display
 @Efit_display_event
 @Efitevent
 @Efit_control
 @Efit_control_event
-@EBSDfit_event
+@Efit_event
 @Efitgetpreferences
 @Efitwritepreferences
 @Efitgetfilename
@@ -49,10 +49,10 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; EMsoft:EBSDfit.pro
+; EMsoft:Efit.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: EBSDfit.pro
+; PROGRAM: Efit.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
@@ -70,7 +70,7 @@
 ;
 ;> @date 10/12/15 MDG 1.0 first attempt at a user-friendly interface
 ;--------------------------------------------------------------------------
-pro EBSDfit,dummy
+pro Efit,dummy
 
 common Efit_widget_common, Efitwidget_s
 common Efit_data_common, Efitdata
@@ -81,6 +81,7 @@ common FitParameters, nFit, fitName, defValue, fitValue, fitStep, fitOnOff, fitM
 logmode = 0
 logunit = 10
 nFit = 8
+
 
 ; widget structure
 Efitwidget_s = {widgetstruct, $
@@ -179,12 +180,15 @@ Efitdata = {Efitdatastruct, $
                 detbinning:long(0), $
                 detnumsx:long(0), $
                 detnumsy:long(0), $
+                detMCsig:float(0), $
                 showcircularmask:long(0), $
                 EulerConvention:long(0), $
                 PatternOrigin:long(0), $
                 Efitroot:'undefined', $
                 mpfilesize:long(0), $
                 patternfilesize:long(0), $
+                EMsoftpathname:'', $
+                EMdatapathname:'', $
                 patternpathname:'', $
                 pathname:'', $
                 patternfilename:'', $
@@ -192,8 +196,11 @@ Efitdata = {Efitdatastruct, $
                 suffix:'', $
                 homefolder:'', $
                 nprefs:long(0), $
-                prefname:'~/.EBSDfitgui.prefs', $
+                prefname:'~/.Efitgui.prefs', $
                 test:long(0) }
+
+Efitdata.EMsoftpathname = Core_getenv()
+Efitdata.EMdatapathname = Core_getenv(/data)
 
 ;------------------------------------------------------------
 ;------------------------------------------------------------
@@ -274,7 +281,7 @@ Efitwidget_s.base = WIDGET_BASE(TITLE='Electron Backscatter Diffraction Pattern 
                         XSIZE=1220, $
                         /ALIGN_LEFT, $
 			/TLB_MOVE_EVENTS, $
-			EVENT_PRO='EBSDfit_event', $
+			EVENT_PRO='Efit_event', $
                         XOFFSET=Efitdata.xlocation, $
                         YOFFSET=Efitdata.ylocation)
 
@@ -327,21 +334,21 @@ file3 = WIDGET_BASE(block2, XSIZE=550, /ROW)
 Efitwidget_s.exploadfile = WIDGET_BUTTON(file3, $
                                 UVALUE='EXPFILE', $
                                 VALUE='Load experimental pattern', $
-                                EVENT_PRO='EBSDfit_event', $
+                                EVENT_PRO='Efit_event', $
                                 SENSITIVE=1, $
                                 /FRAME)
 
 Efitwidget_s.mploadfile = WIDGET_BUTTON(file3, $
                                 UVALUE='MPFILE', $
                                 VALUE='Load master file', $
-                                EVENT_PRO='EBSDfit_event', $
+                                EVENT_PRO='Efit_event', $
                                 SENSITIVE=0, $
                                 /FRAME)
 
 Efitwidget_s.mainstop = WIDGET_BUTTON(file3, $
                                 UVALUE='QUIT', $
                                 VALUE='Quit', $
-                                EVENT_PRO='EBSDfit_event', $
+                                EVENT_PRO='Efit_event', $
                                 SENSITIVE=1, $
                                 /FRAME)
 
@@ -371,27 +378,27 @@ tmp1 = WIDGET_LABEL(block2, VALUE='Non-refinable Parameters', font=fontstrlarge,
 line1 = WIDGET_BASE(block2, XSIZE=1200, /ROW)
 ;----------  detector tilt angle
 item1 = WIDGET_BASE(line1, /ROW, XSIZE=350, /ALIGN_LEFT)
-Efitwidget_s.dettheta = Core_WTextE(item1,'Detector Tilt Angle [deg]', fontstr, 250, 25, 10, 1, string(Efitdata.dettheta,format="(F9.2)"),'DETTHETA','EBSDfit_event')
+Efitwidget_s.dettheta = Core_WTextE(item1,'Detector Tilt Angle [deg]', fontstr, 250, 25, 10, 1, string(Efitdata.dettheta,format="(F9.2)"),'DETTHETA','Efit_event')
 
 ;----------  scintillator pixel size
 item2 = WIDGET_BASE(line1, /ROW, XSIZE=350, /ALIGN_LEFT)
-Efitwidget_s.detdelta = Core_WTextE(item2,'Scintillator Pixel Size [micron]', fontstr, 250, 25, 10, 1, string(Efitdata.detdelta,format="(F9.2)"),'DETDELTA','EBSDfit_event')
+Efitwidget_s.detdelta = Core_WTextE(item2,'Scintillator Pixel Size [micron]', fontstr, 250, 25, 10, 1, string(Efitdata.detdelta,format="(F9.2)"),'DETDELTA','Efit_event')
 
 ;----------  number of pixels on detector
 item3 = WIDGET_BASE(line1, /ROW, XSIZE=560, /ALIGN_LEFT)
-Efitwidget_s.detnumsx = Core_WTextE(item3,'Number of pixels ', fontstr, 140, 25, 5, 1, string(Efitdata.detnumsx,format="(I4)"),'DETNUMSX','EBSDfit_event')
-Efitwidget_s.detnumsy = Core_WTextE(item3,' by ', fontstr, 30, 25, 5, 1, string(Efitdata.detnumsy,format="(I4)"),'DETNUMSY','EBSDfit_event')
+Efitwidget_s.detnumsx = Core_WTextE(item3,'Number of pixels ', fontstr, 140, 25, 5, 1, string(Efitdata.detnumsx,format="(I4)"),'DETNUMSX','Efit_event')
+Efitwidget_s.detnumsy = Core_WTextE(item3,' by ', fontstr, 30, 25, 5, 1, string(Efitdata.detnumsy,format="(I4)"),'DETNUMSY','Efit_event')
 
 ;------------------------------------------------------------
 line2 = WIDGET_BASE(block2, XSIZE=1200, /ROW)
 
 ;----------  Beam current
 item1 = WIDGET_BASE(line2, /ROW, XSIZE=350, /ALIGN_LEFT)
-Efitwidget_s.detbeamcurrent = Core_WTextE(item1,'Beam current [nA]', fontstr, 250, 25, 10, 1, string(Efitdata.detbeamcurrent,format="(F9.2)"),'DETBEAMCURRENT','EBSDfit_event')
+Efitwidget_s.detbeamcurrent = Core_WTextE(item1,'Beam current [nA]', fontstr, 250, 25, 10, 1, string(Efitdata.detbeamcurrent,format="(F9.2)"),'DETBEAMCURRENT','Efit_event')
 
 ;----------  Dwell time
 item2 = WIDGET_BASE(line2, /ROW, XSIZE=350, /ALIGN_LEFT)
-Efitwidget_s.detdwelltime = Core_WTextE(item2,'Dwell Time [mu s] ', fontstr, 250, 25, 10, 1, string(Efitdata.detdwelltime,format="(F9.2)"),'DETDWELLTIME','EBSDfit_event')
+Efitwidget_s.detdwelltime = Core_WTextE(item2,'Dwell Time [mu s] ', fontstr, 250, 25, 10, 1, string(Efitdata.detdwelltime,format="(F9.2)"),'DETDWELLTIME','Efit_event')
 
 ;----------  Circular mask
 item3 = WIDGET_BASE(line2, /ROW, XSIZE=350, /ALIGN_LEFT)
@@ -501,9 +508,9 @@ block3 = WIDGET_BASE(row2, $
 Efitwidget_s.gofit = WIDGET_BUTTON(block3, $
                                 UVALUE='GOFIT', $
                                 VALUE='Start Fit', $
-                                EVENT_PRO='EBSDfit_event', $
+                                EVENT_PRO='Efit_event', $
                                 /ALIGN_CENTER, $
-                                SENSITIVE=1)
+                                SENSITIVE=0)
 
 
 ;------------------------------------------------------------
@@ -536,7 +543,7 @@ wset,Efitwidget_s.logodrawID
 tvscl,logo,true=1
 
 ; and hand over control to the xmanager
-XMANAGER,"EBSDfit",Efitwidget_s.base,/NO_BLOCK
+XMANAGER,"Efit",Efitwidget_s.base,/NO_BLOCK
 
 
 end ; program
