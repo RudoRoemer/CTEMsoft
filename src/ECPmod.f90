@@ -149,7 +149,7 @@ if (stat) then
   enl%MCxtalname = trim(stringarray(1))
   deallocate(stringarray)
 
-  dataset = 'MCmode'
+  dataset = 'mode'
   stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
   enl%MCmode = trim(stringarray(1))
   deallocate(stringarray)

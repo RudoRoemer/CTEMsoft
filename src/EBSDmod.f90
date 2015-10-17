@@ -194,6 +194,7 @@ use files
 use io
 use HDF5
 use HDFsupport
+use error
 
 IMPLICIT NONE
 
@@ -250,7 +251,7 @@ if (stat) then
   enl%MCxtalname = trim(stringarray(1))
   deallocate(stringarray)
 
-  dataset = 'MCmode'
+  dataset = 'mode'
   stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
   enl%MCmode = trim(stringarray(1))
   deallocate(stringarray)
@@ -934,11 +935,14 @@ end subroutine TwinCubicMasterPattern
 !
 !> @date 04/20/15 MDG 1.0 original, based on Saransh's twin routine above
 !> @date 09/03/15 MDG 1.2 added support for Northern and Southern Lambert hemispheres
+!> @date 10/16/15  SS 1.3 added alpha parameter for degree of mixing; 0<=alpha<=1; also
+!> added master_inp and master_out variables in the subroutine for NtAg dataset
 !--------------------------------------------------------------------------
-subroutine OverlapMasterPattern(enl,master,q)
+subroutine OverlapMasterPattern(enl,master_in,master_out,q,alpha)
 
 use local
 use io
+use error
 use quaternions
 use Lambert
 use rotations
@@ -949,8 +953,9 @@ use constants
 IMPLICIT NONE
 
 type(EBSDNameListType),INTENT(INOUT)                :: enl
-type(EBSDMasterType),pointer                        :: master
+type(EBSDMasterType),pointer                        :: master_in, master_out
 real(kind=dbl),INTENT(IN)                           :: q(4)
+real(kind=dbl),INTENT(IN)                           :: alpha
 
 real(kind=dbl),allocatable                          :: master_rotatedNH(:,:,:), master_rotatedSH(:,:,:)
 type(EBSDLargeAccumType),pointer                    :: acc
@@ -959,47 +964,64 @@ real(kind=dbl)                                      :: Lamproj(2),dc(3),dc_new(3
 integer(kind=irg)                                   :: nix,niy,nixp,niyp
 integer(kind=irg)                                   :: ii,jj,kk,ierr,istat,pp,qq
 
+if (alpha .lt. 0.D0) then
+    call FatalError('OverlapMasterPattern','value of mixing paramter is less than zero')
+end if
+
+if (alpha .gt. 1.D0) then
+    call FatalError('OverlapMasterPattern','value of mixing paramter is greater than one')
+end if
+
 allocate(master_rotatedNH(-enl%npx:enl%npx,-enl%npy:enl%npy,1:enl%nE),stat=istat)
 allocate(master_rotatedSH(-enl%npx:enl%npx,-enl%npy:enl%npy,1:enl%nE),stat=istat)
 
+if (allocated(master_out%mLPNH)) deallocate(master_out%mLPNH)
+if (allocated(master_out%mLPSH)) deallocate(master_out%mLPSH)
+
+allocate(master_out%mLPNH(-enl%npx:enl%npx,-enl%npy:enl%npy,1:enl%nE),stat=istat)
+allocate(master_out%mLPSH(-enl%npx:enl%npx,-enl%npy:enl%npy,1:enl%nE),stat=istat)
+
+master_out%mLPNH = 0.0
+master_out%mLPSH = 0.0
+
 scl = float(enl%npx) ! / LPs%sPio2 [ removed on 09/01/15 by MDG for new Lambert module]
 
-do ii = 1,enl%nE
-    master_rotatedNH = 0.0
-    master_rotatedSH = 0.0
-    do jj = -enl%npx,enl%npx
-        do kk = -enl%npy,enl%npy
+master_rotatedNH = 0.0
+master_rotatedSH = 0.0
+do jj = -enl%npx,enl%npx
+    do kk = -enl%npy,enl%npy
 
-            Lamproj = (/ float(jj)/scl,float(kk)/scl /)
-            dc = LambertSquareToSphere(Lamproj,ierr)
-            dc_new = quat_Lp(conjg(q),dc)
-            dc_new = dc_new/sqrt(sum(dc_new**2))
-            if (dc_new(3) .lt. 0.0) dc_new = -dc_new
+        Lamproj = (/ float(jj)/scl,float(kk)/scl /)
+        dc = LambertSquareToSphere(Lamproj,ierr)
+        dc_new = quat_Lp(conjg(q), dc)
+        dc_new = dc_new/sqrt(sum(dc_new**2))
+        if (dc_new(3) .lt. 0.0) dc_new = -dc_new
 
 ! convert direction cosines to lambert projections
-            ixy = scl * LambertSphereToSquare( dc_new, istat )
+        ixy = scl * LambertSphereToSquare( dc_new, istat )
 
 ! interpolate intensity from the neighboring points
-            nix = floor(ixy(1))
-            niy = floor(ixy(2))
-            nixp = nix+1
-            niyp = niy+1
-            if (nixp.gt.enl%npx) nixp = nix
-            if (niyp.gt.enl%npy) niyp = niy
-            dx = ixy(1) - nix
-            dy = ixy(2) - niy
-            dxm = 1.0 - dx
-            dym = 1.0 - dy
+        nix = floor(ixy(1))
+        niy = floor(ixy(2))
+        nixp = nix+1
+        niyp = niy+1
+        if (nixp.gt.enl%npx) nixp = nix
+        if (niyp.gt.enl%npy) niyp = niy
+        dx = ixy(1) - nix
+        dy = ixy(2) - niy
+        dxm = 1.0 - dx
+        dym = 1.0 - dy
 
-            master_rotatedNH(jj,kk,1:enl%nE) = master%mLPNH(nix,niy,1:enl%nE)*dxm*dym + master%mLPNH(nixp,niy,1:enl%nE)*dx*dym + &
-                                    master%mLPNH(nix,niyp,1:enl%nE)*dxm*dy + master%mLPNH(nixp,niyp,1:enl%nE)*dx*dy
-            master_rotatedSH(jj,kk,1:enl%nE) = master%mLPSH(nix,niy,1:enl%nE)*dxm*dym + master%mLPSH(nixp,niy,1:enl%nE)*dx*dym + &
-                                    master%mLPSH(nix,niyp,1:enl%nE)*dxm*dy + master%mLPSH(nixp,niyp,1:enl%nE)*dx*dy
-        end do
+        master_rotatedNH(jj,kk,1:enl%nE) = master_in%mLPNH(nix,niy,1:enl%nE)*dxm*dym + master_in%mLPNH(nixp,niy,1:enl%nE)&
+                                    *dx*dym + master_in%mLPNH(nix,niyp,1:enl%nE)*dxm*dy + master_in%mLPNH(nixp,niyp,1:enl%nE)&
+                                    *dx*dy
+        master_rotatedSH(jj,kk,1:enl%nE) = master_in%mLPSH(nix,niy,1:enl%nE)*dxm*dym + master_in%mLPSH(nixp,niy,1:enl%nE)&
+                                    *dx*dym + master_in%mLPSH(nix,niyp,1:enl%nE)*dxm*dy + master_in%mLPSH(nixp,niyp,1:enl%nE)*dx*dy
     end do
 end do
-master%mLPNH = 0.5D0 * (master_rotatedNH + master%mLPNH)
-master%mLPSH = 0.5D0 * (master_rotatedSH + master%mLPSH)
+
+master_out%mLPNH = (1 - alpha) * master_rotatedNH + alpha * master_in%mLPNH
+master_out%mLPSH = (1 - alpha) * master_rotatedSH + alpha * master_in%mLPSH
 
 call Message(' -> completed superimposing rotated and regular master patterns', frm = "(A)")
 
