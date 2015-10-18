@@ -125,3 +125,4 @@ Efitdata.drawID = drawID
 XMANAGER,"Efit_display",Efitwidget_s.displaybase,/NO_BLOCK
 
 end
+

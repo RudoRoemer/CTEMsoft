@@ -128,13 +128,13 @@ Core_Print,'Starting single pattern computation'
                 Efitdata.detgamma = Core_WidgetEvent( Efitwidget_s.fitValue[4],  'Intensity gammma value set to ', '(F9.2)', /flt)
 	endcase
         'DETphi1' : begin
-                Efitdata.detphi1 = Core_WidgetEvent( Efitwidget_s.fitValue[3],  'Euler phi1 angle set to [degrees] ', '(F9.2)', /flt)
+                Efitdata.detphi1 = Core_WidgetEvent( Efitwidget_s.fitValue[5],  'Euler phi1 angle set to [degrees] ', '(F9.2)', /flt)
 	endcase
         'DETphi' : begin
-                Efitdata.detphi = Core_WidgetEvent( Efitwidget_s.fitValue[3],  'Euler Phi angle set to [degrees] ', '(F9.2)', /flt)
+                Efitdata.detphi = Core_WidgetEvent( Efitwidget_s.fitValue[6],  'Euler Phi angle set to [degrees] ', '(F9.2)', /flt)
 	endcase
         'DETphi2' : begin
-                Efitdata.detphi2 = Core_WidgetEvent( Efitwidget_s.fitValue[3],  'Euler phi2 angle set to [degrees] ', '(F9.2)', /flt)
+                Efitdata.detphi2 = Core_WidgetEvent( Efitwidget_s.fitValue[7],  'Euler phi2 angle set to [degrees] ', '(F9.2)', /flt)
 	endcase
 
 ;fitStepLabel = ['DETsL','DETsOMEGA','DETsXPC','DETsYPC','DETsGAMMA','DETsphi1','DETsphi','DETsphi2']
@@ -154,13 +154,13 @@ Core_Print,'Starting single pattern computation'
                 Efitdata.detsgamma = Core_WidgetEvent( Efitwidget_s.fitStep[4],  'Intensity gammma step size value set to ', '(F9.2)', /flt)
 	endcase
         'DETsphi1' : begin
-                Efitdata.detsphi1 = Core_WidgetEvent( Efitwidget_s.fitStep[3],  'Euler phi1 angle step size set to [degrees] ', '(F9.2)', /flt)
+                Efitdata.detsphi1 = Core_WidgetEvent( Efitwidget_s.fitStep[5],  'Euler phi1 angle step size set to [degrees] ', '(F9.2)', /flt)
 	endcase
         'DETsphi' : begin
-                Efitdata.detsphi = Core_WidgetEvent( Efitwidget_s.fitStep[3],  'Euler Phi angle step size set to [degrees] ', '(F9.2)', /flt)
+                Efitdata.detsphi = Core_WidgetEvent( Efitwidget_s.fitStep[6],  'Euler Phi angle step size set to [degrees] ', '(F9.2)', /flt)
 	endcase
         'DETsphi2' : begin
-                Efitdata.detsphi2 = Core_WidgetEvent( Efitwidget_s.fitStep[3],  'Euler phi2 angle step size set to [degrees] ', '(F9.2)', /flt)
+                Efitdata.detsphi2 = Core_WidgetEvent( Efitwidget_s.fitStep[7],  'Euler phi2 angle step size set to [degrees] ', '(F9.2)', /flt)
 	endcase
 
 ;fitOnOffLabel = ['DEToL','DEToOMEGA','DEToXPC','DEToYPC','DEToGAMMA','DETophi1','DETophi','DETophi2']
@@ -267,13 +267,13 @@ Core_Print,'Starting single pattern computation'
                 Efitdata.detmgamma = Core_WidgetEvent( Efitwidget_s.fitManualStep[4],  'Intensity gammma manual step size value set to ', '(F9.2)', /flt)
 	endcase
         'DETmphi1' : begin
-                Efitdata.detmphi1 = Core_WidgetEvent( Efitwidget_s.fitManualStep[3],  'Euler phi1 angle manual step size set to [degrees] ', '(F9.2)', /flt)
+                Efitdata.detmphi1 = Core_WidgetEvent( Efitwidget_s.fitManualStep[5],  'Euler phi1 angle manual step size set to [degrees] ', '(F9.2)', /flt)
 	endcase
         'DETmphi' : begin
-                Efitdata.detmphi = Core_WidgetEvent( Efitwidget_s.fitManualStep[3],  'Euler Phi angle step manual size set to [degrees] ', '(F9.2)', /flt)
+                Efitdata.detmphi = Core_WidgetEvent( Efitwidget_s.fitManualStep[6],  'Euler Phi angle step manual size set to [degrees] ', '(F9.2)', /flt)
 	endcase
         'DETmphi2' : begin
-                Efitdata.detmphi2 = Core_WidgetEvent( Efitwidget_s.fitManualStep[3],  'Euler phi2 angle step manual size set to [degrees] ', '(F9.2)', /flt)
+                Efitdata.detmphi2 = Core_WidgetEvent( Efitwidget_s.fitManualStep[7],  'Euler phi2 angle step manual size set to [degrees] ', '(F9.2)', /flt)
 	endcase
 
 

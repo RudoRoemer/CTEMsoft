@@ -145,6 +145,7 @@ real(kind=dbl),parameter                :: nAmpere = 6.241D+18
 ! ------ generate the detector rgx, rgy, rgz arrays if needed (calling program must decide this via ipar(1))
 !====================================
 if (ipar(1).eq.1) then
+
 ! This needs to be done only once for a given detector geometry
   allocate(scin_x(ipar(2)),scin_y(ipar(3)),stat=istat)
   
