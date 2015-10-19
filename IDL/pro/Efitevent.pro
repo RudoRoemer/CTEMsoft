@@ -46,39 +46,141 @@ common Efit_data_common, Efitdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
 common CommonCore, status, logmode, logunit
+common FitParameters, nFit, fitName, defValue, fitValue, fitStep, fitOnOff, fitManualStep, fitManualUpDown, fitUserLabel, fitStepLabel, fitOnOffLabel, fitUpLabel, fitDownLabel, fitManualStepLabel
+
+
+common EBSD_EMsoft, MCxtalname, MCmode, nsx, nsy, EkeV, Ehistmin, Ebinsize, depthmax, depthstep, MCsig, MComega, $
+                    numEbins, numzbins, accum_e, accum_z, Masterenergyfile, npx, npy, nnE, numset, mLPNH, mLPSH, Masterxtalname, expEBSDpattern, EBSDpattern
 
 WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
 
 IF N_ELEMENTS(eventval) EQ 0 THEN RETURN,eventval
 
 CASE eventval OF
+        'CONVCRIT' : begin
+                Efitdata.convcrit = Core_WidgetChoiceEvent( Efitwidget_s.convcrit,  'Convergence criterion? ')
+                if ((max(EBSDpattern) gt 0) or (max(expEBSDpattern) gt 0)) then Efit_showpattern
+        endcase
+
+        'SMOOTHVAL' : begin
+                Efitdata.smoothval = Core_WidgetChoiceEvent( Efitwidget_s.smoothval,  'Smoothing parameter? ')
+                if ((max(EBSDpattern) gt 0) or (max(expEBSDpattern) gt 0)) then Efit_showpattern
+        endcase
+
+        'RAMPONOFF' : begin
+                Efitdata.ramponoff = Core_WidgetChoiceEvent( Efitwidget_s.ramponoff,  'Ramp filter? ')
+                if ((max(EBSDpattern) gt 0) or (max(expEBSDpattern) gt 0)) then Efit_showpattern
+        endcase
+
+        'HIPASSONOFF' : begin
+                Efitdata.hipassonoff = Core_WidgetChoiceEvent( Efitwidget_s.hipassonoff,  'Hipass filter? ')
+                if ((max(EBSDpattern) gt 0) or (max(expEBSDpattern) gt 0)) then Efit_showpattern
+        endcase
+
+        'CIRCULARMASK' : begin
+                Efitdata.showcircularmask = Core_WidgetChoiceEvent( Efitwidget_s.circularmask,  'Add circular mask? ')
+                if ((max(EBSDpattern) gt 0) or (max(expEBSDpattern) gt 0)) then Efit_showpattern
+	endcase
+
+        'BINNING' : begin
+                Efitdata.detbinning = Core_WidgetChoiceEvent( Efitwidget_s.detbinning,  'Binning set to  ')
+                if ((max(EBSDpattern) gt 0) or (max(expEBSDpattern) gt 0)) then Efit_showpattern
+	endcase
+
+        'EBSDEULERCONVENTION' : begin
+                Efitdata.EulerConvention = Core_WidgetChoiceEvent( Efitwidget_s.EulerConvention,  'Euler Convention set to ')
+	endcase
+
+        'EBSDPATTERNORIGIN' : begin
+                Efitdata.PatternOrigin = Core_WidgetChoiceEvent( Efitwidget_s.PatternOrigin,  'Pattern origin set to ')
+                if ((max(EBSDpattern) gt 0) or (max(expEBSDpattern) gt 0)) then Efit_showpattern
+	endcase
+
         'DEToL' : begin
                 Efitdata.detoL = Core_WidgetChoiceEvent( Efitwidget_s.fitOnOff[0],  'Fit scintillator distance? ')
+                if (Efitdata.detoL eq 0) then fitOnOff[0] = 0 else fitOnOff[0] = 1
+                if (total(fitOnOff) gt 0) then begin
+                  WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =1
+                end else begin
+                  WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =0
+                endelse
 	endcase
+
         'DEToOMEGA' : begin
                 Efitdata.detoomega = Core_WidgetChoiceEvent( Efitwidget_s.fitOnOff[1],  'Fit sample omega angle? ')
+                if (Efitdata.detoL eq 0) then fitOnOff[1] = 0 else fitOnOff[1] = 1
+                if (total(fitOnOff) gt 0) then begin
+                  WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =1
+                end else begin
+                  WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =0
+                endelse
 	endcase
+
         'DEToXPC' : begin
                 Efitdata.detoxpc = Core_WidgetChoiceEvent( Efitwidget_s.fitOnOff[2],  'Fit pattern center x? ')
+                if (Efitdata.detoL eq 0) then fitOnOff[2] = 0 else fitOnOff[2] = 1
+                if (total(fitOnOff) gt 0) then begin
+                  WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =1
+                end else begin
+                  WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =0
+                endelse
 	endcase
+
         'DEToYPC' : begin
                 Efitdata.detoypc = Core_WidgetChoiceEvent( Efitwidget_s.fitOnOff[3],  'Fit pattern center y? ')
+                if (Efitdata.detoL eq 0) then fitOnOff[3] = 0 else fitOnOff[3] = 1
+                if (total(fitOnOff) gt 0) then begin
+                  WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =1
+                end else begin
+                  WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =0
+                endelse
 	endcase
+
         'DEToGAMMA' : begin
                 Efitdata.detogamma = Core_WidgetChoiceEvent( Efitwidget_s.fitOnOff[4],  'Fit intensity gammma? ') 
+                if (Efitdata.detoL eq 0) then fitOnOff[4] = 0 else fitOnOff[4] = 1
+                if (total(fitOnOff) gt 0) then begin
+                  WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =1
+                end else begin
+                  WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =0
+                endelse
 	endcase
+
         'DETophi1' : begin
                 Efitdata.detophi1 = Core_WidgetChoiceEvent( Efitwidget_s.fitOnOff[3],  'Fit Euler phi1 angle? ')
+                if (Efitdata.detoL eq 0) then fitOnOff[5] = 0 else fitOnOff[5] = 1
+                if (total(fitOnOff) gt 0) then begin
+                  WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =1
+                end else begin
+                  WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =0
+                endelse
 	endcase
+
         'DETophi' : begin
                 Efitdata.detophi = Core_WidgetChoiceEvent( Efitwidget_s.fitOnOff[3],  'Fit Euler Phi angle? ')
+                if (Efitdata.detoL eq 0) then fitOnOff[6] = 0 else fitOnOff[6] = 1
+                if (total(fitOnOff) gt 0) then begin
+                  WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =1
+                end else begin
+                  WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =0
+                endelse
 	endcase
+
         'DETophi2' : begin
                 Efitdata.detophi2 = Core_WidgetChoiceEvent( Efitwidget_s.fitOnOff[3],  'Fit Euler phi2 angle? ')
+                if (Efitdata.detoL eq 0) then fitOnOff[7] = 0 else fitOnOff[7] = 1
+                if (total(fitOnOff) gt 0) then begin
+                  WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =1
+                end else begin
+                  WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =0
+                endelse
 	endcase
+
         'DISPLAYOPTION' : begin   ; this comes from the Efit_control widget...
                 Efitdata.displayoption = Core_WidgetChoiceEvent( Efitwidget_s.displayoption, 'Set option to ',/value)
+                Efit_showpattern
         endcase
+
         'PATTERNFORMAT' : begin
                 Efitdata.imageformat = Core_WidgetChoiceEvent( Efitwidget_s.imageformat, 'Set option to ',/value)
         endcase

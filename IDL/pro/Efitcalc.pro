@@ -38,14 +38,20 @@
 ;> @date 10/15/15 MDG 1.0 first attempt at a user-friendly interface
 ;> @date 10/17/15 MDG 1.1 integrated with EMdymod.f90 routine
 ;--------------------------------------------------------------------------
-function Efitcalc,recompute
+pro Efitcalc,dummy
 compile_opt idl2 
 
 common Efit_widget_common, Efitwidget_s
 common Efit_data_common, Efitdata
 
 common EBSD_EMsoft, MCxtalname, MCmode, nsx, nsy, EkeV, Ehistmin, Ebinsize, depthmax, depthstep, MCsig, MComega, $
-                    numEbins, numzbins, accum_e, accum_z, Masterenergyfile, npx, npy, nnE, numset, mLPNH, mLPSH, Masterxtalname, expEBSDpattern
+                    numEbins, numzbins, accum_e, accum_z, Masterenergyfile, npx, npy, nnE, numset, mLPNH, mLPSH, Masterxtalname, expEBSDpattern, EBSDpattern
+
+; first convert the Euler angle triplet (in degrees) to a quaternion
+Efitdata.quaternion = Core_eu2qu( [Efitdata.detphi1, Efitdata.detphi, Efitdata.detphi2] )
+
+; determine whether or not we can re-use the rgx, rgy, rgz arrays in SingleEBSDPattern
+; if the sum of the first four fitOnOff values is zero, and the remainder is not, then recompute = 1 after the first call_external, else 0
 
 ; set up the ipar and fpar arrays; all integers must be long64 !!!!
 nipar = long(8)
@@ -79,9 +85,9 @@ res = call_external(Efitdata.EMsoftpathname+'Build/Bin/libEMSoftdylib.dylib', 'S
 
 if (res ne 1.0) then begin
   Core_print,'SingleEBSDPatternWrapper return code = '+string(res,format="(F4.1)")
-end else begin
-  Core_print,'SingleEBSDPatternWrapper completed '
-endelse
+end 
 
-return,EBSDpattern
+wset,Efitdata.drawID
+Efit_showpattern
+
 end

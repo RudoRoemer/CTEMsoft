@@ -43,12 +43,95 @@ common Efit_widget_common, Efitwidget_s
 common Efit_data_common, Efitdata
 
 common EBSD_EMsoft, MCxtalname, MCmode, nsx, nsy, EkeV, Ehistmin, Ebinsize, depthmax, depthstep, MCsig, MComega, $
-                    numEbins, numzbins, accum_e, accum_z, Masterenergyfile, npx, npy, nnE, numset, mLPNH, mLPSH, Masterxtalname, expEBSDpattern
+                    numEbins, numzbins, accum_e, accum_z, Masterenergyfile, npx, npy, nnE, numset, mLPNH, mLPSH, Masterxtalname, expEBSDpattern, EBSDpattern
 
-; for now, let's just do the basic display.
+; first we prepare the pattern (scaling, binning, flips, mask, ... 
+if (Efitdata.showcircularmask eq 1) then begin
+  radius = min([Efitdata.detnumsx,Efitdata.detnumsy])
+  d = dist(radius)
+  d = shift(d,radius/2,radius/2)
+  d[where (d le radius/2)] = 1.0
+  d[where (d gt radius/2)] = 0.0
+  mask = replicate(0.0,Efitdata.detnumsx,Efitdata.detnumsy)
+  if (radius eq Efitdata.detnumsx) then begin
+    i = (Efitdata.detnumsy - radius)/2
+    mask[0,i] = d
+  end else begin
+    i = (Efitdata.detnumsx - radius)/2
+    mask[i,0] = d
+  endelse
+end else begin
+  mask = 1.0
+endelse
 
-wset,Efitdata.drawID
-tvscl,expEBSDpattern
+if (max(EBSDpattern) gt 0.0) then begin
+
+; apply the correct intensity scaling
+  Epat = EBSDpattern^Efitdata.detgamma
+
+; try a high pass filter
+  if (Efitdata.hipassonoff eq 1) then begin
+    hipass = DIGITAL_FILTER(Efitdata.hipasscutoff,1.0,50,7)
+    Epat = Convol(Epat,hipass)
+  endif
+
+; remove any ramp
+  if (Efitdata.ramponoff eq 1) then begin
+    Eav = mean(Epat)
+    ramp = sfit(Epat,1)
+    Epat = Epat/ramp
+    Epat = Epat * Eav/mean(Epat)
+  endif
+
+  if (Efitdata.smoothval ne 0) then begin
+    Epat = smooth(Epat,2*Efitdata.smoothval+1)
+  endif
+end else Epat = replicate(0.0,Efitdata.detnumsx,Efitdata.detnumsy)
+
+case (Efitdata.displayoption) of 
+        0 : begin       ; experimental pattern only
+          mi = min(expEBSDpattern,max=ma)
+          WIDGET_CONTROL, set_value=string(mi,format="(F9.2)"), Efitwidget_s.min
+          WIDGET_CONTROL, set_value=string(ma,format="(F9.2)"), Efitwidget_s.max
+          tvscl,expEBSDpattern * mask
+        endcase
+
+        1 : begin       ; simulated pattern only
+          mi = min(Epat,max=ma)
+          WIDGET_CONTROL, set_value=string(mi,format="(F9.2)"), Efitwidget_s.min
+          WIDGET_CONTROL, set_value=string(ma,format="(F9.2)"), Efitwidget_s.max
+          tvscl,Epat * mask
+        endcase
+
+        2 : begin       ; difference pattern
+          z = abs(float(bytscl(expEBSDpattern)) - float(bytscl(Epat))) 
+          mi = min(z,max=ma)
+          WIDGET_CONTROL, set_value=string(mi,format="(F9.2)"), Efitwidget_s.min
+          WIDGET_CONTROL, set_value=string(ma,format="(F9.2)"), Efitwidget_s.max
+          tvscl,z * mask
+        endcase
+
+        3 : begin       ; overlap pattern 
+          z = float(bytscl(expEBSDpattern)) + float(bytscl(Epat))
+          mi = min(z,max=ma)
+          WIDGET_CONTROL, set_value=string(mi,format="(F9.2)"), Efitwidget_s.min
+          WIDGET_CONTROL, set_value=string(ma,format="(F9.2)"), Efitwidget_s.max
+          tvscl,z * mask
+        endcase
+
+        4 : begin       ; overlap pattern RGB 
+          c = bytarr(3,Efitdata.detnumsx,Efitdata.detnumsy)
+          c[0,0:*,0:*] = bytscl(expEBSDpattern*mask)
+          c[1,0:*,0:*] = bytscl(Epat*mask)
+          c[2,0:*,0:*] = bytscl(Epat*mask)
+          WIDGET_CONTROL, set_value='---', Efitwidget_s.min
+          WIDGET_CONTROL, set_value='---', Efitwidget_s.max
+          tvscl,c,true=1
+        endcase
+
+else: MESSAGE, "Efit_showpattern: unknown display option"
+
+endcase
 
 
 end

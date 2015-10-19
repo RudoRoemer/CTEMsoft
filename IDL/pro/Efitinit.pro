@@ -48,7 +48,7 @@ common Efit_widget_common, Efitwidget_s
 common Efit_data_common, Efitdata
 
 common EBSD_EMsoft, MCxtalname, MCmode, nsx, nsy, EkeV, Ehistmin, Ebinsize, depthmax, depthstep, MCsig, MComega, $
-                    numEbins, numzbins, accum_e, accum_z, Masterenergyfile, npx, npy, nnE, numset, mLPNH, mLPSH, Masterxtalname, expEBSDpattern
+                    numEbins, numzbins, accum_e, accum_z, Masterenergyfile, npx, npy, nnE, numset, mLPNH, mLPSH, Masterxtalname, expEBSDpattern, EBSDpattern
 
 
 Core_Print,'Loading data files'
@@ -188,5 +188,7 @@ H5G_close,group2_id
 H5F_close,file_id
 
 Core_Print,'   -> Monte Carlo file read'
+
+
 
 end

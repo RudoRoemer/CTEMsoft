@@ -44,6 +44,10 @@ common Efit_data_common, Efitdata
 common CommonCore, status, logmode, logunit
 common FitParameters, nFit, fitName, defValue, fitValue, fitStep, fitOnOff, fitManualStep, fitManualUpDown, fitUserLabel, fitStepLabel, fitOnOffLabel, fitUpLabel, fitDownLabel, fitManualStepLabel
 
+common EBSD_EMsoft, MCxtalname, MCmode, nsx, nsy, EkeV, Ehistmin, Ebinsize, depthmax, depthstep, MCsig, MComega, $
+                    numEbins, numzbins, accum_e, accum_z, Masterenergyfile, npx, npy, nnE, numset, mLPNH, mLPSH, Masterxtalname, expEBSDpattern, EBSDpattern
+
+
 
 if (event.id eq Efitwidget_s.base) then begin
   Efitdata.xlocation = event.x
@@ -67,6 +71,7 @@ end else begin
 		  WIDGET_CONTROL, Efitwidget_s.displaybase, /DESTROY
                 endif 
                 Efit_display
+                EBSDpattern = replicate(0.0,Efitdata.detnumsx,Efitdata.detnumsy)
 ; and draw the pattern in the current display mode
                 Efit_showpattern
         endcase
@@ -81,17 +86,7 @@ end else begin
         endcase
 
         'GOFIT': begin
-Core_Print,'Starting single pattern computation'
-; first convert the Euler angle triplet (in degrees) to a quaternion
-                Efitdata.quaternion = Core_eu2qu( [Efitdata.detphi1, Efitdata.detphi, Efitdata.detphi2] )
-
-; determine whether or not we can re-use the rgx, rgy, rgz arrays in SingleEBSDPattern
-; if the sum of the first four fitOnOff values is zero, and the remainder is not, then recompute = 1 after the first call_external, else 0
-                recompute = 0L
-
-                EBSDpattern = EfitCalc(recompute)
-                wset,Efitdata.drawID
-                tvscl,EBSDpattern
+                EfitCalc
         endcase
 
  	'QUIT': begin
@@ -109,6 +104,41 @@ Core_Print,'Starting single pattern computation'
 		!EXCEPT=1
 	endcase
 
+; some image processing parameters
+        'HIPASSCUTOFF' : begin
+                Efitdata.hipasscutoff = Core_WidgetEvent( Efitwidget_s.hipasscutoff,  'hipass cut off set to ', '(F9.2)', /flt)
+                if (Efitdata.hipasscutoff gt 0.5) then begin
+                  Efitdata.hipasscutoff = 0.5
+                  Core_Print,'Hipass filter cutoff should be smaller than 0.5'
+                endif
+                if (Efitdata.hipasscutoff lt 0.0) then begin
+                  Efitdata.hipasscutoff = 0.0
+                  Core_Print,'Hipass filter cutoff should be positive'
+                endif
+                Efit_showpattern
+        endcase
+
+; create a JSON file with the current parameter set
+        'MKJSON' : begin
+        endcase
+
+; next are the non-refinable parameter widgets
+        'DETTHETA' : begin
+                Efitdata.dettheta = Core_WidgetEvent( Efitwidget_s.dettheta,  'Detector tilt angle set to [degree] ', '(F9.2)', /flt)
+                EfitCalc
+	endcase
+        'DETDELTA' : begin
+                Efitdata.detdelta = Core_WidgetEvent( Efitwidget_s.detdelta,  'Scintillator pixel size set to [micron] ', '(F9.2)', /flt)
+                EfitCalc
+	endcase
+        'BEAMCURRENT' : begin
+                Efitdata.detbeamcurrent = Core_WidgetEvent( Efitwidget_s.detbeamcurrent,  'Beam current set to [nA] ', '(F9.2)', /flt)
+                EfitCalc
+	endcase
+        'DWELLTIME' : begin
+                Efitdata.detdwelltime = Core_WidgetEvent( Efitwidget_s.detdwelltime,  'Dwell time set to [mu s] ', '(F9.2)', /flt)
+                EfitCalc
+	endcase
 
 
 ;fitUserLabel = ['DETL','DETOMEGA','DETXPC','DETYPC','DETGAMMA','DETphi1','DETphi','DETphi2']
@@ -171,41 +201,49 @@ Core_Print,'Starting single pattern computation'
                 Efitdata.detL += float(Efitdata.detmL)
                 WIDGET_CONTROL, SET_VALUE=string(Efitdata.detL,FORMAT='(F9.2)'), Efitwidget_s.fitValue[0]
                 Core_Print, 'Scintillator distance set to [micron] '+string(Efitdata.detL,FORMAT='(F9.2)')
+                EfitCalc
 	endcase
         'DETuOMEGA' : begin
                 Efitdata.detomega += float(Efitdata.detmomega)
                 WIDGET_CONTROL, SET_VALUE=string(Efitdata.detomega,FORMAT='(F9.2)'), Efitwidget_s.fitValue[1]
                 Core_Print, 'Sample omega angle set to [degree] '+string(Efitdata.detomega,FORMAT='(F9.2)')
+                EfitCalc
 	endcase
         'DETuXPC' : begin
                 Efitdata.detxpc += float(Efitdata.detmxpc)
                 WIDGET_CONTROL, SET_VALUE=string(Efitdata.detxpc,FORMAT='(F9.2)'), Efitwidget_s.fitValue[2]
                 Core_Print, 'Pattern center x set to [pixels] '+string(Efitdata.detxpc,FORMAT='(F9.2)')
+                EfitCalc
 	endcase
         'DETuYPC' : begin
                 Efitdata.detypc += float(Efitdata.detmypc)
                 WIDGET_CONTROL, SET_VALUE=string(Efitdata.detypc,FORMAT='(F9.2)'), Efitwidget_s.fitValue[3]
                 Core_Print, 'Pattern center y set to [pixels] '+string(Efitdata.detypc,FORMAT='(F9.2)')
+                EfitCalc
 	endcase
         'DETuGAMMA' : begin
                 Efitdata.detgamma += float(Efitdata.detmgamma)
                 WIDGET_CONTROL, SET_VALUE=string(Efitdata.detgamma,FORMAT='(F9.2)'), Efitwidget_s.fitValue[4]
                 Core_Print, 'Intensity gamma value set to '+string(Efitdata.detgamma,FORMAT='(F9.2)')
+                EfitCalc
 	endcase
         'DETuphi1' : begin
                 Efitdata.detphi1 += float(Efitdata.detmphi1)
                 WIDGET_CONTROL, SET_VALUE=string(Efitdata.detphi1,FORMAT='(F9.2)'), Efitwidget_s.fitValue[5]
                 Core_Print, 'Euler angle phi1 set to '+string(Efitdata.detphi1,FORMAT='(F9.2)')
+                EfitCalc
 	endcase
         'DETuphi' : begin
                 Efitdata.detphi += float(Efitdata.detmphi)
                 WIDGET_CONTROL, SET_VALUE=string(Efitdata.detphi,FORMAT='(F9.2)'), Efitwidget_s.fitValue[6]
                 Core_Print, 'Euler angle phi set to '+string(Efitdata.detphi,FORMAT='(F9.2)')
+                EfitCalc
 	endcase
         'DETuphi2' : begin
                 Efitdata.detphi2 += float(Efitdata.detmphi2)
                 WIDGET_CONTROL, SET_VALUE=string(Efitdata.detphi2,FORMAT='(F9.2)'), Efitwidget_s.fitValue[7]
                 Core_Print, 'Euler angle phi2 set to '+string(Efitdata.detphi2,FORMAT='(F9.2)')
+                EfitCalc
 	endcase
 
 ;fitDownLabel = ['DETdL','DETdOMEGA','DETdXPC','DETdYPC','DETdGAMMA','DETdphi1','DETdphi','DETdphi2']
@@ -213,41 +251,49 @@ Core_Print,'Starting single pattern computation'
                 Efitdata.detL -= float(Efitdata.detmL)
                 WIDGET_CONTROL, SET_VALUE=string(Efitdata.detL,FORMAT='(F9.2)'), Efitwidget_s.fitValue[0]
                 Core_Print, 'Scintillator distance set to [micron] '+string(Efitdata.detL,FORMAT='(F9.2)')
+                EfitCalc
 	endcase
         'DETdOMEGA' : begin
                 Efitdata.detomega -= float(Efitdata.detmomega)
                 WIDGET_CONTROL, SET_VALUE=string(Efitdata.detomega,FORMAT='(F9.2)'), Efitwidget_s.fitValue[1]
                 Core_Print, 'Sample omega angle set to [degree] '+string(Efitdata.detomega,FORMAT='(F9.2)')
+                EfitCalc
 	endcase
         'DETdXPC' : begin
                 Efitdata.detxpc -= float(Efitdata.detmxpc)
                 WIDGET_CONTROL, SET_VALUE=string(Efitdata.detxpc,FORMAT='(F9.2)'), Efitwidget_s.fitValue[2]
                 Core_Print, 'Pattern center x set to [pixels] '+string(Efitdata.detxpc,FORMAT='(F9.2)')
+                EfitCalc
 	endcase
         'DETdYPC' : begin
                 Efitdata.detypc -= float(Efitdata.detmypc)
                 WIDGET_CONTROL, SET_VALUE=string(Efitdata.detypc,FORMAT='(F9.2)'), Efitwidget_s.fitValue[3]
                 Core_Print, 'Pattern center y set to [pixels] '+string(Efitdata.detypc,FORMAT='(F9.2)')
+                EfitCalc
 	endcase
         'DETdGAMMA' : begin
                 Efitdata.detgamma -= float(Efitdata.detmgamma)
                 WIDGET_CONTROL, SET_VALUE=string(Efitdata.detgamma,FORMAT='(F9.2)'), Efitwidget_s.fitValue[4]
                 Core_Print, 'Intensity gamma value set to '+string(Efitdata.detgamma,FORMAT='(F9.2)')
+                EfitCalc
 	endcase
         'DETdphi1' : begin
                 Efitdata.detphi1 -= float(Efitdata.detmphi1)
                 WIDGET_CONTROL, SET_VALUE=string(Efitdata.detphi1,FORMAT='(F9.2)'), Efitwidget_s.fitValue[5]
                 Core_Print, 'Euler angle phi1 set to '+string(Efitdata.detphi1,FORMAT='(F9.2)')
+                EfitCalc
 	endcase
         'DETdphi' : begin
                 Efitdata.detphi -= float(Efitdata.detmphi)
                 WIDGET_CONTROL, SET_VALUE=string(Efitdata.detphi,FORMAT='(F9.2)'), Efitwidget_s.fitValue[6]
                 Core_Print, 'Euler angle phi set to '+string(Efitdata.detphi,FORMAT='(F9.2)')
+                EfitCalc
 	endcase
         'DETdphi2' : begin
                 Efitdata.detphi2 -= float(Efitdata.detmphi2)
                 WIDGET_CONTROL, SET_VALUE=string(Efitdata.detphi2,FORMAT='(F9.2)'), Efitwidget_s.fitValue[7]
                 Core_Print, 'Euler angle phi2 set to '+string(Efitdata.detphi2,FORMAT='(F9.2)')
+                EfitCalc
 	endcase
 
 ;fitManualStepLabel = ['DETmL','DETmOMEGA','DETmXPC','DETmYPC','DETmGAMMA','DETmphi1','DETmphi','DETmphi2']

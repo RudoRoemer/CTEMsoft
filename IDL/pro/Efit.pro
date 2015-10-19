@@ -118,6 +118,14 @@ Efitwidget_s = {widgetstruct, $
                 fitManualDown:replicate(0L,nFit), $
                 fitManualStep:replicate(0L,nFit), $
                 status:long(0), $
+                min:long(0), $
+                max:long(0), $
+                smoothval:long(0), $
+                mkjson:long(0), $
+                convcrit:long(0), $
+                ramponoff:long(0), $
+                hipassonoff:long(0), $
+                hipasscutoff:long(0), $
                 circularmask:long(0), $
                 EulerConvention:long(0), $
                 PatternOrigin:long(0), $
@@ -194,6 +202,11 @@ Efitdata = {Efitdatastruct, $
                 patternfilename:'', $
                 EBSPsuffix:'', $
                 suffix:'', $
+                ramponoff:long(0), $
+                convcrit:long(0), $
+                smoothval:long(0), $
+                hipassonoff:long(0), $
+                hipasscutoff:float(0), $
                 homefolder:'', $
                 nprefs:long(0), $
                 prefname:'~/.Efitgui.prefs', $
@@ -201,6 +214,28 @@ Efitdata = {Efitdatastruct, $
 
 Efitdata.EMsoftpathname = Core_getenv()
 Efitdata.EMdatapathname = Core_getenv(/data)
+
+;------------------------------------------------------------
+; get the display window size to 80% of the current screen size (but be careful with double screens ... )
+; We'll need to guess whether or not the user has a double screen: if the aspect ratio is larger than 16/9,
+; then there are likely two screens, so we need to limit ourselves to just the first one...
+; This should really become a core function that we can call from all programs.
+device,decomposed = 0
+device, GET_SCREEN_SIZE = scr
+
+sar = float(scr[0])/float(scr[1])
+if (sar gt (1.1*16.0/9.0)) then begin
+	scr[0] = scr[0]/2
+end
+Efitdata.scrdimy = scr[1] * 0.8
+Efitdata.scrdimx = scr[0]
+Efitdata.xlocation = Efitdata.scrdimx / 8.0
+Efitdata.ylocation = Efitdata.scrdimx / 8.0
+
+;------------------------------------------------------------
+; does the preferences file exist ?  If not, create it, otherwise read it
+; this should also fill in some of the default values for the refinable parameters and the stepsizes and such
+Efitgetpreferences,/noprint
 
 ;------------------------------------------------------------
 ;------------------------------------------------------------
@@ -227,6 +262,9 @@ fitValue[1] = Efitdata.detomega
 fitValue[2] = Efitdata.detxpc
 fitValue[3] = Efitdata.detypc
 fitValue[4] = Efitdata.detgamma
+fitValue[5] = Efitdata.detphi1
+fitValue[6] = Efitdata.detphi
+fitValue[7] = Efitdata.detphi2
 fitStep = fltarr(nFit)
 fitStep[0] = Efitdata.detsL
 fitStep[1] = Efitdata.detsomega
@@ -251,28 +289,6 @@ fitManualStep[7] = Efitdata.detmphi2
 fontstr='-adobe-new century schoolbook-bold-r-normal--14-100-100-100-p-87-iso8859-1'
 fontstrlarge='-adobe-new century schoolbook-medium-r-normal--20-140-100-100-p-103-iso8859-1'
 fontstrsmall='-adobe-new century schoolbook-medium-r-normal--14-100-100-100-p-82-iso8859-1'
-
-;------------------------------------------------------------
-; get the display window size to 80% of the current screen size (but be careful with double screens ... )
-; We'll need to guess whether or not the user has a double screen: if the aspect ratio is larger than 16/9,
-; then there are likely two screens, so we need to limit ourselves to just the first one...
-; This should really become a core function that we can call from all programs.
-device,decomposed = 0
-device, GET_SCREEN_SIZE = scr
-
-sar = float(scr[0])/float(scr[1])
-if (sar gt (1.1*16.0/9.0)) then begin
-	scr[0] = scr[0]/2
-end
-Efitdata.scrdimy = scr[1] * 0.8
-Efitdata.scrdimx = scr[0]
-Efitdata.xlocation = Efitdata.scrdimx / 8.0
-Efitdata.ylocation = Efitdata.scrdimx / 8.0
-
-;------------------------------------------------------------
-; does the preferences file exist ?  If not, create it, otherwise read it
-; this should also fill in some of the default values for the refinable parameters and the stepsizes and such
-Efitgetpreferences,/noprint
 
 ;------------------------------------------------------------
 ; create the top level widget
@@ -468,7 +484,7 @@ row2 = WIDGET_BASE(block1, $
 
 block2 = WIDGET_BASE(row2, $
 			/FRAME, $
-			XSIZE=800, $
+			XSIZE=750, $
 			/ALIGN_LEFT, $
 			/COLUMN)
 
@@ -482,37 +498,118 @@ header = WIDGET_LABEL(block2, VALUE='     Parameter          Value        Stepsi
 for i=0,nFit-1 do ret = Core_FitLine(block2, i)
 
 
-;------------------------------------------------------------
-;------------------------------------------------------------
-; we'll also need some options for background subtraction, sort of as a preprocessing step
-;  - fit 2D Gaussian shape
-;  - high-pass filter
-
 
 ;------------------------------------------------------------
 ;------------------------------------------------------------
-; and create a GO button to execute the fit routine
-; we'll need to have a cancel button as well...
-spacer = WIDGET_BASE(row2, $
-			XSIZE=150, $
-			/ALIGN_CENTER, $
-			/COLUMN)
-
 block3 = WIDGET_BASE(row2, $
-			/FRAME, $
-			XSIZE=100, $
+			XSIZE=440, $
 			/ALIGN_CENTER, $
 			/COLUMN)
 
+block4 = WIDGET_BASE(block3, $
+			/FRAME, $
+			XSIZE=430, $
+			/ALIGN_CENTER, $
+			/COLUMN)
 
-Efitwidget_s.gofit = WIDGET_BUTTON(block3, $
+; here we put a couple of image adjustment options
+;
+; hipass filter with filter coefficient
+; linear ramp on/off
+; smoothing
+;
+; the pattern should automatically update each time a parameter is changed
+; but we should also have a Update Pattern button for the first column of 
+; the refinable parameters section.
+;
+line2 = WIDGET_BASE(block4, XSIZE=410, /ROW, /ALIGN_LEFT)
+
+vals = ['Off','On']
+Efitwidget_s.hipassonoff = CW_BGROUP(line2, $
+                        vals, $
+                        /ROW, $
+                        /NO_RELEASE, $
+                        /EXCLUSIVE, $
+                        FONT=fontstr, $
+			LABEL_LEFT='Hipass filter', $
+                        EVENT_FUNC ='Efitevent', $
+                        UVALUE='HIPASSONOFF', $
+                        SET_VALUE=Efitdata.hipassonoff)
+line2 = WIDGET_BASE(block4, XSIZE=410, /ROW, /ALIGN_LEFT)
+
+Efitwidget_s.hipasscutoff = Core_WTextE(line2,'     Hipass filter low cut off ', fontstr, 250, 25, 10, 1, string(Efitdata.hipasscutoff,format="(F9.2)"),'HIPASSCUTOFF','Efit_event')
+
+; ramp filter on/off
+line2 = WIDGET_BASE(block4, XSIZE=410, /ROW, /ALIGN_LEFT)
+vals = ['Off','On']
+Efitwidget_s.ramponoff = CW_BGROUP(line2, $
+                        vals, $
+                        /ROW, $
+                        /NO_RELEASE, $
+                        /EXCLUSIVE, $
+                        FONT=fontstr, $
+			LABEL_LEFT='Linear ramp subtraction', $
+                        EVENT_FUNC ='Efitevent', $
+                        UVALUE='RAMPONOFF', $
+                        SET_VALUE=Efitdata.ramponoff)
+
+
+line2 = WIDGET_BASE(block4, XSIZE=410, /ROW, /ALIGN_LEFT)
+
+vals = ['0','3','5','7','9','11']
+Efitwidget_s.smoothval = CW_BGROUP(line2, $
+                        vals, $
+                        /ROW, $
+                        /NO_RELEASE, $
+                        /EXCLUSIVE, $
+                        FONT=fontstr, $
+			LABEL_LEFT='Smoothing parameter', $
+                        EVENT_FUNC ='Efitevent', $
+                        UVALUE='SMOOTHVAL', $
+                        SET_VALUE=Efitdata.smoothval)
+
+
+;------------------------------------------------------------
+;------------------------------------------------------------
+block4 = WIDGET_BASE(block3, $
+			/FRAME, $
+			XSIZE=430, $
+			/ALIGN_CENTER, $
+			/COLUMN)
+
+line2 = WIDGET_BASE(block4, XSIZE=410, /ROW, /ALIGN_LEFT)
+
+vals = ['dot product','mutual information']
+Efitwidget_s.convcrit= CW_BGROUP(line2, $
+                        vals, $
+                        /ROW, $
+                        /NO_RELEASE, $
+                        /EXCLUSIVE, $
+                        FONT=fontstr, $
+			LABEL_LEFT='Fit criterion', $
+                        EVENT_FUNC ='Efitevent', $
+                        UVALUE='CONVCRIT', $
+                        SET_VALUE=Efitdata.convcrit)
+
+line2 = WIDGET_BASE(block4, XSIZE=410, /ROW, /ALIGN_LEFT)
+
+Efitwidget_s.gofit = WIDGET_BUTTON(line2, $
                                 UVALUE='GOFIT', $
                                 VALUE='Start Fit', $
                                 EVENT_PRO='Efit_event', $
                                 /ALIGN_CENTER, $
                                 SENSITIVE=0)
 
+Efitwidget_s.mkjson= WIDGET_BUTTON(line2, $
+                                UVALUE='MKJSON', $
+                                VALUE='Create JSON file', $
+                                EVENT_PRO='Efit_event', $
+                                /ALIGN_CENTER, $
+                                SENSITIVE=0)
 
+
+;------------------------------------------------------------
+;------------------------------------------------------------
 ;------------------------------------------------------------
 ;------------------------------------------------------------
 ; then we have the program message window

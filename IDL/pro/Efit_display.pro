@@ -98,6 +98,11 @@ Efitwidget_s.imageformat = CW_BGROUP(block0, $
                         UVALUE='PATTERNFORMAT', $
                         SET_VALUE=Efitdata.imageformat)
 
+; the min-max indicators
+Efitwidget_s.min = Core_WText(block0, 'Min/Max ',fontstr, 75, 25, 15, 1, '---')
+Efitwidget_s.max = Core_WText(block0, '/',fontstr, 5, 25, 15, 1, '---')
+
+
 ; finally, the draw area...
 block1 = WIDGET_BASE(Efitwidget_s.displaybase, $
 			XSIZE=Efitdata.detnumsx, $
