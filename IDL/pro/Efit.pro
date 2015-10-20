@@ -6,6 +6,9 @@
 @Efit_control
 @Efit_control_event
 @Efit_event
+@Efit_fit
+@Efit_amoeba
+@Efit_update
 @Efitgetpreferences
 @Efitwritepreferences
 @Efitgetfilename
@@ -20,6 +23,8 @@
 @Core_quat_Lp
 @Core_eu2qu
 @Core_LambertSphereToSquare
+@Core_histnd
+@Core_mind
 
 ;
 ; Copyright (c) 2015, Marc De Graef/Carnegie Mellon University
@@ -75,7 +80,7 @@ pro Efit,dummy
 common Efit_widget_common, Efitwidget_s
 common Efit_data_common, Efitdata
 common CommonCore, status, logmode, logunit
-common FitParameters, nFit, fitName, defValue, fitValue, fitStep, fitOnOff, fitManualStep, fitManualUpDown, fitUserLabel, fitStepLabel, fitOnOffLabel, fitUpLabel, fitDownLabel, fitManualStepLabel
+common FitParameters, nFit, fitName, defValue, fitValue, fitStep, fitOnOff, fitManualStep, fitManualUpDown, fitUserLabel, fitStepLabel, fitOnOffLabel, fitUpLabel, fitDownLabel, fitManualStepLabel, fitIterations
 
 !EXCEPT = 0
 logmode = 0
@@ -88,8 +93,10 @@ Efitwidget_s = {widgetstruct, $
         	base:long(0), $                    	; base widget ID
         	controlbase:long(0), $                    	; base widget ID
         	displaybase:long(0), $                    	; base widget ID
-        	cancelbutton:long(0), $                    	; base widget ID
                 displayoption:long(0), $
+                cancelbutton:long(0), $
+                cancelwidget:long(0), $
+                progress:long(0), $
                 imageformat:long(0), $
                 logodraw:long(0), $
                 logodrawid:long(0), $
@@ -121,8 +128,10 @@ Efitwidget_s = {widgetstruct, $
                 min:long(0), $
                 max:long(0), $
                 smoothval:long(0), $
+                compute:long(0), $
                 mkjson:long(0), $
                 convcrit:long(0), $
+                fitmode:long(0), $
                 ramponoff:long(0), $
                 hipassonoff:long(0), $
                 hipasscutoff:long(0), $
@@ -143,7 +152,6 @@ Efitdata = {Efitdatastruct, $
                 ylocationdisplay:fix(0), $
                 imageformat:long(0), $
                 displayoption:long(0), $
-                cancelfit:long(0), $
                 drawID:long(0), $
                 mpfilename:'', $
                 energyfilename:'', $
@@ -202,6 +210,8 @@ Efitdata = {Efitdatastruct, $
                 patternfilename:'', $
                 EBSPsuffix:'', $
                 suffix:'', $
+                fitmode:long(0), $
+                compute:long(0), $
                 ramponoff:long(0), $
                 convcrit:long(0), $
                 smoothval:long(0), $
@@ -592,7 +602,28 @@ Efitwidget_s.convcrit= CW_BGROUP(line2, $
                         SET_VALUE=Efitdata.convcrit)
 
 line2 = WIDGET_BASE(block4, XSIZE=410, /ROW, /ALIGN_LEFT)
+vals = ['free','detector','orientation']
+Efitwidget_s.fitmode = CW_BGROUP(line2, $
+                        vals, $
+                        /ROW, $
+                        /NO_RELEASE, $
+                        /EXCLUSIVE, $
+                        FONT=fontstr, $
+			LABEL_LEFT='Fit mode', $
+                        EVENT_FUNC ='Efitevent', $
+                        UVALUE='FITMODE', $
+                        SET_VALUE=Efitdata.fitmode)
 
+
+line2 = WIDGET_BASE(block4, XSIZE=410, /ROW, /ALIGN_LEFT)
+Efitwidget_s.compute = WIDGET_BUTTON(line2, $
+                                UVALUE='COMPUTE', $
+                                VALUE='Compute', $
+                                EVENT_PRO='Efit_event', $
+                                /ALIGN_CENTER, $
+                                SENSITIVE=0)
+
+line2 = WIDGET_BASE(block4, XSIZE=410, /ROW, /ALIGN_LEFT)
 Efitwidget_s.gofit = WIDGET_BUTTON(line2, $
                                 UVALUE='GOFIT', $
                                 VALUE='Start Fit', $
@@ -600,6 +631,10 @@ Efitwidget_s.gofit = WIDGET_BUTTON(line2, $
                                 /ALIGN_CENTER, $
                                 SENSITIVE=0)
 
+Efitwidget_s.progress = Core_WText(line2,'convergence parameter', fontstr, 200, 25, 60, 1, string(0.0,FORMAT="(F12.6)"))
+
+
+line2 = WIDGET_BASE(block4, XSIZE=410, /ROW, /ALIGN_LEFT)
 Efitwidget_s.mkjson= WIDGET_BUTTON(line2, $
                                 UVALUE='MKJSON', $
                                 VALUE='Create JSON file', $

@@ -42,11 +42,12 @@ pro Efit_event,event
 common Efit_widget_common, Efitwidget_s
 common Efit_data_common, Efitdata
 common CommonCore, status, logmode, logunit
-common FitParameters, nFit, fitName, defValue, fitValue, fitStep, fitOnOff, fitManualStep, fitManualUpDown, fitUserLabel, fitStepLabel, fitOnOffLabel, fitUpLabel, fitDownLabel, fitManualStepLabel
+common FitParameters, nFit, fitName, defValue, fitValue, fitStep, fitOnOff, fitManualStep, fitManualUpDown, fitUserLabel, fitStepLabel, fitOnOffLabel, fitUpLabel, fitDownLabel, fitManualStepLabel, fitIterations
 
 common EBSD_EMsoft, MCxtalname, MCmode, nsx, nsy, EkeV, Ehistmin, Ebinsize, depthmax, depthstep, MCsig, MComega, $
                     numEbins, numzbins, accum_e, accum_z, Masterenergyfile, npx, npy, nnE, numset, mLPNH, mLPSH, Masterxtalname, expEBSDpattern, EBSDpattern
 
+common Efitdisplaycommon, mask, maskready, expvector
 
 
 if (event.id eq Efitwidget_s.base) then begin
@@ -73,6 +74,7 @@ end else begin
                 Efit_display
                 EBSDpattern = replicate(0.0,Efitdata.detnumsx,Efitdata.detnumsy)
 ; and draw the pattern in the current display mode
+                maskready = 0
                 Efit_showpattern
         endcase
 
@@ -81,12 +83,17 @@ end else begin
 		Efitgetfilename,validfile,/MPFILE
                 if (validfile eq 1) then begin
                   Efitinit
+                  WIDGET_CONTROL, Efitwidget_s.compute, sensitive=1
                   WIDGET_CONTROL, Efitwidget_s.gofit, sensitive=1
                 endif
         endcase
 
-        'GOFIT': begin
+        'COMPUTE': begin
                 EfitCalc
+        endcase
+
+        'GOFIT': begin
+                Efit_fit
         endcase
 
  	'QUIT': begin

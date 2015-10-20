@@ -45,8 +45,11 @@ common Efit_data_common, Efitdata
 common EBSD_EMsoft, MCxtalname, MCmode, nsx, nsy, EkeV, Ehistmin, Ebinsize, depthmax, depthstep, MCsig, MComega, $
                     numEbins, numzbins, accum_e, accum_z, Masterenergyfile, npx, npy, nnE, numset, mLPNH, mLPSH, Masterxtalname, expEBSDpattern, EBSDpattern
 
+common Efitdisplaycommon, mask, maskready, expvector
+
 ; first we prepare the pattern (scaling, binning, flips, mask, ... 
-if (Efitdata.showcircularmask eq 1) then begin
+if (maskready eq 0) then begin
+ if (Efitdata.showcircularmask eq 1) then begin
   radius = min([Efitdata.detnumsx,Efitdata.detnumsy])
   d = dist(radius)
   d = shift(d,radius/2,radius/2)
@@ -60,9 +63,11 @@ if (Efitdata.showcircularmask eq 1) then begin
     i = (Efitdata.detnumsx - radius)/2
     mask[i,0] = d
   endelse
-end else begin
+ end else begin
   mask = 1.0
-endelse
+ endelse
+ maskready = 1
+endif
 
 if (max(EBSDpattern) gt 0.0) then begin
 

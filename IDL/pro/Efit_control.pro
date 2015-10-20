@@ -36,14 +36,14 @@
 ;> @brief Generates a controller widget for the simulated EBSD pattern display
 ;
 ;> @date 10/15/15 MDG 1.0 first attempt at a user-friendly interface
+;> @date 10/20/15 MDG 1.1 removed cancel button
 ;--------------------------------------------------------------------------
 pro Efit_control,dummy
 
 common Efit_widget_common, Efitwidget_s
 common Efit_data_common, Efitdata
 
-; the controller will have only two components: a list op display options and 
-; a Cancel Fit button that will interrupt the fitting routine if one is ongoing.
+; the controller will have only one components: a list op display options 
 
 ; a few font strings (this will need to be redone for Windows systems)
 fontstr='-adobe-new century schoolbook-bold-r-normal--14-100-100-100-p-87-iso8859-1'
@@ -60,13 +60,6 @@ Efitwidget_s.controlbase = WIDGET_BASE(TITLE='Display Control Panel', $
 			EVENT_PRO='Efit_control_event', $
                         XOFFSET=Efitdata.xlocationcontrol, $
                         YOFFSET=Efitdata.ylocationcontrol)
-
-Efitwidget_s.cancelbutton = WIDGET_BUTTON(Efitwidget_s.controlbase, $
-                                UVALUE='CANCELFIT', $
-                                VALUE='Cancel Current Fit', $
-                                EVENT_PRO='Efit_control_event', $
-                                SENSITIVE=0, $
-                                /FRAME)
 
 vals = [' Display Experimental Pattern',' Display Simulated Pattern',' Display Difference Pattern',' Display Overlap Pattern',' Display Color Overlap']
 Efitwidget_s.displayoption = CW_BGROUP(Efitwidget_s.controlbase, $

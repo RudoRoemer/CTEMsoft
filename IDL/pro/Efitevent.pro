@@ -46,8 +46,7 @@ common Efit_data_common, Efitdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
 common CommonCore, status, logmode, logunit
-common FitParameters, nFit, fitName, defValue, fitValue, fitStep, fitOnOff, fitManualStep, fitManualUpDown, fitUserLabel, fitStepLabel, fitOnOffLabel, fitUpLabel, fitDownLabel, fitManualStepLabel
-
+common FitParameters, nFit, fitName, defValue, fitValue, fitStep, fitOnOff, fitManualStep, fitManualUpDown, fitUserLabel, fitStepLabel, fitOnOffLabel, fitUpLabel, fitDownLabel, fitManualStepLabel, fitIterations
 
 common EBSD_EMsoft, MCxtalname, MCmode, nsx, nsy, EkeV, Ehistmin, Ebinsize, depthmax, depthstep, MCsig, MComega, $
                     numEbins, numzbins, accum_e, accum_z, Masterenergyfile, npx, npy, nnE, numset, mLPNH, mLPSH, Masterxtalname, expEBSDpattern, EBSDpattern
@@ -57,9 +56,29 @@ WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
 IF N_ELEMENTS(eventval) EQ 0 THEN RETURN,eventval
 
 CASE eventval OF
+        'FITMODE' : begin
+                oldmode = Efitdata.fitmode
+                Efitdata.fitmode = Core_WidgetChoiceEvent( Efitwidget_s.fitmode,  'Fit mode? ',/value)
+                if ((oldmode ne 0) and (Efitdata.fitmode eq 0)) then begin
+; reset the fitOnOff parameters to off for all of them...
+                  for i=0,nFit-1 do WIDGET_CONTROL, set_value=0, Efitwidget_s.fitOnOff[i]
+                endif
+                if (Efitdata.fitmode eq 1) then begin
+                  for i=0,4 do WIDGET_CONTROL, set_value=1, Efitwidget_s.fitOnOff[i]
+                  for i=5,nFit-1 do WIDGET_CONTROL, set_value=0, Efitwidget_s.fitOnOff[i]
+                  fitOnOff[0:4] = 1L
+                  fitOnOff[5:*] = 0L
+                endif
+                if (Efitdata.fitmode eq 2) then begin
+                  for i=0,4 do WIDGET_CONTROL, set_value=0, Efitwidget_s.fitOnOff[i]
+                  for i=5,nFit-1 do WIDGET_CONTROL, set_value=1, Efitwidget_s.fitOnOff[i]
+                  fitOnOff[0:4] = 0L
+                  fitOnOff[5:*] = 1L
+                endif
+        endcase
+
         'CONVCRIT' : begin
                 Efitdata.convcrit = Core_WidgetChoiceEvent( Efitwidget_s.convcrit,  'Convergence criterion? ')
-                if ((max(EBSDpattern) gt 0) or (max(expEBSDpattern) gt 0)) then Efit_showpattern
         endcase
 
         'SMOOTHVAL' : begin

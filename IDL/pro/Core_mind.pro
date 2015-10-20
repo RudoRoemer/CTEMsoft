@@ -26,26 +26,58 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; EMsoft:Efit_control_event.pro
+; EMsoft:Core_mind.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: Efit_control_event.pro
+; PROGRAM: Core_mind.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief main event handler for Efit_control.pro routine
+;> @brief special event handler for all the CW_BGROUP calls, since CW_BGROUP does not support event_pro
 ;
-;> @date 10/13/15 MDG 1.0 first attempt at a user-friendly interface
+;> @date 03/19/14 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro Efit_control_event,event
+function Core_mind,ndhist,level=level
+;
+; computes the mutual information for a set of n images
+;
+; input: the normalized n-dimensional histogram, as computed by new_hist_nd(array,binsize,/normalize)
+;
+; output: the higher dimensional mutual information
+;
+; The idea is that we compute the n-dimensional joint histogram only once,
+; and then project it down into lower dimensions for the computation of 
+; all the image entropies...
+;
+; This routine calls itself recursively with the lower dimensional joint histograms
+; as input ...
+;
+; version 1, MDG/EIC, 3/17/10
+;> @date 10/20/15 MDG 1.1 adapted for Efit.pro routine
 
-common Efit_widget_common, Efitwidget_s
-common Efit_data_common, Efitdata
+if arg_present(level) then level += 1 else level = 0
 
-if (event.id eq Efitwidget_s.controlbase) then begin
-  Efitdata.xlocationcontrol = event.x
-  Efitdata.ylocationcontrol = event.y-25
+; get the dimensions to determine the sign of this contribution
+sz = size(ndhist,/dimension)
+szsz = size(sz,/dimension)
+if (szsz[0] mod 2 eq 0) then sign=-1 else sign=+1
+
+; compute the entropy for this level of recursion
+q = where(ndhist ne 0.0,cnt)
+if (cnt ne 0) then H = -sign*total(ndhist[q] * alog(ndhist[q]))/factorial(level) else begin
+	print,'Warning: All joint histogram entries are zero'
+	return,-1
+endelse
+
+; now recursively call this routine for all the lower level projections
+if (szsz[0] gt 1) then begin
+  for i=1,szsz[0] do begin
+    H += Core_mind(reform(total(ndhist,i)),level=level)
+    level -= 1
+  endfor
+endif
+
+return,H
 end
 
-end
 
