@@ -1004,34 +1004,38 @@ if (twolayerflag) then
     dataset = 'tS'
     call json_add(inp, dataset, ecpnl%tS); call JSON_failtest(error_cnt)
 
-    n_real = 4
+    n_real = 5
     allocate(reallist(n_real),io_real(n_real),stat=istat)
     if (istat .ne. 0) then
         call FatalError('HDFwriteECPNameList','Cannot allocate the reallist array')
     end if
 
 ! write all the single reals
-    io_real = (/ ecpnl%dmin, ecpnl%thetac, &
+    io_real = (/ ecpnl%dmin, ecpnl%thetac, sngl(ecpnl%sampletilt), &
              ecpnl%filmthickness, ecpnl%gammavalue /)
     reallist(1) = 'dmin'
     reallist(2) = 'thetac'
-    reallist(3) = 'filmthickness'
-    reallist(4) = 'gammavalue'
+    reallist(3) = 'sampletilt'
+    reallist(4) = 'filmthickness'
+    reallist(5) = 'gammavalue'
+
     call JSON_writeNMLreals(inp, io_real, reallist, n_real, error_cnt)
 
 else
 
-    n_real = 2
+    n_real = 3
     allocate(reallist(n_real),io_real(n_real),stat=istat)
     if (istat .ne. 0) then
         call FatalError('HDFwriteECPNameList','Cannot allocate the reallist array')
     end if
 
 ! write all the single reals
-    io_real = (/ ecpnl%thetac, &
+   io_real = (/ ecpnl%thetac, sngl(ecpnl%sampletilt), &
                  ecpnl%gammavalue /)
     reallist(1) = 'thetac'
-    reallist(2) = 'gammavalue'
+    reallist(2) = 'sampletilt'
+    reallist(3) = 'gammavalue'
+
     call JSON_writeNMLreals(inp, io_real, reallist, n_real, error_cnt)
 
 end if

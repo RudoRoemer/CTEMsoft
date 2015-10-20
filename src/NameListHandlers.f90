@@ -984,10 +984,7 @@ integer(kind=irg)       :: tF(3)
 integer(kind=irg)       :: tS(3)
 real(kind=sgl)          :: dmin
 real(kind=sgl)          :: thetac
-real(kind=sgl)          :: startthick
-real(kind=sgl)          :: thickinc
 real(kind=sgl)          :: filmthickness
-character(7)            :: compmode
 character(fnlen)        :: xtalname
 character(fnlen)        :: xtalname2
 character(fnlen)        :: energyfile
@@ -1001,12 +998,13 @@ character(3)            :: eulerconvention
 integer(kind=irg)       :: numangle_anglefile
 real(kind=sgl)          :: gammavalue
 character(3)            :: outputformat
+real(kind=dbl)          :: sampletilt
 
 ! namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, distort, abcdist, albegadist, ktmax, &
 namelist /ECPlist/ stdout, xtalname, xtalname2, fn_f, fn_s, dmin, filmthickness, anglefile, &
-                   startthick, thickinc, nthreads, thetac, compmode, npix, maskpattern, eulerconvention, &
+                   nthreads, thetac, npix, maskpattern, eulerconvention, &
                    gF, gS, tF, tS, energyfile, filmfile, subsfile, masterfile, datafile, &
-                   numangle_anglefile, gammavalue, outputformat
+                   numangle_anglefile, gammavalue, outputformat, sampletilt
 
 ! default values
 stdout = 6                              ! standard output
@@ -1020,10 +1018,7 @@ npix = 200                              ! number of pixels in final image
 nthreads = 1                            ! number of OpenMP threads
 dmin = 0.04                             ! smallest d-spacing to include in dynamical matrix [nm]
 thetac = 0.0                            ! beam convergence in mrad (either ktmax or thetac must be given)
-startthick = 0.0                        ! starting thickness [nm]
-thickinc = 0.0                          ! thickness increment
 filmthickness = 0.0                     ! 0.0 if there is no film
-compmode = 'Blochwv'                    ! 'Blochwv' or 'ScatMat' solution mode (Bloch is default)
 xtalname = 'undefined'                  ! initial value to check that the keyword is present in the nml file
 xtalname2 = 'undefined'                 ! initial value for substrate structure name
 energyfile = 'undefined'
@@ -1037,6 +1032,7 @@ eulerconvention = 'hkl'
 numangle_anglefile = 0
 gammavalue = 1.0
 outputformat = 'gui'
+sampletilt = 0.D0
 
 if (present(initonly)) then
   if (initonly) skipread = .TRUE.
@@ -1065,10 +1061,7 @@ ecpnl%npix = npix
 ecpnl%nthreads = nthreads
 ecpnl%dmin = dmin
 ecpnl%thetac = thetac
-ecpnl%startthick = startthick
-ecpnl%thickinc = thickinc
 ecpnl%filmthickness = filmthickness
-ecpnl%compmode = compmode
 ecpnl%datafile = datafile
 ecpnl%xtalname = xtalname
 ecpnl%xtalname2 = xtalname2
@@ -1082,6 +1075,7 @@ ecpnl%numangle_anglefile = numangle_anglefile
 ecpnl%eulerconvention = eulerconvention
 ecpnl%gammavalue = gammavalue
 ecpnl%outputformat = outputformat
+ecpnl%sampletilt = sampletilt
 
 end subroutine GetECPNameList
 

@@ -264,10 +264,7 @@ type ECPNameListType
         integer(kind=irg)       :: tF(3)
         integer(kind=irg)       :: tS(3)
         real(kind=sgl)          :: thetac
-        real(kind=sgl)          :: startthick
-        real(kind=sgl)          :: thickinc
         real(kind=sgl)          :: filmthickness
-        character(7)            :: compmode
         character(1)            :: maskpattern
         character(fnlen)        :: xtalname
         character(fnlen)        :: xtalname2
@@ -280,6 +277,7 @@ type ECPNameListType
         character(3)            :: eulerconvention
         real(kind=sgl)          :: gammavalue
         character(3)            :: outputformat
+        real(kind=dbl)          :: sampletilt
 ! everything below here is not part of the namelist input structure, but is used to pass arguments to subroutines
         integer(kind=irg)       :: numangle
         integer(kind=irg)       :: numangle_anglefile

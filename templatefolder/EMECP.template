@@ -27,6 +27,8 @@ outputformat = 'gui'
 datafile = 'undefined'
 ! number of threads for parallel execution
 nthreads = 1
+! tilt of the sample; only one angle incorporated for now
+sampletilt = 0.D0
 
 !==============================================================
 ! the nml parameters only used in case of two layered structure

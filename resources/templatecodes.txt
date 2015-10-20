@@ -14,6 +14,7 @@
 022EMEBSD.template
 023EMEBSDoverlap.template
 030EMGAMMA.template
+039EMECPmaster.template
 040EMECP.template
 041EMECCI.template
 042EMMCOpenCL.template

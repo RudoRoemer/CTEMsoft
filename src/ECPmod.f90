@@ -485,6 +485,7 @@ end if
 
 ktmp => klist
 nullify(ktmp%next)
+ktmp%k = kk
 ktmp%i = 0
 ktmp%j = 0
 numk = numk + 1
@@ -495,7 +496,7 @@ do ii = imin, imax
            allocate(ktmp%next,stat=istat)
            ktmp => ktmp%next
            nullify(ktmp%next)
-           ktmp%k(1:3) = (/delta*ii,delta*jj,0.D0/) + kk
+           ktmp%k(1:3) = (/delta*ii,delta*jj,0.D0/) + kk(1:3)
            ktmp%k = ktmp%k/sqrt(sum(ktmp%k**2))
            ktmp%i = ii
            ktmp%j = jj
@@ -542,7 +543,7 @@ real(kind=sgl)                          :: qax(4)        ! axis-angle rotation q
 real(kind=sgl),parameter                :: dtor = 0.0174533  ! convert from degrees to radians
 integer(kind=irg)                       :: istat
 
-
+allocate(angles)
 !====================================
 ! get the angular information, either in Euler angles or in quaternions, from a file
 !====================================
@@ -580,7 +581,7 @@ if (enl%anglemode.eq.'euler') then
   end if
 
 ! convert the euler angle triplets to quaternions
-  allocate(angles%quatang(4,enl%numangle_anglefile),stat=istat)
+  allocate(angles%quatang(4,1:enl%numangle_anglefile),stat=istat)
 ! if (istat.ne.0) then ...
 
   if (present(verbose)) call Message('  -> converting Euler angles to quaternions', frm = "(A/)")
@@ -612,8 +613,7 @@ close(unit=dataunit,status='keep')
 !    angles%quatang(1:4,i) = quat_mult(qax,angles%quatang(1:4,i))
 !  end do 
 !end if
-
-write (*,*) 'completed reading Euler angles'
+call Message(' -> completed reading '//trim(enl%anglefile), frm = "(A)")
 
 end subroutine ECPreadangles
 

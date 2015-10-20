@@ -919,33 +919,35 @@ if (twolayerflag) then
     hdferr = HDF_writeDatasetIntegerArray1D(dataset, ecpnl%tS, 3, HDF_head)
     if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPNameList: unable to create tS dataset',.TRUE.)
     
-    n_real = 4
+    n_real = 5
     allocate(reallist(n_real),io_real(n_real),stat=istat)
     if (istat .ne. 0) then
         call FatalError('HDFwriteECPNameList','Cannot allocate the reallist array')
     end if
 ! write all the single reals
-    io_real = (/ ecpnl%dmin, ecpnl%thetac, &
+    io_real = (/ ecpnl%dmin, ecpnl%thetac, sngl(ecpnl%sampletilt), &
              ecpnl%filmthickness, ecpnl%gammavalue /)
     reallist(1) = 'dmin'
     reallist(2) = 'thetac'
-    reallist(3) = 'filmthickness'
-    reallist(4) = 'gammavalue'
+    reallist(3) = 'sampletilt'
+    reallist(4) = 'filmthickness'
+    reallist(5) = 'gammavalue'
 
     call HDF_writeNMLreals(HDF_head, io_real, reallist, n_real)
 
 else
 
-    n_real = 2
+    n_real = 3
     allocate(reallist(n_real),io_real(n_real),stat=istat)
     if (istat .ne. 0) then
         call FatalError('HDFwriteECPNameList','Cannot allocate the reallist array')
     end if
 ! write all the single reals
-    io_real = (/ ecpnl%thetac, &
+    io_real = (/ ecpnl%thetac, sngl(ecpnl%sampletilt), &
                  ecpnl%gammavalue /)
     reallist(1) = 'thetac'
-    reallist(2) = 'gammavalue'
+    reallist(2) = 'sampletilt'
+    reallist(3) = 'gammavalue'
 
     call HDF_writeNMLreals(HDF_head, io_real, reallist, n_real)
 

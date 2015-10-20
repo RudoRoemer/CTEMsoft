@@ -63,7 +63,7 @@ progdesc = 'Master pattern generation for Electron channeling pattern'
 call EMsoft(progname, progdesc)
 
 ! deal with the command line arguments, if any
-call Interpret_Program_Arguments(nmldeffile,2,(/ 0, 40 /), progname)
+call Interpret_Program_Arguments(nmldeffile,2,(/ 39 /), progname)
 
 ! deal with the namelist stuff
 call GetECPMasterNameList(nmldeffile,ecpnl)
@@ -155,7 +155,7 @@ character(fnlen, KIND=c_char),allocatable,TARGET :: stringarray(:)
 character(fnlen,kind=c_char)                     :: line2(1)
 
 
-logical                 :: verbose, usehex, switchmirror
+logical                             :: verbose, usehex, switchmirror
 
 type(unitcell), pointer             :: cell
 type(gnode),save                    :: rlp
@@ -168,6 +168,7 @@ type(reflisttype),pointer           :: reflist, firstw,rltmp
 integer(kind=irg)                   :: nthreads,TID,ix,hdferr,num_el,etotal, nlines,nsx,nsy,SelE
 type(HDFobjectStackType),pointer    :: HDF_head
 character(fnlen)                    :: dataset, instring
+character(fnlen)                    :: mode
 integer(HSIZE_T)                    :: dims4(4), cnt4(4), offset4(4), dims3(3), cnt3(3), offset3(3)
 
 interface
@@ -226,7 +227,7 @@ energyfile = trim(EMdatapathname)//trim(ecpnl%energyfile)
 inquire(file=energyfile, exist=f_exists)
 
 if (.not.f_exists) then
-call FatalError('ComputeMasterPattern','Monte Carlo input file does not exist')
+    call FatalError('ComputeMasterPattern','Monte Carlo input file does not exist')
 end if
 
 ! open the MC file using the default properties.
@@ -265,6 +266,14 @@ depthmax = HDF_readDatasetDouble(dataset, HDF_head)
 dataset = 'depthstep'
 depthstep = HDF_readDatasetDouble(dataset, HDF_head)
 
+dataset = 'mode'
+stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+mode = trim(stringarray(1))
+
+if (trim(mode) .ne. 'bse1') then
+    call FatalError('ECmasterpattern','The mode is not bse1...select the correct monte carlo file')
+end if
+
 ! close the name list group
 call HDF_pop(HDF_head)
 call HDF_pop(HDF_head)
@@ -274,7 +283,7 @@ groupname = 'EMData'
 hdferr = HDF_openGroup(groupname, HDF_head)
 
 ! read data items
-dataset = 'numEbins'
+dataset = 'numangle'
 numEbins = HDF_readDatasetInteger(dataset, HDF_head)
 
 dataset = 'numzbins'
@@ -327,8 +336,8 @@ call Initialize_Cell(cell,Dyn,rlp, xtalname, ecpnl%dmin, sngl(1000.0*EkeV),verbo
 ! that symmetry is handled are the modified Calckvectors routine, and the filling of the modified
 ! Lambert projections after the dynamical simulation step.  We are also changing the name of the 
 ! sr array (or srhex) to mLPNH and mLPSH (modified Lambert Projection Northern/Southern Hemisphere),
-! and we change the output HDF5 file a little as well. We need to make sure that the EMEBSD program
-! issues a warning when an old format HDF5 file is read.  
+! and we change the output HDF5 file a little as well. We need to make sure that the EMECP program
+! issues an error when an old format HDF5 file is read.  
 
 ! Here, we encode isym into a new number that describes the sampling scheme; the new schemes are 
 ! described in detail in the EBSD manual pdf file.

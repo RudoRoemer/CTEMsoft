@@ -126,15 +126,20 @@ real(kind=sgl),allocatable              :: mask(:,:), lx(:), ly(:)
 integer(kind=irg)                       :: maskradius, io_int(1), hdferr
 logical                                 :: verbose
 real(kind=sgl),allocatable              :: master_arrayNH(:,:), master_arraySH(:,:)
+real(kind=sgl),allocatable              :: anglewf(:)
+integer(kind=irg)                       :: nsig, isig
 integer(kind=irg)                       :: numk, nix, niy, nixp, niyp, i, j, ierr, &
                                            ipx, ipy, iang, idir
 real(kind=dbl)                          :: scl, x, dx, dy, dxm, dym
-real(kind=dbl)                          :: dc(3), ixy(2)
+real(kind=dbl)                          :: dc(3), ixy(2), qu(4)
 integer(kind=irg),allocatable           :: kij(:,:)
 real(kind=sgl),allocatable              :: ECPpattern(:,:), ECPpatternintd(:,:)
 real(kind=sgl)                          :: time_start, time_end, ma, mi
 character(len=1),allocatable            :: bpat(:,:)
 integer(kind=irg)                       :: TID, nthreads
+real(kind=dbl)                          :: dp, MCangle
+real(kind=dbl),parameter                :: Rtod = 57.2957795131D0
+logical                                 :: switchwfoff = .FALSE.
 
 type(HDFobjectStackType),pointer        :: HDF_head
 integer(HSIZE_T), dimension(1:3)        :: hdims, offset 
@@ -155,7 +160,6 @@ logical                                 :: overwrite = .TRUE., insert = .TRUE.
 
 call Message('opening '//trim(ecpnl%energyfile), frm = "(A)" )
 call  ECPreadMCfile(ecpnl, acc, verbose=.TRUE.)
-call Message(' -> completed reading '//trim(ecpnl%energyfile), frm = "(A)")
 
 !=================================================================
 ! read Master pattern output file and extract necessary parameters
@@ -164,15 +168,39 @@ call Message(' -> completed reading '//trim(ecpnl%energyfile), frm = "(A)")
 
 call Message('opening '//trim(ecpnl%masterfile), frm = "(A)" )
 call ECPreadMasterfile(ecpnl, master, verbose=.TRUE.)
-call Message(' -> completed reading '//trim(ecpnl%masterfile), frm = "(A)")
 
 !=================================================================
 ! reading the angle file as euler angles or quaternions
 !=================================================================
 
-call Message('opening '//trim(ecpnl%anglefile), frm = "(A)" )
+call Message(' -> opening '//trim(ecpnl%anglefile), frm = "(A)" )
 call ECPreadangles(ecpnl, angles, verbose=.TRUE.)
-call Message(' -> completed reading '//trim(ecpnl%anglefile), frm = "(A)")
+
+!=================================================================
+! get the anglewf array for detector
+!=================================================================
+
+nsig = nint((ecpnl%MCsigend - ecpnl%MCsigstart)/ecpnl%MCsigstep) + 1
+allocate(anglewf(1:nsig),stat=istat)
+if (istat .ne. 0) call FatalError('ECpattern','Cannot allocate angle weight factor arrays')
+anglewf(1:nsig) = float(sum(sum(sum(acc%accum_z,4),3),2))/float(sum(acc%accum_z))
+
+!=================================================================
+! check if there are enough angles in MC for detector geometry
+!=================================================================
+if (ecpnl%MCsigend .lt. abs(ecpnl%sampletilt) + ecpnl%thetac) then
+        call Message('Not enough angles in Monte carlo file...interpolation will be done without &
+        appropriate weight factors',frm = "(A)")
+        switchwfoff = .TRUE.
+end if
+
+if (ecpnl%MCsigstart .gt. ecpnl%thetac - abs(ecpnl%sampletilt)) then
+    call Message('Not enough angles in Monte carlo file...interpolation will be done without &
+    appropriate weight factors',frm = "(A)")
+    switchwfoff = .TRUE.
+end if
+
+
 
 !=================================================================
 ! completed reading the file; generating list of incident vectors
@@ -242,20 +270,20 @@ do i = 1,numk
    ktmp => ktmp%next
 end do
 
-allocate(mask(ecpnl%npix, ecpnl%npix),stat=istat)
+allocate(mask(-ecpnl%npix:ecpnl%npix, -ecpnl%npix:ecpnl%npix),stat=istat)
 if (istat .ne. 0) then
    call FatalError('ECpattern','could not allocate mask array')
 end if
 
 mask = 1.0
-if (ecpnl%maskpattern.eq.'y') then
-! create the circular mask in a potentially rectangular array
-  maskradius = (minval( (/ ecpnl%npix, ecpnl%npix /) ) / 2 )**2
-  allocate(lx(ecpnl%npix), ly(ecpnl%npix), stat=istat)
-  lx = (/ (float(i),i=1,ecpnl%npix) /) - float(ecpnl%npix/2)
-  ly = (/ (float(i),i=1,ecpnl%npix) /) - float(ecpnl%npix/2)
-  do i=1,ecpnl%npix
-    do j=1,ecpnl%npix
+if (ecpnl%maskpattern .eq. 'y') then
+! create the circular mask
+  maskradius = (minval( (/ ecpnl%npix, ecpnl%npix /) ) )**2
+  allocate(lx(-ecpnl%npix:ecpnl%npix), ly(-ecpnl%npix:ecpnl%npix), stat=istat)
+  lx = (/ (float(i),i=-ecpnl%npix,ecpnl%npix) /)
+  ly = (/ (float(i),i=-ecpnl%npix,ecpnl%npix) /)
+  do i= -ecpnl%npix,ecpnl%npix
+    do j= -ecpnl%npix,ecpnl%npix
       if ((lx(i)**2+ly(j)**2).gt.maskradius) mask(i,j) = 0.0
     end do
   end do
@@ -279,32 +307,64 @@ allocate(ECPpattern(-ecpnl%npix:ecpnl%npix,-ecpnl%npix:ecpnl%npix),&
 ECPpatternintd(-ecpnl%npix:ecpnl%npix,-ecpnl%npix:ecpnl%npix),stat=istat)
 ECPpattern = 0.0
 
+dataset = 'ECpatterns'
+
+if (ecpnl%outputformat .eq. 'bin') then
+    allocate(bpat(-ecpnl%npix:ecpnl%npix,-ecpnl%npix:ecpnl%npix),stat=istat)
+    if (istat .ne. 0) call FatalError('ECpatter','cannot allocate bpat array')
+    bpat = char(nint(255.0*ECPpattern))
+
+! write dictionary pattern to h5 file
+    offset = (/ 0, 0, 0 /)
+    hdims = (/ 2*ecpnl%npix+1, 2*ecpnl%npix+1, ecpnl%numangle_anglefile /)
+    dim0 = 2*ecpnl%npix+1
+    dim1 = 2*ecpnl%npix+1
+    dim2 = 1
+    hdferr = HDF_writeHyperslabCharArray3D(dataset, bpat, hdims, offset, dim0, dim1, dim2, &
+                                          HDF_head)
+end if
+
+if (ecpnl%outputformat .eq. 'gui') then
+    offset = (/ 0, 0, 0 /)
+    hdims = (/ 2*ecpnl%npix+1, 2*ecpnl%npix+1, ecpnl%numangle_anglefile /)
+    dim0 = 2*ecpnl%npix+1
+    dim1 = 2*ecpnl%npix+1
+    dim2 = 1
+    hdferr = HDF_writeHyperslabFloatArray3D(dataset, ECPpattern, hdims, offset, dim0, dim1, dim2, &
+                                          HDF_head)
+end if
+
 ! set the number of OpenMP threads and allocate the corresponding number of random number streams
 io_int(1) = ecpnl%nthreads
 call WriteValue(' Attempting to set number of threads to ',io_int,1,"(I4)")
 call OMP_SET_NUM_THREADS(ecpnl%nthreads)
-dataset = 'ECPpatterns'
 
 ! use OpenMP to run on multiple cores
-!$OMP PARALLEL PRIVATE(TID,nthreads,ecpnl,dc,ixy,istat,nix,niy,nixp,niyp,dx,dy,dxm,dym) &
-!$OMP& PRIVATE(ipx,ipy,ECPpattern,bpat,ECPpatternintd,ma,mi,offset,hdims,dim0,dim1,dim2,hdferr) &
-!$OMP& SHARED (idir,numk,angles,kij,master_arrayNH,master_arraySH,mask,dataset,HDF_head,insert)
+!$OMP PARALLEL PRIVATE(TID,nthreads,dc,ixy,istat,nix,niy,nixp,niyp,dx,dy,dxm,dym,MCangle,isig,dp) &
+!$OMP& PRIVATE(ipx,ipy,ECPpattern,bpat,ECPpatternintd,ma,mi,offset,hdims,dim0,dim1,dim2,hdferr,qu,idir) &
+!$OMP& SHARED (ecpnl,numk,angles,kij,master_arrayNH,master_arraySH,anglewf,mask,dataset) &
+!$OMP& SHARED (HDF_head,insert,switchwfoff)
 
 TID = OMP_GET_THREAD_NUM()
 nthreads = OMP_GET_NUM_THREADS()
-if (TID .eq. 0) write(*,*)'Number of threads = ',nthreads 
 
 !$OMP DO SCHEDULE(DYNAMIC)
 angleloop: do iang = 1,ecpnl%numangle_anglefile
 
+    qu(1:4) = angles%quatang(1:4,iang)
+ 
     imageloop: do idir = 1,numk
 
 ! do the active coordinate transformation for this euler angle
 
         dc = klist(1:3,idir)
-        dc = quat_LP(angles%quatang(1:4,iang),dc)
-        dc = dc/dsqrt(sum(dc*dc))
+        dp = DOT_PRODUCT(dc(1:3),(/dsin(ecpnl%sampletilt),0.D0,dcos(ecpnl%sampletilt)/))        
 
+        MCangle = acos(dp)*Rtod
+! find index closest to the list of MC runs we already have
+        isig = nint((MCangle - ecpnl%MCsigstart)/ecpnl%MCsigstep) + 1
+        dc = quat_LP(qu,dc)
+        dc = dc/dsqrt(sum(dc*dc))
 ! make sure the third one is positive; if not, switch all
 ! convert these direction cosines to coordinates in the Rosca-Lambert projection
 
@@ -322,75 +382,80 @@ angleloop: do iang = 1,ecpnl%numangle_anglefile
         dy = ixy(2)-niy
         dxm = 1.0-dx
         dym = 1.0-dy
-
 ! interpolate the intensity
         ipx = kij(1,idir)
         ipy = kij(2,idir)
 ! including the detector model with some sample tilt
-        
-        if (dc(3).gt.0.0) then 
-            ECPpattern(ipx,ipy) =   master_arrayNH(nix,niy) * dxm * dym + &
-                             master_arrayNH(nixp,niy) * dx * dym + &
-                             master_arrayNH(nix,niyp) * dxm * dy + &
-                             master_arrayNH(nixp,niyp) * dx * dy
-        else
-            ECPpattern(ipx,ipy) =   master_arrayNH(nix,niy) * dxm * dym + &
-                             master_arrayNH(nixp,niy) * dx * dym + &
-                             master_arrayNH(nix,niyp) * dxm * dy + &
-                             master_arrayNH(nixp,niyp) * dx * dy
+        if (switchwfoff .eqv. .FALSE.) then
+            if (dc(3).gt.0.0) then 
 
+                ECPpattern(ipx,ipy) =  anglewf(isig)* ( master_arrayNH(nix,niy) * dxm * dym + &
+                             master_arrayNH(nixp,niy) * dx * dym + &
+                             master_arrayNH(nix,niyp) * dxm * dy + &
+                             master_arrayNH(nixp,niyp) * dx * dy )
+
+            else
+                 ECPpattern(ipx,ipy) =  anglewf(isig)* ( master_arraySH(nix,niy) * dxm * dym + &
+                             master_arraySH(nixp,niy) * dx * dym + &
+                             master_arraySH(nix,niyp) * dxm * dy + &
+                             master_arraySH(nixp,niyp) * dx * dy )
+
+            end if
+
+        else
+            if (dc(3).gt.0.0) then 
+                ECPpattern(ipx,ipy) =   master_arrayNH(nix,niy) * dxm * dym + &
+                         master_arrayNH(nixp,niy) * dx * dym + &
+                         master_arrayNH(nix,niyp) * dxm * dy + &
+                         master_arrayNH(nixp,niyp) * dx * dy 
+            else
+                 ECPpattern(ipx,ipy) =   master_arraySH(nix,niy) * dxm * dym + &
+                         master_arraySH(nixp,niy) * dx * dym + &
+                         master_arraySH(nix,niyp) * dxm * dy + &
+                         master_arraySH(nixp,niyp) * dx * dy 
+
+            end if
+ 
         end if
 
-       
-    end do imageloop 
+    end do imageloop
+   
+    if (mod(iang,2500) .eq. 0) then
+        io_int(1) = iang
+        call WriteValue('completed pattern # ',io_int,1)
+    end if
 
-!$OMP CRITICAL
     if (ecpnl%outputformat .eq. 'bin') then
-        allocate(bpat(ecpnl%npix,ecpnl%npix),stat=istat)
-        if (istat .ne. 0) call FatalError('ECpatter','cannot allocate bpat array')
         ma = maxval(ECPpattern)
         mi = minval(ECPpattern)
-        ECPpatternintd = mask * ((ECPpattern - mi)/ (ma-mi))
+        ECPpatternintd = ((ECPpattern - mi)/ (ma-mi))
+        if (ecpnl%maskpattern.eq.'y')  ECPpatternintd = ECPpatternintd * mask 
         bpat = char(nint(255.0*ECPpatternintd))
 
 ! write dictionary pattern to h5 file
         offset = (/ 0, 0, iang-1 /)
-        hdims = (/ ecpnl%npix, ecpnl%npix, ecpnl%numangle_anglefile /)
-        dim0 = ecpnl%npix
-        dim1 = ecpnl%npix
+        hdims = (/ 2*ecpnl%npix+1, 2*ecpnl%npix+1, ecpnl%numangle_anglefile /)
+        dim0 = 2*ecpnl%npix+1
+        dim1 = 2*ecpnl%npix+1
         dim2 = 1
-        if (iang .eq. 1) then
-            hdferr = HDF_writeHyperslabCharArray3D(dataset, bpat, hdims, offset, dim0, dim1, dim2, &
-                                          HDF_head)
-        else
-            hdferr = HDF_writeHyperslabCharArray3D(dataset, bpat, hdims, offset, dim0, dim1, dim2, &
+        hdferr = HDF_writeHyperslabCharArray3D(dataset, bpat, hdims, offset, dim0, dim1, dim2, &
                                           HDF_head, insert)
-        end if
  
     end if
-!$OMP END CRITICAL
 
-    if (ecpnl%maskpattern.eq.'y')  ECPpattern = ECPpattern * mask
 
-!$OMP CRITICAL
     if (ecpnl%outputformat .eq. 'gui') then
+          if (ecpnl%maskpattern.eq.'y')  ECPpattern = ECPpattern * mask
           offset = (/ 0, 0, iang-1 /)
-          hdims = (/ ecpnl%npix, ecpnl%npix, ecpnl%numangle_anglefile /)
-          dim0 = ecpnl%npix
-          dim1 = ecpnl%npix
+          hdims = (/ 2*ecpnl%npix+1, 2*ecpnl%npix+1, ecpnl%numangle_anglefile /)
+          dim0 = 2*ecpnl%npix+1
+          dim1 = 2*ecpnl%npix+1
           dim2 = 1
-          if (iang .eq. 1) then
-            hdferr = HDF_writeHyperslabFloatArray3D(dataset, ECPpattern, hdims, offset, dim0, dim1, dim2, &
-                                          HDF_head)
-          else
-            hdferr = HDF_writeHyperslabFloatArray3D(dataset, ECPpattern, hdims, offset, dim0, dim1, dim2, &
+          hdferr = HDF_writeHyperslabFloatArray3D(dataset, ECPpattern, hdims, offset, dim0, dim1, dim2, &
                                           HDF_head, insert)
-          end if
     end if
-!$OMP END CRITICAL
 
 end do angleloop 
-
 !$OMP END DO
 !$OMP END PARALLEL
 
@@ -411,11 +476,7 @@ dataset = 'Duration'
 time_end = time_end - time_start
 hdferr = HDF_writeDatasetFloat(dataset, time_end, HDF_head)
 
-! close the datafile
-call HDF_pop(HDF_head,.TRUE.)
-
 ! close the Fortran interface
 call h5close_f(hdferr)
-
 
 end subroutine ECpattern

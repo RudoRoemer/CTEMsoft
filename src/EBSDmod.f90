@@ -938,7 +938,7 @@ end subroutine TwinCubicMasterPattern
 !> @date 10/16/15  SS 1.3 added alpha parameter for degree of mixing; 0<=alpha<=1; also
 !> added master_inp and master_out variables in the subroutine for NtAg dataset
 !--------------------------------------------------------------------------
-subroutine OverlapMasterPattern(enl,master_in,master_out,q,alpha)
+recursive subroutine OverlapMasterPattern(enl,master_in,master_out,q,alpha)
 
 use local
 use io
