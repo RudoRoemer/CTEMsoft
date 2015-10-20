@@ -42,27 +42,10 @@ pro Efit_control_event,event
 common Efit_widget_common, Efitwidget_s
 common Efit_data_common, Efitdata
 
-
 if (event.id eq Efitwidget_s.controlbase) then begin
   Efitdata.xlocationcontrol = event.x
   Efitdata.ylocationcontrol = event.y-25
-end else begin
-
-  WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
-  
-  CASE eventval OF
-        'CANCELFIT': begin
-                Efitdata.cancelfit = 1
-                Core_Print,'---------------------------------------------------'
-                Core_Print,'Cancel event detected; parameter fit will end soon.'
-                Core_Print,'---------------------------------------------------'
-        endcase
-
-  else: MESSAGE, "Efit_control_event: Event "+eventval+" Unknown"
-
-  endcase
-
-endelse
+end
 
 end
 

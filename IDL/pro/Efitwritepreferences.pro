@@ -33,7 +33,7 @@
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief write the EBSDfit preferences file
+;> @brief write the Efit preferences file
 ;
 ;> @date 10/13/15 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------

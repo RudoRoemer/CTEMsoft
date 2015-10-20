@@ -26,44 +26,39 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; EMsoft:Efit_display_event.pro
+; EMsoft:Core_histnd.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: Efit_display_event.pro
+; PROGRAM: Core_histnd.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief main event handler for Efit_display.pro routine
+;> @brief n-dimensional histogram computation
 ;
-;> @date 10/13/15 MDG 1.0 first attempt at a user-friendly interface
+;> @date 03/19/14 MDG 1.0 first version
+;> @date 10/20/15 MDG 1.1 integration with Efit program
 ;--------------------------------------------------------------------------
-pro Efit_display_event,event
+function Core_histnd,V,bs,normalize=normalize
 
-common Efit_widget_common, Efitwidget_s
-common Efit_data_common, Efitdata
+  if keyword_set(time) then t = systime(1)
 
+  s=size(V,/DIMENSIONS)
+  if n_elements(s) ne 2 then message,'Input must be P (points) x N (dimensions)'
 
-if (event.id eq Efitwidget_s.displaybase) then begin
-  Efitdata.xlocationdisplay = event.x
-  Efitdata.ylocationdisplay = event.y-25
-end else begin
+  q = 0
+  while (ishft(bs,-q) ne 1) do q+=1
 
-  WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
+  nbins=long(ishft(256,-q)) 
+  total_bins= nbins^s[1]
+
+  h=long(ishft(reform(V[*,s[1]-1]),-q))
+  for i=s[1]-2,0,-1 do h = ishft(h,8-q) + long(ishft(reform(V[*,i]),-q))
+
+  ret=make_array(TYPE=3,DIMENSION=replicate(nbins,s[1]),/NOZERO)
+  ret[0]=histogram(h,MIN=0L,MAX=total_bins-1L)
+
+  if keyword_set(normalize) then ret = ret/total(ret)
   
-  CASE eventval OF
-        'CLOSEDISPLAY': begin
-                WIDGET_CONTROL, Efitwidget_s.displaybase, /DESTROY
-        endcase
-        'SAVEPATTERN': begin
-                Core_Print,'to be implemented'
-        endcase
-
-  else: MESSAGE, "Efit_display_event: Event "+eventval+" Unknown"
-
-  endcase
-
-endelse
-
+  return,ret
 end
-
 

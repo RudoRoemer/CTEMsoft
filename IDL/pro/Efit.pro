@@ -1,11 +1,14 @@
-@EBSDcalc
-@EBSDinit
+@Efitcalc
+@Efitinit
 @Efit_display
 @Efit_display_event
 @Efitevent
 @Efit_control
 @Efit_control_event
-@EBSDfit_event
+@Efit_event
+@Efit_fit
+@Efit_amoeba
+@Efit_update
 @Efitgetpreferences
 @Efitwritepreferences
 @Efitgetfilename
@@ -20,6 +23,8 @@
 @Core_quat_Lp
 @Core_eu2qu
 @Core_LambertSphereToSquare
+@Core_histnd
+@Core_mind
 
 ;
 ; Copyright (c) 2015, Marc De Graef/Carnegie Mellon University
@@ -49,10 +54,10 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; EMsoft:EBSDfit.pro
+; EMsoft:Efit.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: EBSDfit.pro
+; PROGRAM: Efit.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
@@ -70,25 +75,28 @@
 ;
 ;> @date 10/12/15 MDG 1.0 first attempt at a user-friendly interface
 ;--------------------------------------------------------------------------
-pro EBSDfit,dummy
+pro Efit,dummy
 
 common Efit_widget_common, Efitwidget_s
 common Efit_data_common, Efitdata
 common CommonCore, status, logmode, logunit
-common FitParameters, nFit, fitName, defValue, fitValue, fitStep, fitOnOff, fitManualStep, fitManualUpDown, fitUserLabel, fitStepLabel, fitOnOffLabel, fitUpLabel, fitDownLabel, fitManualStepLabel
+common FitParameters, nFit, fitName, defValue, fitValue, fitStep, fitOnOff, fitManualStep, fitManualUpDown, fitUserLabel, fitStepLabel, fitOnOffLabel, fitUpLabel, fitDownLabel, fitManualStepLabel, fitIterations
 
 !EXCEPT = 0
 logmode = 0
 logunit = 10
 nFit = 8
 
+
 ; widget structure
 Efitwidget_s = {widgetstruct, $
         	base:long(0), $                    	; base widget ID
         	controlbase:long(0), $                    	; base widget ID
         	displaybase:long(0), $                    	; base widget ID
-        	cancelbutton:long(0), $                    	; base widget ID
                 displayoption:long(0), $
+                cancelbutton:long(0), $
+                cancelwidget:long(0), $
+                progress:long(0), $
                 imageformat:long(0), $
                 logodraw:long(0), $
                 logodrawid:long(0), $
@@ -117,6 +125,16 @@ Efitwidget_s = {widgetstruct, $
                 fitManualDown:replicate(0L,nFit), $
                 fitManualStep:replicate(0L,nFit), $
                 status:long(0), $
+                min:long(0), $
+                max:long(0), $
+                smoothval:long(0), $
+                compute:long(0), $
+                mkjson:long(0), $
+                convcrit:long(0), $
+                fitmode:long(0), $
+                ramponoff:long(0), $
+                hipassonoff:long(0), $
+                hipasscutoff:long(0), $
                 circularmask:long(0), $
                 EulerConvention:long(0), $
                 PatternOrigin:long(0), $
@@ -134,7 +152,6 @@ Efitdata = {Efitdatastruct, $
                 ylocationdisplay:fix(0), $
                 imageformat:long(0), $
                 displayoption:long(0), $
-                cancelfit:long(0), $
                 drawID:long(0), $
                 mpfilename:'', $
                 energyfilename:'', $
@@ -179,21 +196,56 @@ Efitdata = {Efitdatastruct, $
                 detbinning:long(0), $
                 detnumsx:long(0), $
                 detnumsy:long(0), $
+                detMCsig:float(0), $
                 showcircularmask:long(0), $
                 EulerConvention:long(0), $
                 PatternOrigin:long(0), $
                 Efitroot:'undefined', $
                 mpfilesize:long(0), $
                 patternfilesize:long(0), $
+                EMsoftpathname:'', $
+                EMdatapathname:'', $
                 patternpathname:'', $
                 pathname:'', $
                 patternfilename:'', $
                 EBSPsuffix:'', $
                 suffix:'', $
+                fitmode:long(0), $
+                compute:long(0), $
+                ramponoff:long(0), $
+                convcrit:long(0), $
+                smoothval:long(0), $
+                hipassonoff:long(0), $
+                hipasscutoff:float(0), $
                 homefolder:'', $
                 nprefs:long(0), $
-                prefname:'~/.EBSDfitgui.prefs', $
+                prefname:'~/.Efitgui.prefs', $
                 test:long(0) }
+
+Efitdata.EMsoftpathname = Core_getenv()
+Efitdata.EMdatapathname = Core_getenv(/data)
+
+;------------------------------------------------------------
+; get the display window size to 80% of the current screen size (but be careful with double screens ... )
+; We'll need to guess whether or not the user has a double screen: if the aspect ratio is larger than 16/9,
+; then there are likely two screens, so we need to limit ourselves to just the first one...
+; This should really become a core function that we can call from all programs.
+device,decomposed = 0
+device, GET_SCREEN_SIZE = scr
+
+sar = float(scr[0])/float(scr[1])
+if (sar gt (1.1*16.0/9.0)) then begin
+	scr[0] = scr[0]/2
+end
+Efitdata.scrdimy = scr[1] * 0.8
+Efitdata.scrdimx = scr[0]
+Efitdata.xlocation = Efitdata.scrdimx / 8.0
+Efitdata.ylocation = Efitdata.scrdimx / 8.0
+
+;------------------------------------------------------------
+; does the preferences file exist ?  If not, create it, otherwise read it
+; this should also fill in some of the default values for the refinable parameters and the stepsizes and such
+Efitgetpreferences,/noprint
 
 ;------------------------------------------------------------
 ;------------------------------------------------------------
@@ -220,6 +272,9 @@ fitValue[1] = Efitdata.detomega
 fitValue[2] = Efitdata.detxpc
 fitValue[3] = Efitdata.detypc
 fitValue[4] = Efitdata.detgamma
+fitValue[5] = Efitdata.detphi1
+fitValue[6] = Efitdata.detphi
+fitValue[7] = Efitdata.detphi2
 fitStep = fltarr(nFit)
 fitStep[0] = Efitdata.detsL
 fitStep[1] = Efitdata.detsomega
@@ -246,35 +301,13 @@ fontstrlarge='-adobe-new century schoolbook-medium-r-normal--20-140-100-100-p-10
 fontstrsmall='-adobe-new century schoolbook-medium-r-normal--14-100-100-100-p-82-iso8859-1'
 
 ;------------------------------------------------------------
-; get the display window size to 80% of the current screen size (but be careful with double screens ... )
-; We'll need to guess whether or not the user has a double screen: if the aspect ratio is larger than 16/9,
-; then there are likely two screens, so we need to limit ourselves to just the first one...
-; This should really become a core function that we can call from all programs.
-device,decomposed = 0
-device, GET_SCREEN_SIZE = scr
-
-sar = float(scr[0])/float(scr[1])
-if (sar gt (1.1*16.0/9.0)) then begin
-	scr[0] = scr[0]/2
-end
-Efitdata.scrdimy = scr[1] * 0.8
-Efitdata.scrdimx = scr[0]
-Efitdata.xlocation = Efitdata.scrdimx / 8.0
-Efitdata.ylocation = Efitdata.scrdimx / 8.0
-
-;------------------------------------------------------------
-; does the preferences file exist ?  If not, create it, otherwise read it
-; this should also fill in some of the default values for the refinable parameters and the stepsizes and such
-Efitgetpreferences,/noprint
-
-;------------------------------------------------------------
 ; create the top level widget
 Efitwidget_s.base = WIDGET_BASE(TITLE='Electron Backscatter Diffraction Pattern Fit Program', $
                         /COLUMN, $
                         XSIZE=1220, $
                         /ALIGN_LEFT, $
 			/TLB_MOVE_EVENTS, $
-			EVENT_PRO='EBSDfit_event', $
+			EVENT_PRO='Efit_event', $
                         XOFFSET=Efitdata.xlocation, $
                         YOFFSET=Efitdata.ylocation)
 
@@ -327,21 +360,21 @@ file3 = WIDGET_BASE(block2, XSIZE=550, /ROW)
 Efitwidget_s.exploadfile = WIDGET_BUTTON(file3, $
                                 UVALUE='EXPFILE', $
                                 VALUE='Load experimental pattern', $
-                                EVENT_PRO='EBSDfit_event', $
+                                EVENT_PRO='Efit_event', $
                                 SENSITIVE=1, $
                                 /FRAME)
 
 Efitwidget_s.mploadfile = WIDGET_BUTTON(file3, $
                                 UVALUE='MPFILE', $
                                 VALUE='Load master file', $
-                                EVENT_PRO='EBSDfit_event', $
+                                EVENT_PRO='Efit_event', $
                                 SENSITIVE=0, $
                                 /FRAME)
 
 Efitwidget_s.mainstop = WIDGET_BUTTON(file3, $
                                 UVALUE='QUIT', $
                                 VALUE='Quit', $
-                                EVENT_PRO='EBSDfit_event', $
+                                EVENT_PRO='Efit_event', $
                                 SENSITIVE=1, $
                                 /FRAME)
 
@@ -371,27 +404,27 @@ tmp1 = WIDGET_LABEL(block2, VALUE='Non-refinable Parameters', font=fontstrlarge,
 line1 = WIDGET_BASE(block2, XSIZE=1200, /ROW)
 ;----------  detector tilt angle
 item1 = WIDGET_BASE(line1, /ROW, XSIZE=350, /ALIGN_LEFT)
-Efitwidget_s.dettheta = Core_WTextE(item1,'Detector Tilt Angle [deg]', fontstr, 250, 25, 10, 1, string(Efitdata.dettheta,format="(F9.2)"),'DETTHETA','EBSDfit_event')
+Efitwidget_s.dettheta = Core_WTextE(item1,'Detector Tilt Angle [deg]', fontstr, 250, 25, 10, 1, string(Efitdata.dettheta,format="(F9.2)"),'DETTHETA','Efit_event')
 
 ;----------  scintillator pixel size
 item2 = WIDGET_BASE(line1, /ROW, XSIZE=350, /ALIGN_LEFT)
-Efitwidget_s.detdelta = Core_WTextE(item2,'Scintillator Pixel Size [micron]', fontstr, 250, 25, 10, 1, string(Efitdata.detdelta,format="(F9.2)"),'DETDELTA','EBSDfit_event')
+Efitwidget_s.detdelta = Core_WTextE(item2,'Scintillator Pixel Size [micron]', fontstr, 250, 25, 10, 1, string(Efitdata.detdelta,format="(F9.2)"),'DETDELTA','Efit_event')
 
 ;----------  number of pixels on detector
 item3 = WIDGET_BASE(line1, /ROW, XSIZE=560, /ALIGN_LEFT)
-Efitwidget_s.detnumsx = Core_WTextE(item3,'Number of pixels ', fontstr, 140, 25, 5, 1, string(Efitdata.detnumsx,format="(I4)"),'DETNUMSX','EBSDfit_event')
-Efitwidget_s.detnumsy = Core_WTextE(item3,' by ', fontstr, 30, 25, 5, 1, string(Efitdata.detnumsy,format="(I4)"),'DETNUMSY','EBSDfit_event')
+Efitwidget_s.detnumsx = Core_WTextE(item3,'Number of pixels ', fontstr, 140, 25, 5, 1, string(Efitdata.detnumsx,format="(I4)"),'DETNUMSX','Efit_event')
+Efitwidget_s.detnumsy = Core_WTextE(item3,' by ', fontstr, 30, 25, 5, 1, string(Efitdata.detnumsy,format="(I4)"),'DETNUMSY','Efit_event')
 
 ;------------------------------------------------------------
 line2 = WIDGET_BASE(block2, XSIZE=1200, /ROW)
 
 ;----------  Beam current
 item1 = WIDGET_BASE(line2, /ROW, XSIZE=350, /ALIGN_LEFT)
-Efitwidget_s.detbeamcurrent = Core_WTextE(item1,'Beam current [nA]', fontstr, 250, 25, 10, 1, string(Efitdata.detbeamcurrent,format="(F9.2)"),'DETBEAMCURRENT','EBSDfit_event')
+Efitwidget_s.detbeamcurrent = Core_WTextE(item1,'Beam current [nA]', fontstr, 250, 25, 10, 1, string(Efitdata.detbeamcurrent,format="(F9.2)"),'DETBEAMCURRENT','Efit_event')
 
 ;----------  Dwell time
 item2 = WIDGET_BASE(line2, /ROW, XSIZE=350, /ALIGN_LEFT)
-Efitwidget_s.detdwelltime = Core_WTextE(item2,'Dwell Time [mu s] ', fontstr, 250, 25, 10, 1, string(Efitdata.detdwelltime,format="(F9.2)"),'DETDWELLTIME','EBSDfit_event')
+Efitwidget_s.detdwelltime = Core_WTextE(item2,'Dwell Time [mu s] ', fontstr, 250, 25, 10, 1, string(Efitdata.detdwelltime,format="(F9.2)"),'DETDWELLTIME','Efit_event')
 
 ;----------  Circular mask
 item3 = WIDGET_BASE(line2, /ROW, XSIZE=350, /ALIGN_LEFT)
@@ -461,7 +494,7 @@ row2 = WIDGET_BASE(block1, $
 
 block2 = WIDGET_BASE(row2, $
 			/FRAME, $
-			XSIZE=800, $
+			XSIZE=750, $
 			/ALIGN_LEFT, $
 			/COLUMN)
 
@@ -475,37 +508,143 @@ header = WIDGET_LABEL(block2, VALUE='     Parameter          Value        Stepsi
 for i=0,nFit-1 do ret = Core_FitLine(block2, i)
 
 
-;------------------------------------------------------------
-;------------------------------------------------------------
-; we'll also need some options for background subtraction, sort of as a preprocessing step
-;  - fit 2D Gaussian shape
-;  - high-pass filter
-
 
 ;------------------------------------------------------------
 ;------------------------------------------------------------
-; and create a GO button to execute the fit routine
-; we'll need to have a cancel button as well...
-spacer = WIDGET_BASE(row2, $
-			XSIZE=150, $
-			/ALIGN_CENTER, $
-			/COLUMN)
-
 block3 = WIDGET_BASE(row2, $
-			/FRAME, $
-			XSIZE=100, $
+			XSIZE=440, $
 			/ALIGN_CENTER, $
 			/COLUMN)
 
+block4 = WIDGET_BASE(block3, $
+			/FRAME, $
+			XSIZE=430, $
+			/ALIGN_CENTER, $
+			/COLUMN)
 
-Efitwidget_s.gofit = WIDGET_BUTTON(block3, $
+; here we put a couple of image adjustment options
+;
+; hipass filter with filter coefficient
+; linear ramp on/off
+; smoothing
+;
+; the pattern should automatically update each time a parameter is changed
+; but we should also have a Update Pattern button for the first column of 
+; the refinable parameters section.
+;
+line2 = WIDGET_BASE(block4, XSIZE=410, /ROW, /ALIGN_LEFT)
+
+vals = ['Off','On']
+Efitwidget_s.hipassonoff = CW_BGROUP(line2, $
+                        vals, $
+                        /ROW, $
+                        /NO_RELEASE, $
+                        /EXCLUSIVE, $
+                        FONT=fontstr, $
+			LABEL_LEFT='Hipass filter', $
+                        EVENT_FUNC ='Efitevent', $
+                        UVALUE='HIPASSONOFF', $
+                        SET_VALUE=Efitdata.hipassonoff)
+line2 = WIDGET_BASE(block4, XSIZE=410, /ROW, /ALIGN_LEFT)
+
+Efitwidget_s.hipasscutoff = Core_WTextE(line2,'     Hipass filter low cut off ', fontstr, 250, 25, 10, 1, string(Efitdata.hipasscutoff,format="(F9.2)"),'HIPASSCUTOFF','Efit_event')
+
+; ramp filter on/off
+line2 = WIDGET_BASE(block4, XSIZE=410, /ROW, /ALIGN_LEFT)
+vals = ['Off','On']
+Efitwidget_s.ramponoff = CW_BGROUP(line2, $
+                        vals, $
+                        /ROW, $
+                        /NO_RELEASE, $
+                        /EXCLUSIVE, $
+                        FONT=fontstr, $
+			LABEL_LEFT='Linear ramp subtraction', $
+                        EVENT_FUNC ='Efitevent', $
+                        UVALUE='RAMPONOFF', $
+                        SET_VALUE=Efitdata.ramponoff)
+
+
+line2 = WIDGET_BASE(block4, XSIZE=410, /ROW, /ALIGN_LEFT)
+
+vals = ['0','3','5','7','9','11']
+Efitwidget_s.smoothval = CW_BGROUP(line2, $
+                        vals, $
+                        /ROW, $
+                        /NO_RELEASE, $
+                        /EXCLUSIVE, $
+                        FONT=fontstr, $
+			LABEL_LEFT='Smoothing parameter', $
+                        EVENT_FUNC ='Efitevent', $
+                        UVALUE='SMOOTHVAL', $
+                        SET_VALUE=Efitdata.smoothval)
+
+
+;------------------------------------------------------------
+;------------------------------------------------------------
+block4 = WIDGET_BASE(block3, $
+			/FRAME, $
+			XSIZE=430, $
+			/ALIGN_CENTER, $
+			/COLUMN)
+
+line2 = WIDGET_BASE(block4, XSIZE=410, /ROW, /ALIGN_LEFT)
+
+vals = ['dot product','mutual information']
+Efitwidget_s.convcrit= CW_BGROUP(line2, $
+                        vals, $
+                        /ROW, $
+                        /NO_RELEASE, $
+                        /EXCLUSIVE, $
+                        FONT=fontstr, $
+			LABEL_LEFT='Fit criterion', $
+                        EVENT_FUNC ='Efitevent', $
+                        UVALUE='CONVCRIT', $
+                        SET_VALUE=Efitdata.convcrit)
+
+line2 = WIDGET_BASE(block4, XSIZE=410, /ROW, /ALIGN_LEFT)
+vals = ['free','detector','orientation']
+Efitwidget_s.fitmode = CW_BGROUP(line2, $
+                        vals, $
+                        /ROW, $
+                        /NO_RELEASE, $
+                        /EXCLUSIVE, $
+                        FONT=fontstr, $
+			LABEL_LEFT='Fit mode', $
+                        EVENT_FUNC ='Efitevent', $
+                        UVALUE='FITMODE', $
+                        SET_VALUE=Efitdata.fitmode)
+
+
+line2 = WIDGET_BASE(block4, XSIZE=410, /ROW, /ALIGN_LEFT)
+Efitwidget_s.compute = WIDGET_BUTTON(line2, $
+                                UVALUE='COMPUTE', $
+                                VALUE='Compute', $
+                                EVENT_PRO='Efit_event', $
+                                /ALIGN_CENTER, $
+                                SENSITIVE=0)
+
+line2 = WIDGET_BASE(block4, XSIZE=410, /ROW, /ALIGN_LEFT)
+Efitwidget_s.gofit = WIDGET_BUTTON(line2, $
                                 UVALUE='GOFIT', $
                                 VALUE='Start Fit', $
-                                EVENT_PRO='EBSDfit_event', $
+                                EVENT_PRO='Efit_event', $
                                 /ALIGN_CENTER, $
-                                SENSITIVE=1)
+                                SENSITIVE=0)
+
+Efitwidget_s.progress = Core_WText(line2,'convergence parameter', fontstr, 200, 25, 60, 1, string(0.0,FORMAT="(F12.6)"))
 
 
+line2 = WIDGET_BASE(block4, XSIZE=410, /ROW, /ALIGN_LEFT)
+Efitwidget_s.mkjson= WIDGET_BUTTON(line2, $
+                                UVALUE='MKJSON', $
+                                VALUE='Create JSON file', $
+                                EVENT_PRO='Efit_event', $
+                                /ALIGN_CENTER, $
+                                SENSITIVE=0)
+
+
+;------------------------------------------------------------
+;------------------------------------------------------------
 ;------------------------------------------------------------
 ;------------------------------------------------------------
 ; then we have the program message window
@@ -536,7 +675,7 @@ wset,Efitwidget_s.logodrawID
 tvscl,logo,true=1
 
 ; and hand over control to the xmanager
-XMANAGER,"EBSDfit",Efitwidget_s.base,/NO_BLOCK
+XMANAGER,"Efit",Efitwidget_s.base,/NO_BLOCK
 
 
 end ; program

@@ -26,84 +26,68 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; EMsoft:EBSDcalc.pro
+; EMsoft:Efitcalc.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: EBSDcalc.pro
+; PROGRAM: Efitcalc.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief Electron backscatter diffraction calculation via interpolation
+;> @brief Electron backscatter diffraction calculation via call_external of EMdymod.f90 routine
 ;
 ;> @date 10/15/15 MDG 1.0 first attempt at a user-friendly interface
+;> @date 10/17/15 MDG 1.1 integrated with EMdymod.f90 routine
 ;--------------------------------------------------------------------------
-function EBSDcalc,dummy
+pro Efitcalc,dummy
+compile_opt idl2 
 
 common Efit_widget_common, Efitwidget_s
 common Efit_data_common, Efitdata
 
 common EBSD_EMsoft, MCxtalname, MCmode, nsx, nsy, EkeV, Ehistmin, Ebinsize, depthmax, depthstep, MCsig, MComega, $
-                    numEbins, numzbins, accum_e, accum_z, Masterenergyfile, npx, npy, nnE, numset, mLPNH, mLPSH, Masterxtalname, $
-                    expEBSDpattern, rgx, rgy, rgz, accum_e_detector          
+                    numEbins, numzbins, accum_e, accum_z, Masterenergyfile, npx, npy, nnE, numset, mLPNH, mLPSH, Masterxtalname, expEBSDpattern, EBSDpattern
 
-nAmpere = 6.241D+18 
-
-nel = total(accum_e_detector)
-
-bindx = 1.0/float(1.0+Efitdata.detbinning)^2
-binx = Efitdata.detnumsx * bindx
-biny = Efitdata.detnumsy * bindx
-
-; intensity prefactor
-prefactor = 0.25D0 * nAmpere * Efitdata.detbeamcurrent * Efitdata.detdwelltime * 1.0D-15 / nel
-
-; Lambert scalefactor
-scl = float(npx[0])
-
-; convert the Euler angles to a quaternion
+; first convert the Euler angle triplet (in degrees) to a quaternion
 Efitdata.quaternion = Core_eu2qu( [Efitdata.detphi1, Efitdata.detphi, Efitdata.detphi2] )
 
-EBSDpattern = replicate(0.0, Efitdata.detnumsx, Efitdata.detnumsy)
+; determine whether or not we can re-use the rgx, rgy, rgz arrays in SingleEBSDPattern
+; if the sum of the first four fitOnOff values is zero, and the remainder is not, then recompute = 1 after the first call_external, else 0
 
-for i=0,Efitdata.detnumsx-1 do begin
-   for j=0,Efitdata.detnumsy-1 do begin
-; do the active coordinate transformation for this euler angle
-      dc = Core_quat_Lp( Efitdata.quaternion, [rgx(i,j),rgy(i,j),rgz(i,j)] )
-; normalize dc
-      dc = dc/sqrt(total(dc*dc))
-; convert these direction cosines to coordinates in the Rosca-Lambert projection (always square projection !!!)
-      ixy = scl * Core_LambertSphereToSquare( dc, istat )
+; set up the ipar and fpar arrays; all integers must be long64 !!!!
+nipar = long(8)
+ipar = lon64arr(nipar)
+ipar[0] = long64(1) ; long(recompute) ; 1 if rgx, rgy, rgz detector arrays need to be computed, 0 if not (arrays will have save status)
+ipar[1] = long64(Efitdata.detnumsx)
+ipar[2] = long64(Efitdata.detnumsy)
+ipar[3] = long64(numEbins)
+ipar[4] = long64(nsx)
+ipar[5] = long64(nsy)
+ipar[6] = long64((nsx-1)/2)
+ipar[7] = long64(npx)
 
-      if (istat eq 0) then begin
-; four-point interpolation (bi-quadratic)
-        nix = fix(npx+ixy[0])-npx
-        niy = fix(npy+ixy[1])-npy
-        nixp = nix+1
-        niyp = niy+1
-        if (nixp gt npx) then nixp = nix
-        if (niyp gt npy) then niyp = niy
-        if (nix lt -npx) then nix = nixp
-        if (niy lt -npy) then niy = niyp
-        dx = ixy[0]-nix
-        dy = ixy[1]-niy
-        dxm = 1.0-dx
-        dym = 1.0-dy
-        if (dc[2] gt 0.0) then begin
-          for k=0,numEbins[0]-1 do begin
-            EBSDpattern(i,j) += accum_e_detector[k,i,j] * ( mLPNH[nix,niy,k] * dxm * dym + $
-              mLPNH[nixp,niy,k] * dx * dym + mLPNH[nix,niyp,k] * dxm * dy + $
-              mLPNH[nixp,niyp,k] * dx * dy )
-          endfor
-        end else begin
-          for k=0,numEbins[0]-1 do begin
-            EBSDpattern(i,j) += accum_e_detector[k,i,j] * ( mLPSH[nix,niy,k] * dxm * dym + $
-              mLPSH[nixp,niy,k] * dx * dym + mLPSH[nix,niyp,k] * dxm * dy + $
-              mLPSH[nixp,niyp,k] * dx * dy )
-          endfor
-        endelse
-      endif
-    endfor
-endfor
+nfpar = long(13)
+fpar = fltarr(nfpar)
+fpar[0] = Efitdata.detxpc
+fpar[1] = Efitdata.detypc
+fpar[2] = Efitdata.detdelta
+fpar[3] = Efitdata.detMCsig
+fpar[4] = Efitdata.detomega
+fpar[5] = Efitdata.dettheta
+fpar[6] = Efitdata.detL
+fpar[7] = Efitdata.detbeamcurrent
+fpar[8] = Efitdata.detdwelltime
+fpar[9:12] = Efitdata.quaternion[0:3]
 
-return,EBSDpattern
+EBSDpattern = fltarr(Efitdata.detnumsx,Efitdata.detnumsy)
+
+res = call_external(Efitdata.EMsoftpathname+'Build/Bin/libEMSoftdylib.dylib', 'SingleEBSDPatternWrapper', $
+      nipar, nfpar, long(numEbins), ipar[4], long(npx), ipar[1], ipar[2], ipar, fpar, float(accum_e), mLPNH, mLPSH, EBSDpattern, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
+
+if (res ne 1.0) then begin
+  Core_print,'SingleEBSDPatternWrapper return code = '+string(res,format="(F4.1)")
+end 
+
+wset,Efitdata.drawID
+Efit_showpattern
+
 end
