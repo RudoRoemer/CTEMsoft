@@ -212,6 +212,12 @@ Efitdata = {Efitdatastruct, $
                 suffix:'', $
                 fitmode:long(0), $
                 compute:long(0), $
+                jsonpathname:'', $
+                jsonfilename:'', $
+                jsonsuffix:'', $
+                eulerpathname:'', $
+                eulerfilename:'', $
+                eulersuffix:'', $
                 ramponoff:long(0), $
                 convcrit:long(0), $
                 smoothval:long(0), $

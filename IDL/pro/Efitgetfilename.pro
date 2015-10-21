@@ -37,7 +37,7 @@
 ;
 ;> @date 10/13/15 MDG 1.0 first attempt 
 ;--------------------------------------------------------------------------
-pro Efitgetfilename,validfile,PATTERNFILE=PATTERNFILE,MPFILE=MPFILE
+pro Efitgetfilename,validfile,PATTERNFILE=PATTERNFILE,MPFILE=MPFILE,JSONFILE=JSONFILE,EULERFILE=EULERFILE
  
 ;------------------------------------------------------------
 ; common blocks
@@ -102,7 +102,9 @@ common EBSD_EMsoft, MCxtalname, MCmode, nsx, nsy, EkeV, Ehistmin, Ebinsize, dept
 ; and activate the master pattern button
         WIDGET_CONTROL, Efitwidget_s.mploadfile, sensitive = 1
 ; 
-  end else begin
+  endif
+
+  if keyword_set(MPFILE) then begin 
     res=dialog_pickfile(title='Select a valid Master Pattern data file',path=rootpath,filter='*Master*.h5;*master*.h5;*MASTER*.h5')
     if (res eq '') then begin
 	  Core_Print,'No selection made'
@@ -125,7 +127,49 @@ common EBSD_EMsoft, MCxtalname, MCmode, nsx, nsy, EkeV, Ehistmin, Ebinsize, dept
   	Core_Print,' path '+Efitdata.pathname
   	Core_Print,' data file '+Efitdata.mpfilename
   	Core_Print,' suffix '+Efitdata.suffix
-  endelse
+  endif
+
+  if keyword_set(JSONFILE) then begin 
+    res=dialog_pickfile(title='Enter *.json file name',path=rootpath,filter='*.json',default_extension='json',/write)
+    if (res eq '') then begin
+	  Core_Print,'No selection made'
+	  goto, skip
+    end
+	validfile = 1
+; find the last folder separator
+	spos = strpos(res,'/',/reverse_search)
+	dpos = strpos(res,'.',/reverse_search)
+	plen = strlen(res)
+	Efitdata.jsonpathname = strmid(res,0,spos)
+	Efitdata.jsonfilename = strmid(res,spos+1)
+	Efitdata.jsonsuffix = strmid(res,dpos+1)
+
+  	Core_Print,' full path '+res
+  	Core_Print,' path '+Efitdata.jsonpathname
+  	Core_Print,' data file '+Efitdata.jsonfilename
+  	Core_Print,' suffix '+Efitdata.jsonsuffix
+  endif
+
+  if keyword_set(EULERFILE) then begin 
+    res=dialog_pickfile(title='Enter *.txt file name for Euler angles',path=rootpath,filter='*.txt',default_extension='txt',/write)
+    if (res eq '') then begin
+	  Core_Print,'No selection made'
+	  goto, skip
+    end
+	validfile = 1
+; find the last folder separator
+	spos = strpos(res,'/',/reverse_search)
+	dpos = strpos(res,'.',/reverse_search)
+	plen = strlen(res)
+	Efitdata.eulerpathname = strmid(res,0,spos)
+	Efitdata.eulerfilename = strmid(res,spos+1)
+	Efitdata.eulersuffix = strmid(res,dpos+1)
+
+  	Core_Print,' full path '+res
+  	Core_Print,' path '+Efitdata.eulerpathname
+  	Core_Print,' data file '+Efitdata.eulerfilename
+  	Core_Print,' suffix '+Efitdata.eulersuffix
+  endif
 
 skip:
 end

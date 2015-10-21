@@ -175,8 +175,9 @@ end else begin    ; mutual information approach
   V = bytarr(2,npixels)
   V[0,0:*] = bytscl(expvector[0:*]) 
   V[1,0:*] = bytscl(simvector[0:*]) 
-  bs = 4
-  cval = Core_mind(Core_histnd(V,bs,/normalize))
+  bs = 1
+  h = Core_histnd(V,bs,/normalize)
+  cval = Core_mind(h)
 endelse
 
 ; then show the pattern ...

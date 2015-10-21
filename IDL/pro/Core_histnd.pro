@@ -40,8 +40,6 @@
 ;--------------------------------------------------------------------------
 function Core_histnd,V,bs,normalize=normalize
 
-  if keyword_set(time) then t = systime(1)
-
   s=size(V,/DIMENSIONS)
   if n_elements(s) ne 2 then message,'Input must be P (points) x N (dimensions)'
 
@@ -49,16 +47,15 @@ function Core_histnd,V,bs,normalize=normalize
   while (ishft(bs,-q) ne 1) do q+=1
 
   nbins=long(ishft(256,-q)) 
-  total_bins= nbins^s[1]
+  total_bins= nbins^s[0]
 
-  h=long(ishft(reform(V[*,s[1]-1]),-q))
-  for i=s[1]-2,0,-1 do h = ishft(h,8-q) + long(ishft(reform(V[*,i]),-q))
+  h=long(ishft(V[s[0]-1,*],-q))
+  for i=s[0]-2,0,-1 do h = ishft(h,8-q) + long(ishft(V[i,*],-q))
 
-  ret=make_array(TYPE=3,DIMENSION=replicate(nbins,s[1]),/NOZERO)
+  ret=make_array(TYPE=3,DIMENSION=replicate(nbins,s[0]),/NOZERO)
   ret[0]=histogram(h,MIN=0L,MAX=total_bins-1L)
 
   if keyword_set(normalize) then ret = ret/total(ret)
   
   return,ret
 end
-

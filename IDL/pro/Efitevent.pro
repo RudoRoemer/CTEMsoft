@@ -127,7 +127,7 @@ CASE eventval OF
 
         'DEToOMEGA' : begin
                 Efitdata.detoomega = Core_WidgetChoiceEvent( Efitwidget_s.fitOnOff[1],  'Fit sample omega angle? ')
-                if (Efitdata.detoL eq 0) then fitOnOff[1] = 0 else fitOnOff[1] = 1
+                if (Efitdata.detoomega eq 0) then fitOnOff[1] = 0 else fitOnOff[1] = 1
                 if (total(fitOnOff) gt 0) then begin
                   WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =1
                 end else begin
@@ -137,7 +137,7 @@ CASE eventval OF
 
         'DEToXPC' : begin
                 Efitdata.detoxpc = Core_WidgetChoiceEvent( Efitwidget_s.fitOnOff[2],  'Fit pattern center x? ')
-                if (Efitdata.detoL eq 0) then fitOnOff[2] = 0 else fitOnOff[2] = 1
+                if (Efitdata.detoxpc eq 0) then fitOnOff[2] = 0 else fitOnOff[2] = 1
                 if (total(fitOnOff) gt 0) then begin
                   WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =1
                 end else begin
@@ -147,7 +147,7 @@ CASE eventval OF
 
         'DEToYPC' : begin
                 Efitdata.detoypc = Core_WidgetChoiceEvent( Efitwidget_s.fitOnOff[3],  'Fit pattern center y? ')
-                if (Efitdata.detoL eq 0) then fitOnOff[3] = 0 else fitOnOff[3] = 1
+                if (Efitdata.detoypc eq 0) then fitOnOff[3] = 0 else fitOnOff[3] = 1
                 if (total(fitOnOff) gt 0) then begin
                   WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =1
                 end else begin
@@ -157,7 +157,7 @@ CASE eventval OF
 
         'DEToGAMMA' : begin
                 Efitdata.detogamma = Core_WidgetChoiceEvent( Efitwidget_s.fitOnOff[4],  'Fit intensity gammma? ') 
-                if (Efitdata.detoL eq 0) then fitOnOff[4] = 0 else fitOnOff[4] = 1
+                if (Efitdata.detogamma eq 0) then fitOnOff[4] = 0 else fitOnOff[4] = 1
                 if (total(fitOnOff) gt 0) then begin
                   WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =1
                 end else begin
@@ -166,8 +166,8 @@ CASE eventval OF
 	endcase
 
         'DETophi1' : begin
-                Efitdata.detophi1 = Core_WidgetChoiceEvent( Efitwidget_s.fitOnOff[3],  'Fit Euler phi1 angle? ')
-                if (Efitdata.detoL eq 0) then fitOnOff[5] = 0 else fitOnOff[5] = 1
+                Efitdata.detophi1 = Core_WidgetChoiceEvent( Efitwidget_s.fitOnOff[5],  'Fit Euler phi1 angle? ')
+                if (Efitdata.detophi1 eq 0) then fitOnOff[5] = 0 else fitOnOff[5] = 1
                 if (total(fitOnOff) gt 0) then begin
                   WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =1
                 end else begin
@@ -176,8 +176,8 @@ CASE eventval OF
 	endcase
 
         'DETophi' : begin
-                Efitdata.detophi = Core_WidgetChoiceEvent( Efitwidget_s.fitOnOff[3],  'Fit Euler Phi angle? ')
-                if (Efitdata.detoL eq 0) then fitOnOff[6] = 0 else fitOnOff[6] = 1
+                Efitdata.detophi = Core_WidgetChoiceEvent( Efitwidget_s.fitOnOff[6],  'Fit Euler Phi angle? ')
+                if (Efitdata.detophi eq 0) then fitOnOff[6] = 0 else fitOnOff[6] = 1
                 if (total(fitOnOff) gt 0) then begin
                   WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =1
                 end else begin
@@ -186,8 +186,8 @@ CASE eventval OF
 	endcase
 
         'DETophi2' : begin
-                Efitdata.detophi2 = Core_WidgetChoiceEvent( Efitwidget_s.fitOnOff[3],  'Fit Euler phi2 angle? ')
-                if (Efitdata.detoL eq 0) then fitOnOff[7] = 0 else fitOnOff[7] = 1
+                Efitdata.detophi2 = Core_WidgetChoiceEvent( Efitwidget_s.fitOnOff[7],  'Fit Euler phi2 angle? ')
+                if (Efitdata.detophi2 eq 0) then fitOnOff[7] = 0 else fitOnOff[7] = 1
                 if (total(fitOnOff) gt 0) then begin
                   WIDGET_CONTROL, Efitwidget_s.mkjson, sensitive =1
                 end else begin
