@@ -27,7 +27,7 @@ set(EMSoftLib_SRCS
 	${EMSoftLib_SOURCE_DIR}/math.f90
 	${EMSoftLib_SOURCE_DIR}/multibeams.f90
 	${EMSoftLib_SOURCE_DIR}/EBSDmod.f90
-  ${EMSoftLib_SOURCE_DIR}/ECPmod.f90
+        ${EMSoftLib_SOURCE_DIR}/ECPmod.f90
 	${EMSoftLib_SOURCE_DIR}/MBmodule.f90
  	${EMSoftLib_SOURCE_DIR}/NameListTypedefs.f90
  	${EMSoftLib_SOURCE_DIR}/NameListHandlers.f90
@@ -55,25 +55,6 @@ set(EMSoftLib_SRCS
 	${EMSoftLib_SOURCE_DIR}/YSHmodule.f90
 )
 
-# to be removed
-#set(EMSoftdyLib_SRCS
-#	${EMSoftLib_SOURCE_DIR}/constants.f90
-#	${EMSoftLib_SOURCE_DIR}/symmetry.f90
-#	${EMSoftLib_SOURCE_DIR}/Lambert.f90
-#	${EMSoftLib_SOURCE_DIR}/crystal.f90
-#	${EMSoftLib_SOURCE_DIR}/math.f90
-#	${EMSoftLib_SOURCE_DIR}/error.f90
-##	${EMSoftLib_SOURCE_DIR}/local.f90
-#	${EMSoftLib_BINARY_DIR}/local.f90  # NOTE THIS FILE IS GENERATED DURING CMAKE TIME
-#	${EMSoftLib_SOURCE_DIR}/EMdymod.f90
-#	${EMSoftLib_SOURCE_DIR}/io.f90
-# 	${EMSoftLib_SOURCE_DIR}/HDFsupport.f90
-#	${EMSoftLib_SOURCE_DIR}/quaternions.f90
-#	${EMSoftLib_SOURCE_DIR}/rotations.f90
-#	${EMSoftLib_SOURCE_DIR}/timing.f90
-#	${EMSoftLib_SOURCE_DIR}/typedefs.f90
-#)
-
 
 set(install_dir "tools")
 set(lib_install_dir "lib")
@@ -83,8 +64,7 @@ if(WIN32)
 endif()
 
 
-
-ADD_LIBRARY(EMSoftLib ${LIB_TYPE} ${EMSoftdyLib_SRCS} ${EMSoftLib_SRCS})
+ADD_LIBRARY(EMSoftLib ${LIB_TYPE} ${EMSoftLib_SRCS})
 TARGET_LINK_LIBRARIES(EMSoftLib blas lapack hdf5 hdf5_f90cstub hdf5_fortran jsonfortran)
 
 if(BUILD_SHARED_LIBS)
