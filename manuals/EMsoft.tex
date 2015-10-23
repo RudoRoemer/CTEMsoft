@@ -51,7 +51,7 @@
 \rhead{}
 
 % Footers
-\lfoot{\textsf{EMsoft--2015} manual, Release 3.0-beta, \today}
+\lfoot{\textsf{EMSoft--2015} manual, Release 3.0, \today}
 \cfoot{}
 \rfoot{\footnotesize Page \thepage\ of \pageref{LastPage}} % "Page 1 of 2"
 
@@ -70,7 +70,7 @@
 
 \pretitle{\vspace{-1.5in} \begin{center} \HorRule \fontsize{25}{25} \usefont{OT1}{phv}{b}{n} \color{DarkRed} \selectfont} % Horizontal rule before the title
 
-\title{EMsoft\\ General User Manual} % Your article title
+\title{EMSoft:\\ General User and\\ Development Manual} % Your article title
 
 \posttitle{\par\end{center}\vskip 0.5em} % Whitespace under the title
 
@@ -81,9 +81,10 @@
 \postauthor{\footnotesize \usefont{OT1}{phv}{m}{sl} \color{Black} % Configuration for the institution name
 
 \par\end{center}\HorRule} % Horizontal rule after the title
-\date{Program Manual, Release 3.0-beta, \today}
+\date{Program Manual, Release 3.0, \today}
 
-\newcommand{\ctp}{\textsf{EMsoft}}
+\newcommand{\ctp}{\textsf{EMSoft}}
+\newcommand{\ctpb}{\textbf{\textsf{EMSoft}}}
 %
 \begin{document}
 \maketitle
@@ -92,51 +93,89 @@
 {\small\tableofcontents}
 
 \newpage
-\section{Introduction}
-This manual describes those aspects of the \ctp\ package that are common to almost all of the programs; it also describes the functionality of 
-the library source code files.  
-The name of the package has also been changed from CTEMsoft to \ctp, to reflect the fact that both SEM and TEM codes are part of the library.
-In hte present beta release, only the ECP and EBSD programs are made available in Mac OS X executable form.  The source code will
-be made available via GitHub at a later date this Fall.
+\section{What is \ctpb?}
+\ctp\ is an open source package for the simulation of electron microscopy imaging and diffraction modalities.  It consists of a library with
+core routines for crystallography, symmetry, dynamical scattering, Monte Carlo simulations, and so on, plus a series of programs for the different modalities.
+The package is based on the older, and now discontinued, \textsf{CTEMsoft} package, for which the version 2.0 source code is still
+available at \textit{http://www.github.com/marcdegraef/CTEMsoft}.  This code base is no longer supported and is completely replaced
+by a new source code base, version 3.0, available from \textit{http://www.github.com/marcdegraef/EMSoft}.  The two versions are not 
+compatible with each other (with one exception; see section~\ref{sec:f90input5}).
 
-%The 2013 version of the source code is based on the original CTEMsoft code from the late 90s and the years 
-%leading up to the publication of the CTEM textbook (2003, Cambridge University Press).  While some of the code was described in the 
-%book, not everything was subsequently released in the public domain.  In fact, only the code corresponding to Chapters 1 through 7 was 
-%released; the remainder exists, but due to time limitations it was never released.  The present version (Release 3.0) aims to correct this issue and also
-%provides a significantly upgraded and updated code base.  
+This manual describes a few aspects of the \ctp\ package:
+\begin{itemize}
+\item how to install the software developer toolkit;
+\item where to get the executables, if you don't want to compile things yourself;
+\item the different ways of communicating with the programs (input files);
+\item and a list of programs available in this release (3.0).
+\end{itemize}
 
+At the time of writing of this manual, these programs have been successfully compiled and executed on the Mac OS X platform (Yosemite) and on 
+Linux CentOS 7 using the public domain gfortran compiler. There is no real reason why this code should not work on Windows systems, and efforts are underway
+to make sure that the code will run on all platforms. Where appropriate, computations
+are carried out using \textsf{OpenMP} directives, so that multiple cores are used.  In addition, several programs make use of a 
+GPU (if available), using \textit{OpenCL} code.
 
-At the time of writing of this manual, these programs have been successfully compiled on the Mac OS X platform using the public domain gfortran compiler.  
-There is no basic reason why this code should not work on Windows and Linux systems, and efforts are underway
-to make sure that the code will run on all platforms. It would be interesting to see some of this code
-implemented in a super computer setting, since many of the routines should be quite parallellizable.  Where possible, some of the computations
-are carried out using the OpenMP directives, so that multiple cores can be used.  This aspect of the code is still under further development,
-and we anticipate that GPUs will become useful as well, using the OpenCL approach.
-
-The \ctp\ package is entirely written in f90 and, since March 2015, also includes commands from the fortran-2003 implementation, in 
-particular ISO\_C\_BINDINGS for the HDF modules.
-
-The source code is extensively commented, using regular comment lines, but also using DOxygen documentation generation commands.  Hence
-there exists an extensive on-line documentation of all variables, variable types, modules, subroutines, functions, etc. for the latest version 
-of the code.  For selected programs, more extensive manual pages are available.  If interested, please contact the author for further information.
-
-\newpage
-\section{The EMsoft library and third party libraries\label{sec:library}}
-The core of the \ctp\ package is the static library \textsf{EMsoftlib.a}.  This library contains all the code segments and variable/type definitions
-that are used by the programs.  The library must be compiled first, before any program can be compiled.  The source code is organized 
-in a series of modules, starting with \textsf{src/local.f90} which is/should be the only routine that might need some editing before the library is 
-compiled.  
-
-\ctp\ also makes use of a number of third party libraries and source files, all of them in the public domain.  The most important ones are 
-the LAPACK and associated BLAS libraries, as well as the HDF5 library.  With the help of Mike Jackson and Megna Shah (BlueQuartz.net), the 
-compilation files from version 1.0 have been reworked from old-fashioned
-makefiles to use the more flexible CMake environment; to compile the \ctp\ you must have the following installed on your system: (to be added later)
+If you wish to compile \ctp\ yourself, then please proceed with the next section; if you only plan on using the 
+executables, please jump ahead to section~\ref{sec:executables}.
 
 
+\section{The \ctpb\ Software Developer Kit\label{sec:SDK}}
+If you wish to compile the package code yourself, then you will first need to pull the code base from github; you can 
+clone the repository from \textit{http://www.github.com/marcdegraef/EMSoft}.  Select a location on your hard drive to 
+host the source code tree; we recommend that the foldername be \ctp, but you are obviously free to change this.
+
+Before you can start to compile the code, you must install the software developer kit (SDK).  This is made very easy thanks to our
+friends at Bluequartz.net; open a terminal window, navigate inside the \ctp\ tree to the folder \textsf{Support/P\_Build\_Scripts},
+where \textsf{P} represents your platform (e.g., OSX). On the Mac OS X platform, the SDK will be installed by default in the \textsf{/Users/Shared}
+folder; this can be changed by editing the first entry in the \textsf{Build\_SDK.sh} shell script file.  For Linux systems, this 
+script is nearly identical to the one on OS X, but the user may wish to create (with \textsf{sudo}) a \textsf{/Users/Shared/} folder first.
+
+Once the appropriate folder has been selected, the build script should be executed with
+\begin{verbatim}
+	sudo ./Build_SDK.sh
+\end{verbatim}
+(Note that you will not need sudo access if you opt to place the SDK inside your home folder; if you do so, the SDK will not be accessible
+to other users.) This shell script will first download the \textsf{EMSoft\_SDK} archive from one of the BlueQuartz web servers and install
+and unpack the archive. Then the script will start the compilation process for the following libraries:
+\begin{itemize}
+\item \textsf{CMake}: CMake is a package that manages the entire compilation process.  To make sure that the correct version is used, it is installed first.
+\item \textsf{jsonfortran}: a small library to parse and create json-formatted files (JavaScript Object Notation);
+\item \textsf{HDF5}: a large library for Hierarchical Data Format support; note that this library will be compiled twice, once in debug mode and once in release mode.
+It is normal for there to be a large number of warnings during the compilation; just ignore them.
+\item \textsf{fortrancl}: another small library with wrapper routines to call OpenCL from within f90 programs.
+\end{itemize}
+All four of these packages should compile and install without any issues, assuming that you have the correct compilers on your system.  Note that the 
+installation is sandboxed, i.e., it will not interfere with or overwrite any existing implementations of these libraries;  you should only use the libraries
+inside the sandbox, though.
+
+Once the SDK has been compiled, you will be ready to compile \ctp, as described in the next section.
+
+\section{Compiling \ctpb\label{sec:compile}}
+Add the location of the bin folder inside the SDK to your path variable; this will depend on your operating system and the type 
+of shell you are using.  For Mac OS X, the command is as follows (assuming the default SDK location):
+\begin{verbatim}
+	export PATH=$PATH:/Users/Shared/EMSoft_SDK/cmake-3.3.1-Darwin-x86_64/CMake.app/Contents/bin/
+\end{verbatim}
+Typically, you would add this line, or a similar one for other shells, to your \textsf{.bashrc} or \textsf{.cshrc} file.
+
+In a terminal window, cd to your \textsf{EMsoft} top folder, create a \textit{Build} folder, cd inside it and enter the following command:
+\begin{verbatim}
+	cmake -DEMSoft_SDK=/Users/Shared/EMSoft_SDK -DCMAKE_BUILD_TYPE=Debug ../
+\end{verbatim}
+This will spit out a number of variables and path names.\footnote{If you get any error messages or notice things that do not look right, please contact us with a 
+screen dump as well as a description of your systemm, including the OS version.}  Then type
+\begin{verbatim}
+	make -j
+\end{verbatim}
+to compile the entire library and all the executables.  From here on, you can start editing the source code and recompile things as needed.
 
 
-\newpage
 \section{Installation Instructions\label{sec:todo}}
+If you chose not to compile the code, and you only wish to execute the programs, or you did perform the steps in the last two sections, you will
+now need to set up your environment so that the executables will be found, 
+
+
+
 In the older version of CTEMsoft, the programs required several environment variables to be set, so
 that all the resource files and such could be located. In the present pre-release, this has been changed
 to a more flexible system that should work on all platforms (OS X, Linux and Windows).  There are 
@@ -183,7 +222,8 @@ The syntax will depend a little on which shell you are using (for UNIX-based sys
 is not case-sensitive for file and folder names; on all other UNIX-flavored platforms, filenames and folders \textit{are}
 case-sensitive.
 
-\item To view the HDF5 formatted data files, you may wish to install the free HDF5 viewer.  First you need to have Java installed (if it isn’t already):for Mac OS X, go to 
+\item To view the HDF5 formatted data files, you may wish to install the free HDF5 viewer.  First you need to have Java installed (if it isn’t already):
+for Mac OS X, go to 
 \begin{verbatim}
 https://java.com/en/download/faq/java_mac.xml
 \end{verbatim}
