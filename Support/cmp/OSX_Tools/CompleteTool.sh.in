@@ -12,6 +12,7 @@ function printStatus()
 	fi	
 }
 
+echo "-- Adjusting internal library paths: @osx_app_name@"
 
 
 InstallPrefix="${1}"

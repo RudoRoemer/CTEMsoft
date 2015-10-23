@@ -1,6 +1,6 @@
 
 if(NOT "${EMSoft_SDK}" STREQUAL "")
-  include("${EMSoft_SDK}/EMSoft.cmake")
+  include("${EMSoft_SDK}/EMSoft_SDK.cmake")
   message(STATUS "EMSoft_SDK Location: ${EMSoft_SDK}")
 endif()
 

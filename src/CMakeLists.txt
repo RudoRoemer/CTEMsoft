@@ -27,7 +27,7 @@ set(EMSoftLib_SRCS
 	${EMSoftLib_SOURCE_DIR}/math.f90
 	${EMSoftLib_SOURCE_DIR}/multibeams.f90
 	${EMSoftLib_SOURCE_DIR}/EBSDmod.f90
-        ${EMSoftLib_SOURCE_DIR}/ECPmod.f90
+  ${EMSoftLib_SOURCE_DIR}/ECPmod.f90
 	${EMSoftLib_SOURCE_DIR}/MBmodule.f90
  	${EMSoftLib_SOURCE_DIR}/NameListTypedefs.f90
  	${EMSoftLib_SOURCE_DIR}/NameListHandlers.f90
@@ -74,13 +74,6 @@ set(EMSoftLib_SRCS
 #	${EMSoftLib_SOURCE_DIR}/typedefs.f90
 #)
 
-message(STATUS “JSONFORTRAN_LIBRARY = ${JSONFORTRAN_LIBRARY}”)
-
-ADD_LIBRARY(EMSoftLib ${LIB_TYPE} ${EMSoftLib_SRCS})
-TARGET_LINK_LIBRARIES(EMSoftLib blas lapack ${HDF5_LIBRARIES} ${JSONFORTRAN_LIBRARY})
-#ADD_LIBRARY(EMSoftdyLib SHARED ${EMSoftdyLib_SRCS})
-#ADD_LIBRARY(local ${EMSoftLib_SOURCE_DIR}/local.f90)
-#TARGET_LINK_LIBRARIES(EMSoftdyLib blas lapack ${HDF5_LIBRARIES} ${JSONFORTRAN_LIBRARY})
 
 set(install_dir "tools")
 set(lib_install_dir "lib")
@@ -90,8 +83,12 @@ if(WIN32)
 endif()
 
 
+
+ADD_LIBRARY(EMSoftLib ${LIB_TYPE} ${EMSoftdyLib_SRCS} ${EMSoftLib_SRCS})
+TARGET_LINK_LIBRARIES(EMSoftLib blas lapack hdf5 hdf5_f90cstub hdf5_fortran jsonfortran)
+
 if(BUILD_SHARED_LIBS)
-    INSTALL(TARGETS ${PROJECT_NAME}
+	    INSTALL(TARGETS EMSoftLib
         COMPONENT Applications
         RUNTIME DESTINATION ${install_dir}
         LIBRARY DESTINATION ${lib_install_dir}
