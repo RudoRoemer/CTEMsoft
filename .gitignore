@@ -45,7 +45,6 @@ IDL/various
 *.amake
 *.amake.bk
 *.f90.bak
-*.data
 *.xtal
 *.nml
 
