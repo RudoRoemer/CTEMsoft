@@ -140,7 +140,7 @@ integer(kind=irg)       :: nt, nns, nnw, tots, totw ! thickness array and BetheP
 real(kind=sgl)          :: FN(3), kk(3), fnat, kn, Radius, xy(2), tstart, tstop
 integer(kind=irg)       :: numset, nref, ipx, ipy, ipz, iequiv(3,48), nequiv, ip, jp, izz, IE, iz, one,ierr
 integer(kind=irg),allocatable   :: kij(:,:), nat(:)
-real(kind=dbl)          :: res(2), xyz(3)
+real(kind=dbl)          :: res(2), xyz(3), ind
 
 character(fnlen)        :: oldprogname, energyfile, outname
 character(fnlen)        :: xtalname, groupname
@@ -305,7 +305,8 @@ call HDF_pop(HDF_head,.TRUE.)
 ! close the fortran interface
 call h5close_f(hdferr)
 
-etotal = num_el
+ind = float(numEbins)/2.0+1.0
+etotal = sum(accum_z(floor(ind),:,:,:))
 
 call Message(' -> completed reading '//trim(ecpnl%energyfile), frm = "(A//)")
 
@@ -406,7 +407,7 @@ allocate(kij(3,numk),stat=istat)
 allocate(klist(3,numk),knlist(numk),stat=istat)
 
 do iz=1,izz
-    lambdaZ(iz) = float(sum(accum_z(:,iz,:,:)))/etotal
+    lambdaZ(iz) = float(sum(accum_z(floor(ind),iz,:,:)))/float(etotal)
 end do
 
 kij(1:3,1) = (/ ktmp%i, ktmp%j, ktmp%hs /)

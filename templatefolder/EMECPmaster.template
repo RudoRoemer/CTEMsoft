@@ -1,17 +1,13 @@
 &ECPmastervars
-! computational mode 'Blochwv' for Bloch wave, 'ScatMat' for scattering matrix
-compmode = 'Blochwv'  ! 'ScatMat'
-! output device (6=screen, >10 is fort.## file)
-stdout = 6
 ! no. of pixels in the X and Y direction
 npx = 500
 ! smallest d-spacing to take into account [nm]
 dmin = 0.05
-! Data storage options
-Esel = -1
 ! name of output file (to be read by IDL visualization routine)
 outname = 'ECPmasterout.data'
 ! name of the energy statistics file produced by CTEMMC program [note that
 ! this file will also contain parameters such as the microscope accelerating voltage]
 energyfile = 'MCoutput.data'
+! number of threads to run the master pattern
+nthreads = 1
 /
