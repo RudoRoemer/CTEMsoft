@@ -1,0 +1,78 @@
+&rundata
+! Note: All values in this template file correspond to the program defaults
+!
+!------------
+! multi-threading parameters
+!------------
+! number of threads to be used in multi-threaded mode
+SETNTHR = 6
+!------------
+! microscope parameters
+!------------
+! microscope accelerating voltage [V]
+voltage = 200000.0
+! illumination mode (parallel beam 'CTEM' or converged probe 'STEM')
+illumination_mode = 'STEM'
+!------------
+! crystal structure and incident beam parameters
+!------------
+! string with the filename of the structure data (e.g., Cu.xtal; default = undefined)
+xtalname = 'undefined'
+! zone axis indices in crystal reference frame
+kk = 0,0,1
+! coordinates of the Laue center (x,y) in [nm^-1]
+lauec = 0.0,0.0
+!------------
+! various filenames
+!------------
+! name of the nml file with the STEM and detector parameters
+STEMnmlfile = 'STEM_rundata.nml'
+! name of the nml file with the foil parameters
+foilnmlfile = 'FOIL_rundata.nml'
+! type of output file ('data', 'tiff')
+outputformat = 'data'
+! full filename of the output file, including complete path
+dataname = '/some/folder/on/your/drive/trialbinary.data'
+! store displacement field ('new'), read an existing field ('old') or don't store/read anything ('not')
+dispmode = 'not'
+! filename for the displacement field (only if dispmode <> 'not')
+dispfile = 'test_ZA.data'
+!------------
+! output modes
+!------------
+! all program output is sent to the output logical unit (default 6=screen, use >10 for file)
+output = 6
+! should the data output consist of images (STEMstore=.FALSE.) or the entire data array (STEMstore=.TRUE.)
+! for further processing in the IDL STEMDisplay.pro program?
+STEMstore = .FALSE.
+! verbose when dinfo=1, minimal screen output when dinfo=0
+dinfo = 0
+! how often should timing updates be shown (every t_interval k-steps)
+t_interval = 5
+!------------
+! image parameters and scattering matrix step size
+!------------
+! edge length of a column [nm] in the column approximation context
+DF_L = 1.0
+! number of x-columns (=number of x-pixels in output image)
+DF_npix = 256
+! number of y-columns (=number of y-pixels in output image)
+DF_npiy = 256
+! slice thickness for scattering matrix approach [nm]
+DF_slice = 1.0
+!------------
+! all defect related parameters and filenames
+!------------
+! number of dislocation data files (set to 0 if none present)
+numdisl = 0
+! names of the dislocation nml files (comment if none present)
+dislname = 'disl1.nml','disl2.nml'
+! number of stacking fault data files (set to 0 if none present)
+numsf = 0
+! file names for stacking fault input files (comment if none present)
+sfname = 'sf1.nml'
+! inclusion filename  (comment if none present)
+incname = 'none'
+! void file name (comment if none present)
+voidname = 'none'
+/

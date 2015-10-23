@@ -1,0 +1,283 @@
+\documentclass[11pt]{article}
+%\geometry{landscape}                % Activate for for rotated page geometry
+%\usepackage[parfill]{parskip}    % Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{epsfig}
+\usepackage{amsmath}
+\usepackage{epstopdf}
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+
+\textheight=9.0in
+\textwidth=6.5in
+\topmargin=-0.5in
+\oddsidemargin=0.0in
+\evensidemargin=0.0in
+
+\title{Systematic Row Conventional and STEM Defect Image Simulations}
+\author{Marc De Graef}
+\date{\today}                                           % Activate to display a given date or no date
+
+\begin{document}
+\maketitle
+
+
+\section{The \textit{STEMdefect.f90} program}
+The systematic row defect contrast simulation program is called \textit{STEMdefect.f90}, and is written in Fortran 90.
+The source code builds on the libraries of the CTEM book,\footnote{M. De Graef, \textit{Introduction to Conventional Transmission Electron Microscopy}, Cambridge University Press, 2003.}
+and in its current version includes options for dislocations, stacking faults,
+bent foils, voids, coherent spherical precipitates, and large inclusions.  The number of beams in the systematic row is unlimited,
+as is the number of defects of each type that can be present in a single simulation run.
+
+The main interactions with the program are done by means of so-called \textit{namelist files}, i.e., text files with extension \textit{.nml}.
+These files must be edited manually for each defect configuration, or they can be updated automatically by a scripting environment, such as Python or IDL (Interactive Data Language).  
+Four example sets of input files are provided with the program:
+a single dislocation, a pair of dislocations separated by a stacking fault, a number of dislocations and stacking faults in various 
+crystallographic orientations in a slightly bent foil, and a bunch of random voids and small inclusions.  
+
+To unpack the zipped archive file \textit{STEMdefect.tar.gz} on a Mac running OS X, place it in a folder on your hard drive and open the Terminal program (in the 
+/Applications/Utilities folder).  Set your directory to the one containing the zipped archive and type \textit{gunzip STEMdefect.tar.gz}, followed by \textit{tar -xf STEMdefect.tar};
+this will create a folder called \textbf{CTEM} with a series of sub-folders inside the current folder. At this point you can remove the archive by typing \textit{rm STEMdefect.tar}. The folders are:
+\begin{enumerate}
+	\item \textbf{docs}: this contains the present program description file;
+	\item \textbf{bin}:  this contains the executable file \textit{STEMdefect};
+	\item \textbf{templates}: this has a complete set of template input files inside 
+	\textbf{SRdefect} subfolder;
+	\item \textbf{xtal}: this is where one should/could keep all the crystal structure data files;
+	\item \textbf{examples}: this folder has four sub-folders: \textbf{SRdefect-ex1}, \textbf{SRdefect-ex2}, \textbf{SRdefect-ex3}, and \textbf{SRdefect-ex4}, each with complete example input files.
+	\item \textbf{user}: inside this folder you can create your own subfolders, one for each defect configuration.
+\end{enumerate}
+To facilitate running the program, you should add the \textbf{bin} folder to your PATH variable (that depends somewhat on the UNIX shell that you are using).  Note that the 
+prefix ``SR'' stems from earlier versions of the program that could only perform conventional TEM simulations (i.e., with parallel illumination).  The latest version
+can also deal with STEM illumination and a Bright Field -- annular Dark Field detector pair; documentation for this particular illumination mode is still to be written.
+
+In addition to interactive input, the program makes use of a number of namelist files that specify run-time variables, the foil geometry, and the geometrical 
+parameters of each of the defects.  The following sections detail the content of each namelist file.  A namelist file \textit{must} begin with the ampersand symbol
+followed by the name (case sensitive) of the name list; then, all the variables must be defined, one per line, as \textit{name = value} pairs.  The file is concluded
+with a forward slash on the last line.
+
+\subsection{SRdef\_rundata.nml}
+This file contains the general run parameters, with the exception of a few that are entered interactively during the run.  The following parameters
+are part of the name list called \textit{rundata}: (the default values are also listed; if an entry is absent in the SRdef\_rundata.nml file, the default value will be used)
+\begin{itemize}
+\item \textsf{DF\_L} (float, $1.0$): number of nanometers per image pixel (or edge length of column);
+\item \textsf{DF\_npix} (integer, $256$): number of image pixels in horizontal direction;
+\item \textsf{DF\_npiy} (integer, $256$): number of image pixels in vertical direction;
+\item \textsf{DF\_slice} (float, $1.0$): set the slice thickness (in nanometers; use 1.0 or 2.0 for a quick run, 0.50 or 0.25 for an accurate (slower) run; 
+%\item \textsf{Nmat} (integer, $10000$): number of scattering matrices to be pre-computed ($10,000$ is a good value);
+\item \textsf{dinfo} (integer, 0): toggle parameter to turn verbose output on (1) or off (0);
+\item \textsf{outputformat} (string, `data'):  select the format for the output file: `data', `tiff', or `pgm';
+\item \textsf{outputroot} (string, `image'): this is the string that will form the beginning of the image file names for the pgm and tiff formats (for the data format, the user will be prompted interactively to enter a file name);
+%\item \textsf{t\_interval} (integer,$16$): timer interval; an estimate of the remaining computation time will be printed every \textsf{t\_interval} image columns;
+%\item \textsf{sgname} (string): will be used in the future to name a file containing a location-dependent excitation error (currently unused);
+\item \textsf{illumination\_mode} (string, `CTEM'): set the illumination mode to `CTEM' or `STEM'; the latter has been implemented, but is not yet documented;
+\item \textsf{dispfile} (string, `none'):  filename for the storage of the displacement field data (typically a very large file); when equal to `none', no data file will be written;
+\item \textsf{dispmode} (string,'new'): set file creation mode for displacement field data (`new', `old', `unknown', i.e., the usual Fortran qualifiers);
+\item \textsf{voidname} (string, `none'): name of  void descriptor file;
+\item \textsf{incname} (string, `none'): name of  inclusion descriptor file;
+\item \textsf{numdisl} (integer, $0$): number of dislocations;
+\item \textsf{dislname(i)} (string): names of dislocation descriptor namelist files;
+\item \textsf{numsf} (integer, $0$): number of stacking faults; be aware that each stacking fault also creates $2$ dislocations);
+\item \textsf{sfname(i)} (string): names of stacking fault descriptor namelist files;
+\end{itemize}
+Note that strings must be placed between single quotes.  The name of this file may not be changed.  There is no maximum number of defects; memory is allocated as needed.
+
+
+\subsection{SRdef\_foildata.nml}
+This file defines a number of parameters related to the foil geometry and material properties.  The following parameters (with default values) are available for the \textit{foildata} name list:\footnote{See section
+8.3 in the microscopy book for a detailed description of all the relevant reference frames used in this computation.}
+\begin{itemize}
+%\item \textsf{foilB(1,2,3)} (float, $[001]$): direction indices of the beam direction;
+\item \textsf{foilF(1,2,3)} (float, $[001]$): real space direction indices of the foil normal at zero foil tilt angles;
+\item \textsf{foilq(1,2,3)} (float, $[100]$): reciprocal space indices of the (possibly non-integer) $\mathbf{q}$-vector that is parallel to the horizontal direction of the simulated image (unless the `foilbeP' angle defined below is non-zero);
+\item \textsf{brx,bry,brxy} (float, $0.0$): three parameters to describe the bending of the foil, which results in a local excitation error given by
+\[
+	s_\mathbf{g} = brx (x-cpx)^2 + bry (y-cpy)^2 + 2 brxy (x-cpx)(y-cpy)
+\]
+These prefactors should be of the order $10^{-7}$ to give reasonable overall excitation errors; They may be either positive or negative to get elliptic paraboloid
+or saddle point surface shapes.  Other shapes are certainly possible, but this one is flexible enough to result in a lot of realistic shapes.
+\item \textsf{cpx,cpy} (float, $(0.5,0.5)$): fractional coordinates used in the above expression for the foil shape.
+\item \textsf{foilalP} (float, $0.0$): primary tilt angle in degrees.  It is assumed that the primary tilt axis lies along the vector $\mathbf{q}$ defined above;
+\item \textsf{foilalS} (float, $0.0$): secondary tilt angle (for a double tilt sample holder) in degrees;
+\item \textsf{foilbeP} (float, $0.0$): angle between the primary tilt axis and the horizontal image direction (in degrees); 
+\item \textsf{foilz0} (float, $100$): foil thickness in nanometers;
+\item \textsf{foilelmo(1..6,1..6)} (float, $0.0$): elastic moduli of the foil in engineering notation.  Zero values do not need to be entered, and only the entries on or above
+the diagonal need to be present.
+\end{itemize}
+Note that the units of the elastic moduli do not matter, as long as all numbers are expressed in the same units.  The name of this file may not be changed.
+The electron beam direction is computed from the combination of the foil geometry and the foil tilt angles.  All angles are measured in a counter-clockwise fashion.
+ 
+\subsection{dislocation.nml}
+The word ``dislocation'' in the file name above may be replaced by any other string (maximum $16$ characters).
+This namelist file contains the following dislocation parameters for the \textit{dislocationdata} name list:
+\begin{itemize}
+\item \textsf{id,jd} (float): the fractional position of the center of the dislocation line in the image;
+\item \textsf{u(1,2,3)} (float):  the directional indices of the dislocation line direction;
+\item \textsf{bv(1,2,3)} (float): the components of the Burgers vector of the dislocation;
+\end{itemize}
+The position of a dislocation (and that of all other defects) is defined as a fraction of the image size along the horizontal 
+and vertical directions; each of these fractions is a floating point number and does not need to be contained in the 
+interval $[0,1]$.  If a coordinate falls outside this interval, then the defect itself will not be visible in the image, but potentially
+some contributions from its displacement field might still affect the image.
+
+\subsection{stacking\_fault.nml}
+The word ``stacking\_fault'' in the file name above may be replaced by any other string (maximum $16$ characters).
+This namelist file contains the following dislocation parameters for the \textit{SFdata} name list:
+\begin{itemize}
+\item \textsf{SFi,SFj} (float): fractional coordinates of the center of the stacking fault;
+\item \textsf{SFsep} (float): separation distance (in nanometers) between the centers of the two partial dislocations; 
+\item \textsf{SFplane(1,2,3)} (float): Miller indices of the stacking fault plane;
+\item \textsf{SFlpu(1,2,3)} (float): directional indices of the line direction of the leading partial;
+\item \textsf{SFlpb(1,2,3)} (float): Burgers vector components of the leading partial (these will also be the components of the stacking fault displacement vector); 
+\item \textsf{SFtpu(1,2,3)} (float): directional indices of the line direction of the trailing partial;
+\item \textsf{SFtpb(1,2,3)} (float): Burgers vector components of the trailing partial.
+\end{itemize}
+
+\subsection{Void and Inclusion Data Files}
+Image simulations for voids and inclusions can be performed as well.  The input data format is somewhat different, since the 
+number of voids and/or inclusions could potentially be large.  All void parameters are collected into a single data file, with the 
+number of voids (integer) on the first line, followed by one line per void with the fractional coordinates $x$, $y$, the fractional 
+depth $z$, and the radius in nanometers (all separated by commas).  For the inclusion data file, the format is identical,
+except that each line has an additional parameter equal to (see CTEM book section 8.4.1)
+\begin{equation}
+    C = \frac{3K\delta(1+\nu)}{3K(1+\nu)+2E},
+\end{equation}
+with $K$ the bulk modulus of the particle, and $E$ and $\nu$ Young's
+modulus and Poisson's ratio of the matrix, respectively.  $\delta$ is the lattice
+misfit parameter between the matrix and the inclusion; typically, $C\approx\frac{2}{3}\delta$ .
+The name of the input file has to be added to the \textsf{SRdef\_rundata.nml} file, in the \textsf{voidname}
+or \textsf{incname} variable.
+Voids and/or inclusions can be mixed with all other defects, and there is no limit to their number.  The fourth example
+discussed below shows the result of an image simulation for a mix of voids and inclusions.  Note that the depth of a void or 
+inclusion is defined in fractional coordinates, starting at the top foil surface.
+
+
+\section{Example Simulations}
+
+For all example simulations we will consider the copper fcc structure, with foil normal $[00\bar{1}]$.  The 
+horizontal image direction will be taken to be parallel to $\mathbf{q}=[010]$, and the foil thickness is $215$ nm.  The elastic moduli (in arbitrary units)
+for copper are $c_{11}=c_{22}=c_{33}=16.84$, $c_{12}=c_{13}=c_{23}=12.14$, and $c_{44}=c_{55}=c_{66}=7.55$.  This leads to an elastic
+anisotropy factor of $3.21$.  
+
+The first time the \textit{STEMdefect} program is executed, one must create the input file for the copper structure. In the Terminal window, 
+set your folder to the \textsf{Examples/Ex1} folder and type
+\textsf{STEMdefect} (if you defined the PATH variable) or type \textsf{../../bin/STEMdefect} otherwise.  When the program starts, it will print
+out a copyright notice and then ask whether to load a file (0) or create a new structure (1); enter \textsf{1} to create a new structure. Then select the 
+crystal system (cubic, so enter \textsf{1}); enter the lattice parameter in nanometers (\textsf{0.36526}); enter the space group number (\textsf{225});
+then the atomic number (\textsf{29}); and the fractional atom position, site occupation parameter and the Debye-Waller factor (enter \textsf{0.0,0.0,0.0,1.0,0.004}).\footnote{If you
+do not know the Debye-Waller factor for a compound, enter $0.1$ nm$^2$ for first column elements, $0.01$--$0.03$ nm$^2$ for second column elements, and 
+values in the range $0.003$--$0.007$ for all other elements.}  There are no other atoms, so enter \textsf{n}.  Then enter the file name, including the path; since we
+are storing structure files in the \textsf{xtal} folder, which is two folders up from where we are, simply type \textsf{../../xtal/Cu.xtal} for the file name to get it into the correct folder.
+This will create the structure file \textsf{Cu.xtal}, which can then be used for all the examples.  
+
+The program then continues to ask for a number of parameters: first, re-enter the file name (\textsf{../../xtal/Cu.xtal}); then the accelerating voltage (pick \textsf{200000}, entered as an integer);
+then there are three options for the atomic scattering factors, and the third option is the preferred one (enter \textsf{3}).  The program will spit out various pieces
+of information along the way.  Then the program asks for the systematic row reflection; enter the Miller indices (\textsf{0,2,0}, without parentheses), and the maximum
+multiple of $\mathbf{g}_{020}$ to be taken into account.  If you enter \textsf{3}, that means that the computation will use $7$ beams, from $-3\mathbf{g}_{020}$ to 
+$+3\mathbf{g}_{020}$.  The next entry is the excitation error of the $\mathbf{g}_{020}$ reflection; note that the program displays a number of important values, for
+the symmetric systematic row, for $s_{-\mathbf{g}}=0$, and for the weak beam case $s_{3\mathbf{g}}=0$.  Enter the appropriate value for the excitation error, say \textsf{0.0}
+for the standard Bragg orientation.  Note that it is left up to the user to make sure that the systematic row vector is actually normal to the beam direction.
+
+The final entry is the root of the file name for the output.  If the file format selected with the \textsf{outputformat} variable in the \textsf{SRdef\_rundata.nml} file is 
+\textsf{data}, then the output file will have the name \textit{root.data}, and will be a standard Fortran unformatted file, with first three integers (number of beams $n$, number
+of image pixels $n_x$, $n_y$) followed by an array of floating point numbers with dimensions $n,n_x,n_y$.  If the \textsf{outputformat} is \textsf{pgm} or \textsf{tiff}, then the 
+output will consist of multiple files, one for each image, all with a filename of the type \textsf{root\_\#g.pgm} or \textsf{root\_\#g.tiff}, where \# indicates a number from $-N$ to $+N$, with $N$ the 
+maximum beam number.   If a file already exists, you will be prompted whether to overwrite it or not.
+
+Now that we have covered the standard way of running the program, let's also cover an alternative method.  If we are in the process of determining the correct
+defect parameters (say in the file \textsf{dislocation.nml}) then we may have to run the \textit{STEMdefect} program over and over.  To avoid having to type the entries 
+many times, we can create a text file, called \textit{inp}, in which each line lists one entry that we would normally type as a response to one of the program's prompts.
+This file will have one response per line, and then the program can be executed as \textsf{../../bin/STEMdefect $<$ inp}, which will take a line from the file each time 
+an input is needed.
+
+All example runs were executed on a Mac Pro $2\times 3$ GHz Quad-Core Intel Xeon running Mac OS X 10.6.4;  the code was compiled in the Absoft environment,
+with standard optimizations turned on, and with a first-attempt at multi-threading.  This might have to be improved in the future, especially for STEM defect image simulations
+which tend to take much longer than the CTEM images.
+
+Now, let's get to the examples.
+
+\subsection{Example 1: a single dislocation}
+In the folder \textbf{Examples/Ex1}, you will find four files: \textsf{SRdef\_rundata.nml}, \textsf{SRdef\_foildata.nml}, \textsf{inp}, and \textsf{disl1.nml}.  Inspecting these files, we 
+find that the simulation will be carried out on an image of $400\times 400$ pixels and that the output format will be in the \textit{pgm} format.  The dislocation is a perfect
+dislocation located at the center of the image (fractional coordinates $(0.5,0.5)$) 
+with Burgers vector $\frac{1}{2}[011]$ and line direction $[011]$ (i.e., a perfect screw dislocation). Since the foil is oriented so that $[010]$ is 
+parallel to the bottom edge of the image, we expect the dislocation image to be horizontal.  In the \textsf{SRdef\_rundata.nml} file, we have removed all entries
+that are not needed for this run.  The foil shape is flat (no bending) with a thickness of $219$ nm.  If we run the program with $7=2n+1$ beams, and the other 
+parameters are as described above, then the resulting bright field and dark field images are the ones shown in Fig.~\ref{fig:disl}.
+
+\begin{figure}[h]
+\centering\leavevmode
+\epsffile{example1}
+\caption{\label{fig:disl}(a) Bright field and (b) $\mathbf{g}_{020}$ dark field image of a $7$-beam systematic row computation for the parameters stated in the text.  [program run time:  $19$s]}
+\end{figure}
+
+The other dark field images have a very low intensity and do not show much detail; this is typical for systematic row
+orientations close to the two-beam Bragg orientation.
+
+\newpage
+\subsection{Example 2: a single stacking fault}
+In the folder \textbf{Examples/Ex2}, you will find four files: \textsf{SRdef\_rundata.nml}, \textsf{SRdef\_foildata.nml}, \textit{inp}, \textsf{sf1.nml}.  There is a stacking fault 
+located at the center of the foil, on the $(111)$ fault plane, separated on the center line by $125$ nm, and bounded by a leading partial with $\mathbf{u}=[0\bar{1}1]$
+and $\mathbf{b}=\mathbf{R}=\frac{1}{6}[\bar{1}\bar{1}2]$, and a trailing partial with $\mathbf{u}=[0\bar{1}1]$
+and $\mathbf{b}=\frac{1}{6}[1\bar{2}1]$.  The resulting contrast (the remaining conditions are identical to those in the first example) is shown in
+Fig.~\ref{fig:sf}.
+\begin{figure}[ht]
+\centering\leavevmode
+\epsffile{example2}
+\caption{\label{fig:sf} (a) Bright field and (b) $\mathbf{g}_{020}$ dark field images of a $7$-beam systematic row computation for the parameters stated in the text.  [program run time: $27$s]}
+\end{figure}
+
+\newpage
+\subsection{Example 3: a combination of faults}
+This example has six perfect dislocations and three stacking faults, with input files located in the folder \textbf{Examples/Ex3}.  
+The defect information is summarized in the tables below, and the resulting images, computed for a $5$-beam systematic row on a 
+grid of $1024\times 1024$ pixels, with a bent foil are shown in Fig.~\ref{fig:combo}.  All other parameters can be found in the namelist files.
+The pixel size in this example is $2$ nm.  Note that in all images, the intensity is scaled between 0 and 255 for the entire systematic row
+series of images; because of this, the higher order reflections usually are quite dark and often do not show any contrast.  To get to the
+image contrast for the entire series (the actual intensities), use the `data' format for output.
+
+\begin{table}[hb]
+\centering\leavevmode
+\begin{tabular}{|c|cc|cc|}
+\hline
+Dislocation & $x$ & $y$ & $\mathbf{u}$ & $\mathbf{b}$ \\
+\hline\hline
+$1$ & $0.20$ & $0.80$ & $[1\bar{1}2]$ & $\frac{1}{2}[110]$\\
+$2$ & $0.10$ & $0.20$ & $[112]$ & $\frac{1}{2}[1\bar{1}0]$\\
+$3$ & $0.85$ & $0.80$ & $[\bar{1}21]$ & $\frac{1}{2}[\bar{1}0\bar{1}]$\\
+$4$ & $0.50$ & $0.10$ & $[\bar{1}12]$ & $\frac{1}{2}[110]$\\
+$5$ & $0.85$ & $0.50$ & $[21\bar{1}]$ & $\frac{1}{2}[011]$\\
+$6$ & $0.70$ & $0.25$ & $[12\bar{1}]$ & $\frac{1}{2}[101]$\\ 
+\hline
+\end{tabular}
+\begin{tabular}{|c|cc|cc|cc|cc|}
+\hline
+SF& $x$ & $y$ & Leading $\mathbf{u}$ & $\mathbf{b}$ & Trailing $\mathbf{u}$ & $\mathbf{b}$ & SF Plane & Separation [nm]\\
+\hline\hline
+$1$ & $0.50$ & $0.50$ &   $[3\,\bar{10}\,7]$ & $\frac{1}{6}[\bar{1}\bar{1}2]$ & $[\bar{2}\bar{8}1]$ & $\frac{1}{6}[1\bar{2}1]$ & $(111)$ & 450 \\
+$2$ & $0.25$ & $0.25$ &   $[\bar{1}12]$ & $\frac{1}{6}[1\bar{1}2]$ & $[\bar{1}1\bar{2}]$ & $\frac{1}{6}[\bar{1}\bar{2}1]$ & $(\bar{1}11)$ & 250 \\
+$3$ & $0.70$ & $0.70$ &   $[4\,\bar{10}\,6]$ & $\frac{1}{6}[\bar{1}\bar{1}2]$ & $[6\bar{10}4]$ & $\frac{1}{6}[1\bar{2}1]$ & $(111)$ & 1000 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{figure}[ht]
+\centering\leavevmode
+\epsffile{example3}
+\caption{\label{fig:combo}(a) Bright field and (b) $\mathbf{g}_{020}$ dark field images of a $5$-beam systematic row computation for six perfect dislocations and three stacking faults. [program run time: $11$m $8$s]}
+\end{figure}
+
+\newpage
+\subsection{Example 4: random voids and inclusions}
+Two input files with $50$ entries each were created using a random number generator; radii are random between 3 and 10 nm.  The active reflection is $\mathbf{g}_{020}$ for a $5$-beam systematic
+row.  The resulting bright field and dark field images are shown below.
+
+\begin{figure}[ht]
+\centering\leavevmode
+\epsffile{example4}
+\caption{\label{fig:vandi}Bright field and dark field images of a $5$-beam systematic row computation for $50$ random voids and $50$ random inclusions. [program run time: $4$m $19$s]}
+\end{figure}
+
+Note that this program uses at least 3 beams, so it does not do a ``true'' two-beam case.
+
+
+
+\end{document}  
