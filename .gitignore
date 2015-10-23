@@ -53,9 +53,6 @@ IDL/various
 /doc/
 /dot/
 
-# examples folder
-/examples/
-
 # IDL Virtual Machine
 /IDL/VMapps/
 /IDL/VMappsPC/
