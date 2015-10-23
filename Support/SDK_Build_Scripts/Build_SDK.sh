@@ -1,21 +1,21 @@
 #!/bin/bash
 
-SDK_PARENT_DIR=/Users/Shared
-SDK_INSTALL=${SDK_PARENT_DIR}/EMSoft_SDK
-
-PARALLEL_BUILD=8
-
-SCRIPT_DIR=`pwd`
-
-
-if [ ! -e "$SDK_INSTALL" ];
-then
-  sudo mkdir -p ${SDK_INSTALL}
-  chmod ugo+rwx ${SDK_INSTALL}
-fi
 
 HOST_SYSTEM=`uname`
 echo "Host System: $HOST_SYSTEM"
+PARALLEL_BUILD=8
+SCRIPT_DIR=`pwd`
+
+
+SDK_PARENT_DIR=/Users/Shared
+SDK_INSTALL=${SDK_PARENT_DIR}/EMSoft_SDK
+
+# Create the actual SDK directory and set the ownership
+if [ ! -e "$SDK_INSTALL" ];
+then
+  sudo mkdir -p ${SDK_INSTALL}
+  sudo chmod ugo+rwx ${SDK_INSTALL}
+fi
 
 WGET=`type -P wget`
 CURL=`type -P curl`
@@ -43,19 +43,22 @@ then
   DOWNLOAD_ARGS=""
 fi
 
-
-
-if [ ! -e "/Applications/Doxygen.app" ];
+# Only look for Doxygen.app on OS X systems.
+if [[ "$HOST_SYSTEM" = "Darwin" ]];
 then
-  echo "--------------------------------------------"
-  echo "Doxygen is missing from your system."
-  echo "Downloading Doxygen 1.8.10 for you."
-  $DOWNLOAD_PROG  "http://ftp.stack.nl/pub/users/dimitri/Doxygen-1.8.10.dmg" -o "${EMSoft_SDK}/Doxygen-1.8.10.dmg"
-  open "${EMSoft_SDK}/Doxygen-1.8.10.dmg"
-  echo "Please Copy the Doxygen.app from the mounted disk image into the /Applications directory. CMake can most"
-  echo "easily find it in this location."
+  if [ ! -e "/Applications/Doxygen.app" ];
+  then
+    echo "--------------------------------------------"
+    echo "Doxygen is missing from your system."
+    echo "Downloading Doxygen 1.8.10 for you."
+    $DOWNLOAD_PROG  "http://ftp.stack.nl/pub/users/dimitri/Doxygen-1.8.10.dmg" -o "${EMSoft_SDK}/Doxygen-1.8.10.dmg"
+    open "${EMSoft_SDK}/Doxygen-1.8.10.dmg"
+    echo "Please Copy the Doxygen.app from the mounted disk image into the /Applications directory. CMake can most"
+    echo "easily find it in this location."
+  fi
 fi
 
+# If we are missing the actual source archives then download from the web site
 if [ ! -e "${SDK_PARENT_DIR}/EMSoft_SDK_OSX.tar.gz" ];
   then
   echo "-----------------------------------------------------------"
@@ -72,13 +75,12 @@ fi
 # Move one Directory Above the SDK Folder and untar the
 if [ -e "$SDK_PARENT_DIR/EMSoft_SDK_OSX.tar.gz" ];
   then
-
-  cd "$SDK_PARENT_DIR"
-  tar -xvzf EMSoft_SDK_OSX.tar.gz
+    cd "$SDK_PARENT_DIR"
+    tar -xvzf EMSoft_SDK_OSX.tar.gz
 fi
 
 #-------------------------------------------------
-# Copy our scripts over to the SDK directory that has not been created
+# Copy our scripts over to the SDK directory
 cp ${SCRIPT_DIR}/Build_HDF5.sh ${SDK_INSTALL}/.
 cp ${SCRIPT_DIR}/Build_JsonFortran.sh ${SDK_INSTALL}/.
 cp ${SCRIPT_DIR}/Build_FortranCL.sh ${SDK_INSTALL}/.
