@@ -69,7 +69,7 @@ endfunction()
 
 Add_EMSoft_Executable(TARGET EMECP SOURCES ${APP_DIR}/EMECP.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMECP.template)
 Add_EMSoft_Executable(TARGET EMECPmaster SOURCES ${APP_DIR}/EMECPmaster.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMECPmaster.template)
-Add_EMSoft_Executable(TARGET EMKosselMaster SOURCES ${APP_DIR}/EMKosselMaster.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMKosselMaster.template)
+Add_EMSoft_Executable(TARGET EMKosselMaster SOURCES ${APP_DIR}/EMKosselmaster.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMKosselMaster.template)
 Add_EMSoft_Executable(TARGET EMsampleRFZ SOURCES ${APP_DIR}/EMsampleRFZ.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMsampleRFZ.template)
 Add_EMSoft_Executable(TARGET EMMC SOURCES ${APP_DIR}/EMMC.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMMC.template)  #MP
 Add_EMSoft_Executable(TARGET EMEBSD SOURCES ${APP_DIR}/EMEBSD.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMEBSD.template)
@@ -87,7 +87,7 @@ Add_EMSoft_Executable(TARGET EMorient SOURCES ${APP_DIR}/EMorient.f90 LINK_LIBRA
 Add_EMSoft_Executable(TARGET EMxtalinfo SOURCES ${APP_DIR}/EMxtalinfo.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMxtalinfo.template)
 Add_EMSoft_Executable(TARGET EMzap SOURCES ${APP_DIR}/EMzap.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMzap.template)
 Add_EMSoft_Executable(TARGET EMdrawcell SOURCES ${APP_DIR}/EMdrawcell.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMdrawcell.template)
-Add_EMSoft_Executable(TARGET EMPEDKIN SOURCES ${APP_DIR}/EMPEDKIN.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMPEDKIN.template)
+Add_EMSoft_Executable(TARGET EMpedKIN SOURCES ${APP_DIR}/EMpedKIN.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMPEDKIN.template)
 Add_EMSoft_Executable(TARGET rotationtest SOURCES ${APP_DIR}/rotationtest.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMECP.template)
 
 
@@ -105,6 +105,13 @@ add_dependencies(rotationtest ZZ_RotationsFile-Copy )
 if(APPLE)
   find_library(LAPACK_LIB Accelerate)
  # include_directories(" -FvecLib")
+elseif(UNIX AND NOT APPLE)
+  find_package(LAPACK REQUIRED)
+  if(LAPACK_FOUND)
+    set(LAPACK_LIB ${LAPACK_LIBRARIES})
+  else()
+    message(STATUS "LAPACK NOT Found for LINUX. Install LAPACK/BLAS on your system")
+  endif()
 else()
 	message(FATAL_ERROR "This platform needs to have CMake code inserted to find the BLAS/LAPACK Libraries.")
 endif(APPLE)
@@ -112,11 +119,18 @@ endif(APPLE)
 #------------------------------------------------------------------------------
 # Fine the OpenCL Package
 find_package( OpenCL REQUIRED )
+message(STATUS "OpenCL_FOUND: ${OpenCL_FOUND}")
+message(STATUS "OpenCL_INCLUDE_DIRS: ${OpenCL_INCLUDE_DIRS}")
+message(STATUS "OpenCL_LIBRARIES: ${OpenCL_LIBRARIES}")
+message(STATUS "OpenCL_VERSION_STRING: ${OpenCL_VERSION_STRING}")
+message(STATUS "OpenCL_INCLUDE_DIR: ${OpenCL_INCLUDE_DIR}")
+message(STATUS "OpenCL_LIBRARY: ${OpenCL_LIBRARY}")
 
-include_directories( ${OPENCL_INCLUDE_DIRS} )
+include_directories( ${OpenCL_INCLUDE_DIRS} )
+
 # Figure out if the OpenCL Package has CPP bindings
 if( OPENCL_HAS_CPP_BINDINGS )
-  message(STATUS "OpenCL has CPP bindings. Full include is: " ${OPENCL_INCLUDE_DIRS} )
+  message(STATUS "OpenCL has CPP bindings. Full include is: " ${OpenCL_INCLUDE_DIRS} )
 else( OPENCL_HAS_CPP_BINDINGS )
   message(STATUS "No OpenCL CPP bindings found" )
 endif( OPENCL_HAS_CPP_BINDINGS )
@@ -133,7 +147,7 @@ endif()
 include_directories(${FORTRANCL_INCLUDE_DIR})
 
 # Create an variable to hold all the OpenCL related libraries
-set(EMSOFT_CL_LIBRARIES  ${OPENCL_LIBRARIES} ${FORTRANCL_LIBRARIES})
+set(EMSOFT_CL_LIBRARIES  ${OpenCL_LIBRARIES} ${FORTRANCL_LIBRARIES})
 
 include_directories(${HDF5_INCLUDE_DIR})
 

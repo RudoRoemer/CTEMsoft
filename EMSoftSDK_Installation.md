@@ -38,3 +38,24 @@ We will use CMake to configure a build system for EMSoft. CMake has been include
 	[user@system] $ make -j
 	
 After compilation the various programs will be available to execute.
+
+# Linux Installation #
+
+These instructions were developed on Ubuntu 14.04 with an nVidea 650 GTX video card.
+
+## GFortran 4.9.2 ##
+
+Ubuntu 14.04 comes with GFortran 4.8 which is not new enough for EMSoft to use. We need to install 
+a newer version (Preferably 5.x, but 4.9.2 should work.). The following commands will get you
+the newer GFortran library:
+
+  [user] $ sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+  [user] $ sudo apt-get update && sudo apt-get upgrade && sudo apt-get install gfortran-4.9
+
+## OpenCL ##
+Download from (https://software.intel.com/en-us/articles/opencl-drivers)[https://software.intel.com/en-us/articles/opencl-drivers]
+The download we are looking for is:
+  Intel OpenCL™ Code Builder for Ubuntu (157MB)
+
+
+
