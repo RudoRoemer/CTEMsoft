@@ -45,7 +45,8 @@ function(Add_EMSoft_Executable)
   endif()
 
   if(NOT "${Z_TEMPLATE}" STREQUAL "" AND NOT EXISTS ${Z_TEMPLATE})
-    message(STATUS "The Template file ${Z_TEMPLATE} does not exist. Install Rule NOT generated.")
+    message(STATUS "Missing Template File for Exectuable ${Z_TARGET}")
+    message(STATUS "  ${Z_TEMPLATE}")
   else()
     install(FILES ${Z_TEMPLATE}
       DESTINATION "Templates"

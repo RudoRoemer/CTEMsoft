@@ -170,6 +170,10 @@ include(${PROJECT_SOURCE_DIR}/opencl/SourceList.cmake)
 include(${PROJECT_SOURCE_DIR}/resources/SourceList.cmake)
 
 # --------------------------------------------------------------------
+# Package the needed examples
+include(${PROJECT_SOURCE_DIR}/examples/SourceList.cmake)
+
+# --------------------------------------------------------------------
 # Add the executables
 ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/src_programs ${PROJECT_BINARY_DIR}/src_programs)
 
