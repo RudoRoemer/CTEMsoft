@@ -1,3 +1,10 @@
+
+#---------------------------------------------------------------------
+# Set some variables to shorten up the call to the function below
+set(APP_DIR "${EMsoft_SOURCE_DIR}/src_programs")
+set(TMPLT_DIR "${EMsoft_SOURCE_DIR}/templatefolder")
+set(EXE_LINK_LIBRARIES EMSoftLib gomp gcc_eh jsonfortran)
+
 #---------------------------------------------------------------------
 # This function creates an executable that is to be compiled. The valid
 # arguments are:
@@ -6,7 +13,7 @@
 #  LINK_LIBRARIES: The list of Libraries the TARGET needs to be linked to
 function(Add_EMSoft_Executable)
   set(options )
-  set(oneValueArgs TARGET)
+  set(oneValueArgs TARGET TEMPLATE)
   set(multiValueArgs SOURCES LINK_LIBRARIES)
   cmake_parse_arguments(Z "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
@@ -14,7 +21,6 @@ function(Add_EMSoft_Executable)
   mark_as_advanced(EMSOFT_BUILD_${Z_TARGET})
 
   if(EMSOFT_BUILD_${Z_TARGET})  
-  
     set(install_dir "bin")
     set(lib_install_dir "lib")
     if(WIN32)
@@ -35,47 +41,53 @@ function(Add_EMSoft_Executable)
                   LINK_LIBRARIES ${Z_LINK_LIBRARIES}
                   LIB_SEARCH_DIRS ${EMsoft_BINARY_DIR}/Bin
     )
+
   endif()
 
+  if(NOT "${Z_TEMPLATE}" STREQUAL "" AND NOT EXISTS ${Z_TEMPLATE})
+    message(STATUS "The Template file ${Z_TEMPLATE} does not exist. Install Rule NOT generated.")
+  else()
+    install(FILES ${Z_TEMPLATE}
+      DESTINATION "Templates"
+      COMPONENT Applications
+    )
+  endif()
 
 endfunction()
 
-#---------------------------------------------------------------------
-# Set some variables to shorten up the call to the function below
-set(APP_DIR ${EMsoft_SOURCE_DIR}/src_programs)
-set(LINK_LIBRARIES EMSoftLib gomp gcc_eh jsonfortran)
+
 
 #---------------------------------------------------------------------
 # Add all of our executables.
-#Add_EMSoft_Executable(TARGET EMECPthinfilm SOURCES ${APP_DIR}/EMECPthinfilm.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-#Add_EMSoft_Executable(TARGET EMECPSMMultiLayer SOURCES ${APP_DIR}/EMECPSMMultiLayer.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-#Add_EMSoft_Executable(TARGET EMECCI SOURCES ${APP_DIR}/EMECCI.f90 LINK_LIBRARIES ${LINK_LIBRARIES}) #read_stacking_fault_data has wrong number of args passed to it
-#Add_EMSoft_Executable(TARGET EMKossel SOURCES ${APP_DIR}/EMKossel.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-#Add_EMSoft_Executable(TARGET EMEBSDoverlap SOURCES ${APP_DIR}/EMEBSDoverlap.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
+#Add_EMSoft_Executable(TARGET EMECPthinfilm SOURCES ${APP_DIR}/EMECPthinfilm.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE)
+#Add_EMSoft_Executable(TARGET EMECPSMMultiLayer SOURCES ${APP_DIR}/EMECPSMMultiLayer.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE)
+#Add_EMSoft_Executable(TARGET EMECCI SOURCES ${APP_DIR}/EMECCI.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE) #read_stacking_fault_data has wrong number of args passed to it
+#Add_EMSoft_Executable(TARGET EMKossel SOURCES ${APP_DIR}/EMKossel.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE)
+#Add_EMSoft_Executable(TARGET EMEBSDoverlap SOURCES ${APP_DIR}/EMEBSDoverlap.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE)
 
 
-Add_EMSoft_Executable(TARGET EMECP SOURCES ${APP_DIR}/EMECP.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-Add_EMSoft_Executable(TARGET EMECPmaster SOURCES ${APP_DIR}/EMECPmaster.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-Add_EMSoft_Executable(TARGET EMKosselMaster SOURCES ${APP_DIR}/EMKosselMaster.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-Add_EMSoft_Executable(TARGET EMsampleRFZ SOURCES ${APP_DIR}/EMsampleRFZ.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-Add_EMSoft_Executable(TARGET EMMC SOURCES ${APP_DIR}/EMMC.f90 LINK_LIBRARIES ${LINK_LIBRARIES})  #MP
-Add_EMSoft_Executable(TARGET EMEBSD SOURCES ${APP_DIR}/EMEBSD.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-Add_EMSoft_Executable(TARGET EMEBSDmaster SOURCES ${APP_DIR}/EMEBSDmaster.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-Add_EMSoft_Executable(TARGET EMmkxtal SOURCES ${APP_DIR}/EMmkxtal.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-Add_EMSoft_Executable(TARGET EMlistSG SOURCES ${APP_DIR}/EMlistSG.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-Add_EMSoft_Executable(TARGET EMqg SOURCES ${APP_DIR}/EMqg.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-Add_EMSoft_Executable(TARGET EMfamily SOURCES ${APP_DIR}/EMfamily.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-Add_EMSoft_Executable(TARGET EMstar SOURCES ${APP_DIR}/EMstar.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-Add_EMSoft_Executable(TARGET EMorbit SOURCES ${APP_DIR}/EMorbit.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-Add_EMSoft_Executable(TARGET EMZAgeom SOURCES ${APP_DIR}/EMZAgeom.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-Add_EMSoft_Executable(TARGET EMlatgeom SOURCES ${APP_DIR}/EMlatgeom.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-Add_EMSoft_Executable(TARGET EMstereo SOURCES ${APP_DIR}/EMstereo.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-Add_EMSoft_Executable(TARGET EMorient SOURCES ${APP_DIR}/EMorient.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-Add_EMSoft_Executable(TARGET EMxtalinfo SOURCES ${APP_DIR}/EMxtalinfo.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-Add_EMSoft_Executable(TARGET EMzap SOURCES ${APP_DIR}/EMzap.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-Add_EMSoft_Executable(TARGET EMdrawcell SOURCES ${APP_DIR}/EMdrawcell.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-Add_EMSoft_Executable(TARGET EMPEDKIN SOURCES ${APP_DIR}/EMPEDKIN.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
-Add_EMSoft_Executable(TARGET rotationtest SOURCES ${APP_DIR}/rotationtest.f90 LINK_LIBRARIES ${LINK_LIBRARIES})
+Add_EMSoft_Executable(TARGET EMECP SOURCES ${APP_DIR}/EMECP.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMECP.template)
+Add_EMSoft_Executable(TARGET EMECPmaster SOURCES ${APP_DIR}/EMECPmaster.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMECPmaster.template)
+Add_EMSoft_Executable(TARGET EMKosselMaster SOURCES ${APP_DIR}/EMKosselMaster.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMKosselMaster.template)
+Add_EMSoft_Executable(TARGET EMsampleRFZ SOURCES ${APP_DIR}/EMsampleRFZ.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMsampleRFZ.template)
+Add_EMSoft_Executable(TARGET EMMC SOURCES ${APP_DIR}/EMMC.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMMC.template)  #MP
+Add_EMSoft_Executable(TARGET EMEBSD SOURCES ${APP_DIR}/EMEBSD.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMEBSD.template)
+Add_EMSoft_Executable(TARGET EMEBSDmaster SOURCES ${APP_DIR}/EMEBSDmaster.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMEBSDmaster.template)
+Add_EMSoft_Executable(TARGET EMmkxtal SOURCES ${APP_DIR}/EMmkxtal.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES})
+Add_EMSoft_Executable(TARGET EMlistSG SOURCES ${APP_DIR}/EMlistSG.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMlistSG.template)
+Add_EMSoft_Executable(TARGET EMqg SOURCES ${APP_DIR}/EMqg.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMqg.template)
+Add_EMSoft_Executable(TARGET EMfamily SOURCES ${APP_DIR}/EMfamily.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMfamily.template)
+Add_EMSoft_Executable(TARGET EMstar SOURCES ${APP_DIR}/EMstar.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMstar.template)
+Add_EMSoft_Executable(TARGET EMorbit SOURCES ${APP_DIR}/EMorbit.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMorbit.template)
+Add_EMSoft_Executable(TARGET EMZAgeom SOURCES ${APP_DIR}/EMZAgeom.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMZAgeom.template)
+Add_EMSoft_Executable(TARGET EMlatgeom SOURCES ${APP_DIR}/EMlatgeom.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMlatgeom.template)
+Add_EMSoft_Executable(TARGET EMstereo SOURCES ${APP_DIR}/EMstereo.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMstereo.template)
+Add_EMSoft_Executable(TARGET EMorient SOURCES ${APP_DIR}/EMorient.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMorient.template)
+Add_EMSoft_Executable(TARGET EMxtalinfo SOURCES ${APP_DIR}/EMxtalinfo.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMxtalinfo.template)
+Add_EMSoft_Executable(TARGET EMzap SOURCES ${APP_DIR}/EMzap.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMzap.template)
+Add_EMSoft_Executable(TARGET EMdrawcell SOURCES ${APP_DIR}/EMdrawcell.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMdrawcell.template)
+Add_EMSoft_Executable(TARGET EMPEDKIN SOURCES ${APP_DIR}/EMPEDKIN.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMPEDKIN.template)
+Add_EMSoft_Executable(TARGET rotationtest SOURCES ${APP_DIR}/rotationtest.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMECP.template)
 
 
 #---------------------------------------------------------------------
@@ -125,6 +137,11 @@ set(EMSOFT_CL_LIBRARIES  ${OPENCL_LIBRARIES} ${FORTRANCL_LIBRARIES})
 include_directories(${HDF5_INCLUDE_DIR})
 
 # Add executables to be compiled.
-Add_EMSoft_Executable(TARGET EMMCOpenCL SOURCES ${APP_DIR}/EMMCOpenCL.f90 LINK_LIBRARIES ${LINK_LIBRARIES} ${LAPACK_LIB} ${EMSOFT_CL_LIBRARIES})
-Add_EMSoft_Executable(TARGET EMEBSDmasterOpenCL SOURCES ${APP_DIR}/EMEBSDmasterOpenCL.f90 LINK_LIBRARIES ${LINK_LIBRARIES} ${LAPACK_LIB} ${EMSOFT_CL_LIBRARIES})
+Add_EMSoft_Executable(TARGET EMMCOpenCL SOURCES ${APP_DIR}/EMMCOpenCL.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${EMSOFT_CL_LIBRARIES}  TEMPLATE ${TMPLT_DIR}/EMMCOpenCL.template)
+Add_EMSoft_Executable(TARGET EMEBSDmasterOpenCL SOURCES ${APP_DIR}/EMEBSDmasterOpenCL.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${EMSOFT_CL_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMEBSDmaster.template)
 
+
+install(FILES ${TMPLT_DIR}/BetheParameters.template
+  DESTINATION "Templates"
+  COMPONENT Applications
+)

@@ -161,11 +161,19 @@ cmake_add_fortran_subdirectory(src_sampleRFZ
   LINK_LIBS 
 )
 
-# Be sure to package the OpenCL files
+# --------------------------------------------------------------------
+# Package the OpenCL files
 include(${PROJECT_SOURCE_DIR}/opencl/SourceList.cmake)
 
+# --------------------------------------------------------------------
+# Package the needed resources
+include(${PROJECT_SOURCE_DIR}/resources/SourceList.cmake)
+
+# --------------------------------------------------------------------
+# Add the executables
 ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/src_programs ${PROJECT_BINARY_DIR}/src_programs)
 
+# --------------------------------------------------------------------
 # This should be the last line in this file:
 include(${EMsoft_SOURCE_DIR}/Support/CPack/PackageProject.cmake)
 
