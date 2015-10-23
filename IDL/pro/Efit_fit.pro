@@ -110,7 +110,7 @@ Widget_Control, Efitwidget_s.cancelwidget, /Realize
 
 
 ; next we start the modified amoeba routine Efit_amoeba to improve the experimental parameters
-ftol=1.0e-4
+ftol=1.0e-5
 fmin=Efit_amoeba(ftol,function_name='Efit_update', function_value=fv, ncalls=iter, nmax=500,p0=pa, scale=scl)
 
 if (n_elements(fmin) ne nset) then begin

@@ -911,7 +911,7 @@ use error
 
 IMPLICIT NONE
 
-real(kind=sgl),INTENT(IN)       :: qu(3)
+real(kind=sgl),INTENT(IN)       :: qu(4)
 
 integer(kind=irg)               :: res
 real(kind=sgl)                  :: r
@@ -952,7 +952,7 @@ use error
 
 IMPLICIT NONE
 
-real(kind=dbl),INTENT(IN)       :: qu(3)
+real(kind=dbl),INTENT(IN)       :: qu(4)
 
 integer(kind=irg)               :: res
 real(kind=dbl)                  :: r
