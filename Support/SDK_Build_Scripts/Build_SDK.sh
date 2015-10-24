@@ -6,7 +6,6 @@ echo "Host System: $HOST_SYSTEM"
 PARALLEL_BUILD=8
 SCRIPT_DIR=`pwd`
 
-
 SDK_PARENT_DIR=/opt
 SDK_INSTALL=${SDK_PARENT_DIR}/EMSoft_SDK
 
@@ -51,7 +50,7 @@ then
     echo "--------------------------------------------"
     echo "Doxygen is missing from your system."
     echo "Downloading Doxygen 1.8.10 for you."
-    $DOWNLOAD_PROG  "http://ftp.stack.nl/pub/users/dimitri/Doxygen-1.8.10.dmg" -o "${EMSoft_SDK}/Doxygen-1.8.10.dmg"
+    sudo $DOWNLOAD_PROG  "http://ftp.stack.nl/pub/users/dimitri/Doxygen-1.8.10.dmg" -o "${EMSoft_SDK}/Doxygen-1.8.10.dmg"
     open "${EMSoft_SDK}/Doxygen-1.8.10.dmg"
     echo "Please Copy the Doxygen.app from the mounted disk image into the /Applications directory. CMake can most"
     echo "easily find it in this location."
@@ -67,7 +66,7 @@ then
 fi
 
 # If we are missing the actual source archives then download from the web site
-if [ ! -e "${SDK_PARENT_DIR}/EMSoft_SDK_OSX.tar.gz" ];
+if [ ! -e "${SDK_PARENT_DIR}/${archiveName}" ];
   then
   echo "-----------------------------------------------------------"
   echo "An archive named ${archiveName} should be located at "
@@ -75,7 +74,8 @@ if [ ! -e "${SDK_PARENT_DIR}/EMSoft_SDK_OSX.tar.gz" ];
   echo "archive contains all the dependent library codes that will be"
   echo "compiled for the EMSoft SDK. The SDK Archive will be downloaded"
   echo "from http://dream3d.bluequartz.net"
-  $DOWNLOAD_PROG  "http://dream3d.bluequartz.net/binaries/EMSoft_SDK/${archiveName}" -O "${SDK_PARENT_DIR}/${archiveName}"
+  cd "$SDK_PARENT_DIR"
+  sudo $DOWNLOAD_PROG  "http://dream3d.bluequartz.net/binaries/EMSoft_SDK/${archiveName}" -O "${SDK_PARENT_DIR}/${archiveName}"
 
 fi
 
@@ -84,14 +84,14 @@ fi
 if [ -e "$SDK_PARENT_DIR/${archiveName}" ];
   then
     cd "$SDK_PARENT_DIR"
-    tar -xvzf ${archiveName}
+    sudo tar -xvzf ${archiveName}
 fi
 
 #-------------------------------------------------
 # Copy our scripts over to the SDK directory
-cp ${SCRIPT_DIR}/Build_HDF5.sh ${SDK_INSTALL}/.
-cp ${SCRIPT_DIR}/Build_JsonFortran.sh ${SDK_INSTALL}/.
-cp ${SCRIPT_DIR}/Build_FortranCL.sh ${SDK_INSTALL}/.
+sudo cp ${SCRIPT_DIR}/Build_HDF5.sh ${SDK_INSTALL}/.
+sudo cp ${SCRIPT_DIR}/Build_JsonFortran.sh ${SDK_INSTALL}/.
+sudo cp ${SCRIPT_DIR}/Build_FortranCL.sh ${SDK_INSTALL}/.
 
 #-------------------------------------------------
 # Move into the SDK directory
@@ -99,7 +99,7 @@ cd ${SDK_INSTALL}
 
 #-------------------------------------------------
 # Unpack CMake
-tar -xvzf ${SDK_INSTALL}/cmake-3.3.1-${cmakename}-x86_64.tar.gz
+sudo tar -xvzf ${SDK_INSTALL}/cmake-3.3.1-${cmakename}-x86_64.tar.gz
 
 #-------------------------------------------------
 # Get CMake on our path
@@ -114,7 +114,7 @@ fi
 # Create the EMSoft_SKD.cmake file, but back up any existing one first
 if [ -e "$SDK_INSTALL/EMSoft_SDK.cmake" ]
   then
-  mv "$SDK_INSTALL/EMSoft_SDK.cmake" "$SDK_INSTALL/EMSoft_SDK.cmake.bak"
+  sudo mv "$SDK_INSTALL/EMSoft_SDK.cmake" "$SDK_INSTALL/EMSoft_SDK.cmake.bak"
 fi
 echo "# This is the EMSoft_SDK File. This file contains all the paths to the dependent libraries." > "$SDK_INSTALL/EMSoft_SDK.cmake"
 
@@ -153,16 +153,16 @@ echo ""  >> "$SDK_INSTALL/EMSoft_SDK.cmake"
 #-------------------------------------------------
 # Start building all the packages
 
-${SDK_INSTALL}/Build_JsonFortran.sh "${SDK_INSTALL}" ${PARALLEL_BUILD}
-rm ${SDK_INSTALL}/Build_JsonFortran.sh
+sudo ${SDK_INSTALL}/Build_JsonFortran.sh "${SDK_INSTALL}" ${PARALLEL_BUILD}
+sudo rm ${SDK_INSTALL}/Build_JsonFortran.sh
 
 
-${SDK_INSTALL}/Build_HDF5.sh "${SDK_INSTALL}" ${PARALLEL_BUILD}
-rm ${SDK_INSTALL}/Build_HDF5.sh
+sudo ${SDK_INSTALL}/Build_HDF5.sh "${SDK_INSTALL}" ${PARALLEL_BUILD}
+sudo rm ${SDK_INSTALL}/Build_HDF5.sh
 
 
-${SDK_INSTALL}/Build_FortranCL.sh "${SDK_INSTALL}" ${PARALLEL_BUILD}
-rm ${SDK_INSTALL}/Build_FortranCL.sh
+sudo ${SDK_INSTALL}/Build_FortranCL.sh "${SDK_INSTALL}" ${PARALLEL_BUILD}
+sudo rm ${SDK_INSTALL}/Build_FortranCL.sh
 
 # Continue writing the EMSoft_SDK.cmake file after all those libraries were compiled
 echo "" >> "$SDK_INSTALL/EMSoft_SDK.cmake"
@@ -172,12 +172,12 @@ echo "set(CMAKE_MODULE_PATH \${CMAKE_MODULE_PATH} \${HDF5_DIR} \${JSONFORTRAN_DI
 echo "" >> "$SDK_INSTALL/EMSoft_SDK.cmake"
 echo "" >> "$SDK_INSTALL/EMSoft_SDK.cmake"
 echo "#--------------------------------------------------------------------------------------------------" >> "$SDK_INSTALL/EMSoft_SDK.cmake"
-echo "# Only Run this the first time when configuring DREAM.3D. After that the values" >> "$SDK_INSTALL/EMSoft_SDK.cmake"
+echo "# Only Run this the first time when configuring EMSoft. After that the values" >> "$SDK_INSTALL/EMSoft_SDK.cmake"
 echo "# are cached properly and the user can add additional plugins through the normal" >> "$SDK_INSTALL/EMSoft_SDK.cmake"
 echo "# CMake GUI or CCMake programs." >> "$SDK_INSTALL/EMSoft_SDK.cmake"
 echo "if(NOT DEFINED EMSoft_FIRST_CONFIGURE)" >> "$SDK_INSTALL/EMSoft_SDK.cmake"
 echo "" >> "$SDK_INSTALL/EMSoft_SDK.cmake"
-echo "  set(EMSoft_FIRST_CONFIGURE \"ON\" CACHE STRING \"Determines if DREAM3D has already been configured\")" >> "$SDK_INSTALL/EMSoft_SDK.cmake"
+echo "  set(EMSoft_FIRST_CONFIGURE \"ON\" CACHE STRING \"Determines if EMSoft has already been configured\")" >> "$SDK_INSTALL/EMSoft_SDK.cmake"
 echo "endif()" >> "$SDK_INSTALL/EMSoft_SDK.cmake"
 echo "" >> "$SDK_INSTALL/EMSoft_SDK.cmake"
 

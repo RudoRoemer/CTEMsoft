@@ -125,18 +125,17 @@ clone the repository from \textit{http://www.github.com/marcdegraef/EMSoft}.  Se
 host the source code tree; we recommend that the foldername be \ctp, but you are obviously free to change this.
 
 Before you can start to compile the code, you must install the software developer kit (SDK).  This is made very easy thanks to our
-friends at Bluequartz.net; open a terminal window, navigate inside the \ctp\ tree to the folder \textsf{Support/P\_Build\_Scripts},
-where \textsf{P} represents your platform (e.g., OSX). On the Mac OS X platform, the SDK will be installed by default in the \textsf{/Users/Shared}
-folder; this can be changed by editing the first entry in the \textsf{Build\_SDK.sh} shell script file.  For Linux systems, this 
-script is nearly identical to the one on OS X, but the user may wish to create (with \textsf{sudo}) a \textsf{/Users/Shared/} folder first.
+friends at Bluequartz.net; open a terminal window, navigate inside the \ctp\ tree to the folder \textsf{Support/SDK\_Build\_Scripts}.
+On the Mac OS X and Linux platforms, the SDK will be installed by default in a new \textsf{/opt/EMSoft\_SDK}
+folder; this can be changed by editing the \textsf{SDK\_PARENT\_DIR} variable in the \textsf{Build\_SDK.sh} shell script file.
 
-Once the appropriate folder has been selected, the build script should be executed with
+The build script should be executed with
 \begin{verbatim}
 	sudo ./Build_SDK.sh
 \end{verbatim}
 (Note that you will not need sudo access if you opt to place the SDK inside your home folder; if you do so, the SDK will not be accessible
 to other users.) This shell script will first download the \textsf{EMSoft\_SDK} archive from one of the BlueQuartz web servers and install
-and unpack the archive. Then the script will start the compilation process for the following libraries:
+and unpack the archive. Then the script will install the following program and libraries:
 \begin{itemize}
 \item \textsf{CMake}: CMake is a package that manages the entire compilation process.  To make sure that the correct version is used, it is installed first.
 \item \textsf{jsonfortran}: a small library to parse and create json-formatted files (JavaScript Object Notation);
@@ -146,29 +145,34 @@ It is normal for there to be a large number of warnings during the compilation; 
 \end{itemize}
 All four of these packages should compile and install without any issues, assuming that you have the correct compilers on your system.  Note that the 
 installation is sandboxed, i.e., it will not interfere with or overwrite any existing implementations of these libraries;  you should only use the libraries
-inside the sandbox, though.
-
-Once the SDK has been compiled, you will be ready to compile \ctp, as described in the next section.
+inside the sandbox, though.  The compilation process should only take about five minutes.  Once the SDK has been compiled, you will be ready to compile \ctp, 
+as described in the next section.
 
 \section{Compiling \ctpb\label{sec:compile}}
 Add the location of the bin folder inside the SDK to your path variable; this will depend on your operating system and the type 
 of shell you are using.  For Mac OS X, the command is as follows (assuming the default SDK location):
 \begin{verbatim}
-	export PATH=$PATH:/Users/Shared/EMSoft_SDK/cmake-3.3.1-Darwin-x86_64/CMake.app/Contents/bin/
+	export PATH=$PATH:/opt/EMSoft_SDK/cmake-3.3.1-Darwin-x86_64/CMake.app/Contents/bin/
+\end{verbatim}
+For Linux, use
+\begin{verbatim}
+	export PATH=$PATH:/opt/EMSoft_SDK/cmake-3.3.1-Linux-x86_64/bin/
 \end{verbatim}
 Typically, you would add this line, or a similar one for other shells, to your \textsf{.bashrc} or \textsf{.cshrc} file.
 
-In a terminal window, cd to your \textsf{EMsoft} top folder, create a \textit{Build} folder, cd inside it and enter the following command:
+In a terminal window, cd to your \textsf{EMsoft} top folder, create a \textsf{Build} folder, cd inside it and enter the following command:
 \begin{verbatim}
-	cmake -DEMSoft_SDK=/Users/Shared/EMSoft_SDK -DCMAKE_BUILD_TYPE=Debug ../
+	cmake -DEMSoft_SDK=/opt/EMSoft_SDK -DCMAKE_BUILD_TYPE=Debug ../
 \end{verbatim}
 This will spit out a number of variables and path names.\footnote{If you get any error messages or notice things that do not look right, please contact us with a 
-screen dump as well as a description of your systemm, including the OS version.}  Then type
+screen dump as well as a description of your system, including the OS version.} This is the first cmake run, which will set up all necessary variables
+for future runs.  The next time you call the cmake program, you can omit the arguments (except for ../); you can also use the interactive ccmake version.
+Tho compile the \ctp\ package, simply type
 \begin{verbatim}
 	make -j
 \end{verbatim}
-to compile the entire library and all the executables.  From here on, you can start editing the source code and recompile things as needed.
-
+and the entire library and all the executables will be compiled.  From here on, you can start editing the source code and recompile things as needed.
+All executables will be located in the \textsf{Build/Bin} folder, so you may want to add this folder to your path variable.
 
 \section{Installation Instructions\label{sec:todo}}
 If you chose not to compile the code, and you only wish to execute the programs, or you did perform the steps in the last two sections, you will
