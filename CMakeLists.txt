@@ -153,7 +153,7 @@ cmake_add_fortran_subdirectory(src
   LINK_LIBS EMSoftLib blas lapack 
 )
 
-cmake_add_fortran_subdirectory(src_sampleRFZ
+cmake_add_fortran_subdirectory(src_SampleRFZ
   NO_EXTERNAL_INSTALL
   PROJECT SampleRFZLib  # project name in toplevel CMakeLists.txt in lapack
   LIBRARIES  SampleRFZLib# target libraries created

@@ -7,7 +7,7 @@ PARALLEL_BUILD=8
 SCRIPT_DIR=`pwd`
 
 
-SDK_PARENT_DIR=/Users/Shared
+SDK_PARENT_DIR=/opt
 SDK_INSTALL=${SDK_PARENT_DIR}/EMSoft_SDK
 
 # Create the actual SDK directory and set the ownership
@@ -58,25 +58,33 @@ then
   fi
 fi
 
+archiveName="EMSoft_SDK_Linux.tar.gz"
+cmakename="Linux"
+if [[ "$HOST_SYSTEM" = "Darwin" ]];
+then
+  archiveName="EMSoft_SDK_OSX.tar.gz"
+  cmakename="Darwin"
+fi
+
 # If we are missing the actual source archives then download from the web site
 if [ ! -e "${SDK_PARENT_DIR}/EMSoft_SDK_OSX.tar.gz" ];
   then
   echo "-----------------------------------------------------------"
-  echo "An archive named EMSoft_SDK_OSX.tar.gz should be located at "
-  echo "${SDK_PARENT_DIR}/EMSoft_SDK_OSX.tar.gz but was not found. This "
+  echo "An archive named ${archiveName} should be located at "
+  echo "${SDK_PARENT_DIR}/${archiveName} but was not found. This "
   echo "archive contains all the dependent library codes that will be"
   echo "compiled for the EMSoft SDK. The SDK Archive will be downloaded"
   echo "from http://dream3d.bluequartz.net"
-  $DOWNLOAD_PROG  "http://dream3d.bluequartz.net/binaries/EMSoft_SDK/EMSoft_SDK_OSX.tar.gz" -o "${SDK_PARENT_DIR}/EMSoft_SDK_OSX.tar.gz"
+  $DOWNLOAD_PROG  "http://dream3d.bluequartz.net/binaries/EMSoft_SDK/${archiveName}" -O "${SDK_PARENT_DIR}/${archiveName}"
 
 fi
 
 #-------------------------------------------------
 # Move one Directory Above the SDK Folder and untar the
-if [ -e "$SDK_PARENT_DIR/EMSoft_SDK_OSX.tar.gz" ];
+if [ -e "$SDK_PARENT_DIR/${archiveName}" ];
   then
     cd "$SDK_PARENT_DIR"
-    tar -xvzf EMSoft_SDK_OSX.tar.gz
+    tar -xvzf ${archiveName}
 fi
 
 #-------------------------------------------------
@@ -91,12 +99,16 @@ cd ${SDK_INSTALL}
 
 #-------------------------------------------------
 # Unpack CMake
-tar -xvzf ${SDK_INSTALL}/cmake-3.3.1-Darwin-x86_64.tar.gz
+tar -xvzf ${SDK_INSTALL}/cmake-3.3.1-${cmakename}-x86_64.tar.gz
 
 #-------------------------------------------------
 # Get CMake on our path
-export PATH=$PATH:${SDK_INSTALL}/cmake-3.3.1-Darwin-x86_64/CMake.app/Contents/bin
-
+if [[ "$HOST_SYSTEM" = "Darwin" ]];
+then
+  export PATH=$PATH:${SDK_INSTALL}/cmake-3.3.1-${cmakename}-x86_64/CMake.app/Contents/bin
+else
+  export PATH=$PATH:${SDK_INSTALL}/cmake-3.3.1-${cmakename}-x86_64/bin
+fi
 
 #-------------------------------------------------
 # Create the EMSoft_SKD.cmake file, but back up any existing one first
@@ -170,4 +182,4 @@ echo "endif()" >> "$SDK_INSTALL/EMSoft_SDK.cmake"
 echo "" >> "$SDK_INSTALL/EMSoft_SDK.cmake"
 
 
-
+sudo chmod -R ugo+rw *

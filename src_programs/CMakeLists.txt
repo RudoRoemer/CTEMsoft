@@ -69,7 +69,7 @@ endfunction()
 
 Add_EMSoft_Executable(TARGET EMECP SOURCES ${APP_DIR}/EMECP.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMECP.template)
 Add_EMSoft_Executable(TARGET EMECPmaster SOURCES ${APP_DIR}/EMECPmaster.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMECPmaster.template)
-Add_EMSoft_Executable(TARGET EMKosselMaster SOURCES ${APP_DIR}/EMKosselMaster.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMKosselMaster.template)
+Add_EMSoft_Executable(TARGET EMKosselMaster SOURCES ${APP_DIR}/EMKosselmaster.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMKosselMaster.template)
 Add_EMSoft_Executable(TARGET EMsampleRFZ SOURCES ${APP_DIR}/EMsampleRFZ.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMsampleRFZ.template)
 Add_EMSoft_Executable(TARGET EMMC SOURCES ${APP_DIR}/EMMC.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMMC.template)
 Add_EMSoft_Executable(TARGET EMEBSD SOURCES ${APP_DIR}/EMEBSD.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMEBSD.template)
@@ -105,6 +105,13 @@ add_dependencies(rotationtest ZZ_RotationsFile-Copy )
 if(APPLE)
   find_library(LAPACK_LIB Accelerate)
  # include_directories(" -FvecLib")
+elseif(UNIX AND NOT APPLE)
+  find_package(LAPACK REQUIRED)
+  if(LAPACK_FOUND)
+    set(LAPACK_LIB ${LAPACK_LIBRARIES})
+  else()
+    message(STATUS "LAPACK NOT Found for LINUX. Install LAPACK/BLAS on your system")
+  endif()
 else()
 	message(FATAL_ERROR "This platform needs to have CMake code inserted to find the BLAS/LAPACK Libraries.")
 endif(APPLE)
@@ -112,11 +119,22 @@ endif(APPLE)
 #------------------------------------------------------------------------------
 # Fine the OpenCL Package
 find_package( OpenCL REQUIRED )
+if(OpenCL_FOUND)
+  message(STATUS "OpenCL_FOUND: ${OpenCL_FOUND}")
+  message(STATUS "OpenCL_VERSION_STRING: ${OpenCL_VERSION_STRING}")
+  message(STATUS "OpenCL_INCLUDE_DIRS: ${OpenCL_INCLUDE_DIRS}")
+  message(STATUS "OpenCL_LIBRARIES: ${OpenCL_LIBRARIES}")
+#  message(STATUS "OpenCL_INCLUDE_DIR: ${OpenCL_INCLUDE_DIR}")
+#  message(STATUS "OpenCL_LIBRARY: ${OpenCL_LIBRARY}")
+else()
+  message(FATAL_ERROR "OpenCL is needed to compile some programs in EMSoft. Please install a package appropriate for your Operating System")
+endif()
 
-include_directories( ${OPENCL_INCLUDE_DIRS} )
+include_directories( ${OpenCL_INCLUDE_DIRS} )
+
 # Figure out if the OpenCL Package has CPP bindings
 if( OPENCL_HAS_CPP_BINDINGS )
-  message(STATUS "OpenCL has CPP bindings. Full include is: " ${OPENCL_INCLUDE_DIRS} )
+  message(STATUS "OpenCL has CPP bindings. Full include is: " ${OpenCL_INCLUDE_DIRS} )
 else( OPENCL_HAS_CPP_BINDINGS )
   message(STATUS "No OpenCL CPP bindings found" )
 endif( OPENCL_HAS_CPP_BINDINGS )
@@ -130,16 +148,21 @@ if( NOT FORTRANCL_FOUND)
   message(FATAL_ERROR "Please Download, Build and install. After install export the environment variable FORTRANCL_INSTALL to point to the installation location.")
 endif()
 
+
 include_directories(${FORTRANCL_INCLUDE_DIR})
-
-# Create an variable to hold all the OpenCL related libraries
-set(EMSOFT_CL_LIBRARIES  ${OPENCL_LIBRARIES} ${FORTRANCL_LIBRARIES})
-
 include_directories(${HDF5_INCLUDE_DIR})
 
 # Add executables to be compiled.
-Add_EMSoft_Executable(TARGET EMMCOpenCL SOURCES ${APP_DIR}/EMMCOpenCL.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${EMSOFT_CL_LIBRARIES}  TEMPLATE ${TMPLT_DIR}/EMMCOpenCL.template)
-Add_EMSoft_Executable(TARGET EMEBSDmasterOpenCL SOURCES ${APP_DIR}/EMEBSDmasterOpenCL.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${EMSOFT_CL_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMEBSDmaster.template)
+Add_EMSoft_Executable(TARGET EMMCOpenCL 
+                      SOURCES ${APP_DIR}/EMMCOpenCL.f90 
+                      LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${FORTRANCL_LIBRARIES} ${OpenCL_LIBRARY}
+                      TEMPLATE ${TMPLT_DIR}/EMMCOpenCL.template
+                      )
+Add_EMSoft_Executable(TARGET EMEBSDmasterOpenCL 
+                      SOURCES ${APP_DIR}/EMEBSDmasterOpenCL.f90 
+                      LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${FORTRANCL_LIBRARIES} ${OpenCL_LIBRARY}
+                      TEMPLATE ${TMPLT_DIR}/EMEBSDmaster.template
+                      )
 
 
 install(FILES ${TMPLT_DIR}/BetheParameters.template
