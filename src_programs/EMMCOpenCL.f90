@@ -223,18 +223,16 @@ energyres = 0.0
 size_in_bytes = num_max*sizeof(EkeV)
 size_in_bytes_seeds = 4*globalworkgrpsz*globalworkgrpsz*sizeof(EkeV)
 
-if (mcnl%sigstep .ne. 0.D0) then
-   numangle = nint((mcnl%sigend - mcnl%sigstart)/mcnl%sigstep)+1
-else
-   call FatalError('EMMCOpenCL:','zero step size for sigma values')
-end if
-
-if (mode .eq. 'full' .and. numangle .gt. 1) then
-   call FatalError('EMMCOpenCL:','Multiple values of sigma for full (EBSD) mode. &
-   Please specify same sigstart and sigstop value in full mode. ')
+if (mode .eq. 'bse1') then
+    if (mcnl%sigstep .ne. 0.D0) then
+       numangle = nint((mcnl%sigend - mcnl%sigstart)/mcnl%sigstep)+1
+    else
+       call FatalError('EMMCOpenCL:','zero step size for sigma values')
+    end if
 end if
 
 if (mode .eq. 'full') then
+   numangle = 1
    allocate(accum_e(numEbins,-nx:nx,-nx:nx),accum_z(numEbins,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
 else if (mode .eq. 'bse1') then
    allocate(accum_e(numangle,-nx:nx,-nx:nx),accum_z(numangle,numzbins,-nx/10:nx/10,-nx/10:nx/10),stat=istat)
@@ -352,8 +350,18 @@ if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
 call clEnqueueWriteBuffer(command_queue, seeds, cl_bool(.true.), 0_8, size_in_bytes_seeds, init_seeds(1), ierr)
 
 angleloop: do iang = 1,numangle
-    write(*,*) 'Starting',iang,'loop for tilt values'
-    sig = (mcnl%sigstart + (iang-1)*mcnl%sigstep)*dtoR
+
+    if (mode .eq. 'bse1') then
+        if (iang .eq. 1) call Message('Monte Carlo mode set to bse1. Calculating statistics for tilt series...',frm='(A)')
+        io_int(1) = iang
+        call Writevalue('Angle loop #',io_int,1,'(I3)')
+        sig = (mcnl%sigstart + (iang-1)*mcnl%sigstep)*dtoR
+    else if (mode .eq. 'full') then
+        call Message('Monte Carlo mode set to full. Performing full calculation...',frm='(A)')
+        sig = mcnl%sig*dtoR
+    else
+         call FatalError('DoMCSimulation','Unknown mode specified in namelist/json file')
+    end if
 
     mainloop: do i = 1,(totnum_el/num_max+1)
 
