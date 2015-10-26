@@ -53,8 +53,6 @@ call Interpret_Program_Arguments(nmldeffile,1,(/ 42 /), progname)
 call GetMCCLNameList(nmldeffile,mcnl)
 
 ! perform a Monte Carlo simulation
-write (*,*) 'namelist contents : ',mcnl
-
 call DoMCsimulation(mcnl, progname, nmldeffile)
 
 end program EMMCOpenCL
@@ -119,9 +117,8 @@ integer(kind=irg)       :: numsy        ! number of Lambert map points along y
 integer(kind=irg)       :: numEbins     ! number of energy bins
 integer(kind=irg)       :: numzbins     ! number of depth bins
 integer(kind=irg)       :: nx           ! no. of pixels
-integer(kind=irg)       :: i,j,k,l,ip,istat
-integer,parameter       :: k12 = selected_int_kind(15)
-
+integer(kind=irg)       :: j,k,l,ip,istat
+integer(kind=ill)       :: i, io_int(1), num_max
 real(kind=4)            :: Ze           ! average atomic number
 real(kind=4)            :: density      ! density in g/cm^3
 real(kind=4)            :: at_wt        ! average atomic weight in g/mole
@@ -129,8 +126,8 @@ logical                 :: verbose
 real(kind=4)            :: dens, avA, avZ, io_real(3), dmin ! used with CalcDensity routine
 real(kind=8) , parameter:: dtoR = 0.01745329251D0 !auxiliary variables
 real(kind=4)            :: EkeV, sig, omega ! input values to the kernel. Can only be real kind=4 otherwise values are not properly passed
-integer(kind=4)         :: totnum_el     ! total number of electrons to simulate
-integer(kind=4)         :: globalworkgrpsz, num_el, num_max, steps, prime ! input values to the kernel
+integer(kind=ill)       :: totnum_el     ! total number of electrons to simulate
+integer(kind=4)         :: globalworkgrpsz, num_el, steps, prime ! input values to the kernel
 integer(kind=8)         :: size_in_bytes,size_in_bytes_seeds ! size of arrays passed to kernel. Only accepts kind=8 integers by clCreateBuffer etc., so donot change
 integer(kind=8)         :: globalsize(2), localsize(2) ! size of global and local work groups. Again only kind=8 is accepted by clEnqueueNDRangeKernel
 character(4)            :: mode
@@ -161,7 +158,7 @@ character(len = 100)    :: info ! info about the GPU
 integer, parameter      :: iunit = 10
 integer, parameter      :: source_length = 100000
 character(len = source_length)  :: source
-integer(kind=4)         :: num, ierr, irec, io_int(1), val,val1 ! auxiliary variables
+integer(kind=4)         :: num, ierr, irec, val,val1 ! auxiliary variables
 character(fnlen)        :: groupname, dataset, instring, dataname
 integer(kind=irg)       :: numangle, iang
 
@@ -206,8 +203,7 @@ omega = mcnl%omega*dtoR
 globalworkgrpsz = mcnl%globalworkgrpsz
 num_el = mcnl%num_el ! no. of electron simulation by one work item
 num_max = globalworkgrpsz*globalworkgrpsz*num_el ! total simulation in one loop
-totnum_el = mcnl%totnum_el ! total number of electrons to simulate
-
+totnum_el = mcnl%totnum_el_ill ! total number of electrons to simulate
 globalsize = (/ mcnl%globalworkgrpsz, mcnl%globalworkgrpsz /)
 localsize = (/ mcnl%globalworkgrpsz/10, mcnl%globalworkgrpsz/10 /)
 
@@ -262,7 +258,7 @@ if(ierr /= CL_SUCCESS) stop "Cannot get CL device."
 
 ! get the device name and print it
 call clGetDeviceInfo(device(mcnl%devid), CL_DEVICE_NAME, info, ierr)
-write(6,*) "CL device: ", info
+call Message('CL device: '//info, frm='(A)')
 
 ! create the context and the command queue
 context = clCreateContext(platform, device(mcnl%devid), ierr)
@@ -299,11 +295,11 @@ call clBuildProgram(prog, '-cl-no-signed-zeros', ierr)
 
 ! get the compilation log
 call clGetProgramBuildInfo(prog, device(mcnl%devid), CL_PROGRAM_BUILD_LOG, source, irec)
-if(len(trim(source)) > 0) print*, trim(source)
+if(len(trim(source)) > 0) call Message(trim(source),frm='(A)')
 
 if(ierr /= CL_SUCCESS) stop 'Error: program build failed.'
 
-write(6,*) "Kernel Build Successful...."
+call Message('Kernel Build Successful....')
 
 ! finally get the kernel and release the program
 kernel = clCreateKernel(prog, 'MC', ierr)
@@ -328,7 +324,6 @@ do i = 1,globalworkgrpsz
         end do
     end do
 end do
-!print*,init_seeds
 
 ! create device memory buffers
 LamX = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
@@ -408,7 +403,6 @@ angleloop: do iang = 1,numangle
         call clSetKernelArg(kernel, 13, steps, ierr)
         if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-!print*, EkeV, globalworkgrpsz, Ze, density, at_wt, num_max, prime, sig, omega
 ! execute the kernel
         call clEnqueueNDRangeKernel(command_queue, kernel, globalsize, localsize, event, ierr)
 
@@ -490,18 +484,48 @@ angleloop: do iang = 1,numangle
 
         if (mod(i,50).eq.0) then
             io_int(1) = i*num_max
-            call WriteValue(' Total number of electrons generated = ',io_int, 1, "(I15)")
-            io_int(1) = sum(accum_e)
-            call WriteValue(' Number of electrons on detector       = ',io_int, 1, "(I15)")
+            call WriteValue(' Total number of electrons incident = ',io_int, 1, "(I15)")
+            if (mode .eq. 'bse1') then
+                io_int(1) = sum(accum_e(iang,:,:))
+                call WriteValue(' Number of electrons on detector = ',io_int, 1, "(I15)")
+            else if(mode .eq. 'full') then
+                io_int(1) = sum(accum_e)
+                call WriteValue(' Number of electrons on detector = ',io_int, 1, "(I15)")
+            else
+                call FatalError('DoMCSimulations','Unknown mode specified in namelist/json file')
+            end if
+
+
         end if
 
 
     end do mainloop
+! and write some infgormation to the console
+
+    io_int(1) = totnum_el
+    call WriteValue('Total number of incident electrons = ',io_int,1,'(I15)')
+    if (mode .eq. 'bse1') then
+        io_int(1) = sum(accum_e(iang,:,:))
+        call WriteValue('Total number of electrons on detector = ',io_int,1,'(I15)')
+        bse = sum(accum_e(iang,:,:))
+        io_real(1) = dble(bse)/dble(totnum_el)
+        call WriteValue('Backscatter yield = ',io_real,1,'(F15.6)')
+    else if (mode .eq. 'full') then
+        io_int(1) = sum(accum_e)
+        call WriteValue('Total number of electrons on detector = ',io_int,1,'(I15)')
+        bse = sum(accum_e)
+        io_real(1) = dble(bse)/dble(totnum_el)
+        call WriteValue('Backscatter yield = ',io_real,1,'(F15.6)')
+    else 
+        call FatalError('DoMCSimulations','Unknown mode specified in namelist/json file')
+    end if
+ 
+
 end do angleloop
 
-i = totnum_el/num_max
+io_int(1) = totnum_el/num_max
 
-totnum_el = (i+1)*num_max
+totnum_el = (io_int(1)+1)*num_max
 
 ! output in .h5 format.
 
@@ -552,7 +576,7 @@ dataset = 'numzbins'
 hdferr = HDF_writeDatasetInteger(dataset, numzbins, HDF_head)
 
 dataset = 'totnum_el'
-hdferr = HDF_writeDatasetInteger(dataset, totnum_el, HDF_head)
+hdferr = HDF_writeDatasetInteger(dataset, INT(totnum_el,4), HDF_head)
 
 if (mode .eq. 'full') then
 
@@ -585,13 +609,6 @@ call HDF_pop(HDF_head,.TRUE.)
 ! and close the fortran hdf interface
 call h5close_f(hdferr)
 
-! and write some infgormation to the console
-
-bse = real(val)/real(totnum_el)
-print*, "Backscatter yield          = ",bse
-print*, "Total number of incident electrons = ",totnum_el
-print*, "Number of electrons on detector = ",sum(accum_e)
-print*, "Maximum electron in depth and energy bin resp. = ",maxval(accum_z),maxval(accum_e)
 !
 !=====================
 ! RELEASE EVERYTHING
