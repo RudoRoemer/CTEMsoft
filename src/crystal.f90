@@ -2016,7 +2016,7 @@ dp = CalcDot(cellS,p1,r,'c')
 tangential = p1 - dp*r
 
 ! get magnitude of normal component
-normal = sqrt((1/cellS%mLambda)**2 - sum(tangential**2))
+normal = sqrt((1.0/cellS%mLambda)**2 - sum(tangential**2))
 
 p1 = normal*r + tangential
 
