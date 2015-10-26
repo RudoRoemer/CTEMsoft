@@ -176,12 +176,13 @@ All executables will be located in the \textsf{Build/Bin} folder, so you may wan
 
 \section{Installation Instructions\label{sec:todo}}
 If you chose not to compile the code, and you only wish to execute the programs, or you did perform the steps in the last two sections, you will
-now need to set up your environment so that the executables will be found, 
-
-
-
+now need to set up your environment so that the executables will be found.  The package file with executables can be downloaded from the following
+location:
+\begin{verbatim}
+	http:// xxx
+\end{verbatim}
 In the older version of CTEMsoft, the programs required several environment variables to be set, so
-that all the resource files and such could be located. In the present pre-release, this has been changed
+that all the resource files and such could be located. In the present release, this has been changed
 to a more flexible system that should work on all platforms (OS X, Linux and Windows).  There are 
 only two variables that need to be set in order for the programs to function properly.  They are defined 
 via the \textsf{EMsoftConfig.json} file, located inside the hidden \textsf{.config/EMsoft} folder in the user's 
@@ -189,12 +190,12 @@ home directory.
 
 \begin{enumerate}
 \item Place the \textsf{EMsoft.zip} archive somewhere inside your home folder; for instance, if your username is ``me,'' you could create 
-a folder named \textsf{packages} inside the \textsf{/Users/me} folder, and put the archive inside \textsf{/Users/me/packages}.
-Then unpack the archive, which will create en \textsf{EMsoft} folder containing several other folders.
+a folder named \textsf{packages} inside the \textsf{/Users/me} folder, and download the archive inside \textsf{/Users/me/packages}.
+Then unpack the archive, which will create an \textsf{EMsoft} folder containing several other folders.
 
 \item Check whether or not the folder \textsf{/opt/local/lib/libgcc} exists on your system; if it does not,
 create it (you will need to execute a \textsf{sudo} command to do so, or ask the system admin to 
-create it for you.  Then, check whether or not the files inside the \textsf{EMsoft/lib} folder are present 
+create it for you).  Then, check whether or not the files inside the \textsf{EMsoft/lib} folder are present 
 in the \textsf{/opt/local/lib/libgcc} folder; if they are not, copy them from \textsf{EMsoft/lib}.
 
 \item Check whether or not the \textsf{.config} folder exists in your home folder; if it doesn't exist, create it (don't forget the 
@@ -226,7 +227,7 @@ The syntax will depend a little on which shell you are using (for UNIX-based sys
 is not case-sensitive for file and folder names; on all other UNIX-flavored platforms, filenames and folders \textit{are}
 case-sensitive.
 
-\item To view the HDF5 formatted data files, you may wish to install the free HDF5 viewer.  First you need to have Java installed (if it isn’t already):
+\item To view the HDF5 formatted data files, you may wish to install the free HDF5 viewer.  First you need to have Java installed (if it isn't already):
 for Mac OS X, go to 
 \begin{verbatim}
 https://java.com/en/download/faq/java_mac.xml
@@ -259,6 +260,7 @@ The arguments  between square brackets are optional, and are defined as follows:
 	\item \textsf{file.nml}: the main namelist file to be used by the program.  If no name is present, then the default filename \textsf{EMprogram.nml} will be used.  If the 
 	provided namelist file does not exist, the program will report an error and abort.
 \end{itemize}
+Note that the programs will also accept .json files instead of .nml files.
 
 The programs in the top half of the table on the last page of this manual function in the way described above; all other programs
 have a simple command line interface, with user prompts for all relevant variables.  Eventually, in a future release, all programs
@@ -394,8 +396,8 @@ will be automatically placed in the \textsf{XtalFolder} inside the main \ctp\ da
 %will be taken, otherwise the rhombohedral unit cell will be assumed.
 %
 
-\section{List of programs}
-The list below shows all the available programs in the current Release (2.0) of the \ctp\ suite, along with whether or not there is a 
+\section{List of programs\label{sec:executables}}
+The list below shows all the available programs in the current Release (3.0) of the \ctp\ suite, along with whether or not there is a 
 separate manual for each program.  Programs for which no manual is available are generally relatively easy to figure out.
 In the current release, many programs still have a command-line interaction with the user; this will be modified
 in the next release so that all programs will eventually make use of namelist files.  The top half of the table
@@ -413,16 +415,17 @@ to perform certain computations.
 \hline
 Program & Short description & Manual? \\
 \hline\hline
-  \textsf{EMlacbed} & large angle CBED pattern computation (TEM)& $\checkmark$ \\
-  \textsf{EMmbcbed} & regular CBED pattern (TEM)& $\checkmark$\\
-  \textsf{EMSRdefect} & (S)TEM systematic row defect images (TEM) & $\checkmark$\\
-  \textsf{EMZAdefect} & (S)TEM zone axis defect images (TEM) & $\checkmark$\\
-  \textsf{EMECP} & electron channeling pattern (SEM) & $\checkmark$\\
-  \textsf{EMECCI} & ECCI defect images (SEM) & $\checkmark$\\
-  \textsf{EMKossel} & electron Kossel patterns (SEM) & $\checkmark$\\
-  \textsf{EMMC} & Monte Carlo trajectory simulations (SEM) & $\checkmark$\\
+%  \textsf{EMlacbed} & large angle CBED pattern computation (TEM)& $\checkmark$ \\
+%  \textsf{EMmbcbed} & regular CBED pattern (TEM)& $\checkmark$\\
+%  \textsf{EMSRdefect} & (S)TEM systematic row defect images (TEM) & $\checkmark$\\
+%  \textsf{EMZAdefect} & (S)TEM zone axis defect images (TEM) & $\checkmark$\\
+  \textsf{EMMCOpenCL} & Monte Carlo simulation (SEM) & $\checkmark$\\
   \textsf{EMEBSDmaster} & EBSD master pattern simulation (SEM) & $\checkmark$\\
   \textsf{EMEBSD} & EBSD pattern simulation (SEM) & $\checkmark$\\
+  \textsf{EMECPmaster} & electron channeling master pattern (SEM) & $\checkmark$\\
+  \textsf{EMECP} & electron channeling pattern (SEM) & $\checkmark$\\
+%  \textsf{EMECCI} & ECCI defect images (SEM) & $\checkmark$\\
+  \textsf{EMKossel} & electron Kossel patterns (SEM) & $\checkmark$\\
 \hline
   \textsf{EMmkxtal} & make a crystal structure input file& $\checkmark$\\
   \textsf{EMlistSG} & list the equivalent positions of any space group & \\
@@ -441,6 +444,12 @@ Program & Short description & Manual? \\
 \end{tabular}
 \end{table*}
 
+\section{Future releases}
+The following future releases are currently planned:
+\begin{itemize}
+	\item 3.1, Spring 2016: addition of dictionary indexing codes for EBSD and ECP; ECCI defect imaging code.
+	\item 3.2, Fall 2016: addition of updated TEM codes (currently still available in release 2.0); integration with DREAM.3D.
+\end{itemize}
 
 
 
