@@ -33,7 +33,7 @@ Ebinsize = 1.0D0
 depthmax = 100.D0
 ! depth step size [nm]
 depthstep = 1.0D0
-! output data file name
+! output data file name; pathname is relative to the EMdatapathname path !!!
 dataname = 'MCoutput.h5'
 /
 

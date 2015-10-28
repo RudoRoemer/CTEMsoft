@@ -94,6 +94,10 @@ end else begin
         endcase
 
         'GOFIT': begin
+                if (Efitdata.displayoption eq 5) then begin
+                  Efitdata.displayoption = 4
+                  WIDGET_CONTROL, set_value=Efitdata.displayoption, Efitwidget_s.displayoption
+                endif
                 Efit_fit
         endcase
 

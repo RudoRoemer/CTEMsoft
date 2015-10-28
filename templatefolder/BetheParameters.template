@@ -1,15 +1,17 @@
 &Bethelist
 ! Do not change the line above !
 !
-c1 = 8.0
-c2 = 50.0
+! Details about the particular implementation of the Bethe potentials can be 
+! found in the recent paper: A. Wang & M. De Graef, "Modeling dynamical electron
+! scattering with Bethe potentials and the scattering matrix" Ultramicroscopy,
+! vol 160, pp. 35-43 (2016)
+!
+! strong beam cutoff
+c1 = 5.0
+! weak beam cutoff
+c2 = 10.0
+! complete cutoff
 c3 = 100.0
+! double diffraction reflections: maximum excitation error to include [nm^{-1}]
 sgdbdiff = 1.00    
-! this cutoff (c2 in the manual) draws the line between strong (smaller) and weak (larger) beams
-weakcutoff = 60.0
-! this cutoff (c1 in the manual) separates weak reflections from those that will not be considered
-cutoff = 120.0
-! this parameter sets the threshold excitation error for double diffraction reflections
-sgcutoff = 0.05
-! do not change the following line
 /

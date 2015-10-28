@@ -27,6 +27,7 @@ set(EMSoftLib_SRCS
 	${EMSoftLib_SOURCE_DIR}/math.f90
 	${EMSoftLib_SOURCE_DIR}/multibeams.f90
 	${EMSoftLib_SOURCE_DIR}/EBSDmod.f90
+	${EMSoftLib_SOURCE_DIR}/EMdymod.f90
         ${EMSoftLib_SOURCE_DIR}/ECPmod.f90
 	${EMSoftLib_SOURCE_DIR}/MBmodule.f90
  	${EMSoftLib_SOURCE_DIR}/NameListTypedefs.f90

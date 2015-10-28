@@ -88,7 +88,7 @@ progdesc = 'EBSD Energy-dependent Master Pattern Simulation'
 call EMsoft(progname, progdesc)
 
 ! deal with the command line arguments, if any
-call Interpret_Program_Arguments(nmldeffile,1,(/ 21 /), progname)
+call Interpret_Program_Arguments(nmldeffile,2,(/ 21, 0 /), progname)
 
 ! deal with the namelist stuff, either .nml or .json format
 res = index(nmldeffile,'.nml',kind=irg)
