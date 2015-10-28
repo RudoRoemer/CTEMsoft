@@ -159,7 +159,7 @@ logical                                 :: overwrite = .TRUE., insert = .TRUE.
 ! used in the bse1 mode
 !=================================================================
 
-call Message('opening '//trim(ecpnl%energyfile), frm = "(A)" )
+call Message(' -> opening '//trim(ecpnl%energyfile), frm = "(A)" )
 call  ECPreadMCfile(ecpnl, acc, verbose=.TRUE.)
 
 !=================================================================
@@ -167,7 +167,7 @@ call  ECPreadMCfile(ecpnl, acc, verbose=.TRUE.)
 ! first, we need to load the data from the ECP master program
 !=================================================================
 
-call Message('opening '//trim(ecpnl%masterfile), frm = "(A)" )
+call Message(' -> opening '//trim(ecpnl%masterfile), frm = "(A)" )
 call ECPreadMasterfile(ecpnl, master, verbose=.TRUE.)
 
 !=================================================================
@@ -359,7 +359,18 @@ nthreads = OMP_GET_NUM_THREADS()
 
 !$OMP DO SCHEDULE(DYNAMIC)
 angleloop: do iang = 1,ecpnl%numangle_anglefile
+    if (nint(float(ecpnl%numangle_anglefile)/20.0) .gt. 0) then
+        if (mod(iang,nint(float(ecpnl%numangle_anglefile)/20.0)) .eq. 0) then
+            io_int(1) = iang
+            call WriteValue(' completed pattern # ',io_int,1)
+        end if
+    else
+        if (mod(iang,2) .eq. 0) then
+            io_int(1) = iang
+            call WriteValue(' completed pattern # ',io_int,1)
+        end if
 
+    end if
     qu(1:4) = angles%quatang(1:4,iang)
  
     imageloop: do idir = 1,numk
@@ -497,5 +508,7 @@ hdferr = HDF_writeDatasetFloat(dataset, time_end, HDF_head)
 
 ! close the Fortran interface
 call h5close_f(hdferr)
+
+call Message(' -> Execution done...quitting now',frm='(A)')
 
 end subroutine ECpattern

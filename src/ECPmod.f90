@@ -569,7 +569,7 @@ read(dataunit,*) enl%numangle_anglefile
 
 if (present(verbose)) then 
   io_int(1) = enl%numangle_anglefile
-  call WriteValue('Number of angle entries = ',io_int,1)
+  call WriteValue(' -> Number of angle entries = ',io_int,1)
 end if
 
 if (enl%anglemode.eq.'euler') then
@@ -582,7 +582,7 @@ if (enl%anglemode.eq.'euler') then
   close(unit=dataunit,status='keep')
 
   if (enl%eulerconvention.eq.'hkl') then
-    if (present(verbose)) call Message('  -> converting Euler angles to TSL representation', frm = "(A/)")
+    if (present(verbose)) call Message(' -> converting Euler angles to TSL representation', frm = "(A/)")
     eulang(1,1:enl%numangle_anglefile) = eulang(1,1:enl%numangle_anglefile) + 90.0
   end if
 
@@ -590,7 +590,7 @@ if (enl%anglemode.eq.'euler') then
   allocate(angles%quatang(4,1:enl%numangle_anglefile),stat=istat)
 ! if (istat.ne.0) then ...
 
-  if (present(verbose)) call Message('  -> converting Euler angles to quaternions', frm = "(A/)")
+  if (present(verbose)) call Message(' -> converting Euler angles to quaternions', frm = "(A/)")
   
   do i=1,enl%numangle_anglefile
     angles%quatang(1:4,i) = eu2qu(eulang(1:3,i)*dtor)
@@ -714,7 +714,7 @@ end do
 
 if (present(verbose)) then
     if(verbose) then
-        call Message('  -> Finished generating detector',frm='(A)')
+        call Message(' -> Finished generating detector',frm='(A)')
     end if
 end if
 
@@ -811,7 +811,7 @@ do isig = 1,nsig
 end do
 
 if (present(verbose)) then
-    if (verbose) call Message('  -> Finished calculating the weight factors',frm='(A)')
+    if (verbose) call Message(' -> Finished calculating the weight factors',frm='(A)')
 end if
 
 end subroutine ECPGetWeightFactors
