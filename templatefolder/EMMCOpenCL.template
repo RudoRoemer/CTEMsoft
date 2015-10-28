@@ -22,7 +22,7 @@ devid = 1
 ! number of work items (depends on GPU card; leave unchanged)
 globalworkgrpsz = 150
 ! total number of incident electrons
-totnum_el = 2000000000
+totnum_el_ill = 2000000000
 ! incident beam energy [keV]
 EkeV = 30.D0
 ! minimum energy to consider [keV]

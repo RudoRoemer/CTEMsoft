@@ -133,7 +133,7 @@ logical                                    :: loadingfile
    if (dhkl.lt.dmin) EXIT
    iml = iml + 1
  end do
-
+ 
  if (present(verbose)) then
   if (verbose) then
     io_int = (/ imh, imk, iml /)

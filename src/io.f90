@@ -67,6 +67,7 @@ end interface ReadValue
 interface WriteValue
         module procedure WriteValueIntShort
         module procedure WriteValueIntLong
+        module procedure WriteValueIntLongLong
         module procedure WriteValueRealSingle
         module procedure WriteValueRealDouble
         module procedure WriteValueRealComplex
@@ -504,6 +505,55 @@ else
 end if
 
 end subroutine WriteValueIntLong
+
+! ###################################################################
+! 
+!  subroutine WriteValueIntLongLong
+!
+!> @author Saransh, Carnegie Mellon University
+!
+!> @brief write one or more 8-byte integers
+!
+!> @param Qstring question string
+!> @param out_int output string
+!> @param num optional number of integers
+!> @param frm optional formatting argument
+!> @param stdout optional output unit identifier
+!
+!> @date 03/19/13 MDG 1.0 new routine
+!> @date 06/05/14 MDG 2.0 changed io handling
+! ###################################################################
+subroutine WriteValueIntLongLong(Qstring, out_int, num, frm, stdout)
+
+character(*), INTENT(IN)			:: Qstring
+integer(kind=ill),INTENT(IN)			:: out_int(*)
+character(*),INTENT(IN),OPTIONAL		:: frm
+integer(kind=irg),INTENT(IN),OPTIONAL		:: num
+integer(kind=irg),INTENT(IN),OPTIONAL		:: stdout
+
+integer(kind=irg)				:: std
+
+std = 6
+if (PRESENT(stdout)) std = stdout
+
+if (len(Qstring).ne.0) call Message(Qstring, frm = "(A$)", stdout = std)
+
+! one or more than one values expected ?
+if (PRESENT(num)) then
+ if (PRESENT(frm)) then
+  write (std, fmt=frm) (out_int(i),i=1,num)
+ else
+  write (std,*) (out_int(i),i=1,num)
+ end if
+else
+ if (PRESENT(frm)) then
+  write (std, fmt=frm) out_int(1)
+ else
+  write (std,*) out_int(1)
+ end if
+end if
+
+end subroutine WriteValueIntLongLong
 
 
 ! ###################################################################

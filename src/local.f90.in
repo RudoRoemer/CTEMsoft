@@ -78,6 +78,8 @@ module local
   integer,parameter                     :: ish = SELECTED_INT_KIND(3) 
 !> long integer kind parameter  
   integer,parameter                     :: irg = SELECTED_INT_KIND(9)
+!> long long kind parameter
+  integer,parameter                     :: ill = SELECTED_INT_KIND(12)
 
 !> standard string length for filenames
   integer(kind=irg),parameter           :: fnlen=132
