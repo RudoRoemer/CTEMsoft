@@ -693,24 +693,11 @@ intlist(4) = 'nthreads'
 !intlist(5) = 'distort'
 call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
-! integer vectors
-!dataset = 'fn'
-!hdferr = HDF_writeDatasetFloatArray1D(dataset, ecpnl%fn, 3, HDF_head)
-!if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPMasterNameList: unable to create fn dataset',.TRUE.)
 
 ! write all the single doubles
 io_real = (/ ecpnl%dmin /)
 reallist(1) = 'dmin'
 call HDF_writeNMLdbles(HDF_head, io_real, reallist, n_real)
-
-! 3-vectors (real)
-!dataset = 'abcdist'
-!hdferr = HDF_writeDatasetFloatArray1D(dataset, ecpnl%abcdist, 3, HDF_head)
-!if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPMasterNameList: unable to create abcdist dataset',.TRUE.)
-
-!dataset = 'albegadist'
-!hdferr = HDF_writeDatasetFloatArray1D(dataset, ecpnl%albegadist, 3, HDF_head)
-!if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPMasterNameList: unable to create albegadist dataset',.TRUE.)
 
 ! write all the strings
 dataset = 'outname'
@@ -919,35 +906,41 @@ if (twolayerflag) then
     hdferr = HDF_writeDatasetIntegerArray1D(dataset, ecpnl%tS, 3, HDF_head)
     if (hdferr.ne.0) call HDF_handleError(hdferr,'HDFwriteECPNameList: unable to create tS dataset',.TRUE.)
     
-    n_real = 5
+    n_real = 8
     allocate(reallist(n_real),io_real(n_real),stat=istat)
     if (istat .ne. 0) then
         call FatalError('HDFwriteECPNameList','Cannot allocate the reallist array')
     end if
 ! write all the single reals
-    io_real = (/ ecpnl%dmin, ecpnl%thetac, sngl(ecpnl%sampletilt), &
-             ecpnl%filmthickness, ecpnl%gammavalue /)
+    io_real = (/ ecpnl%dmin, ecpnl%thetac, sngl(ecpnl%sampletilt), ecpnl%workingdistance, &
+             ecpnl%filmthickness, ecpnl%gammavalue, ecpnl%Rin, ecpnl%Rout /)
     reallist(1) = 'dmin'
     reallist(2) = 'thetac'
     reallist(3) = 'sampletilt'
-    reallist(4) = 'filmthickness'
-    reallist(5) = 'gammavalue'
+    reallist(4) = 'workingdistance'
+    reallist(5) = 'filmthickness'
+    reallist(6) = 'gammavalue'
+    reallist(7) = 'Rin'
+    reallist(8) = 'Rout'
 
     call HDF_writeNMLreals(HDF_head, io_real, reallist, n_real)
 
 else
 
-    n_real = 3
+    n_real = 6
     allocate(reallist(n_real),io_real(n_real),stat=istat)
     if (istat .ne. 0) then
         call FatalError('HDFwriteECPNameList','Cannot allocate the reallist array')
     end if
 ! write all the single reals
     io_real = (/ ecpnl%thetac, sngl(ecpnl%sampletilt), &
-                 ecpnl%gammavalue /)
+                 ecpnl%gammavalue, ecpnl%workingdistance, ecpnl%Rin, ecpnl%Rout /)
     reallist(1) = 'thetac'
     reallist(2) = 'sampletilt'
     reallist(3) = 'gammavalue'
+    reallist(4) = 'workingdistance'
+    reallist(5) = 'Rin'
+    reallist(6) = 'Rout'
 
     call HDF_writeNMLreals(HDF_head, io_real, reallist, n_real)
 

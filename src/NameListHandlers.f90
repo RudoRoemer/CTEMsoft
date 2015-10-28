@@ -1001,12 +1001,15 @@ integer(kind=irg)       :: numangle_anglefile
 real(kind=sgl)          :: gammavalue
 character(3)            :: outputformat
 real(kind=dbl)          :: sampletilt
+real(kind=sgl)          :: workingdistance
+real(kind=sgl)          :: Rin
+real(kind=sgl)          :: Rout
 
 ! namelist /ECPlist/ stdout, xtalname, voltage, k, fn, dmin, distort, abcdist, albegadist, ktmax, &
 namelist /ECPlist/ stdout, xtalname, xtalname2, fn_f, fn_s, dmin, filmthickness, anglefile, &
-                   nthreads, thetac, npix, maskpattern, eulerconvention, &
+                   nthreads, thetac, npix, maskpattern, eulerconvention, Rin, Rout, &
                    gF, gS, tF, tS, energyfile, filmfile, subsfile, masterfile, datafile, &
-                   numangle_anglefile, gammavalue, outputformat, sampletilt
+                   numangle_anglefile, gammavalue, outputformat, sampletilt, workingdistance
 
 ! default values
 stdout = 6                              ! standard output
@@ -1035,6 +1038,9 @@ numangle_anglefile = 0
 gammavalue = 1.0
 outputformat = 'gui'
 sampletilt = 0.D0
+Workingdistance = 13.0
+Rin = 2.0
+Rout = 6.0
 
 if (present(initonly)) then
   if (initonly) skipread = .TRUE.
@@ -1078,6 +1084,9 @@ ecpnl%eulerconvention = eulerconvention
 ecpnl%gammavalue = gammavalue
 ecpnl%outputformat = outputformat
 ecpnl%sampletilt = sampletilt
+ecpnl%workingdistance = workingdistance
+ecpnl%Rin = Rin
+ecpnl%Rout = Rout
 
 end subroutine GetECPNameList
 

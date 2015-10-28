@@ -29,6 +29,13 @@ datafile = 'undefined'
 nthreads = 1
 ! tilt of the sample; only one angle incorporated for now
 sampletilt = 0.D0
+! detector geometry parameters
+! working distance [in mm]
+workingdistance = 13.0
+! inner radius of annular detector [in mm]
+Rin = 2.0
+! outer radius of annular detector [in mm]
+Rout = 6.0
 
 !==============================================================
 ! the nml parameters only used in case of two layered structure

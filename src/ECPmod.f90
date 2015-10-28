@@ -51,10 +51,12 @@ end type ECPAngleType
 
 type ECPLargeAccumType
         integer(kind=irg),allocatable   :: accum_z(:,:,:,:)
+        integer(kind=irg),allocatable   :: accum_e(:,:,:)
 end type ECPLargeAccumType
 
 type ECPMasterType
         real(kind=sgl),allocatable      :: mLPNH(:,:) , mLPSH(:,:)
+        real(kind=sgl),allocatable      :: rgx(:,:), rgy(:,:), rgz(:,:)
 end type ECPMasterType
 
 type IncidentListECP
@@ -108,7 +110,7 @@ integer(HSIZE_T)                        :: dims3(3),dims4(4)
 character(fnlen)                        :: groupname, dataset, energyfile 
 character(fnlen),allocatable            :: stringarray(:)
 
-integer(kind=irg),allocatable           :: acc_z(:,:,:,:)
+integer(kind=irg),allocatable           :: acc_z(:,:,:,:), acc_e(:,:,:)
 
 type(HDFobjectStackType),pointer        :: HDF_head
 
@@ -226,6 +228,12 @@ if (stat) then
   allocate(acc%accum_z(1:dims4(1),1:dims4(2),1:dims4(3),1:dims4(4)))
   acc%accum_z = acc_z
   deallocate(acc_z)
+
+  dataset = 'accum_e'
+  acc_e = HDF_readDatasetIntegerArray3D(dataset, dims3, HDF_head)
+  allocate(acc%accum_e(1:dims3(1),1:dims3(2),1:dims3(3)))
+  acc%accum_e = acc_e
+  deallocate(acc_e)
  
   enl%num_el = sum(acc%accum_z)
 
@@ -246,7 +254,7 @@ else
 ! REPLACING WITH FATALERROR COMMENT
 !==============================================
 
-  call FatalError('ECPmod (ECPreadMCfile)','The file is not a h5 file. Old version of MC file not supported anymore!')
+  call FatalError('ECPreadMCfile','The file is not a h5 file. Old version of MC file not supported anymore!')
   !if (present(verbose)) call Message('opening '//trim(enl%energyfile), frm = "(A)")
 
   !open(dataunit,file=trim(energyfile),status='unknown',form='unformatted')
@@ -277,9 +285,7 @@ else
 end if
 
 if (present(verbose)) then
-
-if (verbose) call Message(' -> completed reading '//trim(enl%energyfile), frm = "(A)")
-
+    if (verbose) call Message(' -> completed reading '//trim(enl%energyfile), frm = "(A)")
 end if
 
 end subroutine ECPreadMCfile
@@ -509,13 +515,13 @@ end subroutine GetVectorsCone
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE:EBSDreadangles
+! SUBROUTINE:ECPreadangles
 !
 !> @author Saransh Singh, Carnegie Mellon University
 !
 !> @brief read angles from an angle file
 !
-!> @param enl EBSD name list structure
+!> @param enl ECP name list structure
 !> @param quatang array of unit quaternions (output)
 !
 !> @date 10/12/15  SS 1.0 original
@@ -548,7 +554,7 @@ allocate(angles)
 ! get the angular information, either in Euler angles or in quaternions, from a file
 !====================================
 ! open the angle file 
-open(unit=dataunit,file=trim(enl%anglefile),status='old',action='read')
+open(unit=dataunit,file=trim(EMdatapathname)//trim(enl%anglefile),status='old',action='read')
 
 ! get the type of angle first [ 'eu' or 'qu' ]
 read(dataunit,*) angletype
@@ -616,6 +622,199 @@ close(unit=dataunit,status='keep')
 call Message(' -> completed reading '//trim(enl%anglefile), frm = "(A)")
 
 end subroutine ECPreadangles
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:ECPGenerateDetector
+!
+!> @author Saransh Singh, Carnegie Mellon University
+!
+!> @brief discretize the annular detector as a set of direction cosines in the 
+!> microscope frame
+!
+!> @param ecpnl ECP name list structure
+!> @param master ECPMasterType data type
+!
+!> @date 10/27/15  SS 1.0 original
+!--------------------------------------------------------------------------
+subroutine ECPGenerateDetector(ecpnl, master, verbose)
+
+use NameListTypedefs
+use io
+use error
+use files
+use quaternions
+use rotations
+use constants
+
+IMPLICIT NONE
+
+type(ECPNameListType),INTENT(INOUT)     :: ecpnl
+type(ECPMasterType),pointer             :: master
+logical, INTENT(IN), OPTIONAL           :: verbose
+
+real(kind=sgl)                          :: thetain, thetaout, polar, azimuthal, delpolar, delazimuth
+real(kind=sgl)                          :: io_real(2), om(3,3), sampletilt, dc(3)
+integer(kind=irg)                       :: iazimuth, ipolar, nazimuth, npolar, istat
+
+if (ecpnl%Rin .gt. ecpnl%Rout) then
+    call FatalError('ECPGenerateDetector','Inner radius of annular detector cannot be greater than outer radius')
+end if
+
+thetain = atan2(ecpnl%Rin,ecpnl%workingdistance)
+thetaout = atan2(ecpnl%Rout,ecpnl%workingdistance)
+
+sampletilt = ecpnl%sampletilt*cPi/180.0
+om(1,:) = (/cos(sampletilt),0.0,sin(sampletilt)/)
+om(2,:) = (/0.0,1.0,0.0/)
+om(3,:) = (/-sin(sampletilt),0.0,cos(sampletilt)/)
+
+if (present(verbose)) then
+    if(verbose) then
+       io_real(1) = thetain*180.0/cPi
+       io_real(2) = thetaout*180.0/cPi
+       call WriteValue('Inner and outer polar angles for detector (in degrees) are ',io_real,2)
+    end if
+end if
+
+
+npolar = nint((thetaout - thetain)*180.0/cPi) + 1
+delpolar = (thetaout - thetain)/float(npolar-1)
+
+nazimuth = 361
+delazimuth = 2.0*cPi/float(nazimuth-1)
+
+ecpnl%npolar = npolar
+ecpnl%nazimuth = nazimuth
+
+allocate(master%rgx(npolar,nazimuth),master%rgy(npolar,nazimuth),master%rgz(npolar,nazimuth),stat=istat)
+if (istat .ne. 0) call FatalError('ECPGenerateDetector','cannot allocate the rgx, rgy and rgz arrays')
+
+master%rgx = 0.0
+master%rgy = 0.0
+master%rgz = 0.0
+
+do ipolar = 1,npolar
+    polar = thetain + float(ipolar-1)*delpolar
+
+    do iazimuth = 1,nazimuth
+         azimuthal = float(iazimuth-1)*delazimuth
+
+         dc(1) = cos(azimuthal)*sin(polar)
+         dc(2) = Sin(azimuthal)*sin(polar)
+         dc(3) = cos(polar)
+
+         dc = matmul(om,dc)
+
+         master%rgx(ipolar,iazimuth) = dc(1)
+         master%rgy(ipolar,iazimuth) = dc(2)
+         master%rgz(ipolar,iazimuth) = dc(3)
+    end do
+end do
+
+if (present(verbose)) then
+    if(verbose) then
+        call Message('  -> Finished generating detector',frm='(A)')
+    end if
+end if
+
+
+end subroutine ECPGenerateDetector
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:ECPGetWeightFactors
+!
+!> @author Saransh Singh, Carnegie Mellon University
+!
+!> @brief calculate the interpolation weight factors 
+!
+!> @param ecpnl ECP name list structure
+!> @param master ECPMasterType data type
+!> @param weightfact weightfactor array for different incident angle
+!> @param nsig number of sampling points for weightfactors
+!
+!> @date 10/27/15  SS 1.0 original
+!--------------------------------------------------------------------------
+subroutine ECPGetWeightFactors(ecpnl, master, acc, weightfact, nsig, verbose)
+
+use NameListTypedefs
+use io
+use error
+use files
+use quaternions
+use rotations
+use constants
+use Lambert
+
+IMPLICIT NONE
+
+type(ECPNameListType),INTENT(INOUT)     :: ecpnl
+type(ECPMasterType),pointer             :: master
+type(ECPLargeAccumType),pointer         :: acc
+real(kind=sgl), INTENT(OUT)             :: weightfact(nsig)
+integer(kind=irg), INTENT(IN)           :: nsig
+logical, INTENT(IN), OPTIONAL           :: verbose
+
+integer(kind=irg)                       :: isig, ipolar, iazimuth, istat
+integer(kind=irg)                       :: nix, niy, nixp, niyp, isampletilt
+real(kind=sgl)                          :: dx, dy, dxm, dym, acc_sum, samplenormal(3), dp
+real(kind=sgl)                          :: dc(3), ixy(2), scl, deltheta, thetac, x, MCangle
+real(kind=dbl),parameter                :: Rtod = 57.2957795131D0
+
+scl = ecpnl%nsx
+
+thetac = ecpnl%thetac
+deltheta = thetac/float(nsig-1)
+
+weightfact = 0.0
+
+do isig = 1,nsig
+    acc_sum = 0.0
+    MCangle = (isig - 1)*deltheta - ecpnl%sampletilt
+    isampletilt = nint((MCangle - ecpnl%MCsigstart)/ecpnl%MCsigstep)
+    
+    if (isampletilt .lt. 1) then
+        isampletilt = abs(isampletilt) + 1
+    else
+        isampletilt = isampletilt + 1
+    end if
+    
+    do ipolar = 1,ecpnl%npolar
+        do iazimuth = 1,ecpnl%nazimuth
+            dc(1:3) = (/master%rgx(ipolar,iazimuth),master%rgy(ipolar,iazimuth),master%rgz(ipolar,iazimuth)/)
+! convert to Rosca-lambert projection
+            ixy = scl *  LambertSphereToSquare( dc, istat )
+            if (istat .ne. 0) call FatalError('ECPGetWeightFactors','Cannot convert to square Lambert projection')
+            nix = int(ecpnl%npx+ixy(1))-ecpnl%npx
+            niy = int(ecpnl%npy+ixy(2))-ecpnl%npy
+            nixp = nix+1
+            niyp = niy+1
+            if (nixp.gt.ecpnl%npx) nixp = nix
+            if (niyp.gt.ecpnl%npy) niyp = niy
+            if (nix.lt.-ecpnl%npx) nix = nixp
+            if (niy.lt.-ecpnl%npy) niy = niyp
+            dx = ixy(1)-nix
+            dy = ixy(2)-niy
+            dxm = 1.0-dx
+            dym = 1.0-dy
+            
+            acc_sum = 0.25*(acc%accum_e(isampletilt,nix,niy) * dxm * dym + &
+                            acc%accum_e(isampletilt,nixp,niy) * dx * dym + &
+                            acc%accum_e(isampletilt,nix,niyp) * dxm * dy + &
+                            acc%accum_e(isampletilt,nixp,niyp) * dx * dy)
+             
+            weightfact(isig) = weightfact(isig) + acc_sum
+
+        end do
+    end do
+end do
+
+if (present(verbose)) then
+    if (verbose) call Message('  -> Finished calculating the weight factors',frm='(A)')
+end if
+
+end subroutine ECPGetWeightFactors
 
 end module ECPmod
 

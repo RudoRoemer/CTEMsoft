@@ -127,10 +127,10 @@ integer(kind=irg)                       :: maskradius, io_int(1), hdferr
 logical                                 :: verbose
 real(kind=sgl),allocatable              :: master_arrayNH(:,:), master_arraySH(:,:)
 real(kind=sgl),allocatable              :: anglewf(:)
-integer(kind=irg)                       :: nsig, isig
+integer(kind=irg)                       :: nsig, isig, isigp
 integer(kind=irg)                       :: numk, nix, niy, nixp, niyp, i, j, ierr, &
                                            ipx, ipy, iang, idir
-real(kind=dbl)                          :: scl, x, dx, dy, dxm, dym
+real(kind=dbl)                          :: scl, x, dx, dy, dxm, dym, wf
 real(kind=dbl)                          :: dc(3), ixy(2), qu(4)
 integer(kind=irg),allocatable           :: kij(:,:)
 real(kind=sgl),allocatable              :: ECPpattern(:,:), ECPpatternintd(:,:)
@@ -139,6 +139,7 @@ character(len=1),allocatable            :: bpat(:,:)
 integer(kind=irg)                       :: TID, nthreads
 real(kind=dbl)                          :: dp, MCangle
 real(kind=dbl),parameter                :: Rtod = 57.2957795131D0
+real(kind=dbl),parameter                :: dtoR = 0.01745329251D0
 logical                                 :: switchwfoff = .FALSE.
 
 type(HDFobjectStackType),pointer        :: HDF_head
@@ -176,14 +177,22 @@ call ECPreadMasterfile(ecpnl, master, verbose=.TRUE.)
 call Message(' -> opening '//trim(ecpnl%anglefile), frm = "(A)" )
 call ECPreadangles(ecpnl, angles, verbose=.TRUE.)
 
-!=================================================================
-! get the anglewf array for detector
-!=================================================================
+!================================================================================
+! generating the detector arrays; should be always called after ECPreadMasterfile
+!================================================================================
 
-nsig = nint((ecpnl%MCsigend - ecpnl%MCsigstart)/ecpnl%MCsigstep) + 1
+call Message(' -> Generating detector arrays', frm = "(A)" )
+call ECPGenerateDetector(ecpnl, master, verbose=.TRUE.)
+
+!================================================================================
+! get the weight factors here
+!================================================================================
+
+nsig = int(ecpnl%thetac) + 1
 allocate(anglewf(1:nsig),stat=istat)
-if (istat .ne. 0) call FatalError('ECpattern','Cannot allocate angle weight factor arrays')
-anglewf(1:nsig) = float(sum(sum(sum(acc%accum_z,4),3),2))/float(sum(acc%accum_z))
+
+call Message(' -> Calculating weight factors', frm = "(A)" )
+call ECPGetWeightFactors(ecpnl, master, acc, anglewf, nsig, verbose=.TRUE.)
 
 !=================================================================
 ! check if there are enough angles in MC for detector geometry
@@ -194,7 +203,7 @@ if (ecpnl%MCsigend .lt. abs(ecpnl%sampletilt) + ecpnl%thetac) then
         switchwfoff = .TRUE.
 end if
 
-if (ecpnl%MCsigstart .gt. ecpnl%thetac - abs(ecpnl%sampletilt)) then
+if ((-ecpnl%MCsigend .gt. ecpnl%thetac - abs(ecpnl%sampletilt)) .and. (switchwfoff .eqv. .FALSE.)) then
     call Message('Not enough angles in Monte carlo file...interpolation will be done without &
     appropriate weight factors',frm = "(A)")
     switchwfoff = .TRUE.
@@ -334,7 +343,7 @@ if (ecpnl%outputformat .eq. 'gui') then
                                           HDF_head)
 end if
 
-! set the number of OpenMP threads and allocate the corresponding number of random number streams
+! set the number of OpenMP threads
 io_int(1) = ecpnl%nthreads
 call WriteValue(' Attempting to set number of threads to ',io_int,1,"(I4)")
 call OMP_SET_NUM_THREADS(ecpnl%nthreads)
@@ -358,11 +367,21 @@ angleloop: do iang = 1,ecpnl%numangle_anglefile
 ! do the active coordinate transformation for this euler angle
 
         dc = klist(1:3,idir)
-        dp = DOT_PRODUCT(dc(1:3),(/dsin(ecpnl%sampletilt),0.D0,dcos(ecpnl%sampletilt)/))        
+        dp = DOT_PRODUCT(dc(1:3),(/dsin(ecpnl%sampletilt*dtoR),0.D0,dcos(ecpnl%sampletilt*dtoR)/))        
 
         MCangle = acos(dp)*Rtod
-! find index closest to the list of MC runs we already have
-        isig = nint((MCangle - ecpnl%MCsigstart)/ecpnl%MCsigstep) + 1
+! find index closest to the list of MC runs we already have and interpolate the weight factor
+        isig = int(MCangle) + 1
+        if (isig .gt. nsig) isig = nsig
+
+        isigp = isig + 1
+        if (isigp .gt. nsig) isigp = nsig
+
+        dx = MCangle - int(MCangle)
+        dxm =  1.0 - dx
+ 
+        wf = anglewf(isig) * dxm + anglewf(isigp) * dx
+        
         dc = quat_LP(qu,dc)
         dc = dc/dsqrt(sum(dc*dc))
 ! make sure the third one is positive; if not, switch all
@@ -389,13 +408,13 @@ angleloop: do iang = 1,ecpnl%numangle_anglefile
         if (switchwfoff .eqv. .FALSE.) then
             if (dc(3).gt.0.0) then 
 
-                ECPpattern(ipx,ipy) =  anglewf(isig)* ( master_arrayNH(nix,niy) * dxm * dym + &
+                ECPpattern(ipx,ipy) = wf * ( master_arrayNH(nix,niy) * dxm * dym + &
                              master_arrayNH(nixp,niy) * dx * dym + &
                              master_arrayNH(nix,niyp) * dxm * dy + &
                              master_arrayNH(nixp,niyp) * dx * dy )
 
             else
-                 ECPpattern(ipx,ipy) =  anglewf(isig)* ( master_arraySH(nix,niy) * dxm * dym + &
+                 ECPpattern(ipx,ipy) =  wf * ( master_arraySH(nix,niy) * dxm * dym + &
                              master_arraySH(nixp,niy) * dx * dym + &
                              master_arraySH(nix,niyp) * dxm * dy + &
                              master_arraySH(nixp,niyp) * dx * dy )

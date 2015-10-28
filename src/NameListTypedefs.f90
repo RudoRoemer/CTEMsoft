@@ -279,6 +279,9 @@ type ECPNameListType
         real(kind=sgl)          :: gammavalue
         character(3)            :: outputformat
         real(kind=dbl)          :: sampletilt
+        real(kind=sgl)          :: workingdistance
+        real(kind=sgl)          :: Rin
+        real(kind=sgl)          :: Rout
 ! everything below here is not part of the namelist input structure, but is used to pass arguments to subroutines
         integer(kind=irg)       :: numangle
         integer(kind=irg)       :: numangle_anglefile
@@ -292,6 +295,8 @@ type ECPNameListType
         integer(kind=irg)       :: npy
         integer(kind=irg)       :: nE
         integer(kind=irg)       :: numset
+        integer(kind=irg)       :: npolar
+        integer(kind=irg)       :: nazimuth
         real(kind=dbl)          :: EkeV
         real(kind=dbl)          :: Ehistmin 
         real(kind=dbl)          :: Ebinsize 
