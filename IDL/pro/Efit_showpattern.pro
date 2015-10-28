@@ -134,6 +134,19 @@ case (Efitdata.displayoption) of
           tvscl,c,true=1
         endcase
 
+        5 : begin       ; flicker patterns
+          z1 = bytscl(expEBSDpattern * mask)
+          z2 = bytscl(Epat * mask)
+          WIDGET_CONTROL, set_value='---', Efitwidget_s.min
+          WIDGET_CONTROL, set_value='---', Efitwidget_s.max
+          for i=0,9 do begin
+            tv,z1
+            wait,0.25
+            tv,z2
+            wait,0.25
+          endfor
+        endcase
+
 else: MESSAGE, "Efit_showpattern: unknown display option"
 
 endcase

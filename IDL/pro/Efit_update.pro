@@ -132,7 +132,9 @@ fpar[9:12] = Efitdata.quaternion[0:3]
 ; initialize the simulated pattern array
 EBSDpattern = fltarr(Efitdata.detnumsx,Efitdata.detnumsy)
 
-res = call_external(Efitdata.EMsoftpathname+'Build/Bin/libEMSoftlib.dylib', 'SingleEBSDPatternWrapper', $
+callname = 'SingleEBSDPatternWrapper'
+
+res = call_external(Efitdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
       nipar, nfpar, long(numEbins), ipar[4], long(npx), ipar[1], ipar[2], ipar, fpar, float(accum_e), mLPNH, mLPSH, EBSDpattern, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
 
 if (res ne 1.0) then begin

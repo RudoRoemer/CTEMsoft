@@ -61,7 +61,7 @@ Efitwidget_s.controlbase = WIDGET_BASE(TITLE='Display Control Panel', $
                         XOFFSET=Efitdata.xlocationcontrol, $
                         YOFFSET=Efitdata.ylocationcontrol)
 
-vals = [' Display Experimental Pattern',' Display Simulated Pattern',' Display Difference Pattern',' Display Overlap Pattern',' Display Color Overlap']
+vals = [' Display Experimental Pattern',' Display Simulated Pattern',' Display Difference Pattern',' Display Overlap Pattern',' Display Color Overlap',' Flicker']
 Efitwidget_s.displayoption = CW_BGROUP(Efitwidget_s.controlbase, $
                         vals, $
                         /COLUMN, $
