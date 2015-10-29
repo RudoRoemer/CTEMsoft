@@ -383,7 +383,6 @@ angleloop: do iang = 1,ecpnl%numangle_anglefile
         
         dc = quat_LP(qu,dc)
         dc = dc/dsqrt(sum(dc*dc))
-! make sure the third one is positive; if not, switch all
 ! convert these direction cosines to coordinates in the Rosca-Lambert projection
 
         ixy = scl * LambertSphereToSquare( dc, istat )

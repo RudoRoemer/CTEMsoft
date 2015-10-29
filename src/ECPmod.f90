@@ -786,14 +786,14 @@ do isig = 1,nsig
 ! convert to Rosca-lambert projection
             ixy = scl *  LambertSphereToSquare( dc, istat )
             if (istat .ne. 0) call FatalError('ECPGetWeightFactors','Cannot convert to square Lambert projection')
-            nix = int(ecpnl%npx+ixy(1))-ecpnl%npx
-            niy = int(ecpnl%npy+ixy(2))-ecpnl%npy
+            nix = int(ecpnl%nsx+ixy(1))-ecpnl%nsx
+            niy = int(ecpnl%nsy+ixy(2))-ecpnl%nsy
             nixp = nix+1
             niyp = niy+1
-            if (nixp.gt.ecpnl%npx) nixp = nix
-            if (niyp.gt.ecpnl%npy) niyp = niy
-            if (nix.lt.-ecpnl%npx) nix = nixp
-            if (niy.lt.-ecpnl%npy) niy = niyp
+            if (nixp.gt.ecpnl%nsx) nixp = nix
+            if (niyp.gt.ecpnl%nsy) niyp = niy
+            if (nix.lt.-ecpnl%nsx) nix = nixp
+            if (niy.lt.-ecpnl%nsy) niy = niyp
             dx = ixy(1)-nix
             dy = ixy(2)-niy
             dxm = 1.0-dx
