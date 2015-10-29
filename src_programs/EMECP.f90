@@ -188,7 +188,7 @@ call ECPGenerateDetector(ecpnl, master, verbose=.TRUE.)
 ! get the weight factors here
 !================================================================================
 
-nsig = int(ecpnl%thetac) + 1
+nsig = int(ecpnl%thetac) + abs(ecpnl%sampletilt) + 1
 allocate(anglewf(1:nsig),stat=istat)
 
 call Message(' -> Calculating weight factors', frm = "(A)" )
@@ -349,9 +349,9 @@ call WriteValue(' Attempting to set number of threads to ',io_int,1,"(I4)")
 call OMP_SET_NUM_THREADS(ecpnl%nthreads)
 
 ! use OpenMP to run on multiple cores
-!$OMP PARALLEL PRIVATE(TID,nthreads,dc,ixy,istat,nix,niy,nixp,niyp,dx,dy,dxm,dym,MCangle,isig,dp) &
-!$OMP& PRIVATE(ipx,ipy,ECPpattern,bpat,ECPpatternintd,ma,mi,offset,hdims,dim0,dim1,dim2,hdferr,qu,idir) &
-!$OMP& SHARED (ecpnl,numk,angles,kij,master_arrayNH,master_arraySH,anglewf,mask,dataset) &
+!$OMP PARALLEL PRIVATE(TID,nthreads,dc,ixy,istat,nix,niy,nixp,niyp,dx,dy,dxm,dym,MCangle,isig,dp,isigp) &
+!$OMP& PRIVATE(ipx,ipy,ECPpattern,bpat,ECPpatternintd,ma,mi,offset,hdims,dim0,dim1,dim2,hdferr,qu,idir,wf) &
+!$OMP& SHARED (ecpnl,numk,angles,kij,master_arrayNH,master_arraySH,anglewf,mask,dataset,nsig) &
 !$OMP& SHARED (HDF_head,insert,switchwfoff)
 
 TID = OMP_GET_THREAD_NUM()
@@ -359,18 +359,6 @@ nthreads = OMP_GET_NUM_THREADS()
 
 !$OMP DO SCHEDULE(DYNAMIC)
 angleloop: do iang = 1,ecpnl%numangle_anglefile
-    if (nint(float(ecpnl%numangle_anglefile)/20.0) .gt. 0) then
-        if (mod(iang,nint(float(ecpnl%numangle_anglefile)/20.0)) .eq. 0) then
-            io_int(1) = iang
-            call WriteValue(' completed pattern # ',io_int,1)
-        end if
-    else
-        if (mod(iang,2) .eq. 0) then
-            io_int(1) = iang
-            call WriteValue(' completed pattern # ',io_int,1)
-        end if
-
-    end if
     qu(1:4) = angles%quatang(1:4,iang)
  
     imageloop: do idir = 1,numk
@@ -379,7 +367,7 @@ angleloop: do iang = 1,ecpnl%numangle_anglefile
 
         dc = klist(1:3,idir)
         dp = DOT_PRODUCT(dc(1:3),(/dsin(ecpnl%sampletilt*dtoR),0.D0,dcos(ecpnl%sampletilt*dtoR)/))        
-
+      
         MCangle = acos(dp)*Rtod
 ! find index closest to the list of MC runs we already have and interpolate the weight factor
         isig = int(MCangle) + 1
@@ -415,6 +403,7 @@ angleloop: do iang = 1,ecpnl%numangle_anglefile
 ! interpolate the intensity
         ipx = kij(1,idir)
         ipy = kij(2,idir)
+        
 ! including the detector model with some sample tilt
         if (switchwfoff .eqv. .FALSE.) then
             if (dc(3).gt.0.0) then 
@@ -452,9 +441,9 @@ angleloop: do iang = 1,ecpnl%numangle_anglefile
    
     if (mod(iang,2500) .eq. 0) then
         io_int(1) = iang
-        call WriteValue('completed pattern # ',io_int,1)
+        call WriteValue(' completed pattern # ',io_int,1)
     end if
-
+!$OMP CRITICAL
     if (ecpnl%outputformat .eq. 'bin') then
         ma = maxval(ECPpattern)
         mi = minval(ECPpattern)
@@ -484,6 +473,7 @@ angleloop: do iang = 1,ecpnl%numangle_anglefile
           hdferr = HDF_writeHyperslabFloatArray3D(dataset, ECPpattern, hdims, offset, dim0, dim1, dim2, &
                                           HDF_head, insert)
     end if
+!$OMP END CRITICAL
 
 end do angleloop 
 !$OMP END DO

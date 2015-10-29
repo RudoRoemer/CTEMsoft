@@ -765,13 +765,13 @@ real(kind=dbl),parameter                :: Rtod = 57.2957795131D0
 scl = ecpnl%nsx
 
 thetac = ecpnl%thetac
-deltheta = thetac/float(nsig-1)
+deltheta = (thetac+abs(ecpnl%sampletilt))/float(nsig-1)
 
 weightfact = 0.0
 
 do isig = 1,nsig
     acc_sum = 0.0
-    MCangle = (isig - 1)*deltheta - ecpnl%sampletilt
+    MCangle = (isig - 1)*deltheta
     isampletilt = nint((MCangle - ecpnl%MCsigstart)/ecpnl%MCsigstep)
     
     if (isampletilt .lt. 1) then
@@ -809,6 +809,8 @@ do isig = 1,nsig
         end do
     end do
 end do
+
+weightfact(1:nsig) = weightfact(1:nsig)/weightfact(1)
 
 if (present(verbose)) then
     if (verbose) call Message(' -> Finished calculating the weight factors',frm='(A)')
