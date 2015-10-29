@@ -321,7 +321,7 @@ end subroutine SingleEBSDPattern
 !
 !> @date 10/16/15 MDG 1.0 original
 !--------------------------------------------------------------------------
-subroutine SingleECPattern(nipar, nfpar, n1, n2, m1, o1, o2, nsig, ipar, fpar, accum_e, mLPNH, mLPSH, ECpattern)
+subroutine SingleECPattern(nipar, nfpar, n1, n2, m1, o1, o2, ipar, fpar, accum_e, mLPNH, mLPSH, ECpattern)
 
 ! the input parameters are all part of a ipar and fpar input arrays instead of the usual namelist structures.
 ! The following is the mapping:
@@ -334,7 +334,6 @@ subroutine SingleECPattern(nipar, nfpar, n1, n2, m1, o1, o2, nsig, ipar, fpar, a
 ! ipar(6) = enl%nsy
 ! ipar(7) = nx = (enl%nsx-1)/2
 ! ipar(8) = enl%npx
-! ipar(8) = nsig ! number of values for which the angle dependent weight factors are calculated
 
 ! fpar(1) = enl%thetac
 ! fpar(2) = enl%sampletilt
@@ -361,7 +360,6 @@ integer(8),INTENT(IN)                   :: ipar(nipar)
 integer(8),INTENT(IN)                   :: m1
 integer(8),INTENT(IN)                   :: o1
 integer(8),INTENT(IN)                   :: o2
-integer(8),INTENT(IN)                   :: nsig
 real(kind=sgl),INTENT(IN)               :: fpar(nfpar)
 real(kind=sgl),INTENT(IN)               :: accum_e(n1,-n2:n2,-n2:n2)
 real(kind=sgl),INTENT(IN)               :: mLPNH(-m1:m1, -m1:m1)
@@ -374,7 +372,7 @@ real(kind=dbl),parameter                :: Rtod = 57.2957795131D0
 real(kind=dbl),parameter                :: dtoR = 0.01745329251D0
 
 real(kind=sgl)                          :: kk(3), thetacr, ktmax, delta, wf, quat(4)
-integer(kind=irg)                       :: istat, imin, imax, jmin, jmax, ii ,jj, nazimuth, npolar
+integer(kind=irg)                       :: istat, imin, imax, jmin, jmax, ii ,jj, nazimuth, npolar, nsig
 integer(kind=irg)                       :: ipolar, iazimuth, isig, isampletilt, nix, niy, nixp, niyp, isigp
 real(kind=sgl)                          :: thetain, thetaout, polar, azimuthal, delpolar, delazimuth, om(3,3)
 real(kind=sgl)                          :: dc(3), scl, deltheta, acc_sum, MCangle, ixy(2), dx, dy, dxm, dym, dp
@@ -445,6 +443,8 @@ if (ipar(1) .eq. 1) then
 !===================================================================
 
 scl = float(ipar(5))
+nsig = nint(fpar(1) + abs(fpar(2))) + 1
+
 deltheta = (fpar(1)+abs(fpar(2)))/float(nsig-1)
 
 if (allocated(weightfact)) deallocate(weightfact)
@@ -647,15 +647,15 @@ REAL(c_float)                                   :: SingleECPatternWrapper
 
 ! wrapper function dependent declarations; they are all pointers 
 ! since we pass everything by reference from IDL 
-integer(c_size_t), pointer                      :: nipar, nfpar, n1, n2, m1, o1, o2, nsig
+integer(c_size_t), pointer                      :: nipar, nfpar, n1, n2, m1, o1, o2
 integer(c_size_t),dimension(:), pointer         :: ipar
 real(c_float), dimension(:), pointer            :: fpar
 real(c_float), dimension(:,:), pointer          :: ECpattern
 real(c_float), dimension(:,:,:), pointer        :: accum_e, mLPNH, mLPSH
 
 ! the following line just helps in identifying the correct order of the subroutine arguments...
-!                             1      2      3   4   5   6   7   8     9     10       11     12     13    14
-!subroutine SingleEBSDPattern(nipar, nfpar, n1, n2, m1, o1, o2, nsig, ipar, fpar, accum_e, mLPNH, mLPSH, EBSDpattern)
+!                             1      2      3   4   5   6   7   8     9     10       11     12     13   
+!subroutine SingleEBSDPattern(nipar, nfpar, n1, n2, m1, o1, o2, ipar, fpar, accum_e, mLPNH, mLPSH, EBSDpattern)
 !
 ! transform the C pointers above to fortran pointers, and use them in the regular function call
 call c_f_pointer(argv(1),nipar) 
@@ -665,15 +665,14 @@ call c_f_pointer(argv(4),n2)
 call c_f_pointer(argv(5),m1) 
 call c_f_pointer(argv(6),o1) 
 call c_f_pointer(argv(7),o2) 
-call c_f_pointer(argv(9),nsig) 
-call c_f_pointer(argv(9),ipar,(/nipar/)) 
-call c_f_pointer(argv(10),fpar,(/nfpar/)) 
-call c_f_pointer(argv(11),accum_e,(/n1,2*n2+1,2*n2+1/)) 
-call c_f_pointer(argv(12),mLPNH,(/2*m1+1,2*m1+1,n1/)) 
-call c_f_pointer(argv(13),mLPSH,(/2*m1+1,2*m1+1,n1/)) 
-call c_f_pointer(argv(14),ECpattern,(/o1,o2/)) 
+call c_f_pointer(argv(8),ipar,(/nipar/)) 
+call c_f_pointer(argv(9),fpar,(/nfpar/)) 
+call c_f_pointer(argv(10),accum_e,(/n1,2*n2+1,2*n2+1/)) 
+call c_f_pointer(argv(11),mLPNH,(/2*m1+1,2*m1+1,n1/)) 
+call c_f_pointer(argv(12),mLPSH,(/2*m1+1,2*m1+1,n1/)) 
+call c_f_pointer(argv(13),ECpattern,(/o1,o2/)) 
 
-call SingleECPattern(nipar, nfpar, n1, n2, m1, o1, o2, nsig, ipar, fpar, accum_e, mLPNH, mLPSH, ECpattern)
+call SingleECPattern(nipar, nfpar, n1, n2, m1, o1, o2, ipar, fpar, accum_e, mLPNH, mLPSH, ECpattern)
 
 SingleECPatternWrapper = 1._c_float
 end function SingleECPatternWrapper

@@ -188,7 +188,7 @@ call ECPGenerateDetector(ecpnl, master, verbose=.TRUE.)
 ! get the weight factors here
 !================================================================================
 
-nsig = int(ecpnl%thetac) + abs(ecpnl%sampletilt) + 1
+nsig = nint((ecpnl%thetac) + abs(ecpnl%sampletilt)) + 1
 allocate(anglewf(1:nsig),stat=istat)
 
 call Message(' -> Calculating weight factors', frm = "(A)" )
