@@ -77,6 +77,10 @@ CASE eventval OF
                 endif
         endcase
 
+        'PREPROC' : begin
+                Efitdata.preproc = Core_WidgetChoiceEvent( Efitwidget_s.preproc,  'Preprocessing mode? ')
+        endcase
+
         'CONVCRIT' : begin
                 Efitdata.convcrit = Core_WidgetChoiceEvent( Efitwidget_s.convcrit,  'Convergence criterion? ')
         endcase

@@ -121,7 +121,7 @@ end else begin
 ; display a filesaving widget in the data folder with the file extension filled in
 		delist = ['jpeg','tiff','bmp']
 		de = delist[EBSDdata.imageformat]
-		filename = DIALOG_PICKFILE(/write,default_extension=de,path=EBSDdata.mcpathname,title='enter filename without extension')
+		filename = DIALOG_PICKFILE(/write,default_extension=de,path=EBSDdata.pathname,title='enter filename without extension')
 		sz = size(MCimage,/dimensions)
 		if (sz[0] eq 3) then begin
                  case de of

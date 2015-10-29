@@ -132,6 +132,7 @@ Efitwidget_s = {widgetstruct, $
                 mkjson:long(0), $
                 convcrit:long(0), $
                 fitmode:long(0), $
+                preproc:long(0), $
                 ramponoff:long(0), $
                 hipassonoff:long(0), $
                 hipasscutoff:long(0), $
@@ -211,6 +212,7 @@ Efitdata = {Efitdatastruct, $
                 EBSPsuffix:'', $
                 suffix:'', $
                 fitmode:long(0), $
+                preproc:long(0), $
                 compute:long(0), $
                 jsonpathname:'', $
                 jsonfilename:'', $
@@ -583,6 +585,19 @@ Efitwidget_s.smoothval = CW_BGROUP(line2, $
                         EVENT_FUNC ='Efitevent', $
                         UVALUE='SMOOTHVAL', $
                         SET_VALUE=Efitdata.smoothval)
+
+line2 = WIDGET_BASE(block4, XSIZE=410, /ROW, /ALIGN_LEFT)
+vals = ['Regular','Laplacian']
+Efitwidget_s.preproc = CW_BGROUP(line2, $
+                        vals, $
+                        /ROW, $
+                        /NO_RELEASE, $
+                        /EXCLUSIVE, $
+                        FONT=fontstr, $
+			LABEL_LEFT='Preprocessing mode', $
+                        EVENT_FUNC ='Efitevent', $
+                        UVALUE='PREPROC', $
+                        SET_VALUE=Efitdata.preproc)
 
 
 ;------------------------------------------------------------

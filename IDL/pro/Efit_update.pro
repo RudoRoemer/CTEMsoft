@@ -162,13 +162,29 @@ if (Efitdata.smoothval ne 0) then begin
     Epat = smooth(Epat,2*Efitdata.smoothval+1)
 endif
 
-; now we are ready to compare with the experimental pattern, either via the dot product, or via
-; mutual information... the value is stored in cval
 npixels = Efitdata.detnumsx*Efitdata.detnumsy
-; normalize 
-v = reform(float(EBSDpattern),npixels)
-vl = sqrt(total(v*v))
-simvector = v/vl
+
+; any gradient or laplacian operators to be applied to the patterns ?
+if (Efitdata.preproc ne 0) then begin
+  if (Efitdata.preproc eq 1) then begin
+    v = reform(roberts(EBSDpattern)*mask,npixels)
+    vl = sqrt(total(v*v))
+    simvector = v/vl
+; store the laplacian of the experimental pattern in a normalized column vector
+    v = reform(roberts(float(expEBSDpattern))*mask,npixels)
+    vl = sqrt(total(v*v))
+    expvector = v/vl
+  endif
+end else begin
+  v = reform(float(EBSDpattern),npixels)
+  vl = sqrt(total(v*v))
+  simvector = v/vl
+  v = reform(float(expEBSDpattern),npixels)
+  vl = sqrt(total(v*v))
+  expvector = v/vl
+endelse
+
+
 
 if (Efitdata.ConvCrit eq 0) then begin   ; dot product approach
 ; and get the dot product

@@ -54,11 +54,19 @@ common projections, mcxcircle, mcycircle, mpxcircle, mpycircle, mcSPxcircle, mcS
 
 wset,EBSDwidget_s.MCdrawID
 
-energy = EBSDdata.mcenergymin + EBSDdata.Esel * EBSDdata.mcenergybinsize
-if (EBSDdata.MCLSum eq 0) then begin
-  image = reform(accum_e[EBSDdata.Esel,*,*])
-  WIDGET_CONTROL, set_value=string(energy,format="(F5.2)"), EBSDwidget_s.MCenergyval
-end 
+if (EBSDdata.EBSDorECP eq 0) then begin
+  energy = EBSDdata.mcenergymin + EBSDdata.Esel * EBSDdata.mcenergybinsize
+  if (EBSDdata.MCLSum eq 0) then begin
+    image = reform(accum_e[EBSDdata.Esel,*,*])
+    WIDGET_CONTROL, set_value=string(energy,format="(F5.2)"), EBSDwidget_s.MCenergyval
+  end 
+end else begin
+  angle = EBSDdata.mcsigstart + EBSDdata.Esel * EBSDdata.mcsigstep
+  if (EBSDdata.MCLSum eq 0) then begin
+    image = reform(accum_e[EBSDdata.Esel,*,*])
+    WIDGET_CONTROL, set_value=string(angle,format="(F5.2)"), EBSDwidget_s.MCenergyval
+  end 
+endelse
 
 if (EBSDdata.MCLSum eq 1) then begin
   image = reform(total(accum_e,1))
@@ -135,7 +143,11 @@ end
 if (EBSDdata.MCMPboth eq 1) then begin
   wset,EBSDwidget_s.MPdrawID
   if (EBSDdata.MCLSum eq 0) then begin
-    if (EBSDdata.Asymsel lt 0) then image = reform(MParraysum[*,*,EBSDdata.Esel]) else image = reform(MParray[*,*,EBSDdata.Esel,EBSDdata.Asymsel])
+    if (EBSDdata.EBSDorECP eq 0) then begin
+      if (EBSDdata.Asymsel lt 0) then image = reform(MParraysum[*,*,EBSDdata.Esel]) else image = reform(MParray[*,*,EBSDdata.Esel,EBSDdata.Asymsel])
+    end else begin
+      if (EBSDdata.Asymsel lt 0) then image = reform(MParraysum[*,*]) else image = reform(MParray[*,*,EBSDdata.Asymsel])
+    endelse
   end 
 
   if (EBSDdata.MCLSum eq 1) then begin

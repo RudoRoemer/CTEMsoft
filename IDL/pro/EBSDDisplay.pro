@@ -14,6 +14,7 @@
 @EBSDgetpreferences		; read preferences file
 @EBSDwritepreferences		; write preferences file
 @EBSDExecute			; perform the actual pattern computation
+@ECPDetectorWidget              ; ECP detector widget
 @Core_LambertS2C		; modified Lambert to Lambert projection
 @Core_LambertS2SP		; modified Lambert to stereographic projection
 @Core_colorwheel		; color representation of energy distribution
@@ -79,6 +80,7 @@
 ;> @date 03/19/14 MDG 1.2 implementation of Monte Carlo and master EBSD widgets
 ;> @date 05/22/14 MDG 1.3 completion of single pattern display mode
 ;> @date 05/27/14 MDG 1.4 completion of angle file display mode
+;> @date 10/29/15 MDG 2.0 added ECP handling, first only Monte Carlo part
 ;--------------------------------------------------------------------------
 pro EBSDDisplay,dummy
 ;
@@ -242,6 +244,7 @@ EBSDwidget_s = {widgetstruct, $
 
 EBSDdata = {EBSDdatastruct, $
 	; Monte Carlo parameters first 
+        EBSDorECP:long(0), $                    ; EBSD (0) or ECP (1) data type
 	mcfilename: '', $			; Monte Carlo result file name
 	mcfilesize: long64(0), $		; Monte Carlo file size [bytes]
 	mcenergymin: float(0.0), $		; minimum energy
@@ -256,6 +259,9 @@ EBSDdata = {EBSDdatastruct, $
 	mcimy: long(0), $			; same along y
 	mctotale: long64(0), $			; total number of electrons hitting the sample
 	mcbse: long(0), $			; total number of BSE electrons
+	mcsigstart: float(0.0), $			; start angle for ECP beam tilts 
+	mcsigend: float(0.0), $			; end angle for ECP beam tilts 
+	mcsigstep: float(0.0), $			; angular step size for ECP beam tilts 
 	mcvangle: float(0.0), $			; vertical sample tilt angle (around TD)
 	mchangle: float(0.0), $			; horizontal sample tilt angle (around RD)
 	mcmode: '', $				; 'CSDA' (continuous slowing down approximation) or 'DLOS' (discrete losses)
@@ -398,7 +404,7 @@ EBSDgetpreferences,/noprint
 
 ;------------------------------------------------------------
 ; create the top level widget
-EBSDwidget_s.base = WIDGET_BASE(TITLE='Electron Backscatter Diffraction Display Program', $
+EBSDwidget_s.base = WIDGET_BASE(TITLE='Electron Backscatter Diffraction Pattern and Electron Channeling Pattern Display Program', $
                         /ROW, $
                         XSIZE=1220, $
                         /ALIGN_LEFT, $
@@ -608,7 +614,7 @@ WIDGET_CONTROL,EBSDwidget_s.base,/REALIZE
 WIDGET_CONTROL, EBSDwidget_s.logodraw, GET_VALUE=drawID
 EBSDwidget_s.logodrawID = drawID
 ;
-read_jpeg,'Resources/SEMONRlogo.jpg',logo
+read_jpeg,'Resources/EMsoftlogo.jpg',logo
 wset,EBSDwidget_s.logodrawID
 tvscl,logo,true=1
 

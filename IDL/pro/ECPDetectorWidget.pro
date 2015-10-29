@@ -1,4 +1,5 @@
-; Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
+;
+; Copyright (c) 2013-2015, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are 
@@ -25,93 +26,31 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDDisplay_event.pro
+; EMsoft:ECPDetectorWidget.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: EBSDDisplay_event.pro
+; PROGRAM: ECPDetectorWidget.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief Electron backscatter diffraction pattern display event handler
+;> @brief basic detector GUI for ECP modality
 ;
-;
-;> @date 03/19/14 MDG 1.0 initial version
+;> @date 10/29/15 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro EBSDDisplay_event, event
+pro ECPDetectorWidget, event
 
 ;------------------------------------------------------------
 ; common blocks
 common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
+common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
+common EBSD_rawdata, accum_e, accum_z, MParray, MParraysum
+common projections, mcxcircle, mcycircle, mpxcircle, mpycircle, mcSPxcircle, mcSPycircle, mpSPxcircle, mpSPycircle 
 
-if (EBSDdata.eventverbose eq 1) then help,event,/structure
-
-if (event.id eq EBSDwidget_s.base) then begin
-  EBSDdata.xlocation = event.x
-  EBSDdata.ylocation = event.y-25
-end else begin
-
-  WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
-  
-  CASE eventval OF
-  	'MCDISPLAY': begin
-; create the Monte Carlo display widget
-		EBSDMCDisplayWidget
-	endcase
-
-  	'MPDISPLAY': begin
-; create the Master Pattern display widget
-		EBSDMCDisplayWidget
-	endcase
-
-  	'MCFILE': begin
-; ask the user to select the data file
-		EBSDgetfilename,validfile,/MCFILE
-; read the data file and populate all the relevant fields
-		if (validfile eq 1) then begin
-                   res = H5F_IS_HDF5(EBSDdata.mcpathname+'/'+EBSDdata.mcfilename)
-                   if (res eq 0) then EBSDreaddatafile,/MCFILE else EBSDreadHDFdatafile,/MCFILE
-                endif
-
-; activate the MC Display button
-
-; and close any other open widgets
-	endcase
-
-  	'MPFILE': begin
-; ask the user to select the data file
-		EBSDgetfilename,validfile,/MPFILE
-; read the data file and populate all the relevant fields
-		if (validfile eq 1) then begin
-                   res = H5F_IS_HDF5(EBSDdata.pathname+'/'+EBSDdata.mpfilename)
-                   if (res eq 0) then EBSDreaddatafile,/MPFILE else EBSDreadHDFdatafile,/MPFILE
-                endif
-
-; activate both the MC and MP Display buttons
-
-; and close any other open widgets
-	endcase
-
-	'DETECTOR': begin
-                if (EBSDdata.EBSDorECP eq 0) then EBSDDetectorWidget else ECPDetectorWidget
-	endcase
-
- 	'QUIT': begin
-		EBSDwritepreferences
-; do a general cleanup of potentially open widgets
- 		Core_Print,'Quitting program',/blank
-		WIDGET_CONTROL, EBSDwidget_s.base, /DESTROY
-		!EXCEPT=1
-	endcase
-
-  else: MESSAGE, "Event User Value Not Found"
-
-  endcase
-
-endelse
-
-end 
+common Image_common, MCimage, MPimage
 
 
 
+
+end

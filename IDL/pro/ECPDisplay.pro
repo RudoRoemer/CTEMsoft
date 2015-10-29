@@ -8,7 +8,7 @@
 @ECPgetpreferences		; read preferences file
 @ECPwritepreferences		; write preferences file
 ;
-; Copyright (c) 2013-2014, Marc De Graef/Carnegie Mellon University
+; Copyright (c) 2013-2015, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are 
@@ -35,7 +35,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:ECPDisplay.pro
+; EMsoft2013:ECPDisplay.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: ECPDisplay.pro

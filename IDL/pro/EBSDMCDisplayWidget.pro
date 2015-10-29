@@ -95,16 +95,19 @@ b1 = WIDGET_BUTTON(menu1, VALUE='Lambert [square]', UVALUE='LAMBERTS')
 b2 = WIDGET_BUTTON(menu1, VALUE='Lambert [circle]', UVALUE='LAMBERTC')
 b3 = WIDGET_BUTTON(menu1, VALUE='Stereographic P.', UVALUE='STEREOP')
 
-menu2 = WIDGET_BUTTON(menubar, VALUE='Display Mode', /MENU)
-if (EBSDdata.MCMPboth eq 1) then begin
-  b2 = WIDGET_BUTTON(menu2, VALUE='Individual Energy/Master Bin', UVALUE='DISPEBIN')
-  b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum/Weighted Master', UVALUE='DISPESUM')
-  b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum RGB/blank', UVALUE='DISPESUMRGB')
-end else begin
-  b2 = WIDGET_BUTTON(menu2, VALUE='Individual Energy Bin', UVALUE='DISPEBIN')
-  b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum', UVALUE='DISPESUM')
-  b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum RGB', UVALUE='DISPESUMRGB')
-endelse
+; we only have a Display Mode menu item for the EBSD mode
+if (EBSDdata.EBSDorECP eq 0) then begin
+  menu2 = WIDGET_BUTTON(menubar, VALUE='Display Mode', /MENU)
+  if (EBSDdata.MCMPboth eq 1) then begin
+    b2 = WIDGET_BUTTON(menu2, VALUE='Individual Energy/Master Bin', UVALUE='DISPEBIN')
+    b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum/Weighted Master', UVALUE='DISPESUM')
+    b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum RGB/blank', UVALUE='DISPESUMRGB')
+  end else begin
+    b2 = WIDGET_BUTTON(menu2, VALUE='Individual Energy Bin', UVALUE='DISPEBIN')
+    b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum', UVALUE='DISPESUM')
+    b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum RGB', UVALUE='DISPESUMRGB')
+  endelse
+endif
 
 ;------------------------------------------------------------
 if (EBSDdata.MCMPboth eq 0) then begin
@@ -124,7 +127,8 @@ endelse
 block2 = WIDGET_BASE(block1, /ROW, /ALIGN_CENTER)
 
 ; here's a slider to select the energy window ...
-EBSDwidget_s.MCslider = WIDGET_SLIDER(block2, $
+if (EBSDdata.EBSDorECP eq 0) then begin
+  EBSDwidget_s.MCslider = WIDGET_SLIDER(block2, $
 			EVENT_PRO='EBSDMCDisplayWidget_event', $
 			MINIMUM = 1, $
 			MAXIMUM = EBSDdata.mcenergynumbin, $
@@ -134,14 +138,36 @@ EBSDwidget_s.MCslider = WIDGET_SLIDER(block2, $
 			VALUE = 1, $
 			UVALUE = 'MCSLIDER', $
 			/ALIGN_CENTER)
+end else begin
+  EBSDwidget_s.MCslider = WIDGET_SLIDER(block2, $
+			EVENT_PRO='EBSDMCDisplayWidget_event', $
+			MINIMUM = 1, $
+			MAXIMUM = EBSDdata.mcenergynumbin, $
+			SENSITIVE = 1, $
+			TITLE = 'Select a beam tilt angle', $
+			XSIZE = 400, $
+			VALUE = 1, $
+			UVALUE = 'MCSLIDER', $
+			/ALIGN_CENTER)
+endelse
 
-; and right next to it we display the actual energy in a text box
-energy = EBSDdata.mcenergymin + EBSDdata.Esel * EBSDdata.mcenergybinsize
-EBSDwidget_s.MCenergyval =  WIDGET_TEXT(block2, $
+; and right next to it we display the actual energy or beam tilt angle in a text box
+if (EBSDdata.EBSDorECP eq 0) then begin
+  energy = EBSDdata.mcenergymin + EBSDdata.Esel * EBSDdata.mcenergybinsize
+  EBSDwidget_s.MCenergyval =  WIDGET_TEXT(block2, $
 			VALUE=string(energy,format="(F5.2)"), $
 			XSIZE=10, $
 			YSIZE=1, $
 			/ALIGN_RIGHT)
+end else begin
+  angle = EBSDdata.mcsigstart + EBSDdata.Esel * EBSDdata.mcsigstep
+  EBSDwidget_s.MCenergyval =  WIDGET_TEXT(block2, $
+			VALUE=string(angle,format="(F5.2)"), $
+			XSIZE=10, $
+			YSIZE=1, $
+			/ALIGN_RIGHT)
+endelse
+
 
 if (EBSDdata.MCMPboth eq 1) then begin
 ; in the same block we also generate a list of all the asymmetric unit positions
