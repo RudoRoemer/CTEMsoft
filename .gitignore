@@ -78,6 +78,7 @@ IDL/pro_todo
 
 #ignoring cmake and other build systems
 CMakeLists.txt.user
+CMakeCache.txt
 /Build/
 /zRel/
 /CleanBuild/
