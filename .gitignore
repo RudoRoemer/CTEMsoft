@@ -14,31 +14,13 @@
 *.pl
 
 IDL/**/*.sav
-IDL/various
-/ideas/
-/MathStuff/
-/rotations/
+IDL/pro_todo
 
 # ignore OS files
 .DS_Store
 .DS_Store?
 
 *.atools
-
-# executables
-/exe/
-
-# fortrancl folder
-/fortrancl/
-
-# VMF folder
-/VMF/
-
-# ORR folder
-/ORR/
-
-# Amy test folder
-/Amy/
 
 # libs, makefiles, editor backup files, etc
 *.a
@@ -56,27 +38,7 @@ IDL/various
 /IDL/VMapps/
 /IDL/VMappsPC/
 
-# debug files
-*.fx3
-
-# mkdep
-mkdep_F95
-
-# Release & Debug files
-/lib/*/Release/
-/lib/Release/
-/lib/*/Debug/
-/lib/Debug/
-
-# runtime files
-absoft_run_env.sh
-
-# testbed folder
-/lib/testbed/
-
 # figures for manuals
-# /manuals/
-#/manuals/figs/
 *.tiff
 *.jpg
 *.ai
@@ -94,40 +56,23 @@ absoft_run_env.sh
 *.synctex.gz
 *.toc
 *.pdf
-
-# oldsrc
-/oldsrc/
+*.bib
+*.out
+*.synctex.gz(busy)
 
 # rksuite
 /src/rksuite_90/
 
-# testfolder
-/testfolder/
-
-# xtal
-/xtal/
-
 # IDL VM
 
 #lib030414 and other temp test folders #PGC
-/lib030414
-/test_cmp
-/test_lib
-/test_makefile
-/mktest
 
 # .mod’s and .o’s
 *.mod
 *.o
 /IDL/README.txt
-/IDL/pro/change
-/IDL/pro/fort.21
-/manuals/*.bib
-/manuals/*.out
 /resources/*.pro
-/src/AmyPlay.f90
 /src/local.f90
-/src/PatrickPlay.f90
 /src_programs/*.c
 /src_programs/go*
 

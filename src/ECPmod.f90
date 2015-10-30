@@ -694,6 +694,7 @@ master%rgx = 0.0
 master%rgy = 0.0
 master%rgz = 0.0
 
+! compute the direction cosines of the detector elements in the sample reference frame.
 do ipolar = 1,npolar
     polar = thetain + float(ipolar-1)*delpolar
 
