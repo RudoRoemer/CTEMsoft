@@ -766,13 +766,13 @@ real(kind=dbl),parameter                :: Rtod = 57.2957795131D0
 scl = ecpnl%nsx
 
 thetac = ecpnl%thetac
-deltheta = thetac/float(nsig-1)
+deltheta = (thetac+abs(ecpnl%sampletilt))/float(nsig-1)
 
 weightfact = 0.0
 
 do isig = 1,nsig
     acc_sum = 0.0
-    MCangle = (isig - 1)*deltheta - ecpnl%sampletilt
+    MCangle = (isig - 1)*deltheta
     isampletilt = nint((MCangle - ecpnl%MCsigstart)/ecpnl%MCsigstep)
     
     if (isampletilt .lt. 1) then
@@ -787,14 +787,14 @@ do isig = 1,nsig
 ! convert to Rosca-lambert projection
             ixy = scl *  LambertSphereToSquare( dc, istat )
             if (istat .ne. 0) call FatalError('ECPGetWeightFactors','Cannot convert to square Lambert projection')
-            nix = int(ecpnl%npx+ixy(1))-ecpnl%npx
-            niy = int(ecpnl%npy+ixy(2))-ecpnl%npy
+            nix = int(ecpnl%nsx+ixy(1))-ecpnl%nsx
+            niy = int(ecpnl%nsy+ixy(2))-ecpnl%nsy
             nixp = nix+1
             niyp = niy+1
-            if (nixp.gt.ecpnl%npx) nixp = nix
-            if (niyp.gt.ecpnl%npy) niyp = niy
-            if (nix.lt.-ecpnl%npx) nix = nixp
-            if (niy.lt.-ecpnl%npy) niy = niyp
+            if (nixp.gt.ecpnl%nsx) nixp = nix
+            if (niyp.gt.ecpnl%nsy) niyp = niy
+            if (nix.lt.-ecpnl%nsx) nix = nixp
+            if (niy.lt.-ecpnl%nsy) niy = niyp
             dx = ixy(1)-nix
             dy = ixy(2)-niy
             dxm = 1.0-dx
@@ -810,6 +810,8 @@ do isig = 1,nsig
         end do
     end do
 end do
+
+weightfact(1:nsig) = weightfact(1:nsig)/weightfact(1)
 
 if (present(verbose)) then
     if (verbose) call Message(' -> Finished calculating the weight factors',frm='(A)')

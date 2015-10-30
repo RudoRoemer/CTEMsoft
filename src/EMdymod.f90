@@ -51,13 +51,13 @@ contains
 !> @brief This function can be called as a standalone function to compute an EBSD pattern
 !
 !> @etails The main purpose of this routine and its accompanying wrapper routine is to
-!> provide a way for an external program to compute an EBSD pattern.  The idea is that 
+!> provide a way for an external program to compute a channeling pattern.  The idea is that 
 !> all the necessary arrays and variables are passed in by reference as arguments, without
 !> the need for the routine to fetch any other data from files etc...  The initial goal is
 !> to have a function that can be called with the CALL_EXTERNAL mechanism in IDL, but 
 !> in the long run this will also be the approach for calling the routine from C/C++, which
 !> is an essential part of integration with DREAM.3D.  This routine is a simplified version
-!> of the core of the EMEBSD program. 
+!> of the core of the EMECP program. 
 !>
 !> This routine will first compute the detector arrays rgx etc. if necessary, and then perform
 !> the usual interpolation from the square Lambert projection. The pattern will be a basic pattern,
@@ -76,7 +76,7 @@ contains
 !> @param mLPSH Southern hemisphere master pattern
 !> @param EBSDpattern output array
 !
-!> @date 10/16/15 MDG 1.0 original
+!> @date 10/16/15 SS 1.0 original
 !--------------------------------------------------------------------------
 subroutine SingleEBSDPattern(nipar, nfpar, n1, n2, m1, o1, o2, ipar, fpar, accum_e, mLPNH, mLPSH, EBSDpattern)
 
@@ -106,6 +106,7 @@ subroutine SingleEBSDPattern(nipar, nfpar, n1, n2, m1, o1, o2, ipar, fpar, accum
 use local
 use constants
 use Lambert
+use quaternions
 
 IMPLICIT NONE
 
@@ -283,6 +284,281 @@ EBSDpattern = prefactor * EBSDpattern
 return
 end subroutine SingleEBSDPattern
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:SingleECPattern
+!
+!> @author Saransh Singh, Carnegie Mellon University
+!
+!> @brief This function can be called as a standalone function to compute an electron channeling pattern
+!> based on Marc's code above
+!
+!> @etails The main purpose of this routine and its accompanying wrapper routine is to
+!> provide a way for an external program to compute an EBSD pattern.  The idea is that 
+!> all the necessary arrays and variables are passed in by reference as arguments, without
+!> the need for the routine to fetch any other data from files etc...  The initial goal is
+!> to have a function that can be called with the CALL_EXTERNAL mechanism in IDL, but 
+!> in the long run this will also be the approach for calling the routine from C/C++, which
+!> is an essential part of integration with DREAM.3D.  This routine is a simplified version
+!> of the core of the EMEBSD program. 
+!>
+!> This routine will first compute the incident cone vectors etc. if necessary, and then perform
+!> the usual interpolation from the square Lambert projection. The pattern will be a basic pattern,
+!> without any intensity scaling or binning etc; the calling program should take care of those 
+!> operations.
+!
+!> @param nipar number of entries in ipar
+!> @param nfpar number of entries in fpar
+!> @param n1, n2 dimension parameters for accum_e
+!> @param m1 dimension parameter for mLPNH and mLPSH
+!> @param o1,o2 dimension parameters for ECpattern
+!> @param ipar array with integer input parameters
+!> @param fpar array with float input parameters
+!> @param accum_e array with Monte Carlo histogram
+!> @param mLPNH Northern hemisphere master pattern
+!> @param mLPSH Southern hemisphere master pattern
+!> @param EBSDpattern output array
+!
+!> @date 10/16/15 MDG 1.0 original
+!--------------------------------------------------------------------------
+subroutine SingleECPattern(nipar, nfpar, n1, n2, m1, o1, o2, ipar, fpar, accum_e, mLPNH, mLPSH, ECpattern)
+
+! the input parameters are all part of a ipar and fpar input arrays instead of the usual namelist structures.
+! The following is the mapping:
+!
+! ipar(1) = 1 if GetVectorsCone detector arrays need to be computed, 0 if not (arrays will have save status)
+! ipar(2) = enl%npix
+! ipar(3) = enl%numsy
+! ipar(4) = enl%numEbins
+! ipar(5) = enl%nsx
+! ipar(6) = enl%nsy
+! ipar(7) = nx = (enl%nsx-1)/2
+! ipar(8) = enl%npx
+
+! fpar(1) = enl%thetac
+! fpar(2) = enl%sampletilt
+! fpar(3) = enl%workingdistance
+! fpar(4) = enl%Rin
+! fpar(5) = enl%Rout
+! fpar(6) = enl%sigstart
+! fpar(7) = enl%sigend
+! fpar(8) = enl%sigstep
+! fpar(9-12) =  quaternion for requested Euler angles
+
+use local
+use constants
+use Lambert
+use quaternions
+
+IMPLICIT NONE
+
+integer(8),INTENT(IN)                   :: nipar
+integer(8),INTENT(IN)                   :: nfpar
+integer(8),INTENT(IN)                   :: n1
+integer(8),INTENT(IN)                   :: n2
+integer(8),INTENT(IN)                   :: ipar(nipar)
+integer(8),INTENT(IN)                   :: m1
+integer(8),INTENT(IN)                   :: o1
+integer(8),INTENT(IN)                   :: o2
+real(kind=sgl),INTENT(IN)               :: fpar(nfpar)
+real(kind=sgl),INTENT(IN)               :: accum_e(n1,-n2:n2,-n2:n2)
+real(kind=sgl),INTENT(IN)               :: mLPNH(-m1:m1, -m1:m1)
+real(kind=sgl),INTENT(IN)               :: mLPSH(-m1:m1, -m1:m1)
+real(kind=sgl),INTENT(OUT)              :: ECpattern(o1, o2)
+
+real(kind=sgl),allocatable,save         :: klist(:,:,:), rgx(:,:), rgy(:,:), rgz(:,:), weightfact(:)
+
+real(kind=dbl),parameter                :: Rtod = 57.2957795131D0
+real(kind=dbl),parameter                :: dtoR = 0.01745329251D0
+
+real(kind=sgl)                          :: kk(3), thetacr, ktmax, delta, wf, quat(4)
+integer(kind=irg)                       :: istat, imin, imax, jmin, jmax, ii ,jj, nazimuth, npolar, nsig
+integer(kind=irg)                       :: ipolar, iazimuth, isig, isampletilt, nix, niy, nixp, niyp, isigp
+real(kind=sgl)                          :: thetain, thetaout, polar, azimuthal, delpolar, delazimuth, om(3,3)
+real(kind=sgl)                          :: dc(3), scl, deltheta, acc_sum, MCangle, ixy(2), dx, dy, dxm, dym, dp
+
+!==================================================================================
+! ------ generate the detector klist, rgx, rgy, rgz, weightfactors arrays if needed 
+!------- (calling program must decide this via ipar(1))
+!==================================================================================
+
+if (ipar(1) .eq. 1) then
+
+    if (allocated(klist)) deallocate(klist)
+    allocate(klist(1:3,-ipar(2):ipar(2),-ipar(2):ipar(2)), stat=istat)
+    kk = (/0.0,0.0,1.0/)
+    thetacr = DtoR*fpar(1)
+    ktmax = tan(thetacr)
+    delta = 2.0*ktmax/(2.0*dble(ipar(2))+1.0)
+
+    imin = -ipar(2)
+    imax = ipar(2)
+    jmin = -ipar(2)
+    jmax = ipar(2)
+     
+    do ii = imin, imax
+        do jj = jmin, jmax
+            klist(1:3,ii,jj) = (/delta*ii,delta*jj,0.0/) + kk(1:3)
+            klist(1:3,ii,jj) =  klist(1:3,ii,jj)/sqrt(sum( klist(1:3,ii,jj)**2))
+        end do
+    end do
+
+    thetain = atan2(fpar(4),fpar(3))
+    thetaout = atan2(fpar(4),fpar(3))
+
+    om(1,:) = (/cos(fpar(2)),0.0,sin(fpar(2))/)
+    om(2,:) = (/0.0,1.0,0.0/)
+    om(3,:) = (/-sin(fpar(2)),0.0,cos(fpar(2))/)
+
+    npolar = nint((thetaout - thetain)*180.0/cPi) + 1
+    delpolar = (thetaout - thetain)/float(npolar-1)
+
+    nazimuth = 361
+    delazimuth = 2.0*cPi/float(nazimuth-1)
+
+    if (allocated(rgx)) deallocate(rgx, rgy, rgz)
+    allocate(rgx(npolar, nazimuth), rgy(npolar, nazimuth), rgz(npolar, nazimuth), stat=istat)
+
+    do ipolar = 1,npolar
+         polar = thetain + float(ipolar-1)*delpolar
+
+         do iazimuth = 1,nazimuth
+             azimuthal = float(iazimuth-1)*delazimuth
+
+             dc(1) = cos(azimuthal)*sin(polar)
+             dc(2) = sin(azimuthal)*sin(polar)
+             dc(3) = cos(polar)
+
+             dc = matmul(om,dc)
+
+             rgx(ipolar,iazimuth) = dc(1)
+             rgy(ipolar,iazimuth) = dc(2)
+             rgz(ipolar,iazimuth) = dc(3)
+        end do
+    end do
+
+
+!===================================================================
+! ------ generate the weight factors from the monte carlo histogram
+!===================================================================
+
+scl = float(ipar(5))
+nsig = nint(fpar(1) + abs(fpar(2))) + 1
+
+deltheta = (fpar(1)+abs(fpar(2)))/float(nsig-1)
+
+if (allocated(weightfact)) deallocate(weightfact)
+
+allocate(weightfact(1:nsig), stat=istat)
+weightfact = 0.0
+
+do isig = 1,nsig
+    acc_sum = 0.0
+    MCangle = (isig - 1)*deltheta
+    isampletilt = nint((MCangle - fpar(6))/fpar(8))
+    
+    if (isampletilt .lt. 1) then
+        isampletilt = abs(isampletilt) + 1
+    else
+        isampletilt = isampletilt + 1
+    end if
+    
+    do ipolar = 1,npolar
+        do iazimuth = 1,nazimuth
+            dc(1:3) = (/rgx(ipolar,iazimuth), rgy(ipolar,iazimuth), rgz(ipolar,iazimuth)/)
+! convert to Rosca-lambert projection
+            ixy = scl *  LambertSphereToSquare( dc, istat )
+            nix = int(ipar(5)+ixy(1))-ipar(5)
+            niy = int(ipar(5)+ixy(2))-ipar(5)
+            nixp = nix+1
+            niyp = niy+1
+            if (nixp.gt.ipar(5)) nixp = nix
+            if (niyp.gt.ipar(5)) niyp = niy
+            if (nix.lt.-ipar(5)) nix = nixp
+            if (niy.lt.-ipar(5)) niy = niyp
+            dx = ixy(1)-nix
+            dy = ixy(2)-niy
+            dxm = 1.0-dx
+            dym = 1.0-dy
+            
+            acc_sum = 0.25*(accum_e(isampletilt,nix,niy) * dxm * dym + &
+                            accum_e(isampletilt,nixp,niy) * dx * dym + &
+                            accum_e(isampletilt,nix,niyp) * dxm * dy + &
+                            accum_e(isampletilt,nixp,niyp) * dx * dy)
+             
+            weightfact(isig) = weightfact(isig) + acc_sum
+
+        end do
+    end do
+end do
+
+weightfact(1:nsig) = weightfact(1:nsig)/weightfact(1)
+
+end if
+
+!===================================================================
+! ------ perform interpolation from square lambert map
+!===================================================================
+
+quat(1:4) = fpar(9:12)
+scl = float(ipar(8))
+
+do ii = imin, imax
+    do jj = jmin, jmax
+
+        dc(1:3) = klist(1:3,ii,jj)
+        dp = DOT_PRODUCT(dc(1:3),(/sin(fpar(2)*dtoR),0.D0,cos(fpar(2)*dtoR)/))      
+      
+        MCangle = acos(dp)*Rtod
+
+        isig = int(MCangle) + 1
+        if (isig .gt. nsig) isig = nsig
+
+        isigp = isig + 1
+        if (isigp .gt. nsig) isigp = nsig
+
+        dx = MCangle - int(MCangle)
+        dxm =  1.0 - dx
+ 
+        wf = weightfact(isig) * dxm + weightfact(isigp) * dx
+ 
+        dc = quat_LP(quat, dc)
+        dc = dc/sqrt(sum(dc*dc))
+
+        ixy = scl * LambertSphereToSquare( dc, istat )
+        nix = int(ipar(8)+ixy(1))-ipar(8)
+        niy = int(ipar(8)+ixy(2))-ipar(8)
+        nixp = nix+1
+        niyp = niy+1
+        if (nixp.gt.ipar(8)) nixp = nix
+        if (niyp.gt.ipar(8)) niyp = niy
+        if (nix.lt.-ipar(8)) nix = nixp
+        if (niy.lt.-ipar(8)) niy = niyp
+        dx = ixy(1)-nix
+        dy = ixy(2)-niy
+        dxm = 1.0-dx
+        dym = 1.0-dy
+
+        if (dc(3).gt.0.0) then 
+
+            ECpattern(ii,jj) = wf * ( mLPNH(nix,niy) * dxm * dym + &
+                         mLPNH(nixp,niy) * dx * dym + &
+                         mLPNH(nix,niyp) * dxm * dy + &
+                         mLPNH(nixp,niyp) * dx * dy )
+
+        else
+             ECpattern(ii,jj) =  wf * ( mLPSH(nix,niy) * dxm * dym + &
+                         mLPSH(nixp,niy) * dx * dym + &
+                         mLPSH(nix,niyp) * dxm * dy + &
+                         mLPSH(nixp,niyp) * dx * dy )
+
+        end if
+
+    end do
+end do
+
+
+end subroutine SingleECPattern
 
 !--------------------------------------------------------------------------
 !
@@ -343,6 +619,63 @@ SingleEBSDPatternWrapper = 1._c_float
 end function SingleEBSDPatternWrapper
 
 
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:SingleECPatternWrapper
+!
+!> @author Saransh Singh, Carnegie Mellon University
+!
+!> @brief wrapper routine for SingleECPPattern; based on Marc's routine above
+!>
+!> see https://groups.google.com/forum/#!topic/comp.lang.idl-pvwave/Gk0xxVFbW8E
+!>
+!
+!> @param argc number of argument
+!> @param argv pointers to subroutine parameters
+!
+!> @date 10/28/15 SS 1.0 original
+!--------------------------------------------------------------------------
+function SingleECPatternWrapper(argc, argv) bind(c, name='SingleECPatternWrapper') 
+
+use,INTRINSIC :: ISO_C_BINDING
+
+IMPLICIT NONE
+
+INTEGER(c_size_t), VALUE, INTENT(IN)            :: argc 
+type(c_ptr), dimension(argc), INTENT(INOUT)     :: argv
+REAL(c_float)                                   :: SingleECPatternWrapper
+
+! wrapper function dependent declarations; they are all pointers 
+! since we pass everything by reference from IDL 
+integer(c_size_t), pointer                      :: nipar, nfpar, n1, n2, m1, o1, o2
+integer(c_size_t),dimension(:), pointer         :: ipar
+real(c_float), dimension(:), pointer            :: fpar
+real(c_float), dimension(:,:), pointer          :: ECpattern
+real(c_float), dimension(:,:,:), pointer        :: accum_e, mLPNH, mLPSH
+
+! the following line just helps in identifying the correct order of the subroutine arguments...
+!                             1      2      3   4   5   6   7   8     9     10       11     12     13   
+!subroutine SingleEBSDPattern(nipar, nfpar, n1, n2, m1, o1, o2, ipar, fpar, accum_e, mLPNH, mLPSH, EBSDpattern)
+!
+! transform the C pointers above to fortran pointers, and use them in the regular function call
+call c_f_pointer(argv(1),nipar) 
+call c_f_pointer(argv(2),nfpar) 
+call c_f_pointer(argv(3),n1) 
+call c_f_pointer(argv(4),n2) 
+call c_f_pointer(argv(5),m1) 
+call c_f_pointer(argv(6),o1) 
+call c_f_pointer(argv(7),o2) 
+call c_f_pointer(argv(8),ipar,(/nipar/)) 
+call c_f_pointer(argv(9),fpar,(/nfpar/)) 
+call c_f_pointer(argv(10),accum_e,(/n1,2*n2+1,2*n2+1/)) 
+call c_f_pointer(argv(11),mLPNH,(/2*m1+1,2*m1+1,n1/)) 
+call c_f_pointer(argv(12),mLPSH,(/2*m1+1,2*m1+1,n1/)) 
+call c_f_pointer(argv(13),ECpattern,(/o1,o2/)) 
+
+call SingleECPattern(nipar, nfpar, n1, n2, m1, o1, o2, ipar, fpar, accum_e, mLPNH, mLPSH, ECpattern)
+
+SingleECPatternWrapper = 1._c_float
+end function SingleECPatternWrapper
 
 
 end module EMdymod
