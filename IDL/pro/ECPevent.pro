@@ -1,5 +1,5 @@
 ;
-; Copyright (c) 2013-2014, Marc De Graef/Carnegie Mellon University
+; Copyright (c) 2013-2015, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are 
@@ -26,7 +26,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:ECPevent.pro
+; EMsoft:ECPevent.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: ECPevent.pro
@@ -35,17 +35,23 @@
 ;
 ;> @brief special event handler for all the CW_BGROUP calls, since CW_BGROUP does not support event_pro
 ;
-;> @date 10/09/13 MDG 1.0 first version
+;> @date 10/30/15 MDG 1.0 first version
 ;--------------------------------------------------------------------------
 function ECPevent, event
 
 ;------------------------------------------------------------
 ; common blocks
-common ECP_widget_common, widget_s
-common ECP_data_common, data
+common EBSD_widget_common, EBSDwidget_s
+common EBSD_data_common, EBSDdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
-if (data.eventverbose eq 1) then help,event,/structure
+common CommonCore, status, logmode, logunit
+
+common EBSD_rawdata, accum_e, accum_z, mLPNH, mLPSH
+
+
+if (EBSDdata.eventverbose eq 1) then help,event,/structure
+
 
 WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
 
@@ -54,15 +60,70 @@ IF N_ELEMENTS(eventval) EQ 0 THEN RETURN,eventval
 CASE eventval OF
 
   'ECPFORMAT': begin
-		WIDGET_CONTROL, get_value=val,widget_s.ECPformatbgroup
-		data.ecpformat = fix(val[0])
-	  endcase
+                WIDGET_CONTROL, get_value=val,EBSDwidget_s.EBSDformatbgroup
+                EBSDdata.imageformat = fix(val[0])
+          endcase
 
-  'ECPGRID': begin
-		WIDGET_CONTROL, get_value=val,widget_s.ECPgridbgroup
-		data.ecpgrid = fix(val[0])
-		ECPshow
-	  endcase
+  'ECPATTERNORIGIN': begin
+                WIDGET_CONTROL, get_value=val,EBSDwidget_s.PatternOrigin
+                EBSDdata.PatternOrigin = fix(val[0])
+	  	ECPshowPattern,/single
+		vals = ['Upper Left','Lower Left','Upper Right','Lower Right']
+		  Core_Print, 'Pattern origin set to '+vals[EBSDdata.PatternOrigin]
+	endcase
+ 'ECPATTERNSCALING': begin
+                WIDGET_CONTROL, get_value=val,EBSDwidget_s.PatternScaling
+                EBSDdata.PatternScaling = fix(val[0])
+	  	ECPshowPattern,/single
+		vals = ['linear', 'gamma']
+		  Core_Print, 'Pattern scaling set to '+vals[EBSDdata.PatternScaling]
+	endcase
+
+ 'CIRCULARMASK': begin
+                WIDGET_CONTROL, get_value=val,EBSDwidget_s.circularmask
+                EBSDdata.showcircularmask= fix(val[0])
+	  	if (EBSDdata.Pmode eq 0) then EBSDshowPattern,/single else EBSDshowPattern
+		vals = ['Off','On']
+		  Core_Print, 'Circular mask set to '+vals[EBSDdata.showcircularmask]
+	endcase
+
+ 'PMODE': begin
+                WIDGET_CONTROL, get_value=val,EBSDwidget_s.Pmode
+                EBSDdata.Pmode = fix(val[0])
+		vals = ['Single Pattern','Angle File','Dictionary']
+; next we need to turn on those widgets that belong to the selected mode (sensitivity=1)
+		if (EBSDdata.Pmode eq 0) then begin
+		  WIDGET_CONTROL, EBSDwidget_s.DisplayEBSD, sensitive=1
+		  WIDGET_CONTROL, EBSDwidget_s.EBSDgetanglefilename, sensitive=0
+;	  WIDGET_CONTROL, EBSDwidget_s.PGdroplist, sensitive=0
+;	  WIDGET_CONTROL, EBSDwidget_s.EBSDgetdictfilename, sensitive=0
+;	  WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=0
+		    Core_Print, 'Pattern mode set to '+vals[EBSDdata.Pmode]
+		end
+
+		if (EBSDdata.Pmode eq 1) then begin
+		  WIDGET_CONTROL, EBSDwidget_s.DisplayEBSD, sensitive=0
+		  WIDGET_CONTROL, EBSDwidget_s.EBSDgetanglefilename, sensitive=1
+;	  WIDGET_CONTROL, EBSDwidget_s.PGdroplist, sensitive=0
+;	  WIDGET_CONTROL, EBSDwidget_s.EBSDgetdictfilename, sensitive=0
+;	  WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=0
+		    Core_Print, 'Pattern mode set to '+vals[EBSDdata.Pmode]
+		end
+
+		if (EBSDdata.Pmode eq 2) then begin
+		  WIDGET_CONTROL, EBSDwidget_s.DisplayEBSD, sensitive=0
+		  WIDGET_CONTROL, EBSDwidget_s.EBSDgetanglefilename, sensitive=0
+;	  WIDGET_CONTROL, EBSDwidget_s.PGdroplist, sensitive=0
+;	  WIDGET_CONTROL, EBSDwidget_s.EBSDgetdictfilename, sensitive=0
+;	  if ( (EBSDdata.Ncubochoric ne 0) and (EBSDdata.Dictpointgroup ne 0) and (EBSDdata.EBSDdictfilename ne '') ) then begin
+;	    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=0
+;	  end else begin
+;	    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=0
+;	  end
+;	    Core_Print, 'Pattern mode set to '+vals[EBSDdata.Pmode]
+		    Core_Print, 'Not implemented in this program Release',/blank
+		end
+	endcase
 
 else: MESSAGE, "Event User Value Not Found"
 

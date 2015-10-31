@@ -44,7 +44,7 @@ common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
 
 ; the next common block contains all the raw data needed to generate the EBSD patterns
-common EBSD_rawdata, accum_e, accum_z, MParray, MParraysum
+common EBSD_rawdata, accum_e, accum_z, mLPNH, mLPSH
 
 
 ATOMsym=[' H','He','Li','Be',' B',' C',' N',' O',' F','Ne', $

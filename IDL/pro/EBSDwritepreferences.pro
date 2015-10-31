@@ -36,6 +36,7 @@
 ;> @brief write the preferences file
 ;
 ;> @date 06/13/13 MDG 1.0 first attempt 
+;> @date 10/31/15 MDG 1.1 added ECP parameters; changed pathname for preference file
 ;--------------------------------------------------------------------------
 pro EBSDwritepreferences,noprint=noprint
  
@@ -46,7 +47,7 @@ common EBSD_data_common, EBSDdata
 
 ; prefs file
   openw,1,EBSDdata.prefname
-  nprefs = 25
+  nprefs = 30
   EBSDdata.nprefs = nprefs
   printf,1,nprefs
   printf,1,'EBSDroot::'+EBSDdata.EBSDroot
@@ -63,6 +64,13 @@ common EBSD_data_common, EBSDdata
   printf,1,'detbinning::'+string(EBSDdata.detbinning,format="(I3)")
   printf,1,'detbeamcurrent::'+string(EBSDdata.detbeamcurrent,format="(D9.2)")
   printf,1,'detdwelltime::'+string(EBSDdata.detdwelltime,format="(D9.2)")
+
+; ECP specific parameters
+  printf,1,'detW::'+string(EBSDdata.detW,format="(D9.2)")
+  printf,1,'detRi::'+string(EBSDdata.detRi,format="(D9.2)")
+  printf,1,'detRo::'+string(EBSDdata.detRo,format="(D9.2)")
+  printf,1,'detsampleytilt::'+string(EBSDdata.detsampleytilt,format="(D9.2)")
+  printf,1,'detthetac::'+string(EBSDdata.detthetac,format="(F6.2)")
 
 ; window locations
   printf,1,'xlocation::'+string(EBSDdata.xlocation,format="(F6.1)")

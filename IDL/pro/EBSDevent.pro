@@ -47,7 +47,8 @@ common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
 common CommonCore, status, logmode, logunit
 
-common EBSD_rawdata, accum_e, accum_z, MParray
+common EBSD_rawdata, accum_e, accum_z, mLPNH, mLPSH
+
 
 if (EBSDdata.eventverbose eq 1) then help,event,/structure
 

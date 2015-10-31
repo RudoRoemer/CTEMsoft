@@ -71,7 +71,9 @@ end else begin
 ; read the data file and populate all the relevant fields
 		if (validfile eq 1) then begin
                    res = H5F_IS_HDF5(EBSDdata.mcpathname+'/'+EBSDdata.mcfilename)
-                   if (res eq 0) then EBSDreaddatafile,/MCFILE else EBSDreadHDFdatafile,/MCFILE
+                   if (res eq 0) then begin
+                     Core_print,'This file is not an HDF5 file ... '
+                   end else EBSDreadHDFdatafile,/MCFILE
                 endif
 
 ; activate the MC Display button
@@ -85,7 +87,9 @@ end else begin
 ; read the data file and populate all the relevant fields
 		if (validfile eq 1) then begin
                    res = H5F_IS_HDF5(EBSDdata.pathname+'/'+EBSDdata.mpfilename)
-                   if (res eq 0) then EBSDreaddatafile,/MPFILE else EBSDreadHDFdatafile,/MPFILE
+                   if (res eq 0) then begin
+                     Core_print,'This file is not an HDF5 file ...'
+                   end else EBSDreadHDFdatafile,/MPFILE
                 endif
 
 ; activate both the MC and MP Display buttons

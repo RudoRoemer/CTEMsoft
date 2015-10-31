@@ -1,6 +1,5 @@
 @EBSDDisplay_event    		; EBSD event handler
 @EBSDgetfilename		; select a geometry file
-@EBSDreaddatafile		; read geometry and data files
 @EBSDreadHDFdatafile		; read geometry and HDF data files
 @EBSDMCDisplayWidget		; MC display widget
 @EBSDMCDisplayWidget_event	; MC display widget event handler
@@ -15,6 +14,12 @@
 @EBSDwritepreferences		; write preferences file
 @EBSDExecute			; perform the actual pattern computation
 @ECPDetectorWidget              ; ECP detector widget
+@ECPDetectorWidget_event        ; ECP detector widget event handler
+@ECPExecute                     ; executes the ECP calculation
+@ECPatternWidget                ; ECP pattern widget
+@ECPatternWidget_event          ; ECP pattern widget event handler
+@ECPevent                       ; ECP choice event handler
+@ECPshowPattern                 ; show pattern
 @Core_LambertS2C		; modified Lambert to Lambert projection
 @Core_LambertS2SP		; modified Lambert to stereographic projection
 @Core_colorwheel		; color representation of energy distribution
@@ -51,7 +56,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDDisplay.pro
+; EMsoft:EBSDDisplay.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: EBSDDisplay.pro
@@ -67,12 +72,10 @@
 ;> patterns.  In this version, there are no PSF, scintillator energy dependence,
 ;> or microscope geometric distortions; only the detector geometry, noise (on/off),
 ;> binning, and brightness/contrast controls are available.  The other options 
-;> will be included in the next version (as will be the dictionary generation option).
+;> will be included in a next version (as will be the dictionary generation option).
 ;
 ;> @todo Long list of things to be added:
-;> - add aperture to pattern, with on-off switch
-;> - complete Rodrigues Fundamental Zone handling
-;> - incorporate automated calibration of pattern parameters
+;> - incorporate automated calibration of pattern parameters (now done in separate Efit program)
 ;> - allow user to save setup for different microscopes
 ;
 ;> @date 01/27/14 MDG 1.0 first attempt at a user-friendly interface
@@ -81,6 +84,8 @@
 ;> @date 05/22/14 MDG 1.3 completion of single pattern display mode
 ;> @date 05/27/14 MDG 1.4 completion of angle file display mode
 ;> @date 10/29/15 MDG 2.0 added ECP handling, first only Monte Carlo part
+;> @date 10/30/15 MDG 2.1 added ECP calculation for detector model, using call_external to SingleECPatternWrapper
+;> @date 10/31/15 MDG 3.0 simplification of main interface; file data is now listed in message window
 ;--------------------------------------------------------------------------
 pro EBSDDisplay,dummy
 ;
@@ -161,7 +166,12 @@ EBSDwidget_s = {widgetstruct, $
 
 	; detector parameter widget ids
 	detL: long(0), $			; sample scintillator distance [microns]
+	detW: long(0), $			; working distance [millimeters]
+	detRi: long(0), $			; BSE detector inner radius [millimeters]
+	detRo: long(0), $			; BSE detector outer radius [millimeters]
+	detsampleytilt: long(0), $		; sample y-tilt angle [degrees]
 	dettheta: long(0), $			; detector tilt angle [degrees]
+	detthetac: long(0), $			; incident beam cone semi-angle [degrees]
 	detomega: long(0), $			; detector omega tilt angle [degrees]
 	detdelta: long(0), $			; detector pixel size [microns]
 	detnumsx: long(0), $			; number of x-pixels
@@ -189,11 +199,16 @@ EBSDwidget_s = {widgetstruct, $
 	; pattern parameters for display
 	Pmode: long(0), $			; pattern mode widget
 	EBSDpatternfilename: long(0), $		; output file name widget
+	ECPpatternfilename: long(0), $		; output file name widget
+	ECPgetpatternfilename: long(0), $	; output file name button
 	EBSDgetpatternfilename: long(0), $	; output file name button
+	ECPanglefilename: long(0), $		; angle file name widget
+	ECPgetanglefilename: long(0), $	        ; angle file name widget
 	EBSDanglefilename: long(0), $		; angle file name widget
 	EBSDgetanglefilename: long(0), $	; angle file name widget
 	EBSDdictfilename: long(0), $		; dictionary file name widget
 	EBSDgetdictfilename: long(0), $		; dictionary file name widget
+        NHSH: long(0), $                        ; Northern or Southern hemisphere for display?
 	angletype: long(0), $			; angle type widget (Euler of Quaternion)
 	numangles: long(0), $			; number of angles widget
 	PGdroplist: long(0), $			; point group selector droplist
@@ -204,6 +219,7 @@ EBSDwidget_s = {widgetstruct, $
 	GoAngle: long(0), $			; Angle file compute button
 	GoDictionary: long(0), $		; Dictionary file compute button
 	DisplayEBSD: long(0), $			; display EBSD button
+	DisplayECP: long(0), $			; display ECP button
 	PatternScaling: long(0), $		; pattern scaling type widget
 	gammaslider: long(0), $			; gamma correction slider
 	DetectorClose: long(0), $		; Close detector widget
@@ -290,7 +306,12 @@ EBSDdata = {EBSDdatastruct, $
 
 	; detector parameters
 	detL: float(0), $			; scintillator - sample distance [microns]
+	detW: float(0), $			; working distance [millimeters]
+	detRi: float(0), $			; BSE detector inner radius [millimeters]
+	detRo: float(0), $			; BSE detector outer radius [millimeters]
+	detsampleytilt: float(0), $		; sample y-tilt angle [degrees]
 	dettheta: float(0), $			; detector tilt angle [degrees]
+	detthetac: float(0), $			; incident beam cone semi-angle [degrees]
 	detomega: float(0), $			; detector omega tilt angle [degrees]
 	detdelta: float(0), $			; scintillator pixel size [microns]
 	detnumsx: long(0), $			; number of x-pixels
@@ -323,8 +344,11 @@ EBSDdata = {EBSDdatastruct, $
 	; pattern parameters for display
 	Pmode: long(0), $			; pattern mode (0=single, 1=angle file, 2=dictionary)
 	EBSDpatternfilename: '', $		; name for EBSD output file
+	ECPpatternfilename: '', $     		; output file name widget
 	EBSDanglefilename: '', $		; name for EBSD angle file
+	ECPanglefilename: '', $		        ; name for ECP angle file
 	EBSDdictfilename: '', $			; name for EBSD dictionary file
+        NHSH: long(0), $                        ; Northern or Southern hemisphere for display?
 	angletype: '', $			; angle type (euler, quaternion)
 	numangles: long(0), $			; number of angles in file
 	Dictpointgroup: long(0), $		; point group number
@@ -332,6 +356,7 @@ EBSDdata = {EBSDdatastruct, $
 	Ncubochoric: long(0), $			; number of sampling points for cubochoric cell (N, as in 2N+1)
 	NinRFZ: long(0), $			; number of points in Rodrigues Fundamental Zone
 	f90exepath: 'path_unknown', $		; path to f90 executables
+	EMsoftpathname: 'path_unknown', $	; new path to f90 executables
 
 	; then general program parameters
 	eventverbose: fix(0), $			; used for event debugging (0=off, 1=on)
@@ -342,7 +367,7 @@ EBSDdata = {EBSDdatastruct, $
 	homefolder: '', $			; startup folder of the program
 	EBSDroot: 'undefined', $		; current pathname (is stored in preferences file)
 	EBSDMCroot: 'undefined', $		; current pathname (is stored in preferences file)
-	prefname: '~/.EBSDgui.prefs', $		; filename of preferences file (including path)
+	prefname: '~/.config/EMsoft/EBSDgui.prefs', $		; filename of preferences file (including path)
 	nprefs: fix(0), $			; number of preferences in file
 	MCLSmode: fix(0), $			; Monte Carlo Lambert Selector tag
 	MCLSum: fix(0), $			; Monte Carlo Lambert sum or individual tag
@@ -398,15 +423,16 @@ EBSDdata.scrdimx = scr[0]
 EBSDdata.xlocation = EBSDdata.scrdimx / 8.0
 EBSDdata.ylocation = EBSDdata.scrdimx / 8.0
 
+
 ;------------------------------------------------------------
 ; does the preferences file exist ?  If not, create it, otherwise read it
 EBSDgetpreferences,/noprint
 
 ;------------------------------------------------------------
 ; create the top level widget
-EBSDwidget_s.base = WIDGET_BASE(TITLE='Electron Backscatter Diffraction Pattern and Electron Channeling Pattern Display Program', $
-                        /ROW, $
-                        XSIZE=1220, $
+EBSDwidget_s.base = WIDGET_BASE(TITLE='EBSD and ECP Pattern Display Program', $
+                        /COLUMN, $
+                        XSIZE=620, $
                         /ALIGN_LEFT, $
 			/TLB_MOVE_EVENTS, $
 			EVENT_PRO='EBSDDisplay_event', $
@@ -430,14 +456,6 @@ EBSDwidget_s.logodraw = WIDGET_DRAW(block1, $
 			XSIZE=600, $
 			YSIZE=200)
 
-; this is the rightmost block; will be filled in later
-block2 = WIDGET_BASE(EBSDwidget_s.base, $
-			XSIZE=610, $
-			/FRAME, $
-			/COLUMN)
-
-
-
 ;------------------------------------------------------------
 ;------------------------------------------------------------
 ; this is the block that will display Monte Carlo file information; no user interactions here
@@ -458,58 +476,12 @@ EBSDwidget_s.MCbutton= WIDGET_BUTTON(file1, $
 ;---------- file name and size
 file1 = WIDGET_BASE(block11, /ROW, XSIZE=600, /ALIGN_CENTER)
 EBSDwidget_s.mcfilename = Core_WText(file1,'MC Data File Name', fontstrlarge, 200, 25, 60, 1, EBSDdata.mcfilename)
-file1 = WIDGET_BASE(block11, /ROW, /BASE_ALIGN_BOTTOM, /ALIGN_LEFT)
-EBSDwidget_s.mcfilesize = Core_WText(file1,'MC Data File Size', fontstrlarge, 200, 25, 30, 1, string(EBSDdata.mcfilesize,FORMAT="(I12)")+' bytes') 
-
-;---------- min and max energy
-file1 = WIDGET_BASE(block11, /ROW, XSIZE=600, /ALIGN_CENTER)
-EBSDwidget_s.mcenergymin = Core_WText(file1,'Min/Max energy [keV]', fontstrlarge, 200, 25, 20, 1, string(EBSDdata.mcenergymin,format="(F6.2)"))
-EBSDwidget_s.mcenergymax = Core_WText(file1,' / ', fontstrlarge, 25, 25, 20, 1, string(EBSDdata.mcenergymax,format="(F6.2)"))
-
-;---------- bin size, number of bins
-file1 = WIDGET_BASE(block11, /ROW, XSIZE=600, /ALIGN_CENTER)
-EBSDwidget_s.mcenergybinsize = Core_WText(file1,'Energy binsize/#', fontstrlarge, 200, 25, 20, 1, string(EBSDdata.mcenergybinsize,format="(F6.2)"))
-EBSDwidget_s.mcenergynumbin = Core_WText(file1,' / ', fontstrlarge, 25, 25, 20, 1, string(EBSDdata.mcenergynumbin,format="(I5)"))
-
-;---------- depth max, and depth stepsize
-file1 = WIDGET_BASE(block11, /ROW, /ALIGN_LEFT)
-EBSDwidget_s.mcdepthmax = Core_WText(file1,'Depth max/step/#', fontstrlarge, 200, 25, 15, 1, string(EBSDdata.mcdepthmax,FORMAT="(F7.1)")) 
-EBSDwidget_s.mcdepthstep = Core_WText(file1,' / ', fontstrlarge, 25, 25, 15, 1, string(EBSDdata.mcdepthstep,FORMAT="(F7.1)")) 
-EBSDwidget_s.mcdepthnumbins = Core_WText(file1,' / ', fontstrlarge, 25, 25, 15, 1, string(EBSDdata.mcdepthnumbins,FORMAT="(I4)")) 
-
-;---------- microscope voltage and Monte Carlo mode
-file1 = WIDGET_BASE(block11, /ROW, /ALIGN_LEFT)
-EBSDwidget_s.voltage = Core_WText(file1,'Voltage [kV]', fontstrlarge, 200, 25, 10, 1, string(EBSDdata.voltage,FORMAT="(F7.1)")) 
-EBSDwidget_s.mcmode = Core_WText(file1,'   MC Mode ', fontstrlarge, 120, 25, 10, 1, EBSDdata.mcmode) 
-
-;---------- dimensions of modified Lambert projection 
-file1 = WIDGET_BASE(block11, /ROW, /ALIGN_LEFT)
-EBSDwidget_s.mcimx = Core_WText(file1,'Lambert Dimensions', fontstrlarge, 200, 25, 20, 1, string(EBSDdata.mcimx,FORMAT="(I5)")) 
-EBSDwidget_s.mcimy = Core_WText(file1,'by', fontstr, 25, 25, 20, 1, string(EBSDdata.mcimy,FORMAT="(I5)")) 
-
-;---------- total and backscattered numbers of electrons
-file1 = WIDGET_BASE(block11, /ROW, /ALIGN_LEFT)
-EBSDwidget_s.mctotale = Core_WText(file1,'Total #/backscattered e', fontstrlarge, 200, 25, 20, 1, string(EBSDdata.mctotale,FORMAT="(I12)")) 
-EBSDwidget_s.mcbse = Core_WText(file1,' / ', fontstrlarge, 25, 25, 20, 1, string(EBSDdata.mcbse,FORMAT="(I12)")) 
-
-;---------- sample tilt angles 
-file1 = WIDGET_BASE(block11, /ROW, /ALIGN_LEFT)
-EBSDwidget_s.mcvangle = Core_WText(file1,'Sample tilt angles (v, h)', fontstrlarge, 200, 25, 20, 1, string(EBSDdata.mcvangle,FORMAT="(F7.2)")) 
-EBSDwidget_s.mchangle = Core_WText(file1,', ', fontstrlarge, 25, 25, 20, 1, string(EBSDdata.mchangle,FORMAT="(F7.2)")) 
-
-file1 = WIDGET_BASE(block11, /ROW, /BASE_ALIGN_BOTTOM, /ALIGN_LEFT)
-EBSDwidget_s.mcfilmthickness = Core_WText(file1,'Film Thickness [nm]', fontstrlarge, 200, 25, 30, 1, string(EBSDdata.mcfilmthickness,FORMAT="(F7.2)")) 
-;------------------------------------------------------------
-;------------------------------------------------------------
-
-
-
 
 ;------------------------------------------------------------
 ;------------------------------------------------------------
 ; this is the block that will display Master Pattern file information; no user interactions here
 ; except for a few buttons.
-block21 = WIDGET_BASE(block2, /COLUMN, XSIZE=600, /ALIGN_RIGHT)
+block21 = WIDGET_BASE(block1, /COLUMN, XSIZE=600, /ALIGN_RIGHT)
 file2 = WIDGET_BASE(block21, /ROW, XSIZE=600, /ALIGN_RIGHT)
 file3 = WIDGET_LABEL(file2, VALUE='Master Pattern Simulation Parameters', font=fontstrlarge, /ALIGN_CENTER)
 
@@ -525,30 +497,15 @@ EBSDwidget_s.MPbutton = WIDGET_BUTTON(file2, $
 ;---------- file name and size
 file1 = WIDGET_BASE(block21, /ROW, XSIZE=600, /ALIGN_CENTER)
 EBSDwidget_s.mpfilename = Core_WText(file1,'MP Data File Name', fontstrlarge, 200, 25, 60, 1, EBSDdata.mpfilename)
-file1 = WIDGET_BASE(block21, /ROW, /BASE_ALIGN_BOTTOM, /ALIGN_LEFT)
-EBSDwidget_s.mpfilesize = Core_WText(file1,'MP Data File Size', fontstrlarge, 200, 25, 30, 1, string(EBSDdata.mpfilesize,FORMAT="(I12)")+' bytes') 
-
-;---------- dimensions of modified Lambert projection 
-file1 = WIDGET_BASE(block21, /ROW, /ALIGN_LEFT)
-EBSDwidget_s.mpimx = Core_WText(file1,'Lambert Dimensions', fontstrlarge, 200, 25, 20, 1, string(EBSDdata.mpimx,FORMAT="(I5)")) 
-EBSDwidget_s.mpimy = Core_WText(file1,'by', fontstr, 25, 25, 20, 1, string(EBSDdata.mpimy,FORMAT="(I5)")) 
-
-;---------- Lambert grid mode (hexagonal or square)
-file1 = WIDGET_BASE(block21, /ROW, /ALIGN_LEFT)
-EBSDwidget_s.mpgridmode = Core_WText(file1,'Lambert grid', fontstrlarge, 200, 25, 20, 1, EBSDdata.mpgridmode)
-
-;---------- crystal structure file name
-file1 = WIDGET_BASE(block21, /ROW, /ALIGN_LEFT)
-EBSDwidget_s.xtalname = Core_WText(file1,'Structure file', fontstrlarge, 200, 25, 60, 1, EBSDdata.xtalname)
 
 
 ;------------------------------------------------------------
 ;------------------------------------------------------------
 ; then we have the program message window
 
-EBSDwidget_s.status= WIDGET_TEXT(block2, $
+EBSDwidget_s.status= WIDGET_TEXT(block1, $
 			XSIZE=90, $
-			YSIZE=22, $
+			YSIZE=15, $
 			/SCROLL, $
 			VALUE=' ',$
 			/ALIGN_LEFT)
@@ -560,7 +517,7 @@ status = EBSDwidget_s.status
 ;------------------------------------------------------------
 ; finally we need a couple of control buttons: Quit, LoadMC, LoadMaster, Detector
 
-file11 = WIDGET_BASE(block2, XSIZE=590, /FRAME, /ROW)
+file11 = WIDGET_BASE(block1, XSIZE=590, /FRAME, /ROW)
 
 EBSDwidget_s.mainstop = WIDGET_BUTTON(file11, $
                                 VALUE='Quit', $

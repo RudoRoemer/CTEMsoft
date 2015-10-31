@@ -49,7 +49,7 @@ common EBSD_data_common, EBSDdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
 common Image_common, MCimage, MPimage
-common EBSD_rawdata, accum_e, accum_z, MParray, MParraysum
+common EBSD_rawdata, accum_e, accum_z, mLPNH, mLPSH
 common projections, mcxcircle, mcycircle, mpxcircle, mpycircle, mcSPxcircle, mcSPycircle, mpSPxcircle, mpSPycircle 
 
 wset,EBSDwidget_s.MCdrawID
@@ -141,6 +141,13 @@ end
 
 ; should we also display the Master Pattern ?
 if (EBSDdata.MCMPboth eq 1) then begin
+
+  if (EBSDdata.NHSH eq 0) then begin
+    if (EBSDdata.numset gt 1) then MParraysum = total(mLPNH,4) else MParraysum = mLPNH
+  end else begin
+    if (EBSDdata.numset gt 1) then MParraysum = total(mLPSH,4) else MParraysum = mLPSH
+  endelse
+
   wset,EBSDwidget_s.MPdrawID
   if (EBSDdata.MCLSum eq 0) then begin
     if (EBSDdata.EBSDorECP eq 0) then begin

@@ -45,7 +45,8 @@ common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
-common EBSD_rawdata, accum_e, accum_z, MParray, MParraysum
+common EBSD_rawdata, accum_e, accum_z, mLPNH, mLPSH
+
 common projections, mcxcircle, mcycircle, mpxcircle, mpycircle, mcSPxcircle, mcSPycircle, mpSPxcircle, mpSPycircle 
 
 common Image_common, MCimage, MPimage

@@ -39,6 +39,7 @@
 ;> @date 04/02/15 MDG 2.0 modfied from EBSDreaddatafile to cover HDF formatted files
 ;> @date 05/07/15 MDG 2.1 modified to accommodate changes in path names for the entire EMsoft package
 ;> @date 10/29/15 MDG 2.2 added support for ECP master files
+;> @date 10/31/15 MDG 2.3 removed widget fields and redirected all output to status widget
 ;--------------------------------------------------------------------------
 pro EBSDreadHDFdatafile,MCFILE=MCFILE,MPFILE=MPFILE
 ;
@@ -48,7 +49,7 @@ common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
 
 ; the next common block contains all the raw data needed to generate the EBSD patterns
-common EBSD_rawdata, accum_e, accum_z, MParray, MParraysum
+common EBSD_rawdata, accum_e, accum_z, mLPNH, mLPSH
 
   Core_Print,' ',/blank
   EBSDdata.MCMPboth = 0
@@ -94,13 +95,13 @@ EMdatapathname = Core_getenv(/data)
   scversion = strtrim(z[0],2)
   H5D_close,dset_id
   EBSDdata.scversion = strtrim(scversion,2)
-    Core_Print,'Version identifier : '+scversion 
+    Core_Print,'      Version identifier : '+scversion 
 
 ; close the EMheader group
   H5G_close,group_id
 
 ; display the file size in Mb 
-  WIDGET_CONTROL, SET_VALUE=string(float(EBSDdata.mpfilesize)/1024./1024.,FORMAT="(F8.2)")+' Mb', EBSDwidget_s.mpfilesize
+  Core_print,'      MP data file size : '+string(float(EBSDdata.mpfilesize)/1024./1024.,FORMAT="(F8.2)")+' Mb'
 
 ; open the NMLparameters/EBSDMasterNameList group
   if (EBSDdata.EBSDorECP eq 0) then begin
@@ -122,7 +123,6 @@ EMdatapathname = Core_getenv(/data)
   plen = strlen(res)
   EBSDdata.mcpathname = strmid(res,0,spos)
   EBSDdata.mcfilename = strmid(res,spos+1)
-    Core_Print,'MC filename = ->'+EBSDdata.mcfilename+'<-'
   WIDGET_CONTROL, SET_VALUE=EBSDdata.mcfilename, EBSDwidget_s.mcfilename
 
 ; outname (to reset the current filename to the correct EMdatapathname)
@@ -164,9 +164,7 @@ EMdatapathname = Core_getenv(/data)
   H5D_close,dset_id
   EBSDdata.numset= res
 
-  WIDGET_CONTROL, SET_VALUE=string(2*EBSDdata.mpimx+1,format="(I5)"), EBSDwidget_s.mpimx
-  WIDGET_CONTROL, SET_VALUE=string(2*EBSDdata.mpimx+1,format="(I5)"), EBSDwidget_s.mpimy
-  WIDGET_CONTROL, SET_VALUE=string(EBSDdata.mcenergynumbin,format="(I5)"), EBSDwidget_s.mcenergynumbin
+  Core_print,'      Number of energy bins : '+string(EBSDdata.mcenergynumbin,format="(I5)")
   
 ; energy levels (currently not used anywhere)
   if (EBSDdata.EBSDorECP eq 0) then  begin
@@ -185,28 +183,30 @@ EMdatapathname = Core_getenv(/data)
   H5D_close,dset_id
   EBSDdata.atnum(0:EBSDdata.numset-1) = atnum(0:EBSDdata.numset-1)
 
-; Lambert projection type (to be removed in a later version)
+; Lambert projection type (to be removed in a later version because it is always square)
   dset_id = H5D_open(group_id,'squhex')
   z = H5D_read(dset_id) 
   res = strtrim(z[0],2)
   H5D_close,dset_id
   if (res eq 'hexago') then EBSDdata.mpgridmode = ' Hexagonal' else EBSDdata.mpgridmode = ' Square'
-  WIDGET_CONTROL, SET_VALUE=EBSDdata.mpgridmode, EBSDwidget_s.mpgridmode
+  Core_print,'      Lambert array grid mode : '+EBSDdata.mpgridmode
 
-; and finally the results array  (this needs to be altered to include the Southern hemisphere as well)
+; and finally the results arrays 
   dset_id = H5D_open(group_id,'mLPNH')
-  MParray = H5D_read(dset_id) 
+  mLPNH = H5D_read(dset_id) 
   H5D_close,dset_id
-  if (EBSDdata.numset gt 1) then MParraysum = total(MParray,4) else MParraysum = MParray
- 
+  dset_id = H5D_open(group_id,'mLPSH')
+  mLPSH = H5D_read(dset_id) 
+  H5D_close,dset_id
+
 ; close the group
   H5G_close,group_id
 
-  sz = size(MParray,/dimensions)
+  sz = size(mLPNH,/dimensions)
   if (EBSDdata.EBSDorECP eq 0) then begin
-    if (EBSDdata.numset gt 1) then Core_Print,' Size of MParray data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") +' x'+string(sz[3],format="(I5)") else Core_Print,' Size of MParray data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)")
+    if (EBSDdata.numset gt 1) then Core_Print,'      Size of mLPNH data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") +' x'+string(sz[3],format="(I5)") else Core_Print,'      Size of mLPNH data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)")
   end else begin
-    if (EBSDdata.numset gt 1) then Core_Print,' Size of MParray data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") else Core_Print,' Size of MParray data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") 
+    if (EBSDdata.numset gt 1) then Core_Print,'      Size of mLPNH data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") else Core_Print,'      Size of mLPNH data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") 
   endelse
 
 ; and close the file
@@ -214,16 +214,17 @@ EMdatapathname = Core_getenv(/data)
 
 ; and initialize the coordinate arrays for the Lambert transformation
   if (EBSDdata.EBSDorECP eq 0) then begin
-    Core_LambertS2C,reform(MParray[*,*,0,0]),/mp
-    Core_LambertS2SP,reform(MParray[*,*,0,0]),/mp
+    Core_LambertS2C,reform(mLPNH[*,*,0,0]),/mp
+    Core_LambertS2SP,reform(mLPNH[*,*,0,0]),/mp
   end else begin
-    Core_LambertS2C,reform(MParray[*,*,0]),/mp
-    Core_LambertS2SP,reform(MParray[*,*,0]),/mp
+    Core_LambertS2C,reform(mLPNH[*,*,0]),/mp
+    Core_LambertS2SP,reform(mLPNH[*,*,0]),/mp
   endelse
 
   WIDGET_CONTROL, EBSDwidget_s.MPbutton, sensitive=1
   WIDGET_CONTROL, EBSDwidget_s.detector, sensitive=1
   EBSDdata.MCMPboth = 1
+  Core_print,' '
 endif
 
 
@@ -231,6 +232,15 @@ endif
 if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
   Core_Print,'Reading data file '+EBSDdata.mcfilename
   EBSDdata.Esel = 0
+
+  if (EBSDdata.MCMPboth eq 1) then begin ; get the file size of the MC file
+    fname = EBSDdata.pathname+'/'+EBSDdata.mcfilename
+print,'file name : '+fname
+    finfo = file_info(fname)
+help,finfo,/structure
+    EBSDdata.mcfilesize = finfo.size
+print,'file size = ',finfo.size
+  endif
 
 ; first make sure that this is indeed an HDF file
   res = H5F_IS_HDF5(EMdatapathname+EBSDdata.mcpathname+'/'+EBSDdata.mcfilename)
@@ -262,18 +272,14 @@ if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
   scversion = strtrim(z[0],2)
   H5D_close,dset_id
   EBSDdata.scversion = strtrim(scversion,2)
-    Core_Print,'Version identifier : '+scversion 
+    Core_Print,'      Version identifier : '+scversion 
 
 ; close the EMheader group
   H5G_close,group_id
 
 ; display the file size in Mb 
-  WIDGET_CONTROL, SET_VALUE=string(float(EBSDdata.mcfilesize)/1024./1024.,FORMAT="(F8.2)")+' Mb', EBSDwidget_s.mcfilesize
+  Core_print,'      MC Data file size : '+string(float(EBSDdata.mcfilesize)/1024./1024.,FORMAT="(F8.2)")+' Mb'
 
-; version identifier 3_x_x is single structure file
-; version identifier 3_y_y is two-layer file
-
-; if (EBSDdata.scversion eq '3_x_x') then begin ; scversion = 3_x_x
 ; structure file name
   group_id = H5G_open(file_id,'NMLparameters/MCCLNameList')
 
@@ -282,8 +288,7 @@ if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
   z = H5D_read(dset_id) 
   EBSDdata.xtalname = strtrim(z[0],2)
   H5D_close,dset_id
-    Core_Print,'Xtalname = ->'+EBSDdata.xtalname+'<-'
-  WIDGET_CONTROL, SET_VALUE=EBSDdata.xtalname, EBSDwidget_s.xtalname
+  Core_print,'      Structure file name : '+EBSDdata.xtalname
 
 ; open and read the mode dataset, to distinguish between EBSD and ECP data
   dset_id = H5D_open(group_id,'mode')
@@ -363,18 +368,9 @@ if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
   H5D_close,dset_id
   if (res eq 'CSDA') then EBSDdata.mcmode = 'CSDA' else EBSDdata.mcmode = 'DLOS'
 
-  WIDGET_CONTROL, SET_VALUE=string(EBSDdata.mcimx,format="(I5)"), EBSDwidget_s.mcimx
-  WIDGET_CONTROL, SET_VALUE=string(EBSDdata.mcimy,format="(I5)"), EBSDwidget_s.mcimy
-  WIDGET_CONTROL, SET_VALUE=string(EBSDdata.mctotale,format="(I12)"), EBSDwidget_s.mctotale
-  WIDGET_CONTROL, SET_VALUE=string(EBSDdata.mcenergymax,format="(F7.2)"), EBSDwidget_s.mcenergymax
-  WIDGET_CONTROL, SET_VALUE=string(EBSDdata.mcenergymin,format="(F7.2)"), EBSDwidget_s.mcenergymin
-  WIDGET_CONTROL, SET_VALUE=string(EBSDdata.mcenergybinsize,format="(F7.2)"), EBSDwidget_s.mcenergybinsize
-  WIDGET_CONTROL, SET_VALUE=string(EBSDdata.mcdepthmax,format="(F7.2)"), EBSDwidget_s.mcdepthmax
-  WIDGET_CONTROL, SET_VALUE=string(EBSDdata.mcdepthstep,format="(F7.2)"), EBSDwidget_s.mcdepthstep
-  WIDGET_CONTROL, SET_VALUE=string(EBSDdata.voltage,format="(F7.2)"), EBSDwidget_s.voltage
-  WIDGET_CONTROL, SET_VALUE=string(EBSDdata.mcvangle,format="(F7.2)"), EBSDwidget_s.mcvangle
-  WIDGET_CONTROL, SET_VALUE=string(EBSDdata.mchangle,format="(F7.2)"), EBSDwidget_s.mchangle
-  WIDGET_CONTROL, SET_VALUE=EBSDdata.mcmode, EBSDwidget_s.mcmode
+  Core_print,'      Lambert dimensions : '+string(2*EBSDdata.mcimx+1,format="(I5)")+' by '+string(2*EBSDdata.mcimy+1,format="(I5)")
+  Core_print,'      Incident beam voltage [kV] '+string(EBSDdata.voltage,format="(F7.2)")
+  Core_print,'      Monte Carlo mode : '+EBSDdata.mcmode
 
 ; close the group
   H5G_close,group_id
@@ -387,10 +383,17 @@ if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
     dset_id = H5D_open(group_id,'numEbins')
     EBSDdata.mcenergynumbin= long(H5D_read(dset_id))
     H5D_close,dset_id
+    Core_print,'      Sample tilt angles omega/sigma [degrees] : '+string(EBSDdata.mchangle,format="(F7.2)")+'/'+string(EBSDdata.mcvangle,format="(F7.2)")
+    Core_print,'      Min/Max energy [keV] : '+string(EBSDdata.mcenergymin,format="(F7.2)")+'/'+string(EBSDdata.mcenergymin,format="(F7.2)")
+    Core_print,'      Energy binsize [keV] : '+string(EBSDdata.mcenergybinsize,format="(F7.2)")
+    Core_print,'      Number of energy bins : '+string(EBSDdata.mcenergynumbin,format="(I5)")
   end else begin
     dset_id = H5D_open(group_id,'numangle')
     EBSDdata.mcenergynumbin= long(H5D_read(dset_id))
     H5D_close,dset_id
+    Core_print,'      Electron energy [keV] : '+string(EBSDdata.mcenergymax,format="(F7.2)")
+    Core_print,'      Number of beam tilt angles : '+string(EBSDdata.mcenergynumbin,format="(I5)")
+    Core_print,'      Beam tilt range start/end/step [degrees] : '+string(EBSDdata.mcsigstart,format="(F7.2)")+'/'+string(EBSDdata.mcsigend,format="(F7.2)")+'/'+string(EBSDdata.mcsigstep,format="(F7.2)")
   endelse
 
 ; open and read the numzbins dataset
@@ -398,8 +401,9 @@ if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
   EBSDdata.mcdepthnumbins = long(H5D_read(dset_id))
   H5D_close,dset_id
 
-  WIDGET_CONTROL, SET_VALUE=string(EBSDdata.mcenergynumbin,format="(I5)"), EBSDwidget_s.mcenergynumbin
-  WIDGET_CONTROL, SET_VALUE=string(EBSDdata.mcdepthnumbins,format="(I5)"), EBSDwidget_s.mcdepthnumbins
+  Core_print,'      Maximum integration depth [nm] : '+string(EBSDdata.mcdepthmax,format="(F7.2)")
+  Core_print,'      Integration depth step size [nm] : '+string(EBSDdata.mcdepthstep,format="(F7.2)")
+  Core_print,'      Number of depth bins : '+string(EBSDdata.mcdepthnumbins,format="(I5)")
   
 
 ; and finally, we read the actual data arrays accum_e and accum_z
@@ -416,22 +420,16 @@ if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
 
 ; total number of BSE electrons
   EBSDdata.mcbse = total(accum_e)
-  WIDGET_CONTROL, SET_VALUE=string(EBSDdata.mcbse,format="(I12)"), EBSDwidget_s.mcbse
+  Core_print,'      Total number of incident electrons : '+string(EBSDdata.mctotale,format="(I12)")
+  Core_print,'      Number of BSEs : '+string(EBSDdata.mcbse,format="(I12)")
 
   sz = size(accum_e,/dimensions)
-    Core_Print,' Size of accum_e data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)")+' x'+string(sz[2],format="(I5)")
+    Core_Print,'      Size of accum_e data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)")+' x'+string(sz[2],format="(I5)")
   sz = size(accum_z,/dimensions)
-    Core_Print,' Size of accum_z data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") +' x'+string(sz[3],format="(I5)")
+    Core_Print,'      Size of accum_z data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") +' x'+string(sz[3],format="(I5)")
 
 ; and close the file
   H5F_close,file_id
-
-;end else begin  ; scversion = 3_y_y
-
-;  Core_Print,' HDF format not implemented for this file version'
-
-;end ; scversion if then else
-
 
 ; and initialize the coordinate arrays for the Lambert transformation
   Core_LambertS2C,reform(accum_e[0,*,*]),/mc
@@ -443,10 +441,6 @@ if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
      WIDGET_CONTROL, EBSDwidget_s.MPbutton, sensitive=0
      WIDGET_CONTROL, EBSDwidget_s.detector, sensitive=0
      WIDGET_CONTROL, SET_VALUE=' ', EBSDwidget_s.mpfilename
-     WIDGET_CONTROL, SET_VALUE=' ', EBSDwidget_s.mpfilesize
-     WIDGET_CONTROL, SET_VALUE=' ', EBSDwidget_s.mpimx
-     WIDGET_CONTROL, SET_VALUE=' ', EBSDwidget_s.mpimy
-     WIDGET_CONTROL, SET_VALUE=' ', EBSDwidget_s.mpgridmode
    endif
 end
 

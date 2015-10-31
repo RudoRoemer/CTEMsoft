@@ -5,24 +5,32 @@ resolve_all
 ;define a few variables
 appname = 'EBSDDisplay'
 saveappname = appname+'.sav'
-VMappdir = '/Users/mdg/Files/EMsoft/IDL/VMapps'
-Resdir = '/Users/mdg/Files/EMsoft/IDL/VMapps/EBSDDisplay/Resources'
-manifestfile = '/Users/mdg/Files/OSU/IDL/Phasemaps/manifest_rt.txt'
+IDLappdir = '/Users/mdg/Files/EMsoft/Build/IDL'
+VMappdir = '/Users/mdg/Files/EMsoft/Build/IDL/VMapps'
+Resdir = '/Users/mdg/Files/EMsoft/Build/IDL/VMapps/EBSDDisplay/Resources'
+;manifestfile = '/Users/mdg/Files/OSU/IDL/Phasemaps/manifest_rt.txt'
 
 cd,CURRENT=cdir
+
+; add whatever resource folder is needed
+cmd = '/bin/mkdir '+IDLappdir
+spawn,cmd
+cmd = '/bin/mkdir '+VMappdir
+spawn,cmd
 
 ; create the .sav file
 save,/routines,filename=saveappname
 
 ; create the Virtual Machine app for Mac OS X 64bit
-make_rt,appname,VMappdir,savefile=cdir+'/'+saveappname,manifest=manifestfile,/VM,/MACINT64,/OVERWRITE
+;make_rt,appname,VMappdir,savefile=cdir+'/'+saveappname,manifest=manifestfile,/VM,/MACINT64,/OVERWRITE
+make_rt,appname,VMappdir,savefile=cdir+'/'+saveappname,/VM,/MACINT64,/OVERWRITE
 
 ; add whatever resource folder is needed
 cmd = '/bin/mkdir '+Resdir
 spawn,cmd
 
 ; and add the logo file to it
-cmd = '/bin/cp /Users/mdg/Files/EMsoft/IDL/Resources/SEMlogo.jpg '+ResDir
+cmd = '/bin/cp /Users/mdg/Files/EMsoft/IDL/Resources/EMsoftlogo.jpg '+ResDir
 spawn,cmd
 
 exit

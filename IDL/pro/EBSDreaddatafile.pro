@@ -35,7 +35,10 @@
 ;
 ;> @brief Reads the data files produced by the CTEMMC.f90 and CTEMEBSDmaster.f90 programs
 ;
+; THIS FILE FORMAT OPTION HAS BEEN DELETED FROM THIS PROGRAM !!!!!
+;
 ;> @date 03/19/14 MDG 1.0 first attempt 
+;> @date 10/31/15 MDG 2.0 routine removed from package; kept in folder for now...
 ;--------------------------------------------------------------------------
 pro EBSDreaddatafile,MCFILE=MCFILE,MPFILE=MPFILE
 ;
@@ -45,7 +48,7 @@ common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
 
 ; the next common block contains all the raw data needed to generate the EBSD patterns
-common EBSD_rawdata, accum_e, accum_z, MParray, MParraysum
+common EBSD_rawdata, accum_e, accum_z, mLPNH, mLPSH
 
 
   Core_Print,' ',/blank
