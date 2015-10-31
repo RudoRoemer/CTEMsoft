@@ -210,7 +210,6 @@ if ((-ecpnl%MCsigend .gt. ecpnl%thetac - abs(ecpnl%sampletilt)) .and. (switchwfo
 end if
 
 
-
 !=================================================================
 ! completed reading the file; generating list of incident vectors
 !=================================================================
