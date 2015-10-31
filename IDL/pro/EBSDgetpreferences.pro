@@ -36,6 +36,7 @@
 ;> @brief read the preferences file and initialize all relevant widgets
 ;
 ;> @date 06/13/13 MDG 1.0 first attempt 
+;> @date 10/31/15 MDG 1.1 added ECP parameters; changed pathname for preference file
 ;--------------------------------------------------------------------------
 pro EBSDgetpreferences,noprint=noprint
  
@@ -77,6 +78,13 @@ if (rs eq 1) then begin
   	'detbinning': EBSDdata.detbinning = long(val)
   	'detbeamcurrent': EBSDdata.detbeamcurrent = float(val)
   	'detdwelltime': EBSDdata.detdwelltime = float(val)
+
+; ECP parameters
+  	'detW': EBSDdata.detW = float(val)
+  	'detRi': EBSDdata.detRi = float(val)
+  	'detRo': EBSDdata.detRo = float(val)
+  	'detsampleytilt': EBSDdata.detsampleytilt = float(val)
+  	'detthetac': EBSDdata.detthetac = float(val)
 
 ; window locations
   	'xlocation': EBSDdata.xlocation = float(val)

@@ -1,5 +1,5 @@
 ;
-; Copyright (c) 2013-2014, Marc De Graef/Carnegie Mellon University
+; Copyright (c) 2013-2015, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are 
@@ -26,18 +26,18 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDevent.pro
+; EMsoft:ECPevent.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: EBSDevent.pro
+; PROGRAM: ECPevent.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
 ;> @brief special event handler for all the CW_BGROUP calls, since CW_BGROUP does not support event_pro
 ;
-;> @date 03/19/14 MDG 1.0 first version
+;> @date 10/30/15 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-function EBSDevent, event
+function ECPevent, event
 
 ;------------------------------------------------------------
 ; common blocks
@@ -59,86 +59,24 @@ IF N_ELEMENTS(eventval) EQ 0 THEN RETURN,eventval
 
 CASE eventval OF
 
- 'LOGFILE':  begin
-; toggle the log mode 
-		if (EBSDdata.logmode eq 0) then begin
-		   Core_Print,'Turning log mode on',/blank
-		 q = systime()
- 		 z = strsplit(q,' ',/extract,/regex)
- 		 EBSDdata.logname = 'EBSDDisplay'+z[0]+z[1]+z[2]+'_'+z[4]+'_'+z[3]+'.log'
-		   Core_Print,'Log file: '+EBSDdata.logname
-		 EBSDdata.logmode = 1
-		 logmode = 1
-		 openw,EBSDdata.logunit,EBSDdata.logname
-		 EBSDdata.logfileopen = 1
-		end else begin
-		   Core_Print,'Turning log mode off',/blank
-		 if (EBSDdata.logfileopen eq 1) then begin
-		   close,EBSDdata.logunit
-		   EBSDdata.logfileopen = 0
-		 endif
-	    	 EBSDdata.logmode = 0
-		 logmode = 0
-		endelse
-	  endcase
-
-  'EBSDFORMAT': begin
+  'ECPFORMAT': begin
                 WIDGET_CONTROL, get_value=val,EBSDwidget_s.EBSDformatbgroup
                 EBSDdata.imageformat = fix(val[0])
           endcase
 
-
-  'MCLS': begin
-		WIDGET_CONTROL, get_value=val,EBSDwidget_s.MCLambertSelector
-		EBSDdata.MCLSmode= fix(val[0])
-	  endcase
-
-  'MPLS': begin
-		WIDGET_CONTROL, get_value=val,EBSDwidget_s.MPLambertSelector
-		EBSDdata.MPLSmode= fix(val[0])
-	  endcase
-
-  'MCLsum': begin
-		WIDGET_CONTROL, get_value=val,EBSDwidget_s.MCLambertMode
-		EBSDdata.MCLSum =  fix(val[0])
-		if (EBSDdata.MCLSum eq 1) then begin
-		  EBSDshowMC, reform(total(accum_e,1))
-		end else begin
-		  EBSDshowMC, reform(accum_e[EBSDdata.Esel,*,*])
-		end
-	  endcase
-
-  'EBSDEULERCONVENTION': begin
-                WIDGET_CONTROL, get_value=val,EBSDwidget_s.EulerConvention
-                EBSDdata.EulerConvention = fix(val[0])
-	endcase
-
-  'PATTERNMODE': begin
-                WIDGET_CONTROL, get_value=val,EBSDwidget_s.BGmode
-                EBSDdata.BGmode= fix(val[0])
-	endcase
-
-  'EBSPATTERNORIGIN': begin
+  'ECPATTERNORIGIN': begin
                 WIDGET_CONTROL, get_value=val,EBSDwidget_s.PatternOrigin
                 EBSDdata.PatternOrigin = fix(val[0])
-	  	EBSDshowPattern,/single
+	  	ECPshowPattern,/single
 		vals = ['Upper Left','Lower Left','Upper Right','Lower Right']
 		  Core_Print, 'Pattern origin set to '+vals[EBSDdata.PatternOrigin]
 	endcase
- 'EBSPATTERNSCALING': begin
+ 'ECPATTERNSCALING': begin
                 WIDGET_CONTROL, get_value=val,EBSDwidget_s.PatternScaling
                 EBSDdata.PatternScaling = fix(val[0])
-	  	EBSDshowPattern,/single
+	  	ECPshowPattern,/single
 		vals = ['linear', 'gamma']
 		  Core_Print, 'Pattern scaling set to '+vals[EBSDdata.PatternScaling]
-	endcase
-
- 'EBSDPATTERNBINNING': begin
-                WIDGET_CONTROL, get_value=val,EBSDwidget_s.detbinning
-                EBSDdata.detbinning= fix(val[0])
-	  	EBSDshowPattern,/single
-		vals = ['1','2','4','8']
-		  Core_Print, 'Pattern binning set to '+vals[EBSDdata.detbinning]
 	endcase
 
  'CIRCULARMASK': begin

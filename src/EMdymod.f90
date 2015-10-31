@@ -294,13 +294,13 @@ end subroutine SingleEBSDPattern
 !> based on Marc's code above
 !
 !> @etails The main purpose of this routine and its accompanying wrapper routine is to
-!> provide a way for an external program to compute an EBSD pattern.  The idea is that 
+!> provide a way for an external program to compute an ECP pattern.  The idea is that 
 !> all the necessary arrays and variables are passed in by reference as arguments, without
 !> the need for the routine to fetch any other data from files etc...  The initial goal is
 !> to have a function that can be called with the CALL_EXTERNAL mechanism in IDL, but 
 !> in the long run this will also be the approach for calling the routine from C/C++, which
 !> is an essential part of integration with DREAM.3D.  This routine is a simplified version
-!> of the core of the EMEBSD program. 
+!> of the core of the EMECP program. 
 !>
 !> This routine will first compute the incident cone vectors etc. if necessary, and then perform
 !> the usual interpolation from the square Lambert projection. The pattern will be a basic pattern,
@@ -317,9 +317,9 @@ end subroutine SingleEBSDPattern
 !> @param accum_e array with Monte Carlo histogram
 !> @param mLPNH Northern hemisphere master pattern
 !> @param mLPSH Southern hemisphere master pattern
-!> @param EBSDpattern output array
+!> @param ECpattern output array
 !
-!> @date 10/16/15 MDG 1.0 original
+!> @date 10/29/15 SS 1.0 original
 !--------------------------------------------------------------------------
 subroutine SingleECPattern(nipar, nfpar, n1, n2, m1, o1, o2, ipar, fpar, accum_e, mLPNH, mLPSH, ECpattern)
 
@@ -362,8 +362,8 @@ integer(8),INTENT(IN)                   :: o1
 integer(8),INTENT(IN)                   :: o2
 real(kind=sgl),INTENT(IN)               :: fpar(nfpar)
 real(kind=sgl),INTENT(IN)               :: accum_e(n1,-n2:n2,-n2:n2)
-real(kind=sgl),INTENT(IN)               :: mLPNH(-m1:m1, -m1:m1)
-real(kind=sgl),INTENT(IN)               :: mLPSH(-m1:m1, -m1:m1)
+real(kind=sgl),INTENT(IN)               :: mLPNH(-m1:m1, -m1:m1, n1)
+real(kind=sgl),INTENT(IN)               :: mLPSH(-m1:m1, -m1:m1, n1)
 real(kind=sgl),INTENT(OUT)              :: ECpattern(o1, o2)
 
 real(kind=sgl),allocatable,save         :: klist(:,:,:), rgx(:,:), rgy(:,:), rgz(:,:), weightfact(:)
@@ -381,6 +381,22 @@ real(kind=sgl)                          :: dc(3), scl, deltheta, acc_sum, MCangl
 ! ------ generate the detector klist, rgx, rgy, rgz, weightfactors arrays if needed 
 !------- (calling program must decide this via ipar(1))
 !==================================================================================
+
+
+write (*,*) '--------'
+write (*,*) 'ipar:'
+write (*,*) ipar
+write (*,*) '--------'
+write (*,*) 'fpar:'
+write (*,*) fpar
+write (*,*) '--------'
+write (*,*) 'shapes: '
+write (*,*) 'accum_e ',shape(accum_e)
+write (*,*) 'mLPNH   ',shape(mLPNH)
+write (*,*) 'mLPSH   ',shape(mLPSH)
+write (*,*) 'ECP     ',shape(ECpattern)
+
+write (*,*) 'n1, n2, m1, o1, o2 : ', n1, n2, m1, o1, o2
 
 if (ipar(1) .eq. 1) then
 
@@ -404,7 +420,7 @@ if (ipar(1) .eq. 1) then
     end do
 
     thetain = atan2(fpar(4),fpar(3))
-    thetaout = atan2(fpar(4),fpar(3))
+    thetaout = atan2(fpar(5),fpar(3))
 
     om(1,:) = (/cos(fpar(2)),0.0,sin(fpar(2))/)
     om(2,:) = (/0.0,1.0,0.0/)
@@ -415,6 +431,7 @@ if (ipar(1) .eq. 1) then
 
     nazimuth = 361
     delazimuth = 2.0*cPi/float(nazimuth-1)
+
 
     if (allocated(rgx)) deallocate(rgx, rgy, rgz)
     allocate(rgx(npolar, nazimuth), rgy(npolar, nazimuth), rgz(npolar, nazimuth), stat=istat)
@@ -436,7 +453,6 @@ if (ipar(1) .eq. 1) then
              rgz(ipolar,iazimuth) = dc(3)
         end do
     end do
-
 
 !===================================================================
 ! ------ generate the weight factors from the monte carlo histogram
