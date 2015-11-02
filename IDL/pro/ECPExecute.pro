@@ -75,16 +75,15 @@ endif
 
 ; next, generate the ipar and fpar parameter arrays used for call_external
 
-; ipar(1) = 1 if GetVectorsCone detector arrays need to be computed, 0 if not (arrays will have save status)
-; ipar(2) = enl%npix
-; ipar(3) = enl%numsy
-; ipar(4) = enl%numEbins
-; ipar(5) = enl%nsx
-; ipar(6) = enl%nsy
-; ipar(7) = nx = (enl%nsx-1)/2
-; ipar(8) = enl%npx
+; ipar(0) = 1 if GetVectorsCone detector arrays need to be computed, 0 if not (arrays will have save status)
+; ipar(1) = detnumsx
+; ipar(2) = detnumsy
+; ipar(3) = numEbins
+; ipar(4) = mcnsx
+; ipar(5) = mcnsy
+; ipar(6) = mpnpx
 
-nipar = long(8)
+nipar = long(7)
 ipar = lon64arr(nipar)
 
 ipar[0] = long64(1)    ; will need to be modified 
@@ -92,9 +91,8 @@ ipar[1] = long64(EBSDdata.detnumsx)
 ipar[2] = long64(EBSDdata.detnumsy)
 ipar[3] = long64(EBSDdata.mcenergynumbin)
 ipar[4] = long64(EBSDdata.mcimx)
-ipar[5] = long64(EBSDdata.mcimy)
-ipar[6] = long64((EBSDdata.mcimx-1)/2)
-ipar[7] = long64(EBSDdata.mpimx)
+ipar[5] = long64(EBSDdata.numset)
+ipar[6] = long64(EBSDdata.mpimx)
 
 ; fpar(1) = enl%thetac
 ; fpar(2) = enl%sampletilt
@@ -127,12 +125,23 @@ ECpattern = fltarr(EBSDdata.detnumsx,EBSDdata.detnumsy)
 
 callname = 'SingleECPatternWrapper'
 
+print,'IDL maxvals : ',max(mLPNH),max(mLPSH)
+
+faccum_e = float(accum_e)
+
+print,'IDL accum_e      : ',size(accum_e,/dimensions)
+print,'IDL mLPNH        : ',size(mLPNH,/dimensions)
+print,'IDL mLPSH        : ',size(mLPSH,/dimensions)
+print,'IDL ECpattern    : ',size(ECpattern,/dimensions)
+
 res = call_external(EBSDdata.EMsoftpathname+'/libEMSoftLib.dylib', callname, $
-      nipar, nfpar, long(EBSDdata.mcenergynumbin), ipar[4], long(EBSDdata.mpimx), ipar[1], ipar[2], ipar, fpar, float(accum_e), mLPNH, mLPSH, ECpattern, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
+        ipar, fpar, ECpattern, faccum_e, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
 
 if (res ne 1.0) then begin
   Core_print,'SingleECPPatternWrapper return code = '+string(res,format="(F4.1)")
 end 
+
+stop
 
 end
 

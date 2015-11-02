@@ -209,6 +209,12 @@ EMdatapathname = Core_getenv(/data)
     if (EBSDdata.numset gt 1) then Core_Print,'      Size of mLPNH data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") else Core_Print,'      Size of mLPNH data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") 
   endelse
 
+  sz = size(mLPNH)
+  if (sz[0] eq 2) then begin
+    mLPNH = reform(mLPNH,[sz[1],sz[2],1])
+    mLPSH = reform(mLPSH,[sz[1],sz[2],1])
+  endif
+
 ; and close the file
   H5F_close,file_id
 

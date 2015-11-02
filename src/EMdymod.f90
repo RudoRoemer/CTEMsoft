@@ -310,7 +310,8 @@ end subroutine SingleEBSDPattern
 !> @param nipar number of entries in ipar
 !> @param nfpar number of entries in fpar
 !> @param n1, n2 dimension parameters for accum_e
-!> @param m1, m2 dimension parameter for mLPNH and mLPSH
+!> @param m1 dimension parameter for mLPNH and mLPSH 
+!> @param m2 dimension parameter for mLPNH and mLPSH 
 !> @param o1,o2 dimension parameters for ECpattern
 !> @param ipar array with integer input parameters
 !> @param fpar array with float input parameters
@@ -319,21 +320,22 @@ end subroutine SingleEBSDPattern
 !> @param mLPSH Southern hemisphere master pattern
 !> @param EBSDpattern output array
 !
-!> @date 10/16/15 MDG 1.0 original
+!> @date 10/16/15  SS 1.0 original
+!> @date 11/02/14 MDG 1.1 put all integer parameters inside ipar and fixed size of ipar/fpar
 !--------------------------------------------------------------------------
-subroutine SingleECPattern(nipar, nfpar, n1, n2, m1, m2, o1, o2, ipar, fpar, accum_e, mLPNH, mLPSH, ECpattern)
+!subroutine SingleECPattern(nipar, nfpar, n1, n2, m1, m2, o1, o2, ipar, fpar, accum_e, mLPNH, mLPSH, ECpattern)
+subroutine SingleECPattern(ipar, fpar, ECpattern, accum_e, mLPNH, mLPSH)
 
 ! the input parameters are all part of a ipar and fpar input arrays instead of the usual namelist structures.
 ! The following is the mapping:
 !
 ! ipar(1) = 1 if GetVectorsCone detector arrays need to be computed, 0 if not (arrays will have save status)
-! ipar(2) = enl%npix
-! ipar(3) = enl%numsy
-! ipar(4) = enl%numEbins
-! ipar(5) = enl%nsx
-! ipar(6) = enl%nsy
-! ipar(7) = nx = (enl%nsx-1)/2
-! ipar(8) = enl%npx
+! ipar(2) = detnumsx
+! ipar(3) = detnumsy
+! ipar(4) = numEbins
+! ipar(5) = mcnsx
+! ipar(6) = numset
+! ipar(7) = mpnpx
 
 ! fpar(1) = enl%thetac
 ! fpar(2) = enl%sampletilt
@@ -352,20 +354,14 @@ use quaternions
 
 IMPLICIT NONE
 
-integer(8),INTENT(IN)                   :: nipar
-integer(8),INTENT(IN)                   :: nfpar
-integer(8),INTENT(IN)                   :: n1
-integer(8),INTENT(IN)                   :: n2
+integer(8),PARAMETER                    :: nipar=7
+integer(8),PARAMETER                    :: nfpar=12
 integer(8),INTENT(IN)                   :: ipar(nipar)
-integer(8),INTENT(IN)                   :: m1
-integer(8),INTENT(IN)                   :: m2
-integer(8),INTENT(IN)                   :: o1
-integer(8),INTENT(IN)                   :: o2
 real(kind=sgl),INTENT(IN)               :: fpar(nfpar)
-real(kind=sgl),INTENT(IN)               :: accum_e(n1,-n2:n2,-n2:n2)
-real(kind=sgl),INTENT(IN)               :: mLPNH(-m1:m1, -m1:m1, m2)
-real(kind=sgl),INTENT(IN)               :: mLPSH(-m1:m1, -m1:m1, m2)
-real(kind=sgl),INTENT(OUT)              :: ECpattern(o1, o2)
+real(kind=sgl),INTENT(OUT)              :: ECpattern(ipar(2),ipar(3))
+real(kind=sgl),INTENT(IN)               :: accum_e(ipar(4),-ipar(5):ipar(5),-ipar(5):ipar(5))
+real(kind=sgl),INTENT(IN)               :: mLPNH(-ipar(7):ipar(7), -ipar(7):ipar(7), ipar(6))
+real(kind=sgl),INTENT(IN)               :: mLPSH(-ipar(7):ipar(7), -ipar(7):ipar(7), ipar(6))
 
 real(kind=sgl),allocatable,save         :: klist(:,:,:), rgx(:,:), rgy(:,:), rgz(:,:), weightfact(:)
 
@@ -373,11 +369,18 @@ real(kind=dbl),parameter                :: Rtod = 57.2957795131D0
 real(kind=dbl),parameter                :: dtoR = 0.01745329251D0
 
 real(kind=sgl)                          :: kk(3), thetacr, ktmax, delta, wf, quat(4)
-real(kind=sgl)                          :: mLPNH_sum(-m1:m1,-m1:m1), mLPSH_sum(-m1:m1,-m1:m1)
+real(kind=sgl)                          :: mLPNH_sum(-ipar(7):ipar(7), -ipar(7):ipar(7)) 
+real(kind=sgl)                          :: mLPSH_sum(-ipar(7):ipar(7), -ipar(7):ipar(7))
 integer(kind=irg)                       :: istat, imin, imax, jmin, jmax, ii ,jj, nazimuth, npolar, nsig
 integer(kind=irg)                       :: ipolar, iazimuth, isig, isampletilt, nix, niy, nixp, niyp, isigp
 real(kind=sgl)                          :: thetain, thetaout, polar, azimuthal, delpolar, delazimuth, om(3,3)
 real(kind=sgl)                          :: dc(3), scl, deltheta, acc_sum, MCangle, ixy(2), dx, dy, dxm, dym, dp
+
+
+write (*,*) 'f90 accum_e        : ',shape(accum_e)
+write (*,*) 'f90 mLPNH          : ',shape(mLPNH)
+write (*,*) 'f90 mLPSH          : ',shape(mLPSH)
+write (*,*) 'f90 ECpattern      : ',shape(ECpattern)
 
 !==================================================================================
 ! ------ generate the detector klist, rgx, rgy, rgz, weightfactors arrays if needed 
@@ -406,7 +409,7 @@ if (ipar(1) .eq. 1) then
     end do
 
     thetain = atan2(fpar(4),fpar(3))
-    thetaout = atan2(fpar(4),fpar(3))
+    thetaout = atan2(fpar(5),fpar(3))
 
     om(1,:) = (/cos(fpar(2)),0.0,sin(fpar(2))/)
     om(2,:) = (/0.0,1.0,0.0/)
@@ -439,7 +442,6 @@ if (ipar(1) .eq. 1) then
         end do
     end do
 
-
 !===================================================================
 ! ------ generate the weight factors from the monte carlo histogram
 !===================================================================
@@ -464,7 +466,7 @@ do isig = 1,nsig
     else
         isampletilt = isampletilt + 1
     end if
-    
+
     do ipolar = 1,npolar
         do iazimuth = 1,nazimuth
             dc(1:3) = (/rgx(ipolar,iazimuth), rgy(ipolar,iazimuth), rgz(ipolar,iazimuth)/)
@@ -503,10 +505,12 @@ end if
 !===================================================================
 
 quat(1:4) = fpar(9:12)
-scl = float(ipar(8))
+scl = float(ipar(7))
 
 mLPNH_sum = sum(mLPNH,3)
 mLPSH_sum = sum(mLPSH,3)
+
+write (*,*) 'imin/imax : ',imin,imax
 
 do ii = imin, imax
     do jj = jmin, jmax
@@ -531,36 +535,42 @@ do ii = imin, imax
         dc = dc/sqrt(sum(dc*dc))
 
         ixy = scl * LambertSphereToSquare( dc, istat )
-        nix = int(ipar(8)+ixy(1))-ipar(8)
-        niy = int(ipar(8)+ixy(2))-ipar(8)
+        nix = int(ipar(7)+ixy(1))-ipar(7)
+        niy = int(ipar(7)+ixy(2))-ipar(7)
         nixp = nix+1
         niyp = niy+1
-        if (nixp.gt.ipar(8)) nixp = nix
-        if (niyp.gt.ipar(8)) niyp = niy
-        if (nix.lt.-ipar(8)) nix = nixp
-        if (niy.lt.-ipar(8)) niy = niyp
+        if (nixp.gt.ipar(7)) nixp = nix
+        if (niyp.gt.ipar(7)) niyp = niy
+        if (nix.lt.-ipar(7)) nix = nixp
+        if (niy.lt.-ipar(7)) niy = niyp
         dx = ixy(1)-nix
         dy = ixy(2)-niy
         dxm = 1.0-dx
         dym = 1.0-dy
 
         if (dc(3).gt.0.0) then 
-
             ECpattern(ii,jj) = wf * ( mLPNH_sum(nix,niy) * dxm * dym + &
                          mLPNH_sum(nixp,niy) * dx * dym + &
                          mLPNH_sum(nix,niyp) * dxm * dy + &
                          mLPNH_sum(nixp,niyp) * dx * dy )
 
         else
-             ECpattern(ii,jj) =  wf * ( mLPSH_sum(nix,niy) * dxm * dym + &
+            ECpattern(ii,jj) =  wf * ( mLPSH_sum(nix,niy) * dxm * dym + &
                          mLPSH_sum(nixp,niy) * dx * dym + &
                          mLPSH_sum(nix,niyp) * dxm * dy + &
                          mLPSH_sum(nixp,niyp) * dx * dy )
-
         end if
 
     end do
 end do
+
+write (*,*) 'max = ',maxval(ECpattern), shape(ECpattern)
+write (*,*) 'max(NH) ',maxval(mLPNH_sum), maxval(mLPSH_sum)
+
+open(unit=10,file='test.out',form='unformatted',status='unknown')
+write(10) ipar(2), ipar(3)
+write(10) ECpattern
+close(unit=10,status='keep')
 
 
 end subroutine SingleECPattern
@@ -638,7 +648,8 @@ end function SingleEBSDPatternWrapper
 !> @param argc number of argument
 !> @param argv pointers to subroutine parameters
 !
-!> @date 10/28/15 SS 1.0 original
+!> @date 10/28/15  SS 1.0 original
+!> @date 11/02/15 MDG 1.1 simplified parameters
 !--------------------------------------------------------------------------
 function SingleECPatternWrapper(argc, argv) bind(c, name='SingleECPatternWrapper') 
 
@@ -652,33 +663,29 @@ REAL(c_float)                                   :: SingleECPatternWrapper
 
 ! wrapper function dependent declarations; they are all pointers 
 ! since we pass everything by reference from IDL 
-integer(c_size_t), pointer                      :: nipar, nfpar, n1, n2, m1, o1, o2, m2
+integer(c_size_t)                               :: nipar, nfpar
 integer(c_size_t),dimension(:), pointer         :: ipar
 real(c_float), dimension(:), pointer            :: fpar
-real(c_float), dimension(:,:), pointer          :: ECpattern
 real(c_float), dimension(:,:,:), pointer        :: accum_e, mLPNH, mLPSH
+real(c_float), dimension(:,:), pointer          :: ECpattern
 
 ! the following line just helps in identifying the correct order of the subroutine arguments...
-!                             1      2      3   4   5   6   7   8     9     10       11     12     13   14
-!subroutine SingleEBSDPattern(nipar, nfpar, n1, n2, m1, m2, o1, o2, ipar, fpar, accum_e, mLPNH, mLPSH, EBSDpattern)
+!                             1      2     3       4       5      6
+!subroutine SingleECPattern(ipar, fpar, accum_e, mLPNH, mLPSH, ECPattern)
 !
 ! transform the C pointers above to fortran pointers, and use them in the regular function call
-call c_f_pointer(argv(1),nipar) 
-call c_f_pointer(argv(2),nfpar) 
-call c_f_pointer(argv(3),n1) 
-call c_f_pointer(argv(4),n2) 
-call c_f_pointer(argv(5),m1) 
-call c_f_pointer(argv(6),m2) 
-call c_f_pointer(argv(7),o1) 
-call c_f_pointer(argv(8),o2) 
-call c_f_pointer(argv(9),ipar,(/nipar/)) 
-call c_f_pointer(argv(10),fpar,(/nfpar/)) 
-call c_f_pointer(argv(11),accum_e,(/n1,2*n2+1,2*n2+1/)) 
-call c_f_pointer(argv(12),mLPNH,(/2*m1+1,2*m1+1,n1/)) 
-call c_f_pointer(argv(13),mLPSH,(/2*m1+1,2*m1+1,n1/)) 
-call c_f_pointer(argv(14),ECpattern,(/o1,o2/)) 
+nipar = 7
+nfpar = 12
+call c_f_pointer(argv(1),ipar,(/nipar/)) 
+call c_f_pointer(argv(2),fpar,(/nfpar/)) 
+call c_f_pointer(argv(3),ECpattern,(/ipar(2),ipar(3)/))
+call c_f_pointer(argv(4),accum_e,(/ipar(4),2*ipar(5)+1,2*ipar(5)+1/))
+call c_f_pointer(argv(5),mLPNH,(/2*ipar(7)+1, 2*ipar(7)+1, ipar(6)/))
+call c_f_pointer(argv(6),mLPSH,(/2*ipar(7)+1, 2*ipar(7)+1, ipar(6)/))
 
-call SingleECPattern(nipar, nfpar, n1, n2, m1, m2, o1, o2, ipar, fpar, accum_e, mLPNH, mLPSH, ECpattern)
+call SingleECPattern(ipar, fpar, ECpattern, accum_e, mLPNH, mLPSH)
+
+write (*,*) 'maxval(ECpattern) ',maxval(ECpattern),shape(ECpattern)
 
 SingleECPatternWrapper = 1._c_float
 end function SingleECPatternWrapper
