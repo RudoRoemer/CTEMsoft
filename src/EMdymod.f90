@@ -323,7 +323,6 @@ end subroutine SingleEBSDPattern
 !> @date 10/16/15  SS 1.0 original
 !> @date 11/02/14 MDG 1.1 put all integer parameters inside ipar and fixed size of ipar/fpar
 !--------------------------------------------------------------------------
-!subroutine SingleECPattern(nipar, nfpar, n1, n2, m1, m2, o1, o2, ipar, fpar, accum_e, mLPNH, mLPSH, ECpattern)
 subroutine SingleECPattern(ipar, fpar, ECpattern, accum_e, mLPNH, mLPSH)
 
 ! the input parameters are all part of a ipar and fpar input arrays instead of the usual namelist structures.
@@ -376,11 +375,6 @@ integer(kind=irg)                       :: ipolar, iazimuth, isig, isampletilt, 
 real(kind=sgl)                          :: thetain, thetaout, polar, azimuthal, delpolar, delazimuth, om(3,3)
 real(kind=sgl)                          :: dc(3), scl, deltheta, acc_sum, MCangle, ixy(2), dx, dy, dxm, dym, dp
 
-
-write (*,*) 'f90 accum_e        : ',shape(accum_e)
-write (*,*) 'f90 mLPNH          : ',shape(mLPNH)
-write (*,*) 'f90 mLPSH          : ',shape(mLPSH)
-write (*,*) 'f90 ECpattern      : ',shape(ECpattern)
 
 !==================================================================================
 ! ------ generate the detector klist, rgx, rgy, rgz, weightfactors arrays if needed 
@@ -510,8 +504,6 @@ scl = float(ipar(7))
 mLPNH_sum = sum(mLPNH,3)
 mLPSH_sum = sum(mLPSH,3)
 
-write (*,*) 'imin/imax : ',imin,imax
-
 do ii = imin, imax
     do jj = jmin, jmax
 
@@ -563,15 +555,6 @@ do ii = imin, imax
 
     end do
 end do
-
-write (*,*) 'max = ',maxval(ECpattern), shape(ECpattern)
-write (*,*) 'max(NH) ',maxval(mLPNH_sum), maxval(mLPSH_sum)
-
-open(unit=10,file='test.out',form='unformatted',status='unknown')
-write(10) ipar(2), ipar(3)
-write(10) ECpattern
-close(unit=10,status='keep')
-
 
 end subroutine SingleECPattern
 
@@ -684,8 +667,6 @@ call c_f_pointer(argv(5),mLPNH,(/2*ipar(7)+1, 2*ipar(7)+1, ipar(6)/))
 call c_f_pointer(argv(6),mLPSH,(/2*ipar(7)+1, 2*ipar(7)+1, ipar(6)/))
 
 call SingleECPattern(ipar, fpar, ECpattern, accum_e, mLPNH, mLPSH)
-
-write (*,*) 'maxval(ECpattern) ',maxval(ECpattern),shape(ECpattern)
 
 SingleECPatternWrapper = 1._c_float
 end function SingleECPatternWrapper

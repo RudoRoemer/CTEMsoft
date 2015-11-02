@@ -125,14 +125,7 @@ ECpattern = fltarr(EBSDdata.detnumsx,EBSDdata.detnumsy)
 
 callname = 'SingleECPatternWrapper'
 
-print,'IDL maxvals : ',max(mLPNH),max(mLPSH)
-
 faccum_e = float(accum_e)
-
-print,'IDL accum_e      : ',size(accum_e,/dimensions)
-print,'IDL mLPNH        : ',size(mLPNH,/dimensions)
-print,'IDL mLPSH        : ',size(mLPSH,/dimensions)
-print,'IDL ECpattern    : ',size(ECpattern,/dimensions)
 
 res = call_external(EBSDdata.EMsoftpathname+'/libEMSoftLib.dylib', callname, $
         ipar, fpar, ECpattern, faccum_e, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
@@ -140,8 +133,7 @@ res = call_external(EBSDdata.EMsoftpathname+'/libEMSoftLib.dylib', callname, $
 if (res ne 1.0) then begin
   Core_print,'SingleECPPatternWrapper return code = '+string(res,format="(F4.1)")
 end 
-
-stop
+status = 1
 
 end
 

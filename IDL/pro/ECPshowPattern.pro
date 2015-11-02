@@ -39,7 +39,7 @@
 ;> @date 02/06/15 MDG 1.1 added pattern orientation parameters
 ;> @date 10/30/15 MDG 2.0 modified from EBSDshowPattern.pro
 ;--------------------------------------------------------------------------
-pro ECPshowPattern, single=single, nodisplay=nodisplay
+pro ECPshowPattern, ECpattern, single=single, nodisplay=nodisplay
 
 ; the keyword /single indicates that only one pattern is available 
 
@@ -49,7 +49,6 @@ common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
 common EBSDpatterns, pattern, image, finalpattern
 common EBSDmasks, circularmask
-common ECPstuff,ECPattern
 
 ; check whether the mask needs to be recomputed or not
 s = size(circularmask)
@@ -72,7 +71,7 @@ end
 patterns = ECPattern
 
 sz = size(patterns)
-if (sz[0] eq 3) then pattern = reform(patterns[*,*,EBSDdata.currentpatternID])
+if (sz[0] eq 3) then pattern = reform(patterns[*,*,EBSDdata.currentpatternID]) else pattern = patterns
 
 ; set the min and max fields
 EBSDdata.Patternmin = min(pattern)

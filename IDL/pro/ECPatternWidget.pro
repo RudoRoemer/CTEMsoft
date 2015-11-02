@@ -22,7 +22,7 @@
 ;
 ;> @date 10/30/15 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro ECPatternWidget, single=single
+pro ECPatternWidget, ECpattern, single=single
 
 ; the keyword /single indicates that only one pattern is available
 
@@ -32,12 +32,10 @@ common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
-common ECPstuff,ECPattern
-
 
 ;------------------------------------------------------------
 ; make sure that this program isn't already running
-if (XRegistered("ECPPatternWidget") NE 0) then begin
+if (XRegistered("ECPatternWidget") NE 0) then begin
   print,'ECPPatternWidget is already running ... (if it is not, please restart your IDL session)'
   return
 end
@@ -267,7 +265,7 @@ WIDGET_CONTROL, EBSDwidget_s.Patterndraw, GET_VALUE=drawID
 EBSDwidget_s.PatternDrawID = drawID
 
 ; and display the pattern with the current intensity settings
-if (EBSDdata.Pmode eq 0) then ECPshowPattern,/single else ECPshowPattern
+if (EBSDdata.Pmode eq 0) then ECPshowPattern,ECpattern,/single else ECPshowPattern,ECpattern
 
 ; and hand over control to the xmanager
 XMANAGER,"ECPatternWidget",EBSDwidget_s.patternbase,/NO_BLOCK

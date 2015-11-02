@@ -241,11 +241,8 @@ if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
 
   if (EBSDdata.MCMPboth eq 1) then begin ; get the file size of the MC file
     fname = EBSDdata.pathname+'/'+EBSDdata.mcfilename
-print,'file name : '+fname
     finfo = file_info(fname)
-help,finfo,/structure
     EBSDdata.mcfilesize = finfo.size
-print,'file size = ',finfo.size
   endif
 
 ; first make sure that this is indeed an HDF file
