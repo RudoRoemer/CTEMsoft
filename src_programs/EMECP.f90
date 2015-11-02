@@ -218,6 +218,8 @@ numk = 0
 call GetVectorsCone(ecpnl, khead, numk)
 allocate(kij(2,numk),klist(3,numk),stat=istat)
 
+io_int(1) = numk
+call WriteValue('Number of beams for which interpolation will be done = ',io_int,1) 
 !=============================================================================================
 ! ------ and open the output file for IDL visualization (only thread 0 can write to this file)
 !=============================================================================================
@@ -278,20 +280,21 @@ do i = 1,numk
    ktmp => ktmp%next
 end do
 
-allocate(mask(-ecpnl%npix:ecpnl%npix, -ecpnl%npix:ecpnl%npix),stat=istat)
+allocate(mask(1:ecpnl%npix, 1:ecpnl%npix),stat=istat)
 if (istat .ne. 0) then
    call FatalError('ECpattern','could not allocate mask array')
 end if
 
 mask = 1.0
 if (ecpnl%maskpattern .eq. 'y') then
+
 ! create the circular mask
-  maskradius = (minval( (/ ecpnl%npix, ecpnl%npix /) ) )**2
-  allocate(lx(-ecpnl%npix:ecpnl%npix), ly(-ecpnl%npix:ecpnl%npix), stat=istat)
-  lx = (/ (float(i),i=-ecpnl%npix,ecpnl%npix) /)
-  ly = (/ (float(i),i=-ecpnl%npix,ecpnl%npix) /)
-  do i= -ecpnl%npix,ecpnl%npix
-    do j= -ecpnl%npix,ecpnl%npix
+  maskradius = (float(ecpnl%npix)/2.0)**2
+  allocate(lx(1:ecpnl%npix), ly(1:ecpnl%npix), stat=istat)
+  lx = (/ (float(i),i=1,ecpnl%npix) /) - float(ecpnl%npix+1)/2.0
+  ly = (/ (float(i),i=1,ecpnl%npix) /) - float(ecpnl%npix+1)/2.0
+  do i= 1,ecpnl%npix
+    do j= 1,ecpnl%npix
       if ((lx(i)**2+ly(j)**2).gt.maskradius) mask(i,j) = 0.0
     end do
   end do
@@ -311,22 +314,23 @@ master_arraySH = master%mLPSH
 !scl = float(npx)/LPs%sPio2
 scl = dble(ecpnl%npx)
 
-allocate(ECPpattern(-ecpnl%npix:ecpnl%npix,-ecpnl%npix:ecpnl%npix),&
-ECPpatternintd(-ecpnl%npix:ecpnl%npix,-ecpnl%npix:ecpnl%npix),stat=istat)
+allocate(ECPpattern(1:ecpnl%npix, 1:ecpnl%npix),&
+ECPpatternintd(1:ecpnl%npix,1:ecpnl%npix),stat=istat)
 ECPpattern = 0.0
+ECPpatternintd = 0.0
 
 dataset = 'ECpatterns'
 
 if (ecpnl%outputformat .eq. 'bin') then
-    allocate(bpat(-ecpnl%npix:ecpnl%npix,-ecpnl%npix:ecpnl%npix),stat=istat)
+    allocate(bpat(1:ecpnl%npix,1:ecpnl%npix),stat=istat)
     if (istat .ne. 0) call FatalError('ECpatter','cannot allocate bpat array')
     bpat = char(nint(255.0*ECPpattern))
 
 ! write dictionary pattern to h5 file
     offset = (/ 0, 0, 0 /)
-    hdims = (/ 2*ecpnl%npix+1, 2*ecpnl%npix+1, ecpnl%numangle_anglefile /)
-    dim0 = 2*ecpnl%npix+1
-    dim1 = 2*ecpnl%npix+1
+    hdims = (/ ecpnl%npix, ecpnl%npix, ecpnl%numangle_anglefile /)
+    dim0 = ecpnl%npix
+    dim1 = ecpnl%npix
     dim2 = 1
     hdferr = HDF_writeHyperslabCharArray3D(dataset, bpat, hdims, offset, dim0, dim1, dim2, &
                                           HDF_head)
@@ -334,9 +338,9 @@ end if
 
 if (ecpnl%outputformat .eq. 'gui') then
     offset = (/ 0, 0, 0 /)
-    hdims = (/ 2*ecpnl%npix+1, 2*ecpnl%npix+1, ecpnl%numangle_anglefile /)
-    dim0 = 2*ecpnl%npix+1
-    dim1 = 2*ecpnl%npix+1
+    hdims = (/ ecpnl%npix, ecpnl%npix, ecpnl%numangle_anglefile /)
+    dim0 = ecpnl%npix
+    dim1 = ecpnl%npix
     dim2 = 1
     hdferr = HDF_writeHyperslabFloatArray3D(dataset, ECPpattern, hdims, offset, dim0, dim1, dim2, &
                                           HDF_head)
@@ -451,9 +455,9 @@ angleloop: do iang = 1,ecpnl%numangle_anglefile
 
 ! write dictionary pattern to h5 file
         offset = (/ 0, 0, iang-1 /)
-        hdims = (/ 2*ecpnl%npix+1, 2*ecpnl%npix+1, ecpnl%numangle_anglefile /)
-        dim0 = 2*ecpnl%npix+1
-        dim1 = 2*ecpnl%npix+1
+        hdims = (/ ecpnl%npix+1, ecpnl%npix+1, ecpnl%numangle_anglefile /)
+        dim0 = ecpnl%npix
+        dim1 = ecpnl%npix
         dim2 = 1
         hdferr = HDF_writeHyperslabCharArray3D(dataset, bpat, hdims, offset, dim0, dim1, dim2, &
                                           HDF_head, insert)
@@ -464,9 +468,9 @@ angleloop: do iang = 1,ecpnl%numangle_anglefile
     if (ecpnl%outputformat .eq. 'gui') then
           if (ecpnl%maskpattern.eq.'y')  ECPpattern = ECPpattern * mask
           offset = (/ 0, 0, iang-1 /)
-          hdims = (/ 2*ecpnl%npix+1, 2*ecpnl%npix+1, ecpnl%numangle_anglefile /)
-          dim0 = 2*ecpnl%npix+1
-          dim1 = 2*ecpnl%npix+1
+          hdims = (/ ecpnl%npix, ecpnl%npix, ecpnl%numangle_anglefile /)
+          dim0 = ecpnl%npix
+          dim1 = ecpnl%npix
           dim2 = 1
           hdferr = HDF_writeHyperslabFloatArray3D(dataset, ECPpattern, hdims, offset, dim0, dim1, dim2, &
                                           HDF_head, insert)

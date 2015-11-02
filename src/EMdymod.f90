@@ -394,16 +394,16 @@ if (ipar(1) .eq. 1) then
     kk = (/0.0,0.0,1.0/)
     thetacr = DtoR*fpar(1)
     ktmax = tan(thetacr)
-    delta = 2.0*ktmax/(2.0*dble(ipar(2))+1.0)
+    delta = 2.0*ktmax/dble(ipar(2)-1)
 
-    imin = -ipar(2)
+    imin = 1
     imax = ipar(2)
-    jmin = -ipar(2)
-    jmax = ipar(2)
+    jmin = 1
+    jmax = ipar(3)
      
     do ii = imin, imax
         do jj = jmin, jmax
-            klist(1:3,ii,jj) = (/delta*ii,delta*jj,0.0/) + kk(1:3)
+            klist(1:3,ii,jj) = (/-ktmax+delta*(ii-1),-ktmax+delta*(jj-1),0.0/) + kk(1:3)
             klist(1:3,ii,jj) =  klist(1:3,ii,jj)/sqrt(sum( klist(1:3,ii,jj)**2))
         end do
     end do

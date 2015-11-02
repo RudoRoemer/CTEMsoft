@@ -456,6 +456,7 @@ end subroutine ECPreadMasterfile
 !> @param numk number of incident vectors in the linked list
 !
 !> @date 10/12/15  SS 1.0 original
+!> @date 11/02/15  SS 1.1 changed output image to be ecpnl%npix x ecpnl%npix instead of 2*ecpnl%npix+1
 !--------------------------------------------------------------------------
 subroutine GetVectorsCone(ecpnl, klist, numk)
 
@@ -477,11 +478,11 @@ numk = 0
 kk = (/0.D0,0.D0,1.D0/)
 thetacr = DtoR*ecpnl%thetac
 ktmax = tan(thetacr)
-delta = 2.0*ktmax/(2.0*float(ecpnl%npix)+1.0)
+delta = 2.0*ktmax/(float(ecpnl%npix)-1.0)
 
-imin = -ecpnl%npix
+imin = 1
 imax = ecpnl%npix
-jmin = -ecpnl%npix
+jmin = 1
 jmax = ecpnl%npix
 
 allocate(klist,stat=istat)
@@ -491,23 +492,17 @@ end if
 
 ktmp => klist
 nullify(ktmp%next)
-ktmp%k = kk
-ktmp%i = 0
-ktmp%j = 0
-numk = numk + 1
 
 do ii = imin, imax
     do jj = jmin, jmax
-        if (abs(ii) + abs(jj) .ne. 0) then
-           allocate(ktmp%next,stat=istat)
-           ktmp => ktmp%next
-           nullify(ktmp%next)
-           ktmp%k(1:3) = (/delta*ii,delta*jj,0.D0/) + kk(1:3)
-           ktmp%k = ktmp%k/sqrt(sum(ktmp%k**2))
-           ktmp%i = ii
-           ktmp%j = jj
-           numk = numk + 1
-        end if
+        ktmp%k(1:3) = (/-ktmax+delta*(ii-1),-ktmax+delta*(jj-1),0.D0/) + kk(1:3)
+        ktmp%k = ktmp%k/sqrt(sum(ktmp%k**2))
+        ktmp%i = ii
+        ktmp%j = jj
+        numk = numk + 1
+        allocate(ktmp%next)
+        ktmp => ktmp%next
+        nullify(ktmp%next)
     end do
 end do
 
