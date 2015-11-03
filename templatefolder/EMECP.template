@@ -11,9 +11,9 @@ npix = 256
 thetac = 5.0
 ! mask pattern or not; 'y' or 'n'
 maskpattern = 'n'
-! monte carlo input file
+! monte carlo input file; path relative to EMdatapathname
 energyfile = 'undefined'
-! master pattern input file
+! master pattern input file; path relative to EMdatapathname
 masterfile = 'undefined'
 ! input file for list of angles
 anglefile = 'undefined'
@@ -23,7 +23,7 @@ eulerconvention = 'hkl'
 gammavalue = 1.0
 ! output format; 'gui' for IDL and 'bin' for dictionary
 outputformat = 'gui'
-! output file (relative path)
+! output file ; path relative to EMdatapathname
 datafile = 'undefined'
 ! number of threads for parallel execution
 nthreads = 1

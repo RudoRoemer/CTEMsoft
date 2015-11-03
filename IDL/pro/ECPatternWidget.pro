@@ -22,7 +22,7 @@
 ;
 ;> @date 10/30/15 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro ECPatternWidget, ECpattern, single=single
+pro ECPatternWidget, single=single
 
 ; the keyword /single indicates that only one pattern is available
 
@@ -31,6 +31,7 @@ pro ECPatternWidget, ECpattern, single=single
 common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
+common ECPdata, ECPattern
 
 
 ;------------------------------------------------------------
@@ -129,7 +130,7 @@ saveECPattern = WIDGET_BUTTON(block4, $
                         /NO_RELEASE, $
                         EVENT_PRO='ECPatternWidget_event', $
                         /FRAME, $
-                        UVALUE='SAVEECPPATTERN', $
+                        UVALUE='SAVEECPATTERN', $
                         /ALIGN_LEFT)
 
 ; and the save format selector
@@ -265,7 +266,7 @@ WIDGET_CONTROL, EBSDwidget_s.Patterndraw, GET_VALUE=drawID
 EBSDwidget_s.PatternDrawID = drawID
 
 ; and display the pattern with the current intensity settings
-if (EBSDdata.Pmode eq 0) then ECPshowPattern,ECpattern,/single else ECPshowPattern,ECpattern
+if (EBSDdata.Pmode eq 0) then ECPshowPattern,/single else ECPshowPattern
 
 ; and hand over control to the xmanager
 XMANAGER,"ECPatternWidget",EBSDwidget_s.patternbase,/NO_BLOCK

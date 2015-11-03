@@ -33,6 +33,8 @@ common EBSDpatterns, pattern, image, finalpattern
 common EBSD_anglearrays, euler, quaternions
 common EBSDmasks, circularmask
 
+common ECPdata, ECPattern
+
 if (EBSDdata.eventverbose eq 1) then help,event,/structure
 
 EMdatapathname = Core_getenv(/data)

@@ -44,6 +44,7 @@ pro ECPDetectorWidget_event, event
 common EBSD_widget_common, EBSDwidget_s
 common EBSD_data_common, EBSDdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
+common ECPdata, ECPattern
 
 
 if (EBSDdata.eventverbose eq 1) then help,event,/structure
@@ -97,7 +98,7 @@ end else begin
 	  end
 
 ; is the correct widget up on the screen ?
-	  if XRegistered("ECPPatternWidget") then begin
+	  if XRegistered("ECPatternWidget") then begin
 	    if (EBSDdata.currentdisplaywidgetmode ne 0) then WIDGET_CONTROL, EBSDwidget_s.patternbase, /DESTROY
 	  end
 
@@ -106,11 +107,11 @@ end else begin
 
 ; first, set up the variables and do a call_external
 	  status = 0
-	  ECPExecute,status,ECpattern,/single
+	  ECPExecute,status,/single
 
 ; then we create the EBSDpattern widget and let the user adjust the imaging parameters
 	  if (status eq 1) then begin
-	    if (XRegistered("EBSDPatternWidget") EQ 0) then ECPatternWidget,ECpattern,/single else ECPshowPattern,ECpattern,/single
+	    if (XRegistered("ECPatternWidget") EQ 0) then ECPatternWidget,/single else ECPshowPattern,/single
 	  end
 
 	endcase

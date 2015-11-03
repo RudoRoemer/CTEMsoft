@@ -688,7 +688,7 @@ Finally, the incident beam cone opening angle, $\theta_c$, must be specified.  T
 The Monte Carlo program must be executed first, and takes the following name list as input:
 \fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
 \VerbatimInput{../templatefolder/EMMCOpenCL.template}
-The program uses OpenCL coding to carry out the simulations on GPU.  The input parameters
+The program uses OpenCL coding to carry out the simulations on a GPU card if one is available.  The input parameters
 include the crystal file name (to compute the theoretical density and average atomic number), the sample
 tilt angle with respect to the horizontal direction, a potential tilt around the \textsf{RD} axis, the number of pixels
 along the modified Lambert projection edge (should be ``a multiple of $10$ plus one''), the number of incident electrons per computational thread, 
@@ -697,9 +697,18 @@ as well as the maximum penetration depth and depth step size to be considered.  
 HDF5 file.  It should be noted that the execution time of the 
 following program, \textsf{EMEBSDmaster}, is directly determined by how many depth steps and energy bins are selected in the
 Monte Carlo computation; the more depth steps/energy bins, the longer the dynamical simulation will take.
-%
-%Since each OpenMP thread carries out the computation for the same number of incident electrons, the \textsf{EMMC} program takes 
-%about the  same time for a single thread as for multiple threads.  
+
+It should be noted that this program can provide statistics that are used by two other programs: \textsf{EMEBSDmaster.f90} and
+\textsf{EMECPmaster.f90}.  To generate output for the former, the variable \textsf{mode} should be set to \textsf{'full'}, 
+and the sample tilt angle from horizontal (\textsf{sig}) should be specified.  For the latter program, the \textsf{mode} should
+be set to \textsf{'bse1'}, and the user should provide the parameters \textsf{sigstart}, \textsf{sigend}, and \textsf{sigstep}.  In the 
+bse1 mode, the program expects the sample to be oriented normal to the electron beam (\textsf{sigstart=0.0}) initially, and 
+then the computation is repeated for increasingly larger sample tilt angles (equivalent to beam tilts).  For each tilt value, the 
+OpenCL computation is relatively fast since only BSE1 electrons are considered; the total computation time depends on the 
+number of sample tilt values that need to be considered.  For the EBSD case, with \textsf{mode='full'}, the computation 
+considers all electrons, both BSE1 and BSE2, since both types contribute to the EBSD pattern; in the ECP case, only the 
+BSE1 electrons carry diffraction information, since the BSE2 electrons are fully incoherent with respect to the incident beam,
+and the integrating annular detector averages any channeling effects of the electrons on their way out of the sample.
 
 The HDF5 output file contains a number of program parameters
 that need to be passed on to the next program, as well as two large arrays that contain the electron distribution in the hemisphere on
@@ -716,37 +725,44 @@ a typical Monte Carlo run takes about $25$ minutes.
 Note that all filenames (except for the crystal structure file name) are relative to the \textsf{EMdatapathname} path.  So, if your 
 \textsf{EMdatapathname} equals \textsf{/Users/me/EMdata} and you wish the Monte Carlo output file to have the absolute path
 \textsf{/Users/me/EMdata/test/MCoutput.h5}, then only the portion \textsf{test/MCoutput.h5} should be entered as the file name
-in the name list file.
+in the name list file.  Relative pathnames are used so that data files can be transferred between computers with different directory
+structures.
 
-\newpage
-\section{The \protect\textsf{EMEBSDmaster.f90} program\label{sec:f90EBSDmaster}}
-The second program performs the computation of the EBSD master pattern on the
-square or hexagonal modified Lambert projection, with all output on a square modified Lambert projection.
-The input name list file is formatted as follows:
+\section{The \protect\textsf{EMEBSDmaster.f90} and \protect\textsf{EMECPmaster.f90} programs\label{sec:f90EBSDmaster}}
+The second program performs the computation of the EBSD master pattern (:or the ECP master pattern) on a
+square modified Lambert projection. The input name list file fro the \textsf{EMEBSDmaster} program is formatted as follows:
 \fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
 \VerbatimInput{../templatefolder/EMEBSDmaster.template}
-This short input file only requires the definition of the smallest $d$-spacing to be taken into account 
+For the \textsf{EMECPmaster} program, the input file is nearly identical:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
+\VerbatimInput{../templatefolder/EMECPmaster.template}
+The only difference is \textsf{restart} parameter described below.
+These short input files only requires the definition of the smallest $d$-spacing to be taken into account 
 in the dynamical simulation, the number of pixels along the output Lambert projection, the name of the 
-output file from the \textsf{EMMCOpenCL} program, and the name of an output file.  The data file from
+output file from the \textsf{EMMCOpenCL} program, and the name of an HDF5 output file.  The data file from
 the Monte Carlo program already contains a lot of other information, so there is no need to duplicate 
-this here.  This does imply that the Monte Carlo program must be completed before the 
+any of it in this input file.  This does imply that the Monte Carlo program must be completed before the 
 master pattern can be computed.
 
-This program can take a very long time to run, despite the fact that the current version is a multi-threaded OpenMP code.
+The \textsf{EMEBSDmaster} program can take a very long time to run, despite the fact that the current version is a multi-threaded OpenMP code.
 For each energy bin, a complete EBSD master pattern is computed, using the appropriate asymmetric unit according to
 the crystal symmetry.  The output HDF5 file contains a stack of modified Lambert projections, one for each energy bin, along with 
 some other parameters.  The size of the Lambert projections does not need to be the same as the size of the Monte Carlo
 Lambert projections.  %The projections can be visualized using the IDL program.  
 Note that for complex crystal structures,
 with multiple atom sites in the asymmetric unit, the program will store the master patterns separately for each entry in the asymmetric unit.
-This means that one can, in principle, study the effect of elemental substitutions on EBSD patterns.
+This means that one can, in principle, study the effect of elemental substitutions on EBSD patterns.  The \textsf{EMEBSDmaster}
+program can be interrupted at any time, since the master patterns will be written to the HDF5 output file for each energy bin.
+The \textsf{restart} parameter (set to \textsf{.FALSE.} by default) must then be set to \textsf{.TRUE.} and the computation will
+resume with the pattern for the next energy bin.  It is therefore possible to carry out a few energy bins on one computer, and then
+continue the computation on another one (hopefully faster).
 
 The parameter \textsf{dmin} determines a truncation value in direct space, which is effectively a truncation in Fourier space; decreasing
 this value below the default will dramatically increase the execution time.  For complex crystal structures, the simulation time will also
 increase, since the larger unit cell will automatically generate more reciprocal lattice points inside the truncation sphere.
 
 
-The \textsf{-t} option to the \textsf{EMEBSDmaster} program will also create a file named \textsf{BetheParameters.template} in
+The \textsf{-t} option to the \textsf{EMEBSDmaster} and \textsf{EMECPmaster} programs will also create a file named \textsf{BetheParameters.template} in
 your folder.  Rename this file to \textsf{BetheParameters.nml} and set the following parameters, which have been found to be 
 reasonable values for a number of crystal structures and accelerating voltages:
 \fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
@@ -754,34 +770,156 @@ reasonable values for a number of crystal structures and accelerating voltages:
 increasing $c_1$ and $c_2$ will increase the computation time, but will also increase the accuracy of the result. For TEM simulations,
 to be released at a later point in time, the values of $c_1$ and $c_2$ will likely need to be increased.
 
+
 \section{The \protect\textsf{EMEBSD.f90} program\label{sec:f90EBSD}}
 The final program takes as input a series of detector characteristics as well as orientations, and uses the output from both \textsf{EMMCOpenCL} and
 \textsf{EMEBSDmaster} to compute one or more actual EBSD patterns.  
-%The easiest way to execute this program is via the IDL interface, but command line execution is also possible.  
+The easiest way to execute this program is via the IDL interface, but command line execution is also possible.  
 The input name list file contains the following entries:
 \fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
 \VerbatimInput{../templatefolder/EMEBSD.template}
 
 The program reads the name list file, then Monte Carlo output and master patterns;  then the detector geometry is used to
 compute the energy distribution with respect to the scintillator.  This is then used along with the master pattern and the 
-orientation information to compute the final EBSD patterns.  
-% Note that these patterns may contain Poisson noise; this can be turned on/off using the PoissonNoise switch in the name list file. 
-%The output file contains all EBSPs in full resolution,
-%and can be read with the IDL visualization program; at that point, the camera point spread function can be included, as well
-%as binning and brightness/contrast scaling. See the next section for details.
-%
-%Note that this program can also be used to create so-called EBSD dictionaries.  This is a much more advanced functionality 
-%that we will not fully detail in this manual, since it is still under development.
+orientation information to compute the final EBSD patterns.  For a detailed description of all detector parameters we 
+refer the interested reader to both the IDL description in section~\ref{sec:idl} and our paper on the EBSD forward model.\footnote{P.G. Callahan and M. De Graef, 
+``Dynamical EBSD Patterns Part I: Pattern Simulations,'' Microscopy and Microanalysis, vol. 19, pp. 1255-1265 (2013)}
+The output file contains all EBSPs in full resolution,
+and can be read with the IDL visualization program; at that point, the camera point spread function can be included, as well
+as binning and brightness/contrast scaling. See section~\ref{sec:idl} for details.
+
+Note that this program can also be used to create so-called EBSD dictionaries.  This is a much more advanced functionality 
+that we will not fully detail in the present manual, since it is still under development.  We anticipate that dictionary-type 
+computations will become available in the next release (3.1).
 
 The \textsf{outputformat} variable should be kept at the value \textsf{'bin'} for manual program runs; it will take on 
 the value \textsf{'gui'} for runs that are controlled by the IDL routine described in section~\ref{sec:idl}.  We recommend
 that the \textsf{energyaverage} and \textsf{spatialaverage} variables are kept at their default values; they will be removed 
 from the input options in a later release.
 
-%\section{Calling EMEBSD from another program}
-%With the creation of release 3.0, we have changed the library format from static to shared, so that the main package
-%library now has the name (on Mac OS X) \textsf{EMSoftLib.dylib}.  
-%
+\section{The \protect\textsf{EMECP.f90} program\label{sec:f90ECP}}
+The \textsf{EMECP} program uses the following template file:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
+\VerbatimInput{../templatefolder/EMECP.template}
+Note that the bottom set of parameters can be completely ignored in this version of the software.  Most of the parameters 
+are similar to the ones in the EBSD case, except for several of the detector parameters.  The \textsf{EMECP} program
+can be called from the command line with an input file of this form, or it can be called directly from within the IDL GUI
+described in section~\ref{sec:idl}.  
+
+\section{Calling \textsf{EMEBSD} and \textsf{EMECP} from another program}
+With the creation of release 3.0, we have changed the library format from static to shared, so that the main package
+library now has the name (on Mac OS X) \textsf{EMSoftLib.dylib}.  As a direct consequence of this change, several of 
+the subroutines can now be called from other languages.  In the present release (3.0), we make two of those routines
+available to the user: \textsf{SingleEBSDpatternWrapper} and \textsf{SingleECPatternWrapper}. Each of these routines
+takes two arguments, \textsf{argc} and \textsf{argv}, where \textsf{argc} is the number of arguments ($6$ in each case)
+and \textsf{argv} contains a series of pointers to each of the arrays that need to be passed on to the wrapper routines.
+
+Note that this has only been tested on Mac OS X with the gfortran 5.2.0 compiler and IDL's \textsf{call\_external} functionality.
+There are no guarantees that this will work with other configurations, but we would appreciate any feedback, error messages, and
+so forth so that we can work towards making these routines more generally available for direct linking between programs.
+
+The wrapper routines have the following function definitions:
+\begin{verbatim}
+function SingleEBSDPatternWrapper(argc, argv) bind(c, name='SingleEBSDPatternWrapper') 
+
+use,INTRINSIC :: ISO_C_BINDING
+
+IMPLICIT NONE
+
+INTEGER(c_size_t), VALUE, INTENT(IN)            :: argc 
+type(c_ptr), dimension(argc), INTENT(INOUT)     :: argv
+REAL(c_float)                                   :: SingleEBSDPatternWrapper
+\end{verbatim}
+and
+\begin{verbatim}
+function SingleECPatternWrapper(argc, argv) bind(c, name='SingleECPatternWrapper') 
+	
+use,INTRINSIC :: ISO_C_BINDING
+
+IMPLICIT NONE
+
+INTEGER(c_size_t), VALUE, INTENT(IN)            :: argc 
+type(c_ptr), dimension(argc), INTENT(INOUT)     :: argv
+REAL(c_float)                                  		:: SingleECPatternWrapper
+\end{verbatim}
+and use the fortran 2003 \textsf{ISO\_C\_BINDING} module; each function returns a single 4-byte real which is equal to $1.0$ when the 
+function properly returns.  The computed 
+EBSD or ECP pattern is returned via a pointer to the corresponding array.  Each function takes a list of $6$ \textsf{c\_ptr}s
+in the \textsf{argv} input array.  The order of the pointers is the same for each function but the structure of the arrays is different.  Note that
+the \textsf{accum\_e}, \textsf{mLPNH} and \textsf{mLPSH} arrays must be read from the Monte Carlo and master pattern HDF5 files and
+passed on to the wrapper routine. 
+
+\subsection{EBSD pattern calculation}
+The pointers that are passed on to the EBSD pattern calculation wrapper routine must point to the following arrays:
+\begin{enumerate}
+	\item \textsf{ipar}: an array of $6$ integers of fortran type \textsf{c\_size\_t} ($8$-byte integers) that represent the array dimensions
+	of the other input arrays.  The components of \textsf{ipar} are:
+		\begin{enumerate}
+			\item[\textsf{ipar}(1)] if $0$, then the complete detector geometry is computed; if $1$, then the stored detector geometry is used.  This is useful (i.e., speeds things up a little)
+			when the geometry does not change between consecutive pattern simulations.
+			\item[\textsf{ipar}(2)] number of scintillator pixels $s_x$ along horizontal direction
+			\item[\textsf{ipar}(3)] number of scintillator pixels $s_y$ along vertical direction
+			\item[\textsf{ipar}(4)] number of energy bins $n_E$ in Monte Carlo \textsf{accum\_e} array
+			\item[\textsf{ipar}(5)] number $n_{mc}$ of x or y pixels in Monte Carlo \textsf{accum\_e} array (total $2n_{mc}+1$)
+			\item[\textsf{ipar}(6)] number $n_{mp}$ of pixels in modified Lambert projected EBSD master pattern (total $2n_{mp}+1$)
+		\end{enumerate}
+	\item \textsf{fpar}: an array of $13$ floating point numbers of the type \textsf{c\_float} (4-byte reals) that represent several detector geometry parameters. The 
+	components of \textsf{fpar} are:
+	\begin{enumerate}
+		\item[\textsf{fpar}(1)] pattern center x-coordinate [in units of scintillator pixels]
+		\item[\textsf{fpar}(2)] pattern center y-coordinate
+		\item[\textsf{fpar}(3)] scintillator pixel size [microns]
+		\item[\textsf{fpar}(4)] sample tilt angle from Monte Carlo simulation [degrees]
+		\item[\textsf{fpar}(5)] sample rotation angle around the RD direction [degrees]
+		\item[\textsf{fpar}(6)] detector inclination angle with respect to horizontal [degrees; positive below horizontal]
+		\item[\textsf{fpar}(7)] distance between illuminated point and pattern center [micron]
+		\item[\textsf{fpar}(8)] beam current [nA]
+		\item[\textsf{fpar}(9)] dwell time [micro s]
+		\item[\textsf{fpar}(10-13)] quaternion components representing crystal orientation [scalar part first, then vector part]
+	\end{enumerate}
+	\item \textsf{EBSDpattern}: a floating point array of type \textsf{c\_float} with dimensions $s_x\times s_y$; memory must be allocated by the calling program.
+	\item \textsf{accum\_e}: a floating point array with the output from the Monte Carlo program; array dimensions $n_E\times n_{mc}\times n_{mc}$.
+	\item \textsf{mLPNH}: a floating point array with the Northern hemisphere portion of the EBSD master pattern; array dimensions $n_{mp}\times n_{mp}\times n_E$.
+	\item \textsf{mLPSH}: a floating point array with the Southern hemisphere portion of the EBSD master pattern; array dimensions $n_{mp}\times n_{mp}\times n_E$.
+\end{enumerate}
+Note that all six arrays must be properly defined by the calling program, and the pointer must be passed in the stated order in the \textsf{argv} array.
+
+\newpage
+\subsection{ECP pattern calculation}
+The pointers that are passed on to the ECP pattern calculation wrapper routine must point to the following arrays:
+\begin{enumerate}
+	\item \textsf{ipar}: an array of $7$ integers of fortran type \textsf{c\_size\_t} ($8$-byte integers) that represent the array dimensions
+	of the other input arrays.  The components of \textsf{ipar} are:
+		\begin{enumerate}
+			\item[\textsf{ipar}(1)] if $0$, then the complete detector geometry is computed; if $1$, then the stored detector geometry is used.  This is useful (i.e., speeds things up a little)
+			when the geometry does not change between consecutive pattern simulations.
+			\item[\textsf{ipar}(2)] number of ECP pattern pixels $s_x$ along horizontal direction
+			\item[\textsf{ipar}(3)] number of ECP pattern pixels $s_y$ along vertical direction
+			\item[\textsf{ipar}(4)] number of sample tilt angles $n_s$ in Monte Carlo \textsf{accum\_e} array
+			\item[\textsf{ipar}(5)] number $n_{mc}$ of x or y pixels in Monte Carlo \textsf{accum\_e} array (total $2n_{mc}+1$)
+			\item[\textsf{ipar}(6)] number $n_{set}$ of independent atom positions for which a master pattern is available
+			\item[\textsf{ipar}(7)] number $n_{mp}$ of pixels in modified Lambert projected EBSD master pattern (total $2n_{mp}+1$)
+		\end{enumerate}
+	\item \textsf{fpar}: an array of $12$ floating point numbers of the type \textsf{c\_float} (4-byte reals) that represent several detector geometry parameters. The 
+	components of \textsf{fpar} are:
+	\begin{enumerate}
+		\item[\textsf{fpar}(1)] illumination cone semi-opening angle [degrees]
+		\item[\textsf{fpar}(2)] sample tilt angle around RD axis [degrees]
+		\item[\textsf{fpar}(3)] working distance [mm]
+		\item[\textsf{fpar}(4)] inner radius of BSE detector [mm]
+		\item[\textsf{fpar}(5)] outer radius of BSE detector [mm]
+		\item[\textsf{fpar}(6)] start angle from Monte Carlo input file [degrees]
+		\item[\textsf{fpar}(7)] end angle from Monte Carlo input file [degrees]
+		\item[\textsf{fpar}(8)] angle step size from Monte Carlo input file [degrees]
+		\item[\textsf{fpar}(9-12)] quaternion components representing crystal orientation [scalar part first, then vector part]
+	\end{enumerate}
+	\item \textsf{ECpattern}: a floating point array of type \textsf{c\_float} with dimensions $s_x\times s_y$; memory must be allocated by the calling program.
+	\item \textsf{accum\_e}: a floating point array with the output from the Monte Carlo program; array dimensions $n_{s}\times n_{mc}\times n_{mc}$.
+	\item \textsf{mLPNH}: a floating point array with the Northern hemisphere portion of the ECP master pattern; array dimensions $n_{mp}\times n_{mp}\times n_{set}$.
+	\item \textsf{mLPSH}: a floating point array with the Southern hemisphere portion of the ECP master pattern; array dimensions $n_{mp}\times n_{mp}\times n_{set}$.
+\end{enumerate}
+Note that all six arrays must be properly defined by the calling program, and the pointer must be passed in the stated order in the \textsf{argv} array.
+
 
 
 \newpage
@@ -790,7 +928,7 @@ The \textsf{EBSDDisplay.pro} program\footnote{The \ctp\ executable package comes
 i.e., pre-compiled IDL routines that can be executed without an IDL license.  These apps are provided without support but they do work 
 on Mac OS X and Linux; further development will be needed for Windows.  Note that the IDL source code for all apps is also available from
 the source code repository, but this will require an IDL license to be able to compile and run the codes.} is a complex interface that provides the user with the ability to handle the 
-output from all three fortran-90 programs, \textsf{EMMC}, \textsf{EMEBSDmaster}, and \textsf{EMEBSD}.  The main
+output from the fortran-90 programs, \textsf{EMMCOpenCL}, \textsf{EMEBSDmaster}, \textsf{EMECPmaster}, \textsf{EMEBSD}, and \textsf{EMECP}.  The main
 user window is shown in Fig.~\ref{fig:EBSDmain}, and consists of the following regions:
 \begin{itemize}
 	\item Left pane: Monte Carlo run parameters for a given input file (file can be selected using the \button{Load MC file}\ at the lower right

@@ -39,7 +39,7 @@
 ;> @date 04/14/15 MDG 1.1 added HDF5 support
 ;> @date 10/30/15 MDG 2.0 copied from EBSDExecute.pro and adapted for ECP
 ;--------------------------------------------------------------------------
-pro ECPExecute, status, ECpattern, single=single
+pro ECPExecute, status, single=single
 
 ; the keyword /single indicates that only one pattern should be computed
 
@@ -52,7 +52,10 @@ common EBSD_anglearrays, euler, quaternions
 common EBSDmasks, circularmask
 
 common EBSD_rawdata, accum_e, accum_z, mLPNH, mLPSH
+common ECPdata, ECPattern
 
+
+status = 1
 
 ; check whether the mask needs to be recomputed or not
 s = size(circularmask)
@@ -68,7 +71,7 @@ endif
 
 if (EBSDdata.numangles gt 1000) then begin
     Core_Print,'',/blank
-    Core_Print,'You are computing more than 1000 EBSPs; this will take a while...'
+    Core_Print,'You are computing more than 1000 ECPs; this will take a while...'
     Core_Print,'The program will not provide any further updates until the run has been completed.'
     Core_Print,'',/blank
 endif
@@ -118,22 +121,24 @@ fpar[7] = EBSDdata.mcsigstep
 
 ; and here is the quaternion that represents the Euler angle triplet
 quaternion = Core_eu2qu( [EBSDdata.detphi1, EBSDdata.detphi, EBSDdata.detphi2] )
+if (quaternion[0] lt 0.0) then quaternion = -quaternion
+;quaternion[1:3] = -quaternion[1:3]
 fpar[8:11] = quaternion[0:3]
 
 ; initialize the simulated pattern array
-ECpattern = fltarr(EBSDdata.detnumsx,EBSDdata.detnumsy)
+ECPattern = fltarr(EBSDdata.detnumsx,EBSDdata.detnumsy)
 
 callname = 'SingleECPatternWrapper'
 
 faccum_e = float(accum_e)
 
 res = call_external(EBSDdata.EMsoftpathname+'/libEMSoftLib.dylib', callname, $
-        ipar, fpar, ECpattern, faccum_e, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
+        ipar, fpar, ECPattern, faccum_e, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
 
 if (res ne 1.0) then begin
   Core_print,'SingleECPPatternWrapper return code = '+string(res,format="(F4.1)")
+  status = 0
 end 
-status = 1
 
 end
 

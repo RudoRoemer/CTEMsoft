@@ -64,33 +64,27 @@ contains
 !> without any intensity scaling or binning etc; the calling program should take care of those 
 !> operations.
 !
-!> @param nipar number of entries in ipar
-!> @param nfpar number of entries in fpar
-!> @param n1, n2 dimension parameters for accum_e
-!> @param m1 dimension parameter for mLPNH and mLPSH
-!> @param o1,o2 dimension parameters for EBSDpattern
 !> @param ipar array with integer input parameters
 !> @param fpar array with float input parameters
+!> @param EBSDpattern output array
 !> @param accum_e array with Monte Carlo histogram
 !> @param mLPNH Northern hemisphere master pattern
 !> @param mLPSH Southern hemisphere master pattern
-!> @param EBSDpattern output array
 !
-!> @date 10/16/15 SS 1.0 original
+!> @date 10/16/15 MDG 1.0 original
+!> @date 11/02/15 MDG 1.1 simplification of the input variables
 !--------------------------------------------------------------------------
-subroutine SingleEBSDPattern(nipar, nfpar, n1, n2, m1, o1, o2, ipar, fpar, accum_e, mLPNH, mLPSH, EBSDpattern)
+subroutine SingleEBSDPattern(ipar, fpar, EBSDpattern, accum_e, mLPNH, mLPSH)
 
 ! the input parameters are all part of a ipar and fpar input arrays instead of the usual namelist structures.
 ! The following is the mapping:
 !
 ! ipar(1) = 1 if rgx, rgy, rgz detector arrays need to be computed, 0 if not (arrays will have save status)
-! ipar(2) = enl%numsx
-! ipar(3) = enl%numsy
-! ipar(4) = enl%numEbins
-! ipar(5) = enl%nsx
-! ipar(6) = enl%nsy
-! ipar(7) = nx = (enl%nsx-1)/2
-! ipar(8) = enl%npx
+! ipar(2) = detnumsx
+! ipar(3) = detnumsy
+! ipar(4) = detnumEbins
+! ipar(5) = mcnsx
+! ipar(6) = mpnpx
 
 ! fpar(1) = enl%xpc
 ! fpar(2) = enl%ypc
@@ -110,19 +104,14 @@ use quaternions
 
 IMPLICIT NONE
 
-integer(8),INTENT(IN)                   :: nipar
-integer(8),INTENT(IN)                   :: nfpar
-integer(8),INTENT(IN)                   :: n1
-integer(8),INTENT(IN)                   :: n2
+integer(8),PARAMETER                    :: nipar=6
+integer(8),PARAMETER                    :: nfpar=13
 integer(8),INTENT(IN)                   :: ipar(nipar)
-integer(8),INTENT(IN)                   :: m1
-integer(8),INTENT(IN)                   :: o1
-integer(8),INTENT(IN)                   :: o2
 real(kind=sgl),INTENT(IN)               :: fpar(nfpar)
-real(kind=sgl),INTENT(IN)               :: accum_e(n1,-n2:n2,-n2:n2)
-real(kind=sgl),INTENT(IN)               :: mLPNH(-m1:m1, -m1:m1, n1)
-real(kind=sgl),INTENT(IN)               :: mLPSH(-m1:m1, -m1:m1, n1)
-real(kind=sgl),INTENT(OUT)              :: EBSDpattern(o1, o2)
+real(kind=sgl),INTENT(IN)               :: accum_e(ipar(4),-ipar(5):ipar(5),-ipar(5):ipar(5))
+real(kind=sgl),INTENT(IN)               :: mLPNH(-ipar(6):ipar(6), -ipar(6):ipar(6), ipar(4))
+real(kind=sgl),INTENT(IN)               :: mLPSH(-ipar(6):ipar(6), -ipar(6):ipar(6), ipar(4))
+real(kind=sgl),INTENT(OUT)              :: EBSDpattern(ipar(2),ipar(3))
 
 ! variables that must be saved for the next time this function is called
 real(kind=irg),allocatable,save         :: accum_e_detector(:,:,:)
@@ -139,8 +128,6 @@ real(kind=sgl)                          :: dc(3), scl           ! direction cosi
 real(kind=sgl)                          :: sx, dx, dxm, dy, dym, rhos, x, bindx         ! various parameters
 real(kind=sgl)                          :: ixy(2)
 real(kind=dbl),parameter                :: nAmpere = 6.241D+18 
-
-
 
 !====================================
 ! ------ generate the detector rgx, rgy, rgz arrays if needed (calling program must decide this via ipar(1))
@@ -214,7 +201,7 @@ if (ipar(1).eq.1) then
         ixy(2) = -x
 ! four-point interpolation (bi-quadratic)
         nix = int(ipar(5)+ixy(1))-ipar(5)
-        niy = int(ipar(6)+ixy(2))-ipar(6)
+        niy = int(ipar(5)+ixy(2))-ipar(5)
         dx = ixy(1)-nix
         dy = ixy(2)-niy
         dxm = 1.0-dx
@@ -234,7 +221,7 @@ end if   ! end of ipar(1)=1 test
 
 ! from here on, we simply compute the EBSD pattern by interpolation, using the saved arrays from above
 ! no intensity scaling or anything else...
-scl = dble(ipar(8)) 
+scl = dble(ipar(6)) 
 
 EBSDpattern = 0.0
 
@@ -251,14 +238,14 @@ do i=1,ipar(2)
 
     if (istat.eq.0) then 
 ! four-point interpolation (bi-quadratic)
-      nix = int(ipar(8)+ixy(1))-ipar(8)
-      niy = int(ipar(8)+ixy(2))-ipar(8)
+      nix = int(ipar(6)+ixy(1))-ipar(6)
+      niy = int(ipar(6)+ixy(2))-ipar(6)
       nixp = nix+1
       niyp = niy+1
-      if (nixp.gt.ipar(8)) nixp = nix
-      if (niyp.gt.ipar(8)) niyp = niy
-      if (nix.lt.-ipar(8)) nix = nixp
-      if (niy.lt.-ipar(8)) niy = niyp
+      if (nixp.gt.ipar(6)) nixp = nix
+      if (niyp.gt.ipar(6)) niyp = niy
+      if (nix.lt.-ipar(6)) nix = nixp
+      if (niy.lt.-ipar(6)) niy = niyp
       dx = ixy(1)-nix
       dy = ixy(2)-niy
       dxm = 1.0-dx
@@ -336,14 +323,14 @@ subroutine SingleECPattern(ipar, fpar, ECpattern, accum_e, mLPNH, mLPSH)
 ! ipar(6) = numset
 ! ipar(7) = mpnpx
 
-! fpar(1) = enl%thetac
-! fpar(2) = enl%sampletilt
-! fpar(3) = enl%workingdistance
-! fpar(4) = enl%Rin
-! fpar(5) = enl%Rout
-! fpar(6) = enl%sigstart
-! fpar(7) = enl%sigend
-! fpar(8) = enl%sigstep
+! fpar(1) = ecpnl%thetac
+! fpar(2) = ecpnl%sampletilt
+! fpar(3) = ecpnl%workingdistance
+! fpar(4) = ecpnl%Rin
+! fpar(5) = ecpnl%Rout
+! fpar(6) = ecpnl%sigstart
+! fpar(7) = ecpnl%sigend
+! fpar(8) = ecpnl%sigstep
 ! fpar(9-12) =  quaternion for requested Euler angles
 
 use local
@@ -573,6 +560,7 @@ end subroutine SingleECPattern
 !> @param argv pointers to subroutine parameters
 !
 !> @date 10/16/15 MDG 1.0 original
+!> @date 11/02/15 MDG 1.1 simplified parameters
 !--------------------------------------------------------------------------
 function SingleEBSDPatternWrapper(argc, argv) bind(c, name='SingleEBSDPatternWrapper') 
 
@@ -586,32 +574,27 @@ REAL(c_float)                                   :: SingleEBSDPatternWrapper
 
 ! wrapper function dependent declarations; they are all pointers 
 ! since we pass everything by reference from IDL 
-integer(c_size_t), pointer                      :: nipar, nfpar, n1, n2, m1, o1, o2 
+integer(c_size_t), pointer                      :: nipar, nfpar
 integer(c_size_t),dimension(:), pointer         :: ipar
 real(c_float), dimension(:), pointer            :: fpar
 real(c_float), dimension(:,:), pointer          :: EBSDpattern
 real(c_float), dimension(:,:,:), pointer        :: accum_e, mLPNH, mLPSH
 
 ! the following line just helps in identifying the correct order of the subroutine arguments...
-!                             1      2      3   4   5   6   7   8     9     10       11     12     13
-!subroutine SingleEBSDPattern(nipar, nfpar, n1, n2, m1, o1, o2, ipar, fpar, accum_e, mLPNH, mLPSH, EBSDpattern)
+!                             1      2      3           4         5       6 
+!subroutine SingleEBSDPattern(ipar, fpar, EBSDpattern, accum_e, mLPNH, mLPSH)
 !
 ! transform the C pointers above to fortran pointers, and use them in the regular function call
-call c_f_pointer(argv(1),nipar) 
-call c_f_pointer(argv(2),nfpar) 
-call c_f_pointer(argv(3),n1) 
-call c_f_pointer(argv(4),n2) 
-call c_f_pointer(argv(5),m1) 
-call c_f_pointer(argv(6),o1) 
-call c_f_pointer(argv(7),o2) 
-call c_f_pointer(argv(8),ipar,(/nipar/)) 
-call c_f_pointer(argv(9),fpar,(/nfpar/)) 
-call c_f_pointer(argv(10),accum_e,(/n1,2*n2+1,2*n2+1/)) 
-call c_f_pointer(argv(11),mLPNH,(/2*m1+1,2*m1+1,n1/)) 
-call c_f_pointer(argv(12),mLPSH,(/2*m1+1,2*m1+1,n1/)) 
-call c_f_pointer(argv(13),EBSDpattern,(/o1,o2/)) 
+nipar = 6
+nfpar = 13
+call c_f_pointer(argv(1),ipar,(/nipar/)) 
+call c_f_pointer(argv(2),fpar,(/nfpar/)) 
+call c_f_pointer(argv(3),EBSDpattern,(/ipar(2),ipar(3)/))
+call c_f_pointer(argv(4),accum_e,(/ipar(4),2*ipar(5)+1,2*ipar(5)+1/))
+call c_f_pointer(argv(5),mLPNH,(/2*ipar(6)+1, 2*ipar(6)+1, ipar(4)/))
+call c_f_pointer(argv(6),mLPSH,(/2*ipar(6)+1, 2*ipar(6)+1, ipar(4)/))
 
-call SingleEBSDPattern(nipar, nfpar, n1, n2, m1, o1, o2, ipar, fpar, accum_e, mLPNH, mLPSH, EBSDpattern)
+call SingleEBSDPattern(ipar, fpar, EBSDpattern, accum_e, mLPNH, mLPSH)
 
 SingleEBSDPatternWrapper = 1._c_float
 end function SingleEBSDPatternWrapper
