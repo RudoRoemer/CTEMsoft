@@ -133,9 +133,10 @@ fpar[9:12] = Efitdata.quaternion[0:3]
 EBSDpattern = fltarr(Efitdata.detnumsx,Efitdata.detnumsy)
 
 callname = 'SingleEBSDPatternWrapper'
+faccum_e = float(accum_e)
 
 res = call_external(Efitdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
-      nipar, nfpar, long(numEbins), ipar[4], long(npx), ipar[1], ipar[2], ipar, fpar, float(accum_e), mLPNH, mLPSH, EBSDpattern, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
+      ipar, fpar, EBSDpattern, faccum_e, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
 
 if (res ne 1.0) then begin
   Core_print,'SingleEBSDPatternWrapper return code = '+string(res,format="(F4.1)")

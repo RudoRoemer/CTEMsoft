@@ -121,7 +121,7 @@ end else begin
 	  if (filename ne '') then begin
 	    EBSDdata.EBSDanglefilename = filename
 	    WIDGET_CONTROL, set_value=filename, EBSDwidget_s.EBSDanglefilename
-	    EBSDreadanglefile,filename
+	    EBSDreadanglefile,filename,/list
 	    WIDGET_CONTROL, EBSDwidget_s.GoAngle, sensitive=1
 	  end
 	endcase

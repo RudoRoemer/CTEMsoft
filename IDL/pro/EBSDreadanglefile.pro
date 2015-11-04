@@ -57,12 +57,14 @@ if keyword_set(list) then begin
 ; entries in the EBSD_anglearrays common variables.
   if (angletype eq 'eu') then begin
     euler = fltarr(3L,numangles) 
+    quaternions = fltarr(4L,numangles)
     a = 0.0
     b = 0.0
     c = 0.0
     for i=0L,numangles-1L do begin
       readf,10,a,b,c
       euler[0L:2L,i] = [a,b,c]
+      quaternions[0L:3L,i] = Core_eu2qu( [a,b,c] )
     endfor
   end else begin
     quaternions = fltarr(4L,numangles)
@@ -72,7 +74,7 @@ if keyword_set(list) then begin
     d = 0.0
     for i=0L,numangles-1L do begin
       readf,10,a,b,c,d
-      quaternions[0L:2L,i] = [a,b,c,d]
+      quaternions[0L:3L,i] = [a,b,c,d]
     endfor
   end 
 end

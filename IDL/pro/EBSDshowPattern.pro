@@ -49,8 +49,6 @@ common EBSD_data_common, EBSDdata
 common EBSDpatterns, pattern, image, finalpattern
 common EBSDmasks, circularmask
 
-EMpath = Core_getenv(/data)
-
 ; check whether the mask needs to be recomputed or not
 s = size(circularmask)
 dbin = 2^EBSDdata.detbinning
@@ -75,35 +73,17 @@ if not keyword_set(nodisplay) then begin
   empty
 end
 
-if not keyword_set(single) then begin
-  dbin = 2^EBSDdata.detbinning
-; we need to read the pattern from file
-  res = H5F_IS_HDF5(EMpath+EBSDdata.EBSDpatternfilename)
-  if (res eq 0) then begin
-    openr,1,EMpath+EBSDdata.EBSDpatternfilename,/f77
-    q = assoc(1,lonarr(3),4)
-    dims = q[0]
-    offset = 24L + EBSDdata.currentpatternID * ( EBSDdata.detnumsx * EBSDdata.detnumsy / dbin^2 +2L ) * 4L 
-    q = assoc(1,fltarr(dims[0],dims[1]),offset)
-    patterns = q[0]
-    close,1
-  end else begin  ; this is an HDF5 file
-    file_id = H5F_OPEN(EMpath+EBSDdata.EBSDpatternfilename)
-    group_id = H5G_OPEN(file_id,'EMData')
-    dset_id = H5D_OPEN(group_id,'EBSDpatterns')
-    patterns = H5D_READ(dset_id)
-    H5D_CLOSE,dset_id
-    H5G_CLOSE,group_id
-    H5F_CLOSE,file_id
-  end
-end
+sz = size(pattern)
+if (sz[0] eq 3) then begin
+  thispattern = reform(pattern[*,*,EBSDdata.currentpatternID])
+end else begin
+  thispattern = pattern
+endelse
 
-sz = size(patterns)
-if (sz[0] eq 3) then pattern = reform(patterns[*,*,EBSDdata.currentpatternID])
 
 ; set the min and max fields
-EBSDdata.Patternmin = min(pattern)
-EBSDdata.Patternmax = max(pattern)
+EBSDdata.Patternmin = min(thispattern)
+EBSDdata.Patternmax = max(thispattern)
 
 WIDGET_CONTROL, set_value=string(EBSDdata.Patternmin,format="(F7.2)"), EBSDwidget_s.Patternmin
 WIDGET_CONTROL, set_value=string(EBSDdata.Patternmax,format="(F7.2)"), EBSDwidget_s.Patternmax
@@ -113,10 +93,9 @@ WIDGET_CONTROL, set_value=string(EBSDdata.Patternmax,format="(F7.2)"), EBSDwidge
 
 ; what kind of intensity scaling do we need?
   if (EBSDdata.PatternScaling eq 0) then begin  ; this is regular linear scaling
-    finalpattern = bytscl(pattern,min=EBSDdata.Patternmin,max=EBSDdata.Patternmax)
+    finalpattern = bytscl(thispattern,min=EBSDdata.Patternmin,max=EBSDdata.Patternmax)
   end else begin
-    image = pattern^EBSDdata.gammavalue
-    finalpattern = bytscl(image)
+    finalpattern = bytscl(thispattern^EBSDdata.gammavalue)
   end
 
 ; then we apply the pattern origin 
@@ -126,7 +105,6 @@ WIDGET_CONTROL, set_value=string(EBSDdata.Patternmax,format="(F7.2)"), EBSDwidge
     if (EBSDdata.PatternOrigin eq 2) then finalpattern = reverse(finalpattern,1)
     if (EBSDdata.PatternOrigin eq 3) then finalpattern = reverse(reverse(finalpattern,2),1)
   endif
-
 
 ; finally, we use the binning factor
   if (EBSDdata.detbinning ne 0) then finalpattern = congrid(finalpattern,EBSDdata.detnumsx/2^EBSDdata.detbinning,EBSDdata.detnumsy/2^EBSDdata.detbinning)

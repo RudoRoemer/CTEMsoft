@@ -202,18 +202,24 @@ EMdatapathname = Core_getenv(/data)
 ; close the group
   H5G_close,group_id
 
-  sz = size(mLPNH,/dimensions)
+; resize the mLPNH/mLPSH arrays to the correct number of dimensions
   if (EBSDdata.EBSDorECP eq 0) then begin
-    if (EBSDdata.numset gt 1) then Core_Print,'      Size of mLPNH data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") +' x'+string(sz[3],format="(I5)") else Core_Print,'      Size of mLPNH data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)")
+    sz = size(mLPNH)
+    if (sz[0] eq 3) then begin
+      mLPNH = reform(mLPNH,sz[1],sz[2],sz[3],1)
+      mLPSH = reform(mLPSH,sz[1],sz[2],sz[3],1)
+    endif
+    sz = size(mLPNH,/dimensions)
+    Core_Print,'      Size of mLPNH data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") +' x'+string(sz[3],format="(I5)") 
   end else begin
-    if (EBSDdata.numset gt 1) then Core_Print,'      Size of mLPNH data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") else Core_Print,'      Size of mLPNH data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") 
+    sz = size(mLPNH)
+    if (sz[0] eq 2) then begin
+      mLPNH = reform(mLPNH,sz[1],sz[2],1)
+      mLPSH = reform(mLPSH,sz[1],sz[2],1)
+    endif
+    sz = size(mLPNH,/dimensions)
+    Core_Print,'      Size of mLPNH data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") 
   endelse
-
-  sz = size(mLPNH)
-  if (sz[0] eq 2) then begin
-    mLPNH = reform(mLPNH,[sz[1],sz[2],1])
-    mLPSH = reform(mLPSH,[sz[1],sz[2],1])
-  endif
 
 ; and close the file
   H5F_close,file_id
@@ -414,9 +420,10 @@ if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
   accum_e = long(H5D_read(dset_id))
   H5D_close,dset_id
 
-  dset_id = H5D_open(group_id,'accum_z')
-  accum_z = long(H5D_read(dset_id))
-  H5D_close,dset_id
+; we do not need accum_z at all in this program, so we won't read it...
+;  dset_id = H5D_open(group_id,'accum_z')
+;  accum_z = long(H5D_read(dset_id))
+;  H5D_close,dset_id
 
 ; close the group
   H5G_close,group_id
@@ -428,8 +435,8 @@ if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
 
   sz = size(accum_e,/dimensions)
     Core_Print,'      Size of accum_e data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)")+' x'+string(sz[2],format="(I5)")
-  sz = size(accum_z,/dimensions)
-    Core_Print,'      Size of accum_z data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") +' x'+string(sz[3],format="(I5)")
+;  sz = size(accum_z,/dimensions)
+;    Core_Print,'      Size of accum_z data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") +' x'+string(sz[3],format="(I5)")
 
 ; and close the file
   H5F_close,file_id

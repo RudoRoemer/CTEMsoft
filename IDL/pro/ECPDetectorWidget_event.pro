@@ -84,7 +84,7 @@ end else begin
 	  if (filename ne '') then begin
 	    EBSDdata.ECPanglefilename = filename
 	    WIDGET_CONTROL, set_value=filename, EBSDwidget_s.ECPanglefilename
-	    EBSDreadanglefile,filename
+	    EBSDreadanglefile,filename,/list
 	    WIDGET_CONTROL, EBSDwidget_s.GoAngle, sensitive=1
 	  end
 	endcase
@@ -93,7 +93,7 @@ end else begin
 ; first we need to make sure that the path to the fortran executables is known... this is stored in the 
 ; preferences file, but is initially set to 'path_unknown'
 	  if (EBSDdata.EMsoftpathname eq 'path_unknown') then begin
-                EBSDdata.EMsoftpathname = Core_getenv()+'Build/Bin'
+                EBSDdata.EMsoftpathname = Core_getenv()
                 Core_print,'exeutable path set to '+EBSDdata.EMsoftpathname 
 	  end
 
@@ -104,8 +104,6 @@ end else begin
 
 ; first we need to set up the array structures to do a call_external of the SingleECPPatternWrapper
 ; routine; and then we display the pattern in a new widget
-
-; first, set up the variables and do a call_external
 	  status = 0
 	  ECPExecute,status,/single
 
@@ -128,25 +126,17 @@ end else begin
 	  end
 
 ; is the correct widget up on the screen ?
-	  if XRegistered("EBSDPatternWidget") then begin
+	  if XRegistered("ECPatternWidget") then begin
 	    if (EBSDdata.currentdisplaywidgetmode ne 1) then WIDGET_CONTROL, EBSDwidget_s.patternbase, /DESTROY
 	  end
 
-; this does two things.  First of all, the CTEMEBSD program is called with the current
-; parameters for the detector and microscope geometry, and the angle file
-;
-; Then, when the CTEMEBSD program has produced its output file, we create a new widget
-; that displays these EBSD patterns; the user can then save selected patterns or all patterns.
-; At this point, there is no option to change the imaging parameters; all the settings of the 
-; other parts of the widget apply to this pattern calculation
-
 ; first, create the nml file and execute the CTEMEBSD program
 	  status = 0
-	  EBSDExecute,status
+	  ECPExecute,status
 
 ; then we create the EBSDpattern widget and let the user adjust the imaging parameters
 	  if (status eq 1) then begin
-	    if (XRegistered("EBSDPatternWidget") EQ 0) then EBSDPatternWidget else EBSDshowPattern
+	    if (XRegistered("ECPPatternWidget") EQ 0) then ECPatternWidget else ECPshowPattern
 	  end
 
 	endcase

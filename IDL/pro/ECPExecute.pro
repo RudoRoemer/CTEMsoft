@@ -38,6 +38,7 @@
 ;> @date 05/22/14 MDG 1.0 first version
 ;> @date 04/14/15 MDG 1.1 added HDF5 support
 ;> @date 10/30/15 MDG 2.0 copied from EBSDExecute.pro and adapted for ECP
+;> @date 11/04/15 MDG 2.1 added multiple ECP pattern support
 ;--------------------------------------------------------------------------
 pro ECPExecute, status, single=single
 
@@ -54,8 +55,9 @@ common EBSDmasks, circularmask
 common EBSD_rawdata, accum_e, accum_z, mLPNH, mLPSH
 common ECPdata, ECPattern
 
-
 status = 1
+
+if (EBSDdata.EMsoftpathname eq 'path_unknown') then EBSDdata.EMsoftpathname = Core_getenv()
 
 ; check whether the mask needs to be recomputed or not
 s = size(circularmask)
@@ -69,45 +71,20 @@ if (s[0] ne sm) then begin
   circularmask[dm,0] = d
 endif
 
-if (EBSDdata.numangles gt 1000) then begin
-    Core_Print,'',/blank
-    Core_Print,'You are computing more than 1000 ECPs; this will take a while...'
-    Core_Print,'The program will not provide any further updates until the run has been completed.'
-    Core_Print,'',/blank
-endif
-
 ; next, generate the ipar and fpar parameter arrays used for call_external
-
-; ipar(0) = 1 if GetVectorsCone detector arrays need to be computed, 0 if not (arrays will have save status)
-; ipar(1) = detnumsx
-; ipar(2) = detnumsy
-; ipar(3) = numEbins
-; ipar(4) = mcnsx
-; ipar(5) = mcnsy
-; ipar(6) = mpnpx
-
-nipar = long(7)
+nipar = long(8)
 ipar = lon64arr(nipar)
 
-ipar[0] = long64(1)    ; will need to be modified 
+ipar[0] = long64(2)    ; will need to be modified 
 ipar[1] = long64(EBSDdata.detnumsx)
 ipar[2] = long64(EBSDdata.detnumsy)
 ipar[3] = long64(EBSDdata.mcenergynumbin)
 ipar[4] = long64(EBSDdata.mcimx)
 ipar[5] = long64(EBSDdata.numset)
 ipar[6] = long64(EBSDdata.mpimx)
+ipar[7] = long64(EBSDdata.numangles)
 
-; fpar(1) = enl%thetac
-; fpar(2) = enl%sampletilt
-; fpar(3) = enl%workingdistance
-; fpar(4) = enl%Rin
-; fpar(5) = enl%Rout
-; fpar(6) = enl%sigstart
-; fpar(7) = enl%sigend
-; fpar(8) = enl%sigstep
-; fpar(9-12) =  quaternion for requested Euler angles
-
-nfpar = long(12)
+nfpar = long(8)
 fpar = fltarr(nfpar)
 
 fpar[0] = EBSDdata.detthetac
@@ -119,26 +96,53 @@ fpar[5] = EBSDdata.mcsigstart
 fpar[6] = EBSDdata.mcsigend
 fpar[7] = EBSDdata.mcsigstep
 
-; and here is the quaternion that represents the Euler angle triplet
-quaternion = Core_eu2qu( [EBSDdata.detphi1, EBSDdata.detphi, EBSDdata.detphi2] )
-if (quaternion[0] lt 0.0) then quaternion = -quaternion
-;quaternion[1:3] = -quaternion[1:3]
-fpar[8:11] = quaternion[0:3]
-
-; initialize the simulated pattern array
-ECPattern = fltarr(EBSDdata.detnumsx,EBSDdata.detnumsy)
-
 callname = 'SingleECPatternWrapper'
-
 faccum_e = float(accum_e)
 
-res = call_external(EBSDdata.EMsoftpathname+'/libEMSoftLib.dylib', callname, $
-        ipar, fpar, ECPattern, faccum_e, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
+if keyword_set(single) then begin
 
-if (res ne 1.0) then begin
-  Core_print,'SingleECPPatternWrapper return code = '+string(res,format="(F4.1)")
-  status = 0
-end 
+; and here is the quaternion that represents the Euler angle triplet
+  quats = Core_eu2qu( [EBSDdata.detphi1, EBSDdata.detphi, EBSDdata.detphi2] )
+  quats = reform(quats,4,1)
+  ipar[7] = 1
+
+; initialize the simulated pattern array
+  ECPattern = fltarr(EBSDdata.detnumsx,EBSDdata.detnumsy)
+  ECPattern = reform(ECPattern,EBSDdata.detnumsx,EBSDdata.detnumsy,1)
+
+  res = call_external(EBSDdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
+        ipar, fpar, ECPattern, quats, faccum_e, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
+
+help,ECPattern
+print,max(ECPattern)
+
+
+  if (res ne 1.0) then begin
+    Core_print,'SingleECPPatternWrapper return code = '+string(res,format="(F4.1)")
+    status = 0
+  end 
+
+end else begin
+
+  if (EBSDdata.numangles gt 50) then begin
+    Core_Print,'',/blank
+    Core_Print,'You are computing more than 50 ECPs; this will take a while...'
+    Core_Print,'The program will not provide any further updates until the run has been completed.'
+    Core_Print,'',/blank
+  endif
+
+  ECPattern = fltarr(EBSDdata.detnumsx,EBSDdata.detnumsy,EBSDdata.numangles)
+
+; ipar[0] = long64(2)        ; causes SingleECPattern to reuse the detector arrays rather than recompute them each time
+
+  res = call_external(EBSDdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
+        ipar, fpar, ECPattern, quaternions, faccum_e, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
+
+  if (res ne 1.0) then begin
+    Core_print,'SingleECPatternWrapper return code = '+string(res,format="(F4.1)")
+    status = 0
+  end 
+endelse
 
 end
 

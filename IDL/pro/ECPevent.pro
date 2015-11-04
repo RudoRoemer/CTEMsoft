@@ -93,8 +93,8 @@ CASE eventval OF
 		vals = ['Single Pattern','Angle File','Dictionary']
 ; next we need to turn on those widgets that belong to the selected mode (sensitivity=1)
 		if (EBSDdata.Pmode eq 0) then begin
-		  WIDGET_CONTROL, EBSDwidget_s.DisplayEBSD, sensitive=1
-		  WIDGET_CONTROL, EBSDwidget_s.EBSDgetanglefilename, sensitive=0
+		  WIDGET_CONTROL, EBSDwidget_s.DisplayECP, sensitive=1
+		  WIDGET_CONTROL, EBSDwidget_s.ECPgetanglefilename, sensitive=0
 ;	  WIDGET_CONTROL, EBSDwidget_s.PGdroplist, sensitive=0
 ;	  WIDGET_CONTROL, EBSDwidget_s.EBSDgetdictfilename, sensitive=0
 ;	  WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=0
@@ -102,8 +102,8 @@ CASE eventval OF
 		end
 
 		if (EBSDdata.Pmode eq 1) then begin
-		  WIDGET_CONTROL, EBSDwidget_s.DisplayEBSD, sensitive=0
-		  WIDGET_CONTROL, EBSDwidget_s.EBSDgetanglefilename, sensitive=1
+		  WIDGET_CONTROL, EBSDwidget_s.DisplayECP, sensitive=0
+		  WIDGET_CONTROL, EBSDwidget_s.ECPgetanglefilename, sensitive=1
 ;	  WIDGET_CONTROL, EBSDwidget_s.PGdroplist, sensitive=0
 ;	  WIDGET_CONTROL, EBSDwidget_s.EBSDgetdictfilename, sensitive=0
 ;	  WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=0
@@ -111,8 +111,8 @@ CASE eventval OF
 		end
 
 		if (EBSDdata.Pmode eq 2) then begin
-		  WIDGET_CONTROL, EBSDwidget_s.DisplayEBSD, sensitive=0
-		  WIDGET_CONTROL, EBSDwidget_s.EBSDgetanglefilename, sensitive=0
+		  WIDGET_CONTROL, EBSDwidget_s.DisplayECP, sensitive=0
+		  WIDGET_CONTROL, EBSDwidget_s.ECPgetanglefilename, sensitive=0
 ;	  WIDGET_CONTROL, EBSDwidget_s.PGdroplist, sensitive=0
 ;	  WIDGET_CONTROL, EBSDwidget_s.EBSDgetdictfilename, sensitive=0
 ;	  if ( (EBSDdata.Ncubochoric ne 0) and (EBSDdata.Dictpointgroup ne 0) and (EBSDdata.EBSDdictfilename ne '') ) then begin

@@ -188,15 +188,15 @@ WIDGET_CONTROL, set_droplist_select=EBSDdata.mcenergynumbin-1, EBSDwidget_s.EBSD
 ;------------------------------------------------------------
 ;------------------------------------------------------------
 
-EBSDwidget_s.EBSDpatternfilename = Core_WText(file1,'EBSD Output File Name', fontstr, 200, 25, 50, 1, EBSDdata.EBSDpatternfilename)
-
-EBSDwidget_s.EBSDgetpatternfilename = WIDGET_BUTTON(file1, $
-                      UVALUE='GETEBSDFILENAME', $
-                      VALUE='Set Output File Name', $
-                      EVENT_PRO='EBSDDetectorWidget_event', $
-                      SENSITIVE=1, $
-		      /ALIGN_LEFT, $
-                      /FRAME)
+;EBSDwidget_s.EBSDpatternfilename = Core_WText(file1,'EBSD Output File Name', fontstr, 200, 25, 50, 1, EBSDdata.EBSDpatternfilename)
+;
+;EBSDwidget_s.EBSDgetpatternfilename = WIDGET_BUTTON(file1, $
+;                      UVALUE='GETEBSDFILENAME', $
+;                      VALUE='Set Output File Name', $
+;                      EVENT_PRO='EBSDDetectorWidget_event', $
+;                      SENSITIVE=1, $
+;		      /ALIGN_LEFT, $
+;                      /FRAME)
 
 ;------------------------------------------------------------
 ;------------------------------------------------------------
@@ -239,11 +239,11 @@ EBSDwidget_s.detphi1 = Core_WTextE(file2,'Euler [deg] phi1', fontstr, 120, 25, 8
 EBSDwidget_s.detphi = Core_WTextE(file2,' Phi', fontstr, 40, 25, 8, 1, string(EBSDdata.detphi,format="(F6.2)"),'DETPhi','EBSDDetectorWidget_event')
 EBSDwidget_s.detphi2 = Core_WTextE(file2,' phi2', fontstr, 40, 25, 8, 1, string(EBSDdata.detphi2,format="(F6.2)"),'DETphi2','EBSDDetectorWidget_event')
 
-file2 = WIDGET_BASE(file1, /ROW, XSIZE=430, /ALIGN_CENTER)
-EBSDwidget_s.detax1 = Core_WTextE(file2,'axis', fontstr, 40, 25, 8, 1, string(EBSDdata.detax1,format="(F6.2)"),'DETax1','EBSDDetectorWidget_event')
-EBSDwidget_s.detax2 = Core_WTextE(file2,'', fontstr, 4, 25, 8, 1, string(EBSDdata.detax2,format="(F6.2)"),'DETax2','EBSDDetectorWidget_event')
-EBSDwidget_s.detax3 = Core_WTextE(file2,'', fontstr, 4, 25, 8, 1, string(EBSDdata.detax2,format="(F6.2)"),'DETax3','EBSDDetectorWidget_event')
-EBSDwidget_s.detax4 = Core_WTextE(file2,'angle [deg]', fontstr, 85, 25, 8, 1, string(EBSDdata.detax4,format="(F6.2)"),'DETax4','EBSDDetectorWidget_event')
+;file2 = WIDGET_BASE(file1, /ROW, XSIZE=430, /ALIGN_CENTER)
+;EBSDwidget_s.detax1 = Core_WTextE(file2,'axis', fontstr, 40, 25, 8, 1, string(EBSDdata.detax1,format="(F6.2)"),'DETax1','EBSDDetectorWidget_event')
+;EBSDwidget_s.detax2 = Core_WTextE(file2,'', fontstr, 4, 25, 8, 1, string(EBSDdata.detax2,format="(F6.2)"),'DETax2','EBSDDetectorWidget_event')
+;EBSDwidget_s.detax3 = Core_WTextE(file2,'', fontstr, 4, 25, 8, 1, string(EBSDdata.detax2,format="(F6.2)"),'DETax3','EBSDDetectorWidget_event')
+;EBSDwidget_s.detax4 = Core_WTextE(file2,'angle [deg]', fontstr, 85, 25, 8, 1, string(EBSDdata.detax4,format="(F6.2)"),'DETax4','EBSDDetectorWidget_event')
 
 file2 = WIDGET_BASE(file1, /ROW, XSIZE=430, /ALIGN_CENTER)
 EBSDwidget_s.DisplayEBSD = WIDGET_BUTTON(file2, $
@@ -251,7 +251,7 @@ EBSDwidget_s.DisplayEBSD = WIDGET_BUTTON(file2, $
                                 UVALUE='DISPLAYEBSD', $
                                 EVENT_PRO='EBSDDetectorWidget_event', $
 				/ALIGN_LEFT, $
-                                SENSITIVE=0, $
+                                SENSITIVE=1, $
                                 /FRAME)
 
 vals = ['Off','On']

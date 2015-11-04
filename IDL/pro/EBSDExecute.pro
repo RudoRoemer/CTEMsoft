@@ -1,5 +1,5 @@
 ;
-; Copyright (c) 2013-2014, Marc De Graef/Carnegie Mellon University
+; Copyright (c) 2013-2015, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are 
@@ -26,17 +26,18 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDExecute.pro
+; EMsoft:EBSDExecute.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: EBSDExecute.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief main routine for creation of nml file and execution of CTEMEBSD code
+;> @brief main routine for creation of nml file and execution of EMEBSD code
 ;
 ;> @date 05/22/14 MDG 1.0 first version
 ;> @date 04/14/15 MDG 1.1 added HDF5 support
+;> @date 11/04/15 MDG 2.0 modified routine for call_external computation of EBSD pattern
 ;--------------------------------------------------------------------------
 pro EBSDExecute, status, single=single
 
@@ -49,7 +50,11 @@ common EBSD_data_common, EBSDdata
 common EBSDpatterns, pattern, image, finalpattern
 common EBSD_anglearrays, euler, quaternions
 common EBSDmasks, circularmask
+common EBSD_rawdata, accum_e, accum_z, mLPNH, mLPSH
 
+status = 1
+
+if (EBSDdata.EMsoftpathname eq 'path_unknown') then EBSDdata.EMsoftpathname = Core_getenv()
 
 ; check whether the mask needs to be recomputed or not
 s = size(circularmask)
@@ -69,146 +74,78 @@ if (s[0] ne sm) then begin
   end
 endif
 
-v = double([EBSDdata.detax1,EBSDdata.detax2,EBSDdata.detax3])
-axang = double([EBSDdata.detax1,EBSDdata.detax2,EBSDdata.detax3,EBSDdata.detax4])
-euang = double([EBSDdata.detphi1,EBSDdata.detphi,EBSDdata.detphi2])
+ipar = lon64arr(8)            ; dimensions defined in SingleEBSDpattern routine in EMdymod.f90
+ipar[0] = long64(2)           ; for now
+ipar[1] = EBSDdata.detnumsx
+ipar[2] = EBSDdata.detnumsy
+ipar[3] = EBSDdata.mcenergynumbin
+ipar[4] = EBSDdata.mcimx
+ipar[5] = EBSDdata.mpimx
+ipar[6] = EBSDdata.numset
+ipar[7] = EBSDdata.numangles
+
+fpar = fltarr(9)              ; dimensions defined in SingleEBSDpattern routine in EMdymod.f90
+fpar[0] = EBSDdata.detxpc
+fpar[1] = EBSDdata.detypc
+fpar[2] = EBSDdata.detdelta
+fpar[3] = EBSDdata.MCvangle
+fpar[4] = EBSDdata.detomega
+fpar[5] = EBSDdata.dettheta
+fpar[6] = EBSDdata.detL
+fpar[7] = EBSDdata.detbeamcurrent
+fpar[8] = EBSDdata.detdwelltime
+
+callname = 'SingleEBSDPatternWrapper'
+faccum_e = float(accum_e)
 
 if keyword_set(single) then begin
-; generate an angle input file
-  phi1 = EBSDdata.detphi1
-  Phi = EBSDdata.detphi
-  phi2 = EBSDdata.detphi2
-  openw,10,EBSDdata.pathname+'/'+'tmpangle.txt'
-  printf,10,'eu'
-  printf,10,'1'
-  s = string(phi1,format="(F8.3)")+' '+ string(Phi,format="(F8.3)")+' '+ string(phi2,format="(F8.3)")
-  printf,10,s
-  close,10
-    Core_Print, 'temporary single angle file created'
-end
+; and here is the (single) quaternion that represents the Euler angle triplet
+  quats  = Core_eu2qu( [EBSDdata.detphi1, EBSDdata.detphi, EBSDdata.detphi2] )
+  quats = reform(quats,4,1)
 
-; if the keyword is not set, then we expect the angle file to already exist
+  ipar[7] = long64(1)
 
-; then generate the proper nml file
-  openw,10,EBSDdata.pathname+'/'+'EMEBSDtmp.nml'
-  printf,10,'&EBSDdata'
-  printf,10,'L = '+string(EBSDdata.detL,FORMAT="(F10.2)")
-  printf,10,'thetac = '+string(EBSDdata.dettheta,FORMAT="(F6.2)")
-  printf,10,'omega = '+string(EBSDdata.detomega,FORMAT="(F6.2)")
-  printf,10,'delta = '+string(EBSDdata.detdelta,FORMAT="(F7.3)")
-  printf,10,'numsx = '+string(EBSDdata.detnumsx,FORMAT="(I4)")
-  printf,10,'numsy = '+string(EBSDdata.detnumsy,FORMAT="(I4)")
-  printf,10,'xpc = '+string(EBSDdata.detxpc,FORMAT="(F8.3)")
-  printf,10,'ypc = '+string(EBSDdata.detypc,FORMAT="(F8.3)")
-  printf,10,'outputformat = ''gui'''
-  printf,10,'energyaverage = 0'
-  printf,10,'maskpattern = ''n'''
-  th = EBSDdata.mcenergymin + EBSDdata.Eminsel*EBSDdata.mcenergybinsize
-  printf,10,'energymin = '+string(th,FORMAT="(F8.3)")
-  th = EBSDdata.mcenergymin + EBSDdata.Emaxsel*EBSDdata.mcenergybinsize
-  printf,10,'energymax = '+string(th,FORMAT="(F8.3)")
-  if (EBSDData.EulerConvention eq 0) then begin
-    printf,10,'eulerconvention = ''tsl'''
-  end else begin
-    printf,10,'eulerconvention = ''hkl'''
+; initialize the simulated pattern array
+  EBSDpattern = fltarr(EBSDdata.detnumsx,EBSDdata.detnumsy)
+  EBSDpattern = reform(EBSDpattern,EBSDdata.detnumsx,EBSDdata.detnumsy,1)
+
+  res = call_external(EBSDdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
+        ipar, fpar, EBSDpattern, quats, faccum_e, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
+
+  if (res ne 1.0) then begin
+    Core_print,'SingleEBSDPatternWrapper return code = '+string(res,format="(F4.1)")
+    status = 0
   end 
-  printf,10,'masterfile = '''+EBSDdata.mpfilename+''''
-  printf,10,'energyfile = '''+EBSDdata.mcpathname+'/'+EBSDdata.mcfilename+''''
-  printf,10,'datafile = '''+EBSDdata.EBSDpatternfilename+''''
-  printf,10,'beamcurrent = '+string(EBSDdata.detbeamcurrent,FORMAT="(F9.2)")
-  printf,10,'dwelltime = '+string(EBSDdata.detdwelltime,FORMAT="(F9.2)")
-  if keyword_set(single) then printf,10,'scalingmode = ''not'''
-; and here are the imaging parameters that are only needed if we are NOT in single image mode
-  if not keyword_set(single) then begin
-; angle file
-    if (EBSDdata.Pmode eq 1) then printf,10,'anglefile = '''+EBSDdata.EBSDanglefilename+''''
-    if (EBSDdata.Pmode eq 2) then printf,10,'anglefile = '''+EBSDdata.EBSDdictfilename+''''
-; binning parameter
-    printf,10,'binning = '+string(2^EBSDdata.detbinning,format="(I1)")
-; intensity scaling mode
-    if (EBSDdata.PatternScaling eq 0) then begin
-      printf,10,'scalingmode = ''lin'''
-    end else begin
-      printf,10,'scalingmode = ''gam'''
-      printf,10,'gammavalue = '+string(EBSDdata.gammavalue,FORMAT="(F6.3)")
-    end
-; place holder for Pattern Origin setting
-  end else begin
-    printf,10,'anglefile = '''+EBSDdata.pathname+'/'+'tmpangle.txt'''
-  end
-; do we need to do an additional axis-angle pair rotation to all patterns ?
-  if ( (axang[3] ne 0.D0) and (max(abs(v)) ne 0.D0) ) then begin
-      s = string(axang[0],format="(F8.3)")+','+ string(axang[1],format="(F8.3)") +','+ string(axang[2],format="(F8.3)") +','+ string(axang[3],format="(F8.3)")
-      printf,10,'axisangle = '+s
-  end
-  printf,10,'/'
-  close,10
 
-cmd = 'more '+EBSDdata.pathname+'/'+'EMEBSDtmp.nml'
-spawn,cmd
+  pattern = EBSDpattern
 
-  if (EBSDdata.numangles gt 1000) then begin
+end else begin ; computation of multiple EBSDpatterns
+
+  if (EBSDdata.numangles gt 500) then begin
     Core_Print,'',/blank
-    Core_Print,'You are computing more than 1000 EBSPs; this will take a while...'
+    Core_Print,'You are computing more than 500 EBSPs; this will take a while...'
     Core_Print,'The program will not provide any further updates until the run has been completed.'
     Core_Print,'',/blank
   endif
 
-; and finally run the CTEMEBSD program
-  cmd = EBSDdata.f90exepath+'EMEBSD '+EBSDdata.pathname+'/'+'EMEBSDtmp.nml'
-  ;cmd = '/Users/mdg/Files/EMsoft/Build/Bin/EMEBSD '+EBSDdata.pathname+'/'+'CTEMEBSDtmp.nml'
-  spawn,cmd, cmdoutput, cmderroutput
+; we repeatedly call the SingleEBSDpatternWrapper routine, first with ipar[0]=1, and
+; then with ipar[0]=0 for all subsequent calls.
 
-  Core_Print,'EMEBSD program reported the following output '
-  len = size(cmdoutput,/dimensions)
-  for i=0,len[0]-1 do Core_Print,cmdoutput[i]
+  pattern = fltarr(EBSDdata.detnumsx,EBSDdata.detnumsy,EBSDdata.numangles)
 
-  if (cmderroutput[0] ne '') then begin
-    Core_Print,'EMEBSD program reported an error !!!'
-    len = size(cmderroutput,/dimensions)
-    for i=0,len[0]-1 do Core_Print,cmderroutput[i]
-  end else status = 1 
+; initialize the simulated pattern array
+  EBSDpattern = fltarr(EBSDdata.detnumsx,EBSDdata.detnumsy,EBSDdata.numangles)
 
-if keyword_set(single) then begin
-  cmd = '/bin/rm '+EBSDdata.pathname+'/'+'tmpangle.txt'
-  spawn, cmd
-end
+  res = call_external(EBSDdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
+        ipar, fpar, EBSDpattern, quaternions, faccum_e, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
 
- cmd = '/bin/rm '+EBSDdata.pathname+'/'+'EMEBSDtmp.nml'
- spawn, cmd
+  if (res ne 1.0) then begin
+    Core_print,'SingleEBSDPatternWrapper return code = '+string(res,format="(F4.1)")
+    status = 0
+  end 
 
-EMdatapathname = Core_getenv(/data)
-
-; next, we need to load the pattern if we are in single mode
-; we check for HDF5 filetype first 
-if keyword_set(single) then begin
-  res = H5F_IS_HDF5(EMdatapathname+EBSDdata.EBSDpatternfilename)
-  if (res eq 0) then begin
-    openu,1,EBSDdata.EBSDpatternfilename,/f77
-    nsx = 0L
-    nsy = 0L
-    neu = 0L
-    readu,1,nsx, nsy, neu
-    Core_Print,' Dimensions read from pattern file : '+string(nsx,FORMAT="(I5)")+string(nsy,FORMAT="(I5)")+string(neu,FORMAT="(I8)")
-    pattern = fltarr(nsx,nsy)
-    readu,1,pattern
-    close,1
-  end else begin  ; this is an HDF5 file
-    file_id = H5F_OPEN(EMdatapathname+EBSDdata.EBSDpatternfilename)
-    group_id = H5G_OPEN(file_id,'EMData')
-    dset_id = H5D_OPEN(group_id,'EBSDpatterns')
-    pattern = H5D_READ(dset_id)
-print,'read data from HDF5 file; shape = ',size(pattern,/dimensions)
-    H5D_CLOSE,dset_id
-    H5G_CLOSE,group_id
-    H5F_CLOSE,file_id
-  end
-end
-
-; if we are not in single mode, then we need to load the angle file
-if not keyword_set(single) then begin
-  EBSDreadanglefile, EBSDdata.EBSDanglefilename, /list
-end
+  pattern = EBSDpattern
+endelse
 
 
 end
