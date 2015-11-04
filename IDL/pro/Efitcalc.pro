@@ -54,16 +54,15 @@ Efitdata.quaternion = Core_eu2qu( [Efitdata.detphi1, Efitdata.detphi, Efitdata.d
 ; if the sum of the first four fitOnOff values is zero, and the remainder is not, then recompute = 1 after the first call_external, else 0
 
 ; set up the ipar and fpar arrays; all integers must be long64 !!!!
-nipar = long(8)
-ipar = lon64arr(nipar)
-ipar[0] = long64(1) ; long(recompute) ; 1 if rgx, rgy, rgz detector arrays need to be computed, 0 if not (arrays will have save status)
+ipar = lon64arr(8)
+ipar[0] = long64(2) ; long(recompute) ; 1 if rgx, rgy, rgz detector arrays need to be computed, 0 if not (arrays will have save status)
 ipar[1] = long64(Efitdata.detnumsx)
 ipar[2] = long64(Efitdata.detnumsy)
 ipar[3] = long64(numEbins)
 ipar[4] = long64(nsx)
-ipar[5] = long64(nsy)
-ipar[6] = long64((nsx-1)/2)
-ipar[7] = long64(npx)
+ipar[5] = long64(npx)
+ipar[6] = long64(numset)
+ipar[7] = long64(1)
 
 nfpar = long(13)
 fpar = fltarr(nfpar)
@@ -76,14 +75,17 @@ fpar[5] = Efitdata.dettheta
 fpar[6] = Efitdata.detL
 fpar[7] = Efitdata.detbeamcurrent
 fpar[8] = Efitdata.detdwelltime
-fpar[9:12] = Efitdata.quaternion[0:3]
+quats = reform(Efitdata.quaternion[0:3],4,1)
 
 EBSDpattern = fltarr(Efitdata.detnumsx,Efitdata.detnumsy)
+EBSDpattern = reform(EBSDpattern,Efitdata.detnumsx,Efitdata.detnumsy,1)
 
 callname = 'SingleEBSDPatternWrapper'
 
 res = call_external(Efitdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
-      nipar, nfpar, long(numEbins), ipar[4], long(npx), ipar[1], ipar[2], ipar, fpar, float(accum_e), mLPNH, mLPSH, EBSDpattern, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
+      ipar, fpar, EBSDpattern, quats, float(accum_e), mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
+
+EBSDpattern = reform(EBSDpattern)
 
 if (res ne 1.0) then begin
   Core_print,'SingleEBSDPatternWrapper return code = '+string(res,format="(F4.1)")

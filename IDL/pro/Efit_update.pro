@@ -36,6 +36,7 @@
 ;> @brief called by Efit_amoeba; returns dot product or mutual information
 ;
 ;> @date 10/20/15 MDG 1.0 first version
+;> @date 11/04/15 MDG 1.1 modified to accommodate changes in EMdymod.f90
 ;--------------------------------------------------------------------------
 function Efit_update, param
 
@@ -62,7 +63,17 @@ nset = nset[0]
 ; none of the integer parameters are refinable, so this part is always the same
 nipar = long(8)
 ipar = lon64arr(nipar)
-ipar[0] = long64(1) ; long(recompute) ; 1 if rgx, rgy, rgz detector arrays need to be computed, 0 if not (arrays will have save status)
+
+; ipar(1) = 1 if rgx, rgy, rgz detector arrays need to be computed, 0 if not (arrays will have save status)
+; ipar(2) = detnumsx
+; ipar(3) = detnumsy
+; ipar(4) = detnumEbins
+; ipar(5) = mcnsx
+; ipar(6) = mpnpx
+; ipar(7) = numset
+; ipar(8) = numquats
+
+ipar[0] = long64(2) ; long(recompute) ; 1 if rgx, rgy, rgz detector arrays need to be computed, 0 if not (arrays will have save status)
 if ((fitIterations gt 0L) and (total(fitOnOff[0:4]) eq 0)) then begin
   ipar[0] = long64(0) 
 endif
@@ -70,12 +81,23 @@ ipar[1] = long64(Efitdata.detnumsx)
 ipar[2] = long64(Efitdata.detnumsy)
 ipar[3] = long64(numEbins)
 ipar[4] = long64(nsx)
-ipar[5] = long64(nsy)
-ipar[6] = long64((nsx-1)/2)
-ipar[7] = long64(npx)
+ipar[5] = long64(npx)
+ipar[6] = long64(numset)
+ipar[7] = long64(1)
 
 nfpar = long(13)
 fpar = fltarr(nfpar)
+
+; fpar(1) = enl%xpc
+; fpar(2) = enl%ypc
+; fpar(3) = enl%delta
+; fpar(4) = enl%MCsig
+; fpar(5) = enl%omega
+; fpar(6) = enl%thetac
+; fpar(7) = enl%L
+; fpar(8) = enl%beamcurrent
+; fpar(9) = enl%dwelltime
+
 
 ; loop through all potential fitting parameters
 ; this is a little tricky, since there are many potential combinations of fitting parameters
@@ -127,23 +149,24 @@ if (fitOnOff[7] eq 1) then begin
     np += 1
 end else phi2 = fitValue[7]
 Efitdata.quaternion = Core_eu2qu( [phi1, phi, phi2] )
-fpar[9:12] = Efitdata.quaternion[0:3]
+quats = reform(Efitdata.quaternion[0:3],4,1)
 
 ; initialize the simulated pattern array
 EBSDpattern = fltarr(Efitdata.detnumsx,Efitdata.detnumsy)
+EBSDpattern = reform(EBSDpattern,Efitdata.detnumsx,Efitdata.detnumsy,1)
 
 callname = 'SingleEBSDPatternWrapper'
 faccum_e = float(accum_e)
 
 res = call_external(Efitdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
-      ipar, fpar, EBSDpattern, faccum_e, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
+      ipar, fpar, EBSDpattern, quats, faccum_e, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
 
 if (res ne 1.0) then begin
   Core_print,'SingleEBSDPatternWrapper return code = '+string(res,format="(F4.1)")
 end 
 
 ; apply the correct intensity scaling
-Epat = EBSDpattern^Efitdata.detgamma
+Epat = reform(EBSDpattern)^Efitdata.detgamma
 
 ; try a high pass filter
 if (Efitdata.hipassonoff eq 1) then begin
@@ -168,7 +191,7 @@ npixels = Efitdata.detnumsx*Efitdata.detnumsy
 ; any gradient or laplacian operators to be applied to the patterns ?
 if (Efitdata.preproc ne 0) then begin
   if (Efitdata.preproc eq 1) then begin
-    v = reform(roberts(EBSDpattern)*mask,npixels)
+    v = reform(roberts(Epat)*mask,npixels)
     vl = sqrt(total(v*v))
     simvector = v/vl
 ; store the laplacian of the experimental pattern in a normalized column vector
@@ -177,7 +200,7 @@ if (Efitdata.preproc ne 0) then begin
     expvector = v/vl
   endif
 end else begin
-  v = reform(float(EBSDpattern),npixels)
+  v = reform(float(Epat),npixels)
   vl = sqrt(total(v*v))
   simvector = v/vl
   v = reform(float(expEBSDpattern),npixels)
