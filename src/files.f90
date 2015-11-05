@@ -390,6 +390,16 @@ call HDF_pop(HDF_head,.TRUE.)
 
 call h5close_f(hdferr)
 
+! for trigonal space groups we need to set SYM_trigonal to .TRUE.
+if ((cell%SYM_SGnum.ge.143).and.(cell%SYM_SGnum.le.167)) then
+  cell%SG%SYM_trigonal = .TRUE.
+else
+  cell%SG%SYM_trigonal = .FALSE.
+end if 
+
+cell%SG%SYM_second = .FALSE.
+if (cell%SYM_SGset.ne.0) cell%SG%SYM_second=.TRUE.
+
 end subroutine ReadDataHDF
 
 
