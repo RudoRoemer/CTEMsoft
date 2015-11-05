@@ -140,46 +140,40 @@ end else begin
 	  end
 	endcase
 
- 'GETDICTFILENAME': begin
+;'GETDICTFILENAME': begin
 ; display a filesaving widget 
-	  filename = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,title='Set dictionary angle file name ')
-	  if (filename ne '') then begin
-	    EBSDdata.EBSDdictfilename = filename
-	    WIDGET_CONTROL, set_value=filename, EBSDwidget_s.EBSDdictfilename
-	  end
-	  if ( (EBSDdata.Dictpointgroup ne 0) and (EBSDdata.Ncubochoric ne 0) ) then begin
-	    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=1
-	  end
-	endcase
+;  filename = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,title='Set dictionary angle file name ')
+;  if (filename ne '') then begin
+;    EBSDdata.EBSDdictfilename = filename
+;    WIDGET_CONTROL, set_value=filename, EBSDwidget_s.EBSDdictfilename
+;  end
+;  if ( (EBSDdata.Dictpointgroup ne 0) and (EBSDdata.Ncubochoric ne 0) ) then begin
+;    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=1
+;  end
+;endcase
 
- 'GODICT': begin
+;'GODICT': begin
 ; this option calls the sampleRFZ program to create a dictionary angle file
-	      openw,10,EBSDdata.pathname+'/CTEMsampleRFZ.nml'
-	      printf,10,'&RFZlist'
-	      printf,10,'pgnum = '+string(EBSDdata.Dictpointgroup,FORMAT="(I2)")
-	      printf,10,'nsteps = '+string(EBSDdata.Ncubochoric,FORMAT="(I6)")
-	      printf,10,'outname = '''+EBSDdata.EBSDdictfilename+''''
-	      printf,10,'/'
-	      close,10
+;      openw,10,EBSDdata.pathname+'/CTEMsampleRFZ.nml'
+;      printf,10,'&RFZlist'
+;      printf,10,'pgnum = '+string(EBSDdata.Dictpointgroup,FORMAT="(I2)")
+;      printf,10,'nsteps = '+string(EBSDdata.Ncubochoric,FORMAT="(I6)")
+;      printf,10,'outname = '''+EBSDdata.EBSDdictfilename+''''
+;      printf,10,'/'
+;      close,10
 ; then run the CTEMsampleRFZ program on this file to create the angle file
-	      cmd = EBSDdata.f90exepath+'/CTEMsampleRFZ '+EBSDdata.pathname+'/CTEMsampleRFZ.nml'
-	      spawn,cmd
+;      cmd = EBSDdata.f90exepath+'/CTEMsampleRFZ '+EBSDdata.pathname+'/CTEMsampleRFZ.nml'
+;      spawn,cmd
 ; then read the number of entries from that file and display it, then activate the GO button
-	      EBSDreadanglefile, EBSDdata.EBSDdictfilename
-	      WIDGET_CONTROL, set_value=string(EBSDdata.numangles,FORMAT="(I8)"), EBSDwidget_s.NinRFZ
-	      WIDGET_CONTROL, EBSDwidget_s.GoDictionary, sensitive=1
-	endcase
+;      EBSDreadanglefile, EBSDdata.EBSDdictfilename
+;      WIDGET_CONTROL, set_value=string(EBSDdata.numangles,FORMAT="(I8)"), EBSDwidget_s.NinRFZ
+;      WIDGET_CONTROL, EBSDwidget_s.GoDictionary, sensitive=1
+;endcase
 
  'DISPLAYEBSD': begin
 ; first we need to make sure that the path to the fortran executables is known... this is stored in the 
 ; preferences file, but is initially set to 'path_unknown'
-	  if (EBSDdata.f90exepath eq 'path_unknown') then begin
-  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
-  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
-  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
-		directoryname = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,/directory,title='Select the f90 executable folder')
-	        EBSDdata.f90exepath = directoryname[0]
-	  end
+          if (EBSDdata.f90exepath eq 'path_unknown') then EBSDdata.f90exepath = Core_getenv()
 
 ; is the correct widget up on the screen ?
 	  if XRegistered("EBSDPatternWidget") then begin
@@ -209,13 +203,7 @@ end else begin
  'GOANGLE': begin
 ; first we need to make sure that the path to the fortran executables is known... this is stored in the 
 ; preferences file, but is initially set to 'path_unknown'
-	  if (EBSDdata.f90exepath eq 'path_unknown') then begin
-  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
-  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
-  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
-		directoryname = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,/directory,title='Select the f90 executable folder')
-	        EBSDdata.f90exepath = directoryname[0]
-	  end
+          if (EBSDdata.f90exepath eq 'path_unknown') then EBSDdata.f90exepath = Core_getenv()
 
 ; is the correct widget up on the screen ?
 	  if XRegistered("EBSDPatternWidget") then begin
@@ -241,21 +229,15 @@ end else begin
 
 	endcase
 
- 'GODICTIONARY': begin
+;'GODICTIONARY': begin
 ; first we need to make sure that the path to the fortran executables is known... this is stored in the 
 ; preferences file, but is initially set to 'path_unknown'
-	  if (EBSDdata.f90exepath eq 'path_unknown') then begin
-  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
-  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
-  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
-		directoryname = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,/directory,title='Select the f90 executable folder')
-	        EBSDdata.f90exepath = directoryname[0]
-	  end
+;         if (EBSDdata.f90exepath eq 'path_unknown') then EBSDdata.f90exepath = Core_getenv()
 
 ; is the correct widget up on the screen ?
-	  if XRegistered("EBSDPatternWidget") then begin
-	    if (EBSDdata.currentdisplaywidgetmode ne 1) then WIDGET_CONTROL, EBSDwidget_s.patternbase, /DESTROY
-	  end
+;  if XRegistered("EBSDPatternWidget") then begin
+;    if (EBSDdata.currentdisplaywidgetmode ne 1) then WIDGET_CONTROL, EBSDwidget_s.patternbase, /DESTROY
+;  end
 
 ; this does two things.  First of all, the CTEMEBSD program is called with the current
 ; parameters for the detector and microscope geometry, and the angle file
@@ -266,15 +248,15 @@ end else begin
 ; other parts of the widget apply to this pattern calculation
 
 ; first, create the nml file and execute the CTEMEBSD program
-	  status = 0
-	  EBSDExecute,status
+;  status = 0
+;  EBSDExecute,status
 
 ; then we create the EBSDpattern widget and let the user adjust the imaging parameters
-	  if (status eq 1) then begin
-	    if (XRegistered("EBSDPatternWidget") EQ 0) then EBSDPatternWidget else EBSDshowPattern
-	  end
+;  if (status eq 1) then begin
+;    if (XRegistered("EBSDPatternWidget") EQ 0) then EBSDPatternWidget else EBSDshowPattern
+;  end
 
-	endcase
+;endcase
 
  'CLOSEDETECTOR': begin
 ; kill the base widget

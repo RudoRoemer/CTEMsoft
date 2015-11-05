@@ -59,7 +59,8 @@ end else begin
 		delist = ['jpeg','tiff','bmp']
 		de = delist[EBSDdata.imageformat]
 		filename = DIALOG_PICKFILE(/write,default_extension=de,path=EBSDdata.pathname,title='enter filename without extension')
-		ECPshowpattern, /nodisplay
+                i = 0
+		ECPshowpattern, /nodisplay, select=i
 		if (EBSDdata.showcircularmask eq 1) then im = finalpattern*byte(circularmask) else im=finalpattern
 		case de of
 		    'jpeg': write_jpeg,filename,im,quality=100
@@ -76,8 +77,8 @@ end else begin
 		fn = DIALOG_PICKFILE(/write,default_extension=de,path=EBSDdata.pathname,title='enter prefix for image series file name')
 		fn = strsplit(fn,'.',/extract)
 		for i=0,EBSDdata.numangles-1 do begin
-  		  pattern = reform(ECPattern[*,*,i])
-		  ECPshowpattern, /single, /nodisplay
+; 		  pattern = reform(ECPattern[*,*,i])
+		  ECPshowpattern, /single, /nodisplay, select=i
 		  if (EBSDdata.showcircularmask eq 1) then im = finalpattern*byte(circularmask) else im=finalpattern
 		  filename = fn[0]+string(i+1,format="(I5.5)")+'.'+fn[1]
 		  case de of

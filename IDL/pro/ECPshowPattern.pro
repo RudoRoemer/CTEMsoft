@@ -39,7 +39,7 @@
 ;> @date 02/06/15 MDG 1.1 added pattern orientation parameters
 ;> @date 10/30/15 MDG 2.0 modified from EBSDshowPattern.pro
 ;--------------------------------------------------------------------------
-pro ECPshowPattern, single=single, nodisplay=nodisplay
+pro ECPshowPattern, single=single, nodisplay=nodisplay, select=selection
 
 ; the keyword /single indicates that only one pattern is available 
 
@@ -72,7 +72,9 @@ end
 patterns = ECPattern
 
 sz = size(patterns)
-if (sz[0] eq 3) then pattern = reform(patterns[*,*,EBSDdata.currentpatternID]) else pattern = patterns
+if (sz[0] eq 3) then begin
+  if (keyword_set(nodisplay)) then pattern = reform(patterns[*,*,selection]) else pattern = reform(patterns[*,*,EBSDdata.currentpatternID]) 
+end else pattern = patterns
 
 ; set the min and max fields
 EBSDdata.Patternmin = min(pattern)

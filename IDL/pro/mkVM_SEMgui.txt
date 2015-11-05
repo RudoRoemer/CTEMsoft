@@ -1,14 +1,13 @@
 
-.r EBSDDisplay
+.r SEMDisplay
 resolve_all                                                                                                                                                                            
 
 ;define a few variables
-appname = 'EBSDDisplay'
+appname = 'SEMDisplay'
 saveappname = appname+'.sav'
 IDLappdir = '/Users/mdg/Files/EMsoft/Build/IDL'
 VMappdir = '/Users/mdg/Files/EMsoft/Build/IDL/VMapps'
-Resdir = '/Users/mdg/Files/EMsoft/Build/IDL/VMapps/EBSDDisplay/Resources'
-;manifestfile = '/Users/mdg/Files/OSU/IDL/Phasemaps/manifest_rt.txt'
+Resdir = '/Users/mdg/Files/EMsoft/Build/IDL/VMapps/SEMDisplay/Resources'
 
 cd,CURRENT=cdir
 
@@ -22,7 +21,6 @@ spawn,cmd
 save,/routines,filename=saveappname
 
 ; create the Virtual Machine app for Mac OS X 64bit
-;make_rt,appname,VMappdir,savefile=cdir+'/'+saveappname,manifest=manifestfile,/VM,/MACINT64,/OVERWRITE
 make_rt,appname,VMappdir,savefile=cdir+'/'+saveappname,/VM,/MACINT64,/OVERWRITE
 
 ; add whatever resource folder is needed

@@ -113,10 +113,6 @@ if keyword_set(single) then begin
   res = call_external(EBSDdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
         ipar, fpar, ECPattern, quats, faccum_e, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
 
-help,ECPattern
-print,max(ECPattern)
-
-
   if (res ne 1.0) then begin
     Core_print,'SingleECPPatternWrapper return code = '+string(res,format="(F4.1)")
     status = 0

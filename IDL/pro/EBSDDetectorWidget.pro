@@ -125,18 +125,18 @@ file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
 EBSDwidget_s.detdwelltime = Core_WTextE(file2,'Dwell Time [mu s] ', fontstr, 140, 25, 10, 1, string(EBSDdata.detdwelltime,format="(F9.2)"),'DETDWELLTIME','EBSDDetectorWidget_event')
 
 
-file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
-vals = ['TSL', 'HKL']
-EBSDwidget_s.EulerConvention = CW_BGROUP(file2, $
-                        vals, $
-                        /ROW, $
-                        /NO_RELEASE, $
-                        /EXCLUSIVE, $
-                        FONT=fontstr, $
-                        LABEL_LEFT = 'Euler phi1 Convention', $
-                        EVENT_FUNC ='EBSDevent', $
-                        UVALUE='EBSDEULERCONVENTION', $
-                        SET_VALUE=EBSDdata.EulerConvention)
+;file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
+;vals = ['TSL', 'HKL']
+;EBSDwidget_s.EulerConvention = CW_BGROUP(file2, $
+;                        vals, $
+;                        /ROW, $
+;                        /NO_RELEASE, $
+;                        /EXCLUSIVE, $
+;                        FONT=fontstr, $
+;                        LABEL_LEFT = 'Euler phi1 Convention', $
+;                        EVENT_FUNC ='EBSDevent', $
+;                        UVALUE='EBSDEULERCONVENTION', $
+;                        SET_VALUE=EBSDdata.EulerConvention)
 
 
 ;------------------------------------------------------------
@@ -294,7 +294,7 @@ file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_LEFT)
 EBSDwidget_s.angletype = Core_WText(file2,'Angle Type', fontstr, 90, 25, 10, 1, EBSDdata.angletype)
 EBSDwidget_s.numangles = Core_WText(file2,'# Angles  ', fontstr, 80, 25, 10, 1, string(EBSDdata.numangles,format="(I8)"))
 
-; eliminate this part of the code for Release 2
+; this part of the code is disabled for Release 3.0
 j=0
 if (j eq 1) then begin
 ;------------------------------------------------------------
@@ -362,7 +362,7 @@ EBSDwidget_s.GoDict = WIDGET_BUTTON(file2, $
                                 /FRAME)
 
 EBSDwidget_s.NinRFZ = Core_WText(file2,'# points in RFZ', fontstr, 125, 25, 10, 1, string(EBSDdata.NinRFZ,FORMAT="(I10)")) 
-endif  ; eliminated code for this Release
+endif  ; end disabled code for Release 3.0
 
 ;------------------------------------------------------------
 ; realize the widget structure

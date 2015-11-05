@@ -56,14 +56,14 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; EMsoft:EBSDDisplay.pro
+; EMsoft:SEMDisplay.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: EBSDDisplay.pro
+; PROGRAM: SEMDisplay.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief Electron backscatter diffraction pattern display
+;> @brief Electron backscatter diffraction and electron channeling pattern display
 ;
 ;> @details 03/19/14 This is the very first implementation of the EBSD visualization GUI.
 ;> At this stage, we allow the user to display various versions of the Monte Carlo
@@ -86,8 +86,9 @@
 ;> @date 10/29/15 MDG 2.0 added ECP handling, first only Monte Carlo part
 ;> @date 10/30/15 MDG 2.1 added ECP calculation for detector model, using call_external to SingleECPatternWrapper
 ;> @date 10/31/15 MDG 3.0 simplification of main interface; file data is now listed in message window
+;> @date 11/05/15 MDG 3.1 program name change from EBSDDisplay to SEMDisplay
 ;--------------------------------------------------------------------------
-pro EBSDDisplay,dummy
+pro SEMDisplay,dummy
 ;
 ;------------------------------------------------------------
 ; common blocks
@@ -324,7 +325,7 @@ EBSDdata = {EBSDdatastruct, $
 	detphi1: float(0), $			; phi1 Euler angle 
 	detphi: float(0), $			; phi Euler angle 
 	detphi2: float(0), $			; phi2 Euler angle 
-	EulerConvention: long(0), $		; Euler angle convention (TSL = 0, HKL = 2)
+	EulerConvention: long(0), $		; Euler angle convention (TSL = 0, HKL = 1) [disabled for now; always TSL]
 	BGmode: long(0), $			; background/full pattern display mode
 	Eminsel: long(0), $			; min energy selection 
 	Emaxsel: long(0), $			; max energy selection 

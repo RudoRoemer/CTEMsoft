@@ -121,18 +121,18 @@ EBSDwidget_s.detbeamcurrent = Core_WTextE(file2,'Beam current [nA]', fontstr, 14
 file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
 EBSDwidget_s.detdwelltime = Core_WTextE(file2,'Dwell Time [mu s] ', fontstr, 140, 25, 10, 1, string(EBSDdata.detdwelltime,format="(F9.2)"),'DETDWELLTIME','ECPDetectorWidget_event')
 
-file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
-vals = ['TSL', 'HKL']
-EBSDwidget_s.EulerConvention = CW_BGROUP(file2, $
-                        vals, $
-                        /ROW, $
-                        /NO_RELEASE, $
-                        /EXCLUSIVE, $
-                        FONT=fontstr, $
-                        LABEL_LEFT = 'Euler phi1 Convention', $
-                        EVENT_FUNC ='EBSDevent', $
-                        UVALUE='EBSDEULERCONVENTION', $
-                        SET_VALUE=EBSDdata.EulerConvention)
+;file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
+;vals = ['TSL', 'HKL']
+;EBSDwidget_s.EulerConvention = CW_BGROUP(file2, $
+;                        vals, $
+;                        /ROW, $
+;                        /NO_RELEASE, $
+;                        /EXCLUSIVE, $
+;                        FONT=fontstr, $
+;                        LABEL_LEFT = 'Euler phi1 Convention', $
+;                        EVENT_FUNC ='EBSDevent', $
+;                        UVALUE='EBSDEULERCONVENTION', $
+;                        SET_VALUE=EBSDdata.EulerConvention)
 
 ;------------------------------------------------------------
 ;------------------------------------------------------------

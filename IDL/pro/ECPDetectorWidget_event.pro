@@ -117,13 +117,7 @@ end else begin
  'GOANGLE': begin
 ; first we need to make sure that the path to the fortran executables is known... this is stored in the 
 ; preferences file, but is initially set to 'path_unknown'
-	  if (EBSDdata.f90exepath eq 'path_unknown') then begin
-  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
-  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
-  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
-		directoryname = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,/directory,title='Select the f90 executable folder')
-	        EBSDdata.f90exepath = directoryname[0]
-	  end
+          if (EBSDdata.f90exepath eq 'path_unknown') then EBSDdata.f90exepath = Core_getenv()
 
 ; is the correct widget up on the screen ?
 	  if XRegistered("ECPatternWidget") then begin
@@ -141,21 +135,15 @@ end else begin
 
 	endcase
 
- 'GODICTIONARY': begin
+;'GODICTIONARY': begin
 ; first we need to make sure that the path to the fortran executables is known... this is stored in the 
 ; preferences file, but is initially set to 'path_unknown'
-	  if (EBSDdata.f90exepath eq 'path_unknown') then begin
-  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
-  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
-  		Core_Print, 'PLEASE SELECT THE PATH TO THE f90 EXECUTABLE FOLDER', /blank
-		directoryname = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,/directory,title='Select the f90 executable folder')
-	        EBSDdata.f90exepath = directoryname[0]
-	  end
+;         if (EBSDdata.f90exepath eq 'path_unknown') then EBSDdata.f90exepath = Core_getenv()
 
 ; is the correct widget up on the screen ?
-	  if XRegistered("EBSDPatternWidget") then begin
-	    if (EBSDdata.currentdisplaywidgetmode ne 1) then WIDGET_CONTROL, EBSDwidget_s.patternbase, /DESTROY
-	  end
+;  if XRegistered("EBSDPatternWidget") then begin
+;    if (EBSDdata.currentdisplaywidgetmode ne 1) then WIDGET_CONTROL, EBSDwidget_s.patternbase, /DESTROY
+;  end
 
 ; this does two things.  First of all, the CTEMEBSD program is called with the current
 ; parameters for the detector and microscope geometry, and the angle file
@@ -166,15 +154,15 @@ end else begin
 ; other parts of the widget apply to this pattern calculation
 
 ; first, create the nml file and execute the CTEMEBSD program
-	  status = 0
-	  EBSDExecute,status
+;  status = 0
+;  EBSDExecute,status
 
 ; then we create the EBSDpattern widget and let the user adjust the imaging parameters
-	  if (status eq 1) then begin
-	    if (XRegistered("EBSDPatternWidget") EQ 0) then EBSDPatternWidget else EBSDshowPattern
-	  end
+;  if (status eq 1) then begin
+;    if (XRegistered("EBSDPatternWidget") EQ 0) then EBSDPatternWidget else EBSDshowPattern
+;  end
 
-	endcase
+;endcase
 
  'CLOSEDETECTOR': begin
 ; kill the base widget
