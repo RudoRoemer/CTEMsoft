@@ -62,6 +62,7 @@
 !> @date  06/19/14  MDG 4.3 rewrite, removal of all globals, split of namelist handling from computation; add OpenMP
 !> @date  09/09/14  MDG 5.0 forked from EMEBSDmaster to EMKosselmaster program
 !> @date  02/14/15  MDG 5.1 added Kosselmode option for thickness fraction plot
+!> @date  11/09/15  MDG 6.0 added HDF5 support and converted to more recent symmetry routines
 !--------------------------------------------------------------------------
 program EMKosselmaster
 
@@ -84,13 +85,13 @@ progdesc = 'Kossel Master Pattern Simulation'
 call EMsoft(progname, progdesc)
 
 ! deal with the command line arguments, if any
-call Interpret_Program_Arguments(nmldeffile,1,(/ 14 /), progname)
+call Interpret_Program_Arguments(nmldeffile,2,(/ 0, 14 /), progname)
 
 ! deal with the namelist stuff
 call GetKosselMasterNameList(nmldeffile,kmnl)
 
 ! generate a series of master Kossel patterns
- call ComputeKosselMasterPattern(kmnl, progname)
+ call ComputeKosselMasterPattern(kmnl, progname, nmldeffile)
 
 end program EMKosselmaster
 
@@ -111,8 +112,9 @@ end program EMKosselmaster
 !> @date 09/25/13  MDG 3.1 replaced k-vector code by kvectors module
 !> @date 06/19/14  MDG 4.0 no more globals, nml split, added OpenMP
 !> @date 09/09/14  MDG 5.0 new version for Kossel master pattern
+!> @date 11/09/15  MDG 6.0 added HDF5 support and converted to more recent symmetry routines
 !--------------------------------------------------------------------------
-subroutine ComputeKosselMasterPattern(kmnl, progname)
+subroutine ComputeKosselMasterPattern(kmnl, progname, nmldeffile)
 
 use typedefs
 use NameListTypedefs
@@ -131,27 +133,38 @@ use diffraction
 use multibeams
 use timing
 use Lambert
+use HDF5
+use NameListHDFwriters
+use HDFsupport
+use ISO_C_BINDING
 use omp_lib
 
 IMPLICIT NONE
 
 type(KosselMasterNameListType),INTENT(IN) :: kmnl
 character(fnlen),INTENT(IN)               :: progname
+character(fnlen),INTENT(IN)               :: nmldeffile
 
-
-real(kind=dbl)          :: ctmp(192,3), arg
-integer(kind=irg)      :: isym,i,j,ik,npy,ipx,ipy,debug,izz, izzmax, iequiv(2,12), nequiv, num_el, MCnthreads, & ! counters
-                        numk,numthick,  & ! number of independent incident beam directions
-                        ir,kk(3), npyhex, skip, ijmax, one, NUMTHREADS, TID, &
-                        n,ix,iy, io_int(6), nns, nnw, nref,  &
-                        istat,gzero,ic,ip,ikk, totstrong, totweak     ! counters
-real(kind=dbl)         :: tpi,Znsq, kkl, DBWF, kin !
-real(kind=sgl)          :: io_real(5), selE, kn, FN(3), kkk(3)
-real(kind=sgl),allocatable      :: sr(:,:,:), srhex(:,:,:), Iz(:), thick(:), trange(:,:)
+real(kind=dbl)                  :: ctmp(192,3), arg
+integer(HSIZE_T)                :: dims3(3), cnt3(3), offset3(3)
+integer(HSIZE_T)                :: dims2(2), cnt2(2), offset2(2)
+integer(kind=irg)               :: isym,i,j,ik,npy,ipx,ipy,ipz,debug,izz, izzmax, iequiv(3,48), nequiv, num_el, MCnthreads, & ! counters
+                                  SamplingType,numk,numthick,  & ! number of independent incident beam directions
+                                  ir,kk(3), npyhex, skip, ijmax, one, NUMTHREADS, TID, hdferr, &
+                                  n,ix,iy, io_int(6), nns, nnw, nref, nix, niy, nixp, niyp, ierr, &
+                                  istat,gzero,ic,ip,ikk, totstrong, totweak     ! counters
+real(kind=dbl)                  :: tpi,Znsq, kkl, DBWF, kin, xy(2), dc(3), edge, scl, tmp, dx, dxm, dy, dym !!
+real(kind=sgl)                  :: io_real(5), selE, kn, FN(3), kkk(3), bp(4), tstart, tstop
 complex(kind=dbl)               :: czero
-logical                 :: usehex, switchmirror, verbose
-! the following will need to be moved elsewhere at some point...
-integer(kind=irg),parameter     :: LaueTest(11) = (/ 149, 151, 153, 156, 158, 160, 161, 164, 165, 166, 167 /)  ! space groups with 2 or mirror at 30 degrees
+real(kind=sgl),allocatable      :: mLPNH(:,:,:), mLPSH(:,:,:), Iz(:), thick(:), trange(:,:)
+real(kind=sgl),allocatable      :: auxNH(:,:,:), auxSH(:,:,:), auxtrange(:,:)
+logical                         :: usehex, switchmirror, verbose, insert=.TRUE., overwrite=.TRUE., silent=.TRUE.
+character(11)           :: dstr
+character(15)           :: tstrb
+character(15)           :: tstre
+character(fnlen, KIND=c_char)           :: stringarray(1)
+character(fnlen,kind=c_char)            :: line2(1)
+character(fnlen)                :: oldprogname, groupname, energyfile, outname
 
 type(unitcell),pointer          :: cell
 type(DynType),save              :: Dyn
@@ -162,11 +175,20 @@ type(kvectorlist),pointer       :: khead, ktmp
 real(kind=sgl),allocatable      :: karray(:,:)
 integer(kind=irg),allocatable   :: kij(:,:)
 complex(kind=dbl),allocatable   :: DynMat(:,:)
+character(fnlen)                :: dataset, instring
+
+type(HDFobjectStackType),pointer  :: HDF_head
+
 
 !$OMP THREADPRIVATE(rlp) 
 
 tpi = 2.D0*cPi
 czero = dcmplx(0.D0,0.D0)
+
+nullify(HDF_head)
+
+call timestamp(datestring=dstr, timestring=tstrb)
+call cpu_time(tstart)
 
 !=============================================
 !=============================================
@@ -176,10 +198,9 @@ nullify(cell)
 allocate(cell)
 
  verbose = .TRUE.
- call Initialize_Cell(cell,Dyn,rlp, kmnl%xtalname, kmnl%dmin, kmnl%voltage, verbose)
+ call Initialize_Cell(cell,Dyn,rlp,kmnl%xtalname, kmnl%dmin, kmnl%voltage, verbose)
 
 ! the following line needs to be verified ... 
-!  hexset = .TRUE.    ! if hexagonal structure this switch selects between three and four index notation (4 if true)
 
 ! determine the point group number
  j=0
@@ -188,29 +209,29 @@ allocate(cell)
  end do
  isym = j
 
-! and convert this to the corresponding  Laue point group number since diffraction 
-! patterns are always centrosymmetric (hence, there are only 11 different cases for
-! the symmetry of the incident beam).   
-  isym = PGLaueinv(isym)  
+! here is new code dealing with all the special cases (quite a few more compared to the 
+! Laue group case)...  isym is the point group number. Once the symmetry case has been
+! fully determined (taking into account things like 31m and 3m1 an such), then the only places
+! that symmetry is handled are the modified Calckvectors routine, and the filling of the modified
+! Lambert projections after the dynamical simulation step.  We are also changing the name of the 
+! sr array (or srhex) to mLPNH and mLPSH (modified Lambert Projection Northern/Southern Hemisphere),
+! and we change the output HDF5 file a little as well. We need to make sure that the EMEBSD program
+! issues a warning when an old format HDF5 file is read.  
 
-! If the Laue group is # 7, then we need to determine the orientation of the mirror plane.
-! The second orientation of the mirror plane is represented by "Laue group" # 12 in this program.
- switchmirror = .FALSE.
- if (isym.eq.7) then
-  do i=1,11
-    if (cell%SYM_SGnum.eq.LaueTest(i)) switchmirror = .TRUE.
-  end do
- end if
- if (switchmirror) then
-  isym = 12
-  call Message(' Switching computational wedge to second setting for this space group', frm = "(A)")
- end if
- write (*,*) ' Laue group # ',isym, PGTHD(j)
+! Here, we encode isym into a new number that describes the sampling scheme; the new schemes are 
+! described in detail in the EBSD manual pdf file.
 
-! if this point group is trigonal or hexagonal, we need to switch usehex to .TRUE. so that
+SamplingType = PGSamplingType(isym)
+
+! next, intercept the special cases (hexagonal vs. rhombohedral cases that require special treatment)
+if ((SamplingType.eq.-1).or.(isym.eq.14).or.(isym.eq.26)) then 
+  SamplingType = getHexvsRho(cell,isym)
+end if
+
+! if the point group is trigonal or hexagonal, we need to switch usehex to .TRUE. so that
 ! the program will use the hexagonal sampling method
 usehex = .FALSE.
-if (((isym.ge.6).and.(isym.le.9)).or.(isym.eq.12)) usehex = .TRUE.
+if ((cell%xtal_system.eq.4).or.(cell%xtal_system.eq.5)) usehex = .TRUE.
 ! ---------- end of symmetry and crystallography section
 !=============================================
 !=============================================
@@ -247,27 +268,18 @@ end do
 !=============================================
 ! ---------- allocate memory for the master pattern
 ! we need to sample the stereographic projection Northern hemisphere or a portion
-! thereoff, depending on the order of the Laue group.  There are 11 Laue groups, 
-! which leads to 9 different shapes for the stereographic asymmetric unit for the 
-! independent incident beam directions.  
-! allocate space for the results (needs to be altered for general symmetry case)
+! thereoff, depending on the current symmetry.
 if (kmnl%Kosselmode.eq.'normal') then 
-  allocate(sr(-kmnl%npix:kmnl%npix,-npy:npy,1:kmnl%numthick),stat=istat)
-
-! in the trigonal/hexagonal case, we need intermediate storage arrays
-  if (usehex) then
-   npyhex = nint(2.0*float(npy)/sqrt(3.0))
-   allocate(srhex(-kmnl%npix:kmnl%npix,-npyhex:npyhex,1:kmnl%numthick),stat=istat)
-  end if
+  allocate(mLPNH(-kmnl%npix:kmnl%npix,-npy:npy,1:kmnl%numthick),stat=istat)
+  allocate(mLPSH(-kmnl%npix:kmnl%npix,-npy:npy,1:kmnl%numthick),stat=istat)
 
 ! set various arrays to zero
-   sr = 0.0
-   if (usehex) then
-     srhex = 0.0
-   end if
+   mLPNH = 0.0
+   mLPSH = 0.0
 else
 ! Kosselmode must be 'thicks'
   allocate(trange(-kmnl%npix:kmnl%npix,-npy:npy),stat=istat)
+  trange = 0.0
 end if
 ! ---------- end allocate memory for the master pattern
 !=============================================
@@ -275,7 +287,96 @@ end if
 
 ! force dynamical matrix routine to read new Bethe parameters from file
 ! this will all be changed with the new version of the Bethe potentials
-!  call Set_Bethe_Parameters(BetheParameters)
+ call Set_Bethe_Parameters(BetheParameters,silent)
+
+!=============================================
+! create the HDF5 output file
+!=============================================
+
+  nullify(HDF_head)
+! Initialize FORTRAN interface.
+  call h5open_f(hdferr)
+
+  outname = trim(EMdatapathname)//trim(kmnl%outname)
+
+! Create a new file using the default properties.
+  hdferr =  HDF_createFile(outname, HDF_head)
+
+! write the EMheader to the file
+  call HDF_writeEMheader(HDF_head, dstr, tstrb, tstre, progname)
+
+! create a namelist group to write all the namelist files into
+  groupname = "NMLfiles"
+  hdferr = HDF_createGroup(groupname, HDF_head)
+
+! read the text file and write the array to the file
+  dataset = 'Kosselmasterlist'
+  hdferr = HDF_writeDatasetTextFile(dataset, nmldeffile, HDF_head)
+
+! leave this group
+  call HDF_pop(HDF_head)
+  
+! create a namelist group to write all the namelist files into
+  groupname = "NMLparameters"
+  hdferr = HDF_createGroup(groupname, HDF_head)
+  call HDFwriteKosselMasterNameList(HDF_head, kmnl)
+
+! leave this group
+  call HDF_pop(HDF_head)
+
+! then the remainder of the data in a EMData group
+  groupname = 'EMData'
+  hdferr = HDF_createGroup(groupname, HDF_head)
+
+  dataset = 'xtalname'
+  stringarray(1)= trim(kmnl%xtalname)
+  hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
+
+  dataset = 'npix'
+  hdferr = HDF_writeDatasetInteger(dataset, kmnl%npix, HDF_head)
+
+  dataset = 'BetheParameters'
+  bp = (/ BetheParameters%c1, BetheParameters%c2, BetheParameters%c3, BetheParameters%sgdbdiff /)
+  hdferr = HDF_writeDatasetFloatArray1D(dataset, bp, 4, HDF_head)
+
+  dataset = 'numthick'
+  hdferr = HDF_writeDatasetInteger(dataset, numthick, HDF_head)
+
+  dataset = 'startthick'
+  hdferr = HDF_writeDatasetFloat(dataset, kmnl%startthick, HDF_head)
+
+  dataset = 'thickinc'
+  hdferr = HDF_writeDatasetFloat(dataset, kmnl%thickinc, HDF_head)
+
+  dataset = 'Kosselmode'
+  stringarray(1)= trim(kmnl%Kosselmode)
+  hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
+
+! create the hyperslabs and write zeroes to them for now
+  if (kmnl%Kosselmode.eq.'normal') then
+    dataset = 'mLPNH'
+    dims3 = (/  2*kmnl%npix+1, 2*kmnl%npix+1, numthick /)
+    cnt3 = (/ 2*kmnl%npix+1, 2*kmnl%npix+1, numthick /)
+    offset3 = (/ 0, 0, 0 /)
+    hdferr = HDF_writeHyperslabFloatArray3D(dataset, mLPNH, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head)
+
+    dataset = 'mLPSH'
+    dims3 = (/  2*kmnl%npix+1, 2*kmnl%npix+1, numthick /)
+    cnt3 = (/ 2*kmnl%npix+1, 2*kmnl%npix+1, numthick /)
+    offset3 = (/ 0, 0, 0 /)
+    hdferr = HDF_writeHyperslabFloatArray3D(dataset, mLPSH, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head)
+  else
+    dataset = 'trange'
+    dims2 = (/  2*kmnl%npix+1, 2*kmnl%npix+1 /)
+    cnt2 = (/ 2*kmnl%npix+1, 2*kmnl%npix+1 /)
+    offset2 = (/ 0, 0 /)
+    hdferr = HDF_writeHyperslabFloatArray2D(dataset, trange, dims2, offset2, cnt2(1), cnt2(2), HDF_head)
+  end if
+
+  call HDF_pop(HDF_head,.TRUE.)
+
+! and close the fortran hdf interface
+ call h5close_f(hdferr)
 
 !=============================================
 !=============================================
@@ -289,12 +390,12 @@ call Message('Starting computation', frm = "(/A)")
 ! note that this needs to be redone for each energy, since the wave vector changes with energy
    nullify(khead)
    if (usehex) then
-    call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,kmnl%npix,npyhex,numk, &
-                isym,ijmax,'RoscaLambert',usehex)
+    call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,kmnl%npix,npy,numk, &
+                SamplingType,ijmax,'RoscaLambert',usehex)
    else 
 ! Calckvectors(k,ga,ktmax,npx,npy,numk,isym,ijmax,mapmode,usehex)
     call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,kmnl%npix,npy,numk, &
-                isym,ijmax,'RoscaLambert',usehex)
+                SamplingType,ijmax,'RoscaLambert',usehex)
    end if
    io_int(1)=numk
    call WriteValue('# independent beam directions to be considered = ', io_int, 1, "(I8)")
@@ -323,6 +424,7 @@ call Message('Starting computation', frm = "(/A)")
 ! ---------- end of "create the incident beam directions list"
 !=============================================
 
+
 ! here's where we introduce the OpenMP calls, to spead up the overall calculations...
 
 ! set the number of OpenMP threads 
@@ -331,7 +433,6 @@ call Message('Starting computation', frm = "(/A)")
   call WriteValue(' Attempting to set number of threads to ',io_int, 1, frm = "(I4)")
 
 ! use OpenMP to run on multiple cores ... 
-!!$OMP PARALLEL default(shared) COPYIN(rlp) &
 !$OMP PARALLEL COPYIN(rlp) &
 !$OMP& PRIVATE(DynMat,ik,FN,TID,kn,ipx,ipy,ix,iequiv,nequiv,reflist,firstw) &
 !$OMP& PRIVATE(kkk,nns,nnw,nref,io_int,Iz)
@@ -369,8 +470,7 @@ call Message('Starting computation', frm = "(/A)")
      totstrong = totstrong + nns
      totweak = totweak + nnw
 
-! for now, we're disabling the kinematical part
-! solve the dynamical eigenvalue equation for this beam direction  Lgh,thick,kn,nn,gzero,kin,debug
+! solve the dynamical eigenvalue equation for this beam direction
      kn = karray(4,ik)
      if (kmnl%Kosselmode.eq.'thicks') then 
        call CalcKthick(DynMat,kn,nns,kmnl%tfraction,Iz)
@@ -379,36 +479,34 @@ call Message('Starting computation', frm = "(/A)")
      end if
      deallocate(DynMat)
 
-
-! and store the resulting values, applying point group symmetry where needed.
+! and store the resulting svals values, applying point group symmetry where needed.
      ipx = kij(1,ik)
      ipy = kij(2,ik)
-     call Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
+     ipz = kij(3,ik)
+!
 !$OMP CRITICAL
-     if (kmnl%Kosselmode.eq.'normal') then
-      if (usehex) then
-       do ix=1,nequiv
-         srhex(iequiv(1,ix),iequiv(2,ix),1:numthick) = Iz(1:numthick)
-        end do
-      else
-         do ix=1,nequiv
-           sr(iequiv(1,ix),iequiv(2,ix),1:numthick) = Iz(1:numthick)
-          end do
-      end if
+     if (usehex) then 
+       call Apply3DPGSymmetry(cell,ipx,ipy,ipz,kmnl%npix,iequiv,nequiv,usehex)
      else
-!     if (usehex) then
-!      do ix=1,nequiv
-!        srhex(iequiv(1,ix),iequiv(2,ix)) = Iz(1)
-!       end do
-!     else
-         do ix=1,nequiv
-           trange(iequiv(1,ix),iequiv(2,ix)) = Iz(1)
-          end do
-!     end if
+       if ((cell%SYM_SGnum.ge.195).and.(cell%SYM_SGnum.le.230)) then
+         call Apply3DPGSymmetry(cell,ipx,ipy,ipz,kmnl%npix,iequiv,nequiv,cubictype=SamplingType)
+       else
+         call Apply3DPGSymmetry(cell,ipx,ipy,ipz,kmnl%npix,iequiv,nequiv)
+       end if
+     end if
+     if (kmnl%Kosselmode.eq.'normal') then
+      do ix=1,nequiv
+       if (iequiv(3,ix).eq.-1) mLPSH(iequiv(1,ix),iequiv(2,ix),1:numthick) = Iz(1:numthick)
+       if (iequiv(3,ix).eq.1) mLPNH(iequiv(1,ix),iequiv(2,ix),1:numthick) = Iz(1:numthick)
+      end do
+     else
+      do ix=1,nequiv
+        trange(iequiv(1,ix),iequiv(2,ix)) = Iz(1)
+      end do
      end if
 !$OMP END CRITICAL
-  
-     if (mod(ik,2500).eq.0) then
+     
+     if (mod(ik,5000).eq.0) then
        io_int(1) = ik
        call WriteValue('  completed beam direction ',io_int, 1, "(I8)")
      end if
@@ -420,42 +518,112 @@ call Message('Starting computation', frm = "(/A)")
 ! end of OpenMP portion
 !$OMP END PARALLEL
 
-  deallocate(karray, kij)
+deallocate(karray, kij)
 
-!  we need to convert srhex to sr !!!
+if (usehex) then
+! and finally, we convert the hexagonally sampled array to a square Lambert projection which will be used 
+! for all Kossel pattern interpolations;  we need to do this for both the Northern and Southern hemispheres
 
+! we begin by allocating auxiliary arrays to hold copies of the hexagonal data; the original arrays will
+! then be overwritten with the newly interpolated data.
+   if (kmnl%Kosselmode.eq.'normal') then
+    allocate(auxNH(-kmnl%npix:kmnl%npix,-npy:npy,1:kmnl%numthick),stat=istat)
+    allocate(auxSH(-kmnl%npix:kmnl%npix,-npy:npy,1:kmnl%numthick),stat=istat)
+    auxNH = mLPNH
+    auxSH = mLPSH
+   else
+    allocate(auxtrange(-kmnl%npix:kmnl%npix,-npy:npy),stat=istat)
+    auxtrange = trange
+   end if 
+! 
+   edge = 1.D0 / dble(kmnl%npix)
+   scl = float(kmnl%npix) 
+   do i=-kmnl%npix,kmnl%npix
+      do j=-npy,npy
+! determine the spherical direction for this point
+        xy = (/ dble(i), dble(j) /) * edge
+        dc = LambertSquareToSphere(xy, ierr)
+! convert direction cosines to hexagonal Lambert projections
+        xy = scl * LambertSphereToHex( dc, ierr )
+! interpolate intensity from the neighboring points
+        if (ierr.eq.0) then 
+          nix = floor(xy(1))
+          niy = floor(xy(2))
+          nixp = nix+1
+          niyp = niy+1
+          if (nixp.gt.kmnl%npix) nixp = nix
+          if (niyp.gt.kmnl%npix) niyp = niy
+          dx = xy(1) - nix
+          dy = xy(2) - niy
+          dxm = 1.D0 - dx
+          dym = 1.D0 - dy
+          if (kmnl%Kosselmode.eq.'normal') then
+           mLPNH(i,j,1:numthick) = auxNH(nix,niy,1:numthick)*dxm*dym + auxNH(nixp,niy,1:numthick)*dx*dym + &
+                               auxNH(nix,niyp,1:numthick)*dxm*dy + auxNH(nixp,niyp,1:numthick)*dx*dy
+           mLPSH(i,j,1:numthick) = auxSH(nix,niy,1:numthick)*dxm*dym + auxSH(nixp,niy,1:numthick)*dx*dym + &
+                               auxSH(nix,niyp,1:numthick)*dxm*dy + auxSH(nixp,niyp,1:numthick)*dx*dy
+          else 
+           trange(i,j) = auxtrange(nix,niy)*dxm*dym + auxtrange(nixp,niy)*dx*dym + &
+                               auxtrange(nix,niyp)*dxm*dy + auxtrange(nixp,niyp)*dx*dy
+          end if
+        end if
+      end do
+    end do
+end if
 
-  open(unit=dataunit,file=trim(kmnl%outname),status='unknown',action='write',form = 'unformatted')
-! write the program identifier
-  write (dataunit) progname
-! write the version number
-  write (dataunit) scversion
-! then the name of the crystal data file
-  write (dataunit) kmnl%xtalname
-! pattern size parameter
-  write (dataunit) kmnl%npix
-! thickness parameters
-  write (dataunit) numthick
-  write (dataunit) kmnl%startthick, kmnl%thickinc
-! is this a regular (square) or hexagonal projection ? and what is the Kosselmode ?
+! and here is where the major changes are for version 5.0: all output now in HDF5 format
+  call timestamp(timestring=tstre)
+
+  nullify(HDF_head)
+! Initialize FORTRAN HDF interface.
+  call h5open_f(hdferr)
+
+! open the existing file using the default properties.
+  hdferr =  HDF_openFile(outname, HDF_head)
+
+! update the time string
+  groupname = 'EMheader'
+  hdferr = HDF_openGroup(groupname, HDF_head)
+
+  dataset = 'StopTime'
+  line2(1) = tstre
+  hdferr = HDF_writeDatasetStringArray(dataset, line2, 1, HDF_head, overwrite)
+
+  call CPU_TIME(tstop)
+  dataset = 'Duration'
+  tstop = tstop - tstart
+  hdferr = HDF_writeDatasetFloat(dataset, tstop, HDF_head)
+
+  call HDF_pop(HDF_head)
+
+  groupname = 'EMData'
+  hdferr = HDF_openGroup(groupname, HDF_head)
+
+! add data to the hyperslab
   if (kmnl%Kosselmode.eq.'normal') then
-   if (usehex) then 
-    write (dataunit) 'hexago'
-   else
-    write (dataunit) 'square'
-   end if
-! and finally the results array
-   write (dataunit) sr
-  else 
-   if (usehex) then 
-    write (dataunit) 'hexagt'
-   else
-    write (dataunit) 'squart'
-   end if
-! and finally the results array
-   write (dataunit) trange
+    dataset = 'mLPNH'
+    dims3 = (/  2*kmnl%npix+1, 2*kmnl%npix+1, numthick /)
+    cnt3 = (/ 2*kmnl%npix+1, 2*kmnl%npix+1, numthick /)
+    offset3 = (/ 0, 0, 0 /)
+    hdferr = HDF_writeHyperslabFloatArray3D(dataset, mLPNH, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head, insert)
+
+    dataset = 'mLPSH'
+    dims3 = (/  2*kmnl%npix+1, 2*kmnl%npix+1, numthick /)
+    cnt3 = (/ 2*kmnl%npix+1, 2*kmnl%npix+1, numthick /)
+    offset3 = (/ 0, 0, 0 /)
+    hdferr = HDF_writeHyperslabFloatArray3D(dataset, mLPSH, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head, insert)
+  else
+    dataset = 'trange'
+    dims2 = (/  2*kmnl%npix+1, 2*kmnl%npix+1 /)
+    cnt2 = (/ 2*kmnl%npix+1, 2*kmnl%npix+1 /)
+    offset2 = (/ 0, 0 /)
+    hdferr = HDF_writeHyperslabFloatArray2D(dataset, trange, dims2, offset2, cnt2(1), cnt2(2), HDF_head, insert)
   end if
-  close(unit=dataunit,status='keep')
+
+  call HDF_pop(HDF_head,.TRUE.)
+
+! and close the fortran hdf interface
+  call h5close_f(hdferr)
 
   call Message('Final data stored in file '//trim(kmnl%outname), frm = "(A/)")
 

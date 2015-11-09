@@ -1,5 +1,4 @@
-;
-; Copyright (c) 2013-2014, Marc De Graef/Carnegie Mellon University
+; Copyright (c) 2015, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are 
@@ -26,61 +25,78 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:KosselDisplay_event.pro
+; EMsoft:SEMDisplay_event.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: KosselDisplay_event.pro
+; PROGRAM: SEMDisplay_event.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief main event handler
+;> @brief Electron backscatter diffraction pattern display event handler
 ;
-;> @date 11/23/13 MDG 1.0 first version
+;> @date 03/19/14 MDG 1.0 initial version
 ;--------------------------------------------------------------------------
-pro KosselDisplay_event, event
+pro SEMDisplay_event, event
 
 ;------------------------------------------------------------
 ; common blocks
-common Kossel_widget_common, widget_s
-common Kossel_data_common, data
-common Kossel_rawdata, rawdata
+common EBSD_widget_common, EBSDwidget_s
+common EBSD_data_common, EBSDdata
 
 
-if (data.eventverbose eq 1) then help,event,/structure
+if (EBSDdata.eventverbose eq 1) then help,event,/structure
 
-if (event.id eq widget_s.base) then begin
-  data.xlocation = event.x
-  data.ylocation = event.y-25
+if (event.id eq EBSDwidget_s.base) then begin
+  EBSDdata.xlocation = event.x
+  EBSDdata.ylocation = event.y-25
 end else begin
 
   WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
   
-; IF N_ELEMENTS(eventval) EQ 0 THEN RETURN,eventval
-
   CASE eventval OF
-  'LOADFILE': begin
-; loading a new file means the current window must be deleted if it exists
-		if (XRegistered("KosselPatternWidget") NE 0) then WIDGET_CONTROL, widget_s.KosselPatternbase, /DESTROY
-	
+  	'MCDISPLAY': begin
+; create the Monte Carlo display widget
+		EBSDMCDisplayWidget
+	endcase
+
+  	'MPDISPLAY': begin
+; create the Master Pattern display widget
+		EBSDMCDisplayWidget
+	endcase
+
+; 	'MCFILE': begin
 ; ask the user to select the data file
-		Kosselgetfilename,validfile
-
+;	EBSDgetfilename,validfile,/MCFILE
 ; read the data file and populate all the relevant fields
-		if (validfile eq 1) then Kosselreaddatafile,valid
+;	if (validfile eq 1) then begin
+;                  res = H5F_IS_HDF5(EBSDdata.mcpathname+'/'+EBSDdata.mcfilename)
+;                  if (res eq 0) then begin
+;                    Core_print,'This file is not an HDF5 file ... '
+;                  end else EBSDreadHDFdatafile,/MCFILE
+;               endif
+;endcase
 
-; start up the display widget
-		if (valid eq 1) then KosselPatternWidget
-	  endcase
+  	'MPFILE': begin
+; ask the user to select the data file
+		EBSDgetfilename,validfile,/MPFILE
+; read the data file and populate all the relevant fields
+		if (validfile eq 1) then begin
+                   res = H5F_IS_HDF5(EBSDdata.pathname+'/'+EBSDdata.mpfilename)
+                   if (res eq 0) then begin
+                     Core_print,'This file is not an HDF5 file ...'
+                   end else EBSDreadHDFdatafile,/MPFILE
+                endif
+	endcase
 
- 'QUIT': begin
+	'DETECTOR': begin
+                if (EBSDdata.EBSDorECP eq 0) then EBSDDetectorWidget else ECPDetectorWidget
+	endcase
+
+ 	'QUIT': begin
+		EBSDwritepreferences
 ; do a general cleanup of potentially open widgets
-		if (XRegistered("KosselPatternWidget") NE 0) then WIDGET_CONTROL, widget_s.KosselPatternbase, /DESTROY
-
-; write the preferences file
-		Kosselwritepreferences
-
-; and finally kill the base widget
-		WIDGET_CONTROL, widget_s.base, /DESTROY
+ 		Core_Print,'Quitting program',/blank
+		WIDGET_CONTROL, EBSDwidget_s.base, /DESTROY
 		!EXCEPT=1
 	endcase
 
@@ -91,3 +107,6 @@ end else begin
 endelse
 
 end 
+
+
+

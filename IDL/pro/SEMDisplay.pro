@@ -87,6 +87,7 @@
 ;> @date 10/30/15 MDG 2.1 added ECP calculation for detector model, using call_external to SingleECPatternWrapper
 ;> @date 10/31/15 MDG 3.0 simplification of main interface; file data is now listed in message window
 ;> @date 11/05/15 MDG 3.1 program name change from EBSDDisplay to SEMDisplay
+;> @date 11/09/15 MDG 3.2 added Kossel pattern visualization, similar to ECP but simpler detector model
 ;--------------------------------------------------------------------------
 pro SEMDisplay,dummy
 ;
@@ -121,10 +122,12 @@ DG = ['  ',' 1',' 1R',' 2',' 2R',' 21R','  mR', $
 
 circularmask = fltarr(10,10)
 
+
+
 ;------------------------------------------------------------
 ; make sure that this program isn't already running
-if (XRegistered("EBSDDisplay") NE 0) then begin
-  print,'EBSDDisplay is already running ... (if it is not, please restart your IDL session)'
+if (XRegistered("SEMDisplay") NE 0) then begin
+  print,'SEMDisplay is already running ... (if it is not, please restart your IDL session)'
   return
 end
 
@@ -157,6 +160,7 @@ EBSDwidget_s = {widgetstruct, $
 	   
 	; Master Pattern widget ids
 	mpfilename: long(0), $			; file name for master pattern
+	mpfiletype: long(0), $			; file type for master pattern
 	mpfilesize: long(0), $			; file size in bytes
 	mpimx: long(0), $			; x-pixels N as in (2N+1)
 	mpimy: long(0), $			; y-pixels (should be equal to mpimx)
@@ -291,6 +295,8 @@ EBSDdata = {EBSDdatastruct, $
 
 	; then Master Pattern parameters
 	mpfilename: '', $ 			; master pattern file name
+	mpfiletype: long(0), $			; file type for master pattern
+	mpfiletypestring: strarr(3), $		; file type strings for master pattern
 	mpfilesize: long(0), $			; size (in bytes) of master pattern file
 	mpimx: long(0), $			; number of x-pixels in master pattern (N in 2N+1)
 	mpimy: long(0), $			; same along y
@@ -407,6 +413,10 @@ fontstr='-adobe-new century schoolbook-bold-r-normal--14-100-100-100-p-87-iso885
 fontstrlarge='-adobe-new century schoolbook-medium-r-normal--20-140-100-100-p-103-iso8859-1'
 fontstrsmall='-adobe-new century schoolbook-medium-r-normal--14-100-100-100-p-82-iso8859-1'
 
+
+; here are the possible master pattern file types
+data.mpfiletypestring = ['  ','EBSD','ECP','Kossel']
+
 ;------------------------------------------------------------
 ; get the display window size to 80% of the current screen size (but be careful with double screens ... )
 ; We'll need to guess whether or not the user has a double screen: if the aspect ratio is larger than 16/9,
@@ -424,14 +434,13 @@ EBSDdata.scrdimx = scr[0]
 EBSDdata.xlocation = EBSDdata.scrdimx / 8.0
 EBSDdata.ylocation = EBSDdata.scrdimx / 8.0
 
-
 ;------------------------------------------------------------
 ; does the preferences file exist ?  If not, create it, otherwise read it
 EBSDgetpreferences,/noprint
 
 ;------------------------------------------------------------
 ; create the top level widget
-EBSDwidget_s.base = WIDGET_BASE(TITLE='EBSD and ECP Pattern Display Program', $
+EBSDwidget_s.base = WIDGET_BASE(TITLE='EBSD, ECP, and Kossel Pattern Display Program', $
                         /COLUMN, $
                         XSIZE=620, $
                         /ALIGN_LEFT, $
@@ -499,6 +508,9 @@ EBSDwidget_s.MPbutton = WIDGET_BUTTON(file2, $
 file1 = WIDGET_BASE(block21, /ROW, XSIZE=600, /ALIGN_CENTER)
 EBSDwidget_s.mpfilename = Core_WText(file1,'MP Data File Name', fontstrlarge, 200, 25, 60, 1, EBSDdata.mpfilename)
 
+;---------- file type
+file1 = WIDGET_BASE(block21, /ROW, XSIZE=600, /ALIGN_CENTER)
+EBSDwidget_s.mpfiletype = Core_WText(file1,'File Type', fontstrlarge, 50, 25, 60, 1, EBSDdata.mpfiletype)
 
 ;------------------------------------------------------------
 ;------------------------------------------------------------
@@ -527,16 +539,16 @@ EBSDwidget_s.mainstop = WIDGET_BUTTON(file11, $
                                 SENSITIVE=1, $
                                 /FRAME)
 
-EBSDwidget_s.mcloadfile = WIDGET_BUTTON(file11, $
-                                UVALUE='MCFILE', $
-                                VALUE='Load MC file', $
-                                EVENT_PRO='EBSDDisplay_event', $
-                                SENSITIVE=1, $
-                                /FRAME)
-
+;EBSDwidget_s.mcloadfile = WIDGET_BUTTON(file11, $
+;                                UVALUE='MCFILE', $
+;                                VALUE='Load MC file', $
+;                                EVENT_PRO='EBSDDisplay_event', $
+;                                SENSITIVE=1, $
+;                                /FRAME)
+;
 EBSDwidget_s.mploadfile = WIDGET_BUTTON(file11, $
                                 UVALUE='MPFILE', $
-                                VALUE='Load master file', $
+                                VALUE='Load Master File', $
                                 EVENT_PRO='EBSDDisplay_event', $
                                 SENSITIVE=1, $
                                 /FRAME)
@@ -577,7 +589,7 @@ wset,EBSDwidget_s.logodrawID
 tvscl,logo,true=1
 
 ; and hand over control to the xmanager
-XMANAGER,"EBSDDisplay",EBSDwidget_s.base,/NO_BLOCK
+XMANAGER,"SEMDisplay",EBSDwidget_s.base,/NO_BLOCK
 
 end
 
