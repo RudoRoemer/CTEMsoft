@@ -2,6 +2,9 @@
 
 This package contains a series of programs along with a library, mostly written in fortran-90, for the computation and visualization of electron microscopy images and diffraction patterns. The programs can be used as standalone command-line programs, and produce binary output files that can then be visualized using IDL routines (Interactive Data Language).
 
+## IMPORTANT NOTICE ##
+As of Friday November 13, 2015, CTEMsoft 2.0 is no longer supported.  The SEM portion of this package has been completely rewritten and is made available as the new EMsoft 3.0 package here on GitHub.  The TEM portion of CTEMsoft 2.0 will be rewritten during the coming months and will become part of EMsoft 3.2 in the Fall of 2016.
+
 ## Financial Support ##
 Current development of this package is supported by an AFOSR/MURI grant, FA9550-12-1-0458; the original EBSD code was developed with support from an ONR grant, N00014-12-1-0075
 
