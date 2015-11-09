@@ -364,8 +364,6 @@ allocate(cell)
 
 SamplingType = PGSamplingType(isym)
 
-write (*,*) 'stuff ',cell%SYM_SGnum, isym, SamplingType,cell%SG%SYM_second,cell%SYM_SGset 
-
 ! next, intercept the special cases (hexagonal vs. rhombohedral cases that require special treatment)
 if ((SamplingType.eq.-1).or.(isym.eq.14).or.(isym.eq.26)) then 
   SamplingType = getHexvsRho(cell,isym)

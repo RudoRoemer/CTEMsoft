@@ -662,7 +662,7 @@ if (mapmode.eq.'RoscaLambert') then
                 xx = dble(i-j/2)
                 yy = dble(j)*LPs%srt
                 check = .TRUE.
-                if (xx.le.0.D0) then
+                if (xx.lt.0.D0) then
                    check = .FALSE.
                 else
                    if (xx.gt.0.D0) then
@@ -712,7 +712,7 @@ if (mapmode.eq.'RoscaLambert') then
                 xx = dble(i-j/2)
                 yy = dble(j)*LPs%srt
                 check = .TRUE.
-                if (xx.le.0.D0) then
+                if (xx.lt.0.D0) then
                    check = .FALSE.
                 else
                    if (xx.gt.0.D0) then
@@ -735,7 +735,7 @@ if (mapmode.eq.'RoscaLambert') then
                 xx = dble(i-j/2)
                 yy = dble(j)*LPs%srt
                 check = .TRUE.
-                if (xx.le.0.D0) then
+                if (xx.lt.0.D0) then
                    check = .FALSE.
                 else
                    if (xx.gt.0.D0) then
@@ -758,7 +758,7 @@ if (mapmode.eq.'RoscaLambert') then
                 xx = dble(i-j/2)
                 yy = dble(j)*LPs%srt
                 check = .TRUE.
-                if (xx.le.0.D0) then
+                if (xx.lt.0.D0) then
                    check = .FALSE.
                 else
                    if (xx.gt.0.D0) then
