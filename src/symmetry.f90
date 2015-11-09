@@ -2316,6 +2316,7 @@ end subroutine CheckPatternSymmetry
 !
 !> @date  08/25/15 MDG 1.0 original
 !> @date  08/26/15 MDG 1.1 added point group cases 14 and 26
+!> @date  11/06/15 MDG 1.2 fixed special cases (errors for trigonal symmetry)
 !--------------------------------------------------------------------------
 recursive function getHexvsRho(cell,pgnum) result(stnum)
 
@@ -2327,57 +2328,53 @@ IMPLICIT NONE
 
 type(unitcell),pointer                  :: cell
 integer(kind=irg),INTENT(IN)            :: pgnum
-integer(kind=irg)                       :: stnum
+integer(kind=irg)                       :: stnum, sg
 
+sg = cell%SYM_SGnum
 ! Is this a trigonal group
 if (cell%SG%SYM_trigonal.eqv..TRUE.) then ! yes, it is
-  if (cell%SG%SYM_second.eqv..TRUE.) then ! so check the crystal system; if trigonal then ...
-    if (pgnum.eq.16) stnum = 11
-    if (pgnum.eq.17) stnum = 13
-    if (pgnum.eq.18) stnum = 12
-    if (pgnum.eq.19) stnum = 14
-    if (pgnum.eq.20) stnum = 16
-  else    ! it is the hexagonal setting, so we have some checking to do
-    if (pgnum.eq.16) stnum = 10
-    if (pgnum.eq.17) stnum = 12
-    if (pgnum.eq.18) then
-      if ((cell%SYM_SGnum.eq.149).or.(cell%SYM_SGnum.eq.151).or.(cell%SYM_SGnum.eq.153)) then
-        stnum = 13
-      else
-        stnum = 12
-      end if
-    end if
-    if (pgnum.eq.19) then
-      if ((cell%SYM_SGnum.eq.156).or.(cell%SYM_SGnum.eq.158).or.(cell%SYM_SGnum.eq.160)) then
-        stnum = 14
-      else
-        stnum = 15
-      end if
-    end if
-    if (pgnum.eq.20) then
-      if ((cell%SYM_SGnum.eq.162).or.(cell%SYM_SGnum.eq.163)) then
-        stnum = 17
-      else
-        stnum = 16
-      end if
-    end if
-  end if
+
+! go through all the trigonal space groups from 143 to 167 and set the correct sampling type number stnum
+! point group 3
+  if ((sg.ge.143).and.(sg.le.145)) stnum = 10
+  if (sg.eq.146) stnum = 10
+
+! point group bar3
+  if (sg.eq.147) stnum = 12
+  if (sg.eq.148) stnum = 13
+
+! point group 32
+  if ((sg.eq.149).or.(sg.eq.151).or.(sg.eq.153)) stnum = 13
+  if ((sg.eq.150).or.(sg.eq.152).or.(sg.eq.154)) stnum = 12
+  if (sg.eq.155) stnum = 12
+
+! point group 3m
+  if ((sg.eq.156).or.(sg.eq.158)) stnum = 14
+  if ((sg.eq.157).or.(sg.eq.159)) stnum = 14 ! 15
+  if ((sg.eq.160).or.(sg.eq.161)) stnum = 14 ! 15
+  
+! point group bar3m
+  if ((sg.eq.162).or.(sg.eq.163)) stnum = 17
+  if ((sg.eq.164).or.(sg.eq.165)) stnum = 17 ! 16
+  if ((sg.eq.166).or.(sg.eq.167)) stnum = 17 ! 16
 else
 ! this must be either point group 14 or 26, each with two settings
   if (pgnum.eq.14) then
-    if ((cell%SYM_SGnum.ge.115).and.(cell%SYM_SGnum.le.120)) then
-      stnum = 6
-    else
-      stnum = 8
-    end if
+    stnum = 8
+!   if ((sg.ge.115).and.(sg.le.120)) then
+!     stnum = 8! 6
+!   else
+!     stnum = 8
+!   end if
   end if
   if (pgnum.eq.26) then
-    if ((cell%SYM_SGnum.eq.187).or.(cell%SYM_SGnum.eq.188)) then
-      stnum = 16
-    else
-      stnum = 17
-    end if
-  end if
+    stnum = 16
+!   if ((sg.eq.187).or.(sg.eq.188)) then
+!     stnum = 16
+!   else
+!     stnum = 17
+!   end if
+ end if
 end if
 
 end function getHexvsRho

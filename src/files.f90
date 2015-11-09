@@ -226,6 +226,7 @@ end subroutine CrystalData
 !> @date   01/10/14 MDG 4.0 update after new cell type
 !> @date   06/06/14 MDG 4.1 added cell pointer argument
 !> @date   03/29/15 MDG 5.0 branched from old version; HDF support 
+!> @date   11/07/15 MDG 5.1 correction to writing of SEM_SGset variable
 !--------------------------------------------------------------------------
 subroutine SaveDataHDF(cell)
 
@@ -283,6 +284,8 @@ hdferr = HDF_writeDatasetDoubleArray1D(dataset, cellparams, 6, HDF_head)
 dataset = 'SpaceGroupNumber'
 hdferr = HDF_writeDatasetInteger(dataset, cell%SYM_SGnum, HDF_head)
 
+! make sure we do not write a '0' for the SGset variable; it must be either 1 or 2
+if (cell%SYM_SGset.eq.0) cell%SYM_SGset = 1
 dataset = 'SpaceGroupSetting'
 hdferr = HDF_writeDatasetInteger(dataset, cell%SYM_SGset, HDF_head)
 
@@ -324,6 +327,7 @@ end subroutine SaveDataHDF
 !> @date   01/10/14 MDG 4.0 update after new cell type
 !> @date   06/06/14 MDG 4.1 added cell pointer argument
 !> @date   03/29/15 MDG 5.0 branched from old version; HDF support 
+!> @date   11/07/15 MDG 5.1 corrected reading of SYM_SGset for older xtal files
 !--------------------------------------------------------------------------
 subroutine ReadDataHDF(cell)
 
@@ -372,6 +376,9 @@ cell%SYM_SGnum = HDF_readDatasetInteger(dataset, HDF_head)
 
 dataset = 'SpaceGroupSetting'
 cell%SYM_SGset = HDF_readDatasetInteger(dataset, HDF_head)
+! this parameter must be either 1 or 2, but is initialized to 0;
+! some older .xtal files may still have 0 in them, so we correct this here
+if (cell%SYM_SGset.eq.0) cell%SYM_SGset = 1
 
 dataset = 'Natomtypes'
 cell%ATOM_ntype = HDF_readDatasetInteger(dataset, HDF_head)
@@ -397,8 +404,10 @@ else
   cell%SG%SYM_trigonal = .FALSE.
 end if 
 
+! we have not yet implemented the rhombohedral setting of the trigonal 
+! space groups, so this needs to remain at .FALSE. always.
 cell%SG%SYM_second = .FALSE.
-if (cell%SYM_SGset.ne.0) cell%SG%SYM_second=.TRUE.
+!if (cell%SYM_SGset.ne.0) cell%SG%SYM_second=.TRUE.
 
 end subroutine ReadDataHDF
 

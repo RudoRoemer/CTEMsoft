@@ -97,9 +97,10 @@
 \ctp\ is an open source package for the simulation of electron microscopy imaging and diffraction modalities.  It consists of a library with
 core routines for crystallography, symmetry, dynamical scattering, Monte Carlo simulations, and so on, plus a series of programs for the different modalities.
 The package is based on the older, and now discontinued, \textsf{CTEMsoft} package, for which the version 2.0 source code is still
-available at \textit{http://www.github.com/marcdegraef/CTEMsoft}.  This code base is no longer supported and is completely replaced
+available at \textit{http://www.github.com/marcdegraef/CTEMsoft}.  This code base is no longer supported and is replaced
 by a new source code base, version 3.0, available from \textit{http://www.github.com/marcdegraef/EMSoft}.  The two versions are not 
-compatible with each other (with one exception; see section~\ref{sec:f90input5}).
+compatible with each other (with one exception; see section~\ref{sec:f90input5}).  In the current release, only EBSD and ECP programs are
+available, along with a number of support programs; in a later release, we will make updated versions of the TEM programs available as well.
 
 This manual describes a few aspects of the \ctp\ package:
 \begin{itemize}
@@ -116,7 +117,7 @@ are carried out using \textsf{OpenMP} directives, so that multiple cores are use
 GPU (if available), using \textit{OpenCL} code.
 
 If you wish to compile \ctp\ yourself, then please proceed with the next section; if you only plan on using the 
-executables, please jump ahead to section~\ref{sec:executables}.
+executables, please jump ahead to section~\ref{sec:todo}.
 
 
 \section{The \ctpb\ Software Developer Kit\label{sec:SDK}}
@@ -125,7 +126,7 @@ clone the repository from \textit{http://www.github.com/marcdegraef/EMSoft}.  Se
 host the source code tree; we recommend that the foldername be \ctp, but you are obviously free to change this.
 
 Before you can start to compile the code, you must install the software developer kit (SDK).  This is made very easy thanks to our
-friends at Bluequartz.net; open a terminal window, navigate inside the \ctp\ tree to the folder \textsf{Support/SDK\_Build\_Scripts}.
+friends at BlueQuartz.net; open a terminal window, navigate inside the \ctp\ tree to the folder \textsf{Support/SDK\_Build\_Scripts}.
 On the Mac OS X and Linux platforms, the SDK will be installed by default in a new \textsf{/opt/EMSoft\_SDK}
 folder; this can be changed by editing the \textsf{SDK\_PARENT\_DIR} variable in the \textsf{Build\_SDK.sh} shell script file.
 
@@ -167,7 +168,7 @@ In a terminal window, cd to your \textsf{EMsoft} top folder, create a \textsf{Bu
 This will spit out a number of variables and path names.\footnote{If you get any error messages or notice things that do not look right, please contact us with a 
 screen dump as well as a description of your system, including the OS version.} This is the first cmake run, which will set up all necessary variables
 for future runs.  The next time you call the cmake program, you can omit the arguments (except for ../); you can also use the interactive ccmake version.
-Tho compile the \ctp\ package, simply type
+To compile the \ctp\ package, simply type
 \begin{verbatim}
 	make -j
 \end{verbatim}

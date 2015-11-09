@@ -731,22 +731,11 @@ is an 8-byte integer.
 
 
 \section{Crystal structure data in HDF5 format}
-The crystal structure data has thus far been stored in binary form in files of the type \textsf{*.xtal}. 
+In earlier releases, the crystal structure data was stored in binary form in files of the type \textsf{*.xtal}. 
 A series of new routines was created to store crystal structure data in HDF5 format, which makes the 
-files editable by the HDFView program.  These files will also be stored in a single folder, the location 
-of which can be selected by the user by means of an environmental variable.  A mechanism is provided that 
-will recognize data files in the old format, and automatically convert them to the new HDF5 format and 
-store them in the dedicated folder; in the old approach, \textsf{*.xtal} files would be scattered all 
-over the filesystem.  From a user point of view, everything looks the same, except for the dedicated folder.
-
-The environmental variable should be set as follows:
-\begin{verbatim}
-% in .cshrc file  [folder name 'XtalFolder' can be anything]
-    setenv EMsoftxtalpath /some/path/XtalFolder
-% in .bash_profile
-    EMsoftxtalpath=/some/path/XtalFolder
-    export EMsoftxtalpath
-\end{verbatim}
+files editable by the HDFView program.  These files are also stored in a single folder \textsf{EMdatapathname/XtalFolder}; 
+in the old approach, \textsf{*.xtal} files would be scattered all over the filesystem. 
+A mechanism is provided that recognizes data files in the old format, and automatically converts them to the new HDF5 format
 
 \begin{figure}[h]
 \leavevmode\centering

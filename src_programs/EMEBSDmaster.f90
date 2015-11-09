@@ -189,7 +189,7 @@ character(8)            :: MCscversion
 character(11)           :: dstr
 character(15)           :: tstrb
 character(15)           :: tstre
-logical                 :: f_exists, readonly, overwrite=.TRUE., insert=.TRUE.
+logical                 :: f_exists, readonly, overwrite=.TRUE., insert=.TRUE., stereog
 character(fnlen, KIND=c_char),allocatable,TARGET :: stringarray(:)
 character(fnlen,kind=c_char)                     :: line2(1)
 
@@ -207,6 +207,8 @@ character(fnlen)                :: dataset, instring
 type(HDFobjectStackType),pointer  :: HDF_head
 
 !$OMP THREADPRIVATE(rlp) 
+
+stereog = .TRUE.
 
 nullify(HDF_head)
 
@@ -362,9 +364,12 @@ allocate(cell)
 
 SamplingType = PGSamplingType(isym)
 
+write (*,*) 'stuff ',cell%SYM_SGnum, isym, SamplingType,cell%SG%SYM_second,cell%SYM_SGset 
+
 ! next, intercept the special cases (hexagonal vs. rhombohedral cases that require special treatment)
-if (SamplingType.eq.-1) then 
+if ((SamplingType.eq.-1).or.(isym.eq.14).or.(isym.eq.26)) then 
   SamplingType = getHexvsRho(cell,isym)
+  write (*,*) ' --> ',cell%SYM_SGnum, isym, SamplingType,cell%SG%SYM_second,cell%SYM_SGset 
 end if
 
 ! if the point group is trigonal or hexagonal, we need to switch usehex to .TRUE. so that
