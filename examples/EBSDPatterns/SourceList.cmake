@@ -1,22 +1,20 @@
 
 #---------------------------------------------------------------------
 # Set some variables to shorten up the call to the function below
-set(APP_DIR ${EMsoft_SOURCE_DIR}/opencl)
+set(APP_DIR ${EMsoft_SOURCE_DIR}/examples/EBSDPatterns)
 
 #---------------------------------------------------------------------
 # Aggregate all the OpenCL files that are needed
-set(EMSoft_CL_SRCS
-  # ${APP_DIR}/Defectmodule.cl
-  # ${APP_DIR}/DictIndx.cl
-  # ${APP_DIR}/EMMC-multilayer.cl
-  ${APP_DIR}/EMMC.cl
-  # ${APP_DIR}/EMMCGB.cl
-  # ${APP_DIR}/MBmoduleOpenCL.cl
+set(EMSoft_DefectSim_FILES
+  ${APP_DIR}/BetheParameters.nml
+  ${APP_DIR}/EMEBSDexample.nml
+  ${APP_DIR}/EMEBSDMexample.nml
+  ${APP_DIR}/EMMCexample.nml
 )
 
 #---------------------------------------------------------------------
 # Create the Installation Rules
-INSTALL(FILES ${EMSoft_CL_SRCS}
+INSTALL(FILES ${EMSoft_DefectSim_FILES}
   COMPONENT Applications
-  DESTINATION "opencl"
+  DESTINATION "examples/EBSDPatterns"
 )
