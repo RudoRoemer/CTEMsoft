@@ -1,7 +1,7 @@
 
 #---------------------------------------------------------------------
 # Set some variables to shorten up the call to the function below
-set(APP_DIR ${EMsoft_SOURCE_DIR}/examples/DefectSimulations)
+set(APP_DIR ${EMsoft_SOURCE_DIR}/examples_todo/DefectSimulations)
 
 #---------------------------------------------------------------------
 # Aggregate all the OpenCL files that are needed

@@ -161,6 +161,17 @@ cmake_add_fortran_subdirectory(src_SampleRFZ
   LINK_LIBS 
 )
 
+
+# --------------------------------------------------------------------
+# Package the needed examples
+include(${PROJECT_SOURCE_DIR}/examples/SourceList.cmake)
+
+# --------------------------------------------------------------------
+# Package the needed IDL Files
+
+# --------------------------------------------------------------------
+# Package the needed PDF Manuals
+
 # --------------------------------------------------------------------
 # Package the OpenCL files
 include(${PROJECT_SOURCE_DIR}/opencl/SourceList.cmake)
@@ -169,9 +180,10 @@ include(${PROJECT_SOURCE_DIR}/opencl/SourceList.cmake)
 # Package the needed resources
 include(${PROJECT_SOURCE_DIR}/resources/SourceList.cmake)
 
+
 # --------------------------------------------------------------------
 # Package the needed examples
-include(${PROJECT_SOURCE_DIR}/examples/SourceList.cmake)
+include(${PROJECT_SOURCE_DIR}/templatefolder/SourceList.cmake)
 
 # --------------------------------------------------------------------
 # Add the executables

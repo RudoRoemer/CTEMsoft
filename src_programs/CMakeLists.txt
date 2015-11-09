@@ -49,7 +49,7 @@ function(Add_EMSoft_Executable)
     message(STATUS "  ${Z_TEMPLATE}")
   else()
     install(FILES ${Z_TEMPLATE}
-      DESTINATION "Templates"
+      DESTINATION "templatefolder"
       COMPONENT Applications
     )
   endif()
@@ -163,9 +163,3 @@ Add_EMSoft_Executable(TARGET EMEBSDmasterOpenCL
                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${FORTRANCL_LIBRARIES} ${OpenCL_LIBRARY}
                       TEMPLATE ${TMPLT_DIR}/EMEBSDmaster.template
                       )
-
-
-install(FILES ${TMPLT_DIR}/BetheParameters.template
-  DESTINATION "Templates"
-  COMPONENT Applications
-)
