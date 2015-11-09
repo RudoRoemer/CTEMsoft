@@ -1,0 +1,23 @@
+&foildata
+foilF = 0.0, 0.0, 1.0
+foilq = 1.0, 0.0, 0.0
+brx =  0.0e-7
+bry = 0.0e-7
+brxy= -0.0e-7
+cpx = 0.5
+cpy = 0.5
+foilalS =  0.0
+foilalP =  0.0
+foilalR =  0.0
+foilbeP =  0.0
+foilz0 = 100.0
+foilelmo(1,1) = 14.05
+foilelmo(2,2) = 14.05
+foilelmo(3,3) = 14.05
+foilelmo(1,2) =  6.20
+foilelmo(1,3) =  6.20
+foilelmo(2,3) =  6.20
+foilelmo(4,4) =  7.03
+foilelmo(5,5) =  7.03
+foilelmo(6,6) =  7.03
+/

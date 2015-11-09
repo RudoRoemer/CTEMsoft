@@ -28,7 +28,6 @@ IDL/pro_todo
 *.amake.bk
 *.f90.bak
 *.xtal
-*.nml
 
 # DOxygen files
 /doc/

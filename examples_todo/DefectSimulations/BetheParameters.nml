@@ -1,0 +1,6 @@
+&Bethelist
+weakcutoff = 70.0
+cutoff = 70.0
+! the next parameter should be set to include double diffraction reflections
+sgcutoff = 0.05
+/

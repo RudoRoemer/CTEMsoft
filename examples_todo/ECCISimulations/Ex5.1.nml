@@ -1,0 +1,27 @@
+&ECCIlist
+! The line above must not be changed
+SETNTHR = 12
+voltage = 25000.
+xtalname = 'GaP.xtal'
+progmode = 'array'
+summode = 'diag'
+kk = 0,0,1
+dkt = 0.50
+ktmax = 10.0
+lauec = 0.0, 0.0
+dmin = 0.12
+dinfo = 0
+foilnmlfile = 'FOIL5.1.nml'
+dataname = 'Ex5.1.data'
+ECPname = '/some/folder/GaP001_25kV.data'
+DF_L = 4.00
+DF_npix = 256
+DF_npiy = 256
+DF_slice = 1.00
+numYdisl = 4
+dislYname = 'dY01.nml', 'dY02.nml', 'dY03.nml', 'dY04.nml'
+numdisl = 8
+dislname = 'GaPdisl1.nml','GaPdisl2.nml','GaPdisl3.nml','GaPdisl4.nml','GaPdisl5.nml','GaPdisl6.nml','GaPdisl7.nml','GaPdisl8.nml'
+numsf = 4
+sfname = 'sf1.nml', 'sf2.nml', 'sf3.nml', 'sf4.nml'
+/

@@ -1,0 +1,22 @@
+&SRdeflist
+! Note: this is the main CTEMSRdefect.nml file used for section 6.2
+SETNTHR = 6
+voltage = 200000.0
+progmode = 'STEM'
+xtalname = '../../xtal/gam.xtal'
+SRG = -1,-1, 1
+Grange = 4
+GLaue =  0.5
+STEMnmlfile = 'Ex6.2_STEM.nml'
+foilnmlfile = 'Ex6.2_FOIL.nml'
+dataname = '/Volumes/Drive2/playarea/STEM/Ex6.2.data'
+dispmode = 'not'
+!stdout = 6
+dinfo = 0
+DF_L = 1.0
+DF_npix = 256
+DF_npiy = 256
+DF_slice = 1.0
+numsf = 1
+sfname = 'Ex6.2.sf.nml'
+/
