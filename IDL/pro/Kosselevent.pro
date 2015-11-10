@@ -1,5 +1,5 @@
 ;
-; Copyright (c) 2013-2014, Marc De Graef/Carnegie Mellon University
+; Copyright (c) 2013-2015, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are 
@@ -26,18 +26,18 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; EMsoft:EBSDevent.pro
+; EMsoft:Kosselevent.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: EBSDevent.pro
+; PROGRAM: Kosselevent.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
 ;> @brief special event handler for all the CW_BGROUP calls, since CW_BGROUP does not support event_pro
 ;
-;> @date 03/19/14 MDG 1.0 first version
+;> @date 10/30/15 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-function EBSDevent, event
+function Kosselevent, event
 
 ;------------------------------------------------------------
 ; common blocks
@@ -59,92 +59,30 @@ IF N_ELEMENTS(eventval) EQ 0 THEN RETURN,eventval
 
 CASE eventval OF
 
- 'LOGFILE':  begin
-; toggle the log mode 
-		if (SEMdata.logmode eq 0) then begin
-		   Core_Print,'Turning log mode on',/blank
-		 q = systime()
- 		 z = strsplit(q,' ',/extract,/regex)
- 		 SEMdata.logname = 'EBSDDisplay'+z[0]+z[1]+z[2]+'_'+z[4]+'_'+z[3]+'.log'
-		   Core_Print,'Log file: '+SEMdata.logname
-		 SEMdata.logmode = 1
-		 logmode = 1
-		 openw,SEMdata.logunit,SEMdata.logname
-		 SEMdata.logfileopen = 1
-		end else begin
-		   Core_Print,'Turning log mode off',/blank
-		 if (SEMdata.logfileopen eq 1) then begin
-		   close,SEMdata.logunit
-		   SEMdata.logfileopen = 0
-		 endif
-	    	 SEMdata.logmode = 0
-		 logmode = 0
-		endelse
-	  endcase
-
-  'EBSDFORMAT': begin
+  'KOSSELFORMAT': begin
                 WIDGET_CONTROL, get_value=val,SEMwidget_s.EBSDformatbgroup
                 SEMdata.imageformat = fix(val[0])
           endcase
 
-
-  'MCLS': begin
-		WIDGET_CONTROL, get_value=val,SEMwidget_s.MCLambertSelector
-		SEMdata.MCLSmode= fix(val[0])
-	  endcase
-
-  'MPLS': begin
-		WIDGET_CONTROL, get_value=val,SEMwidget_s.MPLambertSelector
-		SEMdata.MPLSmode= fix(val[0])
-	  endcase
-
-  'MCLsum': begin
-		WIDGET_CONTROL, get_value=val,SEMwidget_s.MCLambertMode
-		SEMdata.MCLSum =  fix(val[0])
-		if (SEMdata.MCLSum eq 1) then begin
-		  EBSDshowMC, reform(total(accum_e,1))
-		end else begin
-		  EBSDshowMC, reform(accum_e[SEMdata.Esel,*,*])
-		end
-	  endcase
-
-  'EBSDEULERCONVENTION': begin
-                WIDGET_CONTROL, get_value=val,SEMwidget_s.EulerConvention
-                SEMdata.EulerConvention = fix(val[0])
-	endcase
-
-  'PATTERNMODE': begin
-                WIDGET_CONTROL, get_value=val,SEMwidget_s.BGmode
-                SEMdata.BGmode= fix(val[0])
-	endcase
-
-  'EBSPATTERNORIGIN': begin
+  'KOSSELPATTERNORIGIN': begin
                 WIDGET_CONTROL, get_value=val,SEMwidget_s.PatternOrigin
                 SEMdata.PatternOrigin = fix(val[0])
-	  	EBSDshowPattern,/single
+	  	KosselshowPattern,/single
 		vals = ['Upper Left','Lower Left','Upper Right','Lower Right']
 		  Core_Print, 'Pattern origin set to '+vals[SEMdata.PatternOrigin]
 	endcase
- 'EBSPATTERNSCALING': begin
+ 'KOSSELPATTERNSCALING': begin
                 WIDGET_CONTROL, get_value=val,SEMwidget_s.PatternScaling
                 SEMdata.PatternScaling = fix(val[0])
-	  	EBSDshowPattern,/single
+	  	KosselshowPattern,/single
 		vals = ['linear', 'gamma']
 		  Core_Print, 'Pattern scaling set to '+vals[SEMdata.PatternScaling]
-	endcase
-
- 'EBSDPATTERNBINNING': begin
-                WIDGET_CONTROL, get_value=val,SEMwidget_s.detbinning
-                SEMdata.detbinning= fix(val[0])
-	  	EBSDshowPattern,/single
-		vals = ['1','2','4','8']
-		  Core_Print, 'Pattern binning set to '+vals[SEMdata.detbinning]
 	endcase
 
  'CIRCULARMASK': begin
                 WIDGET_CONTROL, get_value=val,SEMwidget_s.circularmask
                 SEMdata.showcircularmask= fix(val[0])
-	  	if (SEMdata.Pmode eq 0) then EBSDshowPattern,/single else EBSDshowPattern
+	  	if (SEMdata.Pmode eq 0) then KosselshowPattern,/single else KosselshowPattern
 		vals = ['Off','On']
 		  Core_Print, 'Circular mask set to '+vals[SEMdata.showcircularmask]
 	endcase
@@ -155,8 +93,8 @@ CASE eventval OF
 		vals = ['Single Pattern','Angle File','Dictionary']
 ; next we need to turn on those widgets that belong to the selected mode (sensitivity=1)
 		if (SEMdata.Pmode eq 0) then begin
-		  WIDGET_CONTROL, SEMwidget_s.DisplayEBSD, sensitive=1
-		  WIDGET_CONTROL, SEMwidget_s.EBSDgetanglefilename, sensitive=0
+		  WIDGET_CONTROL, SEMwidget_s.DisplayECP, sensitive=1
+		  WIDGET_CONTROL, SEMwidget_s.ECPgetanglefilename, sensitive=0
 ;	  WIDGET_CONTROL, SEMwidget_s.PGdroplist, sensitive=0
 ;	  WIDGET_CONTROL, SEMwidget_s.EBSDgetdictfilename, sensitive=0
 ;	  WIDGET_CONTROL, SEMwidget_s.GoDict, sensitive=0
@@ -164,8 +102,8 @@ CASE eventval OF
 		end
 
 		if (SEMdata.Pmode eq 1) then begin
-		  WIDGET_CONTROL, SEMwidget_s.DisplayEBSD, sensitive=0
-		  WIDGET_CONTROL, SEMwidget_s.EBSDgetanglefilename, sensitive=1
+		  WIDGET_CONTROL, SEMwidget_s.DisplayECP, sensitive=0
+		  WIDGET_CONTROL, SEMwidget_s.ECPgetanglefilename, sensitive=1
 ;	  WIDGET_CONTROL, SEMwidget_s.PGdroplist, sensitive=0
 ;	  WIDGET_CONTROL, SEMwidget_s.EBSDgetdictfilename, sensitive=0
 ;	  WIDGET_CONTROL, SEMwidget_s.GoDict, sensitive=0
@@ -173,8 +111,8 @@ CASE eventval OF
 		end
 
 		if (SEMdata.Pmode eq 2) then begin
-		  WIDGET_CONTROL, SEMwidget_s.DisplayEBSD, sensitive=0
-		  WIDGET_CONTROL, SEMwidget_s.EBSDgetanglefilename, sensitive=0
+		  WIDGET_CONTROL, SEMwidget_s.DisplayECP, sensitive=0
+		  WIDGET_CONTROL, SEMwidget_s.ECPgetanglefilename, sensitive=0
 ;	  WIDGET_CONTROL, SEMwidget_s.PGdroplist, sensitive=0
 ;	  WIDGET_CONTROL, SEMwidget_s.EBSDgetdictfilename, sensitive=0
 ;	  if ( (SEMdata.Ncubochoric ne 0) and (SEMdata.Dictpointgroup ne 0) and (SEMdata.EBSDdictfilename ne '') ) then begin

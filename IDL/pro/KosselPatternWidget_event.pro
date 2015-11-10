@@ -11,10 +11,10 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; EMsoft:ECPatternWidget_event.pro
+; EMsoft:KosselPatternWidget_event.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: ECPatternWidget_event.pro
+; PROGRAM: KosselPatternWidget_event.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
@@ -22,7 +22,7 @@
 ;
 ;> @date 10/30/15 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro ECPatternWidget_event, event
+pro KosselPatternWidget_event, event
 
 ;------------------------------------------------------------
 ; common blocks
@@ -51,16 +51,16 @@ end else begin
  'GAMMASLIDER': begin
 	  WIDGET_CONTROL, get_value=val, SEMwidget_s.gammaslider
 	  SEMdata.gammavalue = float(val[0]) 
-	  ECPshowPattern,/single
+	  KosselshowPattern,/single
   	endcase
 
- 'SAVEECPATTERN': begin
+ 'SAVEKOSSELPATTERN': begin
 ; display a filesaving widget in the data folder with the file extension filled in
 		delist = ['jpeg','tiff','bmp']
 		de = delist[SEMdata.imageformat]
 		filename = DIALOG_PICKFILE(/write,default_extension=de,path=SEMdata.pathname,title='enter filename without extension')
                 i = 0
-		ECPshowpattern, /nodisplay, select=i
+		Kosselshowpattern, /nodisplay, select=i
 		if (SEMdata.showcircularmask eq 1) then im = finalpattern*byte(circularmask) else im=finalpattern
 		case de of
 		    'jpeg': write_jpeg,filename,im,quality=100
@@ -70,7 +70,7 @@ end else begin
 		endcase
 	endcase
 
- 'SAVEALLECPATTERNS': begin
+ 'SAVEALLKOSSELPATTERNS': begin
 ; display a filesaving widget in the data folder with the file extension filled in
 		delist = ['jpeg','tiff','bmp']
 		de = delist[SEMdata.imageformat]
@@ -78,7 +78,7 @@ end else begin
 		fn = strsplit(fn,'.',/extract)
 		for i=0,SEMdata.numangles-1 do begin
 ; 		  pattern = reform(ECPattern[*,*,i])
-		  ECPshowpattern, /single, /nodisplay, select=i
+		  Kosselshowpattern, /single, /nodisplay, select=i
 		  if (SEMdata.showcircularmask eq 1) then im = finalpattern*byte(circularmask) else im=finalpattern
 		  filename = fn[0]+string(i+1,format="(I5.5)")+'.'+fn[1]
 		  case de of
@@ -93,7 +93,7 @@ end else begin
 	endcase
 
 
- 'NEXTECPATTERN': begin
+ 'NEXTKOSSELPATTERN': begin
 	  SEMdata.currentpatternID += 1
 	  if (SEMdata.currentpatternID ge SEMdata.numangles) then SEMdata.currentpatternID = 0
 	  i = SEMdata.currentpatternID
@@ -104,10 +104,10 @@ end else begin
 		', '+string(quaternions[2,i],format="(F7.2)")+', '+string(quaternions[3,i],format="(F7.2)")
 	  end
 	  WIDGET_CONTROL, set_value = st, SEMwidget_s.angledisplay
-	  ECPshowpattern
+	  Kosselshowpattern
 	endcase
 
- 'PREVIOUSECPATTERN': begin
+ 'PREVIOUSKOSSELPATTERN': begin
 	  SEMdata.currentpatternID -= 1
 	  if (SEMdata.currentpatternID lt 0) then SEMdata.currentpatternID = SEMdata.numangles-1
 	  i = SEMdata.currentpatternID
@@ -118,7 +118,7 @@ end else begin
 		', '+string(quaternions[2,i],format="(F7.2)")+', '+string(quaternions[3,i],format="(F7.2)")
 	  end
 	  WIDGET_CONTROL, set_value = st, SEMwidget_s.angledisplay
-	  ECPshowpattern
+	  Kosselshowpattern
 	endcase
 
 

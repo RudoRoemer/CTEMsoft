@@ -26,7 +26,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDwritepreferences.pro
+; EMsoft:EBSDwritepreferences.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: EBSDwritepreferences.pro
@@ -42,53 +42,53 @@ pro EBSDwritepreferences,noprint=noprint
  
 ;------------------------------------------------------------
 ; common blocks
-common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, EBSDdata
+common SEM_widget_common, SEMwidget_s
+common SEM_data_common, SEMdata
 
 ; prefs file
-  openw,1,EBSDdata.prefname
+  openw,1,SEMdata.prefname
   nprefs = 30
-  EBSDdata.nprefs = nprefs
+  SEMdata.nprefs = nprefs
   printf,1,nprefs
-  printf,1,'EBSDroot::'+EBSDdata.EBSDroot
-  printf,1,'EBSDMCroot::'+EBSDdata.EBSDMCroot
-  printf,1,'f90exepath::'+EBSDdata.f90exepath
+  printf,1,'EBSDroot::'+SEMdata.EBSDroot
+  printf,1,'EBSDMCroot::'+SEMdata.EBSDMCroot
+  printf,1,'f90exepath::'+SEMdata.f90exepath
 
-  printf,1,'detl::'+string(EBSDdata.detL,format="(F9.2)")
-  printf,1,'dettheta::'+string(EBSDdata.dettheta,format="(F6.2)")
-  printf,1,'detdelta::'+string(EBSDdata.detdelta,format="(F6.2)")
-  printf,1,'detnumsx::'+string(EBSDdata.detnumsx,format="(I6)")
-  printf,1,'detnumsy::'+string(EBSDdata.detnumsy,format="(I6)")
-  printf,1,'detxpc::'+string(EBSDdata.detxpc,format="(F7.2)")
-  printf,1,'detypc::'+string(EBSDdata.detypc,format="(F7.2)")
-  printf,1,'detbinning::'+string(EBSDdata.detbinning,format="(I3)")
-  printf,1,'detbeamcurrent::'+string(EBSDdata.detbeamcurrent,format="(D9.2)")
-  printf,1,'detdwelltime::'+string(EBSDdata.detdwelltime,format="(D9.2)")
+  printf,1,'detl::'+string(SEMdata.detL,format="(F9.2)")
+  printf,1,'dettheta::'+string(SEMdata.dettheta,format="(F6.2)")
+  printf,1,'detdelta::'+string(SEMdata.detdelta,format="(F6.2)")
+  printf,1,'detnumsx::'+string(SEMdata.detnumsx,format="(I6)")
+  printf,1,'detnumsy::'+string(SEMdata.detnumsy,format="(I6)")
+  printf,1,'detxpc::'+string(SEMdata.detxpc,format="(F7.2)")
+  printf,1,'detypc::'+string(SEMdata.detypc,format="(F7.2)")
+  printf,1,'detbinning::'+string(SEMdata.detbinning,format="(I3)")
+  printf,1,'detbeamcurrent::'+string(SEMdata.detbeamcurrent,format="(D9.2)")
+  printf,1,'detdwelltime::'+string(SEMdata.detdwelltime,format="(D9.2)")
 
 ; ECP specific parameters
-  printf,1,'detW::'+string(EBSDdata.detW,format="(D9.2)")
-  printf,1,'detRi::'+string(EBSDdata.detRi,format="(D9.2)")
-  printf,1,'detRo::'+string(EBSDdata.detRo,format="(D9.2)")
-  printf,1,'detsampleytilt::'+string(EBSDdata.detsampleytilt,format="(D9.2)")
-  printf,1,'detthetac::'+string(EBSDdata.detthetac,format="(F6.2)")
+  printf,1,'detW::'+string(SEMdata.detW,format="(D9.2)")
+  printf,1,'detRi::'+string(SEMdata.detRi,format="(D9.2)")
+  printf,1,'detRo::'+string(SEMdata.detRo,format="(D9.2)")
+  printf,1,'detsampleytilt::'+string(SEMdata.detsampleytilt,format="(D9.2)")
+  printf,1,'detthetac::'+string(SEMdata.detthetac,format="(F6.2)")
 
 ; window locations
-  printf,1,'xlocation::'+string(EBSDdata.xlocation,format="(F6.1)")
-  printf,1,'ylocation::'+string(EBSDdata.ylocation,format="(F6.1)")
-  printf,1,'EBSDxlocation::'+string(EBSDdata.EBSDxlocation,format="(F6.1)")
-  printf,1,'EBSDylocation::'+string(EBSDdata.EBSDylocation,format="(F6.1)")
-  printf,1,'Detectorxlocation::'+string(EBSDdata.Detectorxlocation,format="(F6.1)")
-  printf,1,'Detectorylocation::'+string(EBSDdata.Detectorylocation,format="(F6.1)")
-  printf,1,'Patternxlocation::'+string(EBSDdata.patternxlocation,format="(F6.1)")
-  printf,1,'Patternylocation::'+string(EBSDdata.patternylocation,format="(F6.1)")
-  printf,1,'MCxlocation::'+string(EBSDdata.MCxlocation,format="(F6.1)")
-  printf,1,'MCylocation::'+string(EBSDdata.MCylocation,format="(F6.1)")
-  printf,1,'MPxlocation::'+string(EBSDdata.MPxlocation,format="(F6.1)")
-  printf,1,'MPylocation::'+string(EBSDdata.MPylocation,format="(F6.1)")
+  printf,1,'xlocation::'+string(SEMdata.xlocation,format="(F6.1)")
+  printf,1,'ylocation::'+string(SEMdata.ylocation,format="(F6.1)")
+  printf,1,'EBSDxlocation::'+string(SEMdata.EBSDxlocation,format="(F6.1)")
+  printf,1,'EBSDylocation::'+string(SEMdata.EBSDylocation,format="(F6.1)")
+  printf,1,'Detectorxlocation::'+string(SEMdata.Detectorxlocation,format="(F6.1)")
+  printf,1,'Detectorylocation::'+string(SEMdata.Detectorylocation,format="(F6.1)")
+  printf,1,'Patternxlocation::'+string(SEMdata.patternxlocation,format="(F6.1)")
+  printf,1,'Patternylocation::'+string(SEMdata.patternylocation,format="(F6.1)")
+  printf,1,'MCxlocation::'+string(SEMdata.MCxlocation,format="(F6.1)")
+  printf,1,'MCylocation::'+string(SEMdata.MCylocation,format="(F6.1)")
+  printf,1,'MPxlocation::'+string(SEMdata.MPxlocation,format="(F6.1)")
+  printf,1,'MPylocation::'+string(SEMdata.MPylocation,format="(F6.1)")
 ; and close the file
   close,1
 
-  if not keyword_set(noprint) then Core_Print,'The preferences file '+EBSDdata.prefname+' was successfully saved '
+  if not keyword_set(noprint) then Core_Print,'The preferences file '+SEMdata.prefname+' was successfully saved '
 
 end
 

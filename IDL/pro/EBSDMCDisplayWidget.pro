@@ -25,7 +25,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDMCDisplayWidget.pro
+; EMsoft:EBSDMCDisplayWidget.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: EBSDMCDisplayWidget.pro
@@ -40,8 +40,8 @@ pro EBSDMCDisplayWidget,dummy
 ;
 ;------------------------------------------------------------
 ; common blocks
-common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, EBSDdata
+common SEM_widget_common, SEMwidget_s
+common SEM_data_common, SEMdata
 
 ; the next common block contains all the raw data needed to generate the EBSD patterns
 common EBSD_rawdata, accum_e, accum_z, mLPNH, mLPSH
@@ -68,26 +68,37 @@ end
 
 ;------------------------------------------------------------
 ; create the top level widget
-if (EBSDdata.MCMPboth eq 0) then begin
-  EBSDwidget_s.MCdisplaybase = WIDGET_BASE(TITLE='Monte Carlo Display Widget', $
+;if (SEMdata.MCMPboth eq 0) then begin
+;  SEMwidget_s.MCdisplaybase = WIDGET_BASE(TITLE='Monte Carlo Display Widget', $
+;                        /COLUMN, $
+;                        XSIZE=20+max([ 500, 2*SEMdata.mcimx+1 ]), $
+;                        /ALIGN_CENTER, $
+;			MBAR = menubar, $
+;			/TLB_MOVE_EVENTS, $
+;			EVENT_PRO='EBSDMCDisplayWidget_event', $
+;                        XOFFSET=SEMdata.MCxlocation, $
+;                        YOFFSET=SEMdata.MCylocation)
+;end else begin
+if (SEMdata.mpfiletype lt 3) then begin
+  SEMwidget_s.MCdisplaybase = WIDGET_BASE(TITLE='Master Pattern & Monte Carlo Display Widget', $
                         /COLUMN, $
-                        XSIZE=20+max([ 500, 2*EBSDdata.mcimx+1 ]), $
+                        XSIZE=20+max([ 500, 2*SEMdata.mcimx+1 ]) + max( [ 500, 2*SEMdata.mpimx+1 ] ), $
                         /ALIGN_CENTER, $
 			MBAR = menubar, $
 			/TLB_MOVE_EVENTS, $
 			EVENT_PRO='EBSDMCDisplayWidget_event', $
-                        XOFFSET=EBSDdata.MCxlocation, $
-                        YOFFSET=EBSDdata.MCylocation)
+                        XOFFSET=SEMdata.MCxlocation, $
+                        YOFFSET=SEMdata.MCylocation)
 end else begin
-  EBSDwidget_s.MCdisplaybase = WIDGET_BASE(TITLE='Master Pattern & Monte Carlo Display Widget', $
+  SEMwidget_s.MCdisplaybase = WIDGET_BASE(TITLE='Kossel Master Pattern Display Widget', $
                         /COLUMN, $
-                        XSIZE=20+max([ 500, 2*EBSDdata.mcimx+1 ]) + max( [ 500, 2*EBSDdata.mpimx+1 ] ), $
+                        XSIZE=20+ max( [ 500, 2*SEMdata.mpimx+1 ] ), $
                         /ALIGN_CENTER, $
 			MBAR = menubar, $
 			/TLB_MOVE_EVENTS, $
 			EVENT_PRO='EBSDMCDisplayWidget_event', $
-                        XOFFSET=EBSDdata.MCxlocation, $
-                        YOFFSET=EBSDdata.MCylocation)
+                        XOFFSET=SEMdata.MCxlocation, $
+                        YOFFSET=SEMdata.MCylocation)
 end
 
 menu1 = WIDGET_BUTTON(menubar, VALUE='Projection Mode', /MENU)
@@ -96,115 +107,148 @@ b2 = WIDGET_BUTTON(menu1, VALUE='Lambert [circle]', UVALUE='LAMBERTC')
 b3 = WIDGET_BUTTON(menu1, VALUE='Stereographic P.', UVALUE='STEREOP')
 
 ; we only have a Display Mode menu item for the EBSD mode
-if (EBSDdata.EBSDorECP eq 0) then begin
+if (SEMdata.mpfiletype eq 1) then begin
   menu2 = WIDGET_BUTTON(menubar, VALUE='Display Mode', /MENU)
-  if (EBSDdata.MCMPboth eq 1) then begin
+; if (SEMdata.MCMPboth eq 1) then begin
     b2 = WIDGET_BUTTON(menu2, VALUE='Individual Energy/Master Bin', UVALUE='DISPEBIN')
     b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum/Weighted Master', UVALUE='DISPESUM')
     b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum RGB/blank', UVALUE='DISPESUMRGB')
-  end else begin
-    b2 = WIDGET_BUTTON(menu2, VALUE='Individual Energy Bin', UVALUE='DISPEBIN')
-    b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum', UVALUE='DISPESUM')
-    b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum RGB', UVALUE='DISPESUMRGB')
-  endelse
+; end else begin
+;   b2 = WIDGET_BUTTON(menu2, VALUE='Individual Energy Bin', UVALUE='DISPEBIN')
+;   b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum', UVALUE='DISPESUM')
+;   b2 = WIDGET_BUTTON(menu2, VALUE='Simple Energy Sum RGB', UVALUE='DISPESUMRGB')
+; endelse
 endif
 
 ;------------------------------------------------------------
-if (EBSDdata.MCMPboth eq 0) then begin
-	block1 = WIDGET_BASE(EBSDwidget_s.MCdisplaybase, $
+;if (SEMdata.MCMPboth eq 0) then begin
+;	block1 = WIDGET_BASE(SEMwidget_s.MCdisplaybase, $
+;			/FRAME, $
+;                        XSIZE=max([ 500, 2*SEMdata.mcimx+1 ]) , $
+;			/ALIGN_CENTER, $
+;			/COLUMN)
+;end else begin
+if (SEMdata.mpfiletype lt 3) then begin
+	block1 = WIDGET_BASE(SEMwidget_s.MCdisplaybase, $
 			/FRAME, $
-                        XSIZE=max([ 500, 2*EBSDdata.mcimx+1 ]) , $
+                        XSIZE=max([ 500, 2*SEMdata.mcimx+1 ]) + max( [ 500, 2*SEMdata.mpimx+1 ] ), $
 			/ALIGN_CENTER, $
 			/COLUMN)
 end else begin
-	block1 = WIDGET_BASE(EBSDwidget_s.MCdisplaybase, $
+	block1 = WIDGET_BASE(SEMwidget_s.MCdisplaybase, $
 			/FRAME, $
-                        XSIZE=max([ 500, 2*EBSDdata.mcimx+1 ]) + max( [ 500, 2*EBSDdata.mpimx+1 ] ), $
+                        XSIZE= max( [ 500, 2*SEMdata.mpimx+1 ] ), $
 			/ALIGN_CENTER, $
 			/COLUMN)
-endelse
+end
+;endelse
 
 block2 = WIDGET_BASE(block1, /ROW, /ALIGN_CENTER)
 
 ; here's a slider to select the energy window ...
-if (EBSDdata.EBSDorECP eq 0) then begin
-  EBSDwidget_s.MCslider = WIDGET_SLIDER(block2, $
+if (SEMdata.mpfiletype eq 1) then begin
+  SEMwidget_s.MCslider = WIDGET_SLIDER(block2, $
 			EVENT_PRO='EBSDMCDisplayWidget_event', $
 			MINIMUM = 1, $
-			MAXIMUM = EBSDdata.mcenergynumbin, $
+			MAXIMUM = SEMdata.mcenergynumbin, $
 			SENSITIVE = 1, $
 			TITLE = 'Select an energy', $
 			XSIZE = 400, $
 			VALUE = 1, $
 			UVALUE = 'MCSLIDER', $
 			/ALIGN_CENTER)
-end else begin
-  EBSDwidget_s.MCslider = WIDGET_SLIDER(block2, $
+end 
+if (SEMdata.mpfiletype eq 2) then begin
+  SEMwidget_s.MCslider = WIDGET_SLIDER(block2, $
 			EVENT_PRO='EBSDMCDisplayWidget_event', $
 			MINIMUM = 1, $
-			MAXIMUM = EBSDdata.mcenergynumbin, $
+			MAXIMUM = SEMdata.mcenergynumbin, $
 			SENSITIVE = 1, $
 			TITLE = 'Select a beam tilt angle', $
 			XSIZE = 400, $
 			VALUE = 1, $
 			UVALUE = 'MCSLIDER', $
 			/ALIGN_CENTER)
-endelse
+end
+if (SEMdata.mpfiletype eq 3) then begin
+  SEMwidget_s.MCslider = WIDGET_SLIDER(block2, $
+			EVENT_PRO='EBSDMCDisplayWidget_event', $
+			MINIMUM = 1, $
+			MAXIMUM = SEMdata.mcenergynumbin, $
+			SENSITIVE = 1, $
+			TITLE = 'Select a sample depth', $
+			XSIZE = 400, $
+			VALUE = 1, $
+			UVALUE = 'MCSLIDER', $
+			/ALIGN_CENTER)
+end
 
-; and right next to it we display the actual energy or beam tilt angle in a text box
-if (EBSDdata.EBSDorECP eq 0) then begin
-  energy = EBSDdata.mcenergymin + EBSDdata.Esel * EBSDdata.mcenergybinsize
-  EBSDwidget_s.MCenergyval =  WIDGET_TEXT(block2, $
+; and right next to it we display the actual energy or beam tilt angle or sample depth in a text box
+if (SEMdata.mpfiletype eq 1) then begin
+  energy = SEMdata.mcenergymin + SEMdata.Esel * SEMdata.mcenergybinsize
+  SEMwidget_s.MCenergyval =  WIDGET_TEXT(block2, $
 			VALUE=string(energy,format="(F5.2)"), $
 			XSIZE=10, $
 			YSIZE=1, $
 			/ALIGN_RIGHT)
-end else begin
-  angle = EBSDdata.mcsigstart + EBSDdata.Esel * EBSDdata.mcsigstep
-  EBSDwidget_s.MCenergyval =  WIDGET_TEXT(block2, $
+end
+
+if (SEMdata.mpfiletype eq 2) then begin
+  angle = SEMdata.mcsigstart + SEMdata.Esel * SEMdata.mcsigstep
+  SEMwidget_s.MCenergyval =  WIDGET_TEXT(block2, $
 			VALUE=string(angle,format="(F5.2)"), $
 			XSIZE=10, $
 			YSIZE=1, $
 			/ALIGN_RIGHT)
-endelse
+end
+
+if (SEMdata.mpfiletype eq 3) then begin
+  depth = SEMdata.mcdepthmax + SEMdata.Esel * SEMdata.mcdepthstep
+  SEMwidget_s.MCenergyval =  WIDGET_TEXT(block2, $
+			VALUE=string(depth,format="(F5.2)"), $
+			XSIZE=10, $
+			YSIZE=1, $
+			/ALIGN_RIGHT)
+end
 
 
-if (EBSDdata.MCMPboth eq 1) then begin
+if (SEMdata.MCMPboth eq 1) then begin
 ; in the same block we also generate a list of all the asymmetric unit positions
 ; along with a SUM option to display the total EBSD pattern
-vals = strarr(EBSDdata.numset+1)
+vals = strarr(SEMdata.numset+1)
 vals[0] = 'SUM all sites'
-for i=1,EBSDdata.numset do vals[i] = string(i,format="(I3)")+' '+ATOMsym[EBSDdata.atnum[i-1]-1]+' ('+string(EBSDdata.atnum[i-1]^2,format="(I4)")+')'
+for i=1,SEMdata.numset do vals[i] = string(i,format="(I3)")+' '+ATOMsym[SEMdata.atnum[i-1]-1]+' ('+string(SEMdata.atnum[i-1]^2,format="(I4)")+')'
 
-EBSDwidget_s.asymunit = WIDGET_DROPLIST(block2, $
+SEMwidget_s.asymunit = WIDGET_DROPLIST(block2, $
 			EVENT_PRO='EBSDMCDisplayWidget_event', $
 			VALUE=vals,$
 			/FRAME, $
 			UVALUE='ASYMPOS', $
 			/ALIGN_LEFT)
 
-WIDGET_CONTROL, set_droplist_select=0, EBSDwidget_s.asymunit
+WIDGET_CONTROL, set_droplist_select=0, SEMwidget_s.asymunit
 endif
 
 ;------------------------------------------------------------
 block2 = WIDGET_BASE(block1, /ROW, /ALIGN_CENTER)
 block3 = WIDGET_BASE(block2, /COLUMN, /ALIGN_CENTER)
 
+if (SEMdata.mpfiletype lt 3) then begin
 ; and here's the MC display window itself
-EBSDwidget_s.MCdraw = WIDGET_DRAW(block3, $
+  SEMwidget_s.MCdraw = WIDGET_DRAW(block3, $
                         COLOR_MODEL=2, $
                         RETAIN=2, $
                         /FRAME, $
-                        XSIZE=2*EBSDdata.mcimx+1, $
-                        YSIZE=2*EBSDdata.mcimy+1)
+                        XSIZE=2*SEMdata.mcimx+1, $
+                        YSIZE=2*SEMdata.mcimy+1)
 
 ; and the min-max indicators
-block4 = WIDGET_BASE(block3, /ROW, /ALIGN_CENTER)
-EBSDwidget_s.MCmin = Core_WText(block4, 'min/max ',fontstr, 75, 25, 15, 1, string(EBSDdata.MCmin,FORMAT="(F9.1)"))
-EBSDwidget_s.MCmax = Core_WText(block4, '/',fontstr, 5, 25, 15, 1, string(EBSDdata.MCmax,FORMAT="(F9.1)"))
+  block4 = WIDGET_BASE(block3, /ROW, /ALIGN_CENTER)
+  SEMwidget_s.MCmin = Core_WText(block4, 'min/max ',fontstr, 75, 25, 15, 1, string(SEMdata.MCmin,FORMAT="(F9.1)"))
+  SEMwidget_s.MCmax = Core_WText(block4, '/',fontstr, 5, 25, 15, 1, string(SEMdata.MCmax,FORMAT="(F9.1)"))
 
 ; and a save button
-saveEBSDMC = WIDGET_BUTTON(block4, $
+  saveEBSDMC = WIDGET_BUTTON(block4, $
                         VALUE='Save', $
                         /NO_RELEASE, $
                         EVENT_PRO='EBSDMCDisplayWidget_event', $
@@ -212,33 +256,54 @@ saveEBSDMC = WIDGET_BUTTON(block4, $
                         UVALUE='SAVEEBSDMC', $
                         /ALIGN_LEFT)
 
-
-
 ;------------------------------------------------------------
-; and the MP window, if needed
-if (EBSDdata.MCMPboth eq 1) then begin
-        block3 = WIDGET_BASE(block2, /COLUMN, /ALIGN_CENTER)
-        EBSDwidget_s.MPdraw = WIDGET_DRAW(block3, $
+; and the MP window
+  block3 = WIDGET_BASE(block2, /COLUMN, /ALIGN_CENTER)
+  SEMwidget_s.MPdraw = WIDGET_DRAW(block3, $
                         COLOR_MODEL=2, $
                         RETAIN=2, $
                         /FRAME, $
-                        XSIZE=2*EBSDdata.mpimx+1, $
-                        YSIZE=2*EBSDdata.mpimy+1)
+                        XSIZE=2*SEMdata.mpimx+1, $
+                        YSIZE=2*SEMdata.mpimy+1)
 
 ; and the min-max indicators
-        block4 = WIDGET_BASE(block3, /ROW, /ALIGN_CENTER)
-        EBSDwidget_s.MPmin = Core_WText(block4, 'min/max ',fontstr, 75, 25, 15, 1, string(EBSDdata.MPmin,FORMAT="(F9.1)"))
-        EBSDwidget_s.MPmax = Core_WText(block4, '/',fontstr, 5, 25, 15, 1, string(EBSDdata.MPmax,FORMAT="(F9.1)"))
+  block4 = WIDGET_BASE(block3, /ROW, /ALIGN_CENTER)
+  SEMwidget_s.MPmin = Core_WText(block4, 'min/max ',fontstr, 75, 25, 15, 1, string(SEMdata.MPmin,FORMAT="(F9.1)"))
+  SEMwidget_s.MPmax = Core_WText(block4, '/',fontstr, 5, 25, 15, 1, string(SEMdata.MPmax,FORMAT="(F9.1)"))
 
 ; and a save button
-        saveEBSDMP = WIDGET_BUTTON(block4, $
+  saveEBSDMP = WIDGET_BUTTON(block4, $
                         VALUE='Save', $
                         /NO_RELEASE, $
                         EVENT_PRO='EBSDMCDisplayWidget_event', $
                         /FRAME, $
                         UVALUE='SAVEEBSDMP', $
                         /ALIGN_LEFT)
-endif
+end else begin
+; the Kossel MP window
+  block3 = WIDGET_BASE(block2, /COLUMN, /ALIGN_CENTER)
+  SEMwidget_s.MPdraw = WIDGET_DRAW(block3, $
+                        COLOR_MODEL=2, $
+                        RETAIN=2, $
+                        /FRAME, $
+                        XSIZE=2*SEMdata.mpimx+1, $
+                        YSIZE=2*SEMdata.mpimy+1)
+
+; and the min-max indicators
+  block4 = WIDGET_BASE(block3, /ROW, /ALIGN_CENTER)
+  SEMwidget_s.MPmin = Core_WText(block4, 'min/max ',fontstr, 75, 25, 15, 1, string(SEMdata.MPmin,FORMAT="(F9.1)"))
+  SEMwidget_s.MPmax = Core_WText(block4, '/',fontstr, 5, 25, 15, 1, string(SEMdata.MPmax,FORMAT="(F9.1)"))
+
+; and a save button
+  saveEBSDMP = WIDGET_BUTTON(block4, $
+                        VALUE='Save', $
+                        /NO_RELEASE, $
+                        EVENT_PRO='EBSDMCDisplayWidget_event', $
+                        /FRAME, $
+                        UVALUE='SAVEEBSDMP', $
+                        /ALIGN_LEFT)
+
+end
 
 
 ;------------------------------------------------------------
@@ -256,7 +321,7 @@ file2 = WIDGET_BUTTON(file1, $
                         /FRAME)
 
 vals = ['jpeg','tiff','bmp']
-EBSDwidget_s.EBSDformatbgroup = CW_BGROUP(file1, $
+SEMwidget_s.EBSDformatbgroup = CW_BGROUP(file1, $
                         vals, $
                         /ROW, $
                         /NO_RELEASE, $
@@ -266,25 +331,28 @@ EBSDwidget_s.EBSDformatbgroup = CW_BGROUP(file1, $
                         /FRAME, $
                         EVENT_FUNC ='EBSDevent', $
                         UVALUE='EBSDFORMAT', $
-                        SET_VALUE=EBSDdata.imageformat)
+                        SET_VALUE=SEMdata.imageformat)
 
 ;------------------------------------------------------------
 ; realize the widget structure
-WIDGET_CONTROL,EBSDwidget_s.MCdisplaybase,/REALIZE
+WIDGET_CONTROL,SEMwidget_s.MCdisplaybase,/REALIZE
 
 ; realize the draw widget
-WIDGET_CONTROL, EBSDwidget_s.MCdraw, GET_VALUE=drawID
-EBSDwidget_s.MCdrawID = drawID
-if (EBSDdata.MCMPboth eq 1) then begin
-	WIDGET_CONTROL, EBSDwidget_s.MPdraw, GET_VALUE=drawID
-	EBSDwidget_s.MPdrawID = drawID
-endif
+if (SEMdata.mpfiletype lt 3) then begin
+  WIDGET_CONTROL, SEMwidget_s.MCdraw, GET_VALUE=drawID
+  SEMwidget_s.MCdrawID = drawID
+  WIDGET_CONTROL, SEMwidget_s.MPdraw, GET_VALUE=drawID
+  SEMwidget_s.MPdrawID = drawID
+end else begin
+  WIDGET_CONTROL, SEMwidget_s.MPdraw, GET_VALUE=drawID
+  SEMwidget_s.MPdrawID = drawID
+end
 
-EBSDdata.MCLSum = 0
+SEMdata.MCLSum = 0
 EBSDshowMC
 
 ; and hand over control to the xmanager
-XMANAGER,"EBSDMCDisplayWidget",EBSDwidget_s.MCdisplaybase,/NO_BLOCK
+XMANAGER,"EBSDMCDisplayWidget",SEMwidget_s.MCdisplaybase,/NO_BLOCK
 
 end 
 

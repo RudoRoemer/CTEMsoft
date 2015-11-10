@@ -175,8 +175,8 @@ end else begin
                   masterpath = strmid(z3,1)+'/'+Efitdata.mpfilename
                 endelse
 
-; define the EBSDdata structure that will be written to the JSON file
-                EBSDdata = {ebsddatastructure, $
+; define the SEMdata structure that will be written to the JSON file
+                SEMdata = {ebsddatastructure, $
                         L : Efitdata.detL, $ 
                         thetac : Efitdata.dettheta, $ 
                         delta : Efitdata.detdelta, $
@@ -204,7 +204,7 @@ end else begin
                         spatialaverage : 'n' $ 
                 }
 ; embed it into a new structure
-                jsonstruct = {EBSDdata: EBSDdata}
+                jsonstruct = {SEMdata: SEMdata}
 
 ; and write this to a file using implied_print formatting
                  openw,1,Efitdata.jsonpathname+'/'+Efitdata.jsonfilename

@@ -26,7 +26,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:Core_applyaxisangle.pro
+; EMsoft:Core_applyaxisangle.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: Core_applyaxisangle.pro

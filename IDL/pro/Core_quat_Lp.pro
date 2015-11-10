@@ -25,7 +25,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:Core_quat_Lp.pro
+; EMsoft:Core_quat_Lp.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: Core_quat_Lp.pro

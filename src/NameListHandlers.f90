@@ -171,7 +171,7 @@ logical                                 :: skipread = .FALSE.
 
 integer(kind=irg)       :: stdout
 integer(kind=irg)       :: numthick
-integer(kind=irg)       :: npix
+integer(kind=irg)       :: npx
 integer(kind=irg)       :: nthreads
 real(kind=sgl)          :: voltage
 real(kind=sgl)          :: dmin
@@ -183,12 +183,12 @@ character(fnlen)        :: xtalname
 character(fnlen)        :: outname
 
 namelist /Kosselmasterlist/ stdout, xtalname, voltage, dmin,  nthreads, &
-                              startthick, thickinc, numthick, tfraction, outname, npix, Kosselmode
+                              startthick, thickinc, numthick, tfraction, outname, npx, Kosselmode
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 stdout = 6                      ! standard output
 numthick = 10                   ! number of increments
-npix = 256                      ! output arrays will have size npix x npix
+npx = 256                       ! output arrays will have size npix x npix
 nthreads = 4                    ! default number of threads for OpenMP
 voltage = 200000.0              ! acceleration voltage [V]
 dmin = 0.025                    ! smallest d-spacing to include in dynamical matrix [nm]
@@ -218,7 +218,7 @@ end if
 ! if we get here, then all appears to be ok, and we need to fill in the knl fields
 knl%stdout = stdout
 knl%numthick = numthick
-knl%npix = npix
+knl%npx = npx
 knl%nthreads = nthreads
 knl%voltage = voltage
 knl%dmin = dmin

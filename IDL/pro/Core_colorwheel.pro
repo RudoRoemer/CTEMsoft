@@ -26,7 +26,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:Core_colorwheel.pro
+; EMsoft:Core_colorwheel.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: Core_colorwheel.pro

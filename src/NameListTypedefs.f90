@@ -68,7 +68,7 @@ end type KosselNameListType
 type KosselMasterNameListType
         integer(kind=irg)       :: stdout
         integer(kind=irg)       :: numthick
-        integer(kind=irg)       :: npix
+        integer(kind=irg)       :: npx
         integer(kind=irg)       :: nthreads
         real(kind=sgl)          :: voltage
         real(kind=sgl)          :: dmin

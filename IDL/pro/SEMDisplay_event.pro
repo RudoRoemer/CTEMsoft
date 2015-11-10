@@ -40,15 +40,15 @@ pro SEMDisplay_event, event
 
 ;------------------------------------------------------------
 ; common blocks
-common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, EBSDdata
+common SEM_widget_common, SEMwidget_s
+common SEM_data_common, SEMdata
 
 
-if (EBSDdata.eventverbose eq 1) then help,event,/structure
+if (SEMdata.eventverbose eq 1) then help,event,/structure
 
-if (event.id eq EBSDwidget_s.base) then begin
-  EBSDdata.xlocation = event.x
-  EBSDdata.ylocation = event.y-25
+if (event.id eq SEMwidget_s.base) then begin
+  SEMdata.xlocation = event.x
+  SEMdata.ylocation = event.y-25
 end else begin
 
   WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
@@ -69,7 +69,7 @@ end else begin
 ;	EBSDgetfilename,validfile,/MCFILE
 ; read the data file and populate all the relevant fields
 ;	if (validfile eq 1) then begin
-;                  res = H5F_IS_HDF5(EBSDdata.mcpathname+'/'+EBSDdata.mcfilename)
+;                  res = H5F_IS_HDF5(SEMdata.mcpathname+'/'+SEMdata.mcfilename)
 ;                  if (res eq 0) then begin
 ;                    Core_print,'This file is not an HDF5 file ... '
 ;                  end else EBSDreadHDFdatafile,/MCFILE
@@ -81,7 +81,7 @@ end else begin
 		EBSDgetfilename,validfile,/MPFILE
 ; read the data file and populate all the relevant fields
 		if (validfile eq 1) then begin
-                   res = H5F_IS_HDF5(EBSDdata.pathname+'/'+EBSDdata.mpfilename)
+                   res = H5F_IS_HDF5(SEMdata.pathname+'/'+SEMdata.mpfilename)
                    if (res eq 0) then begin
                      Core_print,'This file is not an HDF5 file ...'
                    end else EBSDreadHDFdatafile,/MPFILE
@@ -89,14 +89,16 @@ end else begin
 	endcase
 
 	'DETECTOR': begin
-                if (EBSDdata.EBSDorECP eq 0) then EBSDDetectorWidget else ECPDetectorWidget
+                if (SEMdata.mpfiletype eq 1) then EBSDDetectorWidget
+                if (SEMdata.mpfiletype eq 2) then ECPDetectorWidget
+                if (SEMdata.mpfiletype eq 3) then KosselDetectorWidget
 	endcase
 
  	'QUIT': begin
 		EBSDwritepreferences
 ; do a general cleanup of potentially open widgets
  		Core_Print,'Quitting program',/blank
-		WIDGET_CONTROL, EBSDwidget_s.base, /DESTROY
+		WIDGET_CONTROL, SEMwidget_s.base, /DESTROY
 		!EXCEPT=1
 	endcase
 

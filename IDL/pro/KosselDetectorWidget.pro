@@ -26,18 +26,18 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; EMsoft:ECPDetectorWidget.pro
+; EMsoft:KosselDetectorWidget.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: ECPDetectorWidget.pro
+; PROGRAM: KosselDetectorWidget.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief basic detector GUI for ECP modality
+;> @brief basic detector GUI for Kossel modality (simpler than the ECP detector GU?I)
 ;
-;> @date 10/30/15 MDG 1.0 first version
+;> @date 11/09/15 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro ECPDetectorWidget, event
+pro KosselDetectorWidget, event
 
 ;------------------------------------------------------------
 ; common blocks
@@ -51,19 +51,19 @@ common projections, mcxcircle, mcycircle, mpxcircle, mpycircle, mcSPxcircle, mcS
 
 ;------------------------------------------------------------
 ; make sure that this program isn't already running
-if (XRegistered("ECPDetectorWidget") NE 0) then begin
-  print,'ECPDetectorWidget is already running ... (if it is not, please restart your IDL session)'
+if (XRegistered("KosselDetectorWidget") NE 0) then begin
+  print,'KosselDetectorWidget is already running ... (if it is not, please restart your IDL session)'
   return
 end
 
 ;------------------------------------------------------------
 ; create the top level widget
-SEMwidget_s.detectorbase = WIDGET_BASE(TITLE='ECP Detector and Pattern Mode Widget', $
+SEMwidget_s.detectorbase = WIDGET_BASE(TITLE='Kossel Detector and Pattern Mode Widget', $
                         /ROW, $
                         XSIZE=810, $
                         /ALIGN_LEFT, $
 			/TLB_MOVE_EVENTS, $
-			EVENT_PRO='ECPDetectorWidget_event', $
+			EVENT_PRO='KosselDetectorWidget_event', $
                         XOFFSET=SEMdata.Detectorxlocation, $
                         YOFFSET=SEMdata.Detectorylocation)
 
@@ -89,50 +89,12 @@ file2 = WIDGET_LABEL(file1, VALUE='Detector & Microscope Geometry', font=fontstr
 ; convention, origin position, display mode (background only or full pattern),
 ; energy filter window, ...
 
-;---------- 
 file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
-SEMwidget_s.detW = Core_WTextE(file2,'Working Distance [mm]', fontstr, 250, 25, 10, 1, string(SEMdata.detW,format="(F9.2)"),'DETW','ECPDetectorWidget_event')
+SEMwidget_s.detnumsx = Core_WTextE(file2,'Number of Pattern Pixels ', fontstr, 250, 25, 10, 1, string(SEMdata.detnumsx,format="(I4)"),'DETNUMSX','KosselDetectorWidget_event')
 
 ;---------- 
 file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
-SEMwidget_s.detRi = Core_WTextE(file2,'BSE Detector Inner Radius [mm]', fontstr, 250, 25, 10, 1, string(SEMdata.detRi,format="(F7.2)"),'DETRI','ECPDetectorWidget_event')
-
-;---------- 
-file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
-SEMwidget_s.detRo = Core_WTextE(file2,'BSE Detector Outer Radius [mm]', fontstr, 250, 25, 10, 1, string(SEMdata.detRo,format="(F7.2)"),'DETRO','ECPDetectorWidget_event')
-
-;---------- 
-file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
-SEMwidget_s.detsampleytilt = Core_WTextE(file2,'Sample y-Tilt Angle [deg]', fontstr, 250, 25, 10, 1, string(SEMdata.detsampleytilt,format="(F6.2)"),'DETSAMPLEYTILT','ECPDetectorWidget_event')
-
-;---------- 
-file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
-SEMwidget_s.detnumsx = Core_WTextE(file2,'Number of Pattern Pixels ', fontstr, 250, 25, 10, 1, string(SEMdata.detnumsx,format="(I4)"),'DETNUMSX','ECPDetectorWidget_event')
-
-;---------- 
-file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
-SEMwidget_s.detthetac = Core_WTextE(file2,'Incident Beam Cone Semi-Angle [deg]', fontstr, 250, 25, 10, 1, string(SEMdata.detthetac,format="(F6.2)"),'DETTHETAC','ECPDetectorWidget_event')
-
-;---------- 
-file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
-SEMwidget_s.detbeamcurrent = Core_WTextE(file2,'Beam current [nA]', fontstr, 140, 25, 10, 1, string(SEMdata.detbeamcurrent,format="(F9.2)"),'DETBEAMCURRENT','ECPDetectorWidget_event')
-
-;---------- 
-file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
-SEMwidget_s.detdwelltime = Core_WTextE(file2,'Dwell Time [mu s] ', fontstr, 140, 25, 10, 1, string(SEMdata.detdwelltime,format="(F9.2)"),'DETDWELLTIME','ECPDetectorWidget_event')
-
-;file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
-;vals = ['TSL', 'HKL']
-;SEMwidget_s.EulerConvention = CW_BGROUP(file2, $
-;                        vals, $
-;                        /ROW, $
-;                        /NO_RELEASE, $
-;                        /EXCLUSIVE, $
-;                        FONT=fontstr, $
-;                        LABEL_LEFT = 'Euler phi1 Convention', $
-;                        EVENT_FUNC ='EBSDevent', $
-;                        UVALUE='EBSDEULERCONVENTION', $
-;                        SET_VALUE=SEMdata.EulerConvention)
+SEMwidget_s.detthetac = Core_WTextE(file2,'Incident Beam Cone Semi-Angle [deg]', fontstr, 250, 25, 10, 1, string(SEMdata.detthetac,format="(F6.2)"),'DETTHETAC','KosselDetectorWidget_event')
 
 ;------------------------------------------------------------
 ;------------------------------------------------------------
@@ -142,7 +104,7 @@ file1 = WIDGET_BASE(block1, XSIZE=340, /ALIGN_LEFT, /ROW)
 SEMwidget_s.DetectorClose = WIDGET_BUTTON(file1, $
                                 UVALUE='CLOSEDETECTOR', $
                                 VALUE='Close', $
-                                EVENT_PRO='ECPDetectorWidget_event', $
+                                EVENT_PRO='KosselDetectorWidget_event', $
                                 SENSITIVE=1, $
                                 /FRAME)
 
@@ -171,15 +133,15 @@ file2 = WIDGET_LABEL(file1, VALUE='Single Pattern Parameters', font=fontstrlarge
 
 ;---------- 
 file2 = WIDGET_BASE(file1, /ROW, XSIZE=430, /ALIGN_CENTER)
-SEMwidget_s.detphi1 = Core_WTextE(file2,'Euler [deg] phi1', fontstr, 120, 25, 8, 1, string(SEMdata.detphi1,format="(F6.2)"),'DETphi1','ECPDetectorWidget_event')
-SEMwidget_s.detphi = Core_WTextE(file2,' Phi', fontstr, 40, 25, 8, 1, string(SEMdata.detphi,format="(F6.2)"),'DETPhi','ECPDetectorWidget_event')
-SEMwidget_s.detphi2 = Core_WTextE(file2,' phi2', fontstr, 40, 25, 8, 1, string(SEMdata.detphi2,format="(F6.2)"),'DETphi2','ECPDetectorWidget_event')
+SEMwidget_s.detphi1 = Core_WTextE(file2,'Euler [deg] phi1', fontstr, 120, 25, 8, 1, string(SEMdata.detphi1,format="(F6.2)"),'DETphi1','KosselDetectorWidget_event')
+SEMwidget_s.detphi = Core_WTextE(file2,' Phi', fontstr, 40, 25, 8, 1, string(SEMdata.detphi,format="(F6.2)"),'DETPhi','KosselDetectorWidget_event')
+SEMwidget_s.detphi2 = Core_WTextE(file2,' phi2', fontstr, 40, 25, 8, 1, string(SEMdata.detphi2,format="(F6.2)"),'DETphi2','KosselDetectorWidget_event')
 
 file2 = WIDGET_BASE(file1, /ROW, XSIZE=430, /ALIGN_CENTER)
-SEMwidget_s.DisplayECP = WIDGET_BUTTON(file2, $
+SEMwidget_s.DisplayKossel = WIDGET_BUTTON(file2, $
                                 VALUE='Display Pattern', $
-                                UVALUE='DISPLAYECP', $
-                                EVENT_PRO='ECPDetectorWidget_event', $
+                                UVALUE='DISPLAYKOSSEL', $
+                                EVENT_PRO='KosselDetectorWidget_event', $
 				/ALIGN_LEFT, $
                                 SENSITIVE=1, $
                                 /FRAME)
@@ -192,7 +154,7 @@ SEMwidget_s.circularmask = CW_BGROUP(file2, $
                         /EXCLUSIVE, $
                         FONT=fontstr, $
 			LABEL_LEFT='Circular Mask', $
-                        EVENT_FUNC ='ECPevent', $
+                        EVENT_FUNC ='Kosselevent', $
                         UVALUE='CIRCULARMASK', $
                         SET_VALUE=SEMdata.showcircularmask)
 
@@ -205,7 +167,7 @@ file2 = WIDGET_LABEL(file3, VALUE='Angle File Parameters', font=fontstrlarge, /A
 SEMwidget_s.GoAngle = WIDGET_BUTTON(file3, $
                                 VALUE='Go', $
                                 UVALUE='GOANGLE', $
-                                EVENT_PRO='ECPDetectorWidget_event', $
+                                EVENT_PRO='KosselDetectorWidget_event', $
                                 SENSITIVE=0, $
                                 /FRAME)
 
@@ -215,7 +177,7 @@ SEMwidget_s.ECPanglefilename = Core_WText(file1,'Angle File Name', fontstr, 200,
 SEMwidget_s.ECPgetanglefilename = WIDGET_BUTTON(file1, $
                       UVALUE='GETANGLEFILENAME', $
                       VALUE='Load Angle File', $
-                      EVENT_PRO='ECPDetectorWidget_event', $
+                      EVENT_PRO='KosselDetectorWidget_event', $
                       SENSITIVE=0, $
 		      /ALIGN_LEFT, $
                       /FRAME)
@@ -230,6 +192,6 @@ SEMwidget_s.numangles = Core_WText(file2,'# Angles  ', fontstr, 80, 25, 10, 1, s
 WIDGET_CONTROL,SEMwidget_s.detectorbase,/REALIZE
 
 ; and hand over control to the xmanager
-XMANAGER,"ECPDetectorWidget",SEMwidget_s.detectorbase,/NO_BLOCK
+XMANAGER,"KosselDetectorWidget",SEMwidget_s.detectorbase,/NO_BLOCK
 
 end

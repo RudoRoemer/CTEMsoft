@@ -11,7 +11,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDPatternWidget.pro
+; EMsoft:EBSDPatternWidget.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: EBSDPatternWidget.pro
@@ -28,8 +28,8 @@ pro EBSDPatternWidget, single=single
 
 ;------------------------------------------------------------
 ; common blocks
-common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, EBSDdata
+common SEM_widget_common, SEMwidget_s
+common SEM_data_common, SEMdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
 ;------------------------------------------------------------
@@ -39,26 +39,26 @@ if (XRegistered("EBSDPatternWidget") NE 0) then begin
   return
 end
 
-psize = max( [600,EBSDdata.detnumsx+100] )
+psize = max( [600,SEMdata.detnumsx+100] )
 ;------------------------------------------------------------
 ; create the top level widget
-EBSDwidget_s.patternbase = WIDGET_BASE(TITLE='Pattern Display Widget', $
+SEMwidget_s.patternbase = WIDGET_BASE(TITLE='Pattern Display Widget', $
                         /ROW, $
                         XSIZE=psize, $
                         /ALIGN_CENTER, $
 			/TLB_MOVE_EVENTS, $
 			EVENT_PRO='EBSDPatternWidget_event', $
-                        XOFFSET=EBSDdata.patternxlocation, $
-                        YOFFSET=EBSDdata.patternylocation)
+                        XOFFSET=SEMdata.patternxlocation, $
+                        YOFFSET=SEMdata.patternylocation)
 
 
-block1 = WIDGET_BASE(EBSDwidget_s.patternbase, $
+block1 = WIDGET_BASE(SEMwidget_s.patternbase, $
 			XSIZE=psize, $
 			/ALIGN_TOP, $
 			/COLUMN)
 
 if keyword_set(single) then begin
- EBSDdata.currentdisplaywidgetmode = 0
+ SEMdata.currentdisplaywidgetmode = 0
 ;------------------------------------------------------------
 ;------------------------------------------------------------
   file1 = WIDGET_BASE(block1, /COLUMN, /FRAME, YPAD=8, XSIZE=600, /ALIGN_LEFT)
@@ -68,7 +68,7 @@ if keyword_set(single) then begin
 ;------------------------------------------------------------
   file2 = WIDGET_BASE(file1, /ROW, XSIZE=600, /ALIGN_CENTER)
   vals = ['1','2','4','8']
-  EBSDwidget_s.detbinning = CW_BGROUP(file2, $
+  SEMwidget_s.detbinning = CW_BGROUP(file2, $
                         vals, $
                         /ROW, $
                         /NO_RELEASE, $
@@ -77,12 +77,12 @@ if keyword_set(single) then begin
                         LABEL_LEFT = 'Detector Binning', $
                         EVENT_FUNC ='EBSDevent', $
                         UVALUE='EBSDPATTERNBINNING', $
-                        SET_VALUE=EBSDdata.detbinning)
+                        SET_VALUE=SEMdata.detbinning)
 
 ;------------------------------------------------------------
   file2 = WIDGET_BASE(file1, /ROW, XSIZE=600, /ALIGN_CENTER)
   vals = ['UL','LL','UR','LR']
-  EBSDwidget_s.PatternOrigin = CW_BGROUP(file2, $
+  SEMwidget_s.PatternOrigin = CW_BGROUP(file2, $
                         vals, $
                         /ROW, $
                         /NO_RELEASE, $
@@ -91,12 +91,12 @@ if keyword_set(single) then begin
                         LABEL_LEFT = 'Pattern Origin', $
                         EVENT_FUNC ='EBSDevent', $
                         UVALUE='EBSPATTERNORIGIN', $
-                        SET_VALUE=EBSDdata.PatternOrigin)
+                        SET_VALUE=SEMdata.PatternOrigin)
 
 ;------------------------------------------------------------
   file2 = WIDGET_BASE(file1, /ROW, XSIZE=600, /ALIGN_CENTER)
   vals = ['linear','gamma']
-  EBSDwidget_s.PatternScaling = CW_BGROUP(file2, $
+  SEMwidget_s.PatternScaling = CW_BGROUP(file2, $
                         vals, $
                         /ROW, $
                         /NO_RELEASE, $
@@ -105,12 +105,12 @@ if keyword_set(single) then begin
                         LABEL_LEFT = 'Pattern Scaling', $
                         EVENT_FUNC ='EBSDevent', $
                         UVALUE='EBSPATTERNSCALING', $
-                        SET_VALUE=EBSDdata.PatternScaling)
+                        SET_VALUE=SEMdata.PatternScaling)
 
 
   file2 = WIDGET_BASE(file1, /ROW, XSIZE=600, /ALIGN_CENTER)
 ; here's a slider to select the gamma setting ...
-  EBSDwidget_s.gammaslider = CW_FSLIDER(file2, $
+  SEMwidget_s.gammaslider = CW_FSLIDER(file2, $
 ;		EVENT_PRO='EBSDPatternWidget_event', $
 			/EDIT, $
 			MINIMUM = 0.01, $
@@ -118,7 +118,7 @@ if keyword_set(single) then begin
 			FORMAT = "(F4.2)", $
 			TITLE = 'Gamma Correction Factor', $
 			XSIZE = 400, $
-			VALUE = EBSDdata.gammavalue, $
+			VALUE = SEMdata.gammavalue, $
 			UVALUE = 'GAMMASLIDER')
 
 
@@ -127,17 +127,17 @@ if keyword_set(single) then begin
 ;------------------------------------------------------------
 ;------------------------------------------------------------
 ; and here's the display window itself
-EBSDwidget_s.Patterndraw = WIDGET_DRAW(block1, $
+SEMwidget_s.Patterndraw = WIDGET_DRAW(block1, $
                         COLOR_MODEL=2, $
                         RETAIN=2, $
                         /FRAME, $
-                        XSIZE=EBSDdata.detnumsx, $
-                        YSIZE=EBSDdata.detnumsy)
+                        XSIZE=SEMdata.detnumsx, $
+                        YSIZE=SEMdata.detnumsy)
 
 ; and the min-max indicators
 block4 = WIDGET_BASE(block1, /ROW, /ALIGN_CENTER)
-EBSDwidget_s.Patternmin = Core_WText(block4, 'min/max ',fontstr, 75, 25, 15, 1, string(EBSDdata.Patternmin,FORMAT="(F9.3)"))
-EBSDwidget_s.Patternmax = Core_WText(block4, '/',fontstr, 5, 25, 15, 1, string(EBSDdata.Patternmax,FORMAT="(F9.3)"))
+SEMwidget_s.Patternmin = Core_WText(block4, 'min/max ',fontstr, 75, 25, 15, 1, string(SEMdata.Patternmin,FORMAT="(F9.3)"))
+SEMwidget_s.Patternmax = Core_WText(block4, '/',fontstr, 5, 25, 15, 1, string(SEMdata.Patternmax,FORMAT="(F9.3)"))
 
 ; and a save button
 block4 = WIDGET_BASE(block1, /ROW, /ALIGN_CENTER)
@@ -151,7 +151,7 @@ saveEBSDPattern = WIDGET_BUTTON(block4, $
 
 ; and the save format selector
 vals = ['jpeg','tiff','bmp']
-EBSDwidget_s.EBSDformatbgroup = CW_BGROUP(block4, $
+SEMwidget_s.EBSDformatbgroup = CW_BGROUP(block4, $
                         vals, $
                         /ROW, $
                         /NO_RELEASE, $
@@ -161,14 +161,14 @@ EBSDwidget_s.EBSDformatbgroup = CW_BGROUP(block4, $
                         /FRAME, $
                         EVENT_FUNC ='EBSDevent', $
                         UVALUE='EBSDFORMAT', $
-                        SET_VALUE=EBSDdata.imageformat)
+                        SET_VALUE=SEMdata.imageformat)
 
 ;------------------------------------------------------------
 ;------------------------------------------------------------
 ; and here is the Close button
 file1 = WIDGET_BASE(block1, XSIZE=340, /ALIGN_LEFT, /ROW)
 
-EBSDwidget_s.PatternClose = WIDGET_BUTTON(file1, $
+SEMwidget_s.PatternClose = WIDGET_BUTTON(file1, $
                                 UVALUE='PATTERNCLOSE', $
                                 VALUE='Close', $
                                 EVENT_PRO='EBSDPatternWidget_event', $
@@ -182,7 +182,7 @@ end else begin
 ; that allows the user to browse through the series of images, 
 ; and save individual ones or all of them (after warning)
 
- EBSDdata.currentdisplaywidgetmode = 1
+ SEMdata.currentdisplaywidgetmode = 1
 ;------------------------------------------------------------
 ;------------------------------------------------------------
   file1 = WIDGET_BASE(block1, /COLUMN, YPAD=8, XSIZE=psize, /ALIGN_LEFT)
@@ -208,21 +208,21 @@ saveEBSDPattern = WIDGET_BUTTON(file2, $
 ; we'll do this as a simple non-editable text widget
 
 file2 = WIDGET_BASE(block1, /ROW, XSIZE=600, /ALIGN_CENTER)
-EBSDwidget_s.angledisplay = Core_WText(file2,'Orientation:', fontstr, 120, 25, 60, 1, ' ')
+SEMwidget_s.angledisplay = Core_WText(file2,'Orientation:', fontstr, 120, 25, 60, 1, ' ')
 
 
 ; then the display window
-EBSDwidget_s.Patterndraw = WIDGET_DRAW(block1, $
+SEMwidget_s.Patterndraw = WIDGET_DRAW(block1, $
                         COLOR_MODEL=2, $
                         RETAIN=2, $
                         /FRAME, $
-                        XSIZE=EBSDdata.detnumsx, $
-                        YSIZE=EBSDdata.detnumsy)
+                        XSIZE=SEMdata.detnumsx, $
+                        YSIZE=SEMdata.detnumsy)
 
 ; and the min-max indicators
 block4 = WIDGET_BASE(block1, /ROW, /ALIGN_CENTER)
-EBSDwidget_s.Patternmin = Core_WText(block4, 'min/max ',fontstr, 75, 25, 15, 1, string(EBSDdata.Patternmin,FORMAT="(F9.3)"))
-EBSDwidget_s.Patternmax = Core_WText(block4, '/',fontstr, 5, 25, 15, 1, string(EBSDdata.Patternmax,FORMAT="(F9.3)"))
+SEMwidget_s.Patternmin = Core_WText(block4, 'min/max ',fontstr, 75, 25, 15, 1, string(SEMdata.Patternmin,FORMAT="(F9.3)"))
+SEMwidget_s.Patternmax = Core_WText(block4, '/',fontstr, 5, 25, 15, 1, string(SEMdata.Patternmax,FORMAT="(F9.3)"))
 
 ; a save all button
 block4 = WIDGET_BASE(block1, /ROW, /ALIGN_CENTER)
@@ -245,7 +245,7 @@ saveEBSDPattern = WIDGET_BUTTON(block4, $
 
 ; and the save format selector
 vals = ['jpeg','tiff','bmp']
-EBSDwidget_s.EBSDformatbgroup = CW_BGROUP(block4, $
+SEMwidget_s.EBSDformatbgroup = CW_BGROUP(block4, $
                         vals, $
                         /ROW, $
                         /NO_RELEASE, $
@@ -255,14 +255,14 @@ EBSDwidget_s.EBSDformatbgroup = CW_BGROUP(block4, $
                         /FRAME, $
                         EVENT_FUNC ='EBSDevent', $
                         UVALUE='EBSDFORMAT', $
-                        SET_VALUE=EBSDdata.imageformat)
+                        SET_VALUE=SEMdata.imageformat)
 
 ;------------------------------------------------------------
 ;------------------------------------------------------------
 ; and here is the Close button
 file1 = WIDGET_BASE(block1, XSIZE=340, /ALIGN_LEFT, /ROW)
 
-EBSDwidget_s.PatternClose = WIDGET_BUTTON(file1, $
+SEMwidget_s.PatternClose = WIDGET_BUTTON(file1, $
                                 UVALUE='PATTERNCLOSE', $
                                 VALUE='Close', $
                                 EVENT_PRO='EBSDPatternWidget_event', $
@@ -275,17 +275,17 @@ end
 
 ;------------------------------------------------------------
 ; realize the widget structure
-WIDGET_CONTROL,EBSDwidget_s.patternbase,/REALIZE
+WIDGET_CONTROL,SEMwidget_s.patternbase,/REALIZE
 
 ; realize the draw widget
-WIDGET_CONTROL, EBSDwidget_s.Patterndraw, GET_VALUE=drawID
-EBSDwidget_s.PatternDrawID = drawID
+WIDGET_CONTROL, SEMwidget_s.Patterndraw, GET_VALUE=drawID
+SEMwidget_s.PatternDrawID = drawID
 
 ; and display the pattern with the current intensity settings
-if (EBSDdata.Pmode eq 0) then EBSDshowPattern,/single else EBSDshowPattern
+if (SEMdata.Pmode eq 0) then EBSDshowPattern,/single else EBSDshowPattern
 
 ; and hand over control to the xmanager
-XMANAGER,"EBSDPatternWidget",EBSDwidget_s.patternbase,/NO_BLOCK
+XMANAGER,"EBSDPatternWidget",SEMwidget_s.patternbase,/NO_BLOCK
 
 end
 

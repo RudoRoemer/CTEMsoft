@@ -26,7 +26,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDshowMC.pro
+; EMsoft:EBSDshowMC.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: EBSDshowMC.pro
@@ -44,38 +44,42 @@ pro EBSDshowMC, dummy
 
 ;------------------------------------------------------------
 ; common blocks
-common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, EBSDdata
+common SEM_widget_common, SEMwidget_s
+common SEM_data_common, SEMdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
 common Image_common, MCimage, MPimage
 common EBSD_rawdata, accum_e, accum_z, mLPNH, mLPSH
 common projections, mcxcircle, mcycircle, mpxcircle, mpycircle, mcSPxcircle, mcSPycircle, mpSPxcircle, mpSPycircle 
 
-wset,EBSDwidget_s.MCdrawID
 
-if (EBSDdata.EBSDorECP eq 0) then begin
-  energy = EBSDdata.mcenergymin + EBSDdata.Esel * EBSDdata.mcenergybinsize
-  if (EBSDdata.MCLSum eq 0) then begin
-    image = reform(accum_e[EBSDdata.Esel,*,*])
-    WIDGET_CONTROL, set_value=string(energy,format="(F5.2)"), EBSDwidget_s.MCenergyval
-  end 
-end else begin
-  angle = EBSDdata.mcsigstart + EBSDdata.Esel * EBSDdata.mcsigstep
-  if (EBSDdata.MCLSum eq 0) then begin
-    image = reform(accum_e[EBSDdata.Esel,*,*])
-    WIDGET_CONTROL, set_value=string(angle,format="(F5.2)"), EBSDwidget_s.MCenergyval
-  end 
-endelse
+if (SEMdata.mpfiletype eq 3) then goto,skipMC
 
-if (EBSDdata.MCLSum eq 1) then begin
-  image = reform(total(accum_e,1))
-  WIDGET_CONTROL, set_value='sum', EBSDwidget_s.MCenergyval
+wset,SEMwidget_s.MCdrawID
+
+if (SEMdata.mpfiletype eq 1) then begin
+  energy = SEMdata.mcenergymin + SEMdata.Esel * SEMdata.mcenergybinsize
+  if (SEMdata.MCLSum eq 0) then begin
+    image = reform(accum_e[SEMdata.Esel,*,*])
+    WIDGET_CONTROL, set_value=string(energy,format="(F5.2)"), SEMwidget_s.MCenergyval
+  end 
+end 
+if (SEMdata.mpfiletype eq 2) then begin
+  angle = SEMdata.mcsigstart + SEMdata.Esel * SEMdata.mcsigstep
+  if (SEMdata.MCLSum eq 0) then begin
+    image = reform(accum_e[SEMdata.Esel,*,*])
+    WIDGET_CONTROL, set_value=string(angle,format="(F5.2)"), SEMwidget_s.MCenergyval
+  end 
 end
 
-if (EBSDdata.MCLSum eq 2) then begin   ; RGB display, needs some data preparation first
-  numEbins = EBSDdata.mcenergynumbin
-  energy = EBSDdata.mcenergymin + findgen(EBSDdata.mcenergynumbin) * EBSDdata.mcenergybinsize
+if (SEMdata.MCLSum eq 1) then begin
+  image = reform(total(accum_e,1))
+  WIDGET_CONTROL, set_value='sum', SEMwidget_s.MCenergyval
+end
+
+if (SEMdata.MCLSum eq 2) then begin   ; RGB display, needs some data preparation first
+  numEbins = SEMdata.mcenergynumbin
+  energy = SEMdata.mcenergymin + findgen(SEMdata.mcenergynumbin) * SEMdata.mcenergybinsize
   sz = size(accum_e,/dimensions)
   dims2 = sz[1]
   dims3 = sz[2]
@@ -88,8 +92,8 @@ if (EBSDdata.MCLSum eq 2) then begin   ; RGB display, needs some data preparatio
   by = fltarr(dims2,dims3)
 
 ; scale the energy as an angle between 0 and 270 counterclockwise
-  minE = EBSDdata.mcenergymin
-  maxE = EBSDdata.mcenergymax
+  minE = SEMdata.mcenergymin
+  maxE = SEMdata.mcenergymax
   e = ener
   ener = (ener-minE)/(maxE-minE)
   ener = ener*180. - 180.
@@ -105,18 +109,18 @@ if (EBSDdata.MCLSum eq 2) then begin   ; RGB display, needs some data preparatio
   Core_colorwheel,bx,by,cimage,clegend
 
   image = cimage
-  WIDGET_CONTROL, set_value='sumRGB', EBSDwidget_s.MCenergyval
+  WIDGET_CONTROL, set_value='sumRGB', SEMwidget_s.MCenergyval
 end
 
-if ((EBSDdata.MCLSmode eq 1) and (EBSDdata.MCLSum ne 2)) then begin
+if ((SEMdata.MCLSmode eq 1) and (SEMdata.MCLSum ne 2)) then begin
   image = bilinear(image,mcxcircle,mcycircle,missing = 0)
 end 
 
-if ((EBSDdata.MCLSmode eq 2) and (EBSDdata.MCLSum ne 2)) then begin
+if ((SEMdata.MCLSmode eq 2) and (SEMdata.MCLSum ne 2)) then begin
   image = bilinear(image,mcSPxcircle,mcSPycircle,missing = 0)
 end 
 
-if ((EBSDdata.MCLSmode eq 1) and (EBSDdata.MCLSum eq 2)) then begin
+if ((SEMdata.MCLSmode eq 1) and (SEMdata.MCLSum eq 2)) then begin
   for i=0,2 do begin
     image = reform(cimage[i,*,*])
     image = bilinear(image,mcxcircle,mcycircle,missing = 0)
@@ -124,74 +128,98 @@ if ((EBSDdata.MCLSmode eq 1) and (EBSDdata.MCLSum eq 2)) then begin
   endfor
 end 
 
-if (EBSDdata.MCLSum ne 2) then begin
+if (SEMdata.MCLSum ne 2) then begin
   tvscl, image 
-  WIDGET_CONTROL, set_value=string(min(image),format="(F9.1)"), EBSDwidget_s.MCmin
-  WIDGET_CONTROL, set_value=string(max(image),format="(F9.1)"), EBSDwidget_s.MCmax
+  WIDGET_CONTROL, set_value=string(min(image),format="(F9.1)"), SEMwidget_s.MCmin
+  WIDGET_CONTROL, set_value=string(max(image),format="(F9.1)"), SEMwidget_s.MCmax
   MCimage = image
 end else begin
   tvscl, cimage, true=1
 ; and add the color legend
   tvscl, clegend, dims2-25, dims3-50, true=1
-  WIDGET_CONTROL, set_value='', EBSDwidget_s.MCmin
-  WIDGET_CONTROL, set_value='', EBSDwidget_s.MCmax
+  WIDGET_CONTROL, set_value='', SEMwidget_s.MCmin
+  WIDGET_CONTROL, set_value='', SEMwidget_s.MCmax
   MCimage = cimage
   MCimage[0:2,dims2-25:*,dims3-50:*] = clegend[0:*,0:*,0:*]
 end
 
-; should we also display the Master Pattern ?
-if (EBSDdata.MCMPboth eq 1) then begin
+skipMC:
 
-  if (EBSDdata.NHSH eq 0) then begin
-    if (EBSDdata.numset gt 1) then MParraysum = total(mLPNH,4) else MParraysum = mLPNH
+if (SEMdata.mpfiletype lt 3) then begin
+; should we also display the Master Pattern ?
+ if (SEMdata.MCMPboth eq 1) then begin
+
+  if (SEMdata.NHSH eq 0) then begin
+    if (SEMdata.numset gt 1) then MParraysum = total(mLPNH,4) else MParraysum = mLPNH
   end else begin
-    if (EBSDdata.numset gt 1) then MParraysum = total(mLPSH,4) else MParraysum = mLPSH
+    if (SEMdata.numset gt 1) then MParraysum = total(mLPSH,4) else MParraysum = mLPSH
   endelse
 
-  wset,EBSDwidget_s.MPdrawID
-  if (EBSDdata.MCLSum eq 0) then begin
-    if (EBSDdata.EBSDorECP eq 0) then begin
-      if (EBSDdata.Asymsel lt 0) then image = reform(MParraysum[*,*,EBSDdata.Esel]) else image = reform(MParray[*,*,EBSDdata.Esel,EBSDdata.Asymsel])
+  wset,SEMwidget_s.MPdrawID
+  if (SEMdata.MCLSum eq 0) then begin
+    if (SEMdata.EBSDorECP eq 0) then begin
+      if (SEMdata.Asymsel lt 0) then image = reform(MParraysum[*,*,SEMdata.Esel]) else image = reform(MParray[*,*,SEMdata.Esel,SEMdata.Asymsel])
     end else begin
-      if (EBSDdata.Asymsel lt 0) then image = reform(MParraysum[*,*]) else image = reform(MParray[*,*,EBSDdata.Asymsel])
+      if (SEMdata.Asymsel lt 0) then image = reform(MParraysum[*,*]) else image = reform(MParray[*,*,SEMdata.Asymsel])
     endelse
   end 
 
-  if (EBSDdata.MCLSum eq 1) then begin
+  if (SEMdata.MCLSum eq 1) then begin
 ; here, we want to display the energy-weighted master pattern as an example
-    if (EBSDdata.Asymsel lt 0) then begin
-      image = MParraysum[0:*,0:*,0] * congrid(reform(float(accum_e[0,0:*,0:*])),2*EBSDdata.MPimx+1,2*EBSDdata.MPimy+1)
-      for i=1,EBSDdata.MCenergynumbin-1 do image += MParraysum[0:*,0:*,i] * congrid(reform(float(accum_e[i,0:*,0:*])),2*EBSDdata.MPimx+1,2*EBSDdata.MPimy+1)
+    if (SEMdata.Asymsel lt 0) then begin
+      image = MParraysum[0:*,0:*,0] * congrid(reform(float(accum_e[0,0:*,0:*])),2*SEMdata.MPimx+1,2*SEMdata.MPimy+1)
+      for i=1,SEMdata.MCenergynumbin-1 do image += MParraysum[0:*,0:*,i] * congrid(reform(float(accum_e[i,0:*,0:*])),2*SEMdata.MPimx+1,2*SEMdata.MPimy+1)
     end else begin
-      image = MParray[0:*,0:*,0,EBSDdata.Asymsel] * congrid(reform(float(accum_e[0,0:*,0:*])),2*EBSDdata.MPimx+1,2*EBSDdata.MPimy+1)
-      for i=1,EBSDdata.MCenergynumbin-1 do image += MParray[0:*,0:*,i,EBSDdata.Asymsel] * congrid(reform(float(accum_e[i,0:*,0:*])),2*EBSDdata.MPimx+1,2*EBSDdata.MPimy+1)
+      image = MParray[0:*,0:*,0,SEMdata.Asymsel] * congrid(reform(float(accum_e[0,0:*,0:*])),2*SEMdata.MPimx+1,2*SEMdata.MPimy+1)
+      for i=1,SEMdata.MCenergynumbin-1 do image += MParray[0:*,0:*,i,SEMdata.Asymsel] * congrid(reform(float(accum_e[i,0:*,0:*])),2*SEMdata.MPimx+1,2*SEMdata.MPimy+1)
     end
   end
 
-  if (EBSDdata.MCLSum eq 2) then begin   ; RGB display, for now left blank
+  if (SEMdata.MCLSum eq 2) then begin   ; RGB display, for now left blank
     MPimage = 0
     erase
     empty
   end
 
-  if ((EBSDdata.MCLSmode eq 1) and (EBSDdata.MCLSum ne 2)) then begin
+  if ((SEMdata.MCLSmode eq 1) and (SEMdata.MCLSum ne 2)) then begin
     image = bilinear(image,mpxcircle,mpycircle,missing = 0)
   end 
 
-  if ((EBSDdata.MCLSmode eq 2) and (EBSDdata.MCLSum ne 2)) then begin
+  if ((SEMdata.MCLSmode eq 2) and (SEMdata.MCLSum ne 2)) then begin
     image = bilinear(image,mpSPxcircle,mpSPycircle,missing = 0)
   end 
 
-; if ((EBSDdata.MCLSmode eq 1) and (EBSDdata.MCLSum eq 2)) then begin
+; if ((SEMdata.MCLSmode eq 1) and (SEMdata.MCLSum eq 2)) then begin
 ; end 
 
-  if (EBSDdata.MCLSum ne 2) then begin
+  if (SEMdata.MCLSum ne 2) then begin
     tvscl, image 
-    WIDGET_CONTROL, set_value=string(min(image),format="(E12.4)"), EBSDwidget_s.MPmin
-    WIDGET_CONTROL, set_value=string(max(image),format="(E12.4)"), EBSDwidget_s.MPmax
+    WIDGET_CONTROL, set_value=string(min(image),format="(E12.4)"), SEMwidget_s.MPmin
+    WIDGET_CONTROL, set_value=string(max(image),format="(E12.4)"), SEMwidget_s.MPmax
     MPimage = image
   end 
-endif
+ end
+end else begin ; we're displaying the Kossel pattern only
+  depth = SEMdata.mcdepthmax + SEMdata.Esel * SEMdata.mcdepthstep
+  WIDGET_CONTROL, set_value=string(depth,format="(F6.2)"), SEMwidget_s.MCenergyval
+
+  wset,SEMwidget_s.MPdrawID
+  image = mLPNH[*,*,SEMdata.Esel]
+
+  if (SEMdata.MCLSmode eq 1) then begin
+    image = bilinear(image,mpxcircle,mpycircle,missing = 0)
+  end 
+  
+  if (SEMdata.MCLSmode eq 2) then begin
+    image = bilinear(image,mpSPxcircle,mpSPycircle,missing = 0)
+  end 
+
+  tvscl, image 
+  WIDGET_CONTROL, set_value=string(min(image),format="(E12.4)"), SEMwidget_s.MPmin
+  WIDGET_CONTROL, set_value=string(max(image),format="(E12.4)"), SEMwidget_s.MPmax
+  MPimage = image
+end
+
 
 
 end

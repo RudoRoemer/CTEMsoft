@@ -26,7 +26,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDMCDisplayWidget_event.pro
+; EMsoft:EBSDMCDisplayWidget_event.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: EBSDMCDisplayWidget_event.pro
@@ -41,8 +41,8 @@ pro EBSDMCDisplayWidget_event, event
 
 ;------------------------------------------------------------
 ; common blocks
-common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, EBSDdata
+common SEM_widget_common, SEMwidget_s
+common SEM_data_common, SEMdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
 common EBSD_rawdata, accum_e, accum_z, mLPNH, mLPSH
@@ -52,13 +52,13 @@ common projections, mcxcircle, mcycircle, mpxcircle, mpycircle, mcSPxcircle, mcS
 common Image_common, MCimage, MPimage
 
 
-if (EBSDdata.eventverbose eq 1) then help,event,/structure
+if (SEMdata.eventverbose eq 1) then help,event,/structure
 
 ; intercept the image widget movement here 
-if (event.id eq EBSDwidget_s.MCdisplaybase) then begin
-  EBSDdata.MCxlocation = event.x
-  EBSDdata.MCylocation = event.y-25
-    Core_Print,' Window moved to location ('+string(fix(EBSDdata.MCxlocation),format="(I4)")+','+string(fix(EBSDdata.MCylocation),format="(I4)")+')'
+if (event.id eq SEMwidget_s.MCdisplaybase) then begin
+  SEMdata.MCxlocation = event.x
+  SEMdata.MCylocation = event.y-25
+    Core_Print,' Window moved to location ('+string(fix(SEMdata.MCxlocation),format="(I4)")+','+string(fix(SEMdata.MCylocation),format="(I4)")+')'
 end else begin
 
   WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
@@ -68,61 +68,61 @@ end else begin
   CASE eventval OF
 
   'MCSLIDER':  begin
-		WIDGET_CONTROL, get_value=val,EBSDwidget_s.mcslider
-		EBSDdata.Esel = fix(val[0]) - 1
+		WIDGET_CONTROL, get_value=val,SEMwidget_s.mcslider
+		SEMdata.Esel = fix(val[0]) - 1
 		EBSDshowMC
 	endcase
 
   'DISPEBIN': begin
-		EBSDdata.MCLSum = 0
+		SEMdata.MCLSum = 0
 		EBSDshowMC
-		WIDGET_CONTROL, EBSDwidget_s.MCslider, sensitive=1
+		WIDGET_CONTROL, SEMwidget_s.MCslider, sensitive=1
 	endcase
 
   'DISPESUM': begin
-		EBSDdata.MCLSum = 1
+		SEMdata.MCLSum = 1
 		EBSDshowMC
-		WIDGET_CONTROL, EBSDwidget_s.MCslider, sensitive=0
+		WIDGET_CONTROL, SEMwidget_s.MCslider, sensitive=0
 	endcase
 
   'DISPESUMRGB': begin
-		EBSDdata.MCLSum = 2
+		SEMdata.MCLSum = 2
 		EBSDshowMC
-		WIDGET_CONTROL, EBSDwidget_s.MCslider, sensitive=0
+		WIDGET_CONTROL, SEMwidget_s.MCslider, sensitive=0
 	endcase
 
   'DISPWSUM': begin
-		EBSDdata.MCLSum = 3
+		SEMdata.MCLSum = 3
 		EBSDshowMC
-		WIDGET_CONTROL, EBSDwidget_s.MCslider, sensitive=0
+		WIDGET_CONTROL, SEMwidget_s.MCslider, sensitive=0
 	endcase
 
   'LAMBERTS': begin
-		EBSDdata.MCLSmode = 0
+		SEMdata.MCLSmode = 0
 		EBSDshowMC
 	endcase
 
   'LAMBERTC': begin
-		EBSDdata.MCLSmode = 1
+		SEMdata.MCLSmode = 1
 		EBSDshowMC
 	endcase
 
   'STEREOP': begin
-		EBSDdata.MCLSmode = 2
+		SEMdata.MCLSmode = 2
 		EBSDshowMC
 	endcase
 
   'ASYMPOS':  begin
 		val = event.index
-		if (val eq 0) then EBSDdata.Asymsel = -1 else EBSDdata.Asymsel = fix(val)-1
+		if (val eq 0) then SEMdata.Asymsel = -1 else SEMdata.Asymsel = fix(val)-1
 		EBSDshowMC
 	endcase
 
   'SAVEEBSDMC': begin
 ; display a filesaving widget in the data folder with the file extension filled in
 		delist = ['jpeg','tiff','bmp']
-		de = delist[EBSDdata.imageformat]
-		filename = DIALOG_PICKFILE(/write,default_extension=de,path=EBSDdata.pathname,title='enter filename without extension')
+		de = delist[SEMdata.imageformat]
+		filename = DIALOG_PICKFILE(/write,default_extension=de,path=SEMdata.pathname,title='enter filename without extension')
 		sz = size(MCimage,/dimensions)
 		if (sz[0] eq 3) then begin
                  case de of
@@ -152,8 +152,8 @@ end else begin
   'SAVEEBSDMP': begin
 ; display a filesaving widget in the data folder with the file extension filled in
 		delist = ['jpeg','tiff','bmp']
-		de = delist[EBSDdata.imageformat]
-		filename = DIALOG_PICKFILE(/write,default_extension=de,path=EBSDdata.pathname,title='enter filename without extension')
+		de = delist[SEMdata.imageformat]
+		filename = DIALOG_PICKFILE(/write,default_extension=de,path=SEMdata.pathname,title='enter filename without extension')
 		im = bytscl(MPimage)
 		case de of
 		    'jpeg': write_jpeg,filename,im,quality=100
@@ -165,8 +165,8 @@ end else begin
 
   'CLOSEMC': begin
 ; kill the base widget
-		WIDGET_CONTROL, EBSDwidget_s.MCdisplaybase, /DESTROY
-		  Core_Print,'EBSD Display Widget closed'
+		WIDGET_CONTROL, SEMwidget_s.MCdisplaybase, /DESTROY
+		  Core_Print,'Master Pattern Display Widget closed'
 	endcase
 
   else: MESSAGE, "Event User Value Not Found"

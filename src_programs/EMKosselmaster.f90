@@ -78,7 +78,7 @@ character(fnlen)                        :: nmldeffile, progname, progdesc
 type(KosselMasterNameListType)          :: kmnl
 
 nmldeffile = 'EMKosselmaster.nml'
-progname = 'EMKosselmaster.f90'
+progname = 'EMKosselMaster.f90'
 progdesc = 'Kossel Master Pattern Simulation'
 
 ! print some information
@@ -258,7 +258,7 @@ end do
 !=============================================
 !=============================================
 ! ---------- a couple of initializations
-   npy = kmnl%npix
+   npy = kmnl%npx
    gzero = 1  ! index of incident beam
 ! ----------
 !=============================================
@@ -270,15 +270,15 @@ end do
 ! we need to sample the stereographic projection Northern hemisphere or a portion
 ! thereoff, depending on the current symmetry.
 if (kmnl%Kosselmode.eq.'normal') then 
-  allocate(mLPNH(-kmnl%npix:kmnl%npix,-npy:npy,1:kmnl%numthick),stat=istat)
-  allocate(mLPSH(-kmnl%npix:kmnl%npix,-npy:npy,1:kmnl%numthick),stat=istat)
+  allocate(mLPNH(-kmnl%npx:kmnl%npx,-npy:npy,1:kmnl%numthick),stat=istat)
+  allocate(mLPSH(-kmnl%npx:kmnl%npx,-npy:npy,1:kmnl%numthick),stat=istat)
 
 ! set various arrays to zero
    mLPNH = 0.0
    mLPSH = 0.0
 else
 ! Kosselmode must be 'thicks'
-  allocate(trange(-kmnl%npix:kmnl%npix,-npy:npy),stat=istat)
+  allocate(trange(-kmnl%npx:kmnl%npx,-npy:npy),stat=istat)
   trange = 0.0
 end if
 ! ---------- end allocate memory for the master pattern
@@ -332,8 +332,8 @@ end if
   stringarray(1)= trim(kmnl%xtalname)
   hdferr = HDF_writeDatasetStringArray(dataset, stringarray, 1, HDF_head)
 
-  dataset = 'npix'
-  hdferr = HDF_writeDatasetInteger(dataset, kmnl%npix, HDF_head)
+  dataset = 'npx'
+  hdferr = HDF_writeDatasetInteger(dataset, kmnl%npx, HDF_head)
 
   dataset = 'BetheParameters'
   bp = (/ BetheParameters%c1, BetheParameters%c2, BetheParameters%c3, BetheParameters%sgdbdiff /)
@@ -355,20 +355,20 @@ end if
 ! create the hyperslabs and write zeroes to them for now
   if (kmnl%Kosselmode.eq.'normal') then
     dataset = 'mLPNH'
-    dims3 = (/  2*kmnl%npix+1, 2*kmnl%npix+1, numthick /)
-    cnt3 = (/ 2*kmnl%npix+1, 2*kmnl%npix+1, numthick /)
+    dims3 = (/  2*kmnl%npx+1, 2*kmnl%npx+1, numthick /)
+    cnt3 = (/ 2*kmnl%npx+1, 2*kmnl%npx+1, numthick /)
     offset3 = (/ 0, 0, 0 /)
     hdferr = HDF_writeHyperslabFloatArray3D(dataset, mLPNH, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head)
 
     dataset = 'mLPSH'
-    dims3 = (/  2*kmnl%npix+1, 2*kmnl%npix+1, numthick /)
-    cnt3 = (/ 2*kmnl%npix+1, 2*kmnl%npix+1, numthick /)
+    dims3 = (/  2*kmnl%npx+1, 2*kmnl%npx+1, numthick /)
+    cnt3 = (/ 2*kmnl%npx+1, 2*kmnl%npx+1, numthick /)
     offset3 = (/ 0, 0, 0 /)
     hdferr = HDF_writeHyperslabFloatArray3D(dataset, mLPSH, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head)
   else
     dataset = 'trange'
-    dims2 = (/  2*kmnl%npix+1, 2*kmnl%npix+1 /)
-    cnt2 = (/ 2*kmnl%npix+1, 2*kmnl%npix+1 /)
+    dims2 = (/  2*kmnl%npx+1, 2*kmnl%npx+1 /)
+    cnt2 = (/ 2*kmnl%npx+1, 2*kmnl%npx+1 /)
     offset2 = (/ 0, 0 /)
     hdferr = HDF_writeHyperslabFloatArray2D(dataset, trange, dims2, offset2, cnt2(1), cnt2(2), HDF_head)
   end if
@@ -390,11 +390,11 @@ call Message('Starting computation', frm = "(/A)")
 ! note that this needs to be redone for each energy, since the wave vector changes with energy
    nullify(khead)
    if (usehex) then
-    call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,kmnl%npix,npy,numk, &
+    call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,kmnl%npx,npy,numk, &
                 SamplingType,ijmax,'RoscaLambert',usehex)
    else 
 ! Calckvectors(k,ga,ktmax,npx,npy,numk,isym,ijmax,mapmode,usehex)
-    call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,kmnl%npix,npy,numk, &
+    call Calckvectors(khead,cell, (/ 0.D0, 0.D0, 1.D0 /), (/ 0.D0, 0.D0, 0.D0 /),0.D0,kmnl%npx,npy,numk, &
                 SamplingType,ijmax,'RoscaLambert',usehex)
    end if
    io_int(1)=numk
@@ -486,12 +486,12 @@ call Message('Starting computation', frm = "(/A)")
 !
 !$OMP CRITICAL
      if (usehex) then 
-       call Apply3DPGSymmetry(cell,ipx,ipy,ipz,kmnl%npix,iequiv,nequiv,usehex)
+       call Apply3DPGSymmetry(cell,ipx,ipy,ipz,kmnl%npx,iequiv,nequiv,usehex)
      else
        if ((cell%SYM_SGnum.ge.195).and.(cell%SYM_SGnum.le.230)) then
-         call Apply3DPGSymmetry(cell,ipx,ipy,ipz,kmnl%npix,iequiv,nequiv,cubictype=SamplingType)
+         call Apply3DPGSymmetry(cell,ipx,ipy,ipz,kmnl%npx,iequiv,nequiv,cubictype=SamplingType)
        else
-         call Apply3DPGSymmetry(cell,ipx,ipy,ipz,kmnl%npix,iequiv,nequiv)
+         call Apply3DPGSymmetry(cell,ipx,ipy,ipz,kmnl%npx,iequiv,nequiv)
        end if
      end if
      if (kmnl%Kosselmode.eq.'normal') then
@@ -527,18 +527,18 @@ if (usehex) then
 ! we begin by allocating auxiliary arrays to hold copies of the hexagonal data; the original arrays will
 ! then be overwritten with the newly interpolated data.
    if (kmnl%Kosselmode.eq.'normal') then
-    allocate(auxNH(-kmnl%npix:kmnl%npix,-npy:npy,1:kmnl%numthick),stat=istat)
-    allocate(auxSH(-kmnl%npix:kmnl%npix,-npy:npy,1:kmnl%numthick),stat=istat)
+    allocate(auxNH(-kmnl%npx:kmnl%npx,-npy:npy,1:kmnl%numthick),stat=istat)
+    allocate(auxSH(-kmnl%npx:kmnl%npx,-npy:npy,1:kmnl%numthick),stat=istat)
     auxNH = mLPNH
     auxSH = mLPSH
    else
-    allocate(auxtrange(-kmnl%npix:kmnl%npix,-npy:npy),stat=istat)
+    allocate(auxtrange(-kmnl%npx:kmnl%npx,-npy:npy),stat=istat)
     auxtrange = trange
    end if 
 ! 
-   edge = 1.D0 / dble(kmnl%npix)
-   scl = float(kmnl%npix) 
-   do i=-kmnl%npix,kmnl%npix
+   edge = 1.D0 / dble(kmnl%npx)
+   scl = float(kmnl%npx) 
+   do i=-kmnl%npx,kmnl%npx
       do j=-npy,npy
 ! determine the spherical direction for this point
         xy = (/ dble(i), dble(j) /) * edge
@@ -551,8 +551,8 @@ if (usehex) then
           niy = floor(xy(2))
           nixp = nix+1
           niyp = niy+1
-          if (nixp.gt.kmnl%npix) nixp = nix
-          if (niyp.gt.kmnl%npix) niyp = niy
+          if (nixp.gt.kmnl%npx) nixp = nix
+          if (niyp.gt.kmnl%npx) niyp = niy
           dx = xy(1) - nix
           dy = xy(2) - niy
           dxm = 1.D0 - dx
@@ -602,20 +602,20 @@ end if
 ! add data to the hyperslab
   if (kmnl%Kosselmode.eq.'normal') then
     dataset = 'mLPNH'
-    dims3 = (/  2*kmnl%npix+1, 2*kmnl%npix+1, numthick /)
-    cnt3 = (/ 2*kmnl%npix+1, 2*kmnl%npix+1, numthick /)
+    dims3 = (/  2*kmnl%npx+1, 2*kmnl%npx+1, numthick /)
+    cnt3 = (/ 2*kmnl%npx+1, 2*kmnl%npx+1, numthick /)
     offset3 = (/ 0, 0, 0 /)
     hdferr = HDF_writeHyperslabFloatArray3D(dataset, mLPNH, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head, insert)
 
     dataset = 'mLPSH'
-    dims3 = (/  2*kmnl%npix+1, 2*kmnl%npix+1, numthick /)
-    cnt3 = (/ 2*kmnl%npix+1, 2*kmnl%npix+1, numthick /)
+    dims3 = (/  2*kmnl%npx+1, 2*kmnl%npx+1, numthick /)
+    cnt3 = (/ 2*kmnl%npx+1, 2*kmnl%npx+1, numthick /)
     offset3 = (/ 0, 0, 0 /)
     hdferr = HDF_writeHyperslabFloatArray3D(dataset, mLPSH, dims3, offset3, cnt3(1), cnt3(2), cnt3(3), HDF_head, insert)
   else
     dataset = 'trange'
-    dims2 = (/  2*kmnl%npix+1, 2*kmnl%npix+1 /)
-    cnt2 = (/ 2*kmnl%npix+1, 2*kmnl%npix+1 /)
+    dims2 = (/  2*kmnl%npx+1, 2*kmnl%npx+1 /)
+    cnt2 = (/ 2*kmnl%npx+1, 2*kmnl%npx+1 /)
     offset2 = (/ 0, 0 /)
     hdferr = HDF_writeHyperslabFloatArray2D(dataset, trange, dims2, offset2, cnt2(1), cnt2(2), HDF_head, insert)
   end if

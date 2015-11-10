@@ -26,7 +26,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDshowPattern.pro
+; EMsoft:EBSDshowPattern.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: EBSDshowPattern.pro
@@ -44,72 +44,72 @@ pro EBSDshowPattern, single=single, nodisplay=nodisplay
 
 ;------------------------------------------------------------
 ; common blocks
-common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, EBSDdata
+common SEM_widget_common, SEMwidget_s
+common SEM_data_common, SEMdata
 common EBSDpatterns, pattern, image, finalpattern
 common EBSDmasks, circularmask
 
 ; check whether the mask needs to be recomputed or not
 s = size(circularmask)
-dbin = 2^EBSDdata.detbinning
-sm = min( [EBSDdata.detnumsx/dbin, EBSDdata.detnumsy/dbin] )
+dbin = 2^SEMdata.detbinning
+sm = min( [SEMdata.detnumsx/dbin, SEMdata.detnumsy/dbin] )
 if (s[0] ne sm) then begin
   d = shift(dist(sm),sm/2,sm/2)
   d[where(d le sm/2)] = 1.0
   d[where(d gt sm/2)] = 0.0
-  circularmask = fltarr(EBSDdata.detnumsx/dbin, EBSDdata.detnumsy/dbin)
-  if (sm eq EBSDdata.detnumsx/dbin) then begin
-    dm = (EBSDdata.detnumsy/dbin - sm)/2
+  circularmask = fltarr(SEMdata.detnumsx/dbin, SEMdata.detnumsy/dbin)
+  if (sm eq SEMdata.detnumsx/dbin) then begin
+    dm = (SEMdata.detnumsy/dbin - sm)/2
     circularmask[0,dm] = d
   end else begin
-    dm = (EBSDdata.detnumsx/dbin - sm)/2
+    dm = (SEMdata.detnumsx/dbin - sm)/2
     circularmask[dm,0] = d
   end
 endif
 
 if not keyword_set(nodisplay) then begin
-  wset,EBSDwidget_s.PatternDrawID
+  wset,SEMwidget_s.PatternDrawID
   erase
   empty
 end
 
 sz = size(pattern)
 if (sz[0] eq 3) then begin
-  thispattern = reform(pattern[*,*,EBSDdata.currentpatternID])
+  thispattern = reform(pattern[*,*,SEMdata.currentpatternID])
 end else begin
   thispattern = pattern
 endelse
 
 
 ; set the min and max fields
-EBSDdata.Patternmin = min(thispattern)
-EBSDdata.Patternmax = max(thispattern)
+SEMdata.Patternmin = min(thispattern)
+SEMdata.Patternmax = max(thispattern)
 
-WIDGET_CONTROL, set_value=string(EBSDdata.Patternmin,format="(F7.2)"), EBSDwidget_s.Patternmin
-WIDGET_CONTROL, set_value=string(EBSDdata.Patternmax,format="(F7.2)"), EBSDwidget_s.Patternmax
+WIDGET_CONTROL, set_value=string(SEMdata.Patternmin,format="(F7.2)"), SEMwidget_s.Patternmin
+WIDGET_CONTROL, set_value=string(SEMdata.Patternmax,format="(F7.2)"), SEMwidget_s.Patternmax
 
 ; display the pattern
 ; first apply the necessary intensity scaling to the current pattern
 
 ; what kind of intensity scaling do we need?
-  if (EBSDdata.PatternScaling eq 0) then begin  ; this is regular linear scaling
-    finalpattern = bytscl(thispattern,min=EBSDdata.Patternmin,max=EBSDdata.Patternmax)
+  if (SEMdata.PatternScaling eq 0) then begin  ; this is regular linear scaling
+    finalpattern = bytscl(thispattern,min=SEMdata.Patternmin,max=SEMdata.Patternmax)
   end else begin
-    finalpattern = bytscl(thispattern^EBSDdata.gammavalue)
+    finalpattern = bytscl(thispattern^SEMdata.gammavalue)
   end
 
 ; then we apply the pattern origin 
 ;    vals = ['Upper Left','Lower Left','Upper Right','Lower Right']
-  if (EBSDdata.PatternOrigin ne 0) then begin
-    if (EBSDdata.PatternOrigin eq 1) then finalpattern = reverse(finalpattern,2)
-    if (EBSDdata.PatternOrigin eq 2) then finalpattern = reverse(finalpattern,1)
-    if (EBSDdata.PatternOrigin eq 3) then finalpattern = reverse(reverse(finalpattern,2),1)
+  if (SEMdata.PatternOrigin ne 0) then begin
+    if (SEMdata.PatternOrigin eq 1) then finalpattern = reverse(finalpattern,2)
+    if (SEMdata.PatternOrigin eq 2) then finalpattern = reverse(finalpattern,1)
+    if (SEMdata.PatternOrigin eq 3) then finalpattern = reverse(reverse(finalpattern,2),1)
   endif
 
 ; finally, we use the binning factor
-  if (EBSDdata.detbinning ne 0) then finalpattern = congrid(finalpattern,EBSDdata.detnumsx/2^EBSDdata.detbinning,EBSDdata.detnumsy/2^EBSDdata.detbinning)
+  if (SEMdata.detbinning ne 0) then finalpattern = congrid(finalpattern,SEMdata.detnumsx/2^SEMdata.detbinning,SEMdata.detnumsy/2^SEMdata.detbinning)
 
 ; and we display the result
-if not keyword_set(nodisplay) then if (EBSDdata.showcircularmask eq 1) then tv,finalpattern*byte(circularmask) else tv,finalpattern
+if not keyword_set(nodisplay) then if (SEMdata.showcircularmask eq 1) then tv,finalpattern*byte(circularmask) else tv,finalpattern
 
 end

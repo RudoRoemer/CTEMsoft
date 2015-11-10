@@ -26,7 +26,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDreadanglefile.pro
+; EMsoft:EBSDreadanglefile.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: EBSDreadanglefile.pro
@@ -41,8 +41,8 @@ pro EBSDreadanglefile, fname, list=list
 
 ;------------------------------------------------------------
 ; common blocks
-common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, EBSDdata
+common SEM_widget_common, SEMwidget_s
+common SEM_data_common, SEMdata
 common EBSD_anglearrays, euler, quaternions
 
 ; the file must exist, since it was selected using the file widget
@@ -51,7 +51,7 @@ angletype = ''
 readf,10,angletype
 numangles = 0L
 readf,10,numangles
-EBSDdata.numangles = numangles
+SEMdata.numangles = numangles
 if keyword_set(list) then begin
 ; if we are doing and angle file, then we need to read and store all the angle
 ; entries in the EBSD_anglearrays common variables.
@@ -80,12 +80,12 @@ if keyword_set(list) then begin
 end
 close,10
 
-EBSDdata.angletype = angletype
+SEMdata.angletype = angletype
 if (angletype eq 'eu') then begin
-  WIDGET_CONTROL, set_value='Euler', EBSDwidget_s.angletype
+  WIDGET_CONTROL, set_value='Euler', SEMwidget_s.angletype
 end
 if (angletype eq 'qu') then begin
-  WIDGET_CONTROL, set_value='quaternion', EBSDwidget_s.angletype
+  WIDGET_CONTROL, set_value='quaternion', SEMwidget_s.angletype
 end
 
 WIDGET_CONTROL, set_value=string(numangles,FORMAT="(I8)"), EBSDwidget_S.numangles

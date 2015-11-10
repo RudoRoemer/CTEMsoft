@@ -46,8 +46,8 @@ pro ECPExecute, status, single=single
 
 ;------------------------------------------------------------
 ; common blocks
-common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, EBSDdata
+common SEM_widget_common, SEMwidget_s
+common SEM_data_common, SEMdata
 common EBSDpatterns, pattern, image, finalpattern
 common EBSD_anglearrays, euler, quaternions
 common EBSDmasks, circularmask
@@ -57,17 +57,17 @@ common ECPdata, ECPattern
 
 status = 1
 
-if (EBSDdata.EMsoftpathname eq 'path_unknown') then EBSDdata.EMsoftpathname = Core_getenv()
+if (SEMdata.EMsoftpathname eq 'path_unknown') then SEMdata.EMsoftpathname = Core_getenv()
 
 ; check whether the mask needs to be recomputed or not
 s = size(circularmask)
-sm = EBSDdata.detnumsx
+sm = SEMdata.detnumsx
 if (s[0] ne sm) then begin
   d = shift(dist(sm),sm/2,sm/2)
   d[where(d le sm/2)] = 1.0
   d[where(d gt sm/2)] = 0.0
-  circularmask = fltarr(EBSDdata.detnumsx, EBSDdata.detnumsy)
-  dm = (EBSDdata.detnumsx - sm)/2
+  circularmask = fltarr(SEMdata.detnumsx, SEMdata.detnumsy)
+  dm = (SEMdata.detnumsx - sm)/2
   circularmask[dm,0] = d
 endif
 
@@ -76,25 +76,25 @@ nipar = long(8)
 ipar = lon64arr(nipar)
 
 ipar[0] = long64(2)    ; will need to be modified 
-ipar[1] = long64(EBSDdata.detnumsx)
-ipar[2] = long64(EBSDdata.detnumsy)
-ipar[3] = long64(EBSDdata.mcenergynumbin)
-ipar[4] = long64(EBSDdata.mcimx)
-ipar[5] = long64(EBSDdata.numset)
-ipar[6] = long64(EBSDdata.mpimx)
-ipar[7] = long64(EBSDdata.numangles)
+ipar[1] = long64(SEMdata.detnumsx)
+ipar[2] = long64(SEMdata.detnumsy)
+ipar[3] = long64(SEMdata.mcenergynumbin)
+ipar[4] = long64(SEMdata.mcimx)
+ipar[5] = long64(SEMdata.numset)
+ipar[6] = long64(SEMdata.mpimx)
+ipar[7] = long64(SEMdata.numangles)
 
 nfpar = long(8)
 fpar = fltarr(nfpar)
 
-fpar[0] = EBSDdata.detthetac
-fpar[1] = EBSDdata.detsampleytilt
-fpar[2] = EBSDdata.detW
-fpar[3] = EBSDdata.detRi
-fpar[4] = EBSDdata.detRo
-fpar[5] = EBSDdata.mcsigstart
-fpar[6] = EBSDdata.mcsigend
-fpar[7] = EBSDdata.mcsigstep
+fpar[0] = SEMdata.detthetac
+fpar[1] = SEMdata.detsampleytilt
+fpar[2] = SEMdata.detW
+fpar[3] = SEMdata.detRi
+fpar[4] = SEMdata.detRo
+fpar[5] = SEMdata.mcsigstart
+fpar[6] = SEMdata.mcsigend
+fpar[7] = SEMdata.mcsigstep
 
 callname = 'SingleECPatternWrapper'
 faccum_e = float(accum_e)
@@ -102,15 +102,15 @@ faccum_e = float(accum_e)
 if keyword_set(single) then begin
 
 ; and here is the quaternion that represents the Euler angle triplet
-  quats = Core_eu2qu( [EBSDdata.detphi1, EBSDdata.detphi, EBSDdata.detphi2] )
+  quats = Core_eu2qu( [SEMdata.detphi1, SEMdata.detphi, SEMdata.detphi2] )
   quats = reform(quats,4,1)
   ipar[7] = 1
 
 ; initialize the simulated pattern array
-  ECPattern = fltarr(EBSDdata.detnumsx,EBSDdata.detnumsy)
-  ECPattern = reform(ECPattern,EBSDdata.detnumsx,EBSDdata.detnumsy,1)
+  ECPattern = fltarr(SEMdata.detnumsx,SEMdata.detnumsy)
+  ECPattern = reform(ECPattern,SEMdata.detnumsx,SEMdata.detnumsy,1)
 
-  res = call_external(EBSDdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
+  res = call_external(SEMdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
         ipar, fpar, ECPattern, quats, faccum_e, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
 
   if (res ne 1.0) then begin
@@ -120,18 +120,18 @@ if keyword_set(single) then begin
 
 end else begin
 
-  if (EBSDdata.numangles gt 50) then begin
+  if (SEMdata.numangles gt 50) then begin
     Core_Print,'',/blank
     Core_Print,'You are computing more than 50 ECPs; this will take a while...'
     Core_Print,'The program will not provide any further updates until the run has been completed.'
     Core_Print,'',/blank
   endif
 
-  ECPattern = fltarr(EBSDdata.detnumsx,EBSDdata.detnumsy,EBSDdata.numangles)
+  ECPattern = fltarr(SEMdata.detnumsx,SEMdata.detnumsy,SEMdata.numangles)
 
 ; ipar[0] = long64(2)        ; causes SingleECPattern to reuse the detector arrays rather than recompute them each time
 
-  res = call_external(EBSDdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
+  res = call_external(SEMdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
         ipar, fpar, ECPattern, quaternions, faccum_e, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
 
   if (res ne 1.0) then begin

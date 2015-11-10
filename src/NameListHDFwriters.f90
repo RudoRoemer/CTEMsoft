@@ -282,10 +282,10 @@ character(fnlen,kind=c_char)                          :: line2(1)
 hdferr = HDF_createGroup('KosselMasterNameList',HDF_head)
 
 ! write all the single integers
-io_int = (/ knl%stdout, knl%numthick, knl%npix, knl%nthreads /)
+io_int = (/ knl%stdout, knl%numthick, knl%npx, knl%nthreads /)
 intlist(1) = 'stdout'
 intlist(2) = 'numthick'
-intlist(3) = 'npix'
+intlist(3) = 'npx'
 intlist(4) = 'nthreads' 
 call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 

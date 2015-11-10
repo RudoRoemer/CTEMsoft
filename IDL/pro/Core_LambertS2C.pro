@@ -26,7 +26,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:Core_LambertS2C.pro
+; EMsoft:Core_LambertS2C.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: Core_LambertS2C.pro

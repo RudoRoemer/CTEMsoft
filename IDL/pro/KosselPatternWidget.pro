@@ -11,18 +11,18 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; EMsoft:ECPatternWidget.pro
+; EMsoft:KosselPatternWidget.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: ECPatternWidget.pro
+; PROGRAM: KosselPatternWidget.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
 ;> @brief main widget for display of the computed ECP pattern
 ;
-;> @date 10/30/15 MDG 1.0 first version
+;> @date 11/09/15 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro ECPatternWidget, single=single
+pro KosselPatternWidget, single=single
 
 ; the keyword /single indicates that only one pattern is available
 
@@ -36,7 +36,7 @@ common ECPdata, ECPattern
 
 ;------------------------------------------------------------
 ; make sure that this program isn't already running
-if (XRegistered("ECPatternWidget") NE 0) then begin
+if (XRegistered("KosselPatternWidget") NE 0) then begin
   print,'ECPPatternWidget is already running ... (if it is not, please restart your IDL session)'
   return
 end
@@ -49,7 +49,7 @@ SEMwidget_s.patternbase = WIDGET_BASE(TITLE='Pattern Display Widget', $
                         XSIZE=psize, $
                         /ALIGN_CENTER, $
 			/TLB_MOVE_EVENTS, $
-			EVENT_PRO='ECPatternWidget_event', $
+			EVENT_PRO='KosselPatternWidget_event', $
                         XOFFSET=SEMdata.patternxlocation, $
                         YOFFSET=SEMdata.patternylocation)
 
@@ -76,8 +76,8 @@ if keyword_set(single) then begin
                         /EXCLUSIVE, $
                         FONT=fontstr, $
                         LABEL_LEFT = 'Pattern Origin', $
-                        EVENT_FUNC ='ECPevent', $
-                        UVALUE='ECPATTERNORIGIN', $
+                        EVENT_FUNC ='Kosselevent', $
+                        UVALUE='KOSSELPATTERNORIGIN', $
                         SET_VALUE=SEMdata.PatternOrigin)
 
 ;------------------------------------------------------------
@@ -90,15 +90,15 @@ if keyword_set(single) then begin
                         /EXCLUSIVE, $
                         FONT=fontstr, $
                         LABEL_LEFT = 'Pattern Scaling', $
-                        EVENT_FUNC ='ECPevent', $
-                        UVALUE='ECPATTERNSCALING', $
+                        EVENT_FUNC ='Kosselevent', $
+                        UVALUE='KOSSELPATTERNSCALING', $
                         SET_VALUE=SEMdata.PatternScaling)
 
 
   file2 = WIDGET_BASE(file1, /ROW, XSIZE=600, /ALIGN_CENTER)
 ; here's a slider to select the gamma setting ...
   SEMwidget_s.gammaslider = CW_FSLIDER(file2, $
-;		EVENT_PRO='ECPatternWidget_event', $
+;		EVENT_PRO='KosselPatternWidget_event', $
 			/EDIT, $
 			MINIMUM = 0.01, $
 			MAXIMUM = 2.00, $
@@ -125,12 +125,12 @@ SEMwidget_s.Patternmax = Core_WText(block4, '/',fontstr, 5, 25, 15, 1, string(SE
 
 ; and a save button
 block4 = WIDGET_BASE(block1, /ROW, /ALIGN_CENTER)
-saveECPattern = WIDGET_BUTTON(block4, $
+saveKosselPattern = WIDGET_BUTTON(block4, $
                         VALUE='Save', $
                         /NO_RELEASE, $
-                        EVENT_PRO='ECPatternWidget_event', $
+                        EVENT_PRO='KosselPatternWidget_event', $
                         /FRAME, $
-                        UVALUE='SAVEECPATTERN', $
+                        UVALUE='SAVEKOSSELPATTERN', $
                         /ALIGN_LEFT)
 
 ; and the save format selector
@@ -143,8 +143,8 @@ SEMwidget_s.EBSDformatbgroup = CW_BGROUP(block4, $
                         FONT=fontstr, $
                         LABEL_LEFT = 'File Format', $
                         /FRAME, $
-                        EVENT_FUNC ='ECPevent', $
-                        UVALUE='ECPFORMAT', $
+                        EVENT_FUNC ='Kosselevent', $
+                        UVALUE='KOSSELFORMAT', $
                         SET_VALUE=SEMdata.imageformat)
 
 ;------------------------------------------------------------
@@ -155,7 +155,7 @@ file1 = WIDGET_BASE(block1, XSIZE=340, /ALIGN_LEFT, /ROW)
 SEMwidget_s.PatternClose = WIDGET_BUTTON(file1, $
                                 UVALUE='PATTERNCLOSE', $
                                 VALUE='Close', $
-                                EVENT_PRO='ECPatternWidget_event', $
+                                EVENT_PRO='KosselPatternWidget_event', $
                                 SENSITIVE=1, $
                                 /FRAME)
 
@@ -175,17 +175,17 @@ end else begin
 saveECPattern = WIDGET_BUTTON(file2, $
                         VALUE='Previous', $
                         /NO_RELEASE, $
-                        EVENT_PRO='ECPatternWidget_event', $
+                        EVENT_PRO='KosselPatternWidget_event', $
                         /FRAME, $
-                        UVALUE='PREVIOUSECPATTERN', $
+                        UVALUE='PREVIOUSKOSSELPATTERN', $
                         /ALIGN_LEFT)
 
 saveECPattern = WIDGET_BUTTON(file2, $
                         VALUE='Next', $
                         /NO_RELEASE, $
-                        EVENT_PRO='ECPatternWidget_event', $
+                        EVENT_PRO='KosselPatternWidget_event', $
                         /FRAME, $
-                        UVALUE='NEXTECPATTERN', $
+                        UVALUE='NEXTKOSSELPATTERN', $
                         /ALIGN_LEFT)
 
 ; display the euler angles/quaternion for the currently displayed pattern
@@ -213,18 +213,18 @@ block4 = WIDGET_BASE(block1, /ROW, /ALIGN_CENTER)
 saveECPattern = WIDGET_BUTTON(block4, $
                         VALUE='SaveAll', $
                         /NO_RELEASE, $
-                        EVENT_PRO='ECPatternWidget_event', $
+                        EVENT_PRO='KosselPatternWidget_event', $
                         /FRAME, $
-                        UVALUE='SAVEALLECPATTERNS', $
+                        UVALUE='SAVEALLKOSSELPATTERNS', $
                         /ALIGN_LEFT)
 
 ; and a save button
 saveECPattern = WIDGET_BUTTON(block4, $
                         VALUE='Save', $
                         /NO_RELEASE, $
-                        EVENT_PRO='ECPatternWidget_event', $
+                        EVENT_PRO='KosselPatternWidget_event', $
                         /FRAME, $
-                        UVALUE='SAVEECPATTERN', $
+                        UVALUE='SAVEKOSSELPATTERN', $
                         /ALIGN_LEFT)
 
 ; and the save format selector
@@ -237,8 +237,8 @@ SEMwidget_s.EBSDformatbgroup = CW_BGROUP(block4, $
                         FONT=fontstr, $
                         LABEL_LEFT = 'File Format', $
                         /FRAME, $
-                        EVENT_FUNC ='ECPevent', $
-                        UVALUE='ECPFORMAT', $
+                        EVENT_FUNC ='Kosselevent', $
+                        UVALUE='KOSSELFORMAT', $
                         SET_VALUE=SEMdata.imageformat)
 
 ;------------------------------------------------------------
@@ -249,7 +249,7 @@ file1 = WIDGET_BASE(block1, XSIZE=340, /ALIGN_LEFT, /ROW)
 SEMwidget_s.PatternClose = WIDGET_BUTTON(file1, $
                                 UVALUE='PATTERNCLOSE', $
                                 VALUE='Close', $
-                                EVENT_PRO='ECPatternWidget_event', $
+                                EVENT_PRO='KosselPatternWidget_event', $
                                 SENSITIVE=1, $
                                 /FRAME)
 end
@@ -266,10 +266,10 @@ WIDGET_CONTROL, SEMwidget_s.Patterndraw, GET_VALUE=drawID
 SEMwidget_s.PatternDrawID = drawID
 
 ; and display the pattern with the current intensity settings
-if (SEMdata.Pmode eq 0) then ECPshowPattern,/single else ECPshowPattern
+if (SEMdata.Pmode eq 0) then KosselshowPattern,/single else KosselshowPattern
 
 ; and hand over control to the xmanager
-XMANAGER,"ECPatternWidget",SEMwidget_s.patternbase,/NO_BLOCK
+XMANAGER,"KosselPatternWidget",SEMwidget_s.patternbase,/NO_BLOCK
 
 end
 
