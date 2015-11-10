@@ -26,22 +26,22 @@ set(EMSoft_IDL_PRO_FILES
   ${APP_DIR}/pro/Core_quatmult.pro              ${APP_DIR}/pro/Efit_fit.pro
   ${APP_DIR}/pro/EBSDDetectorWidget.pro         ${APP_DIR}/pro/Efit_showpattern.pro
   ${APP_DIR}/pro/EBSDDetectorWidget_event.pro   ${APP_DIR}/pro/Efit_update.pro
-  ${APP_DIR}/pro/EBSDDisplay_event.pro          ${APP_DIR}/pro/Efitcalc.pro
+            ${APP_DIR}/pro/Efitcalc.pro
   ${APP_DIR}/pro/EBSDExecute.pro                ${APP_DIR}/pro/Efitevent.pro
   ${APP_DIR}/pro/EBSDMCDisplayWidget.pro        ${APP_DIR}/pro/Efitgetfilename.pro
   ${APP_DIR}/pro/EBSDMCDisplayWidget_event.pro  ${APP_DIR}/pro/Efitgetpreferences.pro
   ${APP_DIR}/pro/EBSDPatternWidget.pro          ${APP_DIR}/pro/Efitinit.pro
   ${APP_DIR}/pro/EBSDPatternWidget_event.pro    ${APP_DIR}/pro/Efitwritepreferences.pro
-  ${APP_DIR}/pro/EBSDcalc.pro                   ${APP_DIR}/pro/KosselDisplay.pro
-  ${APP_DIR}/pro/EBSDevent.pro                  ${APP_DIR}/pro/KosselDisplay_event.pro
+  ${APP_DIR}/pro/EBSDcalc.pro                   
+  ${APP_DIR}/pro/EBSDevent.pro                  
   ${APP_DIR}/pro/EBSDfit.pro                    ${APP_DIR}/pro/KosselPatternWidget.pro
   ${APP_DIR}/pro/EBSDfit_event.pro              ${APP_DIR}/pro/KosselPatternWidget_event.pro
   ${APP_DIR}/pro/EBSDgetfilename.pro            ${APP_DIR}/pro/Kosselevent.pro
-  ${APP_DIR}/pro/EBSDgetpreferences.pro         ${APP_DIR}/pro/Kosselgetfilename.pro
-  ${APP_DIR}/pro/EBSDinit.pro                   ${APP_DIR}/pro/Kosselgetpreferences.pro
-  ${APP_DIR}/pro/EBSDprint.pro                  ${APP_DIR}/pro/Kosselreaddatafile.pro
-  ${APP_DIR}/pro/EBSDreadHDFdatafile.pro        ${APP_DIR}/pro/Kosselshow.pro
-  ${APP_DIR}/pro/EBSDreadanglefile.pro          ${APP_DIR}/pro/Kosselwritepreferences.pro
+  ${APP_DIR}/pro/EBSDgetpreferences.pro         
+  ${APP_DIR}/pro/EBSDinit.pro                   
+  ${APP_DIR}/pro/EBSDprint.pro                  
+  ${APP_DIR}/pro/EBSDreadHDFdatafile.pro        ${APP_DIR}/pro/KosselshowPattern.pro
+  ${APP_DIR}/pro/EBSDreadanglefile.pro          
   ${APP_DIR}/pro/EBSDreaddatafile.pro           ${APP_DIR}/pro/SEMDisplay.pro
   ${APP_DIR}/pro/EBSDshowMC.pro                 ${APP_DIR}/pro/core_getenv.pro
   ${APP_DIR}/pro/EBSDshowPattern.pro
