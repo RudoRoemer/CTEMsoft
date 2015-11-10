@@ -26,7 +26,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:Core_WidgetEvent.pro
+; EMsoft:Core_WidgetEvent.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: Core_WidgetEvent.pro

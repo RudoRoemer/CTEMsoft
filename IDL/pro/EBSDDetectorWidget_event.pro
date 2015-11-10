@@ -26,7 +26,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDDetectorWidget_event.pro
+; EMsoft:EBSDDetectorWidget_event.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: EBSDDetectorWidget_event.pro
@@ -41,143 +41,143 @@ pro EBSDDetectorWidget_event, event
 
 ;------------------------------------------------------------
 ; common blocks
-common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, EBSDdata
+common SEM_widget_common, SEMwidget_s
+common SEM_data_common, SEMdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
 
-if (EBSDdata.eventverbose eq 1) then help,event,/structure
+if (SEMdata.eventverbose eq 1) then help,event,/structure
 
 ; intercept the detector widget movement here 
-if (event.id eq EBSDwidget_s.detectorbase) then begin
-  EBSDdata.Detectorxlocation = event.x
-  EBSDdata.Detectorylocation = event.y-25
+if (event.id eq SEMwidget_s.detectorbase) then begin
+  SEMdata.Detectorxlocation = event.x
+  SEMdata.Detectorylocation = event.y-25
 end else begin
 
   WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
 
   CASE eventval OF
 
- 'DETL': EBSDdata.detL = Core_WidgetEvent( EBSDwidget_s.detL,  'Detector distance set to [micron] ', '(F9.2)', /flt)
+ 'DETL': SEMdata.detL = Core_WidgetEvent( SEMwidget_s.detL,  'Detector distance set to [micron] ', '(F9.2)', /flt)
 
- 'DETTHETA': EBSDdata.dettheta = Core_WidgetEvent( EBSDwidget_s.dettheta, 'Detector angle set to [deg] ', '(F6.2)', /flt)
- 'DETOMEGA': EBSDdata.detomega = Core_WidgetEvent( EBSDwidget_s.detomega, 'Detector omega angle set to [deg] ', '(F6.2)', /flt)
+ 'DETTHETA': SEMdata.dettheta = Core_WidgetEvent( SEMwidget_s.dettheta, 'Detector angle set to [deg] ', '(F6.2)', /flt)
+ 'DETOMEGA': SEMdata.detomega = Core_WidgetEvent( SEMwidget_s.detomega, 'Detector omega angle set to [deg] ', '(F6.2)', /flt)
 
- 'DETDELTA': EBSDdata.detdelta = Core_WidgetEvent( EBSDwidget_s.detdelta, 'Scintillator pixel size set to [micron] ', '(F6.2)', /flt)
+ 'DETDELTA': SEMdata.detdelta = Core_WidgetEvent( SEMwidget_s.detdelta, 'Scintillator pixel size set to [micron] ', '(F6.2)', /flt)
 
- 'DETNUMSX': EBSDdata.detnumsx = Core_WidgetEvent( EBSDwidget_s.detnumsx, 'Scintillator number of pixels along x set to ', '(I4)', /lng)
- 'DETNUMSY': EBSDdata.detnumsy = Core_WidgetEvent( EBSDwidget_s.detnumsy, 'Scintillator number of pixels along y set to ', '(I4)', /lng)
+ 'DETNUMSX': SEMdata.detnumsx = Core_WidgetEvent( SEMwidget_s.detnumsx, 'Scintillator number of pixels along x set to ', '(I4)', /lng)
+ 'DETNUMSY': SEMdata.detnumsy = Core_WidgetEvent( SEMwidget_s.detnumsy, 'Scintillator number of pixels along y set to ', '(I4)', /lng)
 
- 'DETXPC': EBSDdata.detxpc = Core_WidgetEvent( EBSDwidget_s.detxpc, 'Pattern Center x-coordinate set to [pixels] ', '(F7.2)', /flt)
- 'DETYPC': EBSDdata.detypc = Core_WidgetEvent( EBSDwidget_s.detypc, 'Pattern Center y-coordinate set to [pixels] ', '(F7.2)', /flt)
+ 'DETXPC': SEMdata.detxpc = Core_WidgetEvent( SEMwidget_s.detxpc, 'Pattern Center x-coordinate set to [pixels] ', '(F7.2)', /flt)
+ 'DETYPC': SEMdata.detypc = Core_WidgetEvent( SEMwidget_s.detypc, 'Pattern Center y-coordinate set to [pixels] ', '(F7.2)', /flt)
 
- 'DETBEAMCURRENT': EBSDdata.detbeamcurrent = Core_WidgetEvent( EBSDwidget_s.detbeamcurrent, 'Beam current set to [nA] ', '(F9.2)', /flt)
- 'DETDWELLTIME': EBSDdata.detdwelltime = Core_WidgetEvent( EBSDwidget_s.detdwelltime, 'Dwell time set to [mu s] ', '(F9.2)', /flt)
+ 'DETBEAMCURRENT': SEMdata.detbeamcurrent = Core_WidgetEvent( SEMwidget_s.detbeamcurrent, 'Beam current set to [nA] ', '(F9.2)', /flt)
+ 'DETDWELLTIME': SEMdata.detdwelltime = Core_WidgetEvent( SEMwidget_s.detdwelltime, 'Dwell time set to [mu s] ', '(F9.2)', /flt)
 
- 'DETax1': EBSDdata.detax1 = Core_WidgetEvent( EBSDwidget_s.detax1, 'Axis-angle entry 1 set to ', '(F6.2)', /flt)
- 'DETax2': EBSDdata.detax2 = Core_WidgetEvent( EBSDwidget_s.detax2, 'Axis-angle entry 2 set to ', '(F6.2)', /flt)
- 'DETax3': EBSDdata.detax3 = Core_WidgetEvent( EBSDwidget_s.detax3, 'Axis-angle entry 3 set to ', '(F6.2)', /flt)
- 'DETax4': EBSDdata.detax4 = Core_WidgetEvent( EBSDwidget_s.detax4, 'Axis-angle entry 4 set to [deg] ', '(F6.2)', /flt)
+ 'DETax1': SEMdata.detax1 = Core_WidgetEvent( SEMwidget_s.detax1, 'Axis-angle entry 1 set to ', '(F6.2)', /flt)
+ 'DETax2': SEMdata.detax2 = Core_WidgetEvent( SEMwidget_s.detax2, 'Axis-angle entry 2 set to ', '(F6.2)', /flt)
+ 'DETax3': SEMdata.detax3 = Core_WidgetEvent( SEMwidget_s.detax3, 'Axis-angle entry 3 set to ', '(F6.2)', /flt)
+ 'DETax4': SEMdata.detax4 = Core_WidgetEvent( SEMwidget_s.detax4, 'Axis-angle entry 4 set to [deg] ', '(F6.2)', /flt)
 
  'EBSDMINENERGYLIST': begin
-		EBSDdata.Eminsel = fix(event.index)
-		if (EBSDdata.Eminsel gt EBSDdata.Emaxsel) then begin
-			EBSDdata.Emaxsel = EBSDdata.Eminsel
-			WIDGET_CONTROL, set_droplist_select = EBSDdata.Emaxsel, EBSDwidget_s.EBSDmaxenergylist
+		SEMdata.Eminsel = fix(event.index)
+		if (SEMdata.Eminsel gt SEMdata.Emaxsel) then begin
+			SEMdata.Emaxsel = SEMdata.Eminsel
+			WIDGET_CONTROL, set_droplist_select = SEMdata.Emaxsel, SEMwidget_s.EBSDmaxenergylist
 		end
-		WIDGET_CONTROL, set_droplist_select = EBSDdata.Eminsel, EBSDwidget_s.EBSDminenergylist
+		WIDGET_CONTROL, set_droplist_select = SEMdata.Eminsel, SEMwidget_s.EBSDminenergylist
 	 endcase
 
  'EBSDMAXENERGYLIST': begin
-		EBSDdata.Emaxsel = fix(event.index)
-		if (EBSDdata.Emaxsel lt EBSDdata.Eminsel) then begin
-			EBSDdata.Eminsel = EBSDdata.Emaxsel
-			WIDGET_CONTROL, set_droplist_select = EBSDdata.Eminsel, EBSDwidget_s.EBSDminenergylist
+		SEMdata.Emaxsel = fix(event.index)
+		if (SEMdata.Emaxsel lt SEMdata.Eminsel) then begin
+			SEMdata.Eminsel = SEMdata.Emaxsel
+			WIDGET_CONTROL, set_droplist_select = SEMdata.Eminsel, SEMwidget_s.EBSDminenergylist
 		end
-		WIDGET_CONTROL, set_droplist_select = EBSDdata.Emaxsel, EBSDwidget_s.EBSDmaxenergylist
+		WIDGET_CONTROL, set_droplist_select = SEMdata.Emaxsel, SEMwidget_s.EBSDmaxenergylist
 	 endcase
 
  'GETEBSDFILENAME': begin
 ; display a filesaving widget in the data folder with the file extension filled in
-	  filename = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,title='enter EBSD output file name ')
+	  filename = DIALOG_PICKFILE(/write,path=SEMdata.pathname,title='enter EBSD output file name ')
 	  if (filename ne '') then begin
-	    EBSDdata.EBSDpatternfilename = filename
+	    SEMdata.EBSDpatternfilename = filename
 ; and correct this for the relative pathnames of the EMsoft package
-            EBSDdata.EBSDpatternfilename = strmid(EBSDdata.EBSDpatternfilename,strpos(EBSDdata.EBSDpatternfilename,EBSDdata.mcpathname))
-	    WIDGET_CONTROL, set_value=filename, EBSDwidget_s.EBSDpatternfilename
-	    WIDGET_CONTROL, EBSDwidget_s.DisplayEBSD, sensitive=1
-	    WIDGET_CONTROL, EBSDwidget_s.EBSDgetanglefilename, sensitive=1
+            SEMdata.EBSDpatternfilename = strmid(SEMdata.EBSDpatternfilename,strpos(SEMdata.EBSDpatternfilename,SEMdata.mcpathname))
+	    WIDGET_CONTROL, set_value=filename, SEMwidget_s.EBSDpatternfilename
+	    WIDGET_CONTROL, SEMwidget_s.DisplayEBSD, sensitive=1
+	    WIDGET_CONTROL, SEMwidget_s.EBSDgetanglefilename, sensitive=1
 	  end
 	endcase
 
 
- 'DETphi1': EBSDdata.detphi1 = Core_WidgetEvent( EBSDwidget_s.detphi1, 'Euler angle phi1 set to [deg] ', '(F6.2)', /flt)
- 'DETPhi': EBSDdata.detphi = Core_WidgetEvent( EBSDwidget_s.detphi, 'Euler angle Phi set to [deg] ', '(F6.2)', /flt)
- 'DETphi2': EBSDdata.detphi2 = Core_WidgetEvent( EBSDwidget_s.detphi2, 'Euler angle phi2 set to [deg] ', '(F6.2)', /flt)
+ 'DETphi1': SEMdata.detphi1 = Core_WidgetEvent( SEMwidget_s.detphi1, 'Euler angle phi1 set to [deg] ', '(F6.2)', /flt)
+ 'DETPhi': SEMdata.detphi = Core_WidgetEvent( SEMwidget_s.detphi, 'Euler angle Phi set to [deg] ', '(F6.2)', /flt)
+ 'DETphi2': SEMdata.detphi2 = Core_WidgetEvent( SEMwidget_s.detphi2, 'Euler angle phi2 set to [deg] ', '(F6.2)', /flt)
 
  'GETANGLEFILENAME': begin
 ; display a filesaving widget in the data folder with the file extension filled in
-	  filename = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,title='Select angle input file')
+	  filename = DIALOG_PICKFILE(/write,path=SEMdata.pathname,title='Select angle input file')
 	  if (filename ne '') then begin
-	    EBSDdata.EBSDanglefilename = filename
-	    WIDGET_CONTROL, set_value=filename, EBSDwidget_s.EBSDanglefilename
+	    SEMdata.EBSDanglefilename = filename
+	    WIDGET_CONTROL, set_value=filename, SEMwidget_s.EBSDanglefilename
 	    EBSDreadanglefile,filename,/list
-	    WIDGET_CONTROL, EBSDwidget_s.GoAngle, sensitive=1
+	    WIDGET_CONTROL, SEMwidget_s.GoAngle, sensitive=1
 	  end
 	endcase
 
  'DICTIONARYPG': begin
-	  EBSDdata.Dictpointgroup = event.index
-	  if ( (EBSDdata.Ncubochoric ne 0) and (EBSDdata.EBSDdictfilename ne '') ) then begin
-	    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=1
+	  SEMdata.Dictpointgroup = event.index
+	  if ( (SEMdata.Ncubochoric ne 0) and (SEMdata.EBSDdictfilename ne '') ) then begin
+	    WIDGET_CONTROL, SEMwidget_s.GoDict, sensitive=1
 	  end
 	endcase
 
  'NCUBOCHORIC': begin 
-	  EBSDdata.Ncubochoric = Core_WidgetEvent( EBSDwidget_s.Ncubochoric,  'Number of smapling points along cube semi-edge set to ', '(I4)', /lng)
-	  if ( (EBSDdata.Dictpointgroup ne 0) and (EBSDdata.EBSDdictfilename ne '') ) then begin
-	    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=1
+	  SEMdata.Ncubochoric = Core_WidgetEvent( SEMwidget_s.Ncubochoric,  'Number of smapling points along cube semi-edge set to ', '(I4)', /lng)
+	  if ( (SEMdata.Dictpointgroup ne 0) and (SEMdata.EBSDdictfilename ne '') ) then begin
+	    WIDGET_CONTROL, SEMwidget_s.GoDict, sensitive=1
 	  end
 	endcase
 
 ;'GETDICTFILENAME': begin
 ; display a filesaving widget 
-;  filename = DIALOG_PICKFILE(/write,path=EBSDdata.pathname,title='Set dictionary angle file name ')
+;  filename = DIALOG_PICKFILE(/write,path=SEMdata.pathname,title='Set dictionary angle file name ')
 ;  if (filename ne '') then begin
-;    EBSDdata.EBSDdictfilename = filename
-;    WIDGET_CONTROL, set_value=filename, EBSDwidget_s.EBSDdictfilename
+;    SEMdata.EBSDdictfilename = filename
+;    WIDGET_CONTROL, set_value=filename, SEMwidget_s.EBSDdictfilename
 ;  end
-;  if ( (EBSDdata.Dictpointgroup ne 0) and (EBSDdata.Ncubochoric ne 0) ) then begin
-;    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=1
+;  if ( (SEMdata.Dictpointgroup ne 0) and (SEMdata.Ncubochoric ne 0) ) then begin
+;    WIDGET_CONTROL, SEMwidget_s.GoDict, sensitive=1
 ;  end
 ;endcase
 
 ;'GODICT': begin
 ; this option calls the sampleRFZ program to create a dictionary angle file
-;      openw,10,EBSDdata.pathname+'/CTEMsampleRFZ.nml'
+;      openw,10,SEMdata.pathname+'/CTEMsampleRFZ.nml'
 ;      printf,10,'&RFZlist'
-;      printf,10,'pgnum = '+string(EBSDdata.Dictpointgroup,FORMAT="(I2)")
-;      printf,10,'nsteps = '+string(EBSDdata.Ncubochoric,FORMAT="(I6)")
-;      printf,10,'outname = '''+EBSDdata.EBSDdictfilename+''''
+;      printf,10,'pgnum = '+string(SEMdata.Dictpointgroup,FORMAT="(I2)")
+;      printf,10,'nsteps = '+string(SEMdata.Ncubochoric,FORMAT="(I6)")
+;      printf,10,'outname = '''+SEMdata.EBSDdictfilename+''''
 ;      printf,10,'/'
 ;      close,10
 ; then run the CTEMsampleRFZ program on this file to create the angle file
-;      cmd = EBSDdata.f90exepath+'/CTEMsampleRFZ '+EBSDdata.pathname+'/CTEMsampleRFZ.nml'
+;      cmd = SEMdata.f90exepath+'/CTEMsampleRFZ '+SEMdata.pathname+'/CTEMsampleRFZ.nml'
 ;      spawn,cmd
 ; then read the number of entries from that file and display it, then activate the GO button
-;      EBSDreadanglefile, EBSDdata.EBSDdictfilename
-;      WIDGET_CONTROL, set_value=string(EBSDdata.numangles,FORMAT="(I8)"), EBSDwidget_s.NinRFZ
-;      WIDGET_CONTROL, EBSDwidget_s.GoDictionary, sensitive=1
+;      EBSDreadanglefile, SEMdata.EBSDdictfilename
+;      WIDGET_CONTROL, set_value=string(SEMdata.numangles,FORMAT="(I8)"), SEMwidget_s.NinRFZ
+;      WIDGET_CONTROL, SEMwidget_s.GoDictionary, sensitive=1
 ;endcase
 
  'DISPLAYEBSD': begin
 ; first we need to make sure that the path to the fortran executables is known... this is stored in the 
 ; preferences file, but is initially set to 'path_unknown'
-          if (EBSDdata.f90exepath eq 'path_unknown') then EBSDdata.f90exepath = Core_getenv()
+          if (SEMdata.f90exepath eq 'path_unknown') then SEMdata.f90exepath = Core_getenv()
 
 ; is the correct widget up on the screen ?
 	  if XRegistered("EBSDPatternWidget") then begin
-	    if (EBSDdata.currentdisplaywidgetmode ne 0) then WIDGET_CONTROL, EBSDwidget_s.patternbase, /DESTROY
+	    if (SEMdata.currentdisplaywidgetmode ne 0) then WIDGET_CONTROL, SEMwidget_s.patternbase, /DESTROY
 	  end
 
 ; this does two things.  First of all, the CTEMEBSD program is called with the current
@@ -203,11 +203,11 @@ end else begin
  'GOANGLE': begin
 ; first we need to make sure that the path to the fortran executables is known... this is stored in the 
 ; preferences file, but is initially set to 'path_unknown'
-          if (EBSDdata.f90exepath eq 'path_unknown') then EBSDdata.f90exepath = Core_getenv()
+          if (SEMdata.f90exepath eq 'path_unknown') then SEMdata.f90exepath = Core_getenv()
 
 ; is the correct widget up on the screen ?
 	  if XRegistered("EBSDPatternWidget") then begin
-	    if (EBSDdata.currentdisplaywidgetmode ne 1) then WIDGET_CONTROL, EBSDwidget_s.patternbase, /DESTROY
+	    if (SEMdata.currentdisplaywidgetmode ne 1) then WIDGET_CONTROL, SEMwidget_s.patternbase, /DESTROY
 	  end
 
 ; this does two things.  First of all, the CTEMEBSD program is called with the current
@@ -232,11 +232,11 @@ end else begin
 ;'GODICTIONARY': begin
 ; first we need to make sure that the path to the fortran executables is known... this is stored in the 
 ; preferences file, but is initially set to 'path_unknown'
-;         if (EBSDdata.f90exepath eq 'path_unknown') then EBSDdata.f90exepath = Core_getenv()
+;         if (SEMdata.f90exepath eq 'path_unknown') then SEMdata.f90exepath = Core_getenv()
 
 ; is the correct widget up on the screen ?
 ;  if XRegistered("EBSDPatternWidget") then begin
-;    if (EBSDdata.currentdisplaywidgetmode ne 1) then WIDGET_CONTROL, EBSDwidget_s.patternbase, /DESTROY
+;    if (SEMdata.currentdisplaywidgetmode ne 1) then WIDGET_CONTROL, SEMwidget_s.patternbase, /DESTROY
 ;  end
 
 ; this does two things.  First of all, the CTEMEBSD program is called with the current
@@ -260,7 +260,7 @@ end else begin
 
  'CLOSEDETECTOR': begin
 ; kill the base widget
-		WIDGET_CONTROL, EBSDwidget_s.detectorbase, /DESTROY
+		WIDGET_CONTROL, SEMwidget_s.detectorbase, /DESTROY
 	endcase
 
   else: MESSAGE, "Event User Value Not Found"

@@ -26,7 +26,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDreaddatafile.pro
+; EMsoft:EBSDreaddatafile.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: EBSDreaddatafile.pro
@@ -44,20 +44,20 @@ pro EBSDreaddatafile,MCFILE=MCFILE,MPFILE=MPFILE
 ;
 ;------------------------------------------------------------
 ; common blocks
-common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, EBSDdata
+common SEM_widget_common, SEMwidget_s
+common SEM_data_common, SEMdata
 
 ; the next common block contains all the raw data needed to generate the EBSD patterns
 common EBSD_rawdata, accum_e, accum_z, mLPNH, mLPSH
 
 
   Core_Print,' ',/blank
-  EBSDdata.MCMPboth = 0
+  SEMdata.MCMPboth = 0
 
 if keyword_set(MPFILE) then begin
-  Core_Print,'Reading data file '+EBSDdata.mpfilename
+  Core_Print,'Reading data file '+SEMdata.mpfilename
 
-  openu,1,EBSDdata.pathname+'/'+EBSDdata.mpfilename,/f77
+  openu,1,SEMdata.pathname+'/'+SEMdata.mpfilename,/f77
 ; first a string of 132 characters
   progname = bytarr(132)
   readu,1,progname
@@ -67,70 +67,70 @@ if keyword_set(MPFILE) then begin
 ; version string
   scversion = bytarr(8)
   readu,1,scversion
-  EBSDdata.scversion = strtrim(string(scversion))
+  SEMdata.scversion = strtrim(string(scversion))
     Core_Print,'Version identifier : '+string(scversion) 
 
 ; display the file size in Mb 
-  WIDGET_CONTROL, SET_VALUE=string(float(EBSDdata.mpfilesize)/1024./1024.,FORMAT="(F8.2)")+' Mb', EBSDwidget_s.mpfilesize
+  WIDGET_CONTROL, SET_VALUE=string(float(SEMdata.mpfilesize)/1024./1024.,FORMAT="(F8.2)")+' Mb', SEMwidget_s.mpfilesize
 
 ; structure file name
   xtalname = bytarr(132)
   readu,1,xtalname
-  EBSDdata.xtalname = strtrim(string(xtalname))
-    Core_Print,'Xtalname = ->'+EBSDdata.xtalname+'<-'
-  WIDGET_CONTROL, SET_VALUE=EBSDdata.xtalname, EBSDwidget_s.xtalname
+  SEMdata.xtalname = strtrim(string(xtalname))
+    Core_Print,'Xtalname = ->'+SEMdata.xtalname+'<-'
+  WIDGET_CONTROL, SET_VALUE=SEMdata.xtalname, SEMwidget_s.xtalname
 
 ; energy file name
   energyname = bytarr(132)
   readu,1,energyname
   res = strtrim(string(energyname))
   finfo = file_info(res)
-  EBSDdata.mcfilesize = finfo.size
+  SEMdata.mcfilesize = finfo.size
 
   spos = strpos(res,'/',/reverse_search)
   dpos = strpos(res,'.',/reverse_search)
   plen = strlen(res)
-  EBSDdata.mcpathname = strmid(res,0,spos)
-  EBSDdata.mcfilename = strmid(res,spos+1)
-    Core_Print,'MC filename = ->'+EBSDdata.mcfilename+'<-'
-  WIDGET_CONTROL, SET_VALUE=EBSDdata.mcfilename, EBSDwidget_s.mcfilename
+  SEMdata.mcpathname = strmid(res,0,spos)
+  SEMdata.mcfilename = strmid(res,spos+1)
+    Core_Print,'MC filename = ->'+SEMdata.mcfilename+'<-'
+  WIDGET_CONTROL, SET_VALUE=SEMdata.mcfilename, SEMwidget_s.mcfilename
 
 ; npx, npy, numEbins, numset
   dims = lonarr(4)
   readu,1,dims
-  EBSDdata.mpimx = dims[0]
-  EBSDdata.mpimy = dims[1]
-  EBSDdata.mcenergynumbin = dims[2]
-  EBSDdata.numset= dims[3]
-  EBSDdata.Asymsel = -1
+  SEMdata.mpimx = dims[0]
+  SEMdata.mpimy = dims[1]
+  SEMdata.mcenergynumbin = dims[2]
+  SEMdata.numset= dims[3]
+  SEMdata.Asymsel = -1
 
-  WIDGET_CONTROL, SET_VALUE=string(2*dims[0]+1,format="(I5)"), EBSDwidget_s.mpimx
-  WIDGET_CONTROL, SET_VALUE=string(2*dims[1]+1,format="(I5)"), EBSDwidget_s.mpimy
-  WIDGET_CONTROL, SET_VALUE=string(dims[2],format="(I5)"), EBSDwidget_s.mcenergynumbin
+  WIDGET_CONTROL, SET_VALUE=string(2*dims[0]+1,format="(I5)"), SEMwidget_s.mpimx
+  WIDGET_CONTROL, SET_VALUE=string(2*dims[1]+1,format="(I5)"), SEMwidget_s.mpimy
+  WIDGET_CONTROL, SET_VALUE=string(dims[2],format="(I5)"), SEMwidget_s.mcenergynumbin
   
 ; energy levels
-  EkeVs = fltarr(EBSDdata.mcenergynumbin)
+  EkeVs = fltarr(SEMdata.mcenergynumbin)
   readu,1,EkeVs
 
 ; atomic numbers for asymmetric unit
-  atnum = lonarr(EBSDdata.numset)
+  atnum = lonarr(SEMdata.numset)
   readu,1,atnum
-  EBSDdata.atnum(0:EBSDdata.numset-1) = atnum(0:EBSDdata.numset-1)
+  SEMdata.atnum(0:SEMdata.numset-1) = atnum(0:SEMdata.numset-1)
 
 ; Lambert projection type
   Ltype = bytarr(6)
   readu,1,Ltype
   Ltype = strtrim(string(Ltype))
-  if (Ltype eq 'hexago') then EBSDdata.mpgridmode = ' Hexagonal' else EBSDdata.mpgridmode = ' Square'
-  WIDGET_CONTROL, SET_VALUE=EBSDdata.mpgridmode, EBSDwidget_s.mpgridmode
+  if (Ltype eq 'hexago') then SEMdata.mpgridmode = ' Hexagonal' else SEMdata.mpgridmode = ' Square'
+  WIDGET_CONTROL, SET_VALUE=SEMdata.mpgridmode, SEMwidget_s.mpgridmode
 
 ; and finally the results array
-  MParray = fltarr(2L*EBSDdata.mpimx+1L,2L*EBSDdata.mpimy+1L,EBSDdata.mcenergynumbin,EBSDdata.numset)
+  MParray = fltarr(2L*SEMdata.mpimx+1L,2L*SEMdata.mpimy+1L,SEMdata.mcenergynumbin,SEMdata.numset)
   readu,1,MParray
-  if (EBSDdata.numset gt 1) then MParraysum = total(MParray,4) else MParraysum = MParray
+  if (SEMdata.numset gt 1) then MParraysum = total(MParray,4) else MParraysum = MParray
 
   sz = size(MParray,/dimensions)
-  if (EBSDdata.numset gt 1) then Core_Print,' Size of MParray data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") +' x'+string(sz[3],format="(I5)") else Core_Print,' Size of MParray data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)")
+  if (SEMdata.numset gt 1) then Core_Print,' Size of MParray data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") +' x'+string(sz[3],format="(I5)") else Core_Print,' Size of MParray data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)")
 
 ; and close the file
   close,1
@@ -139,9 +139,9 @@ if keyword_set(MPFILE) then begin
   Core_LambertS2C,reform(MParray[*,*,0,0]),/mp
   Core_LambertS2SP,reform(MParray[*,*,0,0]),/mp
 
-   WIDGET_CONTROL, EBSDwidget_s.MPbutton, sensitive=1
-   WIDGET_CONTROL, EBSDwidget_s.detector, sensitive=1
-  EBSDdata.MCMPboth = 1
+   WIDGET_CONTROL, SEMwidget_s.MPbutton, sensitive=1
+   WIDGET_CONTROL, SEMwidget_s.detector, sensitive=1
+  SEMdata.MCMPboth = 1
 endif
 
 
@@ -150,11 +150,11 @@ endif
 
 
 ; read the Monte Carlo data file
-if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
-  Core_Print,'Reading data file '+EBSDdata.mcfilename
-  EBSDdata.Esel = 0
+if (keyword_set(MCFILE) or (SEMdata.MCMPboth eq 1)) then begin
+  Core_Print,'Reading data file '+SEMdata.mcfilename
+  SEMdata.Esel = 0
 
-  openu,1,EBSDdata.mcpathname+'/'+EBSDdata.mcfilename,/f77
+  openu,1,SEMdata.mcpathname+'/'+SEMdata.mcfilename,/f77
 ; first a string of 132 characters
   progname = bytarr(132)
   readu,1,progname
@@ -164,83 +164,83 @@ if (keyword_set(MCFILE) or (EBSDdata.MCMPboth eq 1)) then begin
 ; version string
   scversion = bytarr(8)
   readu,1,scversion
-  EBSDdata.scversion = strtrim(string(scversion))
+  SEMdata.scversion = strtrim(string(scversion))
     Core_Print,'Version identifier : '+string(scversion) 
 
 ; display the file size in Mb 
-  WIDGET_CONTROL, SET_VALUE=string(float(EBSDdata.mcfilesize)/1024./1024.,FORMAT="(F8.2)")+' Mb', EBSDwidget_s.mcfilesize
+  WIDGET_CONTROL, SET_VALUE=string(float(SEMdata.mcfilesize)/1024./1024.,FORMAT="(F8.2)")+' Mb', SEMwidget_s.mcfilesize
 
 ; version identifier 3_x_x is single structure file
 ; version identifier 3_y_y is two-layer file
 
- if (EBSDdata.scversion eq '3_x_x') then begin ; scversion = 3_x_x
+ if (SEMdata.scversion eq '3_x_x') then begin ; scversion = 3_x_x
 ; structure file name
   xtalname = bytarr(132)
   readu,1,xtalname
-  EBSDdata.xtalname = strtrim(string(xtalname))
-    Core_Print,'Xtalname = ->'+EBSDdata.xtalname+'<-'
-  WIDGET_CONTROL, SET_VALUE=EBSDdata.xtalname, EBSDwidget_s.xtalname
+  SEMdata.xtalname = strtrim(string(xtalname))
+    Core_Print,'Xtalname = ->'+SEMdata.xtalname+'<-'
+  WIDGET_CONTROL, SET_VALUE=SEMdata.xtalname, SEMwidget_s.xtalname
 
 ; six integers parameters (last one is not needed)
 ; dims = lonarr(6)
   dims = lonarr(5)
   readu,1,dims
-  EBSDdata.mcenergynumbin = dims[0]
-  EBSDdata.mcdepthnumbins = dims[1]
-  EBSDdata.mcimx = (dims[2]-1L)/2L
-  EBSDdata.mcimy = (dims[3]-1L)/2L
-  EBSDdata.mctotale = dims[4]
+  SEMdata.mcenergynumbin = dims[0]
+  SEMdata.mcdepthnumbins = dims[1]
+  SEMdata.mcimx = (dims[2]-1L)/2L
+  SEMdata.mcimy = (dims[3]-1L)/2L
+  SEMdata.mctotale = dims[4]
 
-  WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(I5)"), EBSDwidget_s.mcenergynumbin
-  WIDGET_CONTROL, SET_VALUE=string(dims[1],format="(I5)"), EBSDwidget_s.mcdepthnumbins
-  WIDGET_CONTROL, SET_VALUE=string(dims[2],format="(I5)"), EBSDwidget_s.mcimx
-  WIDGET_CONTROL, SET_VALUE=string(dims[3],format="(I5)"), EBSDwidget_s.mcimy
-  WIDGET_CONTROL, SET_VALUE=string(dims[4],format="(I12)"), EBSDwidget_s.mctotale
+  WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(I5)"), SEMwidget_s.mcenergynumbin
+  WIDGET_CONTROL, SET_VALUE=string(dims[1],format="(I5)"), SEMwidget_s.mcdepthnumbins
+  WIDGET_CONTROL, SET_VALUE=string(dims[2],format="(I5)"), SEMwidget_s.mcimx
+  WIDGET_CONTROL, SET_VALUE=string(dims[3],format="(I5)"), SEMwidget_s.mcimy
+  WIDGET_CONTROL, SET_VALUE=string(dims[4],format="(I12)"), SEMwidget_s.mctotale
 
 ; 5 more parameters, all doubles
   dims = dblarr(5)
   readu,1,dims
-  EBSDdata.mcenergymax = dims[0]
-  EBSDdata.mcenergymin = dims[1]
-  EBSDdata.mcenergybinsize = dims[2]
-  EBSDdata.mcdepthmax = dims[3]
-  EBSDdata.mcdepthstep = dims[4]
+  SEMdata.mcenergymax = dims[0]
+  SEMdata.mcenergymin = dims[1]
+  SEMdata.mcenergybinsize = dims[2]
+  SEMdata.mcdepthmax = dims[3]
+  SEMdata.mcdepthstep = dims[4]
 
-  EBSDdata.voltage = EBSDdata.mcenergymax
+  SEMdata.voltage = SEMdata.mcenergymax
 
-  WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(F7.2)"), EBSDwidget_s.mcenergymax
-  WIDGET_CONTROL, SET_VALUE=string(dims[1],format="(F7.2)"), EBSDwidget_s.mcenergymin
-  WIDGET_CONTROL, SET_VALUE=string(dims[2],format="(F7.2)"), EBSDwidget_s.mcenergybinsize
-  WIDGET_CONTROL, SET_VALUE=string(dims[3],format="(F7.2)"), EBSDwidget_s.mcdepthmax
-  WIDGET_CONTROL, SET_VALUE=string(dims[4],format="(F7.2)"), EBSDwidget_s.mcdepthstep
-  WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(F7.2)"), EBSDwidget_s.voltage
+  WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(F7.2)"), SEMwidget_s.mcenergymax
+  WIDGET_CONTROL, SET_VALUE=string(dims[1],format="(F7.2)"), SEMwidget_s.mcenergymin
+  WIDGET_CONTROL, SET_VALUE=string(dims[2],format="(F7.2)"), SEMwidget_s.mcenergybinsize
+  WIDGET_CONTROL, SET_VALUE=string(dims[3],format="(F7.2)"), SEMwidget_s.mcdepthmax
+  WIDGET_CONTROL, SET_VALUE=string(dims[4],format="(F7.2)"), SEMwidget_s.mcdepthstep
+  WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(F7.2)"), SEMwidget_s.voltage
 
 ; sample tilt angles
   dims = dblarr(2)
   readu,1,dims
-  EBSDdata.mcvangle = dims[0]
-  EBSDdata.mchangle = dims[1]
+  SEMdata.mcvangle = dims[0]
+  SEMdata.mchangle = dims[1]
 
-  WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(F7.2)"), EBSDwidget_s.mcvangle
-  WIDGET_CONTROL, SET_VALUE=string(dims[1],format="(F7.2)"), EBSDwidget_s.mchangle
+  WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(F7.2)"), SEMwidget_s.mcvangle
+  WIDGET_CONTROL, SET_VALUE=string(dims[1],format="(F7.2)"), SEMwidget_s.mchangle
 
 ; Monte Carlo mode  'CSDA' or 'Discrete losses'
   mcm = bytarr(4)
   readu,1,mcm
   mcm = strtrim(string(mcm))
-  if (mcm eq 'CSDA') then EBSDdata.mcmode = 'CSDA' else EBSDdata.mcmode = 'DLOS'
-  WIDGET_CONTROL, SET_VALUE=EBSDdata.mcmode, EBSDwidget_s.mcmode
+  if (mcm eq 'CSDA') then SEMdata.mcmode = 'CSDA' else SEMdata.mcmode = 'DLOS'
+  WIDGET_CONTROL, SET_VALUE=SEMdata.mcmode, SEMwidget_s.mcmode
 
 
 ; and finally, we read the actual data arrays accum_e and accum_z
-  accum_e = lonarr(EBSDdata.mcenergynumbin, 2*EBSDdata.mcimx+1,2*EBSDdata.mcimy+1)
-  accum_z = lonarr(EBSDdata.mcenergynumbin, EBSDdata.mcdepthnumbins, 2*(EBSDdata.mcimx/10)+1,2*(EBSDdata.mcimy/10)+1)
+  accum_e = lonarr(SEMdata.mcenergynumbin, 2*SEMdata.mcimx+1,2*SEMdata.mcimy+1)
+  accum_z = lonarr(SEMdata.mcenergynumbin, SEMdata.mcdepthnumbins, 2*(SEMdata.mcimx/10)+1,2*(SEMdata.mcimy/10)+1)
   readu,1,accum_e
   readu,1,accum_z
 
 ; total number of BSE electrons
-  EBSDdata.mcbse = total(accum_e)
-  WIDGET_CONTROL, SET_VALUE=string(EBSDdata.mcbse,format="(I12)"), EBSDwidget_s.mcbse
+  SEMdata.mcbse = total(accum_e)
+  WIDGET_CONTROL, SET_VALUE=string(SEMdata.mcbse,format="(I12)"), SEMwidget_s.mcbse
 
 
   sz = size(accum_e,/dimensions)
@@ -258,79 +258,79 @@ end else begin  ; scversion = 3_y_y
   xtalname2 = bytarr(132)
   readu,1,xtalname
   readu,1,xtalname2
-  EBSDdata.xtalname = strtrim(string(xtalname))
-  EBSDdata.xtalname2 = strtrim(string(xtalname2))
-    Core_Print,'Xtalname = ->'+EBSDdata.xtalname+'<-'
-    Core_Print,'Xtalname2 = ->'+EBSDdata.xtalname2+'<-'
-  WIDGET_CONTROL, SET_VALUE=EBSDdata.xtalname, EBSDwidget_s.xtalname+'/'+EBSDwidget_s.xtalname2
+  SEMdata.xtalname = strtrim(string(xtalname))
+  SEMdata.xtalname2 = strtrim(string(xtalname2))
+    Core_Print,'Xtalname = ->'+SEMdata.xtalname+'<-'
+    Core_Print,'Xtalname2 = ->'+SEMdata.xtalname2+'<-'
+  WIDGET_CONTROL, SET_VALUE=SEMdata.xtalname, SEMwidget_s.xtalname+'/'+SEMwidget_s.xtalname2
 
 ; dimensions
   dims = lonarr(4)
   mctotale = 0LL
   readu,1,dims,mctotale
-  EBSDdata.mcenergynumbin = dims[0]
-  EBSDdata.mcdepthnumbins = dims[1]
-  EBSDdata.mcimx = (dims[2]-1L)/2L
-  EBSDdata.mcimy = (dims[3]-1L)/2L
-  EBSDdata.mctotale = mctotale
+  SEMdata.mcenergynumbin = dims[0]
+  SEMdata.mcdepthnumbins = dims[1]
+  SEMdata.mcimx = (dims[2]-1L)/2L
+  SEMdata.mcimy = (dims[3]-1L)/2L
+  SEMdata.mctotale = mctotale
 
 
-  WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(I5)"), EBSDwidget_s.mcenergynumbin
-  WIDGET_CONTROL, SET_VALUE=string(dims[1],format="(I5)"), EBSDwidget_s.mcdepthnumbins
-  WIDGET_CONTROL, SET_VALUE=string(dims[2],format="(I5)"), EBSDwidget_s.mcimx
-  WIDGET_CONTROL, SET_VALUE=string(dims[3],format="(I5)"), EBSDwidget_s.mcimy
-  WIDGET_CONTROL, SET_VALUE=string(mctotale,format="(I12)"), EBSDwidget_s.mctotale
+  WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(I5)"), SEMwidget_s.mcenergynumbin
+  WIDGET_CONTROL, SET_VALUE=string(dims[1],format="(I5)"), SEMwidget_s.mcdepthnumbins
+  WIDGET_CONTROL, SET_VALUE=string(dims[2],format="(I5)"), SEMwidget_s.mcimx
+  WIDGET_CONTROL, SET_VALUE=string(dims[3],format="(I5)"), SEMwidget_s.mcimy
+  WIDGET_CONTROL, SET_VALUE=string(mctotale,format="(I12)"), SEMwidget_s.mctotale
 
 ; 5 more parameters, all doubles
   dims = dblarr(5)
   readu,1,dims
-  EBSDdata.mcenergymax = dims[0]
-  EBSDdata.mcenergymin = dims[1]
-  EBSDdata.mcenergybinsize = dims[2]
-  EBSDdata.mcdepthmax = dims[3]
-  EBSDdata.mcdepthstep = dims[4]
+  SEMdata.mcenergymax = dims[0]
+  SEMdata.mcenergymin = dims[1]
+  SEMdata.mcenergybinsize = dims[2]
+  SEMdata.mcdepthmax = dims[3]
+  SEMdata.mcdepthstep = dims[4]
 
-  EBSDdata.voltage = EBSDdata.mcenergymax
+  SEMdata.voltage = SEMdata.mcenergymax
 
-  WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(F7.2)"), EBSDwidget_s.mcenergymax
-  WIDGET_CONTROL, SET_VALUE=string(dims[1],format="(F7.2)"), EBSDwidget_s.mcenergymin
-  WIDGET_CONTROL, SET_VALUE=string(dims[2],format="(F7.2)"), EBSDwidget_s.mcenergybinsize
-  WIDGET_CONTROL, SET_VALUE=string(dims[3],format="(F7.2)"), EBSDwidget_s.mcdepthmax
-  WIDGET_CONTROL, SET_VALUE=string(dims[4],format="(F7.2)"), EBSDwidget_s.mcdepthstep
-  WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(F7.2)"), EBSDwidget_s.voltage
+  WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(F7.2)"), SEMwidget_s.mcenergymax
+  WIDGET_CONTROL, SET_VALUE=string(dims[1],format="(F7.2)"), SEMwidget_s.mcenergymin
+  WIDGET_CONTROL, SET_VALUE=string(dims[2],format="(F7.2)"), SEMwidget_s.mcenergybinsize
+  WIDGET_CONTROL, SET_VALUE=string(dims[3],format="(F7.2)"), SEMwidget_s.mcdepthmax
+  WIDGET_CONTROL, SET_VALUE=string(dims[4],format="(F7.2)"), SEMwidget_s.mcdepthstep
+  WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(F7.2)"), SEMwidget_s.voltage
 
 ; sample tilt angles
   dims = dblarr(2)
   readu,1,dims
-  EBSDdata.mcvangle = dims[0]
-  EBSDdata.mchangle = dims[1]
+  SEMdata.mcvangle = dims[0]
+  SEMdata.mchangle = dims[1]
 
-  WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(F7.2)"), EBSDwidget_s.mcvangle
-  WIDGET_CONTROL, SET_VALUE=string(dims[1],format="(F7.2)"), EBSDwidget_s.mchangle
+  WIDGET_CONTROL, SET_VALUE=string(dims[0],format="(F7.2)"), SEMwidget_s.mcvangle
+  WIDGET_CONTROL, SET_VALUE=string(dims[1],format="(F7.2)"), SEMwidget_s.mchangle
 
 ; film thickness
   ft = 0.0
   readu,1,ft
-  EBSDdata.mcfilmthickness = ft
-  WIDGET_CONTROL, SET_VALUE=string(ft,format="(F7.2)"), EBSDwidget_s.mcfilmthickness
+  SEMdata.mcfilmthickness = ft
+  WIDGET_CONTROL, SET_VALUE=string(ft,format="(F7.2)"), SEMwidget_s.mcfilmthickness
 
 ; Monte Carlo mode  'CSDA' or 'Discrete losses'
   mcm = bytarr(4)
   readu,1,mcm
   mcm = strtrim(string(mcm))
-  if (mcm eq 'CSDA') then EBSDdata.mcmode = 'CSDA' else EBSDdata.mcmode = 'DLOS'
-  WIDGET_CONTROL, SET_VALUE=EBSDdata.mcmode, EBSDwidget_s.mcmode
+  if (mcm eq 'CSDA') then SEMdata.mcmode = 'CSDA' else SEMdata.mcmode = 'DLOS'
+  WIDGET_CONTROL, SET_VALUE=SEMdata.mcmode, SEMwidget_s.mcmode
 
 
 ; and finally, we read the actual data arrays accum_e and accum_z
-  accum_e = lonarr(EBSDdata.mcenergynumbin, 2*EBSDdata.mcimx+1,2*EBSDdata.mcimy+1)
-  accum_z = lonarr(EBSDdata.mcenergynumbin, EBSDdata.mcdepthnumbins, 2*EBSDdata.mcimx/10+1,2*EBSDdata.mcimy/10+1)
+  accum_e = lonarr(SEMdata.mcenergynumbin, 2*SEMdata.mcimx+1,2*SEMdata.mcimy+1)
+  accum_z = lonarr(SEMdata.mcenergynumbin, SEMdata.mcdepthnumbins, 2*SEMdata.mcimx/10+1,2*SEMdata.mcimy/10+1)
   readu,1,accum_e
   readu,1,accum_z
 
 ; total number of BSE electrons
-  EBSDdata.mcbse = total(accum_e)
-  WIDGET_CONTROL, SET_VALUE=string(EBSDdata.mcbse,format="(I12)"), EBSDwidget_s.mcbse
+  SEMdata.mcbse = total(accum_e)
+  WIDGET_CONTROL, SET_VALUE=string(SEMdata.mcbse,format="(I12)"), SEMwidget_s.mcbse
 
 
   sz = size(accum_e,/dimensions)
@@ -348,15 +348,15 @@ end ; scversion if then else
   Core_LambertS2SP,reform(accum_e[0,*,*]),/mc
 
 ; (de)activate buttons
-   WIDGET_CONTROL, EBSDwidget_s.MCbutton, sensitive=1
-   if (EBSDdata.MCMPboth eq 0) then begin
-     WIDGET_CONTROL, EBSDwidget_s.MPbutton, sensitive=0
-     WIDGET_CONTROL, EBSDwidget_s.detector, sensitive=0
-     WIDGET_CONTROL, SET_VALUE=' ', EBSDwidget_s.mpfilename
-     WIDGET_CONTROL, SET_VALUE=' ', EBSDwidget_s.mpfilesize
-     WIDGET_CONTROL, SET_VALUE=' ', EBSDwidget_s.mpimx
-     WIDGET_CONTROL, SET_VALUE=' ', EBSDwidget_s.mpimy
-     WIDGET_CONTROL, SET_VALUE=' ', EBSDwidget_s.mpgridmode
+   WIDGET_CONTROL, SEMwidget_s.MCbutton, sensitive=1
+   if (SEMdata.MCMPboth eq 0) then begin
+     WIDGET_CONTROL, SEMwidget_s.MPbutton, sensitive=0
+     WIDGET_CONTROL, SEMwidget_s.detector, sensitive=0
+     WIDGET_CONTROL, SET_VALUE=' ', SEMwidget_s.mpfilename
+     WIDGET_CONTROL, SET_VALUE=' ', SEMwidget_s.mpfilesize
+     WIDGET_CONTROL, SET_VALUE=' ', SEMwidget_s.mpimx
+     WIDGET_CONTROL, SET_VALUE=' ', SEMwidget_s.mpimy
+     WIDGET_CONTROL, SET_VALUE=' ', SEMwidget_s.mpgridmode
    endif
 end
 

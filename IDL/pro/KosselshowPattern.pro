@@ -26,20 +26,18 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; EMsoft:ECPshowPattern.pro
+; EMsoft:KosselshowPattern.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: ECPshowPattern.pro
+; PROGRAM: KosselshowPattern.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
 ;> @brief main routine for display of EBSD patterns
 ;
-;> @date 05/22/14 MDG 1.0 first version
-;> @date 02/06/15 MDG 1.1 added pattern orientation parameters
-;> @date 10/30/15 MDG 2.0 modified from EBSDshowPattern.pro
+;> @date 11/09/15 MDG 1.0 modified from ECPshowPattern.pro
 ;--------------------------------------------------------------------------
-pro ECPshowPattern, single=single, nodisplay=nodisplay, select=selection
+pro KosselshowPattern, single=single, nodisplay=nodisplay, select=selection
 
 ; the keyword /single indicates that only one pattern is available 
 
@@ -49,7 +47,7 @@ common SEM_widget_common, SEMwidget_s
 common SEM_data_common, SEMdata
 common EBSDpatterns, pattern, image, finalpattern
 common EBSDmasks, circularmask
-common ECPdata, ECPattern
+common Kosseldata, KosselPattern
 
 ; check whether the mask needs to be recomputed or not
 s = size(circularmask)
@@ -69,7 +67,7 @@ if not keyword_set(nodisplay) then begin
   empty
 end
 
-patterns = ECPattern
+patterns = KosselPattern
 
 sz = size(patterns)
 if (sz[0] eq 3) then begin

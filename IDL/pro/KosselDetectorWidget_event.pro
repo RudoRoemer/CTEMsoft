@@ -26,10 +26,10 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; EMsoft:ECPDetectorWidget_event.pro
+; EMsoft:KosselDetectorWidget_event.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: ECPDetectorWidget_event.pro
+; PROGRAM: KosselDetectorWidget_event.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
@@ -37,7 +37,7 @@
 ;
 ;> @date 10/30/15 MDG 1.0 first version
 ;--------------------------------------------------------------------------
-pro ECPDetectorWidget_event, event
+pro KosselDetectorWidget_event, event
 
 ;------------------------------------------------------------
 ; common blocks
@@ -59,11 +59,6 @@ end else begin
 
   CASE eventval OF
 
- 'DETW': SEMdata.detW = Core_WidgetEvent( SEMwidget_s.detW,  'Working distance set to [mm] ', '(F9.2)', /flt)
- 'DETRI': SEMdata.detRi = Core_WidgetEvent( SEMwidget_s.detRi,  'Detector inner radius set to [mm] ', '(F9.2)', /flt)
- 'DETRO': SEMdata.detRo = Core_WidgetEvent( SEMwidget_s.detRo,  'Detector outer radius set to [mm] ', '(F9.2)', /flt)
-
- 'DETSAMPLEYTILT': SEMdata.detsampleytilt = Core_WidgetEvent( SEMwidget_s.detsampleytilt, 'Sample y-tilt angle set to [deg] ', '(F6.2)', /flt)
  'DETNUMSX': begin
                 SEMdata.detnumsx = Core_WidgetEvent( SEMwidget_s.detnumsx, 'Scintillator number of pixels along x set to ', '(I4)', /lng)
                 SEMdata.detnumsy = SEMdata.detnumsx
@@ -71,8 +66,14 @@ end else begin
 
  'DETTHETAC': SEMdata.detthetac = Core_WidgetEvent( SEMwidget_s.detthetac, 'Incident beam cone semi-angle to [deg] ', '(F6.2)', /flt)
 
- 'DETBEAMCURRENT': SEMdata.detbeamcurrent = Core_WidgetEvent( SEMwidget_s.detbeamcurrent, 'Beam current set to [nA] ', '(F9.2)', /flt)
- 'DETDWELLTIME': SEMdata.detdwelltime = Core_WidgetEvent( SEMwidget_s.detdwelltime, 'Dwell time set to [mu s] ', '(F9.2)', /flt)
+ 'DETDEPTH': begin
+          SEMdata.Esel = Core_WidgetEvent( SEMwidget_s.Esel, 'Selected depth number set to ', '(I3)', /lng)
+          if (SEMdata.Esel ge SEMdata.mcenergynumbin) then begin
+            SEMdata.Esel = SEMdata.mcenergynumbin-1
+            Core_print,'Selected depth value too large; set to maximum value'
+            WIDGET_CONTROL, set_value = string(SEMdata.Esel,format="(I3)"), SEMwidget_s.Esel
+          endif
+        endcase
 
  'DETphi1': SEMdata.detphi1 = Core_WidgetEvent( SEMwidget_s.detphi1, 'Euler angle phi1 set to [deg] ', '(F6.2)', /flt)
  'DETPhi': SEMdata.detphi = Core_WidgetEvent( SEMwidget_s.detphi, 'Euler angle Phi set to [deg] ', '(F6.2)', /flt)
@@ -82,14 +83,14 @@ end else begin
 ; display a filesaving widget in the data folder with the file extension filled in
 	  filename = DIALOG_PICKFILE(/write,path=SEMdata.pathname,title='Select angle input file')
 	  if (filename ne '') then begin
-	    SEMdata.ECPanglefilename = filename
-	    WIDGET_CONTROL, set_value=filename, SEMwidget_s.ECPanglefilename
+	    SEMdata.Kosselanglefilename = filename
+	    WIDGET_CONTROL, set_value=filename, SEMwidget_s.Kosselanglefilename
 	    EBSDreadanglefile,filename,/list
 	    WIDGET_CONTROL, SEMwidget_s.GoAngle, sensitive=1
 	  end
 	endcase
 
- 'DISPLAYECP': begin
+ 'DISPLAYKOSSEL': begin
 ; first we need to make sure that the path to the fortran executables is known... this is stored in the 
 ; preferences file, but is initially set to 'path_unknown'
 	  if (SEMdata.EMsoftpathname eq 'path_unknown') then begin
@@ -98,18 +99,18 @@ end else begin
 	  end
 
 ; is the correct widget up on the screen ?
-	  if XRegistered("ECPatternWidget") then begin
+	  if XRegistered("KosselPatternWidget") then begin
 	    if (SEMdata.currentdisplaywidgetmode ne 0) then WIDGET_CONTROL, SEMwidget_s.patternbase, /DESTROY
 	  end
 
 ; first we need to set up the array structures to do a call_external of the SingleECPPatternWrapper
 ; routine; and then we display the pattern in a new widget
 	  status = 0
-	  ECPExecute,status,/single
+	  KosselExecute,status,/single
 
 ; then we create the EBSDpattern widget and let the user adjust the imaging parameters
 	  if (status eq 1) then begin
-	    if (XRegistered("ECPatternWidget") EQ 0) then ECPatternWidget,/single else ECPshowPattern,/single
+	    if (XRegistered("KosselPatternWidget") EQ 0) then KosselPatternWidget,/single else KosselshowPattern,/single
 	  end
 
 	endcase
@@ -120,17 +121,17 @@ end else begin
           if (SEMdata.f90exepath eq 'path_unknown') then SEMdata.f90exepath = Core_getenv()
 
 ; is the correct widget up on the screen ?
-	  if XRegistered("ECPatternWidget") then begin
+	  if XRegistered("KosselPatternWidget") then begin
 	    if (SEMdata.currentdisplaywidgetmode ne 1) then WIDGET_CONTROL, SEMwidget_s.patternbase, /DESTROY
 	  end
 
 ; first, create the nml file and execute the CTEMEBSD program
 	  status = 0
-	  ECPExecute,status
+	  KosselExecute,status
 
 ; then we create the EBSDpattern widget and let the user adjust the imaging parameters
 	  if (status eq 1) then begin
-	    if (XRegistered("ECPPatternWidget") EQ 0) then ECPatternWidget else ECPshowPattern
+	    if (XRegistered("KosselPatternWidget") EQ 0) then KosselPatternWidget else KosselshowPattern
 	  end
 
 	endcase

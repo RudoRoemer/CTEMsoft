@@ -1,19 +1,4 @@
 ;
-; Copyright (c) 2013-2014, Marc De Graef/Carnegie Mellon University
-; All rights reserved.
-;
-; Redistribution and use in source and binary forms, with or without modification, are 
-; permitted provided that the following conditions are met:
-;
-;     - Redistributions of source code must retain the above copyright notice, this list 
-;        of conditions and the following disclaimer.
-;     - Redistributions in binary form must reproduce the above copyright notice, this 
-;        list of conditions and the following disclaimer in the documentation and/or 
-;        other materials provided with the distribution.
-;     - Neither the names of Marc De Graef, Carnegie Mellon University nor the names 
-;        of its contributors may be used to endorse or promote products derived from 
-;        this software without specific prior written permission.
-;
 ; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
 ; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
 ; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
@@ -26,79 +11,121 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:KosselPatternWidget_event.pro
+; EMsoft:KosselPatternWidget_event.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: KosselPatternWidget_event.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
-;> @brief main event handler
+;> @brief main widget event handler for display of the computed ECP pattern
 ;
-;> @date 06/13/13 MDG 1.0 first version
+;> @date 10/30/15 MDG 1.0 first version
 ;--------------------------------------------------------------------------
 pro KosselPatternWidget_event, event
 
 ;------------------------------------------------------------
 ; common blocks
-common Kossel_widget_common, widget_s
-common Kossel_data_common, data
-common Kossel_rawdata, rawdata
+common SEM_widget_common, SEMwidget_s
+common SEM_data_common, SEMdata
+common fontstrings, fontstr, fontstrlarge, fontstrsmall
+common EBSDpatterns, pattern, image, finalpattern
+common EBSD_anglearrays, euler, quaternions
+common EBSDmasks, circularmask
 
-if (data.eventverbose eq 1) then help,event,/structure
+common ECPdata, ECPattern
 
-; intercept the image widget movement here 
-if (event.id eq widget_s.KosselPatternbase) then begin
-  data.Kosselxlocation = event.x
-  data.Kosselylocation = event.y-25
+if (SEMdata.eventverbose eq 1) then help,event,/structure
+
+EMdatapathname = Core_getenv(/data)
+
+; intercept the detector widget movement here 
+if (event.id eq SEMwidget_s.patternbase) then begin
+  SEMdata.patternxlocation = event.x
+  SEMdata.patternylocation = event.y-25
 end else begin
 
   WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
 
-; IF N_ELEMENTS(eventval) EQ 0 THEN RETURN,eventval
-
   CASE eventval OF
- 'GETCOORDINATES': begin
-	  if (event.press eq 1B) then begin    ; only act on clicks, not on releases
-	    data.cx = (event.x - data.xmid) / data.dgrid
-	    data.cy = (event.y - data.xmid) / data.dgrid
-	    WIDGET_CONTROL, SET_VALUE=string(data.cx,format="(F6.3)"), widget_s.cx
-	    WIDGET_CONTROL, SET_VALUE=string(data.cy,format="(F6.3)"), widget_s.cy
-	  end
-	endcase
+ 'GAMMASLIDER': begin
+	  WIDGET_CONTROL, get_value=val, SEMwidget_s.gammaslider
+	  SEMdata.gammavalue = float(val[0]) 
+	  KosselshowPattern,/single
+  	endcase
 
- 'KosselTHICKLIST': begin
-	  data.thicksel = event.index
-
-; and display the selected KosselPattern
-          Kosselshow
-	endcase
-
- 'BLUR':  begin
-	    WIDGET_CONTROL, get_value=val,widget_s.blur
-	    data.blur= float(val[0])
-	    WIDGET_CONTROL, SET_VALUE=string(data.blur,FORMAT="(F6.3)"), widget_s.blur
-	    Kosselshow
-	endcase
- 
-
- 'SAVEKossel': begin
+ 'SAVEKOSSELPATTERN': begin
 ; display a filesaving widget in the data folder with the file extension filled in
 		delist = ['jpeg','tiff','bmp']
-		de = delist[data.Kosselformat]
-		filename = DIALOG_PICKFILE(/write,default_extension=de,path=data.pathname,title='enter filename without extension')
-	        im = tvrd()
+		de = delist[SEMdata.imageformat]
+		filename = DIALOG_PICKFILE(/write,default_extension=de,path=SEMdata.pathname,title='enter filename without extension')
+                i = 0
+		Kosselshowpattern, /nodisplay, select=i
+		if (SEMdata.showcircularmask eq 1) then im = finalpattern*byte(circularmask) else im=finalpattern
 		case de of
-		  'jpeg': write_jpeg,filename,im,quality=100
-		  'tiff': write_tiff,filename,reverse(im,2)
-		  'bmp': write_bmp,filename,im
+		    'jpeg': write_jpeg,filename,im,quality=100
+		    'tiff': write_tiff,filename,reverse(im,2)
+		    'bmp': write_bmp,filename,im
 		 else: MESSAGE,'unknown file format option'
 		endcase
-	  endcase
+	endcase
 
- 'CLOSEKossel': begin
+ 'SAVEALLKOSSELPATTERNS': begin
+; display a filesaving widget in the data folder with the file extension filled in
+		delist = ['jpeg','tiff','bmp']
+		de = delist[SEMdata.imageformat]
+		fn = DIALOG_PICKFILE(/write,default_extension=de,path=SEMdata.pathname,title='enter prefix for image series file name')
+		fn = strsplit(fn,'.',/extract)
+		for i=0,SEMdata.numangles-1 do begin
+; 		  pattern = reform(ECPattern[*,*,i])
+		  Kosselshowpattern, /single, /nodisplay, select=i
+		  if (SEMdata.showcircularmask eq 1) then im = finalpattern*byte(circularmask) else im=finalpattern
+		  filename = fn[0]+string(i+1,format="(I5.5)")+'.'+fn[1]
+		  case de of
+		    'jpeg': write_jpeg,filename,im,quality=75
+		    'tiff': write_tiff,filename,reverse(im,2)
+		    'bmp': write_bmp,filename,im
+		   else: MESSAGE,'unknown file format option'
+		  endcase
+		end
+  		close,1
+		  Core_Print,'All image files generated'
+	endcase
+
+
+ 'NEXTKOSSELPATTERN': begin
+	  SEMdata.currentpatternID += 1
+	  if (SEMdata.currentpatternID ge SEMdata.numangles) then SEMdata.currentpatternID = 0
+	  i = SEMdata.currentpatternID
+	  if (SEMdata.angletype eq 'eu') then begin
+	    st = string(i+1,format="(I5.5)")+': '+string(euler[0,i],format="(F7.2)")+', '+string(euler[1,i],format="(F7.2)")+', '+string(euler[2,i],format="(F7.2)")
+	  end else begin
+	    st = string(i+1,format="(I5.5)")+': '+string(quaternions[0,i],format="(F7.2)")+', '+string(quaternionseuler[1,i],format="(F7.2)")+ $
+		', '+string(quaternions[2,i],format="(F7.2)")+', '+string(quaternions[3,i],format="(F7.2)")
+	  end
+	  WIDGET_CONTROL, set_value = st, SEMwidget_s.angledisplay
+	  Kosselshowpattern
+	endcase
+
+ 'PREVIOUSKOSSELPATTERN': begin
+	  SEMdata.currentpatternID -= 1
+	  if (SEMdata.currentpatternID lt 0) then SEMdata.currentpatternID = SEMdata.numangles-1
+	  i = SEMdata.currentpatternID
+	  if (SEMdata.angletype eq 'eu') then begin
+	    st = string(i+1,format="(I5.5)")+': '+string(euler[0,i],format="(F7.2)")+', '+string(euler[1,i],format="(F7.2)")+', '+string(euler[2,i],format="(F7.2)")
+	  end else begin
+	    st = string(i+1,format="(I5.5)")+': '+string(quaternions[0,i],format="(F7.2)")+', '+string(quaternionseuler[1,i],format="(F7.2)")+ $
+		', '+string(quaternions[2,i],format="(F7.2)")+', '+string(quaternions[3,i],format="(F7.2)")
+	  end
+	  WIDGET_CONTROL, set_value = st, SEMwidget_s.angledisplay
+	  Kosselshowpattern
+	endcase
+
+
+ 'PATTERNCLOSE': begin
 ; kill the base widget
-		WIDGET_CONTROL, widget_s.KosselPatternbase, /DESTROY
+	  WIDGET_CONTROL, SEMwidget_s.patternbase, /DESTROY
+	    Core_Print,'ECP Pattern Widget closed'
 	endcase
 
   else: MESSAGE, "Event User Value Not Found"

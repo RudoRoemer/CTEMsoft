@@ -1,4 +1,4 @@
-@EBSDDisplay_event    		; EBSD event handler
+@SEMDisplay_event    		; EBSD event handler
 @EBSDgetfilename		; select a geometry file
 @EBSDreadHDFdatafile		; read geometry and HDF data files
 @EBSDMCDisplayWidget		; MC display widget
@@ -10,6 +10,7 @@
 @EBSDreadanglefile		; reads a file of euler angles or other representations
 @EBSDevent			; event handler for button groups
 @EBSDshowMC			; display a Lambert projection image
+@EBSDshowPattern		; display an BSD pattern
 @EBSDgetpreferences		; read preferences file
 @EBSDwritepreferences		; write preferences file
 @EBSDExecute			; perform the actual pattern computation
@@ -19,7 +20,14 @@
 @ECPatternWidget                ; ECP pattern widget
 @ECPatternWidget_event          ; ECP pattern widget event handler
 @ECPevent                       ; ECP choice event handler
-@ECPshowPattern                 ; show pattern
+@ECPshowPattern                 ; show ECP pattern
+@KosselDetectorWidget           ; Kossel detector widget
+@KosselDetectorWidget_event     ; Kossel detector widget event handler
+@KosselExecute                  ; executes the Kossel calculation
+@KosselPatternWidget            ; Kossel pattern widget
+@KosselPatternWidget_event      ; Kossel pattern widget event handler
+@Kosselevent                    ; Kossel choice event handler
+@KosselshowPattern              ; show Kossel pattern
 @Core_LambertS2C		; modified Lambert to Lambert projection
 @Core_LambertS2SP		; modified Lambert to stereographic projection
 @Core_colorwheel		; color representation of energy distribution
@@ -28,6 +36,7 @@
 @Core_Print			; print messages to status window and log file
 @Core_WidgetEvent		; general data handler for various widget events
 @Core_getenv                    ; read the environment variable(s)
+@Core_eu2qu                     ; convert euler angles to quaternion
 ;
 ; Copyright (c) 2014-2015, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
@@ -87,13 +96,15 @@
 ;> @date 10/30/15 MDG 2.1 added ECP calculation for detector model, using call_external to SingleECPatternWrapper
 ;> @date 10/31/15 MDG 3.0 simplification of main interface; file data is now listed in message window
 ;> @date 11/05/15 MDG 3.1 program name change from EBSDDisplay to SEMDisplay
+;> @date 11/09/15 MDG 3.2 added Kossel pattern visualization, similar to ECP but simpler detector model
+;> @date 11/09/15 MDG 3.3 major variable rename
 ;--------------------------------------------------------------------------
 pro SEMDisplay,dummy
 ;
 ;------------------------------------------------------------
 ; common blocks
-common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, EBSDdata
+common SEM_widget_common, SEMwidget_s
+common SEM_data_common, SEMdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 common PointGroups, PGTHD, PGTWD, DG
 
@@ -121,16 +132,18 @@ DG = ['  ',' 1',' 1R',' 2',' 2R',' 21R','  mR', $
 
 circularmask = fltarr(10,10)
 
+
+
 ;------------------------------------------------------------
 ; make sure that this program isn't already running
-if (XRegistered("EBSDDisplay") NE 0) then begin
-  print,'EBSDDisplay is already running ... (if it is not, please restart your IDL session)'
+if (XRegistered("SEMDisplay") NE 0) then begin
+  print,'SEMDisplay is already running ... (if it is not, please restart your IDL session)'
   return
 end
 
 ;------------------------------------------------------------
 ; define a few structures (one for widgets, and one for data)
-EBSDwidget_s = {widgetstruct, $
+SEMwidget_s = {widgetstruct, $
 	base:long(0), $                     	; base widget ID
 
 	; Monte Carlo widget ids
@@ -151,12 +164,14 @@ EBSDwidget_s = {widgetstruct, $
 	mcvangle: long(0), $			; vertical tilt angle
 	mchangle: long(0), $			; horizontal tilt angle
 	mcmode: long(0), $			; Monte Carlo mode
+	Esel: long(0), $			; Monte Carlo mode
 	mcloadfile: long(0), $                  ; load file button
 	mcdisplay: long(0), $                   ; MC display button
         mcfilmthickness: long(0), $             ; film thickness for two-layer structures
 	   
 	; Master Pattern widget ids
 	mpfilename: long(0), $			; file name for master pattern
+	mpfiletype: long(0), $			; file type for master pattern
 	mpfilesize: long(0), $			; file size in bytes
 	mpimx: long(0), $			; x-pixels N as in (2N+1)
 	mpimy: long(0), $			; y-pixels (should be equal to mpimx)
@@ -204,7 +219,9 @@ EBSDwidget_s = {widgetstruct, $
 	ECPgetpatternfilename: long(0), $	; output file name button
 	EBSDgetpatternfilename: long(0), $	; output file name button
 	ECPanglefilename: long(0), $		; angle file name widget
+	Kosselanglefilename: long(0), $		; angle file name widget
 	ECPgetanglefilename: long(0), $	        ; angle file name widget
+	Kosselgetanglefilename: long(0), $      ; angle file name widget
 	EBSDanglefilename: long(0), $		; angle file name widget
 	EBSDgetanglefilename: long(0), $	; angle file name widget
 	EBSDdictfilename: long(0), $		; dictionary file name widget
@@ -221,6 +238,7 @@ EBSDwidget_s = {widgetstruct, $
 	GoDictionary: long(0), $		; Dictionary file compute button
 	DisplayEBSD: long(0), $			; display EBSD button
 	DisplayECP: long(0), $			; display ECP button
+	DisplayKossel: long(0), $		; display Kossel button
 	PatternScaling: long(0), $		; pattern scaling type widget
 	gammaslider: long(0), $			; gamma correction slider
 	DetectorClose: long(0), $		; Close detector widget
@@ -259,7 +277,7 @@ EBSDwidget_s = {widgetstruct, $
 	MCLambertMode: long(0) $		; Lambert sum or individual image mode
            }
 
-EBSDdata = {EBSDdatastruct, $
+SEMdata = {SEMdatastruct, $
 	; Monte Carlo parameters first 
         EBSDorECP:long(0), $                    ; EBSD (0) or ECP (1) data type
 	mcfilename: '', $			; Monte Carlo result file name
@@ -269,7 +287,7 @@ EBSDdata = {EBSDdatastruct, $
 	mcenergybinsize: float(0.0), $		; energy bin size
 	mcenergynumbin: long(0), $		; number of energy bins
 	voltage: float(0.0), $			; microscope voltage
-	mcdepthmax: float(0.0), $		; maximum depth in MC file
+	mcdepthmax: float(0.0), $		; maximum depth in MC file, or start depth in Kossel MP file
 	mcdepthstep: float(0.0), $		; depth step size
 	mcdepthnumbins: long(0), $		; number of depth bins
 	mcimx: long(0), $			; number of pixels along x in modified Lambert map
@@ -291,6 +309,8 @@ EBSDdata = {EBSDdatastruct, $
 
 	; then Master Pattern parameters
 	mpfilename: '', $ 			; master pattern file name
+	mpfiletype: long(0), $			; file type for master pattern
+	mpfiletypestring: strarr(4), $		; file type strings for master pattern
 	mpfilesize: long(0), $			; size (in bytes) of master pattern file
 	mpimx: long(0), $			; number of x-pixels in master pattern (N in 2N+1)
 	mpimy: long(0), $			; same along y
@@ -346,8 +366,10 @@ EBSDdata = {EBSDdatastruct, $
 	Pmode: long(0), $			; pattern mode (0=single, 1=angle file, 2=dictionary)
 	EBSDpatternfilename: '', $		; name for EBSD output file
 	ECPpatternfilename: '', $     		; output file name widget
+	Kosselpatternfilename: '', $     	; output file name widget
 	EBSDanglefilename: '', $		; name for EBSD angle file
 	ECPanglefilename: '', $		        ; name for ECP angle file
+	Kosselanglefilename: '', $		; name for Kossel angle file
 	EBSDdictfilename: '', $			; name for EBSD dictionary file
         NHSH: long(0), $                        ; Northern or Southern hemisphere for display?
 	angletype: '', $			; angle type (euler, quaternion)
@@ -407,6 +429,10 @@ fontstr='-adobe-new century schoolbook-bold-r-normal--14-100-100-100-p-87-iso885
 fontstrlarge='-adobe-new century schoolbook-medium-r-normal--20-140-100-100-p-103-iso8859-1'
 fontstrsmall='-adobe-new century schoolbook-medium-r-normal--14-100-100-100-p-82-iso8859-1'
 
+
+; here are the possible master pattern file types
+SEMdata.mpfiletypestring = ['  ','EBSD','ECP','Kossel']
+
 ;------------------------------------------------------------
 ; get the display window size to 80% of the current screen size (but be careful with double screens ... )
 ; We'll need to guess whether or not the user has a double screen: if the aspect ratio is larger than 16/9,
@@ -419,11 +445,10 @@ sar = float(scr[0])/float(scr[1])
 if (sar gt (1.1*16.0/9.0)) then begin
 	scr[0] = scr[0]/2
 end
-EBSDdata.scrdimy = scr[1] * 0.8
-EBSDdata.scrdimx = scr[0]
-EBSDdata.xlocation = EBSDdata.scrdimx / 8.0
-EBSDdata.ylocation = EBSDdata.scrdimx / 8.0
-
+SEMdata.scrdimy = scr[1] * 0.8
+SEMdata.scrdimx = scr[0]
+SEMdata.xlocation = SEMdata.scrdimx / 8.0
+SEMdata.ylocation = SEMdata.scrdimx / 8.0
 
 ;------------------------------------------------------------
 ; does the preferences file exist ?  If not, create it, otherwise read it
@@ -431,25 +456,25 @@ EBSDgetpreferences,/noprint
 
 ;------------------------------------------------------------
 ; create the top level widget
-EBSDwidget_s.base = WIDGET_BASE(TITLE='EBSD and ECP Pattern Display Program', $
+SEMwidget_s.base = WIDGET_BASE(TITLE='EBSD, ECP, and Kossel Pattern Display Program', $
                         /COLUMN, $
                         XSIZE=620, $
                         /ALIGN_LEFT, $
 			/TLB_MOVE_EVENTS, $
-			EVENT_PRO='EBSDDisplay_event', $
-                        XOFFSET=EBSDdata.xlocation, $
-                        YOFFSET=EBSDdata.ylocation)
+			EVENT_PRO='SEMDisplay_event', $
+                        XOFFSET=SEMdata.xlocation, $
+                        YOFFSET=SEMdata.ylocation)
 
 ;------------------------------------------------------------
 ; create the two main columns
 ; block 1 is the left column, with logo and MC information
-block1 = WIDGET_BASE(EBSDwidget_s.base, $
+block1 = WIDGET_BASE(SEMwidget_s.base, $
 			/FRAME, $
 			XSIZE=610, $
 			/ALIGN_CENTER, $
 			/COLUMN)
 
-EBSDwidget_s.logodraw = WIDGET_DRAW(block1, $
+SEMwidget_s.logodraw = WIDGET_DRAW(block1, $
 			COLOR_MODEL=2, $
 			RETAIN=2, $
 			/FRAME, $
@@ -461,35 +486,35 @@ EBSDwidget_s.logodraw = WIDGET_DRAW(block1, $
 ;------------------------------------------------------------
 ; this is the block that will display Monte Carlo file information; no user interactions here
 ; except for a single button.
-block11 = WIDGET_BASE(block1, /FRAME, /COLUMN, TITLE='Monte Carlo Trajectory Simulation Parameters')
+block11 = WIDGET_BASE(block1, /FRAME, /COLUMN)
 
 file1 = WIDGET_BASE(block11, /ROW, XSIZE=600, /ALIGN_RIGHT)
-file2 = WIDGET_LABEL(file1, VALUE='Monte Carlo Trajectory Simulation Parameters', font=fontstrlarge, /ALIGN_RIGHT)
+file2 = WIDGET_LABEL(file1, VALUE='Monte Carlo Simulation Data', font=fontstrlarge, /ALIGN_RIGHT)
 
-EBSDwidget_s.MCbutton= WIDGET_BUTTON(file1, $
-                      UVALUE='MCDISPLAY', $
-                      VALUE='Display', $
-                      EVENT_PRO='EBSDDisplay_event', $
-                      SENSITIVE=0, $
-		      /ALIGN_RIGHT, $
-                      /FRAME)
+;SEMwidget_s.MCbutton= WIDGET_BUTTON(file1, $
+;                      UVALUE='MCDISPLAY', $
+;                      VALUE='Display', $
+;                      EVENT_PRO='SEMDisplay_event', $
+;                      SENSITIVE=0, $
+;		      /ALIGN_RIGHT, $
+;                      /FRAME)
 
 ;---------- file name and size
 file1 = WIDGET_BASE(block11, /ROW, XSIZE=600, /ALIGN_CENTER)
-EBSDwidget_s.mcfilename = Core_WText(file1,'MC Data File Name', fontstrlarge, 200, 25, 60, 1, EBSDdata.mcfilename)
+SEMwidget_s.mcfilename = Core_WText(file1,'MC Data File Name', fontstrlarge, 200, 25, 60, 1, SEMdata.mcfilename)
 
 ;------------------------------------------------------------
 ;------------------------------------------------------------
 ; this is the block that will display Master Pattern file information; no user interactions here
 ; except for a few buttons.
-block21 = WIDGET_BASE(block1, /COLUMN, XSIZE=600, /ALIGN_RIGHT)
+block21 = WIDGET_BASE(block1, /FRAME, /COLUMN, XSIZE=600, /ALIGN_RIGHT)
 file2 = WIDGET_BASE(block21, /ROW, XSIZE=600, /ALIGN_RIGHT)
-file3 = WIDGET_LABEL(file2, VALUE='Master Pattern Simulation Parameters', font=fontstrlarge, /ALIGN_CENTER)
+file3 = WIDGET_LABEL(file2, VALUE='Master Pattern Simulation Data', font=fontstrlarge, /ALIGN_CENTER)
 
-EBSDwidget_s.MPbutton = WIDGET_BUTTON(file2, $
+SEMwidget_s.MPbutton = WIDGET_BUTTON(file2, $
                       UVALUE='MPDISPLAY', $
                       VALUE='Display', $
-                      EVENT_PRO='EBSDDisplay_event', $
+                      EVENT_PRO='SEMDisplay_event', $
                       SENSITIVE=0, $
 		      /ALIGN_RIGHT, $
                       /FRAME)
@@ -497,14 +522,17 @@ EBSDwidget_s.MPbutton = WIDGET_BUTTON(file2, $
 
 ;---------- file name and size
 file1 = WIDGET_BASE(block21, /ROW, XSIZE=600, /ALIGN_CENTER)
-EBSDwidget_s.mpfilename = Core_WText(file1,'MP Data File Name', fontstrlarge, 200, 25, 60, 1, EBSDdata.mpfilename)
+SEMwidget_s.mpfilename = Core_WText(file1,'MP Data File Name', fontstrlarge, 200, 25, 60, 1, SEMdata.mpfilename)
 
+;---------- file type
+file1 = WIDGET_BASE(block21, /ROW, XSIZE=600, /ALIGN_CENTER)
+SEMwidget_s.mpfiletype = Core_WText(file1,'Master File Type', fontstrlarge, 200, 25, 10, 1, SEMdata.mpfiletypestring[0])
 
 ;------------------------------------------------------------
 ;------------------------------------------------------------
 ; then we have the program message window
 
-EBSDwidget_s.status= WIDGET_TEXT(block1, $
+SEMwidget_s.status= WIDGET_TEXT(block1, $
 			XSIZE=90, $
 			YSIZE=15, $
 			/SCROLL, $
@@ -512,7 +540,7 @@ EBSDwidget_s.status= WIDGET_TEXT(block1, $
 			/ALIGN_LEFT)
 
 ; the following is needed by the Core_Print routine
-status = EBSDwidget_s.status 
+status = SEMwidget_s.status 
 
 ;------------------------------------------------------------
 ;------------------------------------------------------------
@@ -520,64 +548,64 @@ status = EBSDwidget_s.status
 
 file11 = WIDGET_BASE(block1, XSIZE=590, /FRAME, /ROW)
 
-EBSDwidget_s.mainstop = WIDGET_BUTTON(file11, $
+SEMwidget_s.mainstop = WIDGET_BUTTON(file11, $
                                 VALUE='Quit', $
                                 UVALUE='QUIT', $
-                                EVENT_PRO='EBSDDisplay_event', $
+                                EVENT_PRO='SEMDisplay_event', $
                                 SENSITIVE=1, $
                                 /FRAME)
 
-EBSDwidget_s.mcloadfile = WIDGET_BUTTON(file11, $
-                                UVALUE='MCFILE', $
-                                VALUE='Load MC file', $
-                                EVENT_PRO='EBSDDisplay_event', $
-                                SENSITIVE=1, $
-                                /FRAME)
-
-EBSDwidget_s.mploadfile = WIDGET_BUTTON(file11, $
+;SEMwidget_s.mcloadfile = WIDGET_BUTTON(file11, $
+;                                UVALUE='MCFILE', $
+;                                VALUE='Load MC file', $
+;                                EVENT_PRO='SEMDisplay_event', $
+;                                SENSITIVE=1, $
+;                                /FRAME)
+;
+SEMwidget_s.mploadfile = WIDGET_BUTTON(file11, $
                                 UVALUE='MPFILE', $
-                                VALUE='Load master file', $
-                                EVENT_PRO='EBSDDisplay_event', $
+                                VALUE='Load Master File', $
+                                EVENT_PRO='SEMDisplay_event', $
                                 SENSITIVE=1, $
                                 /FRAME)
 
-EBSDwidget_s.detector = WIDGET_BUTTON(file11, $
+SEMwidget_s.detector = WIDGET_BUTTON(file11, $
                                 UVALUE='DETECTOR', $
                                 VALUE='Define detector', $
-                                EVENT_PRO='EBSDDisplay_event', $
+                                EVENT_PRO='SEMDisplay_event', $
                                 SENSITIVE=0, $
                                 /FRAME)
 
 values = ['Off','On']
-EBSDwidget_s.logfile= CW_BGROUP(file11, $
+SEMwidget_s.logfile= CW_BGROUP(file11, $
 			values, $
 			/FRAME, $
                         LABEL_LEFT='LogFile', $
 			/ROW, $
 			/NO_RELEASE, $
 			/EXCLUSIVE, $
-			SET_VALUE=EBSDdata.logmode, $
+			SET_VALUE=SEMdata.logmode, $
                         EVENT_FUNC='EBSDevent', $
 			UVALUE='LOGFILE')
 
 ; the following is needed by the Core_Print routine
-logmode = EBSDdata.logmode
-logunit = EBSDdata.logunit
+logmode = SEMdata.logmode
+logunit = SEMdata.logunit
 
 ;------------------------------------------------------------
 ; realize the widget structure
-WIDGET_CONTROL,EBSDwidget_s.base,/REALIZE
+WIDGET_CONTROL,SEMwidget_s.base,/REALIZE
 
 ; realize the draw widgets
-WIDGET_CONTROL, EBSDwidget_s.logodraw, GET_VALUE=drawID
-EBSDwidget_s.logodrawID = drawID
+WIDGET_CONTROL, SEMwidget_s.logodraw, GET_VALUE=drawID
+SEMwidget_s.logodrawID = drawID
 ;
 read_jpeg,'Resources/EMsoftlogo.jpg',logo
-wset,EBSDwidget_s.logodrawID
+wset,SEMwidget_s.logodrawID
 tvscl,logo,true=1
 
 ; and hand over control to the xmanager
-XMANAGER,"EBSDDisplay",EBSDwidget_s.base,/NO_BLOCK
+XMANAGER,"SEMDisplay",SEMwidget_s.base,/NO_BLOCK
 
 end
 

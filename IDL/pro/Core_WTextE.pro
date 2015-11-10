@@ -26,7 +26,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:Core_WTextE.pro
+; EMsoft:Core_WTextE.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: Core_WTextE.pro

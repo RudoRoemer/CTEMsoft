@@ -1,4 +1,4 @@
-; Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
+; Copyright (c) 2015, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are 
@@ -25,31 +25,30 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDDisplay_event.pro
+; EMsoft:SEMDisplay_event.pro
 ;--------------------------------------------------------------------------
 ;
-; PROGRAM: EBSDDisplay_event.pro
+; PROGRAM: SEMDisplay_event.pro
 ;
 ;> @author Marc De Graef, Carnegie Mellon University
 ;
 ;> @brief Electron backscatter diffraction pattern display event handler
 ;
-;
 ;> @date 03/19/14 MDG 1.0 initial version
 ;--------------------------------------------------------------------------
-pro EBSDDisplay_event, event
+pro SEMDisplay_event, event
 
 ;------------------------------------------------------------
 ; common blocks
-common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, EBSDdata
+common SEM_widget_common, SEMwidget_s
+common SEM_data_common, SEMdata
 
 
-if (EBSDdata.eventverbose eq 1) then help,event,/structure
+if (SEMdata.eventverbose eq 1) then help,event,/structure
 
-if (event.id eq EBSDwidget_s.base) then begin
-  EBSDdata.xlocation = event.x
-  EBSDdata.ylocation = event.y-25
+if (event.id eq SEMwidget_s.base) then begin
+  SEMdata.xlocation = event.x
+  SEMdata.ylocation = event.y-25
 end else begin
 
   WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
@@ -65,47 +64,48 @@ end else begin
 		EBSDMCDisplayWidget
 	endcase
 
-  	'MCFILE': begin
+; 	'MCFILE': begin
 ; ask the user to select the data file
-		EBSDgetfilename,validfile,/MCFILE
+;	EBSDgetfilename,validfile,/MCFILE
 ; read the data file and populate all the relevant fields
-		if (validfile eq 1) then begin
-                   res = H5F_IS_HDF5(EBSDdata.mcpathname+'/'+EBSDdata.mcfilename)
-                   if (res eq 0) then begin
-                     Core_print,'This file is not an HDF5 file ... '
-                   end else EBSDreadHDFdatafile,/MCFILE
-                endif
-
-; activate the MC Display button
-
-; and close any other open widgets
-	endcase
+;	if (validfile eq 1) then begin
+;                  res = H5F_IS_HDF5(SEMdata.mcpathname+'/'+SEMdata.mcfilename)
+;                  if (res eq 0) then begin
+;                    Core_print,'This file is not an HDF5 file ... '
+;                  end else EBSDreadHDFdatafile,/MCFILE
+;               endif
+;endcase
 
   	'MPFILE': begin
 ; ask the user to select the data file
 		EBSDgetfilename,validfile,/MPFILE
 ; read the data file and populate all the relevant fields
 		if (validfile eq 1) then begin
-                   res = H5F_IS_HDF5(EBSDdata.pathname+'/'+EBSDdata.mpfilename)
+                   res = H5F_IS_HDF5(SEMdata.pathname+'/'+SEMdata.mpfilename)
                    if (res eq 0) then begin
                      Core_print,'This file is not an HDF5 file ...'
                    end else EBSDreadHDFdatafile,/MPFILE
                 endif
-
-; activate both the MC and MP Display buttons
-
-; and close any other open widgets
 	endcase
 
 	'DETECTOR': begin
-                if (EBSDdata.EBSDorECP eq 0) then EBSDDetectorWidget else ECPDetectorWidget
+                if (SEMdata.mpfiletype eq 1) then EBSDDetectorWidget
+                if (SEMdata.mpfiletype eq 2) then ECPDetectorWidget
+                if (SEMdata.mpfiletype eq 3) then KosselDetectorWidget
 	endcase
 
  	'QUIT': begin
 		EBSDwritepreferences
 ; do a general cleanup of potentially open widgets
  		Core_Print,'Quitting program',/blank
-		WIDGET_CONTROL, EBSDwidget_s.base, /DESTROY
+                if (XRegistered("KosselDetectorWidget") NE 0) then WIDGET_CONTROL, SEMwidget_s.detectorbase, /DESTROY
+                if (XRegistered("ECPDetectorWidget") NE 0) then WIDGET_CONTROL, SEMwidget_s.detectorbase, /DESTROY
+                if (XRegistered("EBSDDetectorWidget") NE 0) then WIDGET_CONTROL, SEMwidget_s.detectorbase, /DESTROY
+                if (XRegistered("EBSDPatternWidget") NE 0) then WIDGET_CONTROL, SEMwidget_s.patternbase, /DESTROY
+                if (XRegistered("ECPatternWidget") NE 0) then WIDGET_CONTROL, SEMwidget_s.patternbase, /DESTROY
+                if (XRegistered("KosselPatternWidget") NE 0) then WIDGET_CONTROL, SEMwidget_s.patternbase, /DESTROY
+                if (XRegistered("EBSDMCDisplayWidget") NE 0) then WIDGET_CONTROL, SEMwidget_s.MCdisplaybase, /DESTROY
+		WIDGET_CONTROL, SEMwidget_s.base, /DESTROY
 		!EXCEPT=1
 	endcase
 

@@ -414,10 +414,10 @@ call JSON_initpointers(p, inp, jsonname, namelistname, error_cnt)
 ! then we need to add all the necessary fields to the inp structure
 
 ! write all the single integers
-io_int = (/ knl%stdout, knl%numthick, knl%npix, knl%nthreads /)
+io_int = (/ knl%stdout, knl%numthick, knl%npx, knl%nthreads /)
 intlist(1) = 'stdout'
 intlist(2) = 'numthick'
-intlist(3) = 'npix'
+intlist(3) = 'npx'
 intlist(4) = 'nthreads' 
 call JSON_writeNMLintegers(inp, io_int, intlist, n_int, error_cnt)
 
@@ -2135,7 +2135,7 @@ else
   ep = 'Kosselmasterlist.numthick'
   call JSONreadInteger(json, ep, knl%numthick, defknl%numthick)
   ep = 'Kosselmasterlist.npix'
-  call JSONreadInteger(json, ep, knl%npix, defknl%npix)
+  call JSONreadInteger(json, ep, knl%npx, defknl%npx)
   ep = 'Kosselmasterlist.nthreads'
   call JSONreadInteger(json, ep, knl%nthreads, defknl%nthreads)
 

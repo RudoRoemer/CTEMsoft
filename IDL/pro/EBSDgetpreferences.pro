@@ -26,7 +26,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDgetpreferences.pro
+; EMsoft:EBSDgetpreferences.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: EBSDgetpreferences.pro
@@ -42,65 +42,65 @@ pro EBSDgetpreferences,noprint=noprint
  
 ;------------------------------------------------------------
 ; common blocks
-common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, EBSDdata
+common SEM_widget_common, SEMwidget_s
+common SEM_data_common, SEMdata
 
 ; does the preferences file exist ?
-rs = file_test(EBSDdata.prefname)
+rs = file_test(SEMdata.prefname)
 
 if (rs eq 1) then begin
   s = ''
   i = 0
-  openr,1,EBSDdata.prefname
+  openr,1,SEMdata.prefname
   readf,1,i
-  EBSDdata.nprefs = i
+  SEMdata.nprefs = i
 
 ; next, do a little loop and read name:value pairs
-  for i=0,EBSDdata.nprefs-1 do begin
+  for i=0,SEMdata.nprefs-1 do begin
     readf,1,s
     spos = strpos(s,'::')
     nm = strmid(s,0,spos)
     val = strmid(s,spos+2)
     case nm of 
 ; root folder
-	'EBSDroot': EBSDdata.EBSDroot=val
-	'EBSDMCroot': EBSDdata.EBSDMCroot=val
-	'f90exepath': EBSDdata.f90exepath=val
+	'EBSDroot': SEMdata.EBSDroot=val
+	'EBSDMCroot': SEMdata.EBSDMCroot=val
+	'f90exepath': SEMdata.f90exepath=val
 
 ; various parameters
-  	'detl': EBSDdata.detL = float(val)
-  	'dettheta': EBSDdata.dettheta = float(val)
-  	'detdelta': EBSDdata.detdelta = float(val)
-  	'detnumsx': EBSDdata.detnumsx = long(val)
-  	'detnumsy': EBSDdata.detnumsy = long(val)
-  	'detxpc': EBSDdata.detxpc = float(val)
-  	'detypc': EBSDdata.detypc = float(val)
-  	'detbinning': EBSDdata.detbinning = long(val)
-  	'detbeamcurrent': EBSDdata.detbeamcurrent = float(val)
-  	'detdwelltime': EBSDdata.detdwelltime = float(val)
+  	'detl': SEMdata.detL = float(val)
+  	'dettheta': SEMdata.dettheta = float(val)
+  	'detdelta': SEMdata.detdelta = float(val)
+  	'detnumsx': SEMdata.detnumsx = long(val)
+  	'detnumsy': SEMdata.detnumsy = long(val)
+  	'detxpc': SEMdata.detxpc = float(val)
+  	'detypc': SEMdata.detypc = float(val)
+  	'detbinning': SEMdata.detbinning = long(val)
+  	'detbeamcurrent': SEMdata.detbeamcurrent = float(val)
+  	'detdwelltime': SEMdata.detdwelltime = float(val)
 
 ; ECP parameters
-  	'detW': EBSDdata.detW = float(val)
-  	'detRi': EBSDdata.detRi = float(val)
-  	'detRo': EBSDdata.detRo = float(val)
-  	'detsampleytilt': EBSDdata.detsampleytilt = float(val)
-  	'detthetac': EBSDdata.detthetac = float(val)
+  	'detW': SEMdata.detW = float(val)
+  	'detRi': SEMdata.detRi = float(val)
+  	'detRo': SEMdata.detRo = float(val)
+  	'detsampleytilt': SEMdata.detsampleytilt = float(val)
+  	'detthetac': SEMdata.detthetac = float(val)
 
 ; window locations
-  	'xlocation': EBSDdata.xlocation = float(val)
-  	'ylocation': EBSDdata.ylocation = float(val)
-  	'EBSDxlocation': EBSDdata.EBSDxlocation = float(val)
-  	'EBSDylocation': EBSDdata.EBSDylocation = float(val)
-  	'Patternxlocation': EBSDdata.patternxlocation = float(val)
-  	'Patternylocation': EBSDdata.patternylocation = float(val)
-  	'Detectorxlocation': EBSDdata.Detectorxlocation = float(val)
-  	'Detectorylocation': EBSDdata.Detectorylocation = float(val)
-  	'MCxlocation': EBSDdata.MCxlocation = float(val)
-  	'MCylocation': EBSDdata.MCylocation = float(val)
-  	'MPxlocation': EBSDdata.MPxlocation = float(val)
-  	'MPylocation': EBSDdata.MPylocation = float(val)
-  	'Detectorxlocation': EBSDdata.Detectorxlocation = float(val)
-  	'Detectorylocation': EBSDdata.Detectorylocation = float(val)
+  	'xlocation': SEMdata.xlocation = float(val)
+  	'ylocation': SEMdata.ylocation = float(val)
+  	'EBSDxlocation': SEMdata.EBSDxlocation = float(val)
+  	'EBSDylocation': SEMdata.EBSDylocation = float(val)
+  	'Patternxlocation': SEMdata.patternxlocation = float(val)
+  	'Patternylocation': SEMdata.patternylocation = float(val)
+  	'Detectorxlocation': SEMdata.Detectorxlocation = float(val)
+  	'Detectorylocation': SEMdata.Detectorylocation = float(val)
+  	'MCxlocation': SEMdata.MCxlocation = float(val)
+  	'MCylocation': SEMdata.MCylocation = float(val)
+  	'MPxlocation': SEMdata.MPxlocation = float(val)
+  	'MPylocation': SEMdata.MPylocation = float(val)
+  	'Detectorxlocation': SEMdata.Detectorxlocation = float(val)
+  	'Detectorylocation': SEMdata.Detectorylocation = float(val)
 
     else: MESSAGE,'unknown option for preferences file'
     endcase
@@ -110,9 +110,9 @@ if (rs eq 1) then begin
 end else begin
   s = ''
   cd,current=s
-  EBSDdata.EBSDroot=s
+  SEMdata.EBSDroot=s
 ; prefs file does not exist yet, so let's create it with default values
-  if not keyword_set(noprint) then Core_Print,'Creating preferences file '+EBSDdata.prefname
+  if not keyword_set(noprint) then Core_Print,'Creating preferences file '+SEMdata.prefname
   if keyword_set(noprint) then EBSDwritepreferences,/noprint else EBSDwritepreferences
 endelse
 

@@ -12,8 +12,8 @@ stdout = 6
 voltage = 200000.
 ! minimum d-spacing to be taken into account [nm]
 dmin = 0.025
-! output will be diffraction disks inside a square of area (2*npix+1)^2
-npix = 500
+! output will be diffraction disks inside a square of area (2*npx+1)^2
+npx = 500
 ! number of thicknes values to be used in the output
 numthick = 10
 ! starting thickness value [nm]

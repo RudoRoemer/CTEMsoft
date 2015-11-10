@@ -26,7 +26,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDprint.pro
+; EMsoft:EBSDprint.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: EBSDprint.pro
@@ -41,15 +41,15 @@ pro EBSDprint,output,blank=blank
 ;
 ;------------------------------------------------------------
 ; common blocks
-common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, EBSDdata
+common SEM_widget_common, SEMwidget_s
+common SEM_data_common, SEMdata
 
-WIDGET_CONTROL, SET_VALUE=output, EBSDwidget_s.status, /APPEND
-if keyword_set(blank) then WIDGET_CONTROL, SET_VALUE=' ', EBSDwidget_s.status, /APPEND
+WIDGET_CONTROL, SET_VALUE=output, SEMwidget_s.status, /APPEND
+if keyword_set(blank) then WIDGET_CONTROL, SET_VALUE=' ', SEMwidget_s.status, /APPEND
 
-if (EBSDdata.logmode eq 1) then begin
-  printf,EBSDdata.logunit,output
-  if keyword_set(blank) then printf,EBSDdata.logunit,''
+if (SEMdata.logmode eq 1) then begin
+  printf,SEMdata.logunit,output
+  if keyword_set(blank) then printf,SEMdata.logunit,''
 endif
 
 end

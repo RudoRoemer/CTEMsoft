@@ -570,6 +570,154 @@ end subroutine SingleECPattern
 
 !--------------------------------------------------------------------------
 !
+! SUBROUTINE:SingleKosselPattern
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief This function can be called as a standalone function to compute a Kossel pattern
+!
+!> @etails The main purpose of this routine and its accompanying wrapper routine is to
+!> provide a way for an external program to compute a Kossel pattern.  The idea is that 
+!> all the necessary arrays and variables are passed in by reference as arguments, without
+!> the need for the routine to fetch any other data from files etc...  The initial goal is
+!> to have a function that can be called with the CALL_EXTERNAL mechanism in IDL, but 
+!> in the long run this will also be the approach for calling the routine from C/C++, which
+!> is an essential part of integration with DREAM.3D.  
+!>
+!> This routine will first compute the incident cone vectors etc. if necessary, and then perform
+!> the usual interpolation from the square Lambert projection. The pattern will be a basic pattern,
+!> without any intensity scaling or binning etc; the calling program should take care of those 
+!> operations. This is simpler than the ECP case, since there is no energy dependent stuff to 
+!> worry about. We're also keeping the ipar and fpar arrays the same as for the ECP case, even
+!> though we could in principle simplify them; this facilitates integration with the SEMDisplay 
+!> program.
+!
+!> @param ipar array with integer input parameters
+!> @param fpar array with float input parameters
+!> @param KosselPattern output array
+!> @param quats array of quaternions
+!> @param mLPNH Northern hemisphere master pattern
+!> @param mLPSH Southern hemisphere master pattern
+!
+!> @date 11/09/15 MDG 1.0 original
+!--------------------------------------------------------------------------
+subroutine SingleKosselPattern(ipar, fpar, Kosselpattern, quats, mLPNH, mLPSH)
+
+! the input parameters are all part of a ipar and fpar input arrays instead of the usual namelist structures.
+! The following is the mapping:
+!
+! ipar(1) = 1 if GetVectorsCone detector arrays need to be computed, 0 if not (arrays will have save status)
+! ipar(2) = detnumsx
+! ipar(3) = mpnpx
+! ipar(4) = numquats
+! ipar(5) = numdepths
+! ipar(6) = depthsel
+
+! fpar(1) = ecpnl%thetac
+
+use local
+use constants
+use Lambert
+use quaternions
+
+IMPLICIT NONE
+
+integer(8),PARAMETER                    :: nipar=6
+integer(8),PARAMETER                    :: nfpar=1
+integer(8),PARAMETER                    :: nq=4
+integer(8),INTENT(IN)                   :: ipar(nipar)
+real(kind=sgl),INTENT(IN)               :: fpar(nfpar)
+real(kind=sgl),INTENT(OUT)              :: Kosselpattern(ipar(2),ipar(2),ipar(4))
+real(kind=sgl),INTENT(IN)               :: quats(nq,ipar(4))
+real(kind=sgl),INTENT(IN)               :: mLPNH(-ipar(3):ipar(3), -ipar(3):ipar(3),ipar(5))
+real(kind=sgl),INTENT(IN)               :: mLPSH(-ipar(3):ipar(3), -ipar(3):ipar(3),ipar(5))
+
+real(kind=sgl),allocatable,save         :: klist(:,:,:)
+
+real(kind=dbl),parameter                :: Rtod = 57.2957795131D0
+real(kind=dbl),parameter                :: dtoR = 0.01745329251D0
+
+real(kind=sgl)                          :: kk(3), thetacr, ktmax, delta, quat(4)
+integer(kind=irg)                       :: istat, imin, imax, jmin, jmax, ii ,jj, nsig, ip
+integer(kind=irg)                       :: isig, nix, niy, nixp, niyp, isigp
+real(kind=sgl)                          :: dc(3), scl, ixy(2), dx, dy, dxm, dym, dp
+
+
+!==================================================================================
+! ------ generate the detector klist array if needed 
+!------- (calling program must decide this via ipar(1))
+!==================================================================================
+
+if (ipar(1).ge.1) then
+
+    if (allocated(klist)) deallocate(klist)
+    allocate(klist(1:3,-ipar(2):ipar(2),-ipar(2):ipar(2)), stat=istat)
+    kk = (/0.0,0.0,1.0/)
+    thetacr = DtoR*fpar(1)
+    ktmax = tan(thetacr)
+    delta = 2.0*ktmax/dble(ipar(2)-1)
+
+    imin = 1
+    imax = ipar(2)
+    jmin = 1
+    jmax = ipar(2)
+     
+    do ii = imin, imax
+        do jj = jmin, jmax
+            klist(1:3,ii,jj) = (/-ktmax+delta*(ii-1),-ktmax+delta*(jj-1),0.0/) + kk(1:3)
+            klist(1:3,ii,jj) =  klist(1:3,ii,jj)/sqrt(sum( klist(1:3,ii,jj)**2))
+        end do
+    end do
+end if
+
+!===================================================================
+! ------ perform interpolation from square lambert map
+!===================================================================
+
+scl = float(ipar(3))
+
+do ip=1,ipar(4)
+  do ii = imin, imax
+    do jj = jmin, jmax
+
+        dc(1:3) = klist(1:3,ii,jj)
+        dc = quat_LP(quats(1:4,ip), dc)
+        dc = dc/sqrt(sum(dc*dc))
+
+        ixy = scl * LambertSphereToSquare( dc, istat )
+        nix = int(ipar(3)+ixy(1))-ipar(3)
+        niy = int(ipar(3)+ixy(2))-ipar(3)
+        nixp = nix+1
+        niyp = niy+1
+        if (nixp.gt.ipar(3)) nixp = nix
+        if (niyp.gt.ipar(3)) niyp = niy
+        if (nix.lt.-ipar(3)) nix = nixp
+        if (niy.lt.-ipar(3)) niy = niyp
+        dx = ixy(1)-nix
+        dy = ixy(2)-niy
+        dxm = 1.0-dx
+        dym = 1.0-dy
+
+        if (dc(3).gt.0.0) then 
+            Kosselpattern(ii,jj,ip) =  mLPNH(nix,niy,ipar(6)) * dxm * dym + &
+                         mLPNH(nixp,niy,ipar(6)) * dx * dym + &
+                         mLPNH(nix,niyp,ipar(6)) * dxm * dy + &
+                         mLPNH(nixp,niyp,ipar(6)) * dx * dy 
+
+        else
+            Kosselpattern(ii,jj,ip) =  mLPSH(nix,niy,ipar(6)) * dxm * dym + &
+                         mLPSH(nixp,niy,ipar(6)) * dx * dym + &
+                         mLPSH(nix,niyp,ipar(6)) * dxm * dy + &
+                         mLPSH(nixp,niyp,ipar(6)) * dx * dy 
+        end if
+    end do
+  end do
+end do
+
+end subroutine SingleKosselPattern
+
+!--------------------------------------------------------------------------
+!
 ! SUBROUTINE:SingleEBSDPatternWrapper
 !
 !> @author Marc De Graef, Carnegie Mellon University
@@ -681,6 +829,59 @@ call SingleECPattern(ipar, fpar, ECpattern, quats, accum_e, mLPNH, mLPSH)
 
 SingleECPatternWrapper = 1._c_float
 end function SingleECPatternWrapper
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:SingleKosselPatternWrapper
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief wrapper routine for SingleKosselPattern; nearly identical to ECP case
+!>
+!> see https://groups.google.com/forum/#!topic/comp.lang.idl-pvwave/Gk0xxVFbW8E
+!
+!> @param argc number of argument
+!> @param argv pointers to subroutine parameters
+!
+!> @date 11/09/15 MDG 1.0 first version
+!--------------------------------------------------------------------------
+function SingleKosselPatternWrapper(argc, argv) bind(c, name='SingleKosselPatternWrapper') 
+
+use,INTRINSIC :: ISO_C_BINDING
+
+IMPLICIT NONE
+
+INTEGER(c_size_t), VALUE, INTENT(IN)            :: argc 
+type(c_ptr), dimension(argc), INTENT(INOUT)     :: argv
+REAL(c_float)                                   :: SingleKosselPatternWrapper
+
+! wrapper function dependent declarations; they are all pointers 
+! since we pass everything by reference from IDL 
+integer(c_size_t)                               :: nipar, nfpar, nq
+integer(c_size_t),dimension(:), pointer         :: ipar
+real(c_float), dimension(:), pointer            :: fpar
+real(c_float), dimension(:,:), pointer          :: quats
+real(c_float), dimension(:,:,:), pointer        :: KosselPattern, mLPNH, mLPSH
+
+! the following line just helps in identifying the correct order of the subroutine arguments...
+!                             1      2     3             4       5       6
+!subroutine SingleECPattern(ipar, fpar, KosselPattern, quats, mLPNH, mLPSH)
+!
+! transform the C pointers above to fortran pointers, and use them in the regular function call
+nipar = 6
+nfpar = 1
+nq = 4
+call c_f_pointer(argv(1),ipar,(/nipar/)) 
+call c_f_pointer(argv(2),fpar,(/nfpar/)) 
+call c_f_pointer(argv(3),Kosselpattern,(/ipar(2),ipar(2),ipar(4)/))
+call c_f_pointer(argv(4),quats,(/nq,ipar(4)/))
+call c_f_pointer(argv(5),mLPNH,(/2*ipar(3)+1, 2*ipar(3)+1,ipar(5)/))
+call c_f_pointer(argv(6),mLPSH,(/2*ipar(3)+1, 2*ipar(3)+1,ipar(5)/))
+
+call SingleKosselPattern(ipar, fpar, Kosselpattern, quats, mLPNH, mLPSH)
+
+SingleKosselPatternWrapper = 1._c_float
+end function SingleKosselPatternWrapper
 
 
 end module EMdymod

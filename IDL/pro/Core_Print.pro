@@ -26,7 +26,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:Core_Print.pro
+; EMsoft:Core_Print.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: Core_Print.pro

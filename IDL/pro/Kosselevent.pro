@@ -1,5 +1,5 @@
 ;
-; Copyright (c) 2013-2014, Marc De Graef/Carnegie Mellon University
+; Copyright (c) 2013-2015, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are 
@@ -26,7 +26,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:Kosselevent.pro
+; EMsoft:Kosselevent.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: Kosselevent.pro
@@ -35,17 +35,23 @@
 ;
 ;> @brief special event handler for all the CW_BGROUP calls, since CW_BGROUP does not support event_pro
 ;
-;> @date 10/09/13 MDG 1.0 first version
+;> @date 10/30/15 MDG 1.0 first version
 ;--------------------------------------------------------------------------
 function Kosselevent, event
 
 ;------------------------------------------------------------
 ; common blocks
-common Kossel_widget_common, widget_s
-common Kossel_data_common, data
+common SEM_widget_common, SEMwidget_s
+common SEM_data_common, SEMdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
-if (data.eventverbose eq 1) then help,event,/structure
+common CommonCore, status, logmode, logunit
+
+common EBSD_rawdata, accum_e, accum_z, mLPNH, mLPSH
+
+
+if (SEMdata.eventverbose eq 1) then help,event,/structure
+
 
 WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
 
@@ -53,10 +59,71 @@ IF N_ELEMENTS(eventval) EQ 0 THEN RETURN,eventval
 
 CASE eventval OF
 
-  'KosselFORMAT': begin
-		WIDGET_CONTROL, get_value=val,widget_s.Kosselformatbgroup
-		data.Kosselformat = fix(val[0])
-	  endcase
+  'KOSSELFORMAT': begin
+                WIDGET_CONTROL, get_value=val,SEMwidget_s.EBSDformatbgroup
+                SEMdata.imageformat = fix(val[0])
+          endcase
+
+  'KOSSELPATTERNORIGIN': begin
+                WIDGET_CONTROL, get_value=val,SEMwidget_s.PatternOrigin
+                SEMdata.PatternOrigin = fix(val[0])
+	  	KosselshowPattern,/single
+		vals = ['Upper Left','Lower Left','Upper Right','Lower Right']
+		  Core_Print, 'Pattern origin set to '+vals[SEMdata.PatternOrigin]
+	endcase
+ 'KOSSELPATTERNSCALING': begin
+                WIDGET_CONTROL, get_value=val,SEMwidget_s.PatternScaling
+                SEMdata.PatternScaling = fix(val[0])
+	  	KosselshowPattern,/single
+		vals = ['linear', 'gamma']
+		  Core_Print, 'Pattern scaling set to '+vals[SEMdata.PatternScaling]
+	endcase
+
+ 'CIRCULARMASK': begin
+                WIDGET_CONTROL, get_value=val,SEMwidget_s.circularmask
+                SEMdata.showcircularmask= fix(val[0])
+	  	if (SEMdata.Pmode eq 0) then KosselshowPattern,/single else KosselshowPattern
+		vals = ['Off','On']
+		  Core_Print, 'Circular mask set to '+vals[SEMdata.showcircularmask]
+	endcase
+
+ 'PMODE': begin
+                WIDGET_CONTROL, get_value=val,SEMwidget_s.Pmode
+                SEMdata.Pmode = fix(val[0])
+		vals = ['Single Pattern','Angle File','Dictionary']
+; next we need to turn on those widgets that belong to the selected mode (sensitivity=1)
+		if (SEMdata.Pmode eq 0) then begin
+		  WIDGET_CONTROL, SEMwidget_s.DisplayKossel, sensitive=1
+		  WIDGET_CONTROL, SEMwidget_s.Kosselgetanglefilename, sensitive=0
+;	  WIDGET_CONTROL, SEMwidget_s.PGdroplist, sensitive=0
+;	  WIDGET_CONTROL, SEMwidget_s.EBSDgetdictfilename, sensitive=0
+;	  WIDGET_CONTROL, SEMwidget_s.GoDict, sensitive=0
+		    Core_Print, 'Pattern mode set to '+vals[SEMdata.Pmode]
+		end
+
+		if (SEMdata.Pmode eq 1) then begin
+		  WIDGET_CONTROL, SEMwidget_s.DisplayKossel, sensitive=0
+		  WIDGET_CONTROL, SEMwidget_s.Kosselgetanglefilename, sensitive=1
+;	  WIDGET_CONTROL, SEMwidget_s.PGdroplist, sensitive=0
+;	  WIDGET_CONTROL, SEMwidget_s.EBSDgetdictfilename, sensitive=0
+;	  WIDGET_CONTROL, SEMwidget_s.GoDict, sensitive=0
+		    Core_Print, 'Pattern mode set to '+vals[SEMdata.Pmode]
+		end
+
+		if (SEMdata.Pmode eq 2) then begin
+		  WIDGET_CONTROL, SEMwidget_s.DisplayKossel, sensitive=0
+		  WIDGET_CONTROL, SEMwidget_s.Kosselgetanglefilename, sensitive=0
+;	  WIDGET_CONTROL, SEMwidget_s.PGdroplist, sensitive=0
+;	  WIDGET_CONTROL, SEMwidget_s.EBSDgetdictfilename, sensitive=0
+;	  if ( (SEMdata.Ncubochoric ne 0) and (SEMdata.Dictpointgroup ne 0) and (SEMdata.EBSDdictfilename ne '') ) then begin
+;	    WIDGET_CONTROL, SEMwidget_s.GoDict, sensitive=0
+;	  end else begin
+;	    WIDGET_CONTROL, SEMwidget_s.GoDict, sensitive=0
+;	  end
+;	    Core_Print, 'Pattern mode set to '+vals[SEMdata.Pmode]
+		    Core_Print, 'Not implemented in this program Release',/blank
+		end
+	endcase
 
 else: MESSAGE, "Event User Value Not Found"
 

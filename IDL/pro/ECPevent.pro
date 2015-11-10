@@ -41,8 +41,8 @@ function ECPevent, event
 
 ;------------------------------------------------------------
 ; common blocks
-common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, EBSDdata
+common SEM_widget_common, SEMwidget_s
+common SEM_data_common, SEMdata
 common fontstrings, fontstr, fontstrlarge, fontstrsmall
 
 common CommonCore, status, logmode, logunit
@@ -50,7 +50,7 @@ common CommonCore, status, logmode, logunit
 common EBSD_rawdata, accum_e, accum_z, mLPNH, mLPSH
 
 
-if (EBSDdata.eventverbose eq 1) then help,event,/structure
+if (SEMdata.eventverbose eq 1) then help,event,/structure
 
 
 WIDGET_CONTROL, event.id, GET_UVALUE = eventval         ;find the user value
@@ -60,67 +60,67 @@ IF N_ELEMENTS(eventval) EQ 0 THEN RETURN,eventval
 CASE eventval OF
 
   'ECPFORMAT': begin
-                WIDGET_CONTROL, get_value=val,EBSDwidget_s.EBSDformatbgroup
-                EBSDdata.imageformat = fix(val[0])
+                WIDGET_CONTROL, get_value=val,SEMwidget_s.EBSDformatbgroup
+                SEMdata.imageformat = fix(val[0])
           endcase
 
   'ECPATTERNORIGIN': begin
-                WIDGET_CONTROL, get_value=val,EBSDwidget_s.PatternOrigin
-                EBSDdata.PatternOrigin = fix(val[0])
+                WIDGET_CONTROL, get_value=val,SEMwidget_s.PatternOrigin
+                SEMdata.PatternOrigin = fix(val[0])
 	  	ECPshowPattern,/single
 		vals = ['Upper Left','Lower Left','Upper Right','Lower Right']
-		  Core_Print, 'Pattern origin set to '+vals[EBSDdata.PatternOrigin]
+		  Core_Print, 'Pattern origin set to '+vals[SEMdata.PatternOrigin]
 	endcase
  'ECPATTERNSCALING': begin
-                WIDGET_CONTROL, get_value=val,EBSDwidget_s.PatternScaling
-                EBSDdata.PatternScaling = fix(val[0])
+                WIDGET_CONTROL, get_value=val,SEMwidget_s.PatternScaling
+                SEMdata.PatternScaling = fix(val[0])
 	  	ECPshowPattern,/single
 		vals = ['linear', 'gamma']
-		  Core_Print, 'Pattern scaling set to '+vals[EBSDdata.PatternScaling]
+		  Core_Print, 'Pattern scaling set to '+vals[SEMdata.PatternScaling]
 	endcase
 
  'CIRCULARMASK': begin
-                WIDGET_CONTROL, get_value=val,EBSDwidget_s.circularmask
-                EBSDdata.showcircularmask= fix(val[0])
-	  	if (EBSDdata.Pmode eq 0) then EBSDshowPattern,/single else EBSDshowPattern
+                WIDGET_CONTROL, get_value=val,SEMwidget_s.circularmask
+                SEMdata.showcircularmask= fix(val[0])
+	  	if (SEMdata.Pmode eq 0) then ECPshowPattern,/single else ECPshowPattern
 		vals = ['Off','On']
-		  Core_Print, 'Circular mask set to '+vals[EBSDdata.showcircularmask]
+		  Core_Print, 'Circular mask set to '+vals[SEMdata.showcircularmask]
 	endcase
 
  'PMODE': begin
-                WIDGET_CONTROL, get_value=val,EBSDwidget_s.Pmode
-                EBSDdata.Pmode = fix(val[0])
+                WIDGET_CONTROL, get_value=val,SEMwidget_s.Pmode
+                SEMdata.Pmode = fix(val[0])
 		vals = ['Single Pattern','Angle File','Dictionary']
 ; next we need to turn on those widgets that belong to the selected mode (sensitivity=1)
-		if (EBSDdata.Pmode eq 0) then begin
-		  WIDGET_CONTROL, EBSDwidget_s.DisplayECP, sensitive=1
-		  WIDGET_CONTROL, EBSDwidget_s.ECPgetanglefilename, sensitive=0
-;	  WIDGET_CONTROL, EBSDwidget_s.PGdroplist, sensitive=0
-;	  WIDGET_CONTROL, EBSDwidget_s.EBSDgetdictfilename, sensitive=0
-;	  WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=0
-		    Core_Print, 'Pattern mode set to '+vals[EBSDdata.Pmode]
+		if (SEMdata.Pmode eq 0) then begin
+		  WIDGET_CONTROL, SEMwidget_s.DisplayECP, sensitive=1
+		  WIDGET_CONTROL, SEMwidget_s.ECPgetanglefilename, sensitive=0
+;	  WIDGET_CONTROL, SEMwidget_s.PGdroplist, sensitive=0
+;	  WIDGET_CONTROL, SEMwidget_s.EBSDgetdictfilename, sensitive=0
+;	  WIDGET_CONTROL, SEMwidget_s.GoDict, sensitive=0
+		    Core_Print, 'Pattern mode set to '+vals[SEMdata.Pmode]
 		end
 
-		if (EBSDdata.Pmode eq 1) then begin
-		  WIDGET_CONTROL, EBSDwidget_s.DisplayECP, sensitive=0
-		  WIDGET_CONTROL, EBSDwidget_s.ECPgetanglefilename, sensitive=1
-;	  WIDGET_CONTROL, EBSDwidget_s.PGdroplist, sensitive=0
-;	  WIDGET_CONTROL, EBSDwidget_s.EBSDgetdictfilename, sensitive=0
-;	  WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=0
-		    Core_Print, 'Pattern mode set to '+vals[EBSDdata.Pmode]
+		if (SEMdata.Pmode eq 1) then begin
+		  WIDGET_CONTROL, SEMwidget_s.DisplayECP, sensitive=0
+		  WIDGET_CONTROL, SEMwidget_s.ECPgetanglefilename, sensitive=1
+;	  WIDGET_CONTROL, SEMwidget_s.PGdroplist, sensitive=0
+;	  WIDGET_CONTROL, SEMwidget_s.EBSDgetdictfilename, sensitive=0
+;	  WIDGET_CONTROL, SEMwidget_s.GoDict, sensitive=0
+		    Core_Print, 'Pattern mode set to '+vals[SEMdata.Pmode]
 		end
 
-		if (EBSDdata.Pmode eq 2) then begin
-		  WIDGET_CONTROL, EBSDwidget_s.DisplayECP, sensitive=0
-		  WIDGET_CONTROL, EBSDwidget_s.ECPgetanglefilename, sensitive=0
-;	  WIDGET_CONTROL, EBSDwidget_s.PGdroplist, sensitive=0
-;	  WIDGET_CONTROL, EBSDwidget_s.EBSDgetdictfilename, sensitive=0
-;	  if ( (EBSDdata.Ncubochoric ne 0) and (EBSDdata.Dictpointgroup ne 0) and (EBSDdata.EBSDdictfilename ne '') ) then begin
-;	    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=0
+		if (SEMdata.Pmode eq 2) then begin
+		  WIDGET_CONTROL, SEMwidget_s.DisplayECP, sensitive=0
+		  WIDGET_CONTROL, SEMwidget_s.ECPgetanglefilename, sensitive=0
+;	  WIDGET_CONTROL, SEMwidget_s.PGdroplist, sensitive=0
+;	  WIDGET_CONTROL, SEMwidget_s.EBSDgetdictfilename, sensitive=0
+;	  if ( (SEMdata.Ncubochoric ne 0) and (SEMdata.Dictpointgroup ne 0) and (SEMdata.EBSDdictfilename ne '') ) then begin
+;	    WIDGET_CONTROL, SEMwidget_s.GoDict, sensitive=0
 ;	  end else begin
-;	    WIDGET_CONTROL, EBSDwidget_s.GoDict, sensitive=0
+;	    WIDGET_CONTROL, SEMwidget_s.GoDict, sensitive=0
 ;	  end
-;	    Core_Print, 'Pattern mode set to '+vals[EBSDdata.Pmode]
+;	    Core_Print, 'Pattern mode set to '+vals[SEMdata.Pmode]
 		    Core_Print, 'Not implemented in this program Release',/blank
 		end
 	endcase

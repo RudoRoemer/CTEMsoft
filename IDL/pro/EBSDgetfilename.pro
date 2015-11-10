@@ -26,7 +26,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:EBSDgetfilename.pro
+; EMsoft:EBSDgetfilename.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: EBSDgetfilename.pro
@@ -41,19 +41,19 @@ pro EBSDgetfilename,validfile,MCFILE=MCFILE,MPFILE=MPFILE
  
 ;------------------------------------------------------------
 ; common blocks
-common EBSD_widget_common, EBSDwidget_s
-common EBSD_data_common, EBSDdata
+common SEM_widget_common, SEMwidget_s
+common SEM_data_common, SEMdata
 
   validfile = 0
 
   s = ''
   cd,current = s
-  EBSDdata.homefolder = s
-  if (EBSDdata.EBSDroot eq 'undefined') then begin
-    EBSDdata.EBSDroot = EBSDdata.homefolder
+  SEMdata.homefolder = s
+  if (SEMdata.EBSDroot eq 'undefined') then begin
+    SEMdata.EBSDroot = SEMdata.homefolder
   end 
 
-  rootpath = EBSDdata.EBSDroot
+  rootpath = SEMdata.EBSDroot
 
   if keyword_set(MCFILE) then begin
     res=dialog_pickfile(title='Select a valid Monte Carlo data file',path=rootpath,filter='*mc*.*;*MC*.*')
@@ -73,23 +73,23 @@ common EBSD_data_common, EBSDdata
 ;    if ((progname eq 'CTEMMC.f90') or (progname eq 'CTEMMCOpenCL.f90')) then begin
 	validfile = 1
   	finfo = file_info(res)
-	EBSDdata.mcfilesize = finfo.size
+	SEMdata.mcfilesize = finfo.size
 ; find the last folder separator
 	spos = strpos(res,'/',/reverse_search)
 	dpos = strpos(res,'.',/reverse_search)
 	plen = strlen(res)
-	EBSDdata.mcpathname = strmid(res,0,spos)
-	EBSDdata.EBSDroot = EBSDdata.mcpathname
-	EBSDdata.mcfilename = strmid(res,spos+1)
-	EBSDdata.suffix = strmid(res,dpos+1)
-	EBSDdata.EBSDMCroot = EBSDdata.mcpathname
+	SEMdata.mcpathname = strmid(res,0,spos)
+	SEMdata.EBSDroot = SEMdata.mcpathname
+	SEMdata.mcfilename = strmid(res,spos+1)
+	SEMdata.suffix = strmid(res,dpos+1)
+	SEMdata.EBSDMCroot = SEMdata.mcpathname
 
-  	WIDGET_CONTROL, SET_VALUE=EBSDdata.mcfilename, EBSDwidget_s.mcfilename
+  	WIDGET_CONTROL, SET_VALUE=SEMdata.mcfilename, SEMwidget_s.mcfilename
 
   	Core_Print,' full path '+res
-  	Core_Print,' path '+EBSDdata.mcpathname
-  	Core_Print,' data file '+EBSDdata.mcfilename
-  	Core_Print,' suffix '+EBSDdata.suffix
+  	Core_Print,' path '+SEMdata.mcpathname
+  	Core_Print,' data file '+SEMdata.mcfilename
+  	Core_Print,' suffix '+SEMdata.suffix
 ;    end else begin
 ;  	Core_Print,' This file is not of the correct Monte Carlo data type ',/blank
 ;        goto, skip
@@ -111,23 +111,23 @@ common EBSD_data_common, EBSDdata
 ;    if (progname eq 'CTEMEBSDmaster.f90') then begin
 	validfile = 1
   	finfo = file_info(res)
-	EBSDdata.mpfilesize = finfo.size
+	SEMdata.mpfilesize = finfo.size
 ; find the last folder separator
 	spos = strpos(res,'/',/reverse_search)
 	dpos = strpos(res,'.',/reverse_search)
 	plen = strlen(res)
-	EBSDdata.pathname = strmid(res,0,spos)
-	EBSDdata.EBSDroot = EBSDdata.mcpathname
-	EBSDdata.mpfilename = strmid(res,spos+1)
-	EBSDdata.suffix = strmid(res,dpos+1)
-	EBSDdata.EBSDroot = EBSDdata.pathname
+	SEMdata.pathname = strmid(res,0,spos)
+	SEMdata.EBSDroot = SEMdata.mcpathname
+	SEMdata.mpfilename = strmid(res,spos+1)
+	SEMdata.suffix = strmid(res,dpos+1)
+	SEMdata.EBSDroot = SEMdata.pathname
 
-  	WIDGET_CONTROL, SET_VALUE=EBSDdata.mpfilename, EBSDwidget_s.mpfilename
+  	WIDGET_CONTROL, SET_VALUE=SEMdata.mpfilename, SEMwidget_s.mpfilename
 
   	Core_Print,' full path '+res
-  	Core_Print,' path '+EBSDdata.pathname
-  	Core_Print,' data file '+EBSDdata.mpfilename
-  	Core_Print,' suffix '+EBSDdata.suffix
+  	Core_Print,' path '+SEMdata.pathname
+  	Core_Print,' data file '+SEMdata.mpfilename
+  	Core_Print,' suffix '+SEMdata.suffix
 ;    end else begin
 ;  	Core_Print,' This file is not of the correct Master Pattern data type ',/blank
 ;        goto, skip

@@ -25,7 +25,7 @@
 ; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ; ###################################################################
 ;--------------------------------------------------------------------------
-; CTEMsoft2013:Core_quatmult.pro
+; EMsoft:Core_quatmult.pro
 ;--------------------------------------------------------------------------
 ;
 ; PROGRAM: Core_quatmult.pro
