@@ -71,7 +71,7 @@
 
 \pretitle{\vspace{-1.5in} \begin{center} \HorRule \fontsize{25}{25} \usefont{OT1}{phv}{b}{n} \color{DarkRed} \selectfont} % Horizontal rule before the title
 
-\title{EMSoft\\ EBSD and ECP Simulations} % Your article title
+\title{EMSoft\\ EBSD, ECP and Kossel Simulations} % Your article title
 
 \posttitle{\par\end{center}\vskip 0.5em} % Whitespace under the title
 
@@ -108,7 +108,7 @@ support from an AFOSR/MURI grant FA9550-12-1-0458.}}
 
 \vspace*{-0.5in}\begin{figure*}[h]
 \leavevmode\centering
-\epsfxsize=4.0in\epsffile{figs/EMsoftlogo}
+\epsfxsize=4.0in\epsffile{figs/EMsoftlogo.eps}
 \end{figure*}
 
 \renewcommand{\contentsname}{Table of Contents}
@@ -680,8 +680,18 @@ angles, which involves the working distance, $W$, and the detector inner and out
 slightly with respect to the horizontal plane (in particular for ECCI observations), so this must be taken into account in the detector model.
 Finally, the incident beam cone opening angle, $\theta_c$, must be specified.  %The basic geometry is depicted in Fig.~\ref{fig:ECPgeometry}.
 
-
-
+\subsection{Kossel Pattern Simulations\label{sec:Kossel}}
+Kossel patterns represent the probability that an incident beam electron survives as part of the (coherent) beam up to a certain depth in
+the sample.  They are computed using the same Bloch wave code that is used for the EBSD master pattern simulation.  The intensity level in 
+a Kossel pattern is determined from the Bloch wave eigenvalues and excitation amplitudes by the following expression:
+\begin{equation}
+	P(z,\mathbf{k}_0) = \sum_j \vert \alpha^{(j)}\vert^2 e^{-4\pi q^{(j)}z}.\label{eq:EKP}
+\end{equation}
+This computation is then repeated for each of the incident beam directions, and the results are collected and displayed as an 
+electron Kossel pattern.  The \textsf{EMKosselMaster} program can be used to compute the master pattern in the same way as for
+the \textsf{EMEBSDmaster} and \textsf{EMECPmaster} programs.  The IDL \textsf{SEMDisplay} routine discussed in a later section
+has resources for the display of the master pattern as well as the computation of specific Kossel patterns for arbitrary 
+crystal orientation.
 
 
 
@@ -807,6 +817,21 @@ are similar to the ones in the EBSD case, except for several of the detector par
 can be called from the command line with an input file of this form, or it can be called directly from within the IDL GUI
 described in section~\ref{sec:idl}.  
 
+\section{The \protect\textsf{EMKosselMaster} program\label{sec:f90Kossel}}
+The \textsf{EMKosselMaster} program does not require any Monte Carlo simulations, and is controlled via
+the following namelist template file:
+\fvset{frame=lines,formatcom=\color{blue},fontsize=\footnotesize}
+\VerbatimInput{../templatefolder/EMKosselMaster.template}
+Most of the parameters should be clear from the previous sections.  The \textsf{Kosselmode} parameter is set to 
+\textsf{'normal'} to compute a thickness-dependent Kossel master pattern; when the option is set to \textsf{'thicks'},
+the output is a single master pattern (as always in HDF5 format) that represents the depth at which the probability 
+defined in section~\ref{sec:Kossel} is equal to the value set by the \textsf{tfraction} parameter.  The Kossel master
+pattern can be visualized by the \textsf{SEMDisplay} program; for now, only the patterns from the \textsf{'normal'}
+mode can be visualized using this interface.
+
+
+
+
 \section{Calling \textsf{EMEBSD} and \textsf{EMECP} from another program\label{sec:external}}
 With the creation of release 3.0, we have changed the library format from static to shared, so that the main package
 library now has the name (on Mac OS X) \textsf{EMSoftLib.dylib}.  As a direct consequence of this change, several of 
@@ -929,13 +954,13 @@ The \textsf{SEMDisplay.pro} program\footnote{The \ctp\ executable package comes 
 i.e., pre-compiled IDL routines that can be executed without an IDL license.  These apps are provided without support but they do work 
 on Mac OS X and Linux; further development will be needed for Windows.  Note that the IDL source code for all apps is also available from
 the source code repository, but this will require an IDL license to be able to compile and run the codes.} is a complex interface that provides the user with the ability to handle the 
-output from the fortran-90 programs, \textsf{EMMCOpenCL}, \textsf{EMEBSDmaster}, and \textsf{EMECPmaster}.  The main
+output from the fortran-90 programs, \textsf{EMMCOpenCL}, \textsf{EMEBSDmaster}, \textsf{EMECPmaster}, and \textsf{EMKosselMaster}.  The main
 interface window is shown in Fig.~\ref{fig:EBSDmain}, and consists of the following regions:
 \begin{itemize}
 	\item Monte Carlo data file name;
 	\item Master pattern data file name;
 	\item Information window: this shows program messages about file loading, changed parameters, etc.
-	\item Button row: allows the user to load either an MC file or an EBSD/ECP master file (which will also automatically load the 
+	\item Button row: allows the user to load an EBSD/ECP/Kossel master file (which will also automatically load the 
 	corresponding MC file).  The \button{Define detector}\ will be described in more detail below.  The user also has the option to 
 	create a log-file that will store all the entries shown also in the information window.
 \end{itemize}
