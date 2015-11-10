@@ -207,8 +207,8 @@ type LambertParametersType
         real(kind=dbl)          :: sPi=1.772453850905516D0      !  sqrt(pi)
         real(kind=dbl)          :: sPio2=1.253314137315500D0    !  sqrt(pi/2)
         real(kind=dbl)          :: sPi2=0.886226925452758D0     !  sqrt(pi)/2
-        real(kind=dbl)          :: srt=0.866025403784439D0      !  sqrt(3)/2
-        real(kind=dbl)          :: isrt=0.577350269189626D0    !  1/sqrt(3)
+        real(kind=dbl)          :: srt=0.86602540378D0      !  sqrt(3)/2
+        real(kind=dbl)          :: isrt=0.57735026919D0    !  1/sqrt(3)
         real(kind=dbl)          :: alpha=1.346773687088598D0   !  sqrt(pi)/3^(1/4)
         real(kind=dbl)          :: rtt=1.732050807568877D0      !  sqrt(3)
         real(kind=dbl)          :: prea=0.525037567904332D0    !  3^(1/4)/sqrt(2pi)
