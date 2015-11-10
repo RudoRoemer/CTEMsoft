@@ -47,7 +47,7 @@ common SEM_widget_common, SEMwidget_s
 common SEM_data_common, SEMdata
 common EBSDpatterns, pattern, image, finalpattern
 common EBSDmasks, circularmask
-common ECPdata, ECPattern
+common Kosseldata, KosselPattern
 
 ; check whether the mask needs to be recomputed or not
 s = size(circularmask)
@@ -67,7 +67,7 @@ if not keyword_set(nodisplay) then begin
   empty
 end
 
-patterns = ECPattern
+patterns = KosselPattern
 
 sz = size(patterns)
 if (sz[0] eq 3) then begin

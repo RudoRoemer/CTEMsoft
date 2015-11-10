@@ -10,6 +10,7 @@
 @EBSDreadanglefile		; reads a file of euler angles or other representations
 @EBSDevent			; event handler for button groups
 @EBSDshowMC			; display a Lambert projection image
+@EBSDshowPattern		; display an BSD pattern
 @EBSDgetpreferences		; read preferences file
 @EBSDwritepreferences		; write preferences file
 @EBSDExecute			; perform the actual pattern computation
@@ -35,6 +36,7 @@
 @Core_Print			; print messages to status window and log file
 @Core_WidgetEvent		; general data handler for various widget events
 @Core_getenv                    ; read the environment variable(s)
+@Core_eu2qu                     ; convert euler angles to quaternion
 ;
 ; Copyright (c) 2014-2015, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
@@ -162,6 +164,7 @@ SEMwidget_s = {widgetstruct, $
 	mcvangle: long(0), $			; vertical tilt angle
 	mchangle: long(0), $			; horizontal tilt angle
 	mcmode: long(0), $			; Monte Carlo mode
+	Esel: long(0), $			; Monte Carlo mode
 	mcloadfile: long(0), $                  ; load file button
 	mcdisplay: long(0), $                   ; MC display button
         mcfilmthickness: long(0), $             ; film thickness for two-layer structures
@@ -216,7 +219,9 @@ SEMwidget_s = {widgetstruct, $
 	ECPgetpatternfilename: long(0), $	; output file name button
 	EBSDgetpatternfilename: long(0), $	; output file name button
 	ECPanglefilename: long(0), $		; angle file name widget
+	Kosselanglefilename: long(0), $		; angle file name widget
 	ECPgetanglefilename: long(0), $	        ; angle file name widget
+	Kosselgetanglefilename: long(0), $      ; angle file name widget
 	EBSDanglefilename: long(0), $		; angle file name widget
 	EBSDgetanglefilename: long(0), $	; angle file name widget
 	EBSDdictfilename: long(0), $		; dictionary file name widget
@@ -361,8 +366,10 @@ SEMdata = {SEMdatastruct, $
 	Pmode: long(0), $			; pattern mode (0=single, 1=angle file, 2=dictionary)
 	EBSDpatternfilename: '', $		; name for EBSD output file
 	ECPpatternfilename: '', $     		; output file name widget
+	Kosselpatternfilename: '', $     	; output file name widget
 	EBSDanglefilename: '', $		; name for EBSD angle file
 	ECPanglefilename: '', $		        ; name for ECP angle file
+	Kosselanglefilename: '', $		; name for Kossel angle file
 	EBSDdictfilename: '', $			; name for EBSD dictionary file
         NHSH: long(0), $                        ; Northern or Southern hemisphere for display?
 	angletype: '', $			; angle type (euler, quaternion)
@@ -519,7 +526,7 @@ SEMwidget_s.mpfilename = Core_WText(file1,'MP Data File Name', fontstrlarge, 200
 
 ;---------- file type
 file1 = WIDGET_BASE(block21, /ROW, XSIZE=600, /ALIGN_CENTER)
-SEMwidget_s.mpfiletype = Core_WText(file1,'Master File Type', fontstrlarge, 150, 25, 20, 1, SEMdata.mpfiletypestring[0])
+SEMwidget_s.mpfiletype = Core_WText(file1,'Master File Type', fontstrlarge, 200, 25, 10, 1, SEMdata.mpfiletypestring[0])
 
 ;------------------------------------------------------------
 ;------------------------------------------------------------

@@ -608,22 +608,12 @@ subroutine SingleKosselPattern(ipar, fpar, Kosselpattern, quats, mLPNH, mLPSH)
 !
 ! ipar(1) = 1 if GetVectorsCone detector arrays need to be computed, 0 if not (arrays will have save status)
 ! ipar(2) = detnumsx
-! ipar(3) = detnumsy
-! ipar(4) = numEbins
-! ipar(5) = mcnsx
-! ipar(6) = numset
-! ipar(7) = mpnpx
-! ipar(8) = numquats
+! ipar(3) = mpnpx
+! ipar(4) = numquats
+! ipar(5) = numdepths
+! ipar(6) = depthsel
 
 ! fpar(1) = ecpnl%thetac
-! fpar(2) = ecpnl%sampletilt
-! fpar(3) = ecpnl%workingdistance
-! fpar(4) = ecpnl%Rin
-! fpar(5) = ecpnl%Rout
-! fpar(6) = ecpnl%sigstart
-! fpar(7) = ecpnl%sigend
-! fpar(8) = ecpnl%sigstep
-!!!!!!!! removed:  fpar(9-12) =  quaternion for requested Euler angles
 
 use local
 use constants
@@ -632,30 +622,29 @@ use quaternions
 
 IMPLICIT NONE
 
-integer(8),PARAMETER                    :: nipar=8
-integer(8),PARAMETER                    :: nfpar=8
+integer(8),PARAMETER                    :: nipar=6
+integer(8),PARAMETER                    :: nfpar=1
 integer(8),PARAMETER                    :: nq=4
 integer(8),INTENT(IN)                   :: ipar(nipar)
 real(kind=sgl),INTENT(IN)               :: fpar(nfpar)
-real(kind=sgl),INTENT(OUT)              :: Kosselpattern(ipar(2),ipar(3),ipar(8))
-real(kind=sgl),INTENT(IN)               :: quats(nq,ipar(8))
-real(kind=sgl),INTENT(IN)               :: mLPNH(-ipar(7):ipar(7), -ipar(7):ipar(7))
-real(kind=sgl),INTENT(IN)               :: mLPSH(-ipar(7):ipar(7), -ipar(7):ipar(7))
+real(kind=sgl),INTENT(OUT)              :: Kosselpattern(ipar(2),ipar(2),ipar(4))
+real(kind=sgl),INTENT(IN)               :: quats(nq,ipar(4))
+real(kind=sgl),INTENT(IN)               :: mLPNH(-ipar(3):ipar(3), -ipar(3):ipar(3),ipar(5))
+real(kind=sgl),INTENT(IN)               :: mLPSH(-ipar(3):ipar(3), -ipar(3):ipar(3),ipar(5))
 
 real(kind=sgl),allocatable,save         :: klist(:,:,:)
 
 real(kind=dbl),parameter                :: Rtod = 57.2957795131D0
 real(kind=dbl),parameter                :: dtoR = 0.01745329251D0
 
-real(kind=sgl)                          :: kk(3), thetacr, ktmax, delta, wf, quat(4)
-integer(kind=irg)                       :: istat, imin, imax, jmin, jmax, ii ,jj, nazimuth, npolar, nsig, ip
-integer(kind=irg)                       :: ipolar, iazimuth, isig, isampletilt, nix, niy, nixp, niyp, isigp
-real(kind=sgl)                          :: thetain, thetaout, polar, azimuthal, delpolar, delazimuth, om(3,3)
-real(kind=sgl)                          :: dc(3), scl, deltheta, acc_sum, MCangle, ixy(2), dx, dy, dxm, dym, dp
+real(kind=sgl)                          :: kk(3), thetacr, ktmax, delta, quat(4)
+integer(kind=irg)                       :: istat, imin, imax, jmin, jmax, ii ,jj, nsig, ip
+integer(kind=irg)                       :: isig, nix, niy, nixp, niyp, isigp
+real(kind=sgl)                          :: dc(3), scl, ixy(2), dx, dy, dxm, dym, dp
 
 
 !==================================================================================
-! ------ generate the detector klist, rgx, rgy, rgz, weightfactors arrays if needed 
+! ------ generate the detector klist array if needed 
 !------- (calling program must decide this via ipar(1))
 !==================================================================================
 
@@ -671,7 +660,7 @@ if (ipar(1).ge.1) then
     imin = 1
     imax = ipar(2)
     jmin = 1
-    jmax = ipar(3)
+    jmax = ipar(2)
      
     do ii = imin, imax
         do jj = jmin, jmax
@@ -685,9 +674,9 @@ end if
 ! ------ perform interpolation from square lambert map
 !===================================================================
 
-scl = float(ipar(7))
+scl = float(ipar(3))
 
-do ip=1,ipar(8)
+do ip=1,ipar(4)
   do ii = imin, imax
     do jj = jmin, jmax
 
@@ -696,30 +685,30 @@ do ip=1,ipar(8)
         dc = dc/sqrt(sum(dc*dc))
 
         ixy = scl * LambertSphereToSquare( dc, istat )
-        nix = int(ipar(7)+ixy(1))-ipar(7)
-        niy = int(ipar(7)+ixy(2))-ipar(7)
+        nix = int(ipar(3)+ixy(1))-ipar(3)
+        niy = int(ipar(3)+ixy(2))-ipar(3)
         nixp = nix+1
         niyp = niy+1
-        if (nixp.gt.ipar(7)) nixp = nix
-        if (niyp.gt.ipar(7)) niyp = niy
-        if (nix.lt.-ipar(7)) nix = nixp
-        if (niy.lt.-ipar(7)) niy = niyp
+        if (nixp.gt.ipar(3)) nixp = nix
+        if (niyp.gt.ipar(3)) niyp = niy
+        if (nix.lt.-ipar(3)) nix = nixp
+        if (niy.lt.-ipar(3)) niy = niyp
         dx = ixy(1)-nix
         dy = ixy(2)-niy
         dxm = 1.0-dx
         dym = 1.0-dy
 
         if (dc(3).gt.0.0) then 
-            Kosselpattern(ii,jj,ip) =  mLPNH(nix,niy) * dxm * dym + &
-                         mLPNH(nixp,niy) * dx * dym + &
-                         mLPNH(nix,niyp) * dxm * dy + &
-                         mLPNH(nixp,niyp) * dx * dy 
+            Kosselpattern(ii,jj,ip) =  mLPNH(nix,niy,ipar(6)) * dxm * dym + &
+                         mLPNH(nixp,niy,ipar(6)) * dx * dym + &
+                         mLPNH(nix,niyp,ipar(6)) * dxm * dy + &
+                         mLPNH(nixp,niyp,ipar(6)) * dx * dy 
 
         else
-            Kosselpattern(ii,jj,ip) =  mLPSH(nix,niy) * dxm * dym + &
-                         mLPSH(nixp,niy) * dx * dym + &
-                         mLPSH(nix,niyp) * dxm * dy + &
-                         mLPSH(nixp,niyp) * dx * dy 
+            Kosselpattern(ii,jj,ip) =  mLPSH(nix,niy,ipar(6)) * dxm * dym + &
+                         mLPSH(nixp,niy,ipar(6)) * dx * dym + &
+                         mLPSH(nix,niyp,ipar(6)) * dxm * dy + &
+                         mLPSH(nixp,niyp,ipar(6)) * dx * dy 
         end if
     end do
   end do
@@ -871,23 +860,23 @@ REAL(c_float)                                   :: SingleKosselPatternWrapper
 integer(c_size_t)                               :: nipar, nfpar, nq
 integer(c_size_t),dimension(:), pointer         :: ipar
 real(c_float), dimension(:), pointer            :: fpar
-real(c_float), dimension(:,:), pointer          :: mLPNH, mLPSH, quats
-real(c_float), dimension(:,:,:), pointer        :: KosselPattern
+real(c_float), dimension(:,:), pointer          :: quats
+real(c_float), dimension(:,:,:), pointer        :: KosselPattern, mLPNH, mLPSH
 
 ! the following line just helps in identifying the correct order of the subroutine arguments...
 !                             1      2     3             4       5       6
 !subroutine SingleECPattern(ipar, fpar, KosselPattern, quats, mLPNH, mLPSH)
 !
 ! transform the C pointers above to fortran pointers, and use them in the regular function call
-nipar = 8
-nfpar = 8
+nipar = 6
+nfpar = 1
 nq = 4
 call c_f_pointer(argv(1),ipar,(/nipar/)) 
 call c_f_pointer(argv(2),fpar,(/nfpar/)) 
-call c_f_pointer(argv(3),Kosselpattern,(/ipar(2),ipar(3),ipar(8)/))
-call c_f_pointer(argv(4),quats,(/nq,ipar(8)/))
-call c_f_pointer(argv(6),mLPNH,(/2*ipar(7)+1, 2*ipar(7)+1/))
-call c_f_pointer(argv(7),mLPSH,(/2*ipar(7)+1, 2*ipar(7)+1/))
+call c_f_pointer(argv(3),Kosselpattern,(/ipar(2),ipar(2),ipar(4)/))
+call c_f_pointer(argv(4),quats,(/nq,ipar(4)/))
+call c_f_pointer(argv(5),mLPNH,(/2*ipar(3)+1, 2*ipar(3)+1,ipar(5)/))
+call c_f_pointer(argv(6),mLPSH,(/2*ipar(3)+1, 2*ipar(3)+1,ipar(5)/))
 
 call SingleKosselPattern(ipar, fpar, Kosselpattern, quats, mLPNH, mLPSH)
 

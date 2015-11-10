@@ -66,6 +66,14 @@ end else begin
 
  'DETTHETAC': SEMdata.detthetac = Core_WidgetEvent( SEMwidget_s.detthetac, 'Incident beam cone semi-angle to [deg] ', '(F6.2)', /flt)
 
+ 'DETDEPTH': begin
+          SEMdata.Esel = Core_WidgetEvent( SEMwidget_s.Esel, 'Selected depth number set to ', '(I3)', /lng)
+          if (SEMdata.Esel ge SEMdata.mcenergynumbin) then begin
+            SEMdata.Esel = SEMdata.mcenergynumbin-1
+            Core_print,'Selected depth value too large; set to maximum value'
+            WIDGET_CONTROL, set_value = string(SEMdata.Esel,format="(I3)"), SEMwidget_s.Esel
+          endif
+        endcase
 
  'DETphi1': SEMdata.detphi1 = Core_WidgetEvent( SEMwidget_s.detphi1, 'Euler angle phi1 set to [deg] ', '(F6.2)', /flt)
  'DETPhi': SEMdata.detphi = Core_WidgetEvent( SEMwidget_s.detphi, 'Euler angle Phi set to [deg] ', '(F6.2)', /flt)
@@ -75,8 +83,8 @@ end else begin
 ; display a filesaving widget in the data folder with the file extension filled in
 	  filename = DIALOG_PICKFILE(/write,path=SEMdata.pathname,title='Select angle input file')
 	  if (filename ne '') then begin
-	    SEMdata.ECPanglefilename = filename
-	    WIDGET_CONTROL, set_value=filename, SEMwidget_s.ECPanglefilename
+	    SEMdata.Kosselanglefilename = filename
+	    WIDGET_CONTROL, set_value=filename, SEMwidget_s.Kosselanglefilename
 	    EBSDreadanglefile,filename,/list
 	    WIDGET_CONTROL, SEMwidget_s.GoAngle, sensitive=1
 	  end

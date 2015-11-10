@@ -96,6 +96,11 @@ SEMwidget_s.detnumsx = Core_WTextE(file2,'Number of Pattern Pixels ', fontstr, 2
 file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
 SEMwidget_s.detthetac = Core_WTextE(file2,'Incident Beam Cone Semi-Angle [deg]', fontstr, 250, 25, 10, 1, string(SEMdata.detthetac,format="(F6.2)"),'DETTHETAC','KosselDetectorWidget_event')
 
+;---------- depth selector
+file2 = WIDGET_BASE(file1, /ROW, XSIZE=340, /ALIGN_CENTER)
+SEMwidget_s.Esel = Core_WTextE(file2,'Depth number ', fontstr, 250, 25, 10, 1, string(SEMdata.Esel,format="(I3)"),'DETDEPTH','KosselDetectorWidget_event')
+
+
 ;------------------------------------------------------------
 ;------------------------------------------------------------
 ; and here is the Close button
@@ -121,7 +126,7 @@ SEMwidget_s.Pmode = CW_BGROUP(file1, $
                         /NO_RELEASE, $
                         /EXCLUSIVE, $
                         FONT=fontstr, $
-                        EVENT_FUNC ='ECPevent', $
+                        EVENT_FUNC ='Kosselevent', $
                         UVALUE='PMODE', $
                         SET_VALUE=SEMdata.Pmode)
 
@@ -172,9 +177,9 @@ SEMwidget_s.GoAngle = WIDGET_BUTTON(file3, $
                                 /FRAME)
 
 
-SEMwidget_s.ECPanglefilename = Core_WText(file1,'Angle File Name', fontstr, 200, 25, 50, 1, SEMdata.ECPanglefilename)
+SEMwidget_s.Kosselanglefilename = Core_WText(file1,'Angle File Name', fontstr, 200, 25, 50, 1, SEMdata.ECPanglefilename)
 
-SEMwidget_s.ECPgetanglefilename = WIDGET_BUTTON(file1, $
+SEMwidget_s.Kosselgetanglefilename = WIDGET_BUTTON(file1, $
                       UVALUE='GETANGLEFILENAME', $
                       VALUE='Load Angle File', $
                       EVENT_PRO='KosselDetectorWidget_event', $

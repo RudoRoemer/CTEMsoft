@@ -93,8 +93,8 @@ CASE eventval OF
 		vals = ['Single Pattern','Angle File','Dictionary']
 ; next we need to turn on those widgets that belong to the selected mode (sensitivity=1)
 		if (SEMdata.Pmode eq 0) then begin
-		  WIDGET_CONTROL, SEMwidget_s.DisplayECP, sensitive=1
-		  WIDGET_CONTROL, SEMwidget_s.ECPgetanglefilename, sensitive=0
+		  WIDGET_CONTROL, SEMwidget_s.DisplayKossel, sensitive=1
+		  WIDGET_CONTROL, SEMwidget_s.Kosselgetanglefilename, sensitive=0
 ;	  WIDGET_CONTROL, SEMwidget_s.PGdroplist, sensitive=0
 ;	  WIDGET_CONTROL, SEMwidget_s.EBSDgetdictfilename, sensitive=0
 ;	  WIDGET_CONTROL, SEMwidget_s.GoDict, sensitive=0
@@ -102,8 +102,8 @@ CASE eventval OF
 		end
 
 		if (SEMdata.Pmode eq 1) then begin
-		  WIDGET_CONTROL, SEMwidget_s.DisplayECP, sensitive=0
-		  WIDGET_CONTROL, SEMwidget_s.ECPgetanglefilename, sensitive=1
+		  WIDGET_CONTROL, SEMwidget_s.DisplayKossel, sensitive=0
+		  WIDGET_CONTROL, SEMwidget_s.Kosselgetanglefilename, sensitive=1
 ;	  WIDGET_CONTROL, SEMwidget_s.PGdroplist, sensitive=0
 ;	  WIDGET_CONTROL, SEMwidget_s.EBSDgetdictfilename, sensitive=0
 ;	  WIDGET_CONTROL, SEMwidget_s.GoDict, sensitive=0
@@ -111,8 +111,8 @@ CASE eventval OF
 		end
 
 		if (SEMdata.Pmode eq 2) then begin
-		  WIDGET_CONTROL, SEMwidget_s.DisplayECP, sensitive=0
-		  WIDGET_CONTROL, SEMwidget_s.ECPgetanglefilename, sensitive=0
+		  WIDGET_CONTROL, SEMwidget_s.DisplayKossel, sensitive=0
+		  WIDGET_CONTROL, SEMwidget_s.Kosselgetanglefilename, sensitive=0
 ;	  WIDGET_CONTROL, SEMwidget_s.PGdroplist, sensitive=0
 ;	  WIDGET_CONTROL, SEMwidget_s.EBSDgetdictfilename, sensitive=0
 ;	  if ( (SEMdata.Ncubochoric ne 0) and (SEMdata.Dictpointgroup ne 0) and (SEMdata.EBSDdictfilename ne '') ) then begin

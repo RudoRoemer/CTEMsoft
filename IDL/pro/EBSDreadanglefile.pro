@@ -88,7 +88,7 @@ if (angletype eq 'qu') then begin
   WIDGET_CONTROL, set_value='quaternion', SEMwidget_s.angletype
 end
 
-WIDGET_CONTROL, set_value=string(numangles,FORMAT="(I8)"), EBSDwidget_S.numangles
+WIDGET_CONTROL, set_value=string(numangles,FORMAT="(I8)"), SEMwidget_s.numangles
 
 
 end

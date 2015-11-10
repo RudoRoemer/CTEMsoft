@@ -283,9 +283,9 @@ EMdatapathname = Core_getenv(/data)
   end
   if (SEMdata.mpfiletype eq 3) then begin
     sz = size(mLPNH,/dimensions)
-    Core_Print,'      Size of mLPNH data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") 
-    Core_LambertS2C,mLPNH,/mp
-    Core_LambertS2SP,mLPNH,/mp
+    Core_Print,'      Size of mLPNH data array : '+string(sz[0],format="(I5)")+' x'+string(sz[1],format="(I5)") +' x'+string(sz[2],format="(I5)") 
+    Core_LambertS2C,reform(mLPNH[*,*,0]),/mp
+    Core_LambertS2SP,reform(mLPNH[*,*,0]),/mp
   end
 
 ; and close the file
@@ -507,7 +507,7 @@ if (keyword_set(MCFILE) or (SEMdata.MCMPboth eq 1)) then begin
   Core_LambertS2SP,reform(accum_e[0,*,*]),/mc
 
 ; (de)activate buttons
-   WIDGET_CONTROL, SEMwidget_s.MCbutton, sensitive=1
+;  WIDGET_CONTROL, SEMwidget_s.MCbutton, sensitive=1
    if (SEMdata.MCMPboth eq 0) then begin
      WIDGET_CONTROL, SEMwidget_s.MPbutton, sensitive=0
      WIDGET_CONTROL, SEMwidget_s.detector, sensitive=0

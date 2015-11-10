@@ -54,7 +54,7 @@ common EBSD_anglearrays, euler, quaternions
 common EBSDmasks, circularmask
 
 common EBSD_rawdata, accum_e, accum_z, mLPNH, mLPSH
-common ECPdata, ECPattern
+common Kosseldata, KosselPattern
 
 status = 1
 
@@ -73,29 +73,20 @@ if (s[0] ne sm) then begin
 endif
 
 ; next, generate the ipar and fpar parameter arrays used for call_external
-nipar = long(8)
+nipar = long(6)
 ipar = lon64arr(nipar)
 
 ipar[0] = long64(2)    ; will need to be modified 
 ipar[1] = long64(SEMdata.detnumsx)
-ipar[2] = long64(SEMdata.detnumsy)
-ipar[3] = long64(SEMdata.mcenergynumbin)
-ipar[4] = long64(SEMdata.mcimx)
-ipar[5] = long64(SEMdata.numset)
-ipar[6] = long64(SEMdata.mpimx)
-ipar[7] = long64(SEMdata.mcenergynumbin)
+ipar[2] = long64(SEMdata.mpimx)
+ipar[3] = long64(SEMdata.numangles)
+ipar[4] = long64(SEMdata.mcenergynumbin)
+ipar[5] = long64(SEMdata.Esel+1)
 
-nfpar = long(8)
+nfpar = long(1)
 fpar = fltarr(nfpar)
 
 fpar[0] = SEMdata.detthetac
-fpar[1] = SEMdata.detsampleytilt
-fpar[2] = SEMdata.detW
-fpar[3] = SEMdata.detRi
-fpar[4] = SEMdata.detRo
-fpar[5] = SEMdata.mcsigstart
-fpar[6] = SEMdata.mcsigend
-fpar[7] = SEMdata.mcsigstep
 
 callname = 'SingleKosselPatternWrapper'
 
@@ -104,14 +95,14 @@ if keyword_set(single) then begin
 ; and here is the quaternion that represents the Euler angle triplet
   quats = Core_eu2qu( [SEMdata.detphi1, SEMdata.detphi, SEMdata.detphi2] )
   quats = reform(quats,4,1)
-  ipar[7] = 1
+  ipar[3] = 1
 
 ; initialize the simulated pattern array
-  ECPattern = fltarr(SEMdata.detnumsx,SEMdata.detnumsy)
-  ECPattern = reform(ECPattern,SEMdata.detnumsx,SEMdata.detnumsy,1)
+  KosselPattern = fltarr(SEMdata.detnumsx,SEMdata.detnumsy)
+  KosselPattern = reform(KosselPattern,SEMdata.detnumsx,SEMdata.detnumsy,1)
 
   res = call_external(SEMdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
-        ipar, fpar, ECPattern, quats, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
+        ipar, fpar, KosselPattern, quats, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
 
   if (res ne 1.0) then begin
     Core_print,'SingleKosselPatternWrapper return code = '+string(res,format="(F4.1)")
@@ -127,12 +118,10 @@ end else begin
     Core_Print,'',/blank
   endif
 
-  ECPattern = fltarr(SEMdata.detnumsx,SEMdata.detnumsy,SEMdata.numangles)
-
-; ipar[0] = long64(2)        ; causes SingleECPattern to reuse the detector arrays rather than recompute them each time
+  KosselPattern = fltarr(SEMdata.detnumsx,SEMdata.detnumsy,SEMdata.numangles)
 
   res = call_external(SEMdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
-        ipar, fpar, ECPattern, quaternions, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
+        ipar, fpar, KosselPattern, quaternions, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
 
   if (res ne 1.0) then begin
     Core_print,'SingleKosselPatternWrapper return code = '+string(res,format="(F4.1)")

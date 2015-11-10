@@ -98,6 +98,13 @@ end else begin
 		EBSDwritepreferences
 ; do a general cleanup of potentially open widgets
  		Core_Print,'Quitting program',/blank
+                if (XRegistered("KosselDetectorWidget") NE 0) then WIDGET_CONTROL, SEMwidget_s.detectorbase, /DESTROY
+                if (XRegistered("ECPDetectorWidget") NE 0) then WIDGET_CONTROL, SEMwidget_s.detectorbase, /DESTROY
+                if (XRegistered("EBSDDetectorWidget") NE 0) then WIDGET_CONTROL, SEMwidget_s.detectorbase, /DESTROY
+                if (XRegistered("EBSDPatternWidget") NE 0) then WIDGET_CONTROL, SEMwidget_s.patternbase, /DESTROY
+                if (XRegistered("ECPatternWidget") NE 0) then WIDGET_CONTROL, SEMwidget_s.patternbase, /DESTROY
+                if (XRegistered("KosselPatternWidget") NE 0) then WIDGET_CONTROL, SEMwidget_s.patternbase, /DESTROY
+                if (XRegistered("EBSDMCDisplayWidget") NE 0) then WIDGET_CONTROL, SEMwidget_s.MCdisplaybase, /DESTROY
 		WIDGET_CONTROL, SEMwidget_s.base, /DESTROY
 		!EXCEPT=1
 	endcase
