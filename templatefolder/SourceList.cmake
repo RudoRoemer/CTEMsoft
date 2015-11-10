@@ -9,6 +9,8 @@ set(EMSoft_RESOURCE_FILES
   ${APP_DIR}/BetheParameters.template
 )
 
+file(COPY "${EMsoft_SOURCE_DIR}/templatefolder" DESTINATION "${PROJECT_BINARY_DIR}/")
+
 
 #---------------------------------------------------------------------
 # Create the Installation Rules

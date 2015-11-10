@@ -757,16 +757,19 @@ if (mapmode.eq.'RoscaLambert') then
                 xy = (/ dble(i), dble(j) /) * delta
                 xx = dble(i-j/2)
                 yy = dble(j)*LPs%srt
+                
                 check = .TRUE.
                 if (xx.lt.0.D0) then
                    check = .FALSE.
                 else
                    if (xx.gt.0.D0) then
-                     yy = datan(yy/xx)
-                     if (yy.gt.cPi/6.D0) check = .FALSE.
+                     yy = atan(yy/xx)
+                     if (yy.gt.(LPs%Pi)/6.D0) check = .FALSE.
                    end if
+
                 end if
                 if (InsideHexGrid(xy).and.(check)) call AddkVector(ktail,cell,numk,xy,i,j,hexgrid)
+
             end do
           end do
 
@@ -811,13 +814,12 @@ res = .TRUE.
 ! first of all, take the absolute values and see if the transformed point lies inside the 
 ! rectangular box with edge lengths (1,sqrt(3)/2)
 ax = dabs(xy(1)-0.5D0*xy(2))
-ay = dabs(xy(2)*LPs%srt)
+ay = dabs(xy(2)*LPs%srt) 
 
-if ((ax.gt.1.D0).or.(ay.gt.LPS%srt)) res = .FALSE.
-
+if ((ax.gt.1.D0).or.(ay.gt.LPs%srt)) res = .FALSE. 
 ! then check for the inclined edge
 if (res) then
-  if (ax+ay*LPs%isrt.gt.1.D0) res = .FALSE.
+  if (ax+ay*LPs%isrt .gt. 1.D0) res = .FALSE. 
 end if
 
 end function InsideHexGrid

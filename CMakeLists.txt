@@ -168,9 +168,11 @@ include(${PROJECT_SOURCE_DIR}/examples/SourceList.cmake)
 
 # --------------------------------------------------------------------
 # Package the needed IDL Files
+include(${PROJECT_SOURCE_DIR}/IDL/SourceList.cmake)
 
 # --------------------------------------------------------------------
 # Package the needed PDF Manuals
+include(${PROJECT_SOURCE_DIR}/manuals/CMakeLists.txt)
 
 # --------------------------------------------------------------------
 # Package the OpenCL files
