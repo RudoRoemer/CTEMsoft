@@ -2340,7 +2340,7 @@ if (cell%SG%SYM_trigonal.eqv..TRUE.) then ! yes, it is
   if (sg.eq.146) stnum = 10
 
 ! point group bar3
-  if (sg.eq.147) stnum = 12
+  if (sg.eq.147) stnum = 13 !!!!!
   if (sg.eq.148) stnum = 13
 
 ! point group 32
