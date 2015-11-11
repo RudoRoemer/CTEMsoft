@@ -88,7 +88,7 @@ endif()
 
 #---------------------------------------------------------------------
 # Create the Installation Rules for the IDL VM
-install(DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/VMapps"
+install(DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/IDL/VMapps"
   COMPONENT Applications
   DESTINATION "."
 )
