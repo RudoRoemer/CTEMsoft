@@ -55,6 +55,7 @@ common EBSDmasks, circularmask
 
 common EBSD_rawdata, accum_e, accum_z, mLPNH, mLPSH
 common Kosseldata, KosselPattern
+common getenv_common, librarylocation
 
 status = 1
 
@@ -101,7 +102,7 @@ if keyword_set(single) then begin
   KosselPattern = fltarr(SEMdata.detnumsx,SEMdata.detnumsy)
   KosselPattern = reform(KosselPattern,SEMdata.detnumsx,SEMdata.detnumsy,1)
 
-  res = call_external(SEMdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
+  res = call_external(librarylocation+'/libEMSoftLib.dylib', callname, $
         ipar, fpar, KosselPattern, quats, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
 
   if (res ne 1.0) then begin
@@ -120,7 +121,7 @@ end else begin
 
   KosselPattern = fltarr(SEMdata.detnumsx,SEMdata.detnumsy,SEMdata.numangles)
 
-  res = call_external(SEMdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
+  res = call_external(librarylocation+'/libEMSoftLib.dylib', callname, $
         ipar, fpar, KosselPattern, quaternions, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
 
   if (res ne 1.0) then begin

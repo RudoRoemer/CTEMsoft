@@ -55,6 +55,9 @@ common EBSD_EMsoft, MCxtalname, MCmode, nsx, nsy, EkeV, Ehistmin, Ebinsize, dept
 
 common cancelcommon, cancel
 common Efitdisplaycommon, mask, maskready, expvector
+common getenv_common, librarylocation
+
+Efitdata.EMsoftpathname = Core_getenv()
 
 nset = size(param,/dimensions)
 nset = nset[0]
@@ -158,7 +161,7 @@ EBSDpattern = reform(EBSDpattern,Efitdata.detnumsx,Efitdata.detnumsy,1)
 callname = 'SingleEBSDPatternWrapper'
 faccum_e = float(accum_e)
 
-res = call_external(Efitdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
+res = call_external(librarylocation+'/libEMSoftLib.dylib', callname, $
       ipar, fpar, EBSDpattern, quats, faccum_e, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
 
 if (res ne 1.0) then begin

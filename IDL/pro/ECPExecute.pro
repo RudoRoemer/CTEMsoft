@@ -54,6 +54,7 @@ common EBSDmasks, circularmask
 
 common EBSD_rawdata, accum_e, accum_z, mLPNH, mLPSH
 common ECPdata, ECPattern
+common getenv_common, librarylocation
 
 status = 1
 
@@ -110,7 +111,7 @@ if keyword_set(single) then begin
   ECPattern = fltarr(SEMdata.detnumsx,SEMdata.detnumsy)
   ECPattern = reform(ECPattern,SEMdata.detnumsx,SEMdata.detnumsy,1)
 
-  res = call_external(SEMdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
+  res = call_external(librarylocation+'/libEMSoftLib.dylib', callname, $
         ipar, fpar, ECPattern, quats, faccum_e, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
 
   if (res ne 1.0) then begin
@@ -129,9 +130,7 @@ end else begin
 
   ECPattern = fltarr(SEMdata.detnumsx,SEMdata.detnumsy,SEMdata.numangles)
 
-; ipar[0] = long64(2)        ; causes SingleECPattern to reuse the detector arrays rather than recompute them each time
-
-  res = call_external(SEMdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
+  res = call_external(librarylocation+'/libEMSoftLib.dylib', callname, $
         ipar, fpar, ECPattern, quaternions, faccum_e, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
 
   if (res ne 1.0) then begin
