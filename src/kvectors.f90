@@ -139,11 +139,12 @@ character(*),INTENT(IN)                 :: mapmode      !< controls the type of 
 logical,INTENT(IN),OPTIONAL             :: usehex       !< hexagonal mode for RoscaLambert mapmode
 
 integer(kind=irg)                       :: istat,i,j,istart,iend,jstart,jend, imin, imax, jmin, jmax, ii, jj
-real(kind=dbl)                          :: glen, gan(3), gperp(3), kstar(3), delta, xy(2), xx, yy
+real(kind=dbl)                          :: glen, gan(3), gperp(3), kstar(3), delta, xy(2), xx, yy, eps
 logical                                 :: hexgrid = .FALSE., yes = .TRUE., flip = .TRUE., check
 character(3)                            :: grid
 type(kvectorlist),pointer               :: ktail, ktmp
 real(kind=sgl)                          :: xytest(2), xxtest, yytest
+
 ! first, if khead already exists, delete it
  !if (associated(khead)) then                    ! deallocate the entire linked list
  !   call Delete_kvectorlist(khead)
@@ -632,24 +633,23 @@ if (mapmode.eq.'RoscaLambert') then
           iend = npx
           jstart = 0
           jend = npx
+          eps = 1.0D-4 ! 0.0*delta
             do j=jstart,jend
               do i=istart,iend
-                  xytest = (/ float(i), float(j) /) * delta
-                  xxtest = float(i-j/2)
-                  yytest = float(j)*sngl(LPs%srt)
+! there is a potential problem in this routine
                   xy = (/ dble(i), dble(j) /) * delta
-                  xx = dble(i-j/2)
+                  xx = dble(i)-dble(j)/2.D0
                   yy = dble(j)*LPs%srt
                   
                   check = .TRUE.
-                  if (xx.lt.0.D0) then
-                    check = .FALSE.
-                  else
-                    if (xx.gt.0.D0) then
-                      yy = atan(yytest/xxtest)
-                      if (yy .lt. LPs%Pi/6.D0) check = .FALSE.
-                    end if
-                  end if
+                   if (xx.lt.0.D0) then
+                     check = .FALSE.
+                   else
+                     if (xx.ge.0.D0) then
+                       yy = datan2(yy,xx)
+                       if (yy .lt. (LPs%Pi/6.D0-eps)) check = .FALSE.
+                     end if
+                   end if
                   if (InsideHexGrid(xy).and.(check)) call AddkVector(ktail,cell,numk,xy,i,j,hexgrid, addSH = yes)
               end do
             end do
@@ -660,6 +660,7 @@ if (mapmode.eq.'RoscaLambert') then
         iend = npx
         jstart = 0
         jend = npx
+        eps = 1.0D-4
           do j=jstart,jend
             do i=istart,iend
                 xy = (/ dble(i), dble(j) /) * delta
@@ -669,9 +670,9 @@ if (mapmode.eq.'RoscaLambert') then
                 if (xx.lt.0.D0) then
                    check = .FALSE.
                 else
-                   if (xx.gt.0.D0) then
-                     yy = datan(yy/xx)
-                     if (yy.gt.cPi/3.D0) check = .FALSE.
+                   if (xx.ge.0.D0) then
+                     yy = datan2(yy,xx)
+                     if (yy.gt.(cPi/3.D0-eps)) check = .FALSE.
                    end if
                 end if
                 if (InsideHexGrid(xy).and.(check)) call AddkVector(ktail,cell,numk,xy,i,j,hexgrid, addSH = yes)
@@ -682,22 +683,24 @@ if (mapmode.eq.'RoscaLambert') then
         if ((cell%SG%SYM_trigonal).and.(cell%SG%SYM_second)) then
           call FatalError('Calckvectors: ','rhombohedral setting has not been implemented yet, use hexagonal setting instead')
         else
+! there is a potential problem in this routine
           istart = 0
           iend = npx
           jstart = 0
           jend = npx
+          eps = 1.0D-4
             do j=jstart,jend
               do i=istart,iend
                   xy = (/ dble(i), dble(j) /) * delta
-                  xx = dble(i-j/2)
+                  xx = dble(i)-dble(j)/2.D0
                   yy = dble(j)*LPs%srt
                   check = .TRUE.
                   if (xx.lt.0.D0) then
                     check = .FALSE.
                   else
-                    if (xx.gt.0.D0) then
-                      yy = datan(yy/xx)
-                      if (yy.lt.cPi/6.D0) check = .FALSE.
+                    if (xx.ge.0.D0) then
+                      yy = datan2(yy,xx)
+                      if (yy .lt. (LPs%Pi/6.D0-eps)) check = .FALSE.
                     end if
                   end if
                   if (InsideHexGrid(xy).and.(check)) call AddkVector(ktail,cell,numk,xy,i,j,hexgrid)
@@ -710,18 +713,19 @@ if (mapmode.eq.'RoscaLambert') then
         iend = npx
         jstart = 0
         jend = npx
+        eps = 1.0D-4
           do j=jstart,jend
             do i=istart,iend
                 xy = (/ dble(i), dble(j) /) * delta
-                xx = dble(i-j/2)
+                xx = dble(i)-dble(j)/2.D0
                 yy = dble(j)*LPs%srt
                 check = .TRUE.
                 if (xx.lt.0.D0) then
                    check = .FALSE.
                 else
-                   if (xx.gt.0.D0) then
-                     yy = datan(yy/xx)
-                     if (yy.gt.cPi/3.D0) check = .FALSE.
+                   if (xx.ge.0.D0) then
+                     yy = datan2(yy,xx)
+                     if (yy.gt.(cPi/3.D0-eps)) check = .FALSE.
                    end if
                 end if
                 if (InsideHexGrid(xy).and.(check)) call AddkVector(ktail,cell,numk,xy,i,j,hexgrid)
@@ -733,18 +737,19 @@ if (mapmode.eq.'RoscaLambert') then
         iend = npx
         jstart = 0
         jend = npx
+        eps = 1.0D-4
           do j=jstart,jend
             do i=istart,iend
                 xy = (/ dble(i), dble(j) /) * delta
-                xx = dble(i-j/2)
+                xx = dble(i)-dble(j)/2.D0
                 yy = dble(j)*LPs%srt
                 check = .TRUE.
                 if (xx.lt.0.D0) then
                    check = .FALSE.
                 else
-                   if (xx.gt.0.D0) then
-                     yy = datan(yy/xx)
-                     if (yy.gt.cPi/6.D0) check = .FALSE.
+                   if (xx.ge.0.D0) then
+                     yy = datan2(yy,xx)
+                     if (yy.gt.(cPi/6.D0-eps)) check = .FALSE.
                    end if
                 end if
                 if (InsideHexGrid(xy).and.(check)) call AddkVector(ktail,cell,numk,xy,i,j,hexgrid, addSH = yes)
@@ -756,19 +761,20 @@ if (mapmode.eq.'RoscaLambert') then
         iend = npx
         jstart = 0
         jend = npx
+        eps = 1.0D-4
           do j=jstart,jend
             do i=istart,iend
                 xy = (/ dble(i), dble(j) /) * delta
-                xx = dble(i-j/2)
+                xx = dble(i)-dble(j)/2.D0
                 yy = dble(j)*LPs%srt
 
                 check = .TRUE.
                 if (xx.lt.0.D0) then
                    check = .FALSE.
                 else
-                   if (xx.gt.0.D0) then
-                     yy = atan2(yy, xx)
-                     if (yy.gt.(LPs%Pi)/6.D0) check = .FALSE.
+                   if (xx.ge.0.D0) then
+                     yy = datan2(yy, xx)
+                     if (yy.gt.(LPs%Pi/6.D0-eps)) check = .FALSE.
                    end if
 
                 end if
