@@ -46,6 +46,9 @@ common Efit_data_common, Efitdata
 
 common EBSD_EMsoft, MCxtalname, MCmode, nsx, nsy, EkeV, Ehistmin, Ebinsize, depthmax, depthstep, MCsig, MComega, $
                     numEbins, numzbins, accum_e, accum_z, Masterenergyfile, npx, npy, nnE, numset, mLPNH, mLPSH, Masterxtalname, expEBSDpattern, EBSDpattern
+common getenv_common, librarylocation
+
+Efitdata.EMsoftpathname = Core_getenv()
 
 ; first convert the Euler angle triplet (in degrees) to a quaternion
 Efitdata.quaternion = Core_eu2qu( [Efitdata.detphi1, Efitdata.detphi, Efitdata.detphi2] )
@@ -82,7 +85,7 @@ EBSDpattern = reform(EBSDpattern,Efitdata.detnumsx,Efitdata.detnumsy,1)
 
 callname = 'SingleEBSDPatternWrapper'
 
-res = call_external(Efitdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
+res = call_external(librarylocation+'/libEMSoftLib.dylib', callname, $
       ipar, fpar, EBSDpattern, quats, float(accum_e), mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
 
 EBSDpattern = reform(EBSDpattern)

@@ -51,6 +51,7 @@ common EBSDpatterns, pattern, image, finalpattern
 common EBSD_anglearrays, euler, quaternions
 common EBSDmasks, circularmask
 common EBSD_rawdata, accum_e, accum_z, mLPNH, mLPSH
+common getenv_common, librarylocation
 
 status = 1
 
@@ -109,7 +110,7 @@ if keyword_set(single) then begin
   EBSDpattern = fltarr(SEMdata.detnumsx,SEMdata.detnumsy)
   EBSDpattern = reform(EBSDpattern,SEMdata.detnumsx,SEMdata.detnumsy,1)
 
-  res = call_external(SEMdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
+  res = call_external(librarylocation+'/libEMSoftLib.dylib', callname, $
         ipar, fpar, EBSDpattern, quats, faccum_e, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
 
   if (res ne 1.0) then begin
@@ -136,7 +137,7 @@ end else begin ; computation of multiple EBSDpatterns
 ; initialize the simulated pattern array
   EBSDpattern = fltarr(SEMdata.detnumsx,SEMdata.detnumsy,SEMdata.numangles)
 
-  res = call_external(SEMdata.EMsoftpathname+'Build/Bin/libEMSoftLib.dylib', callname, $
+  res = call_external(librarylocation+'/libEMSoftLib.dylib', callname, $
         ipar, fpar, EBSDpattern, quaternions, faccum_e, mLPNH, mLPSH, /F_VALUE, /VERBOSE, /SHOW_ALL_OUTPUT)
 
   if (res ne 1.0) then begin

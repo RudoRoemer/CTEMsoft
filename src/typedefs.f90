@@ -329,8 +329,9 @@ integer(kind=irg),parameter       :: PGLaueinv(32) = (/1,1,2,2,2,3,3,3,4,4,4,5,5
                                                        7,7,7,8,8,8,9,9,9,9,10,10,11,11,11/)
 
 !> 3D point groups mapped onto kvector sampling type (used for master pattern computations) [-1 for special cases]
-integer(kind=irg),parameter       :: PGSamplingType(32) = (/1,2,3,4,5,5,5,6,5,5,6,6,7,-1,9,-1, &
-                                                            -1,-1,-1,-1,15,12,17,16,18,-1,19,3,6,6,8,9 /)
+integer(kind=irg),parameter       :: PGSamplingType(32) = (/1, 2, 3, 4, 5, 5, 5, 6, 5, 5, &
+                                                            6, 6, 7,-1, 9,-1,-1,-1,-1,-1, &
+                                                           15,12,17,16,18,-1,19, 3, 6, 6, 8, 9 /)
 
 !> 31 diffraction group symbols in BESR order
 character(5),parameter  :: DG(31) =(/'    1','   1R','    2','   2R','  21R','   mR', &

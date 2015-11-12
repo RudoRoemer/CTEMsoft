@@ -20,8 +20,8 @@ endif()
 include(CMakeParseArguments)
   
 set(EMsoft_VER_MAJOR "3")
-set(EMsoft_VER_MINOR "x")
-set(EMsoft_VER_PATCH "x")
+set(EMsoft_VER_MINOR "0")
+set(EMsoft_VER_PATCH "0")
 
 
 # ---------- Setup output Directories -------------------------

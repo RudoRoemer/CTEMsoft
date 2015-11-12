@@ -1,5 +1,5 @@
 ;
-; Copyright (c) 2014, Marc De Graef/Carnegie Mellon University
+; Copyright (c) 2015, Marc De Graef/Carnegie Mellon University
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are 
@@ -36,17 +36,28 @@
 ;> @brief read the environment variable for the EMsoft path from a json file
 ;
 ;> @date 10/08/15 MDG 1.0 initial implementation 
+;> @date 11/11/15 MDG 1.1 added functionality for release version library location
 ;--------------------------------------------------------------------------
 function Core_getenv,data=data
+
+common getenv_common, librarylocation
 
 ; first parse the json configuration file
 result = json_parse('~/.config/EMsoft/EMsoftConfig.json',/toarray)
 
-; then extact either the main path or the data path, depending on the keyword
+
+; then extract either the main path or the data path, depending on the keyword
 if keyword_set(data) then begin
   z = result['EMdatapathname']
 end else begin
   z = result['EMsoftpathname']
+; In the development version of this package, the dynamical library will be located in the 
+; the EMsoftpathname/Build/Bin folder.
+; In the release version, the user is supposed to place the libEMSoftLib.dylib file
+; in the /opt/local/lib/libgcc folder, so we need to make sure that we set the 
+; librarylocation variable correctly... 
+  r = result['Release']
+  if (r eq 'No') then librarylocation = z+'Build/Bin' else librarylocation='/opt/local/lib/ligcc'
 endelse
 
 return,z

@@ -73,18 +73,10 @@ end else begin
 		de = delist[SEMdata.imageformat]
 		fn = DIALOG_PICKFILE(/write,default_extension=de,path=SEMdata.pathname,title='enter prefix for image series file name')
 		fn = strsplit(fn,'.',/extract)
-; changed old code to read HDF5 formatted data file [10/11/15, MDG]
-                file_id = H5F_OPEN(EMdatapathname+'/'+SEMdata.EBSDpatternfilename)
-                group_id = H5G_OPEN(file_id,'EMData')
-                dset_id = H5D_OPEN(group_id,'EBSDpatterns')
-                q = H5D_READ(dset_id)
-print,'data set dimensions'
-help,q
-                H5D_close,dset_id
-                H5G_close,group_id
-                H5F_close,file_id
+                patterns = pattern
+
 		for i=0,SEMdata.numangles-1 do begin
-  		  pattern = reform(q[*,*,i])
+  		  pattern = reform(patterns[*,*,i])
 		  EBSDshowpattern, /single, /nodisplay
 		  if (SEMdata.showcircularmask eq 1) then im = finalpattern*byte(circularmask) else im=finalpattern
 		  filename = fn[0]+string(i+1,format="(I5.5)")+'.'+fn[1]
@@ -97,6 +89,7 @@ help,q
 		end
   		close,1
 		  Core_Print,'All image files generated'
+                pattern = patterns
 	endcase
 
 
