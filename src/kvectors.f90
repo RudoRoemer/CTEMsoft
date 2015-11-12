@@ -143,7 +143,7 @@ real(kind=dbl)                          :: glen, gan(3), gperp(3), kstar(3), del
 logical                                 :: hexgrid = .FALSE., yes = .TRUE., flip = .TRUE., check
 character(3)                            :: grid
 type(kvectorlist),pointer               :: ktail, ktmp
-
+real(kind=sgl)                          :: xytest(2), xxtest, yytest
 ! first, if khead already exists, delete it
  !if (associated(khead)) then                    ! deallocate the entire linked list
  !   call Delete_kvectorlist(khead)
@@ -634,16 +634,20 @@ if (mapmode.eq.'RoscaLambert') then
           jend = npx
             do j=jstart,jend
               do i=istart,iend
+                  xytest = (/ float(i), float(j) /) * delta
+                  xxtest = float(i-j/2)
+                  yytest = float(j)*sngl(LPs%srt)
                   xy = (/ dble(i), dble(j) /) * delta
                   xx = dble(i-j/2)
                   yy = dble(j)*LPs%srt
+                  
                   check = .TRUE.
                   if (xx.lt.0.D0) then
                     check = .FALSE.
                   else
                     if (xx.gt.0.D0) then
-                      yy = datan(yy/xx)
-                      if (yy.lt.cPi/6.D0) check = .FALSE.
+                      yy = atan(yytest/xxtest)
+                      if (yy .lt. LPs%Pi/6.D0) check = .FALSE.
                     end if
                   end if
                   if (InsideHexGrid(xy).and.(check)) call AddkVector(ktail,cell,numk,xy,i,j,hexgrid, addSH = yes)
@@ -757,13 +761,13 @@ if (mapmode.eq.'RoscaLambert') then
                 xy = (/ dble(i), dble(j) /) * delta
                 xx = dble(i-j/2)
                 yy = dble(j)*LPs%srt
-                
+
                 check = .TRUE.
                 if (xx.lt.0.D0) then
                    check = .FALSE.
                 else
                    if (xx.gt.0.D0) then
-                     yy = atan(yy/xx)
+                     yy = atan2(yy, xx)
                      if (yy.gt.(LPs%Pi)/6.D0) check = .FALSE.
                    end if
 
@@ -805,7 +809,6 @@ IMPLICIT NONE
 
 real(kind=dbl),INTENT(IN)       :: xy(2)
 logical                         :: res
-
 real(kind=dbl)                  :: ax, ay
 
 ! assume it is a good point
@@ -813,8 +816,8 @@ res = .TRUE.
 
 ! first of all, take the absolute values and see if the transformed point lies inside the 
 ! rectangular box with edge lengths (1,sqrt(3)/2)
-ax = dabs(xy(1)-0.5D0*xy(2))
-ay = dabs(xy(2)*LPs%srt) 
+ax = abs(xy(1)-0.5D0*xy(2))
+ay = abs(xy(2)*LPs%srt)
 
 if ((ax.gt.1.D0).or.(ay.gt.LPs%srt)) res = .FALSE. 
 ! then check for the inclined edge

@@ -368,7 +368,7 @@ SamplingType = PGSamplingType(isym)
 if ((SamplingType.eq.-1).or.(isym.eq.14).or.(isym.eq.26)) then 
   SamplingType = getHexvsRho(cell,isym)
   write (*,*) ' --> ',cell%SYM_SGnum, isym, SamplingType,cell%SG%SYM_second,cell%SYM_SGset 
-end if
+end if 
 
 ! if the point group is trigonal or hexagonal, we need to switch usehex to .TRUE. so that
 ! the program will use the hexagonal sampling method
