@@ -832,20 +832,20 @@ mode can be visualized using this interface.
 
 
 
-\section{Calling \textsf{EMEBSD} and \textsf{EMECP} from another program\label{sec:external}}
+\section{Calling pattern generation routines from another program\label{sec:external}}
 With the creation of release 3.0, we have changed the library format from static to shared, so that the main package
-library now has the name (on Mac OS X) \textsf{EMSoftLib.dylib}.  As a direct consequence of this change, several of 
-the subroutines can now be called from other languages.  In the present release (3.0), we make two of those routines
-available to the user: \textsf{SingleEBSDpatternWrapper} and \textsf{SingleECPatternWrapper}. Each of these routines
-takes two arguments, \textsf{argc} and \textsf{argv}, where \textsf{argc} is the number of arguments ($6$ in each case)
-and \textsf{argv} contains a series of pointers to each of the arrays that need to be passed on to the wrapper routines.
+library now has the name (on Mac OS X) \textsf{libEMSoftLib.dylib}.  As a direct consequence of this change, several of 
+the subroutines can now be called from other languages.  In the present release (3.0), we make three of those routines
+available to the user: \textsf{SingleEBSDPatternWrapper}, \textsf{SingleECPatternWrapper} and  \textsf{SingleKosselPatternWrapper}. Each of these routines
+takes two arguments, \textsf{argc} and \textsf{argv}, where \textsf{argc} is the number of arguments
+and \textsf{argv} contains a series of pointers to each of the arrays that need to be passed on to the wrapper routines.\footnote{Note 
+that this has only been tested on Mac OS X with the gfortran 5.2.0 compiler and IDL's \textsf{call\_external} functionality.
+There are at the moment no guarantees that this will work with other configurations, but we would appreciate any feedback, error messages, and
+so forth for other platforms and environments so that we can work towards making these routines more generally available for direct linking between programs.
+For details on the fortran-C bindings, we recommend the fortran-2008 language definition at http://j3-fortran.org/doc/year/10/10-007r1.pdf.}
 
-Note that this has only been tested on Mac OS X with the gfortran 5.2.0 compiler and IDL's \textsf{call\_external} functionality.
-There are no guarantees that this will work with other configurations, but we would appreciate any feedback, error messages, and
-so forth so that we can work towards making these routines more generally available for direct linking between programs.
-
-The wrapper routines have the following function definitions:
-\begin{verbatim}
+The wrapper routines have the following function declarations:
+{\small\begin{verbatim}
 function SingleEBSDPatternWrapper(argc, argv) bind(c, name='SingleEBSDPatternWrapper') 
 
 use,INTRINSIC :: ISO_C_BINDING
@@ -855,9 +855,9 @@ IMPLICIT NONE
 INTEGER(c_size_t), VALUE, INTENT(IN)            :: argc 
 type(c_ptr), dimension(argc), INTENT(INOUT)     :: argv
 REAL(c_float)                                   :: SingleEBSDPatternWrapper
-\end{verbatim}
-and
-\begin{verbatim}
+\end{verbatim}}
+
+{\small\begin{verbatim}
 function SingleECPatternWrapper(argc, argv) bind(c, name='SingleECPatternWrapper') 
 	
 use,INTRINSIC :: ISO_C_BINDING
@@ -867,18 +867,29 @@ IMPLICIT NONE
 INTEGER(c_size_t), VALUE, INTENT(IN)            :: argc 
 type(c_ptr), dimension(argc), INTENT(INOUT)     :: argv
 REAL(c_float)                                  		:: SingleECPatternWrapper
-\end{verbatim}
-and use the fortran 2003 \textsf{ISO\_C\_BINDING} module; each function returns a single 4-byte real which is equal to $1.0$ when the 
-function properly returns.  The computed 
-EBSD or ECP pattern is returned via a pointer to the corresponding array.  Each function takes a list of $6$ \textsf{c\_ptr}s
-in the \textsf{argv} input array.  The order of the pointers is the same for each function but the structure of the arrays is different.  Note that
-the \textsf{accum\_e}, \textsf{mLPNH} and \textsf{mLPSH} arrays must be read from the Monte Carlo and master pattern HDF5 files and
-passed on to the wrapper routine. 
+\end{verbatim}}
+and 
+{\small\begin{verbatim}
+function SingleKosselPatternWrapper(argc, argv) bind(c, name='SingleKosselPatternWrapper') 
+	
+use,INTRINSIC :: ISO_C_BINDING
+
+IMPLICIT NONE
+
+INTEGER(c_size_t), VALUE, INTENT(IN)            :: argc 
+type(c_ptr), dimension(argc), INTENT(INOUT)     :: argv
+REAL(c_float)                                  		:: SingleKosselPatternWrapper
+\end{verbatim}}
+
+\noindent and use the fortran 2003 \textsf{ISO\_C\_BINDING} module; each function returns a single 4-byte real which is equal to $1.0$ when the 
+function properly returns.  The computed EBSD, ECP or Kossel pattern is returned via a pointer to the corresponding array.  Each function takes a list of \textsf{c\_ptr}s
+in the \textsf{argv} input array.  The order of the pointers is roughly the same for each function but the structure of the arrays that they point to 
+may be different.  
 
 \subsection{EBSD pattern calculation}
 The pointers that are passed on to the EBSD pattern calculation wrapper routine must point to the following arrays:
 \begin{enumerate}
-	\item \textsf{ipar}: an array of $6$ integers of fortran type \textsf{c\_size\_t} ($8$-byte integers) that represent the array dimensions
+	\item \textsf{ipar}: an array of $8$ integers of fortran type \textsf{c\_size\_t} ($8$-byte integers) that represent the array dimensions
 	of the other input arrays.  The components of \textsf{ipar} are:
 		\begin{enumerate}
 			\item[\textsf{ipar}(1)] if $0$, then the complete detector geometry is computed; if $1$, then the stored detector geometry is used.  This is useful (i.e., speeds things up a little)
@@ -888,8 +899,10 @@ The pointers that are passed on to the EBSD pattern calculation wrapper routine 
 			\item[\textsf{ipar}(4)] number of energy bins $n_E$ in Monte Carlo \textsf{accum\_e} array
 			\item[\textsf{ipar}(5)] number $n_{mc}$ of x or y pixels in Monte Carlo \textsf{accum\_e} array (total $2n_{mc}+1$)
 			\item[\textsf{ipar}(6)] number $n_{mp}$ of pixels in modified Lambert projected EBSD master pattern (total $2n_{mp}+1$)
+			\item[\textsf{ipar}(7)] number of special positions $n_{set}$ for which the master patterns have been computed
+			\item[\textsf{ipar}(8)] number of orientations $n_q$ (quaternions) for which patterns must be computed
 		\end{enumerate}
-	\item \textsf{fpar}: an array of $13$ floating point numbers of the type \textsf{c\_float} (4-byte reals) that represent several detector geometry parameters. The 
+	\item \textsf{fpar}: an array of $9$ floating point numbers of the type \textsf{c\_float} (4-byte reals) that represent several detector geometry parameters. The 
 	components of \textsf{fpar} are:
 	\begin{enumerate}
 		\item[\textsf{fpar}(1)] pattern center x-coordinate [in units of scintillator pixels]
@@ -901,20 +914,23 @@ The pointers that are passed on to the EBSD pattern calculation wrapper routine 
 		\item[\textsf{fpar}(7)] distance between illuminated point and pattern center [micron]
 		\item[\textsf{fpar}(8)] beam current [nA]
 		\item[\textsf{fpar}(9)] dwell time [micro s]
-		\item[\textsf{fpar}(10-13)] quaternion components representing crystal orientation [scalar part first, then vector part]
 	\end{enumerate}
-	\item \textsf{EBSDpattern}: a floating point array of type \textsf{c\_float} with dimensions $s_x\times s_y$; memory must be allocated by the calling program.
+	\item \textsf{EBSDpattern}: a floating point array of type \textsf{c\_float} with dimensions $s_x\times s_y\times n_q$; memory must be allocated by the calling program.
+	\item \textsf{quats}: a floating point array of type \textsf{c\_float} with dimensions $4\times n_q$, holding the individual quaternions corresponding to the crystal
+	orientations for which the EBSD patterns must be computed (note that quaternions have their scalar part as the first element, followed by the three-component vector part).
 	\item \textsf{accum\_e}: a floating point array with the output from the Monte Carlo program; array dimensions $n_E\times n_{mc}\times n_{mc}$.
-	\item \textsf{mLPNH}: a floating point array with the Northern hemisphere portion of the EBSD master pattern; array dimensions $n_{mp}\times n_{mp}\times n_E$.
-	\item \textsf{mLPSH}: a floating point array with the Southern hemisphere portion of the EBSD master pattern; array dimensions $n_{mp}\times n_{mp}\times n_E$.
+	\item \textsf{mLPNH}: a floating point array with the Northern hemisphere portion of the EBSD master pattern; array dimensions $n_{mp}\times n_{mp}\times n_E\times n_{set}$.
+	\item \textsf{mLPSH}: a floating point array with the Southern hemisphere portion of the EBSD master pattern; array dimensions $n_{mp}\times n_{mp}\times n_E\times n_{set}$.
 \end{enumerate}
-Note that all six arrays must be properly defined by the calling program, and the pointer must be passed in the stated order in the \textsf{argv} array.
+Note that all seven arrays must be properly defined by the calling program, and the pointers must be passed in the stated order in the \textsf{argv} array.  It is 
+the responsibility of the calling program to fill the \textsf{quats} array with the appropriate list of quaternions, and to read the \textsf{accum\_e}, \textsf{mLPNH} and
+\textsf{mLPSH} arrays from the appropriate HDF5 files; nearly all of the array dimensions needed for the \textsf{ipar} array can be
+extracted from the HDF5 variables.  After the routine has completed its calculations, the desired EBSD patterns can be found in the array \textsf{EBSDpattern}.
 
-\newpage
 \subsection{ECP pattern calculation}
 The pointers that are passed on to the ECP pattern calculation wrapper routine must point to the following arrays:
 \begin{enumerate}
-	\item \textsf{ipar}: an array of $7$ integers of fortran type \textsf{c\_size\_t} ($8$-byte integers) that represent the array dimensions
+	\item \textsf{ipar}: an array of $8$ integers of fortran type \textsf{c\_size\_t} ($8$-byte integers) that represent the array dimensions
 	of the other input arrays.  The components of \textsf{ipar} are:
 		\begin{enumerate}
 			\item[\textsf{ipar}(1)] if $0$, then the complete detector geometry is computed; if $1$, then the stored detector geometry is used.  This is useful (i.e., speeds things up a little)
@@ -924,9 +940,10 @@ The pointers that are passed on to the ECP pattern calculation wrapper routine m
 			\item[\textsf{ipar}(4)] number of sample tilt angles $n_s$ in Monte Carlo \textsf{accum\_e} array
 			\item[\textsf{ipar}(5)] number $n_{mc}$ of x or y pixels in Monte Carlo \textsf{accum\_e} array (total $2n_{mc}+1$)
 			\item[\textsf{ipar}(6)] number $n_{set}$ of independent atom positions for which a master pattern is available
-			\item[\textsf{ipar}(7)] number $n_{mp}$ of pixels in modified Lambert projected EBSD master pattern (total $2n_{mp}+1$)
+			\item[\textsf{ipar}(7)] number $n_{mp}$ of pixels in modified Lambert projected ECP master pattern (total $2n_{mp}+1$)
+			\item[\textsf{ipar}(8)] number of orientations $n_q$ (quaternions) for which patterns must be computed
 		\end{enumerate}
-	\item \textsf{fpar}: an array of $12$ floating point numbers of the type \textsf{c\_float} (4-byte reals) that represent several detector geometry parameters. The 
+	\item \textsf{fpar}: an array of $8$ floating point numbers of the type \textsf{c\_float} (4-byte reals) that represent several detector geometry parameters. The 
 	components of \textsf{fpar} are:
 	\begin{enumerate}
 		\item[\textsf{fpar}(1)] illumination cone semi-opening angle [degrees]
@@ -937,14 +954,48 @@ The pointers that are passed on to the ECP pattern calculation wrapper routine m
 		\item[\textsf{fpar}(6)] start angle from Monte Carlo input file [degrees]
 		\item[\textsf{fpar}(7)] end angle from Monte Carlo input file [degrees]
 		\item[\textsf{fpar}(8)] angle step size from Monte Carlo input file [degrees]
-		\item[\textsf{fpar}(9-12)] quaternion components representing crystal orientation [scalar part first, then vector part]
 	\end{enumerate}
-	\item \textsf{ECpattern}: a floating point array of type \textsf{c\_float} with dimensions $s_x\times s_y$; memory must be allocated by the calling program.
+	\item \textsf{ECpattern}: a floating point array of type \textsf{c\_float} with dimensions $s_x\times s_y\times n_q$; memory must be allocated by the calling program.
+	\item \textsf{quats}: a floating point array of type \textsf{c\_float} with dimensions $4\times n_q$, holding the individual quaternions corresponding to the crystal
+	orientations for which the EBSD patterns must be computed (note that quaternions have their scalar part as the first element, followed by the three-component vector part).
 	\item \textsf{accum\_e}: a floating point array with the output from the Monte Carlo program; array dimensions $n_{s}\times n_{mc}\times n_{mc}$.
 	\item \textsf{mLPNH}: a floating point array with the Northern hemisphere portion of the ECP master pattern; array dimensions $n_{mp}\times n_{mp}\times n_{set}$.
 	\item \textsf{mLPSH}: a floating point array with the Southern hemisphere portion of the ECP master pattern; array dimensions $n_{mp}\times n_{mp}\times n_{set}$.
 \end{enumerate}
-Note that all six arrays must be properly defined by the calling program, and the pointer must be passed in the stated order in the \textsf{argv} array.
+Note that all seven arrays must be properly defined by the calling program, and the pointer must be passed in the stated order in the \textsf{argv} array.   It is 
+the responsibility of the calling program to fill the \textsf{quats} array with the appropriate list of quaternions, and to read the \textsf{accum\_e}, \textsf{mLPNH} and
+\textsf{mLPSH} arrays from the appropriate HDF5 files; nearly all of the array dimensions needed for the \textsf{ipar} array can be
+extracted from the HDF5 variables.  After the routine has completed its calculations, the desired electron channeling patterns can be found in the array \textsf{EBSDpattern}.
+
+\subsection{Kossel pattern calculation}
+The pointers that are passed on to the Kossel pattern calculation wrapper routine must point to the following arrays:
+\begin{enumerate}
+	\item \textsf{ipar}: an array of $6$ integers of fortran type \textsf{c\_size\_t} ($8$-byte integers) that represent the array dimensions
+	of the other input arrays.  The components of \textsf{ipar} are:
+		\begin{enumerate}
+			\item[\textsf{ipar}(1)] if $0$, then the complete detector geometry is computed; if $1$, then the stored detector geometry is used.  This is useful (i.e., speeds things up a little)
+			when the geometry does not change between consecutive pattern simulations.
+			\item[\textsf{ipar}(2)] number of Kossel pattern pixels $s_x$ along horizontal direction
+\			\item[\textsf{ipar}(3)] number $n_{mp}$ of pixels in modified Lambert projected Kossel master pattern (total $2n_{mp}+1$)
+			\item[\textsf{ipar}(4)] number of orientations $n_q$ (quaternions) for which patterns must be computed
+			\item[\textsf{ipar}(5)] number of sample depths $n_d$ for which the master pattern was computed
+			\item[\textsf{ipar}(6)] integer identifying the depth for which the pattern(s) need to be computed.
+		\end{enumerate}
+	\item \textsf{fpar}: an array of $1$ floating point number of the type \textsf{c\_float} (4-byte reals) that represent several detector geometry parameters. The 
+	components of \textsf{fpar} are:
+	\begin{enumerate}
+		\item[\textsf{fpar}(1)] semi-opening angle of the Kossel pattern [degrees]
+	\end{enumerate}
+	\item \textsf{Kosselpattern}: a floating point array of type \textsf{c\_float} with dimensions $s_x\times s_y\times n_q$; memory must be allocated by the calling program.
+	\item \textsf{quats}: a floating point array of type \textsf{c\_float} with dimensions $4\times n_q$, holding the individual quaternions corresponding to the crystal
+	orientations for which the EBSD patterns must be computed (note that quaternions have their scalar part as the first element, followed by the three-component vector part).
+	\item \textsf{mLPNH}: a floating point array with the Northern hemisphere portion of the ECP master pattern; array dimensions $n_{mp}\times n_{mp}\times n_{d}$.
+	\item \textsf{mLPSH}: a floating point array with the Southern hemisphere portion of the ECP master pattern; array dimensions $n_{mp}\times n_{mp}\times n_{d}$.
+\end{enumerate}
+Note that all six arrays must be properly defined by the calling program, and the pointer must be passed in the stated order in the \textsf{argv} array.   It is 
+the responsibility of the calling program to fill the \textsf{quats} array with the appropriate list of quaternions, and to read the \textsf{mLPNH} and
+\textsf{mLPSH} arrays from the appropriate HDF5 files; nearly all of the array dimensions needed for the \textsf{ipar} array can be
+extracted from the HDF5 variables.  After the routine has completed its calculations, the desired Kossel patterns can be found in the array \textsf{Kosselpattern}.
 
 
 
@@ -960,8 +1011,8 @@ interface window is shown in Fig.~\ref{fig:EBSDmain}, and consists of the follow
 	\item Monte Carlo data file name;
 	\item Master pattern data file name;
 	\item Information window: this shows program messages about file loading, changed parameters, etc.
-	\item Button row: allows the user to load an EBSD/ECP/Kossel master file (which will also automatically load the 
-	corresponding MC file).  The \button{Define detector}\ will be described in more detail below.  The user also has the option to 
+	\item Button row: allows the user to load an EBSD/ECP/Kossel master file, which will also automatically load the 
+	corresponding MC file (except for the Kossel mode).  The \button{Define detector}\ will be described in more detail below.  The user also has the option to 
 	create a log-file that will store all the entries shown also in the information window.
 \end{itemize}
 
@@ -971,16 +1022,35 @@ interface window is shown in Fig.~\ref{fig:EBSDmain}, and consists of the follow
 \caption{\label{fig:EBSDmain}Main user interface for the SEMDisplay program.}
 \end{figure}
 
-\subsection{Monte Carlo visualization interface\label{sec:idlMC}}
-In each of the two top entries of the main program widget, there is a \button{Display}, which brings up a graphical interface.  If the user has loaded a Monte Carlo data file, 
-then the display window will look similar to the one shown in Fig.~\ref{fig:MCdisplay}.  There are two items on the top menu line, and a few additional widgets both 
-above and below the graphics display.  Here are all the options:
+\subsection{Monte Carlo  and Master Pattern visualization interface\label{sec:idlMC}}
+
+For EBSD and ECP pattern simulations, this interface will show both Monte Carlo and master pattern data; for the Kossel mode, only the 
+master pattern will be available.  The interface controls available are slightly different for each case.
 
 \begin{figure}[t]
 \leavevmode\centering
-\epsfxsize=3in\epsffile{figs/EBSDMC.eps}
-\caption{\label{fig:MCdisplay}Monte Carlo interface.}
+\epsfxsize=6in\epsffile{figs/EBSDMCMP.eps}
+\caption{\label{fig:MCMPdisplay}Monte Carlo and Master Pattern interface.}
 \end{figure}
+
+
+When the user selects the \button{Display}\ next to the Master Pattern file name widget, the display widget shown in 
+Fig.~\ref{fig:MCMPdisplay} will appear, with the Monte Carlo results on the left and the master pattern on the right.  
+Each of the graphics areas has a separate set of min/max indicators as well as a \button{Save}.
+Note that this widget has a pull-down menu next to the energy slider; initially, this menu will display the selection
+\textsf{SUM all sites}.  For a crystal structure with more than one atom in the asymmetric unit, the pull-down menu will
+display a list of all atoms along with the square of the atomic number (recall that the back-scattering cross section varies
+approximately as the square of the atomic number).  When the user selects one of the atoms from the asymmetric unit, 
+the graphics window on the right will display only the contribution from those sites (the one in the asymmetric unit
+and all equivalent positions).  The \textsf{SUM all sites} option displays the sum over all atomic sites in the unit cell.
+Separating the BSE contributions by element (asymmetric unit site) is useful, because it reveals which pattern is the dominant one.  
+This will obviously depend on the atomic number for each site; for crystal structures with low elemental contrast\footnote{We refer
+to the difference between the atomic numbers as ``elemental contrast;''  in BaTiO$_3$, for instance, we have $Z^2_{\text{Ba}}=3,136$,
+$Z^2_{\text{Ti}}=484$, and $Z^2_{\text{O}}=3\times 64=192$, so that the EBSD pattern is dominated by the contributions from Ba.  In CaTiO$_3$, on the
+other hand, we have $Z^2_{\text{Ca}}=400$, so the contrast between Ca and Ti is low, and the pattern will have contributions from
+both elements.  In both cases, the O contribution would be rather small.}, the net master pattern may have approximately equal contributions 
+from two or more elements.  For structures with high elemental contrast, usually one element (the one with the largest atomic number) will
+dominate the EBSD pattern.  For ECP master patterns, the interface functions in the same way, but there are fewer display options available.
 
 \begin{itemize}
 	\item \textsf{Projection Mode} menu:  this menu has three items, \textsf{Lambert [square]}, \textsf{Lambert [circle]}, and \textsf{Stereographic P.}, corresponding to the 
@@ -1002,34 +1072,8 @@ Note that all three \textsf{Display Mode}s work for either of the \textsf{Projec
 \button{Save}; the file format must be set first using the File Format selector (jpeg, tiff, or bmp).  The minimum and maximum value of the displayed array
 are also shown below the image region.
 
-If the Monte Carlo data was generated with the \textsf{bse1} option for the program mode, then the energy slider will be replaced by a beam tilt slider.
-
-
-\subsection{Monte Carlo and Master Pattern visualization interface\label{sec:idlMCMP}}
-
-\begin{figure}[t]
-\leavevmode\centering
-\epsfxsize=6in\epsffile{figs/EBSDMCMP.eps}
-\caption{\label{fig:MCMPdisplay}Monte Carlo and Master Pattern interface.}
-\end{figure}
-
-When the user selects the \button{Display}\ next to the Master Pattern file name widget, a similar display widget will appear, but this time there 
-are two graphics windows, one for the Monte Carlo results (left) and one for the master pattern (right), as shown in 
-Fig.~\ref{fig:MCMPdisplay}.  Each of the graphics areas has a separate set of min/max indicators as well as a \button{Save}.
-Note that this widget has an additional pull-down menu next to the energy slider; initially, this menu will display the selection
-\textsf{SUM all sites}.  For a crystal structure with more than one atom in the asymmetric unit, the pull-down menu will
-display a list of all atoms along with the square of the atomic number (recall that the back-scattering cross section varies
-approximately as the square of the atomic number).  When the user selects one of the atoms from the asymmetric unit, 
-the graphics window on the right will display only the contribution from those sites (the one in the asymmetric unit
-and all equivalent positions).  The \textsf{SUM all sites} option displays the sum over all atomic sites in the unit cell.
-Separating the BSE contributions by element (asymmetric unit site) is useful, because it reveals which pattern is the dominant one.  
-This will obviously depend on the atomic number for each site; for crystal structures with low elemental contrast\footnote{We refer
-to the difference between the atomic numbers as ``elemental contrast;''  in BaTiO$_3$, for instance, we have $Z^2_{\text{Ba}}=3,136$,
-$Z^2_{\text{Ti}}=484$, and $Z^2_{\text{O}}=3\times 64=192$, so that the EBSD pattern is dominated by the contributions from Ba.  In CaTiO$_3$, on the
-other hand, we have $Z^2_{\text{Ca}}=400$, so the contrast between Ca and Ti is low, and the pattern will have contributions from
-both elements.  In both cases, the O contribution would be rather small.}, the net master pattern may have approximately equal contributions 
-from two or more elements.  For structures with high elemental contrast, usually one element (the one with the largest atomic number) will
-dominate the EBSD pattern.  For ECP master patterns, the interface functions in the same way, but there are fewer display options available.
+If the Monte Carlo data was generated with the \textsf{bse1} option for the program mode, then the energy slider will be replaced by a beam tilt slider.  For
+the Kossel master pattern, the slider controls the sample depth for which the pattern was generated.
 
 
 \subsection{Detector interface\label{sec:idldetector}}
@@ -1090,9 +1134,16 @@ or the four quaternion components.
 \end{figure}
 
 
-%A future version of the display program will make it possible for the user to refine detector and microscope parameters, given a number of experimental
-%patterns and orientations.  In addition, the next version will include the ability to apply a detector point spread function.  We'll also add
-%an option to save the parameters for a particular microscope setup, to allow for easy switching between instrument parameters.
+The interfaces for ECP and Kossel modes are conceptually similar to that for the EBSD mode, but the detector geometrical parameters are 
+different for each case.  The user is encouraged to experiment with the controls to see what effect each has on the simulated pattern.
+
+A future version of the display program will make it possible for the user to refine detector and microscope parameters, given a number of experimental
+patterns and orientations.  In addition, the next version will include the ability to apply a detector point spread function.  We'll also add
+an option to save the parameters for a particular microscope setup, to allow for easy switching between instrument parameters.
+
+It should be noted that this program stores all variables in a preferences file located in the \textsf{.config/EMsoft} folder in the user's home
+folder.  This is useful since the preferences are written each time the program is quit, and read whenever the program is started.  The preferences
+file can also be edited using any text editor; variable names should not be changed.
 
 
 \newpage
@@ -1318,7 +1369,7 @@ for this particular run.
 
 \begin{figure}[h]
 \leavevmode\centering
-\epsfxsize=5.0in\epsffile{figs/hdfview2.eps}
+\epsfxsize=3.0in\epsffile{figs/hdfview2.eps}
 \caption{\label{fig:hdf}Screen shot of the HDFView program with an example Monte Carlo output file.  The individual entries
 on the left can be displayed as images or arrays by right-clicking on them and selecting ``Open As''.}
 \end{figure}

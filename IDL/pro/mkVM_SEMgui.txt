@@ -5,9 +5,9 @@ resolve_all
 ;define a few variables
 appname = 'SEMDisplay'
 saveappname = appname+'.sav'
-IDLappdir = '/Users/mdg/Files/EMsoft/Build/IDL'
-VMappdir = '/Users/mdg/Files/EMsoft/Build/IDL/VMapps'
-Resdir = '/Users/mdg/Files/EMsoft/Build/IDL/VMapps/SEMDisplay/Resources'
+IDLappdir = '/Users/mdg/Files/EMsoft/Build/Bin/IDL'
+VMappdir = '/Users/mdg/Files/EMsoft/Build/Bin/IDL/VMapps'
+Resdir = '/Users/mdg/Files/EMsoft/Build/Bin/IDL/VMapps/SEMDisplay/Resources'
 
 cd,CURRENT=cdir
 

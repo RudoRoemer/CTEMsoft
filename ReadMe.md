@@ -1,16 +1,19 @@
-# CTEMsoft Version 2.0 #
+# EMsoft Version 3.0 #
 
-This package contains a series of programs along with a library, mostly written in fortran-90, for the computation and visualization of electron microscopy images and diffraction patterns. The programs can be used as standalone command-line programs, and produce binary output files that can then be visualized using IDL routines (Interactive Data Language).
+This package contains a series of programs along with a library, mostly written in fortran-90 with some OpenCL bits, for the computation and visualization of scanning electron microscopy diffraction patterns, notable EBSD, ECP, and EKP. The programs can be used as standalone command-line programs, and produce HDF5 output files that can then be visualized using an IDL virtual app (Interactive Data Language).
 
 ## Financial Support ##
-Current development of this package is supported by an AFOSR/MURI grant, FA9550-12-1-0458; the original EBSD code was developed with support from an ONR grant, N00014-12-1-0075
+Current development of this package is supported by an AFOSR/MURI grant, FA9550-12-1-0458; the original EBSD code from CTEMsoft 2.0 was developed with support from an ONR grant, N00014-12-1-0075.
 
 ## Source ##
-Source codes are here on GitHub. Precompiled binaries, manuals, and IDL Virtual Machine apps, are located at [Here](http://muri.materials.cmu.edu/). [they will be located there in a few days (6/2/14)]
+Source codes are here on GitHub. Precompiled binaries, manuals, and IDL Virtual Machine apps, as well as additional information about the package are located at [Here](http://muri.materials.cmu.edu/?p=858). 
 
 ## Installation/Compilation ##
-The code uses the CMake approach for compilation, and requires the gfortran compiler [tested on Mac and PC; Intel compiler on PC currently being tested].  A CMake run will produce a library and a series of executables.  The package requires the BLAS and LAPACK libraries, so you should install those before compilation.
+See [here](http://muri.materials.cmu.edu/wp-content/uploads/2015/11/EMsoft.pdf).
 
+## Future Releases ##
+Our plan is to provide Release 3.1 in the Spring of 2016, and 3.2 in the Fall.  3.1 will include a ECCI defect image simulations as well as dictionary-based indexing codes for EBSD and ECP.  In 3.2 we will re-introduce all of the TEM simulations that were available in the original [CTEMsoft 2.0](https://github.com/marcdegraef/CTEMsoft) release. 
+ 
 ## Feedback ##
 Feedback on the code and visualization routines is always welcome!
 
@@ -20,7 +23,7 @@ This code has a long history. The very first version was written in the mid-1990
 ## License ##
 
 	!###################################################################
-	! Copyright (c) 2013, Marc De Graef/Carnegie Mellon University
+	! Copyright (c) 2013-2015, Marc De Graef/Carnegie Mellon University
 	! All rights reserved.
 	!
 	! Redistribution and use in source and binary forms, with or without modification, are 
