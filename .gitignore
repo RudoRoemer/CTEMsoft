@@ -91,3 +91,11 @@ CMakeCache.txt
 /Debug
 .floo
 
+
+# ignore the following folders in this release
+/examples_todo/
+/manuals_todo/
+/opencl_todo/
+/src_todo/
+/templatefolder_todo/
+

@@ -1,9 +1,0 @@
-&STEMdata
-BFradius = 3.5
-ADFinnerradius = 3.5
-ADFouterradius = 10.0
-numCL = 6
-CLarray = 163.0,  222.00, 327.00, 546.00, 771.00, 1118.00
-beamconvergence =  5.90
-numberofsvalues = 41
-/

@@ -1,7 +1,0 @@
-       6
-Kosselroot::/Volumes/Drive2/playarea/Kossel		; location of last loaded file
-Kosselformat::0 ; output format (0=jpeg, 1=tiff, 2=bmp)
-xlocation::  85.0 ; window locations from here on
-ylocation::  71.0
-Kosselxlocation:: 799.0
-Kosselylocation::  69.0
