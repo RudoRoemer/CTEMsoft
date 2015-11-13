@@ -36,6 +36,7 @@ IDL/**/*.sav
 # IDL Virtual Machine
 /IDL/VMapps/
 /IDL/VMappsPC/
+/IDL/pro_todo/
 
 # figures for manuals
 *.tiff
