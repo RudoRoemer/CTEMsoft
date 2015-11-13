@@ -91,7 +91,8 @@ end function Kdelta
 !> @details This is a new version that combines several older routines.  The most important 
 !> aspects of this routine are a) linked list can use regular mapping or modified Lambert mapping;
 !> b) list makes use of crystal symmetry (although that feature can be turned off); c) routine
-!> has been cleaned up, and there is now a Delete_kvectorlist function as well.
+!> has been cleaned up, and there is now a Delete_kvectorlist function as well.  This is a very 
+!> complex routine so make sure you fully understand it before you attempt to modify or add anything!
 !
 !> @param khead head of linked list
 !> @param cell unit cell pointer
@@ -113,6 +114,7 @@ end function Kdelta
 !> @date   06/09/14 MDG 2.0 added khead and cell as arguments
 !> @date   06/19/14
 !> @date   08/25/15 MDG 3.0 modified symmetry handling to full point group, with doubled Lambert projection
+!> @date   11/13/15 MDG 3.1 inclusion of small epsilon in trigonal and hexagonal cases, to eliminate rounding errors
 !--------------------------------------------------------------------------
 subroutine Calckvectors(khead,cell,k,ga,ktmax,npx,npy,numk,isym,ijmax,mapmode,usehex)
 
@@ -636,7 +638,6 @@ if (mapmode.eq.'RoscaLambert') then
           eps = 1.0D-4 ! 0.0*delta
             do j=jstart,jend
               do i=istart,iend
-! there is a potential problem in this routine
                   xy = (/ dble(i), dble(j) /) * delta
                   xx = dble(i)-dble(j)/2.D0
                   yy = dble(j)*LPs%srt
@@ -664,7 +665,7 @@ if (mapmode.eq.'RoscaLambert') then
           do j=jstart,jend
             do i=istart,iend
                 xy = (/ dble(i), dble(j) /) * delta
-                xx = dble(i-j/2)
+                xx = dble(i)-dble(j)/2.D0
                 yy = dble(j)*LPs%srt
                 check = .TRUE.
                 if (xx.lt.0.D0) then
@@ -672,18 +673,17 @@ if (mapmode.eq.'RoscaLambert') then
                 else
                    if (xx.ge.0.D0) then
                      yy = datan2(yy,xx)
-                     if (yy.gt.(cPi/3.D0-eps)) check = .FALSE.
+                     if (yy.gt.(cPi/3.D0+eps)) check = .FALSE.
                    end if
                 end if
                 if (InsideHexGrid(xy).and.(check)) call AddkVector(ktail,cell,numk,xy,i,j,hexgrid, addSH = yes)
             end do
           end do
 
-  case (16)   ! hexagonal -3m1,, 622, -6m2 [not implemented: rhombohedral -3m]
+  case (16)   ! hexagonal -3m1, 622, -6m2 [not implemented: rhombohedral -3m]
         if ((cell%SG%SYM_trigonal).and.(cell%SG%SYM_second)) then
           call FatalError('Calckvectors: ','rhombohedral setting has not been implemented yet, use hexagonal setting instead')
         else
-! there is a potential problem in this routine
           istart = 0
           iend = npx
           jstart = 0
@@ -725,7 +725,7 @@ if (mapmode.eq.'RoscaLambert') then
                 else
                    if (xx.ge.0.D0) then
                      yy = datan2(yy,xx)
-                     if (yy.gt.(cPi/3.D0-eps)) check = .FALSE.
+                     if (yy.gt.(cPi/3.D0+eps)) check = .FALSE.
                    end if
                 end if
                 if (InsideHexGrid(xy).and.(check)) call AddkVector(ktail,cell,numk,xy,i,j,hexgrid)
@@ -749,14 +749,14 @@ if (mapmode.eq.'RoscaLambert') then
                 else
                    if (xx.ge.0.D0) then
                      yy = datan2(yy,xx)
-                     if (yy.gt.(cPi/6.D0-eps)) check = .FALSE.
+                     if (yy.gt.(cPi/6.D0+eps)) check = .FALSE.
                    end if
                 end if
                 if (InsideHexGrid(xy).and.(check)) call AddkVector(ktail,cell,numk,xy,i,j,hexgrid, addSH = yes)
             end do
           end do
 
-  case (19)   ! hexagonal 6mm
+  case (19)   ! hexagonal 6/mmm
         istart = 0
         iend = npx
         jstart = 0
@@ -774,7 +774,7 @@ if (mapmode.eq.'RoscaLambert') then
                 else
                    if (xx.ge.0.D0) then
                      yy = datan2(yy, xx)
-                     if (yy.gt.(LPs%Pi/6.D0-eps)) check = .FALSE.
+                     if (yy.gt.(LPs%Pi/6.D0+eps)) check = .FALSE.
                    end if
 
                 end if
