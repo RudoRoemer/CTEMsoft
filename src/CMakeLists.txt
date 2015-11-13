@@ -40,7 +40,7 @@ set(EMSoftLib_SRCS
 	${EMSoftLib_SOURCE_DIR}/pgm.f90
 	${EMSoftLib_SOURCE_DIR}/postscript.f90
 	${EMSoftLib_SOURCE_DIR}/quaternions.f90
-	${EMSoftLib_SOURCE_DIR}/rksuite.f
+#	${EMSoftLib_SOURCE_DIR}/rksuite.f
 	${EMSoftLib_SOURCE_DIR}/rng.f95
 	${EMSoftLib_SOURCE_DIR}/rotations.f90
 	${EMSoftLib_SOURCE_DIR}/so3.f90

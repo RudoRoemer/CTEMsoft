@@ -1,0 +1,4 @@
+## About the src_programs folder##
+The programs in Release 3.0 are located in this folder. They are listed in the table at the end of the *EMsoft.pdf* installation manual as well. 
+
+Several of these programs make use of so-called template files, located  in the templatefolder;  each template file holds a series of name-value pairs in the fortran-90 name list format.  When an EMsoft program is executed with the -t option, the program will copy the appropriate namelist file(s) in the local folder; the user should then rename them from the .template extension to .nml, edit the variables inside the file, and then pass that file as a command line argument to the main program.

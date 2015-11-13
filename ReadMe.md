@@ -1,6 +1,6 @@
 # EMsoft Version 3.0 #
 
-This package contains a series of programs along with a library, mostly written in fortran-90 with some OpenCL bits, for the computation and visualization of scanning electron microscopy diffraction patterns, notable EBSD, ECP, and EKP. The programs can be used as standalone command-line programs, and produce HDF5 output files that can then be visualized using an IDL virtual app (Interactive Data Language).
+This package contains a series of programs along with a library, mostly written in fortran-90 with some OpenCL bits, for the computation and visualization of scanning electron microscopy diffraction patterns, notable EBSD, ECP, and EKP. The programs can be used as standalone command-line programs, and produce HDF5 output files that can then be visualized using an IDL virtual app (Interactive Data Language) or read and processed from any other package with HDF5 capability.
 
 ## Financial Support ##
 Current development of this package is supported by an AFOSR/MURI grant, FA9550-12-1-0458; the original EBSD code from CTEMsoft 2.0 was developed with support from an ONR grant, N00014-12-1-0075.
@@ -12,13 +12,13 @@ Source codes are here on GitHub. Precompiled binaries, manuals, and IDL Virtual 
 See [here](http://muri.materials.cmu.edu/wp-content/uploads/2015/11/EMsoft.pdf).
 
 ## Future Releases ##
-Our plan is to provide Release 3.1 in the Spring of 2016, and 3.2 in the Fall.  3.1 will include a ECCI defect image simulations as well as dictionary-based indexing codes for EBSD and ECP.  In 3.2 we will re-introduce all of the TEM simulations that were available in the original [CTEMsoft 2.0](https://github.com/marcdegraef/CTEMsoft) release. 
+Our plan is to provide Release 3.1 in the Spring of 2016, and 3.2 in the Fall.  3.1 will include ECCI defect image simulations as well as dictionary-based indexing codes for EBSD and ECP.  In 3.2 we will re-introduce all of the TEM simulations that were available in the original [CTEMsoft 2.0](https://github.com/marcdegraef/CTEMsoft) release. 
  
 ## Feedback ##
 Feedback on the code and visualization routines is always welcome!
 
 ## History ##
-This code has a long history. The very first version was written in the mid-1990s in fortran-77 and contained only a few simple crystallography and diffraction routines.  Around 2000, all the code was ported to fortran-90, and served as the basis for a TEM textbook (Introduction to Conventional Transmission Electron Microscopy, M. De Graef, 2003 Cambridge University Press).  Since 2003, many additions have been made.  During 2013, I was on sabbatical at the Ohio State University (Center for Electron Microscopy and MicroAnalysis), and the entire package was rewritten, visualization routines were created, all of which resulted in the present Release; most importantly, we started to add developers (it was pretty much a one-man-party until then), and the source code is now managed by a private git-repository, from which we will periodically push to github.com. 
+This code has a long history. The very first version was written in the mid-1990s in fortran-77 and contained only a few simple crystallography and diffraction routines.  Around 2000, all the code was ported to fortran-90, and served as the basis for a TEM textbook (Introduction to Conventional Transmission Electron Microscopy, M. De Graef, 2003 Cambridge University Press).  Since 2003, many additions have been made.  During 2013, I was on sabbatical at the Ohio State University (Center for Electron Microscopy and MicroAnalysis), and the entire package was rewritten, visualization routines were created, all of which resulted in the present Release; most importantly, we started to add developers (it was pretty much a one-man-party until then), and the source code is now managed by a private git-repository, from which we will periodically push to GitHub.com. 
 
 ## License ##
 

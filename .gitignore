@@ -14,7 +14,7 @@
 *.pl
 
 IDL/**/*.sav
-IDL/pro_todo
+# IDL/pro_todo
 
 # ignore OS files
 .DS_Store
@@ -55,7 +55,6 @@ IDL/pro_todo
 *.synctex.gz
 *.toc
 *.pdf
-*.bib
 *.out
 *.synctex.gz(busy)
 
