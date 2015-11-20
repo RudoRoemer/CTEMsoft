@@ -50,6 +50,7 @@
 !> @date 06/05/14 MDG 4.1 added comments about global variables in Release 3.0
 !> @date 03/29/14 MDG 4.2 added path variable for .xtal files (which are now HDF5 files)
 !> @date 04/05/15 MDG 4.3 added additional path variables and an EMsoft_path_init routine
+!> @date 11/20/15 MDG 4.4 Issue 1 resolution
 !--------------------------------------------------------------------------
 
 !---------------------------
@@ -89,11 +90,11 @@ module local
 !> source code version number
   character(8)                          :: scversion="@EMsoft_VER_MAJOR@_@EMsoft_VER_MINOR@_@EMsoft_VER_PATCH@"
 !> code user name
-  character(fnlen)                      :: username="Marc De Graef"     
+  character(fnlen)                      :: username="Undefined"     
 !> code user location
-  character(fnlen)                      :: userlocn="Carnegie Mellon University"
+  character(fnlen)                      :: userlocn="Undefined"
 !> code user email
-  character(fnlen)                      :: useremail="degraef@cmu.edu"
+  character(fnlen)                      :: useremail="Undefined"
 
   
 !> reserved IO unit identifiers for postscript (20) and data (21-23)
@@ -191,6 +192,7 @@ end subroutine EMsoft
 !
 !> @date  05/05/15 MDG 1.0 new routine
 !> @date  09/26/15 MDG 1.1 added .json config support
+!> @date  11/20/15 MDG 1.2 added UserName, UserLocation, and UserEmail options
 !--------------------------------------------------------------------------
 
 subroutine EMsoft_path_init
@@ -255,6 +257,24 @@ if (pathstring.eq.'') then ! try the EMsoftConfig.json file
     write(error_unit,'(A)') 'WARNING: field '//trim(ep)//' not found in json file'
   else
     EMdatapathname = trim(cval)
+  end if
+
+  ep = 'UserName'
+  call json%get(trim(ep), cval, found)
+  if (found) then
+    username = trim(cval)
+  end if
+  
+  ep = 'UserLocation'
+  call json%get(trim(ep), cval, found)
+  if (found) then
+    userlocn = trim(cval)
+  end if
+
+  ep = 'UserEmail'
+  call json%get(trim(ep), cval, found)
+  if (found) then
+    useremail = trim(cval)
   end if
 
   if ((EMsoftpathname.eq.'').or.(EMdatapathname.eq.'')) then

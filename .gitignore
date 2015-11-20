@@ -15,6 +15,7 @@
 
 IDL/**/*.sav
 # IDL/pro_todo
+IDL/pro/template
 
 # ignore OS files
 .DS_Store
