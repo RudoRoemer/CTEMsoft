@@ -12,7 +12,6 @@ numsx = 640
 numsy = 480
 energymin = 10.0
 energymax = 20.0
-energyaverage = 0
 ! pattern center coordinates in units of pixels
 xpc = 0.0
 ypc = 0.0

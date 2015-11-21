@@ -1,4 +1,4 @@
-&MCdata
+&MCCLdata
 ! name of the crystal structure file
 xtalname = 'Al.xtal'
 ! computation mode
@@ -13,8 +13,10 @@ numsx = 801
 num_el = 10
 ! number of work items (depends on GPU card; leave unchanged)
 globalworkgrpsz = 150
+! GPU device ID selector 
+devid = 1
 ! total number of incident electrons
-totnum_el = 1000000000
+totnum_el_ill = 1000000000
 ! incident beam energy [keV]
 EkeV = 25.D0
 ! minimum energy to consider [keV]

@@ -13,6 +13,8 @@
 *.nb
 *.pl
 
+/STUFF/
+
 IDL/**/*.sav
 # IDL/pro_todo
 IDL/pro/template

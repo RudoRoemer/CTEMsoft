@@ -37,6 +37,7 @@
 ;
 ;> @date 10/08/15 MDG 1.0 initial implementation 
 ;> @date 11/11/15 MDG 1.1 added functionality for release version library location
+;> @date 11/21/15 MDG 1.2 corrected type in librarylocation variable
 ;--------------------------------------------------------------------------
 function Core_getenv,data=data
 
@@ -57,7 +58,7 @@ end else begin
 ; in the /opt/local/lib/libgcc folder, so we need to make sure that we set the 
 ; librarylocation variable correctly... 
   r = result['Release']
-  if (r eq 'No') then librarylocation = z+'Build/Bin' else librarylocation='/opt/local/lib/ligcc'
+  if (r eq 'No') then librarylocation = z+'Build/Bin' else librarylocation='/opt/local/lib/libgcc'
 endelse
 
 return,z
