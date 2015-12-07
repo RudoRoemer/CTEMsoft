@@ -37,7 +37,8 @@
 ;
 ;> @date 10/08/15 MDG 1.0 initial implementation 
 ;> @date 11/11/15 MDG 1.1 added functionality for release version library location
-;> @date 11/21/15 MDG 1.2 corrected type in librarylocation variable
+;> @date 11/21/15 MDG 1.2 corrected typo in librarylocation variable
+;> @date 12/07/15 MDG 1.3 added LibraryLocation variable to EMsoft configuration file to simplify things
 ;--------------------------------------------------------------------------
 function Core_getenv,data=data
 
@@ -55,10 +56,9 @@ end else begin
 ; In the development version of this package, the dynamical library will be located in the 
 ; the EMsoftpathname/Build/Bin folder.
 ; In the release version, the user is supposed to place the libEMSoftLib.dylib file
-; in the /opt/local/lib/libgcc folder, so we need to make sure that we set the 
-; librarylocation variable correctly... 
-  r = result['Release']
-  if (r eq 'No') then librarylocation = z+'Build/Bin' else librarylocation='/opt/local/lib/libgcc'
+; in the /opt/local/lib/libgcc folder.  The EMsoftLibraryLocation variable in the 
+; EMsoftConfig.json file defines where that file is actually located.
+  librarylocation = result['EMsoftLibraryLocation']
 endelse
 
 return,z
