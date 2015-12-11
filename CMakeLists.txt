@@ -21,7 +21,7 @@ include(CMakeParseArguments)
   
 set(EMsoft_VER_MAJOR "3")
 set(EMsoft_VER_MINOR "0")
-set(EMsoft_VER_PATCH "1")
+set(EMsoft_VER_PATCH "2")
 
 
 # ---------- Setup output Directories -------------------------
