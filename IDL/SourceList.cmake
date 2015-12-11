@@ -82,17 +82,22 @@ INSTALL(FILES ${EMSoft_IDL_RESOURCE_FILES}
 #---------------------------------------------------------------------
 # Make sure the IDL VMapps folder exists. At some point it will be
 # filled with files.
-if(NOT EXISTS "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/VMapps")
-  file(MAKE_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/VMapps")
+if(NOT EXISTS "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/IDL/VMapps/SEMDisplay")
+  file(MAKE_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/IDL/VMapps/SEMDisplay")
 endif()
 
 #---------------------------------------------------------------------
 # Create the Installation Rules for the IDL VM
-install(DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/IDL/VMapps"
+install(DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/IDL"
   COMPONENT Applications
   DESTINATION "."
   USE_SOURCE_PERMISSIONS
 )
+
+configure_file("${APP_DIR}/Resources/VMappsInstall.cmake.in"
+        "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/VMappsInstall.cmake" @ONLY IMMEDIATE)
+
+install(SCRIPT "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/VMappsInstall.cmake" COMPONENT Applications)
 
 
 
