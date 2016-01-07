@@ -53,7 +53,7 @@
 
 % Footers
 %\lfoot{\textsf{EMSoft--2015} manual, Release 3.0, \today}
-\lfoot{\textsf{EMSoft--2015} manual, Release 3.0.2, \today}
+\lfoot{\textsf{EMSoft--2015} manual, Release 3.0.3, \today}
 \cfoot{}
 \rfoot{\footnotesize Page \thepage\ of \pageref{LastPage}} % "Page 1 of 2"
 
@@ -84,7 +84,7 @@
 
 \par\end{center}\HorRule} % Horizontal rule after the title
 %\date{Program Manual, Release 3.0, \today}
-\date{Program Manual, Release 3.0.2, \today}
+\date{Program Manual, Release 3.0.3, \today}
 
 \newcommand{\ctp}{\textsf{EMSoft}}
 \newcommand{\ctpb}{\textbf{\textsf{EMSoft}}}
@@ -470,6 +470,9 @@ Program & Short description & Manual? \\
 	\end{itemize}
         \item[3.0.3] () \begin{itemize}
                 \item added option to turn off requirement for \LaTeX\ installation to be present in order to compile package;
+                \item modified variable definitions in MBmodule and EMdymod to eliminate compilation errors when using the Intel fortran 
+                compiler in Visual Studio [S. Wright]; 
+                \item removed dispfield.f90, familiy.f90, and hdftest.f90 from src folder;
         \end{itemize}
 \end{itemize}
 
