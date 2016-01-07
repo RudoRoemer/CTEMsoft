@@ -36,6 +36,7 @@
 !> @brief routines that can be called by external code
 !
 !> @date  10/16/15 MDG 1.0 original
+!> @date  01/07/16 MDG 1.1 converted integer(8) to integer(c_size_t) for Visual Studio compatibility
 !--------------------------------------------------------------------------
 module EMdymod
 
@@ -105,13 +106,14 @@ use local
 use constants
 use Lambert
 use quaternions
+use,INTRINSIC :: ISO_C_BINDING
 
 IMPLICIT NONE
 
-integer(8),PARAMETER                    :: nipar=8
-integer(8),PARAMETER                    :: nfpar=9
-integer(8),PARAMETER                    :: nq=4
-integer(8),INTENT(IN)                   :: ipar(nipar)
+integer(c_size_t),PARAMETER             :: nipar=8
+integer(c_size_t),PARAMETER             :: nfpar=9
+integer(c_size_t),PARAMETER             :: nq=4
+integer(c_size_t),INTENT(IN)            :: ipar(nipar)
 real(kind=sgl),INTENT(IN)               :: fpar(nfpar)
 real(kind=sgl),INTENT(IN)               :: quats(nq,ipar(8))
 real(kind=sgl),INTENT(IN)               :: accum_e(ipar(4),-ipar(5):ipar(5),-ipar(5):ipar(5))
@@ -351,13 +353,14 @@ use local
 use constants
 use Lambert
 use quaternions
+use,INTRINSIC :: ISO_C_BINDING
 
 IMPLICIT NONE
 
-integer(8),PARAMETER                    :: nipar=8
-integer(8),PARAMETER                    :: nfpar=8
-integer(8),PARAMETER                    :: nq=4
-integer(8),INTENT(IN)                   :: ipar(nipar)
+integer(c_size_t),PARAMETER             :: nipar=8
+integer(c_size_t),PARAMETER             :: nfpar=8
+integer(c_size_t),PARAMETER             :: nq=4
+integer(c_size_t),INTENT(IN)            :: ipar(nipar)
 real(kind=sgl),INTENT(IN)               :: fpar(nfpar)
 real(kind=sgl),INTENT(OUT)              :: ECpattern(ipar(2),ipar(3),ipar(8))
 real(kind=sgl),INTENT(IN)               :: quats(nq,ipar(8))
@@ -619,13 +622,14 @@ use local
 use constants
 use Lambert
 use quaternions
+use,INTRINSIC :: ISO_C_BINDING
 
 IMPLICIT NONE
 
-integer(8),PARAMETER                    :: nipar=6
-integer(8),PARAMETER                    :: nfpar=1
-integer(8),PARAMETER                    :: nq=4
-integer(8),INTENT(IN)                   :: ipar(nipar)
+integer(c_size_t),PARAMETER             :: nipar=6
+integer(c_size_t),PARAMETER             :: nfpar=1
+integer(c_size_t),PARAMETER             :: nq=4
+integer(c_size_t),INTENT(IN)            :: ipar(nipar)
 real(kind=sgl),INTENT(IN)               :: fpar(nfpar)
 real(kind=sgl),INTENT(OUT)              :: Kosselpattern(ipar(2),ipar(2),ipar(4))
 real(kind=sgl),INTENT(IN)               :: quats(nq,ipar(4))

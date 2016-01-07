@@ -41,6 +41,7 @@
 !> @date 8/01/13   MDG 1.2 added standard Lambert projection
 !> @date 8/12/13   MDG 1.3 added inverse Lambert projections for Ball to Cube
 !> @date 9/20/13   MDG 1.4 added ApplyLaueSymmetry
+!> @date 1/07/16   MDG 1.5 replaced calls to complex() by cmplx() with dbl as third argument (needed for Visual Studio)
 !--------------------------------------------------------------------------
 module MBmodule
 
@@ -745,7 +746,7 @@ character(1)                     :: AorD
 
 czero = cmplx(0.0,0.0,dbl)      ! complex zero
 tpi = 2.D0 * cPi
-ccpi = complex(cPi,0.0D0)
+ccpi = cmplx(cPi,0.0D0,dbl)
 
 nullify(rlr)
 nullify(rlc)
@@ -830,7 +831,7 @@ else ! AorD = 'A' so we need to compute the structure matrix using LUTqg ...
 ! note that the factor of i pi is added in at the end...
         DynMat = czero
         call CalcUcg(cell, rlp, (/0,0,0/),applyqgshift=.TRUE. )
-        pq0 = complex(0.D0,1.D0/rlp%xgp)
+        pq0 = cmplx(0.D0,1.D0/rlp%xgp,dbl)
 
         rlr => listroot%next
         ir = 1
@@ -852,8 +853,8 @@ else ! AorD = 'A' so we need to compute the structure matrix using LUTqg ...
                ll = rlw%hkl - rlc%hkl
                Ahgp = cell%LUTqg(ll(1),ll(2),ll(3)) 
 ! denominator Ahh - Ag'g'
-               Ahh = complex(2.D0 * rlw%sg,0.D0) + pq0
-               Agpgp = complex(2.D0 * rlc%sg,0.D0) + pq0
+               Ahh = cmplx(2.D0 * rlw%sg,0.D0,dbl) + pq0
+               Agpgp = cmplx(2.D0 * rlc%sg,0.D0,dbl) + pq0
                weaksum = weaksum +  Agh * Ahgp / (Ahh - Agpgp)
                rlw => rlw%nextw
               end do
@@ -875,14 +876,14 @@ else ! AorD = 'A' so we need to compute the structure matrix using LUTqg ...
                 Agh = cell%LUTqg(ll(1),ll(2),ll(3)) 
                 Ahg = cell%LUTqg(-ll(1),-ll(2),-ll(3)) 
 ! denominator Ahh - Agg
-                Ahh = complex(2.D0 * rlw%sg,0.D0) + pq0
-                Agpgp = complex(2.D0 * rlr%sg,0.D0) + pq0
+                Ahh = cmplx(2.D0 * rlw%sg,0.D0,dbl) + pq0
+                Agpgp = cmplx(2.D0 * rlr%sg,0.D0,dbl) + pq0
                 weakdiagsum = weakdiagsum +  Agh * Ahg  / (Ahh - Agpgp)
                 rlw => rlw%nextw
               end do
-              DynMat(ir,ir) = complex( 2.D0 * rlr%sg, 0.D0) + pq0 - weakdiagsum
+              DynMat(ir,ir) = cmplx( 2.D0 * rlr%sg, 0.D0, dbl) + pq0 - weakdiagsum
             else
-              DynMat(ir,ir) = complex( 2.D0 * rlr%sg, 0.D0) + pq0 
+              DynMat(ir,ir) = cmplx( 2.D0 * rlr%sg, 0.D0,dbl) + pq0 
             end if           
         
            end if       

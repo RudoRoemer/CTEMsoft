@@ -52,7 +52,8 @@
 !> @date  03/31/15 MDG 1.3 added support for arrays of c_chars
 !> @date  04/07/15 MDG 1.4 added hyperslab routines for char, integer, float and double in 2, 3, and 4D
 !> @date  04/08/15 MDG 1.5 removed HDF_tail pointer as it was no longer needed
-!> @data  04/08/15 MDG 1.6 added optional overwrite keyword to all HDF_writeDataset... routines
+!> @date  04/08/15 MDG 1.6 added optional overwrite keyword to all HDF_writeDataset... routines
+!> @date  01/06/15 MDG 1.7 changed order of array declarations so that dimensions are declared first (needed for Intel Fortran compiler)
 !--------------------------------------------------------------------------
 module HDFsupport
 
@@ -968,8 +969,8 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-character(len=fnlen),INTENT(IN)                         :: inputarray(nlines) 
 integer(kind=irg),INTENT(IN)                            :: nlines
+character(len=fnlen),INTENT(IN)                         :: inputarray(nlines) 
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
@@ -1065,9 +1066,8 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-!character(len=1, KIND=c_char),TARGET                    :: chararray(dim0) 
-character(len=1),TARGET                                 :: chararray(dim0) 
 integer(kind=irg),INTENT(IN)                            :: dim0
+character(len=1),TARGET                                 :: chararray(dim0) 
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
@@ -1140,9 +1140,9 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-character(len=1),TARGET                                 :: chararray(dim0, dim1) 
 integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
+character(len=1),TARGET                                 :: chararray(dim0, dim1) 
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
@@ -1214,10 +1214,10 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-character(len=1),TARGET                                 :: chararray(dim0, dim1, dim2) 
 integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
+character(len=1),TARGET                                 :: chararray(dim0, dim1, dim2) 
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
@@ -1289,11 +1289,11 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-character(len=1),TARGET                                 :: chararray(dim0, dim1, dim2, dim3) 
 integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
 integer(kind=irg),INTENT(IN)                            :: dim3
+character(len=1),TARGET                                 :: chararray(dim0, dim1, dim2, dim3) 
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
@@ -1444,8 +1444,8 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-integer(kind=irg),INTENT(IN)                            :: intarr(dim0)
 integer(kind=irg),INTENT(IN)                            :: dim0
+integer(kind=irg),INTENT(IN)                            :: intarr(dim0)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
@@ -1520,9 +1520,9 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-integer(kind=irg),INTENT(IN)                            :: intarr(dim0, dim1)
 integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
+integer(kind=irg),INTENT(IN)                            :: intarr(dim0, dim1)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
@@ -1598,10 +1598,10 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-integer(kind=irg),INTENT(IN)                            :: intarr(dim0, dim1, dim2)
 integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
+integer(kind=irg),INTENT(IN)                            :: intarr(dim0, dim1, dim2)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
@@ -1676,11 +1676,11 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-integer(kind=irg),INTENT(IN)                            :: intarr(dim0, dim1, dim2, dim3)
 integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
 integer(kind=irg),INTENT(IN)                            :: dim3
+integer(kind=irg),INTENT(IN)                            :: intarr(dim0, dim1, dim2, dim3)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
@@ -1909,8 +1909,8 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-real(kind=sgl),INTENT(IN)                               :: fltarr(dim0)
 integer(kind=irg),INTENT(IN)                            :: dim0
+real(kind=sgl),INTENT(IN)                               :: fltarr(dim0)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
@@ -1987,9 +1987,9 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-real(kind=sgl),INTENT(IN)                               :: fltarr(dim0, dim1)
 integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
+real(kind=sgl),INTENT(IN)                               :: fltarr(dim0, dim1)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
@@ -2065,10 +2065,10 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-real(kind=sgl),INTENT(IN)                               :: fltarr(dim0, dim1, dim2)
 integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
+real(kind=sgl),INTENT(IN)                               :: fltarr(dim0, dim1, dim2)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
@@ -2144,11 +2144,11 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-real(kind=sgl),INTENT(IN)                               :: fltarr(dim0, dim1, dim2, dim3)
 integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
 integer(kind=irg),INTENT(IN)                            :: dim3
+real(kind=sgl),INTENT(IN)                               :: fltarr(dim0, dim1, dim2, dim3)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
@@ -2224,8 +2224,8 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-real(kind=dbl),INTENT(IN)                               :: dblarr(dim0)
 integer(kind=irg),INTENT(IN)                            :: dim0
+real(kind=dbl),INTENT(IN)                               :: dblarr(dim0)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
@@ -2301,9 +2301,9 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-real(kind=dbl),INTENT(IN)                               :: dblarr(dim0, dim1)
 integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
+real(kind=dbl),INTENT(IN)                               :: dblarr(dim0, dim1)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
@@ -2379,10 +2379,10 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-real(kind=dbl),INTENT(IN)                               :: dblarr(dim0, dim1, dim2)
 integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
+real(kind=dbl),INTENT(IN)                               :: dblarr(dim0, dim1, dim2)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
@@ -2458,11 +2458,11 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-real(kind=dbl),INTENT(IN)                               :: dblarr(dim0, dim1, dim2, dim3)
 integer(kind=irg),INTENT(IN)                            :: dim0
 integer(kind=irg),INTENT(IN)                            :: dim1
 integer(kind=irg),INTENT(IN)                            :: dim2
 integer(kind=irg),INTENT(IN)                            :: dim3
+real(kind=dbl),INTENT(IN)                               :: dblarr(dim0, dim1, dim2, dim3)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical,INTENT(IN),OPTIONAL                             :: overwrite
 integer(kind=irg)                                       :: success
@@ -3605,11 +3605,11 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-character(kind=c_char),INTENT(IN),TARGET                :: wdata(dim0,dim1)
 integer(HSIZE_T),INTENT(IN)                             :: hdims(2)
 integer(HSIZE_T),INTENT(IN)                             :: offset(2)
 integer(HSIZE_T),INTENT(IN)                             :: dim0
 integer(HSIZE_T),INTENT(IN)                             :: dim1
+character(kind=c_char),INTENT(IN),TARGET                :: wdata(dim0,dim1)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
@@ -3670,12 +3670,12 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-character(kind=c_char),INTENT(IN)                       :: wdata(dim0,dim1,dim2)
 integer(HSIZE_T),INTENT(IN)                             :: hdims(3)
 integer(HSIZE_T),INTENT(IN)                             :: offset(3)
 integer(HSIZE_T),INTENT(IN)                             :: dim0
 integer(HSIZE_T),INTENT(IN)                             :: dim1
 integer(HSIZE_T),INTENT(IN)                             :: dim2
+character(kind=c_char),INTENT(IN)                       :: wdata(dim0,dim1,dim2)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
@@ -3733,13 +3733,13 @@ use ISO_C_BINDING
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-character(kind=c_char),INTENT(IN)                       :: wdata(dim0,dim1,dim2,dim3)
 integer(HSIZE_T),INTENT(IN)                             :: hdims(4)
 integer(HSIZE_T),INTENT(IN)                             :: offset(4)
 integer(HSIZE_T),INTENT(IN)                             :: dim0
 integer(HSIZE_T),INTENT(IN)                             :: dim1
 integer(HSIZE_T),INTENT(IN)                             :: dim2
 integer(HSIZE_T),INTENT(IN)                             :: dim3
+character(kind=c_char),INTENT(IN)                       :: wdata(dim0,dim1,dim2,dim3)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
@@ -3794,11 +3794,11 @@ function HDF_writeHyperslabIntegerArray2D(dataname, wdata, hdims, offset, &
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-integer(kind=irg),INTENT(IN)                            :: wdata(dim0,dim1)
 integer(HSIZE_T),INTENT(IN)                             :: hdims(2)
 integer(HSIZE_T),INTENT(IN)                             :: offset(2)
 integer(HSIZE_T),INTENT(IN)                             :: dim0
 integer(HSIZE_T),INTENT(IN)                             :: dim1
+integer(kind=irg),INTENT(IN)                            :: wdata(dim0,dim1)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
@@ -3853,12 +3853,12 @@ function HDF_writeHyperslabIntegerArray3D(dataname, wdata, hdims, offset, &
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-integer(kind=irg),INTENT(IN)                            :: wdata(dim0,dim1,dim2)
 integer(HSIZE_T),INTENT(IN)                             :: hdims(3)
 integer(HSIZE_T),INTENT(IN)                             :: offset(3)
 integer(HSIZE_T),INTENT(IN)                             :: dim0
 integer(HSIZE_T),INTENT(IN)                             :: dim1
 integer(HSIZE_T),INTENT(IN)                             :: dim2
+integer(kind=irg),INTENT(IN)                            :: wdata(dim0,dim1,dim2)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
@@ -3913,13 +3913,13 @@ function HDF_writeHyperslabIntegerArray4D(dataname, wdata, hdims, offset, &
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
-integer(kind=irg),INTENT(IN)                            :: wdata(dim0,dim1,dim2,dim3)
 integer(HSIZE_T),INTENT(IN)                             :: hdims(4)
 integer(HSIZE_T),INTENT(IN)                             :: offset(4)
 integer(HSIZE_T),INTENT(IN)                             :: dim0
 integer(HSIZE_T),INTENT(IN)                             :: dim1
 integer(HSIZE_T),INTENT(IN)                             :: dim2
 integer(HSIZE_T),INTENT(IN)                             :: dim3
+integer(kind=irg),INTENT(IN)                            :: wdata(dim0,dim1,dim2,dim3)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
@@ -3976,11 +3976,11 @@ IMPLICIT NONE
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
 
 character(fnlen),INTENT(IN)                             :: dataname
-real(real_kind),INTENT(IN)                              :: wdata(dim0,dim1)
 integer(HSIZE_T),INTENT(IN)                             :: hdims(2)
 integer(HSIZE_T),INTENT(IN)                             :: offset(2)
 integer(HSIZE_T),INTENT(IN)                             :: dim0
 integer(HSIZE_T),INTENT(IN)                             :: dim1
+real(real_kind),INTENT(IN)                              :: wdata(dim0,dim1)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
@@ -4037,12 +4037,12 @@ IMPLICIT NONE
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
 
 character(fnlen),INTENT(IN)                             :: dataname
-real(real_kind),INTENT(IN)                              :: wdata(dim0,dim1,dim2)
 integer(HSIZE_T),INTENT(IN)                             :: hdims(3)
 integer(HSIZE_T),INTENT(IN)                             :: offset(3)
 integer(HSIZE_T),INTENT(IN)                             :: dim0
 integer(HSIZE_T),INTENT(IN)                             :: dim1
 integer(HSIZE_T),INTENT(IN)                             :: dim2
+real(real_kind),INTENT(IN)                              :: wdata(dim0,dim1,dim2)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
@@ -4099,13 +4099,13 @@ IMPLICIT NONE
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_4)
 
 character(fnlen),INTENT(IN)                             :: dataname
-real(real_kind),INTENT(IN)                              :: wdata(dim0,dim1,dim2,dim3)
 integer(HSIZE_T),INTENT(IN)                             :: hdims(4)
 integer(HSIZE_T),INTENT(IN)                             :: offset(4)
 integer(HSIZE_T),INTENT(IN)                             :: dim0
 integer(HSIZE_T),INTENT(IN)                             :: dim1
 integer(HSIZE_T),INTENT(IN)                             :: dim2
 integer(HSIZE_T),INTENT(IN)                             :: dim3
+real(real_kind),INTENT(IN)                              :: wdata(dim0,dim1,dim2,dim3)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
@@ -4162,11 +4162,11 @@ IMPLICIT NONE
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
 
 character(fnlen),INTENT(IN)                             :: dataname
-real(real_kind),INTENT(IN)                              :: wdata(dim0,dim1)
 integer(HSIZE_T),INTENT(IN)                             :: hdims(2)
 integer(HSIZE_T),INTENT(IN)                             :: offset(2)
 integer(HSIZE_T),INTENT(IN)                             :: dim0
 integer(HSIZE_T),INTENT(IN)                             :: dim1
+real(real_kind),INTENT(IN)                              :: wdata(dim0,dim1)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
@@ -4223,12 +4223,12 @@ IMPLICIT NONE
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
 
 character(fnlen),INTENT(IN)                             :: dataname
-real(real_kind),INTENT(IN)                              :: wdata(dim0,dim1,dim2)
 integer(HSIZE_T),INTENT(IN)                             :: hdims(3)
 integer(HSIZE_T),INTENT(IN)                             :: offset(3)
 integer(HSIZE_T),INTENT(IN)                             :: dim0
 integer(HSIZE_T),INTENT(IN)                             :: dim1
 integer(HSIZE_T),INTENT(IN)                             :: dim2
+real(real_kind),INTENT(IN)                              :: wdata(dim0,dim1,dim2)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
@@ -4285,13 +4285,13 @@ IMPLICIT NONE
 integer,parameter                                       :: real_kind = SELECTED_REAL_KIND(Fortran_REAL_8)
 
 character(fnlen),INTENT(IN)                             :: dataname
-real(real_kind),INTENT(IN)                              :: wdata(dim0,dim1,dim2,dim3)
 integer(HSIZE_T),INTENT(IN)                             :: hdims(4)
 integer(HSIZE_T),INTENT(IN)                             :: offset(4)
 integer(HSIZE_T),INTENT(IN)                             :: dim0
 integer(HSIZE_T),INTENT(IN)                             :: dim1
 integer(HSIZE_T),INTENT(IN)                             :: dim2
 integer(HSIZE_T),INTENT(IN)                             :: dim3
+real(real_kind),INTENT(IN)                              :: wdata(dim0,dim1,dim2,dim3)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
 logical, OPTIONAL, INTENT(IN)                           :: insert
 integer(kind=irg)                                       :: success
