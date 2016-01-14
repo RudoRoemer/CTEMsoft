@@ -1084,7 +1084,7 @@ real(kind=sgl),INTENT(IN)	:: q	!<
  write (psunit,"(F12.7,' ',F12.7,' M')") x,y
  write (psunit,"('(',$)") 
  write (psunit,"(A,$)") line
- write (psunit,"('  [x',1PE6.0,'] ) show')") q
+ write (psunit,"('  [x',1PE8.0,'] ) show')") q
 
 end subroutine
 
@@ -1119,7 +1119,7 @@ real(kind=sgl),INTENT(IN)	:: q		!<
  write (psunit,"('90.0 rotate')") 
  write (psunit,"('(',$)") 
  write (psunit,"(A,$)") line
- write (psunit,"('  [x',1PE6.0,'] ) show')") q
+ write (psunit,"('  [x',1PE8.0,'] ) show')") q
  write (psunit,"('-90.0 rotate grestore')") 
 
 end subroutine
