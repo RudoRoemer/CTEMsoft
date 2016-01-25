@@ -2122,6 +2122,7 @@ logical,INTENT(IN),OPTIONAL     :: stereographic
 integer(kind=irg),INTENT(IN),OPTIONAL :: cubictype
 
 real(kind=dbl)                  :: xy(2), xyz(3), kstar(3)
+real(kind=dbl),parameter        :: neps = -0.0001D0
 integer(kind=irg)               :: ierr, i, ix, iy
 real(kind=dbl)                  :: stmp(48,3)           !< output array with equivalent vectors
 integer(kind=irg)               :: n                    !< number of entries in equivalent vector array
@@ -2211,7 +2212,8 @@ do i=1,n
   call TransSpace(cell, stmp(i,1:3), xyz, 'r', 'c')
   call NormVec(cell, xyz, 'c')
   iequiv(3,i) = 1
-  if (xyz(3).lt.0.D0) iequiv(3,i) = -1
+! if (xyz(3).lt.0.D0) iequiv(3,i) = -1
+  if (xyz(3).lt.neps) iequiv(3,i) = -1
   if (present(stereographic)) then 
 ! export stereographic coordinates
    if (iequiv(3,i).eq.1) then

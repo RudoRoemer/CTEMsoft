@@ -621,6 +621,14 @@ io_int(1) = nint(float(totw)/float(numk))
 call WriteValue(' -> Average number of weak reflections   = ',io_int, 1, "(I5)")
 
 
+! make sure that the outer pixel rim of the mLPSH patterns is identical to
+! that of the mLPNH array.
+mLPSH(-ecpnl%npx,-ecpnl%npx:ecpnl%npx,1:numset) = mLPNH(-ecpnl%npx,-ecpnl%npx:ecpnl%npx,1:numset)
+mLPSH( ecpnl%npx,-ecpnl%npx:ecpnl%npx,1:numset) = mLPNH( ecpnl%npx,-ecpnl%npx:ecpnl%npx,1:numset)
+mLPSH(-ecpnl%npx:ecpnl%npx,-ecpnl%npx,1:numset) = mLPNH(-ecpnl%npx:ecpnl%npx,-ecpnl%npx,1:numset)
+mLPSH(-ecpnl%npx:ecpnl%npx, ecpnl%npx,1:numset) = mLPNH(-ecpnl%npx:ecpnl%npx, ecpnl%npx,1:numset)
+
+! make stereographic projections.
   Radius = 1.0
   do i=-ecpnl%npx,ecpnl%npx 
     do j=-ecpnl%npx,ecpnl%npx 

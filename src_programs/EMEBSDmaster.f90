@@ -814,6 +814,14 @@ if (usehex) then
   deallocate(auxNH, auxSH)
 end if
 
+! make sure that the outer pixel rim of the mLPSH patterns is identical to
+! that of the mLPNH array.
+mLPSH(-emnl%npx,-emnl%npx:emnl%npx,1,1:numset) = mLPNH(-emnl%npx,-emnl%npx:emnl%npx,1,1:numset)
+mLPSH( emnl%npx,-emnl%npx:emnl%npx,1,1:numset) = mLPNH( emnl%npx,-emnl%npx:emnl%npx,1,1:numset)
+mLPSH(-emnl%npx:emnl%npx,-emnl%npx,1,1:numset) = mLPNH(-emnl%npx:emnl%npx,-emnl%npx,1,1:numset)
+mLPSH(-emnl%npx:emnl%npx, emnl%npx,1,1:numset) = mLPNH(-emnl%npx:emnl%npx, emnl%npx,1,1:numset)
+
+
 ! since these computations can take a long time, here we store 
 ! all the output at the end of each pass through the energyloop.
 
