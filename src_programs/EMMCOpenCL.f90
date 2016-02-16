@@ -96,7 +96,7 @@ use io
 use files
 use diffraction, only:CalcWaveLength
 use Lambert
-use cl
+use clfortran
 use HDF5
 use NameListHDFwriters
 use HDFsupport
@@ -145,20 +145,21 @@ character(15)           :: tstre
 logical                 :: f_exists
 
 ! OpenCL variables
-type(cl_platform_id)    :: platform
-type(cl_device_id)      :: device(2)
-type(cl_context)        :: context
-type(cl_command_queue)  :: command_queue
-type(cl_program)        :: prog
-type(cl_kernel)         :: kernel
-type(cl_mem)            :: LamX, LamY, depth, energy,seeds
-type(cl_event)          :: event
+integer(c_intptr_t)     :: platform
+integer(c_intptr_t), allocatable, target :: platform_ids(:)
+integer(c_intptr_t)     :: device(2)
+integer(c_intptr_t)     :: context
+integer(c_intptr_t)     :: command_queue
+integer(c_intptr_t)     :: prog
+type(c_ptr)             :: kernel
+integer(c_intptr_t)            :: LamX, LamY, LamZ, depth, energy,seeds
+type(c_ptr)          :: event
 
 character(len = 100)    :: info ! info about the GPU
 integer, parameter      :: iunit = 10
 integer, parameter      :: source_length = 100000
 character(len = source_length)  :: source
-integer(kind=4)         :: num, ierr, irec, val,val1 ! auxiliary variables
+integer(c_int)         :: num, ierr, irec, val,val1 ! auxiliary variables
 character(fnlen)        :: groupname, dataset, instring, dataname
 integer(kind=irg)       :: numangle, iang
 
@@ -249,7 +250,7 @@ delta = dble(nx)
 !=====================
 
 ! get the platform ID
-call clGetPlatformIDs(platform, num, ierr)
+ierr = clGetPlatformIDs(0, C_NULL_PTR, num)
 if(ierr /= CL_SUCCESS) stop "Cannot get CL platform."
 
 ! get the device ID
@@ -622,6 +623,7 @@ call clReleaseMemObject(LamY, ierr)
 call clReleaseMemObject(depth, ierr)
 call clReleaseMemObject(energy, ierr)
 call clReleaseMemObject(seeds, ierr)
+
 
 
 end subroutine DoMCsimulation

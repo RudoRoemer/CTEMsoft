@@ -4,7 +4,7 @@
 #  FORTRANCL_INCLUDE_DIR - where to find szlib.h, etc.
 #  FORTRANCL_LIBRARIES   - List of libraries when using szlib.
 #  FORTRANCL_FOUND       - True if szlib found.
-set(FortranCL_DEBUG 0)
+set(FortranCL_DEBUG 1)
 if(FortranCL_DEBUG)
   MESSAGE(STATUS "Finding FortranCL")
 endif()
@@ -13,6 +13,7 @@ endif()
 if("${FORTRANCL_INSTALL}" STREQUAL "")
     set(FORTRANCL_INSTALL  $ENV{FORTRANCL_INSTALL})
 endif()
+
 
 IF (FORTRANCL_INCLUDE_DIR)
   # Already in cache, be silent
@@ -35,6 +36,8 @@ FIND_LIBRARY(FORTRANCL_LIBRARY
 )
 
 if(FortranCL_DEBUG)
+  MESSAGE(STATUS "FORTRANCL_INSTALL: ${FORTRANCL_INSTALL}")
+
   MESSAGE(STATUS "FORTRANCL_LIBRARY: ${FORTRANCL_LIBRARY}")
   MESSAGE(STATUS "FORTRANCL_INCLUDE_DIR: ${FORTRANCL_INCLUDE_DIR}")
 ENDIF()

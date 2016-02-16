@@ -122,6 +122,8 @@ if(HDF5_FOUND)
 
   if(MSVC_IDE)
     set(BUILD_TYPES Debug Release)
+    make_directory(${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Debug)
+    make_directory(${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Release)
   else()
     set(BUILD_TYPES "${CMAKE_BUILD_TYPE}")
     if("${BUILD_TYPES}" STREQUAL "")
@@ -129,12 +131,20 @@ if(HDF5_FOUND)
     endif()
   endif()
   if(NOT APPLE)
+    
     AddHDF5CopyInstallRules(LIBVAR HDF5_LIB
                         LIBNAME hdf5
                         TYPES ${BUILD_TYPES})
     AddHDF5CopyInstallRules(LIBVAR HDF5_CPP_LIB
                         LIBNAME hdf5_cpp
                         TYPES ${BUILD_TYPES})
+    AddHDF5CopyInstallRules(LIBVAR HDF5_FORTRAN_LIB
+                    LIBNAME hdf5_fortran
+                    TYPES ${BUILD_TYPES})
+     AddHDF5CopyInstallRules(LIBVAR HDF5_F90CSTUB_LIB
+                    LIBNAME hdf5_f90cstub
+                    TYPES ${BUILD_TYPES})
+
   endif()
 
   set(HDF5_COMPONENTS hdf5)

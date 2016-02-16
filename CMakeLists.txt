@@ -1,7 +1,7 @@
 
-if(NOT "${EMSoft_SDK}" STREQUAL "")
-  include("${EMSoft_SDK}/EMSoft_SDK.cmake")
-  message(STATUS "EMSoft_SDK Location: ${EMSoft_SDK}")
+if(NOT "${EMsoft_SDK}" STREQUAL "")
+  include("${EMsoft_SDK}/EMsoft_SDK.cmake")
+  message(STATUS "EMsoft_SDK Location: ${EMsoft_SDK}")
 endif()
 
 
@@ -48,7 +48,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
 # Build shared libraries
 OPTION(BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 # changed to SHARED on 10/23/15, MDG
-set(LIB_TYPE SHARED)
+set(LIB_TYPE STATIC)
 if(BUILD_SHARED_LIBS)
     set(LIB_TYPE SHARED)
     list(APPEND CMP_LIB_SEARCH_DIRS  ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} )
@@ -85,12 +85,8 @@ if (Fortran_COMPILER_NAME MATCHES "gfortran.*")
   set (CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fno-f2c -O0 -g -fno-sign-zero -flat_namespace")
 elseif (Fortran_COMPILER_NAME MATCHES "ifort.*")
   # ifort (untested)
-  set (CMAKE_Fortran_FLAGS_RELEASE "-f77rtl -O3 -openmp")
-  set (CMAKE_Fortran_FLAGS_DEBUG   "-f77rtl -O0 -g -openmp")
-elseif (Fortran_COMPILER_NAME MATCHES "g77")
-  # g77
-  set (CMAKE_Fortran_FLAGS_RELEASE "-funroll-all-loops -fno-f2c -O3 -m32")
-  set (CMAKE_Fortran_FLAGS_DEBUG   "-fno-f2c -O0 -g -m32")
+    set (CMAKE_Fortran_FLAGS_RELEASE "-f77rtl -O3 -openmp")
+    set (CMAKE_Fortran_FLAGS_DEBUG   "-f77rtl -openmp")
 else (Fortran_COMPILER_NAME MATCHES "gfortran.*")
   message ("CMAKE_Fortran_COMPILER full path: " ${CMAKE_Fortran_COMPILER})
   message ("Fortran compiler: " ${Fortran_COMPILER_NAME})
@@ -136,8 +132,47 @@ install(FILES ${PROJECT_SOURCE_DIR}/ReadMe.md ${PROJECT_SOURCE_DIR}/License.txt
 
 
 include_directories(${EMsoft_BINARY_DIR}/src ${JSONFORTRAN_INCLUDE_DIR})
-#find_package (FFTW3 COMPONENTS single double)
 
+#------------------------------------------------------------------------------
+# Find the BLAS/LAPACK library
+# On mac systems, we likely have to link against the vecLib framework
+if(APPLE)
+  find_library(EMsoft_BLAS_LAPACK_LIBS Accelerate)
+ # include_directories(" -FvecLib")
+elseif(UNIX AND NOT APPLE)
+  find_package(LAPACK REQUIRED)
+  if(LAPACK_FOUND)
+    set(EMsoft_BLAS_LAPACK_LIBS ${EMsoft_BLAS_LAPACK_LIBSRARIES})
+  else()
+    message(STATUS "LAPACK NOT Found for LINUX. Install LAPACK/BLAS on your system")
+  endif()
+elseif(WIN32)
+
+  if (Fortran_COMPILER_NAME MATCHES "gfortran.*")
+
+  endif()
+
+  if (Fortran_COMPILER_NAME MATCHES "ifort.*")
+    set(USE_MKL TRUE)
+    find_package(MKL REQUIRED)
+    if(MKL_FOUND)
+      set(EMsoft_BLAS_LAPACK_LIBS ${MKL_LIBRARIES})
+    else()
+      message(FATAL_ERROR "Intel MKL libraries where not found.")
+    endif()
+  else()
+
+  endif()
+
+else()
+  message(FATAL_ERROR "This platform needs to have CMake code inserted to find the BLAS/LAPACK Libraries.")
+endif(APPLE)
+
+include_directories(${EMsoft_BINARY_DIR}/src ${JSONFORTRAN_INCLUDE_DIR} ${FFTW3_INCLUDE_DIR})
+
+
+
+if(0)
 
 ## THIS WILL BE NEEDED FOR WINDOWS
 include(CMakeAddFortranSubdirectory)
@@ -145,12 +180,12 @@ include(CMakeAddFortranSubdirectory)
 # the subdir is lapack, the project is LAPACK
 cmake_add_fortran_subdirectory(src
   NO_EXTERNAL_INSTALL
-  PROJECT EMSoftLib  # project name in toplevel CMakeLists.txt in lapack
+  PROJECT EMsoftLib  # project name in toplevel CMakeLists.txt in lapack
   #ARCHIVE_DIR lapack/lib # .lib location relative to root binary tree
   #RUNTIME_DIR lapack/bin # .dll location relative to root binary tree
-  LIBRARIES EMSoftLib # target libraries created
+  LIBRARIES EMsoftLib # target libraries created
   LINK_LIBRARIES blas lapack  # link interface libraries
-  LINK_LIBS EMSoftLib blas lapack 
+  LINK_LIBS EMsoftLib blas lapack 
 )
 
 cmake_add_fortran_subdirectory(src_SampleRFZ
@@ -161,6 +196,11 @@ cmake_add_fortran_subdirectory(src_SampleRFZ
   LINK_LIBS 
 )
 
+else()
+# --------------------------------------------------------------------
+# Package the needed examples
+  add_subdirectory(${PROJECT_SOURCE_DIR}/src ${PROJECT_BINARY_DIR}/EMsoftLib)
+endif()
 
 # --------------------------------------------------------------------
 # Package the needed examples
