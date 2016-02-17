@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 #------------------------------------------------------------------------------
 # Read the configuration file for the SDK Build. All important variables are 
 # stored in the .conf file. DO NOT CHANGE variables in this file.
@@ -25,50 +24,41 @@ cd $SDK_INSTALL
 HOST_SYSTEM=`uname`
 echo "Host System: $HOST_SYSTEM"
 
-
-CMAKE=`type -P cmake`
-if [[ $CMAKE == "" ]];
-  then
-  echo "CMake is needed for this script. Please install it on your system and be sure it is on your path."
-  exit 1
-fi
-
-
-if [ ! -e "$SDK_INSTALL/${JSONFORTRAN_ARCHIVE_NAME}.tar.gz" ];
+if [ ! -e "$SDK_INSTALL/${FFTW_FOLDER_NAME}-${FFTW_VERSION}.tar.gz" ];
 then
   echo "-------------------------------------------"
-  echo " Downloading jsonfortran Version ${version}"
+  echo " Downloading fftw Version ${FFTW_VERSION}"
   echo "-------------------------------------------"
-  $DOWNLOAD_PROG  "" -o ${JSONFORTRAN_ARCHIVE_NAME}.tar.gz
+  $DOWNLOAD_PROG  "" -o ${FFTW_FOLDER_NAME}-${FFTW_VERSION}.tar.gz
 fi
 
-if [ ! -e "$SDK_INSTALL/${JSONFORTRAN_ARCHIVE_NAME}" ];
+if [ ! -e "$SDK_INSTALL/${FFTW_FOLDER_NAME}-${FFTW_VERSION}" ];
 then
-  tar -xvzf ${JSONFORTRAN_ARCHIVE_NAME}.tar.gz
-# mv jsonfortran-1.8.15 jsonfortran-1.8.15_source
+  tar -xvzf ${FFTW_FOLDER_NAME}-${FFTW_VERSION}.tar.gz
 fi
 
-# We assume we already have downloaded the source for json-fortran and have it in a folder
-# called json-fortran
-cd ${JSONFORTRAN_ARCHIVE_NAME}
-mkdir Build
-cd Build
-cmake -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release -DSKIP_DOC_GEN=TRUE -DCMAKE_INSTALL_PREFIX=${SDK_INSTALL} ../
+# We assume we already have downloaded the source for fftw3 and have it in a folder
+# called fftw-3.3.4
+cd ${FFTW_FOLDER_NAME}-${FFTW_VERSION}
+
+# ./configure --prefix=$SDK_INSTALL/fftw  --enable-shared --enable-threads --enable-openmp 
+./configure --prefix=$SDK_INSTALL/${FFTW_FOLDER_NAME} --enable-shared 
 make -j${PARALLEL_BUILD}
 make install
-cd ../
 
 #------------------------------------------------------------------------------
 # This next bit of code sets the install name of the dylib to the full absolute
 # path of the library. This will come in handy when packagin EMSoft with CMake
 # by allowing CMake to more easily find the library and adjust its internal paths
-cd ${SDK_INSTALL}/jsonfortran-gnu-${JSONFORTRAN_VERSION}/lib
-install_name_tool -id ${SDK_INSTALL}/jsonfortran-gnu-${JSONFORTRAN_VERSION}/lib/libjsonfortran.4.2.dylib ${SDK_INSTALL}/jsonfortran-gnu-${JSONFORTRAN_VERSION}/lib/libjsonfortran.4.2.dylib 
+cd ${SDK_INSTALL}/${FFTW_FOLDER_NAME}/lib
+install_name_tool -id ${SDK_INSTALL}/${FFTW_FOLDER_NAME}/lib/libfftw3.3.dylib ${SDK_INSTALL}/${FFTW_FOLDER_NAME}/lib/libfftw3.3.dylib 
+# install_name_tool -id ${SDK_INSTALL}/${FFTW_FOLDER_NAME}/lib/libfftw3_threads.3.dylib ${SDK_INSTALL}/${FFTW_FOLDER_NAME}/lib/libfftw3_threads.3.dylib 
+# install_name_tool -id ${SDK_INSTALL}/${FFTW_FOLDER_NAME}/lib/libfftw3_omp.3.dylib ${SDK_INSTALL}/${FFTW_FOLDER_NAME}/lib/libfftw3_omp.3.dylib 
 
+echo "" >> "$SDK_INSTALL/EMsoft_SDK.cmake"
 echo "#--------------------------------------------------------------------------------------------------" >> "$SDK_INSTALL/EMsoft_SDK.cmake"
-echo "# jsonfortran Library" >> "$SDK_INSTALL/EMsoft_SDK.cmake"
-echo "set(JSONFORTRAN_INSTALL \"\${EMsoft_SDK_ROOT}/jsonfortran-gnu-${JSONFORTRAN_VERSION}\")" >> "$SDK_INSTALL/EMsoft_SDK.cmake"
-echo "set(JSONFORTRAN_DIR \"\${JSONFORTRAN_INSTALL}/cmake\")" >> "$SDK_INSTALL/EMsoft_SDK.cmake"
-echo "set(jsonfortran-gnu_DIR \"\${JSONFORTRAN_DIR}\")" >> "$SDK_INSTALL/EMsoft_SDK.cmake"
+echo "# FFTW3 Library" >> "$SDK_INSTALL/EMsoft_SDK.cmake"
+echo "set(FFTW3_INSTALL \"\${EMsoft_SDK_ROOT}/${FFTW_FOLDER_NAME}\")" >> "$SDK_INSTALL/EMsoft_SDK.cmake"
+echo "set(FFTW3_VERSION \"${FFTW_VERSION}\")" >>  "$SDK_INSTALL/EMsoft_SDK.cmake"
 echo "" >> "$SDK_INSTALL/EMsoft_SDK.cmake"
 
