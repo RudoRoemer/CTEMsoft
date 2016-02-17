@@ -69,8 +69,9 @@ character(fnlen)                :: progname, progdesc, fname
  call GetAsymPos(cell)
  fname=''
  call ReadValue('Enter output file name (*.xtal) ', fname)
- write (*,*) 'fname = ',fname
  cell%fname = fname
  call SaveDataHDF(cell)
+
+ call Message('File '//trim(fname)//' created in XtalFolder')
 
 end program EMmkxtal
