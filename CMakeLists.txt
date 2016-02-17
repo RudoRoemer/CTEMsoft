@@ -133,9 +133,6 @@ message(STATUS "jsonfortran-gnu LIBRARY DIR: ${jsonfortran_LIBRARY_DIRS}")
 include_directories(${jsonfortran_INCLUDE_DIRS})
 
 
-# ---------- Find FFTW3 Headers/Libraries -----------------------
-include(${CMP_SOURCE_DIR}/Modules/FindFFTW3.cmake)
-
 # --------------------------------------------------------------------
 # Generate our ReadMe and License Files
 configure_file(${PROJECT_SOURCE_DIR}/License.txt
