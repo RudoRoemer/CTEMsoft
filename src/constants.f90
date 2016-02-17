@@ -96,15 +96,18 @@ real(kind=dbl), parameter :: epsijkd = 1.D0
 
 ! the rotations.f90 routines need to have access to the value +Infinity
 ! which is defined here (using the LaTeX name infty)
-INTEGER,private :: inf
-REAL,public :: infty
-EQUIVALENCE (inf,infty) ! stores two variable at the same address
-DATA inf/z'7f800000'/ !Hex for +Infinity
+REAL(kind=sgl),public :: infty = HUGE(0.0_sgl)
 
-INTEGER(kind=8),private :: infd
-REAL(kind=dbl),public :: inftyd
-EQUIVALENCE (infd,inftyd) ! stores two variable at the same address
-DATA infd/z'7FF0000000000000'/ !Hex for +Infinity
+! INTEGER(kind=4),private :: inf
+! REAL(kind=sgl),parameter :: infty
+! EQUIVALENCE (inf,infty) ! stores two variable at the same address
+! DATA inf/z'7f800000'/ !Hex for +Infinity
+
+REAL(kind=dbl),public :: inftyd = HUGE(0.0_dbl)
+! INTEGER(kind=8),private :: infd
+! REAL(kind=dbl),parameter :: inftyd
+! EQUIVALENCE (infd,inftyd) ! stores two variable at the same address
+! DATA infd/z'7FF0000000000000'/ !Hex for +Infinity
 
 
 

@@ -100,7 +100,6 @@ module local
   character(fnlen)                      :: EMsoftplatform="@CMAKE_SYSTEM_NAME@"
 !> pathnamedelimiter
   character(1)                          :: EMsoftnativedelimiter
- 
   
 !> reserved IO unit identifiers for postscript (20) and data (21-23)
   integer(kind=irg), parameter          :: psunit=20, dataunit=21, dataunit2=22, dataunit3=23
@@ -400,12 +399,12 @@ else  ! read the other string from the environment variables
 end if
 
 ! define the derived pathname variables (globals)
-templatepathname = trim(EMsoftpathname)//'templatefolder/'
-resourcepathname = trim(EMsoftpathname)//'resources/'
-openclpathname = trim(EMsoftpathname)//'opencl/'
-xtalpathname = trim(EMdatapathname)//'XtalFolder/'
-templatecodefilename = trim(resourcepathname)//'templatecodes.txt'
-randomseedfilename = trim(resourcepathname)//'RandomSeeds.data'
+templatepathname = trim(EMsoftpathname)//'\\templatefolder/'
+resourcepathname = trim(EMsoftpathname)//'\\resources/'
+openclpathname = trim(EMsoftpathname)//'\\opencl/'
+xtalpathname = trim(EMdatapathname)//'\\XtalFolder/'
+templatecodefilename = trim(resourcepathname)//'\\templatecodes.txt'
+randomseedfilename = trim(resourcepathname)//'\\RandomSeeds.data'
 
 end subroutine EMsoft_path_init
 

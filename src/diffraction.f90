@@ -1290,8 +1290,8 @@ real(kind=sgl),INTENT(IN)       :: laL                  !< camera length
 integer(kind=irg),INTENT(IN)    :: icnt                 !< counter
 logical,INTENT(IN)              :: dbdiff(icnt)         !< array to deal with double diffraction spots
 real(kind=sgl),INTENT(IN)       :: Vg(*),rg(*),Vgsave(*)
-integer(kind=irg),INTENT(IN)    :: rfamily(hhcc,48,3),rnumfam(*)
 integer(kind=irg),INTENT(IN)    :: hhcc
+integer(kind=irg),INTENT(IN)    :: rfamily(hhcc,48,3),rnumfam(*)
 
 ! nref is the anticipated maximum number of reflections per pattern
 integer(kind=irg),parameter     :: nref = 2000

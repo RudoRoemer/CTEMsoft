@@ -3,7 +3,15 @@
 # Set some variables to shorten up the call to the function below
 set(APP_DIR "${EMsoft_SOURCE_DIR}/src_programs")
 set(TMPLT_DIR "${EMsoft_SOURCE_DIR}/templatefolder")
-set(EXE_LINK_LIBRARIES EMSoftLib gomp gcc_eh jsonfortran)
+
+
+set(EXE_LINK_LIBRARIES EMsoftLib hdf5 hdf5_f90cstub hdf5_fortran hdf5_hl_fortran jsonfortran)
+if (Fortran_COMPILER_NAME MATCHES "gfortran.*")
+  set(EXE_LINK_LIBRARIES ${EXE_LINK_LIBRARIES} gomp gcc_eh)
+endif()
+
+include_directories(${EMsoft_BINARY_DIR}/EMsoftLib)
+include_directories(${EMsoftLib_BINARY_DIR})
 
 #---------------------------------------------------------------------
 # This function creates an executable that is to be compiled. The valid
@@ -19,6 +27,9 @@ function(Add_EMSoft_Executable)
 
   option(EMSOFT_BUILD_${Z_TARGET} "Build ${Z_TARGET}" ON)
   mark_as_advanced(EMSOFT_BUILD_${Z_TARGET})
+
+  include_directories(${CLFORTRAN_INCLUDE_DIR})
+  include_directories(${HDF5_INCLUDE_DIR})
 
   if(EMSOFT_BUILD_${Z_TARGET})  
     set(install_dir "bin")
@@ -75,7 +86,6 @@ Add_EMSoft_Executable(TARGET EMsampleRFZ SOURCES ${APP_DIR}/EMsampleRFZ.f90 LINK
 Add_EMSoft_Executable(TARGET EMEBSD SOURCES ${APP_DIR}/EMEBSD.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMEBSD.template)
 Add_EMSoft_Executable(TARGET EMEBSDmaster SOURCES ${APP_DIR}/EMEBSDmaster.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMEBSDmaster.template)
 #Add_EMSoft_Executable(TARGET EMPEDKIN SOURCES ${APP_DIR}/EMPEDKIN.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMPEDKIN.template)
-Add_EMSoft_Executable(TARGET rotationtest SOURCES ${APP_DIR}/rotationtest.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMECP.template)
 Add_EMSoft_Executable(TARGET EMmkxtal SOURCES ${APP_DIR}/EMmkxtal.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES})
 Add_EMSoft_Executable(TARGET EMlistSG SOURCES ${APP_DIR}/EMlistSG.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES})
 Add_EMSoft_Executable(TARGET EMqg SOURCES ${APP_DIR}/EMqg.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES})
@@ -91,30 +101,15 @@ Add_EMSoft_Executable(TARGET EMzap SOURCES ${APP_DIR}/EMzap.f90 LINK_LIBRARIES $
 Add_EMSoft_Executable(TARGET EMdrawcell SOURCES ${APP_DIR}/EMdrawcell.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES})
 
 
+Add_EMSoft_Executable(TARGET rotationtest SOURCES ${APP_DIR}/rotationtest.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMECP.template)
 #---------------------------------------------------------------------
 # Copy the Rotations.txt file from Resources into the build directory
 ADD_CUSTOM_TARGET(ZZ_RotationsFile-Copy ALL
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${EMsoft_SOURCE_DIR}/resources/rotations.txt"
                     ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${INTER_DIR}/
                     )
-add_dependencies(rotationtest ZZ_RotationsFile-Copy )
+#add_dependencies(rotationtest ZZ_RotationsFile-Copy )
 
-#------------------------------------------------------------------------------
-# Find the BLAS/LAPACK library
-# On mac systems, we likely have to link against the vecLib framework
-if(APPLE)
-  find_library(LAPACK_LIB Accelerate)
- # include_directories(" -FvecLib")
-elseif(UNIX AND NOT APPLE)
-  find_package(LAPACK REQUIRED)
-  if(LAPACK_FOUND)
-    set(LAPACK_LIB ${LAPACK_LIBRARIES})
-  else()
-    message(STATUS "LAPACK NOT Found for LINUX. Install LAPACK/BLAS on your system")
-  endif()
-else()
-	message(FATAL_ERROR "This platform needs to have CMake code inserted to find the BLAS/LAPACK Libraries.")
-endif(APPLE)
 
 #------------------------------------------------------------------------------
 # Fine the OpenCL Package
@@ -140,26 +135,31 @@ else( OPENCL_HAS_CPP_BINDINGS )
 endif( OPENCL_HAS_CPP_BINDINGS )
 
 #------------------------------------------------------------------------------
-# Fine the Fortran OpenCL Bindings Package
-find_package(FortranCL REQUIRED)
-if( NOT FORTRANCL_FOUND)
-  message(STATUS "FortranCL is REQUIRED for this project.")
-  message(STATUS "FortranCL source repository is at http://code.google.com/p/fortrancl/downloads/list")
-  message(FATAL_ERROR "Please Download, Build and install. After install export the environment variable FORTRANCL_INSTALL to point to the installation location.")
+# Find the Fortran OpenCL Bindings Package
+find_package(CLFortran REQUIRED)
+if( NOT CLFORTRAN_FOUND)
+  message(STATUS "CLFortran is REQUIRED for this project.")
+  message(STATUS "CLFortran source repository is at http://code.google.com/p/fortrancl/downloads/list")
+  message(FATAL_ERROR "Please Download, Build and install. After install export the environment variable CLFORTRAN_INSTALL to point to the installation location.")
 endif()
 
+message(STATUS "CLFORTRAN_INCLUDE_DIR: ${CLFORTRAN_INCLUDE_DIR}" )
 
-include_directories(${FORTRANCL_INCLUDE_DIR})
-include_directories(${HDF5_INCLUDE_DIR})
 
 # Add executables to be compiled.
-Add_EMSoft_Executable(TARGET EMMCOpenCL 
-                      SOURCES ${APP_DIR}/EMMCOpenCL.f90 
-                      LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${FORTRANCL_LIBRARIES} ${OpenCL_LIBRARY}
-                      TEMPLATE ${TMPLT_DIR}/EMMCOpenCL.template
-                      )
-#Add_EMSoft_Executable(TARGET EMEBSDmasterOpenCL 
-#                      SOURCES ${APP_DIR}/EMEBSDmasterOpenCL.f90 
-#                      LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${FORTRANCL_LIBRARIES} ${OpenCL_LIBRARY}
-#                      TEMPLATE ${TMPLT_DIR}/EMEBSDmaster.template
-#                      )
+# Add_EMSoft_Executable(TARGET EMMCOpenCL 
+#                       SOURCES ${APP_DIR}/EMMCOpenCL.f90 
+#                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${CLFORTRAN_LIBRARIES} ${OpenCL_LIBRARY}
+#                       TEMPLATE ${TMPLT_DIR}/EMMCOpenCL.template
+#                       )
+# Add_EMsoft_Executable(TARGET EMECPDictionaryIndexing
+#                       SOURCES ${APP_DIR}/EMECPDictionaryIndexing.f90 
+#                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${CLFORTRAN_LIBRARIES} ${OpenCL_LIBRARY}
+#                       TEMPLATE ${TMPLT_DIR}/EMECPIndexing.template
+#                       )
+# Add_EMsoft_Executable(TARGET EMEBSDDictionaryIndexing
+#                       SOURCES ${APP_DIR}/EMEBSDDictionaryIndexing.f90 
+#                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${CLFORTRAN_LIBRARIES} ${OpenCL_LIBRARY}
+#                       TEMPLATE ${TMPLT_DIR}/EMEBSDIndexing.template
+#                       )
+
