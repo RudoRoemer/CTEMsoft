@@ -243,31 +243,31 @@ hdferr = HDF_openGroup(groupname, HDF_head)
 
 ! read all the necessary variables from the namelist group
 dataset = 'xtalname'
-stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
 xtalname = trim(stringarray(1))
 
 dataset = 'numsx'
-nsx = HDF_readDatasetInteger(dataset, HDF_head)
+call HDF_readDatasetInteger(dataset, HDF_head, hdferr, nsx)
 nsx = (nsx - 1)/2
 nsy = nsx
 
 dataset = 'EkeV'
-EkeV = HDF_readDatasetDouble(dataset, HDF_head)
+call HDF_readDatasetDouble(dataset, HDF_head, hdferr, EkeV)
 
 dataset = 'Ehistmin'
-Ehistmin = HDF_readDatasetDouble(dataset, HDF_head)
+call HDF_readDatasetDouble(dataset, HDF_head, hdferr, Ehistmin)
 
 dataset = 'Ebinsize'
-Ebinsize = HDF_readDatasetDouble(dataset, HDF_head)
+call HDF_readDatasetDouble(dataset, HDF_head, hdferr, Ebinsize)
 
 dataset = 'depthmax'
-depthmax = HDF_readDatasetDouble(dataset, HDF_head)
+call HDF_readDatasetDouble(dataset, HDF_head, hdferr, depthmax)
 
 dataset = 'depthstep'
-depthstep = HDF_readDatasetDouble(dataset, HDF_head)
+call HDF_readDatasetDouble(dataset, HDF_head, hdferr, depthstep)
 
 dataset = 'mode'
-stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
 mode = trim(stringarray(1))
 
 if (trim(mode) .ne. 'bse1') then
@@ -284,17 +284,17 @@ hdferr = HDF_openGroup(groupname, HDF_head)
 
 ! read data items
 dataset = 'numangle'
-numEbins = HDF_readDatasetInteger(dataset, HDF_head)
+call HDF_readDatasetInteger(dataset, HDF_head, hdferr, numEbins)
 
 dataset = 'numzbins'
-numzbins = HDF_readDatasetInteger(dataset, HDF_head)
+call HDF_readDatasetInteger(dataset, HDF_head, hdferr, numzbins)
 
 dataset = 'totnum_el'
-num_el = HDF_readDatasetInteger(dataset, HDF_head)
+call HDF_readDatasetInteger(dataset, HDF_head, hdferr, num_el)
 
 dataset = 'accum_z'
 ! dims4 =  (/ numEbins, numzbins, 2*(nsx/10)+1,2*(nsy/10)+1 /)
-acc_z = HDF_readDatasetIntegerArray4D(dataset, dims4, HDF_head)
+call HDF_readDatasetIntegerArray4D(dataset, dims4, HDF_head, hdferr, acc_z)
 allocate(accum_z(numEbins,numzbins,-nsx/10:nsx/10,-nsy/10:nsy/10),stat=istat)
 accum_z = acc_z
 deallocate(acc_z)

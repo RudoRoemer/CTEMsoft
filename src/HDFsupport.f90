@@ -786,7 +786,7 @@ end function HDF_readfromTextfile
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_readDatasetStringArray
+! SUBROUTINE:HDF_readDatasetStringArray
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -800,7 +800,7 @@ end function HDF_readfromTextfile
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetStringArray(dataname, nlines, HDF_head) result(stringarray)
+subroutine HDF_readDatasetStringArray(dataname, nlines, HDF_head, hdferr, stringarray)
 
 use ISO_C_BINDING
 
@@ -809,10 +809,11 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 integer(kind=irg),INTENT(OUT)                           :: nlines
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-character(len=fnlen, KIND=c_char),allocatable, TARGET   :: stringarray(:) 
+integer(kind=irg),INTENT(OUT)                           :: hdferr
+character(len=fnlen, KIND=c_char),allocatable, TARGET, INTENT(OUT)   :: stringarray(:) 
 
 integer(HID_T)                                          :: filetype, space ! Handles
-integer                                                 :: hdferr, i, length
+integer                                                 :: i, length
 integer(HSIZE_T), DIMENSION(1:1)                        :: dims
 integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
 
@@ -862,7 +863,7 @@ call H5Tclose_f(filetype, hdferr)
 call HDF_pop(HDF_head)
 
 
-end function HDF_readDatasetStringArray
+end subroutine HDF_readDatasetStringArray
 
 !--------------------------------------------------------------------------
 !
@@ -2517,8 +2518,15 @@ end function HDF_writeDatasetDoubleArray4D
 
 
 !--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------READ subroutines below--------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+
+!--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_readDatasetCharArray1D
+! SUBROUTINE:HDF_readDatasetCharArray1D
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -2532,7 +2540,7 @@ end function HDF_writeDatasetDoubleArray4D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetCharArray1D(dataname, dims, HDF_head) result(rdata)
+subroutine HDF_readDatasetCharArray1D(dataname, dims, HDF_head, hdferr, rdata)
 
 use ISO_C_BINDING
 
@@ -2541,10 +2549,11 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(1)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-character(len=1), dimension(:), allocatable, TARGET     :: rdata
+integer(kind=irg),INTENT(OUT)                           :: hdferr
+character(len=1), allocatable, TARGET, INTENT(OUT)      :: rdata(:)
 
 integer(HID_T)                                          :: space, dset ! Handles
-integer                                                 :: hdferr, rnk
+integer                                                 :: rnk
 integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
@@ -2569,11 +2578,11 @@ call h5sclose_f(space, hdferr)
 
 ! that's it
 
-end function HDF_readDatasetCharArray1D
+end subroutine HDF_readDatasetCharArray1D
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_readDatasetCharArray2D
+! SUBROUTINE:HDF_readDatasetCharArray2D
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -2587,7 +2596,7 @@ end function HDF_readDatasetCharArray1D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetCharArray2D(dataname, dims, HDF_head) result(rdata)
+subroutine HDF_readDatasetCharArray2D(dataname, dims, HDF_head, hdferr, rdata)
 
 use ISO_C_BINDING
 
@@ -2596,10 +2605,11 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(2)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-character(len=1), dimension(:,:), allocatable, TARGET   :: rdata
+integer(kind=irg),INTENT(OUT)                           :: hdferr
+character(len=1), allocatable, TARGET,INTENT(OUT)       :: rdata(:,:)
 
 integer(HID_T)                                          :: space, dset ! Handles
-integer                                                 :: hdferr, rnk
+integer                                                 :: rnk
 integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
@@ -2624,12 +2634,12 @@ call h5sclose_f(space, hdferr)
 
 ! that's it
 
-end function HDF_readDatasetCharArray2D
+end subroutine HDF_readDatasetCharArray2D
 
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_readDatasetCharArray3D
+! SUBROUTINE:HDF_readDatasetCharArray3D
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -2643,7 +2653,7 @@ end function HDF_readDatasetCharArray2D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetCharArray3D(dataname, dims, HDF_head) result(rdata)
+subroutine HDF_readDatasetCharArray3D(dataname, dims, HDF_head, hdferr, rdata)
 
 use ISO_C_BINDING
 
@@ -2652,10 +2662,11 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(3)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-character(len=1), dimension(:,:,:), allocatable, TARGET :: rdata
+integer(kind=irg),INTENT(OUT)                           :: hdferr
+character(len=1), allocatable, TARGET, INTENT(OUT)      :: rdata(:,:,:)
 
 integer(HID_T)                                          :: space, dset ! Handles
-integer                                                 :: hdferr, rnk
+integer                                                 :: rnk
 integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
@@ -2680,12 +2691,12 @@ call h5sclose_f(space, hdferr)
 
 ! that's it
 
-end function HDF_readDatasetCharArray3D
+end subroutine HDF_readDatasetCharArray3D
 
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_readDatasetCharArray4D
+! SUBROUTINE:HDF_readDatasetCharArray4D
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -2699,7 +2710,7 @@ end function HDF_readDatasetCharArray3D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetCharArray4D(dataname, dims, HDF_head) result(rdata)
+subroutine HDF_readDatasetCharArray4D(dataname, dims, HDF_head, hdferr, rdata)
 
 use ISO_C_BINDING
 
@@ -2708,10 +2719,11 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(4)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-character(len=1), dimension(:,:,:,:), allocatable, TARGET :: rdata
+integer(kind=irg),INTENT(OUT)                           :: hdferr
+character(len=1), allocatable, TARGET, INTENT(OUT)      :: rdata(:,:,:,:)
 
 integer(HID_T)                                          :: space, dset ! Handles
-integer                                                 :: hdferr, rnk
+integer                                                 :: rnk
 integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
@@ -2736,12 +2748,12 @@ call h5sclose_f(space, hdferr)
 
 ! that's it
 
-end function HDF_readDatasetCharArray4D
+end subroutine HDF_readDatasetCharArray4D
 
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_readDatasetInteger
+! SUBROUTINE:HDF_readDatasetInteger
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -2754,7 +2766,7 @@ end function HDF_readDatasetCharArray4D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetInteger(dataname, HDF_head) result(rdata)
+subroutine HDF_readDatasetInteger(dataname, HDF_head, hdferr, rdata)
 
 use ISO_C_BINDING
 
@@ -2762,10 +2774,10 @@ IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                             :: dataname
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-integer,  TARGET                                        :: rdata
+integer(kind=irg),INTENT(OUT)                           :: hdferr
+integer, TARGET, INTENT(OUT)                            :: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
-integer                                                 :: hdferr
 
 TYPE(C_PTR)                                             :: f_ptr
 
@@ -2786,12 +2798,12 @@ call h5sclose_f(space, hdferr)
 
 ! that's it
 
-end function HDF_readDatasetInteger
+end subroutine HDF_readDatasetInteger
 
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_readDatasetIntegerArray1D
+! SUBROUTINE:HDF_readDatasetIntegerArray1D
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -2805,7 +2817,7 @@ end function HDF_readDatasetInteger
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetIntegerArray1D(dataname, dims, HDF_head) result(rdata)
+subroutine HDF_readDatasetIntegerArray1D(dataname, dims, HDF_head, hdferr, rdata)
 
 use ISO_C_BINDING
 
@@ -2814,10 +2826,11 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(1)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-integer, dimension(:), allocatable, TARGET              :: rdata
+integer(kind=irg),INTENT(OUT)                           :: hdferr
+integer, allocatable, TARGET, INTENT(OUT)               :: rdata(:)
 
 integer(HID_T)                                          :: space, dset ! Handles
-integer                                                 :: hdferr, rnk
+integer                                                 :: rnk
 integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
@@ -2842,11 +2855,11 @@ call h5sclose_f(space, hdferr)
 
 ! that's it
 
-end function HDF_readDatasetIntegerArray1D
+end subroutine HDF_readDatasetIntegerArray1D
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_readDatasetIntegerArray2D
+! SUBROUTINE:HDF_readDatasetIntegerArray2D
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -2860,7 +2873,7 @@ end function HDF_readDatasetIntegerArray1D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetIntegerArray2D(dataname, dims, HDF_head) result(rdata)
+subroutine HDF_readDatasetIntegerArray2D(dataname, dims, HDF_head, hdferr, rdata)
 
 use ISO_C_BINDING
 
@@ -2869,10 +2882,11 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(2)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-integer, dimension(:,:), allocatable, TARGET            :: rdata
+integer(kind=irg),INTENT(OUT)                           :: hdferr
+integer, allocatable, TARGET, INTENT(OUT)               :: rdata(:,:)
 
 integer(HID_T)                                          :: space, dset ! Handles
-integer                                                 :: hdferr, rnk
+integer                                                 :: rnk
 integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
@@ -2897,11 +2911,11 @@ call h5sclose_f(space, hdferr)
 
 ! that's it
 
-end function HDF_readDatasetIntegerArray2D
+end subroutine HDF_readDatasetIntegerArray2D
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_readDatasetIntegerArray3D
+! SUBROUTINE:HDF_readDatasetIntegerArray3D
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -2915,7 +2929,7 @@ end function HDF_readDatasetIntegerArray2D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetIntegerArray3D(dataname, dims, HDF_head) result(rdata)
+subroutine HDF_readDatasetIntegerArray3D(dataname, dims, HDF_head, hdferr, rdata)
 
 use ISO_C_BINDING
 
@@ -2924,10 +2938,11 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(3)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-integer, dimension(:,:,:), allocatable, TARGET          :: rdata
+integer(kind=irg),INTENT(OUT)                           :: hdferr
+integer, allocatable, TARGET, INTENT(OUT)               :: rdata(:,:,:)
 
 integer(HID_T)                                          :: space, dset ! Handles
-integer                                                 :: hdferr, rnk
+integer                                                 :: rnk
 integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
@@ -2952,11 +2967,11 @@ call h5sclose_f(space, hdferr)
 
 ! that's it
 
-end function HDF_readDatasetIntegerArray3D
+end subroutine HDF_readDatasetIntegerArray3D
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_readDatasetIntegerArray4D
+! SUBROUTINE:HDF_readDatasetIntegerArray4D
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -2970,7 +2985,7 @@ end function HDF_readDatasetIntegerArray3D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetIntegerArray4D(dataname, dims, HDF_head) result(rdata)
+subroutine HDF_readDatasetIntegerArray4D(dataname, dims, HDF_head, hdferr, rdata)
 
 use ISO_C_BINDING
 
@@ -2979,10 +2994,11 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(4)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-integer, dimension(:,:,:,:), allocatable, TARGET        :: rdata
+integer(kind=irg),INTENT(OUT)                           :: hdferr
+integer, allocatable, TARGET, INTENT(OUT)               :: rdata(:,:,:,:)
 
 integer(HID_T)                                          :: space, dset ! Handles
-integer                                                 :: hdferr, rnk
+integer                                                 :: rnk
 integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
@@ -3007,11 +3023,11 @@ call h5sclose_f(space, hdferr)
 
 ! that's it
 
-end function HDF_readDatasetIntegerArray4D
+end subroutine HDF_readDatasetIntegerArray4D
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_readDatasetFloat
+! SUBROUTINE:HDF_readDatasetFloat
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -3024,7 +3040,7 @@ end function HDF_readDatasetIntegerArray4D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetFloat(dataname, HDF_head) result(rdata)
+subroutine HDF_readDatasetFloat(dataname, HDF_head, hdferr, rdata)
 
 use ISO_C_BINDING
 
@@ -3034,10 +3050,10 @@ integer,parameter                                       :: real_kind = SELECTED_
 
 character(fnlen),INTENT(IN)                             :: dataname
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-real(real_kind), TARGET                                 :: rdata
+integer(kind=irg),INTENT(OUT)                           :: hdferr
+real(real_kind), TARGET, INTENT(OUT)                    :: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
-integer                                                 :: hdferr
 
 TYPE(C_PTR)                                             :: f_ptr
 
@@ -3058,11 +3074,11 @@ call h5sclose_f(space, hdferr)
 
 ! that's it
 
-end function HDF_readDatasetFloat
+end subroutine HDF_readDatasetFloat
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_readDatasetFloatArray1D
+! SUBROUTINE:HDF_readDatasetFloatArray1D
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -3076,7 +3092,7 @@ end function HDF_readDatasetFloat
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetFloatArray1D(dataname, dims, HDF_head) result(rdata)
+subroutine HDF_readDatasetFloatArray1D(dataname, dims, HDF_head, hdferr, rdata)
 
 use ISO_C_BINDING
 
@@ -3087,10 +3103,11 @@ integer,parameter                                       :: real_kind = SELECTED_
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(1)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-real(real_kind), dimension(:), allocatable, TARGET      :: rdata
+integer(kind=irg),INTENT(OUT)                           :: hdferr
+real(real_kind), allocatable, TARGET, INTENT(OUT)       :: rdata(:)
 
 integer(HID_T)                                          :: space, dset ! Handles
-integer                                                 :: hdferr, rnk
+integer                                                 :: rnk
 integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
@@ -3115,11 +3132,11 @@ call h5sclose_f(space, hdferr)
 
 ! that's it
 
-end function HDF_readDatasetFloatArray1D
+end subroutine HDF_readDatasetFloatArray1D
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_readDatasetFloatArray2D
+! SUBROUTINE:HDF_readDatasetFloatArray2D
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -3133,7 +3150,7 @@ end function HDF_readDatasetFloatArray1D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetFloatArray2D(dataname, dims, HDF_head) result(rdata)
+subroutine HDF_readDatasetFloatArray2D(dataname, dims, HDF_head, hdferr, rdata)
 
 use ISO_C_BINDING
 
@@ -3144,10 +3161,11 @@ integer,parameter                                       :: real_kind = SELECTED_
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(2)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-real(real_kind), dimension(:,:), allocatable, TARGET    :: rdata
+integer(kind=irg),INTENT(OUT)                           :: hdferr
+real(real_kind), allocatable, TARGET, INTENT(OUT)       :: rdata(:,:)
 
 integer(HID_T)                                          :: space, dset ! Handles
-integer                                                 :: hdferr, rnk
+integer                                                 :: rnk
 integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
@@ -3172,11 +3190,11 @@ call h5sclose_f(space, hdferr)
 
 ! that's it
 
-end function HDF_readDatasetFloatArray2D
+end subroutine HDF_readDatasetFloatArray2D
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_readDatasetFloatArray3D
+! SUBROUTINE:HDF_readDatasetFloatArray3D
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -3190,7 +3208,7 @@ end function HDF_readDatasetFloatArray2D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetFloatArray3D(dataname, dims, HDF_head) result(rdata)
+subroutine HDF_readDatasetFloatArray3D(dataname, dims, HDF_head, hdferr, rdata)
 
 use ISO_C_BINDING
 
@@ -3201,10 +3219,11 @@ integer,parameter                                       :: real_kind = SELECTED_
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(3)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-real(real_kind), dimension(:,:,:), allocatable, TARGET  :: rdata
+integer(kind=irg),INTENT(OUT)                           :: hdferr
+real(real_kind), allocatable, TARGET, INTENT(OUT)       :: rdata(:,:,:)
 
 integer(HID_T)                                          :: space, dset ! Handles
-integer                                                 :: hdferr, rnk
+integer                                                 :: rnk
 integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
@@ -3229,11 +3248,11 @@ call h5sclose_f(space, hdferr)
 
 ! that's it
 
-end function HDF_readDatasetFloatArray3D
+end subroutine HDF_readDatasetFloatArray3D
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_readDatasetFloatArray4D
+! SUBROUTINE:HDF_readDatasetFloatArray4D
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -3247,7 +3266,7 @@ end function HDF_readDatasetFloatArray3D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetFloatArray4D(dataname, dims, HDF_head) result(rdata)
+subroutine HDF_readDatasetFloatArray4D(dataname, dims, HDF_head, hdferr, rdata)
 
 use ISO_C_BINDING
 
@@ -3258,10 +3277,11 @@ integer,parameter                                       :: real_kind = SELECTED_
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(4)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-real(real_kind), dimension(:,:,:,:), allocatable, TARGET:: rdata
+integer(kind=irg),INTENT(OUT)                           :: hdferr
+real(real_kind), allocatable, TARGET, INTENT(OUT)       :: rdata(:,:,:,:)
 
 integer(HID_T)                                          :: space, dset ! Handles
-integer                                                 :: hdferr, rnk
+integer                                                 :: rnk
 integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
@@ -3286,11 +3306,11 @@ call h5sclose_f(space, hdferr)
 
 ! that's it
 
-end function HDF_readDatasetFloatArray4D
+end subroutine HDF_readDatasetFloatArray4D
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_readDatasetDouble
+! SUBROUTINE:HDF_readDatasetDouble
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -3303,7 +3323,7 @@ end function HDF_readDatasetFloatArray4D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetDouble(dataname, HDF_head) result(rdata)
+subroutine HDF_readDatasetDouble(dataname, HDF_head, hdferr, rdata)
 
 use ISO_C_BINDING
 
@@ -3313,10 +3333,10 @@ integer,parameter                                       :: real_kind = SELECTED_
 
 character(fnlen),INTENT(IN)                             :: dataname
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-real(real_kind), TARGET                                 :: rdata
+integer(kind=irg),INTENT(OUT)                           :: hdferr
+real(real_kind), TARGET, INTENT(OUT)                    :: rdata
 
 integer(HID_T)                                          :: space, dset ! Handles
-integer                                                 :: hdferr
 
 TYPE(C_PTR)                                             :: f_ptr
 
@@ -3337,12 +3357,12 @@ call h5sclose_f(space, hdferr)
 
 ! that's it
 
-end function HDF_readDatasetDouble
+end subroutine HDF_readDatasetDouble
 
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_readDatasetDoubleArray1D
+! SUBROUTINE:HDF_readDatasetDoubleArray1D
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -3356,7 +3376,7 @@ end function HDF_readDatasetDouble
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetDoubleArray1D(dataname, dims, HDF_head) result(rdata)
+subroutine HDF_readDatasetDoubleArray1D(dataname, dims, HDF_head, hdferr, rdata)
 
 use ISO_C_BINDING
 
@@ -3367,10 +3387,11 @@ integer,parameter                                       :: real_kind = SELECTED_
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(1)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-real(real_kind), dimension(:), allocatable, TARGET      :: rdata
+integer(kind=irg),INTENT(OUT)                           :: hdferr
+real(real_kind), allocatable, TARGET, INTENT(OUT)       :: rdata(:)
 
 integer(HID_T)                                          :: space, dset ! Handles
-integer                                                 :: hdferr, rnk
+integer                                                 :: rnk
 integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
@@ -3395,11 +3416,11 @@ call h5sclose_f(space, hdferr)
 
 ! that's it
 
-end function HDF_readDatasetDoubleArray1D
+end subroutine HDF_readDatasetDoubleArray1D
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_readDatasetDoubleArray2D
+! SUBROUTINE:HDF_readDatasetDoubleArray2D
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -3413,7 +3434,7 @@ end function HDF_readDatasetDoubleArray1D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetDoubleArray2D(dataname, dims, HDF_head) result(rdata)
+subroutine HDF_readDatasetDoubleArray2D(dataname, dims, HDF_head, hdferr, rdata)
 
 use ISO_C_BINDING
 
@@ -3424,10 +3445,11 @@ integer,parameter                                       :: real_kind = SELECTED_
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(2)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-real(real_kind), dimension(:,:), allocatable, TARGET    :: rdata
+integer(kind=irg),INTENT(OUT)                           :: hdferr
+real(real_kind), allocatable, TARGET, INTENT(OUT)       :: rdata(:,:)
 
 integer(HID_T)                                          :: space, dset ! Handles
-integer                                                 :: hdferr, rnk
+integer                                                 :: rnk
 integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
@@ -3452,11 +3474,11 @@ call h5sclose_f(space, hdferr)
 
 ! that's it
 
-end function HDF_readDatasetDoubleArray2D
+end subroutine HDF_readDatasetDoubleArray2D
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_readDatasetDoubleArray3D
+! SUBROUTINE:HDF_readDatasetDoubleArray3D
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -3470,7 +3492,7 @@ end function HDF_readDatasetDoubleArray2D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetDoubleArray3D(dataname, dims, HDF_head) result(rdata)
+subroutine HDF_readDatasetDoubleArray3D(dataname, dims, HDF_head, hdferr, rdata)
 
 use ISO_C_BINDING
 
@@ -3481,10 +3503,11 @@ integer,parameter                                       :: real_kind = SELECTED_
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(3)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-real(real_kind), dimension(:,:,:), allocatable, TARGET  :: rdata
+integer(kind=irg),INTENT(OUT)                           :: hdferr
+real(real_kind), allocatable, TARGET, INTENT(OUT)       :: rdata(:,:,:)
 
 integer(HID_T)                                          :: space, dset ! Handles
-integer                                                 :: hdferr, rnk
+integer                                                 :: rnk
 integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
@@ -3510,11 +3533,11 @@ call h5sclose_f(space, hdferr)
 
 ! that's it
 
-end function HDF_readDatasetDoubleArray3D
+end subroutine HDF_readDatasetDoubleArray3D
 
 !--------------------------------------------------------------------------
 !
-! FUNCTION:HDF_readDatasetDoubleArray4D
+! SUBROUTINE:HDF_readDatasetDoubleArray4D
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -3528,7 +3551,7 @@ end function HDF_readDatasetDoubleArray3D
 !
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
-function HDF_readDatasetDoubleArray4D(dataname, dims, HDF_head) result(rdata)
+subroutine HDF_readDatasetDoubleArray4D(dataname, dims, HDF_head, hdferr, rdata)
 
 use ISO_C_BINDING
 
@@ -3539,10 +3562,11 @@ integer,parameter                                       :: real_kind = SELECTED_
 character(fnlen),INTENT(IN)                             :: dataname
 integer(HSIZE_T),INTENT(OUT)                            :: dims(4)
 type(HDFobjectStackType),INTENT(INOUT),pointer          :: HDF_head
-real(real_kind), dimension(:,:,:,:), allocatable, TARGET:: rdata
+integer(kind=irg),INTENT(OUT)                           :: hdferr
+real(real_kind), allocatable, TARGET, INTENT(OUT)       :: rdata(:,:,:,:)
 
 integer(HID_T)                                          :: space, dset ! Handles
-integer                                                 :: hdferr, rnk
+integer                                                 :: rnk
 integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
@@ -3567,7 +3591,7 @@ call h5sclose_f(space, hdferr)
 
 ! that's it
 
-end function HDF_readDatasetDoubleArray4D
+end subroutine HDF_readDatasetDoubleArray4D
 
 !--------------------------------------------------------------------------
 !--------------------------------------------------------------------------

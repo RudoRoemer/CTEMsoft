@@ -345,7 +345,7 @@ type(HDFobjectStackType),pointer        :: HDF_head
 character(fnlen)                        :: dataset, groupname, fname
 integer(HSIZE_T)                        :: dims(1), dims2(2)
 integer(kind=irg)                       :: hdferr
-real(kind=dbl)                          :: cellparams(6)
+real(kind=dbl),allocatable              :: cellparams(:)
 integer(kind=irg),allocatable           :: atomtypes(:)
 real(kind=sgl),allocatable              :: atompos(:,:)
 
@@ -360,10 +360,10 @@ groupname = 'CrystalData'
 hdferr = HDF_openGroup(groupname, HDF_head)
 
 dataset = 'CrystalSystem'
-cell%xtal_system = HDF_readDatasetInteger(dataset, HDF_head)
+call HDF_readDatasetInteger(dataset, HDF_head, hdferr, cell%xtal_system)
 
 dataset = 'LatticeParameters'
-cellparams = HDF_readDatasetDoubleArray1D(dataset, dims, HDF_head)
+call HDF_readDatasetDoubleArray1D(dataset, dims, HDF_head, hdferr, cellparams)
 cell%a = cellparams(1)
 cell%b = cellparams(2)
 cell%c = cellparams(3)
@@ -372,24 +372,24 @@ cell%beta = cellparams(5)
 cell%gamma = cellparams(6)
 
 dataset = 'SpaceGroupNumber'
-cell%SYM_SGnum = HDF_readDatasetInteger(dataset, HDF_head)
+call HDF_readDatasetInteger(dataset, HDF_head, hdferr, cell%SYM_SGnum)
 
 dataset = 'SpaceGroupSetting'
-cell%SYM_SGset = HDF_readDatasetInteger(dataset, HDF_head)
+call HDF_readDatasetInteger(dataset, HDF_head, hdferr, cell%SYM_SGset)
 ! this parameter must be either 1 or 2, but is initialized to 0;
 ! some older .xtal files may still have 0 in them, so we correct this here
 if (cell%SYM_SGset.eq.0) cell%SYM_SGset = 1
 
 dataset = 'Natomtypes'
-cell%ATOM_ntype = HDF_readDatasetInteger(dataset, HDF_head)
+call HDF_readDatasetInteger(dataset, HDF_head, hdferr, cell%ATOM_ntype)
 
 dataset = 'Atomtypes'
-atomtypes = HDF_readDatasetIntegerArray1D(dataset, dims, HDF_head)
+call HDF_readDatasetIntegerArray1D(dataset, dims, HDF_head, hdferr, atomtypes)
 cell%ATOM_type(1:cell%ATOM_ntype) = atomtypes(1:cell%ATOM_ntype) 
 deallocate(atomtypes)
 
 dataset = 'AtomData'
-atompos = HDF_readDatasetFloatArray2D(dataset, dims2, HDF_head)
+call HDF_readDatasetFloatArray2D(dataset, dims2, HDF_head, hdferr, atompos)
 cell%ATOM_pos(1:cell%ATOM_ntype,1:5) = atompos(1:cell%ATOM_ntype,1:5) 
 deallocate(atompos)
 

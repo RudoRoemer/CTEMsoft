@@ -147,12 +147,12 @@ if (stat) then
 
 ! read all the necessary variables from the namelist group
   dataset = 'xtalname'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%MCxtalname = trim(stringarray(1))
   deallocate(stringarray)
 
   dataset = 'mode'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%MCmode = trim(stringarray(1))
   deallocate(stringarray)
 
@@ -161,36 +161,36 @@ if (stat) then
   end if
 
   dataset = 'numsx'
-  enl%nsx = HDF_readDatasetInteger(dataset, HDF_head)
+  call HDF_readDatasetInteger(dataset, HDF_head, hdferr, enl%nsx)
   enl%nsx = (enl%nsx - 1)/2
   enl%nsy = enl%nsx
 
   dataset = 'EkeV'
-  enl%EkeV = HDF_readDatasetDouble(dataset, HDF_head)
+  call HDF_readDatasetDouble(dataset, HDF_head, hdferr, enl%EkeV)
 
   dataset = 'Ehistmin'
-  enl%Ehistmin = HDF_readDatasetDouble(dataset, HDF_head)
+  call HDF_readDatasetDouble(dataset, HDF_head, hdferr, enl%Ehistmin)
 
   dataset = 'Ebinsize'
-  enl%Ebinsize = HDF_readDatasetDouble(dataset, HDF_head)
+  call HDF_readDatasetDouble(dataset, HDF_head, hdferr, enl%Ebinsize)
 
   dataset = 'depthmax'
-  enl%depthmax = HDF_readDatasetDouble(dataset, HDF_head)
+  call HDF_readDatasetDouble(dataset, HDF_head, hdferr, enl%depthmax)
 
   dataset = 'depthstep'
-  enl%depthstep = HDF_readDatasetDouble(dataset, HDF_head)
+  call HDF_readDatasetDouble(dataset, HDF_head, hdferr, enl%depthstep)
 
   dataset = 'sigstart'
-  enl%MCsigstart = HDF_readDatasetDouble(dataset, HDF_head)
+  call HDF_readDatasetDouble(dataset, HDF_head, hdferr, enl%MCsigstart)
 
   dataset = 'sigend'
-  enl%MCsigend = HDF_readDatasetDouble(dataset, HDF_head)
+  call HDF_readDatasetDouble(dataset, HDF_head, hdferr, enl%MCsigend)
 
   dataset = 'sigstep'
-  enl%MCsigstep = HDF_readDatasetDouble(dataset, HDF_head)
+  call HDF_readDatasetDouble(dataset, HDF_head, hdferr, enl%MCsigstep)
 
   dataset = 'omega'
-  enl%MComega = HDF_readDatasetDouble(dataset, HDF_head)
+  call HDF_readDatasetDouble(dataset, HDF_head, hdferr, enl%MComega)
 
 ! close the name list group
   call HDF_pop(HDF_head)
@@ -201,12 +201,12 @@ if (stat) then
   hdferr = HDF_openGroup(groupname, HDF_head)
 
   dataset = 'ProgramName'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%MCprogname = trim(stringarray(1))
   deallocate(stringarray)
 
   dataset = 'Version'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%MCscversion = trim(stringarray(1))
   deallocate(stringarray)
 
@@ -218,19 +218,19 @@ if (stat) then
 
 ! read data items 
   dataset = 'numangle'
-  enl%numangle = HDF_readDatasetInteger(dataset, HDF_head)
+  call HDF_readDatasetInteger(dataset, HDF_head, hdferr, enl%numangle)
 
   dataset = 'numzbins'
-  enl%numzbins = HDF_readDatasetInteger(dataset, HDF_head)
+  call HDF_readDatasetInteger(dataset, HDF_head, hdferr, enl%numzbins)
 
   dataset = 'accum_z'
-  acc_z = HDF_readDatasetIntegerArray4D(dataset, dims4, HDF_head)
+  call HDF_readDatasetIntegerArray4D(dataset, dims4, HDF_head, hdferr, acc_z)
   allocate(acc%accum_z(1:dims4(1),1:dims4(2),1:dims4(3),1:dims4(4)))
   acc%accum_z = acc_z
   deallocate(acc_z)
 
   dataset = 'accum_e'
-  acc_e = HDF_readDatasetIntegerArray3D(dataset, dims3, HDF_head)
+  call HDF_readDatasetIntegerArray3D(dataset, dims3, HDF_head, hdferr, acc_e)
   allocate(acc%accum_e(1:dims3(1),1:dims3(2),1:dims3(3)))
   acc%accum_e = acc_e
   deallocate(acc_e)
@@ -244,44 +244,7 @@ if (stat) then
   call h5close_f(hdferr)
 
 else
-!==============================================
-! ------ read old format Monte Carlo data file
-!==============================================
-
-!==============================================
-! OLD VERSION OF MC FILE NOT SUPPORTED ANYMORE
-! COMMENTING OUT THE FOLLOWING LINES
-! REPLACING WITH FATALERROR COMMENT
-!==============================================
-
   call FatalError('ECPreadMCfile','The file is not a h5 file. Old version of MC file not supported anymore!')
-  !if (present(verbose)) call Message('opening '//trim(enl%energyfile), frm = "(A)")
-
-  !open(dataunit,file=trim(energyfile),status='unknown',form='unformatted')
-
-! read the program identifier
-   !read (dataunit) enl%MCprogname
-! read the version number
-   !read (dataunit) enl%MCscversion
-! then the name of the crystal data file
-   !read (dataunit) enl%MCxtalname
-! energy information etc...
-   !read(dataunit) enl%numEbins, enl%numzbins, enl%nsx, enl%nsy, enl%num_el ! , enl%MCnthreads
-   !enl%nsx = (enl%nsx - 1)/2
-   !enl%nsy = (enl%nsy - 1)/2
-! more energy information
-   !read (dataunit) enl%EkeV, enl%Ehistmin, enl%Ebinsize, enl%depthmax, enl%depthstep
-! angular information
-   !read (dataunit) enl%MCsig, enl%MComega
-! Monte Carlo mode ('CSDA' or other)
-   !read (dataunit) enl%MCmode
-! and finally the actual energy histogram (in square Lambert projection format)
-   !allocate(acc%accum_z(enl%numEbins,enl%numzbins,-enl%nsx:enl%nsx,-enl%nsy:enl%nsy),stat=istat)
-   !read(dataunit) acc%accum_z
-   !enl%num_el = sum(acc%accum_z)
-! we do not need the other array in this energyfile
-! read(dataunit) accum_z    ! we only need this array for the depth integrations in EMEBSDmaster.f90
-  !close(dataunit,status='keep')
 end if
 
 if (present(verbose)) then
@@ -370,12 +333,12 @@ if (stat) then
 
 ! read all the necessary variables from the namelist group
   dataset = 'energyfile'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%Masterenergyfile = trim(stringarray(1))
   deallocate(stringarray)
 
   dataset = 'npx'
-  enl%npx = HDF_readDatasetInteger(dataset, HDF_head)
+  call HDF_readDatasetInteger(dataset, HDF_head, hdferr, enl%npx)
   enl%npy = enl%npx
 
   call HDF_pop(HDF_head)
@@ -385,30 +348,30 @@ if (stat) then
   hdferr = HDF_openGroup(groupname, HDF_head)
 
   dataset = 'EkeV'
-  enl%EkeV = HDF_readDatasetfloat(dataset, HDF_head)
+  call HDF_readDatasetDouble(dataset, HDF_head, hdferr, enl%EkeV)
   
   dataset = 'numset'
-  enl%numset = HDF_readDatasetInteger(dataset, HDF_head)
+  call HDF_readDatasetInteger(dataset, HDF_head, hdferr, enl%numset)
 
   dataset = 'squhex'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%sqorhe = trim(stringarray(1))
   deallocate(stringarray)
 
   dataset = 'mLPNH'
-  srtmp = HDF_readDatasetFloatArray3D(dataset, dims3, HDF_head)
+  call HDF_readDatasetFloatArray3D(dataset, dims3, HDF_head, hdferr, srtmp)
   allocate(master%mLPNH(-enl%npx:enl%npx,-enl%npy:enl%npy),stat=istat)
   master%mLPNH = sum(srtmp,3)
   deallocate(srtmp)
 
   dataset = 'mLPSH'
-  srtmp = HDF_readDatasetFloatArray3D(dataset, dims3, HDF_head)
+  call HDF_readDatasetFloatArray3D(dataset, dims3, HDF_head, hdferr, srtmp)
   allocate(master%mLPSH(-enl%npx:enl%npx,-enl%npy:enl%npy),stat=istat)
   master%mLPSH = sum(srtmp,3)
   deallocate(srtmp)
 
   dataset = 'xtalname'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%Masterxtalname = trim(stringarray(1))
   deallocate(stringarray)
 
@@ -418,12 +381,12 @@ if (stat) then
   hdferr = HDF_openGroup(groupname, HDF_head)
 
   dataset = 'ProgramName'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%Masterprogname = trim(stringarray(1))
   deallocate(stringarray)
   
   dataset = 'Version'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%Masterscversion = trim(stringarray(1))
   deallocate(stringarray)
   

@@ -247,40 +247,40 @@ if (stat) then
 
 ! read all the necessary variables from the namelist group
   dataset = 'xtalname'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%MCxtalname = trim(stringarray(1))
   deallocate(stringarray)
 
   dataset = 'mode'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%MCmode = trim(stringarray(1))
   deallocate(stringarray)
   if (enl%MCmode .ne. 'full') call FatalError('EBSDreadMCfile','This file is not in full mode. Please input correct HDF5 file')
   dataset = 'numsx'
-  enl%nsx = HDF_readDatasetInteger(dataset, HDF_head)
+  call HDF_readDatasetInteger(dataset, HDF_head, hdferr, enl%nsx)
   enl%nsx = (enl%nsx - 1)/2
   enl%nsy = enl%nsx
 
   dataset = 'EkeV'
-  enl%EkeV = HDF_readDatasetDouble(dataset, HDF_head)
+  call HDF_readDatasetDouble(dataset, HDF_head, hdferr, enl%EkeV)
 
   dataset = 'Ehistmin'
-  enl%Ehistmin = HDF_readDatasetDouble(dataset, HDF_head)
+  call HDF_readDatasetDouble(dataset, HDF_head, hdferr, enl%Ehistmin)
 
   dataset = 'Ebinsize'
-  enl%Ebinsize = HDF_readDatasetDouble(dataset, HDF_head)
+  call HDF_readDatasetDouble(dataset, HDF_head, hdferr, enl%Ebinsize)
 
   dataset = 'depthmax'
-  enl%depthmax = HDF_readDatasetDouble(dataset, HDF_head)
+  call HDF_readDatasetDouble(dataset, HDF_head, hdferr, enl%depthmax)
 
   dataset = 'depthstep'
-  enl%depthstep = HDF_readDatasetDouble(dataset, HDF_head)
+  call HDF_readDatasetDouble(dataset, HDF_head, hdferr, enl%depthstep)
 
   dataset = 'sig'
-  enl%MCsig = HDF_readDatasetDouble(dataset, HDF_head)
+  call HDF_readDatasetDouble(dataset, HDF_head, hdferr, enl%MCsig)
 
   dataset = 'omega'
-  enl%MComega = HDF_readDatasetDouble(dataset, HDF_head)
+  call HDF_readDatasetDouble(dataset, HDF_head, hdferr, enl%MComega)
 
 ! close the name list group
   call HDF_pop(HDF_head)
@@ -291,12 +291,12 @@ if (stat) then
   hdferr = HDF_openGroup(groupname, HDF_head)
 
   dataset = 'ProgramName'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%MCprogname = trim(stringarray(1))
   deallocate(stringarray)
 
   dataset = 'Version'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%MCscversion = trim(stringarray(1))
   deallocate(stringarray)
 
@@ -308,13 +308,13 @@ if (stat) then
 
 ! read data items 
   dataset = 'numEbins'
-  enl%numEbins = HDF_readDatasetInteger(dataset, HDF_head)
+  call HDF_readDatasetInteger(dataset, HDF_head, hdferr, enl%numEbins)
 
   dataset = 'numzbins'
-  enl%numzbins = HDF_readDatasetInteger(dataset, HDF_head)
+  call HDF_readDatasetInteger(dataset, HDF_head, hdferr, enl%numzbins)
 
   dataset = 'accum_e'
-  acc_e = HDF_readDatasetIntegerArray3D(dataset, dims3, HDF_head)
+  call HDF_readDatasetIntegerArray3D(dataset, dims3, HDF_head, hdferr, acc_e)
   enl%num_el = sum(acc_e)
   nx = (dims3(2)-1)/2
   allocate(acc%accum_e(1:dims3(1),-nx:nx,-nx:nx))
@@ -322,7 +322,7 @@ if (stat) then
   deallocate(acc_e)
 
   dataset = 'accum_z'
-  acc_z = HDF_readDatasetIntegerArray4D(dataset, dims4, HDF_head)
+  call HDF_readDatasetIntegerArray4D(dataset, dims4, HDF_head, hdferr, acc_z)
   allocate(acc%accum_z(1:dims4(1),1:dims4(2),1:dims4(3),1:dims4(4)))
   acc%accum_z = acc_z
   deallocate(acc_z)
@@ -450,12 +450,12 @@ if (stat) then
 
 ! read all the necessary variables from the namelist group
   dataset = 'energyfile'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%Masterenergyfile = trim(stringarray(1))
   deallocate(stringarray)
 
   dataset = 'npx'
-  enl%npx = HDF_readDatasetInteger(dataset, HDF_head)
+  call HDF_readDatasetInteger(dataset, HDF_head, hdferr, enl%npx)
   enl%npy = enl%npx
 
   call HDF_pop(HDF_head)
@@ -465,7 +465,7 @@ if (stat) then
   hdferr = HDF_openGroup(groupname, HDF_head)
 
   dataset = 'numEbins'
-  enl%nE = HDF_readDatasetInteger(dataset, HDF_head)
+  call HDF_readDatasetInteger(dataset, HDF_head, hdferr, enl%nE)
 ! make sure that MC and Master results are compatible
   if ((enl%numEbins.ne.enl%nE).and.(.not.PRESENT(mfile))) then
     call Message('Energy histogram and Lambert stack have different energy dimension; aborting program', frm = "(A)")
@@ -474,27 +474,27 @@ if (stat) then
   end if
 
   dataset = 'numset'
-  enl%numset = HDF_readDatasetInteger(dataset, HDF_head)
+  call HDF_readDatasetInteger(dataset, HDF_head, hdferr, enl%numset)
 
   dataset = 'squhex'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%sqorhe = trim(stringarray(1))
   deallocate(stringarray)
 
   dataset = 'mLPNH'
-  srtmp = HDF_readDatasetFloatArray4D(dataset, dims4, HDF_head)
+  call HDF_readDatasetFloatArray4D(dataset, dims4, HDF_head, hdferr, srtmp)
   allocate(master%mLPNH(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE),stat=istat)
   master%mLPNH = sum(srtmp,4)
   deallocate(srtmp)
 
   dataset = 'mLPSH'
-  srtmp = HDF_readDatasetFloatArray4D(dataset, dims4, HDF_head)
+  call HDF_readDatasetFloatArray4D(dataset, dims4, HDF_head, hdferr, srtmp)
   allocate(master%mLPSH(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE),stat=istat)
   master%mLPSH = sum(srtmp,4)
   deallocate(srtmp)
 
   dataset = 'xtalname'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%Masterxtalname = trim(stringarray(1))
   deallocate(stringarray)
 
@@ -504,12 +504,12 @@ if (stat) then
   hdferr = HDF_openGroup(groupname, HDF_head)
 
   dataset = 'ProgramName'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%Masterprogname = trim(stringarray(1))
   deallocate(stringarray)
   
   dataset = 'Version'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%Masterscversion = trim(stringarray(1))
   deallocate(stringarray)
   
@@ -604,12 +604,12 @@ if (stat) then
 
 ! read all the necessary variables from the namelist group
   dataset = 'energyfile'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%Masterenergyfile = trim(stringarray(1))
   deallocate(stringarray)
 
   dataset = 'npx'
-  enl%npx = HDF_readDatasetInteger(dataset, HDF_head)
+  call HDF_readDatasetInteger(dataset, HDF_head, hdferr, enl%npx)
   enl%npy = enl%npx
 
   call HDF_pop(HDF_head)
@@ -619,30 +619,30 @@ if (stat) then
   hdferr = HDF_openGroup(groupname, HDF_head)
 
   dataset = 'numEbins'
-  enl%nE = HDF_readDatasetInteger(dataset, HDF_head)
+  call HDF_readDatasetInteger(dataset, HDF_head, hdferr, enl%nE)
 
   dataset = 'numset'
-  enl%numset = HDF_readDatasetInteger(dataset, HDF_head)
+  call HDF_readDatasetInteger(dataset, HDF_head, hdferr, enl%numset)
 
   dataset = 'squhex'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%sqorhe = trim(stringarray(1))
   deallocate(stringarray)
 
   dataset = 'mLPNH'
-  srtmp = HDF_readDatasetFloatArray4D(dataset, dims4, HDF_head)
+  call HDF_readDatasetFloatArray4D(dataset, dims4, HDF_head, hdferr, srtmp)
   allocate(master%mLPNH(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE),stat=istat)
   master%mLPNH = sum(srtmp,4)
   deallocate(srtmp)
 
   dataset = 'mLPSH'
-  srtmp = HDF_readDatasetFloatArray4D(dataset, dims4, HDF_head)
+  call HDF_readDatasetFloatArray4D(dataset, dims4, HDF_head, hdferr, srtmp)
   allocate(master%mLPSH(-enl%npx:enl%npx,-enl%npy:enl%npy,enl%nE),stat=istat)
   master%mLPSH = sum(srtmp,4)
   deallocate(srtmp)
 
   dataset = 'xtalname'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%Masterxtalname = trim(stringarray(1))
   deallocate(stringarray)
 
@@ -652,12 +652,12 @@ if (stat) then
   hdferr = HDF_openGroup(groupname, HDF_head)
 
   dataset = 'ProgramName'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%Masterprogname = trim(stringarray(1))
   deallocate(stringarray)
   
   dataset = 'Version'
-  stringarray = HDF_readDatasetStringArray(dataset, nlines, HDF_head)
+  call HDF_readDatasetStringArray(dataset, nlines, HDF_head, hdferr, stringarray)
   enl%Masterscversion = trim(stringarray(1))
   deallocate(stringarray)
   
