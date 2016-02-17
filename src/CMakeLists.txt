@@ -62,7 +62,6 @@ set(EMsoftLib_SRCS
 
   ${EMsoftLib_SOURCE_DIR}/NameListHDFwriters.f90
   ${EMsoftLib_SOURCE_DIR}/EBSDmod.f90
-  ${EMsoftLib_SOURCE_DIR}/EMdymodHDF.f90
   ${EMsoftLib_SOURCE_DIR}/ECPmod.f90
   ${EMsoftLib_SOURCE_DIR}/HDFsupport.f90
 )
@@ -81,11 +80,12 @@ include_directories(${HDF5_INCLUDE_DIR} )
 
 
 ADD_LIBRARY(EMsoftLib ${LIB_TYPE} ${EMsoftLib_SRCS})
-TARGET_LINK_LIBRARIES(EMsoftLib ${EMsoft_BLAS_LAPACK_LIBS} jsonfortran ${FFTW3_LIBRARY})
+TARGET_LINK_LIBRARIES(EMsoftLib hdf5 hdf5_f90cstub hdf5_fortran hdf5_hl_fortran ${EMsoft_BLAS_LAPACK_LIBS} jsonfortran ${FFTW3_LIBRARY})
 
 
 INSTALL(TARGETS EMsoftLib
   COMPONENT Applications
+  EXPORT EMsoftLibTargets
   RUNTIME DESTINATION ${install_dir}
   LIBRARY DESTINATION ${lib_install_dir}
   ARCHIVE DESTINATION ${lib_install_dir}

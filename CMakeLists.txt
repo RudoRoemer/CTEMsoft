@@ -143,9 +143,6 @@ install(FILES ${PROJECT_SOURCE_DIR}/ReadMe.md ${PROJECT_SOURCE_DIR}/License.txt
         DESTINATION .
         COMPONENT Applications)
 
-
-include_directories(${EMsoft_BINARY_DIR}/src ${JSONFORTRAN_INCLUDE_DIR})
-
 #------------------------------------------------------------------------------
 # Find the BLAS/LAPACK library
 # On mac systems, we likely have to link against the vecLib framework
@@ -181,7 +178,7 @@ else()
   message(FATAL_ERROR "This platform needs to have CMake code inserted to find the BLAS/LAPACK Libraries.")
 endif(APPLE)
 
-include_directories(${EMsoft_BINARY_DIR}/src ${JSONFORTRAN_INCLUDE_DIR} ${FFTW3_INCLUDE_DIR})
+include_directories(${EMsoft_BINARY_DIR} ${JSONFORTRAN_INCLUDE_DIR} ${FFTW3_INCLUDE_DIR})
 
 
 
