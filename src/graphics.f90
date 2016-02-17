@@ -556,7 +556,7 @@ real(kind=sgl)      :: alfa,v1,v2,w1,w2,w3,n(3),e(3),l(3),h(3),pointx,pointy,xr,
 ! open a complete file for online mode, else
 ! open a temporary file for export mode.
  if (dmode.eq.'export') then 
-  open(UNIT=psunit,FILE=trim(axname),STATUS='UNKNOWN',FORM='FORMATTED')
+  open(UNIT=psunit,FILE=trim(EMsoft_toNativePath(axname)),STATUS='UNKNOWN',FORM='FORMATTED')
  else
   PS%psname = 'tmp.ps'
   call PS_openfile(PS, progdesc, imanum, .TRUE.)  ! PS, progdesc, imanum, dontask

@@ -444,9 +444,9 @@ allocate(defects%YD(3*maxdefects))
 ! stacking faults are handled separately
    do i=1,defects%numYdisl
     call Message('opening '//trim(defects%dislYname(i)), frm = "(/A)")
-    OPEN(UNIT=dataunit,FILE=trim(defects%dislYname(i)),DELIM='APOSTROPHE')
-    READ(UNIT=dataunit,NML=dislocationdata)
-    CLOSE(UNIT=dataunit)
+    open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(defects%dislYname(i))),DELIM='APOSTROPHE')
+    read(UNIT=dataunit,NML=dislocationdata)
+    close(UNIT=dataunit)
     
 ! top-of-the-foil intersection of dislocation line is transformed to foil coordinates [nm] with DL(i)%kd=0 (center of foil) [verified 4/23/11]
 ! the point (0,0) is at the center of the image ... hence the factor of 0.5

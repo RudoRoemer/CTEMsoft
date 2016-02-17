@@ -753,7 +753,7 @@ character(len=fnlen, KIND=c_char), DIMENSION(1)              :: line
 
 dt = 55
 ! read the file first to determine the number of lines
-open(unit=dt,file=trim(filename),action='read',form='formatted',status='old')
+open(unit=dt,file=trim(EMsoft_toNativePath(filename)),action='read',form='formatted',status='old')
 nlines = 0
 do
   read (dt,"(A)",end=10) line(1)
@@ -763,7 +763,7 @@ end do
 
 ! then re-read the file and store all the lines in the wdata array
 allocate(stringarray(1:nlines))
-open(unit=dt,file=trim(filename),action='read',form='formatted',status='old')
+open(unit=dt,file=trim(EMsoft_toNativePath(filename)),action='read',form='formatted',status='old')
 do i=1,nlines
 ! initialize the line to null characters before each read
   do j=1,fnlen
@@ -923,7 +923,7 @@ call h5dread_f(HDF_head%objectID, H5T_STRING, f_ptr, hdferr)
 ! store the datain a textfile
 !
 dt = 55
-open(unit=dt, file=trim(textfile), status='unknown', form='formatted')
+open(unit=dt, file=trim(EMsoft_toNativePath(textfile)), status='unknown', form='formatted')
 DO i = 1, dims(1)
   call C_F_POINTER(rdata(i), pfstr)
   length = 0

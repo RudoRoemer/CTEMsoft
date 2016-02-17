@@ -747,9 +747,9 @@ end if
     zfrac = 0.0   ! unless the dislocation line is parallel to the foil surface, zfrac is always 0.0 
     
     call Message('opening '//trim(defects%dislname(i)), frm = "(/A)")
-    OPEN(UNIT=dataunit,FILE=trim(defects%dislname(i)),DELIM='APOSTROPHE')
-    READ(UNIT=dataunit,NML=dislocationdata)
-    CLOSE(UNIT=dataunit)
+    open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(defects%dislname(i))),DELIM='APOSTROPHE')
+    read(UNIT=dataunit,NML=dislocationdata)
+    close(UNIT=dataunit)
     
 ! center of dislocation inside the foil is transformed to foil coordinates [nm] with defects%DL(i)%kd=0 (center of foil) [verified 4/23/11]
 ! the point (0,0) is at the center of the image ... hence the factor of 0.5

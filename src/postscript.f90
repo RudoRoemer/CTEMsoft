@@ -171,12 +171,12 @@ character(fnlen)                        :: gname
  if (present(dontask)) then
 ! if we get here, it means that we are using a temporary PostScript file
 ! and we should not go through the regular SafeOpenFile routine.
-   open(unit=psunit,file=PS%psname,status='unknown',action='write',form='formatted')
+   open(unit=psunit,file=trim(EMsoft_toNativePath(PS%psname)),status='unknown',action='write',form='formatted')
    call Message('Opening temporary file for PostScript output', frm = "(A)")
  else
    call ReadValue(' Enter Postscript file name : ', gname,"(A)")
    PS%psname = gname
-   open(unit=psunit,file=trim(PS%psname),status='unknown',form='formatted')
+   open(unit=psunit,file=trim(EMsoft_toNativePath(PS%psname)),status='unknown',form='formatted')
  end if
 
 ! write the preamble

@@ -87,7 +87,7 @@ real(kind=sgl)      			:: Vx,Vy,Vz,Vrad,tmp(3)
 
 ! open the void data file
 call Message('Opening '//trim(defects%voidname), frm = "(A)")
-open(unit=dataunit,file=trim(defects%voidname),form='formatted')
+open(unit=dataunit,file=trim(EMsoft_toNativePath(defects%voidname)),form='formatted')
 read(unit=dataunit) defects%numvoids
 
 allocate(defects%voids(defects%numvoids))

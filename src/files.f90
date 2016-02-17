@@ -471,7 +471,7 @@ if (PRESENT(stdout)) std = stdout
 
 ! first open and read the resources/templatecodes.txt file
 
-open(UNIT=dataunit,FILE=trim(templatecodefilename), &
+open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(templatecodefilename)), &
         STATUS='old', FORM='formatted',ACCESS='sequential')
 
 templates = ''
@@ -486,10 +486,10 @@ end do
 CLOSE(UNIT=dataunit, STATUS='keep')
 
 do i=1,nt
- input_name = trim(templatepathname)//trim(templates(templatelist(i)+1))
- output_name = templates(templatelist(i)+1)
- OPEN(UNIT=dataunit,FILE=trim(input_name), STATUS='old', FORM='formatted',ACCESS='sequential')
- OPEN(UNIT=dataunit2,FILE=trim(output_name), STATUS='unknown', FORM='formatted',ACCESS='sequential')
+ input_name = EMsoft_toNativePath(trim(templatepathname)//trim(templates(templatelist(i)+1)))
+ output_name = EMsoft_toNativePath(templates(templatelist(i)+1))
+ open(UNIT=dataunit,FILE=trim(input_name), STATUS='old', FORM='formatted',ACCESS='sequential')
+ open(UNIT=dataunit2,FILE=trim(output_name), STATUS='unknown', FORM='formatted',ACCESS='sequential')
  do
         read(dataunit,'(A)',iostat=ios) line
         if (ios.ne.0) then 
@@ -497,8 +497,8 @@ do i=1,nt
         end if
         write(dataunit2,'(A)') trim(line)
   end do
- CLOSE(UNIT=dataunit, STATUS='keep')
- CLOSE(UNIT=dataunit2, STATUS='keep')
+ close(UNIT=dataunit, STATUS='keep')
+ close(UNIT=dataunit2, STATUS='keep')
  call Message('  -> created template file '//trim(templates(templatelist(i)+1)), frm = "(A)", stdout = std)
 end do
  

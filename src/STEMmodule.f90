@@ -611,9 +611,9 @@ weightoutput = ''               ! string with filename root for graphical output
 
 ! read the namelist file
 call Message('opening '//trim(STEMnmlfile), frm = "(/A)")
-OPEN(UNIT=dataunit,FILE=trim(STEMnmlfile),DELIM='APOSTROPHE')
-READ(UNIT=dataunit,NML=STEMdata)
-CLOSE(UNIT=dataunit)
+open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(STEMnmlfile)),DELIM='APOSTROPHE')
+read(UNIT=dataunit,NML=STEMdata)
+close(UNIT=dataunit)
 
 if (PRESENT(beamdiv)) beamdiv=beamconvergence
 

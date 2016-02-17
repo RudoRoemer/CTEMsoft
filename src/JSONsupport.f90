@@ -280,7 +280,7 @@ integer(kind=irg),INTENT(INOUT)         :: error_cnt
 nullify(inp)
 
 ! write the json file
-open(unit=dataunit, file=trim(jsonname), status='REPLACE')
+open(unit=dataunit, file=trim(EMsoft_toNativePath(jsonname)), status='REPLACE')
 call json_print(p,dataunit); call JSON_failtest(error_cnt)
 close(dataunit)
 

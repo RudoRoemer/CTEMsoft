@@ -116,7 +116,7 @@ end if
 
 if (.not.skipread) then
 ! read the namelist file
- open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+ open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(nmlfile)),DELIM='apostrophe',STATUS='old')
  read(UNIT=dataunit,NML=Kossellist)
  close(UNIT=dataunit,STATUS='keep')
 
@@ -205,7 +205,7 @@ end if
 
 if (.not.skipread) then
 ! read the namelist file
- open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+ open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(nmlfile)),DELIM='apostrophe',STATUS='old')
  read(UNIT=dataunit,NML=Kosselmasterlist)
  close(UNIT=dataunit,STATUS='keep')
 
@@ -300,7 +300,7 @@ end if
 
 if (.not.skipread) then
 ! read the namelist file
- open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+ open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(nmlfile)),DELIM='apostrophe',STATUS='old')
  read(UNIT=dataunit,NML=MCdata)
  close(UNIT=dataunit,STATUS='keep')
 
@@ -411,7 +411,7 @@ end if
 
 if (.not.skipread) then
 ! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(nmlfile)),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=MCCLdata)
 close(UNIT=dataunit,STATUS='keep')
 
@@ -525,7 +525,7 @@ end if
 
 if (.not.skipread) then
 ! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(nmlfile)),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=MCCLdata)
 close(UNIT=dataunit,STATUS='keep')
 
@@ -611,7 +611,7 @@ end if
 
 if (.not.skipread) then
 ! read the namelist file
- open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+ open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(nmlfile)),DELIM='apostrophe',STATUS='old')
  read(UNIT=dataunit,NML=EBSDmastervars)
  close(UNIT=dataunit,STATUS='keep')
 
@@ -689,7 +689,7 @@ end if
 
 if (.not.skipread) then
 ! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(nmlfile)),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=ECPmastervars)
 close(UNIT=dataunit,STATUS='keep')
 
@@ -804,7 +804,7 @@ end if
 
 if (.not.skipread) then
 ! read the namelist file
- open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+ open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(nmlfile)),DELIM='apostrophe',STATUS='old')
  read(UNIT=dataunit,NML=EBSDdata)
  close(UNIT=dataunit,STATUS='keep')
 
@@ -915,7 +915,7 @@ end if
 
 if (.not.skipread) then
 ! read the namelist file
- open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+ open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(nmlfile)),DELIM='apostrophe',STATUS='old')
  read(UNIT=dataunit,NML=EBSDdata)
  close(UNIT=dataunit,STATUS='keep')
 
@@ -1048,7 +1048,7 @@ end if
 
 if (.not.skipread) then
 ! read the namelist file
- open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+ open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(nmlfile)),DELIM='apostrophe',STATUS='old')
  read(UNIT=dataunit,NML=ECPlist)
  close(UNIT=dataunit,STATUS='keep')
 
@@ -1158,7 +1158,7 @@ end if
 
 if (.not.skipread) then
 ! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(nmlfile)),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=inputlist)
 close(UNIT=dataunit,STATUS='keep')
 
@@ -1236,7 +1236,7 @@ end if
 
 if (.not.skipread) then
 ! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(nmlfile)),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=ECPvars)
 close(UNIT=dataunit,STATUS='keep')
 
@@ -1315,7 +1315,7 @@ end if
 
 if (.not.skipread) then
 ! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(nmlfile)),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=inputlist)
 close(UNIT=dataunit,STATUS='keep')
 
@@ -1411,7 +1411,7 @@ end if
 
 if (.not.skipread) then
 ! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(nmlfile)),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=inputlist)
 close(UNIT=dataunit,STATUS='keep')
 
@@ -1550,7 +1550,7 @@ end if
 
 if (.not.skipread) then
 ! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(nmlfile)),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=ECCIlist)
 close(UNIT=dataunit,STATUS='keep')
 
@@ -1656,7 +1656,7 @@ end if
 
 if (.not.skipread) then
 ! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(nmlfile)),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=RFZlist)
 close(UNIT=dataunit,STATUS='keep')
 end if
@@ -1737,7 +1737,7 @@ end if
 
 if (.not.skipread) then
 ! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(nmlfile)),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=DictIndxOpenCLvars)
 close(UNIT=dataunit,STATUS='keep')
 
@@ -1857,7 +1857,7 @@ end if
 
 if (.not.skipread) then
 ! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(nmlfile)),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=inputlist)
 close(UNIT=dataunit,STATUS='keep')
 
@@ -1994,7 +1994,7 @@ end if
 
 if (.not.skipread) then
 ! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(nmlfile)),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=EBSDIndxdata)
 close(UNIT=dataunit,STATUS='keep')
 
@@ -2139,7 +2139,7 @@ end if
 
 if (.not.skipread) then
 ! read the namelist file
-open(UNIT=dataunit,FILE=trim(nmlfile),DELIM='apostrophe',STATUS='old')
+open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(nmlfile)),DELIM='apostrophe',STATUS='old')
 read(UNIT=dataunit,NML=rundata)
 close(UNIT=dataunit,STATUS='keep')
 

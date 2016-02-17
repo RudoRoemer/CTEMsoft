@@ -103,7 +103,7 @@ integer(kind=irg)                       :: istat
 ! get the angular information, either in Euler angles or in quaternions, from a file
 !====================================
 ! open the angle file 
-open(unit=dataunit,file=trim(enl%anglefile),status='old',action='read')
+open(unit=dataunit,file=trim(EMsoft_toNativePath(enl%anglefile)),status='old',action='read')
 
 ! get the type of angle first [ 'eu' or 'qu' ]
 read(dataunit,*) angletype
@@ -339,7 +339,7 @@ else
 !====================================
   if (present(verbose)) call Message('opening '//trim(enl%energyfile), frm = "(A)")
 
-  open(dataunit,file=trim(energyfile),status='unknown',form='unformatted')
+  open(dataunit,file=trim(EMsoft_toNativePath(energyfile)),status='unknown',form='unformatted')
 
 ! read the program identifier
    read (dataunit) enl%MCprogname

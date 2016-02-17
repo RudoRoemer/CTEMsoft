@@ -93,7 +93,7 @@ PUBLIC :: TIFF_nx, TIFF_ny, TIFF_Image, TIFF_filename, TIFF_Write_File
 
  integer(kind=irg)                    :: TIFF_nx,TIFF_ny
  integer(kind=irg),allocatable        :: TIFF_Image(:,:)
- character(100)                       :: TIFF_filename
+ character(fnlen)                     :: TIFF_filename
 
 contains
 
@@ -235,7 +235,8 @@ integer(kind=irg)    :: I, Row, Col
 
 ! RECL is measured in units of words, not bytes !!!
 ! This may depend on the platform, and may need to be changed
- open(9,file=TIFF_filename,access="DIRECT",action="WRITE", FORM="UNFORMATTED", RECL=TIFFRecordLength)
+ open(9,file=trim(EMsoft_toNativePath(TIFF_filename)),access="DIRECT",action="WRITE", &
+      FORM="UNFORMATTED", RECL=TIFFRecordLength)
  
 ! 10 byte header
  call TIFF_Write_Byte_Into_Buffer('I')      ! little endian header

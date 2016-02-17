@@ -296,9 +296,9 @@ namelist / foildata / foilF, foilq, foilalP, foilalS, foilalR, foilbeP, foilz0, 
   call Message('opening '//foilnmlfile, frm = "(/A/)")
  end if
 
- OPEN(UNIT=dataunit,FILE=trim(foilnmlfile),DELIM='APOSTROPHE')
- READ(UNIT=dataunit,NML=foildata)
- CLOSE(UNIT=dataunit)
+ open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(foilnmlfile)),DELIM='APOSTROPHE')
+ read(UNIT=dataunit,NML=foildata)
+ close(UNIT=dataunit)
 
 ! verify that the foil normal (in real space) and q (in reciprocal space) are orthogonal
 x = CalcDot(cell,foilF,foilq,'c')

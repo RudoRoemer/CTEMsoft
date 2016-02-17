@@ -543,13 +543,16 @@ real(kind=sgl)                          :: qax(4)        ! axis-angle rotation q
 
 real(kind=sgl),parameter                :: dtor = 0.0174533  ! convert from degrees to radians
 integer(kind=irg)                       :: istat
+character(fnlen)                        :: anglefile
 
 allocate(angles)
 !====================================
 ! get the angular information, either in Euler angles or in quaternions, from a file
 !====================================
 ! open the angle file 
-open(unit=dataunit,file=trim(EMdatapathname)//trim(enl%anglefile),status='old',action='read')
+anglefile = trim(EMdatapathname)//trim(enl%anglefile)
+anglefile = EMsoft_toNativePath(anglefile)
+open(unit=dataunit,file=trim(anglefile),status='old',action='read')
 
 ! get the type of angle first [ 'eu' or 'qu' ]
 read(dataunit,*) angletype

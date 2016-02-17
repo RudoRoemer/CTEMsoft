@@ -51,6 +51,7 @@
 !> @date 03/29/14 MDG 4.2 added path variable for .xtal files (which are now HDF5 files)
 !> @date 04/05/15 MDG 4.3 added additional path variables and an EMsoft_path_init routine
 !> @date 11/20/15 MDG 4.4 Issue 1 resolution
+!> @date 02/16/16 MDG 4.5 added path delimiter conversion routines for Windows implementation
 !--------------------------------------------------------------------------
 
 !---------------------------
@@ -95,7 +96,11 @@ module local
   character(fnlen)                      :: userlocn="Undefined"
 !> code user email
   character(fnlen)                      :: useremail="Undefined"
-
+!> platform
+  character(fnlen)                      :: EMsoftplatform="@CMAKE_SYSTEM_NAME@"
+!> pathnamedelimiter
+  character(1)                          :: EMsoftnativedelimiter
+ 
   
 !> reserved IO unit identifiers for postscript (20) and data (21-23)
   integer(kind=irg), parameter          :: psunit=20, dataunit=21, dataunit2=22, dataunit3=23
@@ -109,7 +114,7 @@ module local
   integer(kind=irg), parameter          :: maxnumtemplates = 256
 
 ! ================================
-! 06/08/14 the entries below are still global variables and should be removed
+! 06/08/14 the entries below are global variables 
 ! ================================
 
 !> pathnames to the namelist template files
@@ -117,6 +122,7 @@ module local
   character(fnlen)                      :: EMsoftpathname
   character(fnlen)                      :: EMdatapathname
   character(fnlen)                      :: templatepathname 
+  character(fnlen)                      :: EMtmppathname 
   character(fnlen)                      :: resourcepathname
   character(fnlen)                      :: openclpathname
   character(fnlen)                      :: xtalpathname
@@ -162,13 +168,14 @@ integer(kind=irg)                     :: std
  std = 6
  if (PRESENT(stdout)) std=stdout
 
- write (std,"(//1x,'EMsoft version ',A,', Copyright (C) 2001-2015 Marc De Graef/CMU')") trim(scversion)
+ write (std,"(//1x,'EMsoft version ',A,', Copyright (C) 2001-2016 Marc De Graef Research Group/CMU')") trim(scversion)
  write (std,"(1x,'EMsoft comes with ABSOLUTELY NO WARRANTY.')")
  write (std,"(1x,'This is free software, and you are welcome to redistribute it')")
  write (std,"(1x,'under certain conditions; see License.txt file for details.'//)")
 
  write (std,"(1x,'Program name : ',A)") trim(progname)
  write (std,"(1x,A/)") trim(progdesc)
+ write (std,"(1x,'Platform : ',A/)") trim(EMsoftplatform)
 
  call timestamp(std)
  write (std,"(1x,/)")
@@ -176,6 +183,92 @@ integer(kind=irg)                     :: std
  call EMsoft_path_init
  
 end subroutine EMsoft
+
+
+!--------------------------------------------------------------------------
+! EMsoft:local:EMsoft_toNativePath.f90
+!--------------------------------------------------------------------------
+!
+! FUNCTION: EMsoft_toNativePath
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief convert a path string from the native format to the other one
+!
+!> @param inpath input path string
+!
+!> @date  02/16/16 MDG 1.0 new routine
+!--------------------------------------------------------------------------
+function EMsoft_toNativePath(inpath) result(outpath)
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)          :: inpath
+character(fnlen)                     :: outpath
+
+integer(kind=irg)                    :: i, slen
+character(1)                         :: todelim, fromdelim, c
+
+slen = len(inpath)
+outpath = ''
+todelim = EMsoftnativedelimiter
+
+if (todelim.eq.'\') then
+  fromdelim = '/'
+else
+  fromdelim = '\'
+end if
+
+do i=1,slen
+  c = inpath(i:i)
+  if (c.eq.fromdelim) c = todelim
+  outpath(i:i) = c
+end do
+
+end function EMsoft_toNativePath
+
+!--------------------------------------------------------------------------
+! EMsoft:local:EMsoft_fromNativePath.f90
+!--------------------------------------------------------------------------
+!
+! FUNCTION: EMsoft_fromNativePath
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief convert a path string to the native format on this platform
+!
+!> @param inpath input path string 
+!
+!> @date  02/16/16 MDG 1.0 original version 
+!--------------------------------------------------------------------------
+function EMsoft_fromNativePath(inpath) result(outpath)
+
+IMPLICIT NONE
+
+character(fnlen),INTENT(IN)          :: inpath
+character(fnlen)                     :: outpath
+
+integer(kind=irg)                    :: i, slen
+character(1)                         :: todelim, fromdelim, c
+
+slen = len(inpath)
+outpath = ''
+fromdelim = EMsoftnativedelimiter
+
+if (fromdelim.eq.'/') then
+  todelim = '\'
+else
+  todelim = '/'
+end if
+
+do i=1,slen
+  c = inpath(i:i)
+  if (c.eq.fromdelim) c = todelim
+  outpath(i:i) = c
+end do
+
+end function EMsoft_fromNativePath
+
 
 
 !--------------------------------------------------------------------------
@@ -209,6 +302,13 @@ character(fnlen)                        :: jsonname
 integer(kind=irg)                       :: error_cnt
 character(kind=CK,len=:),allocatable    :: cval
 logical                                 :: found
+
+! determine the pathname delimiter character
+if (trim(EMsoftplatform).eq.'Windows') then
+  EMsoftnativedelimiter = '\'
+else
+  EMsoftnativedelimiter = '/'
+end if 
 
 ! first try to get the environment variables using the getenv command; if
 ! an empty string is returned, then try to find the .EMsoft/EMsoftConfig.json file;
@@ -249,6 +349,14 @@ if (pathstring.eq.'') then ! try the EMsoftConfig.json file
     write(error_unit,'(A)') 'WARNING: field '//trim(ep)//' not found in json file'
   else
     EMsoftpathname = trim(cval)
+  end if
+
+  ep = 'EMtmppathname'
+  call json%get(trim(ep), cval, found)
+  if (.not. found) then
+    write(error_unit,'(A)') 'WARNING: field '//trim(ep)//' not found in json file'
+  else
+    EMtmppathname = trim(cval)
   end if
 
   ep = 'EMdatapathname'

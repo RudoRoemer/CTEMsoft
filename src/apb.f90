@@ -84,7 +84,7 @@ real(kind=sgl)                 :: Vx,Vy,Vz,Vrad,w,tmp(3), tmp2(3), Rx, Ry, Rz
 
 ! open the apbdata file
 call Message('Opening '//trim(defects%apbname), frm = "(A)")
-open(unit=dataunit,file=trim(defects%apbname),form='formatted')
+open(unit=dataunit,file=trim(EMsoft_toNativePath(defects%apbname)),form='formatted')
 read(dataunit,*) defects%numapb ! PGC unit=dataunit -> dataunit
 allocate(defects%apbs(defects%numapb))
 if (dinfo.eq.1) then

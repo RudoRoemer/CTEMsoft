@@ -87,7 +87,7 @@ real(kind=sgl)      :: Vx,Vy,Vz,Vrad,C,tmp(3)
 
 ! open the inclusion data file
 call Message('Opening '//trim(defects%incname), frm = "(A)")
-open(unit=dataunit,file=trim(defects%incname),form='formatted')
+open(unit=dataunit,file=trim(EMsoft_toNativePath(defects%incname)),form='formatted')
 read(unit=dataunit) defects%numinc
 
 allocate(defects%inclusions(defects%numinc))

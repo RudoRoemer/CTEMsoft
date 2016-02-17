@@ -950,9 +950,9 @@ sgcutoff = 0.05         ! sg cutoff for double diffraction reflections
 
 if (fexist) then ! check for the file in the local folder
 ! read the parameters from the file
- OPEN(UNIT=dataunit,FILE=trim(Bethefilename),DELIM='APOSTROPHE')
- READ(UNIT=dataunit,NML=BetheList)
- CLOSE(UNIT=dataunit)
+ open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(Bethefilename)),DELIM='APOSTROPHE')
+ read(UNIT=dataunit,NML=BetheList)
+ close(UNIT=dataunit)
  if (.not.present(silent)) then
    call Message('Read Bethe parameters from BetheParameters.nml', frm = "(A)")
    write (6,nml=BetheList)

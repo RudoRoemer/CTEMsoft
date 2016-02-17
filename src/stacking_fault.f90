@@ -767,9 +767,9 @@ namelist / SFdata / SFi, SFj, SFsep, SFplane, SFlpu, SFlpb, SFtpu, SFtpb, SFR, p
     call Message('opening '//trim(defects%sfname(i)), frm = "(/A)")
     SFR = (/ 0.0, 0.0, 0.0 /)
     poisson = 0.0
-    OPEN(UNIT=dataunit,FILE=trim(defects%sfname(i)),DELIM='APOSTROPHE')
-    READ(UNIT=dataunit,NML=SFdata)
-    CLOSE(UNIT=dataunit)
+    open(UNIT=dataunit,FILE=trim(EMsoft_toNativePath(defects%sfname(i))),DELIM='APOSTROPHE')
+    read(UNIT=dataunit,NML=SFdata)
+    close(UNIT=dataunit)
 ! transform the fault fractional coordinates to nm in the image reference frame
     defects%SF(i)%id = SFi * 0.5 * float(DF_npix) ! * DF_L  (zooming is done later in the image reference frame)
     defects%SF(i)%jd = SFj * 0.5 * float(DF_npiy) ! * DF_L

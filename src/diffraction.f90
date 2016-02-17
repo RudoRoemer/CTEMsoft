@@ -1905,11 +1905,9 @@ INTENT(IN) :: beam,dimi,dimj,dz
   end do
   deallocate(idimi,jdimj)
 ! and store it in a file
-!  call SafeOpenFile('d1','UNFORMATTED',propname)
-  open(unit=dataunit,file=trim(propname),form='unformatted')
+  open(unit=dataunit,file=trim(EMsoft_toNativePath(propname)),form='unformatted')
   write (dataunit) dimi,dimj
   write (dataunit) fr
-!  call SafeCloseFile('d1','KEEP',propname)
   close(unit=dataunit,status='keep')
   deallocate(fr)
 end subroutine
