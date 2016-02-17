@@ -5,13 +5,13 @@ if(NOT "${EMsoft_SDK}" STREQUAL "")
 endif()
 
 
-cmake_minimum_required (VERSION 2.8.12)
-project (EMsoft C CXX Fortran)
+cmake_minimum_required (VERSION 3.1.0)
+project (EMsoft LANGUAGES C CXX Fortran VERSION 3.0.2.0)
 
 if(${CMAKE_MAJOR_VERSION} STREQUAL "3")
   # CMake 3.0 introduces VERSION variables for each Project. We do our own version numbering so we need to have
   # cmake ignore that policy
-  cmake_policy(SET CMP0048 OLD)
+  cmake_policy(SET CMP0048 NEW)
   # CMake 3.0 introduces some OS X RPath policies
   cmake_policy(SET CMP0042 OLD)
 endif()
@@ -217,6 +217,8 @@ else()
 # Package the needed examples
   add_subdirectory(${PROJECT_SOURCE_DIR}/src ${PROJECT_BINARY_DIR}/EMsoftLib)
 endif()
+
+add_subdirectory(${PROJECT_SOURCE_DIR}/src_programs ${PROJECT_BINARY_DIR}/src_programs)
 
 # --------------------------------------------------------------------
 # Package the needed examples

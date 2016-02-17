@@ -67,7 +67,9 @@ character(fnlen)                :: progname, progdesc, fname
  call GetSpaceGroup(cell)
  call GenerateSymmetry(cell,.TRUE.)
  call GetAsymPos(cell)
+ fname=''
  call ReadValue('Enter output file name (*.xtal) ', fname)
+ write (*,*) 'fname = ',fname
  cell%fname = fname
  call SaveDataHDF(cell)
 

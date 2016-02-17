@@ -100,7 +100,6 @@ module local
   character(fnlen)                      :: EMsoftplatform="@CMAKE_SYSTEM_NAME@"
 !> pathnamedelimiter
   character(1)                          :: EMsoftnativedelimiter
- 
   
 !> reserved IO unit identifiers for postscript (20) and data (21-23)
   integer(kind=irg), parameter          :: psunit=20, dataunit=21, dataunit2=22, dataunit3=23

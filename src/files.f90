@@ -253,11 +253,21 @@ nullify(HDF_head)
 
 ! Initialize FORTRAN interface.
 !
+write (*,*) 'opening hdf'
+
 CALL h5open_f(hdferr)
 
+write (*,*) 'time stamp'
 call timestamp(datestring=dstr, timestring=tstr)
+write (*,*) 'dstr = ',dstr
 
-fname = trim(xtalpathname)//trim(cell%fname)
+if (trim(EMsoftplatform).eq."Windows") then
+  fname = trim(xtalpathname)//"\\"//trim(cell%fname)
+else    
+  fname = trim(xtalpathname)//trim(cell%fname)
+end if
+write (*,*) 'fname ->'//trim(fname)//'<-'
+
 hdferr =  HDF_createFile(fname, HDF_head)
 
 groupname = 'CrystalData'

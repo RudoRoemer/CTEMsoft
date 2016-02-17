@@ -5,7 +5,7 @@ set(APP_DIR "${EMsoft_SOURCE_DIR}/src_programs")
 set(TMPLT_DIR "${EMsoft_SOURCE_DIR}/templatefolder")
 
 
-set(EXE_LINK_LIBRARIES EMsoftLib EMsoftLibHDF jsonfortran)
+set(EXE_LINK_LIBRARIES EMsoftLib hdf5 hdf5_f90cstub hdf5_fortran hdf5_hl_fortran jsonfortran)
 if (Fortran_COMPILER_NAME MATCHES "gfortran.*")
   set(EXE_LINK_LIBRARIES ${EXE_LINK_LIBRARIES} gomp gcc_eh)
 endif()
@@ -101,8 +101,6 @@ Add_EMSoft_Executable(TARGET EMzap SOURCES ${APP_DIR}/EMzap.f90 LINK_LIBRARIES $
 Add_EMSoft_Executable(TARGET EMdrawcell SOURCES ${APP_DIR}/EMdrawcell.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES})
 
 
-Add_EMsoft_Executable(TARGET testprogram SOURCES ${APP_DIR}/testprogram.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES})
-
 Add_EMSoft_Executable(TARGET rotationtest SOURCES ${APP_DIR}/rotationtest.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMECP.template)
 #---------------------------------------------------------------------
 # Copy the Rotations.txt file from Resources into the build directory
@@ -149,11 +147,11 @@ message(STATUS "CLFORTRAN_INCLUDE_DIR: ${CLFORTRAN_INCLUDE_DIR}" )
 
 
 # Add executables to be compiled.
-Add_EMSoft_Executable(TARGET EMMCOpenCL 
-                      SOURCES ${APP_DIR}/EMMCOpenCL.f90 
-                      LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${CLFORTRAN_LIBRARIES} ${OpenCL_LIBRARY}
-                      TEMPLATE ${TMPLT_DIR}/EMMCOpenCL.template
-                      )
+# Add_EMSoft_Executable(TARGET EMMCOpenCL 
+#                       SOURCES ${APP_DIR}/EMMCOpenCL.f90 
+#                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${CLFORTRAN_LIBRARIES} ${OpenCL_LIBRARY}
+#                       TEMPLATE ${TMPLT_DIR}/EMMCOpenCL.template
+#                       )
 # Add_EMsoft_Executable(TARGET EMECPDictionaryIndexing
 #                       SOURCES ${APP_DIR}/EMECPDictionaryIndexing.f90 
 #                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${CLFORTRAN_LIBRARIES} ${OpenCL_LIBRARY}
