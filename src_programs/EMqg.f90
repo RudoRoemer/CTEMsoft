@@ -58,7 +58,7 @@ integer(kind=irg)              :: ind(3),ans, oi_int(3)
 real(kind=sgl)                 :: oi_real(7)
 complex(kind=sgl)              :: oi_cmplx(1)
 real(kind=sgl)                 :: preg
-character(fnlen)               :: progname, progdesc
+character(fnlen)               :: progname, progdesc, gname
 character(200)                 :: parta
 type(unitcell),pointer         :: cell
 logical                        :: loadingfile
@@ -70,8 +70,13 @@ type(gnode)                    :: rlp
 
  allocate(cell)
  
- loadingfile = .TRUE.
- call CrystalData(cell,loadingfile)
+ cell % SG % SYM_reduce=.TRUE.
+
+! read crystal information
+ call ReadValue(' Enter xtal file name : ', gname,"(A)")
+ cell%fname = gname
+ call CrystalData(cell)
+
  call GetVoltage(cell,rlp)
  call CalcPositions(cell,'v')
  preg = 2.0 * sngl(cRestmass*cCharge/cPlanck**2)*1.0E-18
