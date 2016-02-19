@@ -57,6 +57,67 @@ call DoMCsimulation(mcnl, progname, nmldeffile)
 
 end program EMMCOpenCL
 
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:CLread_source_file
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read an OpenCL source file and return the source properly formatted
+!
+!> @param sourcefile filename for the OpenCL source code
+!> @param source c_str containing the source, NULL-terminated
+!> @param slength source string length
+!
+!> @date 02/18/16  MDG 1.0 original
+!--------------------------------------------------------------------------
+subroutine CLread_source_file(sourcefile, csource, slength)
+
+use local
+use error
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+integer, parameter                      :: source_length = 50000
+
+character(fnlen), INTENT(IN)            :: sourcefile
+character(len=source_length, KIND=c_char),INTENT(OUT) :: csource
+integer(c_size_t),INTENT(OUT)           :: slength
+
+
+character(len=source_length),target     :: source
+character(fnlen)                        :: fname
+integer(kind=irg)                       :: irec, ierr 
+
+! read the source file in the EMsoft/opencl folder
+fname = trim(openclpathname)//trim(sourcefile)
+fname = EMsoft_toNativePath(fname)
+open(unit = dataunit, file = trim(fname), access='direct', status = 'old', &
+     action = 'read', iostat = ierr, recl = 1)
+if (ierr /= 0) call FatalError("CLread_source_file: ",'Cannot open file '//fname)
+
+source = ''
+irec = 1
+do
+  read(unit = dataunit, rec = irec, iostat = ierr) source(irec:irec)
+  if (ierr /= 0) exit
+  if(irec == source_length) call FatalError("CLread_source_file: ",'Error: CL source file is too big')
+  irec = irec + 1
+end do
+close(unit=dataunit)
+
+csource = trim(source)
+csource(irec:irec) = C_NULL_CHAR
+slength = irec
+
+end subroutine CLread_source_file
+
+
+
+
+
 !--------------------------------------------------------------------------
 !
 ! SUBROUTINE:DoMCsimulation
@@ -119,23 +180,25 @@ integer(kind=irg)       :: numzbins     ! number of depth bins
 integer(kind=irg)       :: nx           ! no. of pixels
 integer(kind=irg)       :: j,k,l,ip,istat
 integer(kind=ill)       :: i, io_int(1), num_max
-real(kind=4)            :: Ze           ! average atomic number
-real(kind=4)            :: density      ! density in g/cm^3
-real(kind=4)            :: at_wt        ! average atomic weight in g/mole
+real(kind=4),target     :: Ze           ! average atomic number
+real(kind=4),target     :: density      ! density in g/cm^3
+real(kind=4),target     :: at_wt        ! average atomic weight in g/mole
 logical                 :: verbose
 real(kind=4)            :: dens, avA, avZ, io_real(3), dmin ! used with CalcDensity routine
 real(kind=8) , parameter:: dtoR = 0.01745329251D0 !auxiliary variables
-real(kind=4)            :: EkeV, sig, omega ! input values to the kernel. Can only be real kind=4 otherwise values are not properly passed
+real(kind=4),target     :: EkeV, sig, omega ! input values to the kernel. Can only be real kind=4 otherwise values are not properly passed
 integer(kind=ill)       :: totnum_el     ! total number of electrons to simulate
-integer(kind=4)         :: globalworkgrpsz, num_el, steps, prime ! input values to the kernel
+integer(kind=4)         :: prime ! input values to the kernel
+integer(kind=4),target  :: globalworkgrpsz, num_el, steps ! input values to the kernel
 integer(kind=8)         :: size_in_bytes,size_in_bytes_seeds ! size of arrays passed to kernel. Only accepts kind=8 integers by clCreateBuffer etc., so donot change
-integer(kind=8)         :: globalsize(2), localsize(2) ! size of global and local work groups. Again only kind=8 is accepted by clEnqueueNDRangeKernel
+integer(kind=8),target  :: globalsize(2), localsize(2) ! size of global and local work groups. Again only kind=8 is accepted by clEnqueueNDRangeKernel
 character(4)            :: mode
 ! results from kernel stored here
-real(kind=4),allocatable:: Lamresx(:), Lamresy(:), depthres(:), energyres(:)
+real(kind=4),allocatable, target :: Lamresx(:), Lamresy(:), depthres(:), energyres(:)
 
 ! final results stored here
-integer(kind=4),allocatable :: accum_e(:,:,:), accum_z(:,:,:,:), rnseeds(:), init_seeds(:)
+integer(kind=4),allocatable :: accum_e(:,:,:), accum_z(:,:,:,:), rnseeds(:)
+integer(kind=4),allocatable,target  :: init_seeds(:)
 integer(kind=4)         :: idxy(2), iE, px, py, iz, nseeds, hdferr ! auxiliary variables
 real(kind=4)            :: cxyz(3), edis, bse, xy(2) ! auxiliary variables
 real(kind=8)            :: delta,rand
@@ -144,23 +207,33 @@ character(15)           :: tstrb
 character(15)           :: tstre
 logical                 :: f_exists
 
-! OpenCL variables
-integer(c_intptr_t)     :: platform
-integer(c_intptr_t), allocatable, target :: platform_ids(:)
-integer(c_intptr_t)     :: device(2)
-integer(c_intptr_t)     :: context
-integer(c_intptr_t)     :: command_queue
-integer(c_intptr_t)     :: prog
-type(c_ptr)             :: kernel
-integer(c_intptr_t)            :: LamX, LamY, LamZ, depth, energy,seeds
-type(c_ptr)          :: event
+integer(c_size_t),target       :: slocal(2), localout
 
-character(len = 100)    :: info ! info about the GPU
+! OpenCL variables
+integer(c_intptr_t),allocatable, target  :: platform(:)
+integer(c_intptr_t),allocatable, target  :: device(:)
+integer(c_intptr_t),target     :: context
+integer(c_intptr_t),target     :: command_queue
+integer(c_intptr_t),target     :: prog
+integer(c_intptr_t),target     :: kernel
+integer(c_intptr_t),target     :: LamX, LamY, LamZ, depth, energy, seeds
+type(c_ptr)                    :: event
+integer(c_int32_t)             :: ierr, pcnt
+integer(c_size_t),target       :: slength
+integer(c_intptr_t),target     :: ctx_props(3)
+character(2),target            :: kernelname
+character(19),target           :: progoptions
+character(fnlen),target        :: info ! info about the GPU
+integer(c_int64_t)             :: cmd_queue_props
+
 integer, parameter      :: iunit = 10
-integer, parameter      :: source_length = 100000
-character(len = source_length)  :: source
-integer(c_int)         :: num, ierr, irec, val,val1 ! auxiliary variables
-character(fnlen)        :: groupname, dataset, instring, dataname
+integer, parameter      :: source_length = 50000
+character(len=source_length),target  :: source
+character(len=source_length, KIND=c_char),TARGET :: csource
+type(c_ptr), target :: psource
+integer(c_int)         :: nump, numd, irec, val,val1 ! auxiliary variables
+integer(c_size_t)      :: cnum, cnuminfo
+character(fnlen)        :: groupname, dataset, instring, dataname, fname, sourcefile
 integer(kind=irg)       :: numangle, iang
 
 type(HDFobjectStackType),pointer  :: HDF_head
@@ -211,7 +284,6 @@ localsize = (/ mcnl%globalworkgrpsz/10, mcnl%globalworkgrpsz/10 /)
 numEbins =  int((mcnl%EkeV-mcnl%Ehistmin)/mcnl%Ebinsize)+1
 numzbins =  int(mcnl%depthmax/mcnl%depthstep)+1
 nx = (mcnl%numsx-1)/2
-
 allocate(Lamresx(num_max), Lamresy(num_max), depthres(num_max), energyres(num_max), stat=istat)
 Lamresx = 0.0
 Lamresy = 0.0
@@ -240,7 +312,6 @@ end if
 accum_e = 0
 accum_z = 0
 
-
 ! changed by MDG [09/01/15] after extensive modifications to Lambert routines
 ! old code delta = dble(nx)/LPs%sPio2
 delta = dble(nx)
@@ -250,71 +321,80 @@ delta = dble(nx)
 !=====================
 
 ! get the platform ID
-ierr = clGetPlatformIDs(0, C_NULL_PTR, num)
-if(ierr /= CL_SUCCESS) stop "Cannot get CL platform."
+ierr = clGetPlatformIDs(0, C_NULL_PTR, nump)
+if(ierr /= CL_SUCCESS) call FatalError("clGetPlatformIDs: ","Cannot get number of CL platforms.")
+allocate(platform(nump))
+ierr = clGetPlatformIDs(nump, C_LOC(platform), nump)
+if(ierr /= CL_SUCCESS) call FatalError("clGetPlatformIDs: ","Cannot get CL platform.")
 
 ! get the device ID
-call clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, device, num, ierr)
-if(ierr /= CL_SUCCESS) stop "Cannot get CL device."
+ierr =  clGetDeviceIDs(platform(1), CL_DEVICE_TYPE_GPU, 0, C_NULL_PTR, numd)
+if(ierr /= CL_SUCCESS) call FatalError("clGetDeviceIDs: ","Cannot get number of CL devices.")
+allocate(device(numd))
+ierr =  clGetDeviceIDs(platform(1), CL_DEVICE_TYPE_GPU, numd, C_LOC(device), numd)
+if(ierr /= CL_SUCCESS) call FatalError("clGetDeviceIDs: ","Cannot get CL device.")
 
 ! get the device name and print it
-call clGetDeviceInfo(device(mcnl%devid), CL_DEVICE_NAME, info, ierr)
-call Message('CL device: '//info, frm='(A)')
+ierr = clGetDeviceInfo(device(mcnl%devid), CL_DEVICE_NAME, sizeof(info), C_LOC(info), cnuminfo)
+if(ierr /= CL_SUCCESS) call FatalError("clGetDeviceInfo: ","Cannot get CL device info.")
 
 ! create the context and the command queue
-context = clCreateContext(platform, device(mcnl%devid), ierr)
-if(ierr /= CL_SUCCESS) stop "Cannot create context"
-command_queue = clCreateCommandQueue(context, device(mcnl%devid), CL_QUEUE_PROFILING_ENABLE, ierr)
-if(ierr /= CL_SUCCESS) stop "Cannot create command queue"
+ctx_props(1) = CL_CONTEXT_PLATFORM
+ctx_props(2) = platform(1)
+ctx_props(3) = 0
+context = clCreateContext(C_LOC(ctx_props), numd, C_LOC(device),C_NULL_FUNPTR, C_NULL_PTR, ierr)
+if(ierr /= CL_SUCCESS) call FatalError("clCreateContext: ","Cannot create context.")
 
+cmd_queue_props = 0
+command_queue = clCreateCommandQueue(context, device(mcnl%devid), cmd_queue_props, ierr)
+if(ierr /= CL_SUCCESS) call FatalError("clCreateCommandQueue: ","Cannot create command queue.")
 
 !=====================
 ! BUILD THE KERNEL
 !=====================
 
 ! read the source file
-open(unit = iunit, file = trim(openclpathname)//'EMMC.cl', access='direct', status = 'old', &
-        action = 'read', iostat = ierr, recl = 1)
-if (ierr /= 0) stop 'Cannot open file EMMC.cl'
-
-source = ''
-irec = 1
-do
-read(unit = iunit, rec = irec, iostat = ierr) source(irec:irec)
-if (ierr /= 0) exit
-if(irec == source_length) stop 'Error: CL source file is too big'
-irec = irec + 1
-end do
-close(unit=iunit)
+sourcefile = 'EMMC.cl'
+call CLread_source_file(sourcefile, csource, slength)
 
 ! create the program
-prog = clCreateProgramWithSource(context, source, ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot create program from source.'
+! psource = C_LOC(csource)
+io_int(1) = slength
+call WriteValue('Kernel source length (characters) : ',io_int,1)
+pcnt = 1
+psource = C_LOC(csource)
+prog = clCreateProgramWithSource(context, pcnt, C_LOC(psource), C_LOC(slength), ierr)
+if(ierr /= CL_SUCCESS) call FatalError("clCreateProgramWithSource: ",'Error: cannot create program from source.')
 
-! build
-call clBuildProgram(prog, '-cl-no-signed-zeros', ierr)
+! build the program
+progoptions = '-cl-no-signed-zeros'
+ierr = clBuildProgram(prog, numd, C_LOC(device), C_LOC(progoptions), C_NULL_FUNPTR, C_NULL_PTR)
+if(ierr /= CL_SUCCESS) call FatalError("clBuildProgram: ",'Error: cannot build program.')
 
 ! get the compilation log
-call clGetProgramBuildInfo(prog, device(mcnl%devid), CL_PROGRAM_BUILD_LOG, source, irec)
-if(len(trim(source)) > 0) call Message(trim(source),frm='(A)')
+ierr = clGetProgramBuildInfo(prog, device(mcnl%devid), CL_PROGRAM_BUILD_LOG, sizeof(source), C_LOC(source), cnum)
+if(len(trim(source)) > 0) call Message(trim(source(1:cnum)),frm='(A)')
+if(ierr /= CL_SUCCESS) call FatalError("clGetProgramBuildInfo: ",'Error building program.')
 
-if(ierr /= CL_SUCCESS) stop 'Error: program build failed.'
-
-call Message('Kernel Build Successful....')
+! if we get here, then the program build was successful and we can proceed with the creation of the kernel
+call Message('Program Build Successful... Creating kernel')
 
 ! finally get the kernel and release the program
-kernel = clCreateKernel(prog, 'MC', ierr)
-call clReleaseProgram(prog, ierr)
-! allocate device memory
+kernelname = 'MC'
+kernel = clCreateKernel(prog, C_LOC(kernelname), ierr)
+if(ierr /= CL_SUCCESS) call FatalError("clCreateKernel: ",'Error creating kernel.')
 
-open(unit = iunit, file = trim(randomseedfilename), form='unformatted', status='old')
+ierr = clReleaseProgram(prog)
+if(ierr /= CL_SUCCESS) call FatalError("clReleaseProgram: ",'Error releasing program.')
+
+
+open(unit = iunit, file = trim(EMsoft_toNativePath(randomseedfilename)), form='unformatted', status='old')
 read(iunit) nseeds
 allocate(rnseeds(nseeds))
 read(iunit) rnseeds
 close(unit=iunit,status='keep')
 
 if (globalworkgrpsz**2 .gt. nseeds) call FatalError('EMMCOpenCL:','insufficient prime numbers')
-
 
 allocate(init_seeds(4*globalworkgrpsz*globalworkgrpsz),stat=istat)
 init_seeds = 0
@@ -327,95 +407,111 @@ do i = 1,globalworkgrpsz
 end do
 
 ! create device memory buffers
-LamX = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+LamX = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, C_NULL_PTR, ierr)
+if(ierr /= CL_SUCCESS) call FatalError('clCreateBuffer: ','cannot allocate device memory for LamX.')
 
-LamY = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+LamY = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, C_NULL_PTR, ierr)
+if(ierr /= CL_SUCCESS) call FatalError('clCreateBuffer: ','cannot allocate device memory for LamY.')
 
-depth = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+depth = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, C_NULL_PTR, ierr)
+if(ierr /= CL_SUCCESS) call FatalError('clCreateBuffer: ','cannot allocate device memory for depth.')
 
-energy = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+energy = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, C_NULL_PTR, ierr)
+if(ierr /= CL_SUCCESS) call FatalError('clCreateBuffer: ','cannot allocate device memory for energy.')
 
-seeds = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes, ierr)
-if(ierr /= CL_SUCCESS) stop 'Error: cannot allocate device memory.'
+seeds = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes, C_NULL_PTR, ierr)
+if(ierr /= CL_SUCCESS) call FatalError('clCreateBuffer: ','cannot allocate device memory for seeds.')
 
 !call init_random_seed()
-call clEnqueueWriteBuffer(command_queue, seeds, cl_bool(.true.), 0_8, size_in_bytes_seeds, init_seeds(1), ierr)
+ierr = clEnqueueWriteBuffer(command_queue, seeds, CL_TRUE, 0_8, size_in_bytes_seeds, C_LOC(init_seeds(1)), &
+                            0, C_NULL_PTR, C_NULL_PTR)
+if(ierr /= CL_SUCCESS) call FatalError('clEnqueueWriteBuffer: ','cannot Enqueue write buffer.')
+
+
+call Message('Starting Monte Carlo loop on CL device: '//trim(info(1:cnuminfo)), frm='(/A/)')
+
+if (mode .eq. 'bse1') then
+   call Message('Monte Carlo mode set to bse1. Calculating statistics for tilt series...',frm='(A/)')
+else if (mode .eq. 'full') then
+   call Message('Monte Carlo mode set to full. Performing full calculation...',frm='(A/)')
+else
+   call FatalError('DoMCSimulation','Unknown mode specified in namelist/json file')
+end if
 
 angleloop: do iang = 1,numangle
 
     if (mode .eq. 'bse1') then
-        if (iang .eq. 1) call Message('Monte Carlo mode set to bse1. Calculating statistics for tilt series...',frm='(A)')
         io_int(1) = iang
         call Writevalue('Angle loop #',io_int,1,'(I3)')
         sig = (mcnl%sigstart + (iang-1)*mcnl%sigstep)*dtoR
-    else if (mode .eq. 'full') then
-        call Message('Monte Carlo mode set to full. Performing full calculation...',frm='(A)')
+    else 
         sig = mcnl%sig*dtoR
-    else
-         call FatalError('DoMCSimulation','Unknown mode specified in namelist/json file')
     end if
 
     mainloop: do i = 1,(totnum_el/num_max+1)
 
 ! set the kernel arguments
-        call clSetKernelArg(kernel, 0, LamX, ierr)
+        ierr = clSetKernelArg(kernel, 0, sizeof(LamX), C_LOC(LamX))
         if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-        call clSetKernelArg(kernel, 1, LamY, ierr)
+        ierr = clSetKernelArg(kernel, 1, sizeof(LamY), C_LOC(LamY))
         if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-        call clSetKernelArg(kernel, 2, EkeV, ierr)
+        ierr = clSetKernelArg(kernel, 2, sizeof(EkeV), C_LOC(EkeV))
         if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-        call clSetKernelArg(kernel, 3, globalworkgrpsz, ierr)
+        ierr = clSetKernelArg(kernel, 3, sizeof(globalworkgrpsz), C_LOC(globalworkgrpsz))
         if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-        call clSetKernelArg(kernel, 4, Ze, ierr)
+        ierr = clSetKernelArg(kernel, 4, sizeof(Ze), C_LOC(Ze))
         if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-        call clSetKernelArg(kernel, 5, density, ierr)
+        ierr = clSetKernelArg(kernel, 5, sizeof(density), C_LOC(density))
         if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-        call clSetKernelArg(kernel, 6, at_wt, ierr)
+        ierr = clSetKernelArg(kernel, 6, sizeof(at_wt), C_LOC(at_wt))
         if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-        call clSetKernelArg(kernel, 7, num_el, ierr)
+        ierr = clSetKernelArg(kernel, 7, sizeof(num_el), C_LOC(num_el))
         if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-        call clSetKernelArg(kernel, 8, seeds, ierr)
+        ierr = clSetKernelArg(kernel, 8, sizeof(seeds), C_LOC(seeds))
         if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-        call clSetKernelArg(kernel, 9, sig, ierr)
+        ierr = clSetKernelArg(kernel, 9, sizeof(sig), C_LOC(sig))
         if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-        call clSetKernelArg(kernel, 10, omega, ierr)
+        ierr = clSetKernelArg(kernel, 10, sizeof(omega), C_LOC(omega))
         if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-        call clSetKernelArg(kernel, 11, depth, ierr)
+        ierr = clSetKernelArg(kernel, 11, sizeof(depth), C_LOC(depth))
         if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-        call clSetKernelArg(kernel, 12, energy, ierr)
+        ierr = clSetKernelArg(kernel, 12, sizeof(energy), C_LOC(energy))
         if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
 
-        call clSetKernelArg(kernel, 13, steps, ierr)
+        ierr = clSetKernelArg(kernel, 13, sizeof(steps), C_LOC(steps))
         if(ierr /= CL_SUCCESS) stop 'Error: cannot set kernel argument.'
+
+!       ierr = clGetKernelWorkGroupInfo(kernel, device(mcnl%devid), CL_KERNEL_WORK_GROUP_SIZE, sizeof(slocal), &
+!                         C_LOC(slocal(1)), localout );
+!       localsize = (/ slocal(1), slocal(1) /)
+!write (*,*) slocal, localout
 
 ! execute the kernel
-        call clEnqueueNDRangeKernel(command_queue, kernel, globalsize, localsize, event, ierr)
+        ierr = clEnqueueNDRangeKernel(command_queue, kernel, 2, C_NULL_PTR, C_LOC(globalsize), C_LOC(localsize), &
+                                      0, C_NULL_PTR, C_NULL_PTR)
 
 ! wait for the commands to finish
-        call clFinish(command_queue, ierr)
+        ierr = clFinish(command_queue)
 
 ! read the resulting vector from device memory
-        call clEnqueueReadBuffer(command_queue, LamX, cl_bool(.true.), 0_8, size_in_bytes, Lamresx(1), ierr)
-        call clEnqueueReadBuffer(command_queue, LamY, cl_bool(.true.), 0_8, size_in_bytes, Lamresy(1), ierr)
-        call clEnqueueReadBuffer(command_queue, depth, cl_bool(.true.), 0_8, size_in_bytes, depthres(1), ierr)
-        call clEnqueueReadBuffer(command_queue, energy, cl_bool(.true.), 0_8, size_in_bytes, energyres(1), ierr)
-!    call clEnqueueReadBuffer(command_queue, seeds, cl_bool(.true.), 0_8, size_in_bytes_seeds, init_seeds(1), ierr)
+        ierr = clEnqueueReadBuffer(command_queue,LamX,CL_TRUE,0_8,size_in_bytes,C_LOC(Lamresx(1)),0,C_NULL_PTR,C_NULL_PTR)
+        ierr = clEnqueueReadBuffer(command_queue,LamY,CL_TRUE,0_8,size_in_bytes,C_LOC(Lamresy(1)),0,C_NULL_PTR,C_NULL_PTR)
+        ierr = clEnqueueReadBuffer(command_queue,depth,CL_TRUE,0_8,size_in_bytes,C_LOC(depthres(1)),0,C_NULL_PTR,C_NULL_PTR)
+        ierr = clEnqueueReadBuffer(command_queue,energy,CL_TRUE,0_8,size_in_bytes,C_LOC(energyres(1)),0,C_NULL_PTR,C_NULL_PTR)
+!    ierr = clEnqueueReadBuffer(command_queue, seeds, cl_bool(.true.), 0_8, size_in_bytes_seeds, init_seeds(1), ierr)
+
         if (mode .eq. 'full') then
            subloopfull: do j = 1, num_max
 
@@ -615,14 +711,18 @@ call h5close_f(hdferr)
 ! RELEASE EVERYTHING
 !=====================
 
-call clReleaseKernel(kernel, ierr)
-call clReleaseCommandQueue(command_queue, ierr)
-call clReleaseContext(context, ierr)
-call clReleaseMemObject(LamX, ierr)
-call clReleaseMemObject(LamY, ierr)
-call clReleaseMemObject(depth, ierr)
-call clReleaseMemObject(energy, ierr)
-call clReleaseMemObject(seeds, ierr)
+ierr = clReleaseKernel(kernel)
+ierr = clReleaseCommandQueue(command_queue)
+ierr = clReleaseContext(context)
+ierr = clReleaseMemObject(LamX)
+ierr = clReleaseMemObject(LamY)
+ierr = clReleaseMemObject(depth)
+ierr = clReleaseMemObject(energy)
+ierr = clReleaseMemObject(seeds)
+
+
+
+
 
 
 

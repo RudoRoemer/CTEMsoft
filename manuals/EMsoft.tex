@@ -114,9 +114,8 @@ This manual describes a few aspects of the \ctp\ package:
 \end{itemize}
 
 At the time of writing of this manual, these programs have been successfully compiled and executed on the Mac OS X platform (Yosemite) and on 
-Linux CentOS 7 using the public domain gfortran compiler. There is no real reason why this code should not work on Windows systems, and efforts are underway
-to make sure that the code will run on all platforms. Where appropriate, computations
-are carried out using \textsf{OpenMP} directives, so that multiple cores are used.  In addition, several programs make use of a 
+Linux CentOS 7 using the public domain gfortran compiler. Starting in version 3.0.3, Windows 10 systems are also supported.
+Where appropriate, computations are carried out using \textsf{OpenMP} directives, so that multiple cores are used.  In addition, several programs make use of a 
 GPU (if available), using \textit{OpenCL} code.
 
 If you wish to compile \ctp\ yourself, then please proceed with the next section; if you only plan on using the 
@@ -131,7 +130,11 @@ host the source code tree; we recommend that the foldername be \ctp, but you are
 Before you can start to compile the code, you must install the software developer kit (SDK).  This is made very easy thanks to our
 friends at BlueQuartz.net; open a terminal window, navigate inside the \ctp\ tree to the folder \textsf{Support/SDK\_Build\_Scripts}.
 On the Mac OS X and Linux platforms, the SDK will be installed by default in a new \textsf{/opt/EMSoft\_SDK}
-folder; this can be changed by editing the \textsf{SDK\_PARENT\_DIR} variable in the \textsf{Build\_SDK.sh} shell script file.
+folder; this can be changed by editing the \textsf{SDK\_PARENT}  and \textsf{SDK\_INSTALL} variables in the \textsf{SDK\_Configuration.conf}  file.
+Depending on the number of cores on your system, you can also set the \textsf{PARALLEL\_BUILD} parameter; if you have
+$N$ cores, you can in theory put this variable at $2N$, in which case the compilation process will pretty much use all the 
+available compute power on your system. Smaller values will mean a somewhat longer compile time, but your system will
+remain reasonably responsive.
 
 The build script should be executed with
 \begin{verbatim}
@@ -145,11 +148,14 @@ and unpack the archive. Then the script will install the following program and l
 \item \textsf{jsonfortran}: a small library to parse and create json-formatted files (JavaScript Object Notation);
 \item \textsf{HDF5}: a large library for Hierarchical Data Format support; note that this library will be compiled twice, once in debug mode and once in release mode.
 It is normal for there to be a large number of warnings during the compilation; just ignore them.
-\item \textsf{fortrancl}: another small library with wrapper routines to call OpenCL from within f90 programs.
+\item \textsf{clfortran}: another small library with wrapper routines to call OpenCL from within f90 programs. {\color{red}Note that this represents a 
+change with respect to older versions, which used the \textsf{fortrancl} library.  If you have an existing SDK with \textsf{fortrancl}, you should rebuild
+the entire SDK by removing the folder and starting a fresh build.}
+\item \textsf{FFTW}: used for fast Fourier transforms; not actually used in release 3.0.3, but will be used in later releases.
 \end{itemize}
-All four of these packages should compile and install without any issues, assuming that you have the correct compilers on your system.  Note that the 
+All five of these packages should compile and install without any issues, assuming that you have the correct compilers on your system.  Note that the 
 installation is sandboxed, i.e., it will not interfere with or overwrite any existing implementations of these libraries;  you should only use the libraries
-inside the sandbox, though.  The compilation process should only take about five minutes.  Once the SDK has been compiled, you will be ready to compile \ctp, 
+inside the sandbox, though.  Make sure that your PATH variable lists the SDK before any other collections of libraries that may already be on your system.  The compilation process should only take about five minutes.  Once the SDK has been compiled, you will be ready to compile \ctp, 
 as described in the next section.
 
 \section{Compiling \ctpb\label{sec:compile}}
@@ -164,7 +170,8 @@ For Linux, use
 \end{verbatim}
 Typically, you would add this line, or a similar one for other shells, to your \textsf{.bashrc} or \textsf{.cshrc} file.
 
-In a terminal window, cd to your \textsf{EMsoft} top folder, create a \textsf{Build} folder, cd inside it and enter the following command:
+In a terminal window, cd to your \textsf{EMsoft} top folder, create a \textsf{Build} folder, cd inside it and enter the following command (if you changed the 
+location of the SDK, make sure you select the correct path instead of \textsf{/opt}):
 \begin{verbatim}
 	cmake -DEMSoft_SDK=/opt/EMSoft_SDK -DCMAKE_BUILD_TYPE=Debug ../
 \end{verbatim}
@@ -180,7 +187,7 @@ All executables will be located in the \textsf{Build/Bin} folder, so you may wan
 
 \section{Installation Instructions\label{sec:todo}}
 If you chose not to compile the code, and you only wish to execute the programs, or you did perform the steps in the last two sections, you will
-now need to set up your environment so that the executables will be found.  The package file with executables can be downloaded from the following
+now need to set up your environment so that the executables will be found.  The latest package file with executables can be downloaded from the following
 location:
 \begin{verbatim}
 	http://muri.materials.cmu.edu/?p=858
@@ -188,19 +195,15 @@ location:
 In the older version of CTEMsoft, the programs required several environment variables to be set, so
 that all the resource files and such could be located. In the present release, this has been changed
 to a more flexible system that should work on all platforms (OS X, Linux and Windows).  There are 
-only two variables that need to be set in order for the programs to function properly.  They are defined 
+only a few variables that need to be set in order for the programs to function properly.  They are defined 
 via the \textsf{EMsoftConfig.json} file, located inside the hidden \textsf{.config/EMsoft} folder in the user's 
-home directory.
+home directory.  A default version of this file can be generated automatically by executing the \textsf{EMsoftinit} program 
+as the first program that you execute.
 
 \begin{enumerate}
 \item Place the \textsf{EMsoft.zip} archive somewhere inside your home folder; for instance, if your username is ``me,'' you could create 
 a folder named \textsf{packages} inside the \textsf{/Users/me} folder, and download the archive inside \textsf{/Users/me/packages}.
 Then unpack the archive, which will create an \textsf{EMsoft} folder containing several other folders.
-
-\item {\color{red}As of release 3.0.2, this item is no longer needed.} \st{Check whether or not the folder \textsf{/opt/local/lib/libgcc} exists on your system; if it does not,
-create it (you will need to execute a \textsf{sudo} command to do so, or ask the system admin to 
-create it for you).  Then, check whether or not the files inside the \textsf{EMsoft/lib} folder are present 
-in the \textsf{/opt/local/lib/libgcc} folder; if they are not, copy them from \textsf{EMsoft/lib}.}
 
 \item Check whether or not the \textsf{.config} folder exists in your home folder; if it doesn't exist, create it (don't forget the 
 period in front of the folder name). Then go into this folder and create the \textsf{EMsoft} folder; go into
@@ -298,6 +301,9 @@ to identify the set of variables (this is similar to a \textit{common block} in 
 list of name-value pairs follows.  These can appear in any order, and variables may be omitted from the file, in which case the program
 will use a default value (this value can be found in the template file; see section~\ref{sec:structure}).  The final line of the file must contain a single forward slash
 character, ``/'', to end the namelist.
+
+{\color{blue}\textbf{Special Note for Windows Users:} On Windows with the Intel fortran compiler (ifort), the compiled code expects an nml format that is slightly different from the format described above.
+}
 
 The json format (JavaScript Object Notation) is an xml-like version of the name-value pairs, and is very similar to the namelist format, with the exception 
 of the presence of curly braces.  For the example namelist file shown above, the equivalent json file would look as follows:
@@ -442,6 +448,7 @@ Program & Short description & Manual? \\
   \textsf{EMKosselMaster} & electron Kossel master patterns (SEM) & $\checkmark$ \\
 \hline
   \textsf{EMmkxtal} & make a crystal structure input file& $\checkmark$\\
+  \textsf{EMOpenCLinfo} & list the available compute devices on your computer & \\
   \textsf{EMlistSG} & list the equivalent positions of any space group & \\
   \textsf{EMqg} & list Fourier coefficient information & \\
   \textsf{EMfamily} & draw a family of planes (stereographic) & \\
@@ -453,7 +460,7 @@ Program & Short description & Manual? \\
   \textsf{EMorient} & stereographic projection for orientation relation & \\
   \textsf{EMxtalinfo} & makes postscript file with lots of information & \\
   \textsf{EMzap} & create postscript file with zone axis patterns & \\
-  \textsf{EMdrawcell} & draw a unit cell (very primitive) & \\
+  \textsf{EMdrawcell} & draw a unit cell (very primitive\footnote{The program, that is $\ldots$ not the cell.}) & \\
 \hline
 \end{tabular}
 \end{table*}
@@ -472,15 +479,22 @@ Program & Short description & Manual? \\
                 \item added option to turn off requirement for \LaTeX\ installation to be present in order to compile package;
                 \item modified variable definitions in MBmodule and EMdymod to eliminate compilation errors when using the Intel fortran 
                 compiler in Visual Studio [S. Wright]; 
-                \item removed dispfield.f90, familiy.f90, and hdftest.f90 from src folder;
+                \item updated \textsf{HDFsupport} module; converted HDF read operations to subroutines instead of functions to please the Intel fortran 
+                compiler;
+                \item added DLLexport comment lines to all module files;
+                \item changed OpenCL support from the \textsf{fortrancl} library to the more complete \textsf{clfortran} library;
+                \item added \textsf{EMOpenCLinfo} program to display the computing environment;
+                \item added CMake support for compilation with ifort on Windows 10 (thanks to Mike Jackson);
+                \item automatic generation of configuration file upon first execution of any \ctp\ program;
+                \item removed dispfield.f90, family.f90, and hdftest.f90 from src folder;
         \end{itemize}
 \end{itemize}
 
 \section{Future releases}
 The following future releases are currently planned:
 \begin{itemize}
-	\item 3.1, Spring 2016: addition of dictionary indexing codes for EBSD and ECP; ECCI defect imaging code.
-	\item 3.2, Fall 2016: addition of updated TEM codes (currently still available in release 2.0); integration with DREAM.3D.
+	\item 3.1, Summer 2016: addition of dictionary indexing codes for EBSD and ECP; ECCI defect imaging code; integration with DREAM.3D filters.
+	\item 3.2, Fall 2016: addition of updated TEM codes (currently still available in release 2.0); further integration with DREAM.3D.
 \end{itemize}
 
 

@@ -40,6 +40,7 @@ set(EMsoftLib_SRCS
   ${EMsoftLib_SOURCE_DIR}/NameListHDFwriters.f90
   ${EMsoftLib_SOURCE_DIR}/HDFsupport.f90
   ${EMsoftLib_SOURCE_DIR}/JSONsupport.f90
+# ${EMsoftLib_SOURCE_DIR}/CLsupport.f90
   ${EMsoftLib_SOURCE_DIR}/noise.f90
   ${EMsoftLib_SOURCE_DIR}/others.f90
   ${EMsoftLib_SOURCE_DIR}/pgm.f90
@@ -76,6 +77,7 @@ endif()
 
 
 include_directories(${HDF5_INCLUDE_DIR} )
+# include_directories(${CLFORTRAN_INCLUDE_DIR} )
 
 
 

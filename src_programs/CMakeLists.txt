@@ -147,11 +147,15 @@ message(STATUS "CLFORTRAN_INCLUDE_DIR: ${CLFORTRAN_INCLUDE_DIR}" )
 
 
 # Add executables to be compiled.
-# Add_EMSoft_Executable(TARGET EMMCOpenCL 
-#                       SOURCES ${APP_DIR}/EMMCOpenCL.f90 
-#                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${CLFORTRAN_LIBRARIES} ${OpenCL_LIBRARY}
-#                       TEMPLATE ${TMPLT_DIR}/EMMCOpenCL.template
-#                       )
+ Add_EMSoft_Executable(TARGET EMMCOpenCL 
+                       SOURCES ${APP_DIR}/EMMCOpenCL.f90 
+                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${OpenCL_LIBRARY}
+                       TEMPLATE ${TMPLT_DIR}/EMMCOpenCL.template
+                       )
+ Add_EMSoft_Executable(TARGET EMOpenCLinfo
+                       SOURCES ${APP_DIR}/EMOpenCLinfo.f90 
+                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${OpenCL_LIBRARY}
+                       )
 # Add_EMsoft_Executable(TARGET EMECPDictionaryIndexing
 #                       SOURCES ${APP_DIR}/EMECPDictionaryIndexing.f90 
 #                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${CLFORTRAN_LIBRARIES} ${OpenCL_LIBRARY}

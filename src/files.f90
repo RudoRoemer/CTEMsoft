@@ -487,8 +487,10 @@ end do
 CLOSE(UNIT=dataunit, STATUS='keep')
 
 do i=1,nt
- input_name = EMsoft_toNativePath(trim(templatepathname)//trim(templates(templatelist(i)+1)))
- output_name = EMsoft_toNativePath(templates(templatelist(i)+1))
+ input_name = trim(templatepathname)//trim(templates(templatelist(i)+1))
+ output_name = templates(templatelist(i)+1)
+ input_name = EMsoft_toNativePath(input_name)
+ output_name = EMsoft_toNativePath(output_name)
  open(UNIT=dataunit,FILE=trim(input_name), STATUS='old', FORM='formatted',ACCESS='sequential')
  open(UNIT=dataunit2,FILE=trim(output_name), STATUS='unknown', FORM='formatted',ACCESS='sequential')
  do
