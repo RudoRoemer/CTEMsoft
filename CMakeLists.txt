@@ -181,6 +181,41 @@ endif(APPLE)
 include_directories(${EMsoft_BINARY_DIR} ${JSONFORTRAN_INCLUDE_DIR} ${FFTW3_INCLUDE_DIR})
 
 
+#------------------------------------------------------------------------------
+# Find the OpenCL Package
+find_package( OpenCL REQUIRED )
+if(OpenCL_FOUND)
+  message(STATUS "OpenCL_FOUND: ${OpenCL_FOUND}")
+  message(STATUS "OpenCL_VERSION_STRING: ${OpenCL_VERSION_STRING}")
+  message(STATUS "OpenCL_INCLUDE_DIRS: ${OpenCL_INCLUDE_DIRS}")
+  message(STATUS "OpenCL_LIBRARIES: ${OpenCL_LIBRARIES}")
+#  message(STATUS "OpenCL_INCLUDE_DIR: ${OpenCL_INCLUDE_DIR}")
+#  message(STATUS "OpenCL_LIBRARY: ${OpenCL_LIBRARY}")
+else()
+  message(FATAL_ERROR "OpenCL is needed to compile some programs in EMSoft. Please install a package appropriate for your Operating System")
+endif()
+
+include_directories( ${OpenCL_INCLUDE_DIRS} )
+
+# Figure out if the OpenCL Package has CPP bindings
+if( OPENCL_HAS_CPP_BINDINGS )
+  message(STATUS "OpenCL has CPP bindings. Full include is: " ${OpenCL_INCLUDE_DIRS} )
+else( OPENCL_HAS_CPP_BINDINGS )
+  message(STATUS "No OpenCL CPP bindings found" )
+endif( OPENCL_HAS_CPP_BINDINGS )
+
+#------------------------------------------------------------------------------
+# Find the Fortran OpenCL Bindings Package
+find_package(CLFortran REQUIRED)
+if( NOT CLFORTRAN_FOUND)
+  message(STATUS "CLFortran is REQUIRED for this project.")
+  message(STATUS "CLFortran source repository is at http://code.google.com/p/fortrancl/downloads/list")
+  message(FATAL_ERROR "Please Download, Build and install. After install export the environment variable CLFORTRAN_INSTALL to point to the installation location.")
+endif()
+
+message(STATUS "CLFORTRAN_INCLUDE_DIR: ${CLFORTRAN_INCLUDE_DIR}" )
+
+
 
 if(0)
 

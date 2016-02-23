@@ -86,6 +86,8 @@ Add_EMSoft_Executable(TARGET EMsampleRFZ SOURCES ${APP_DIR}/EMsampleRFZ.f90 LINK
 Add_EMSoft_Executable(TARGET EMEBSD SOURCES ${APP_DIR}/EMEBSD.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMEBSD.template)
 Add_EMSoft_Executable(TARGET EMEBSDmaster SOURCES ${APP_DIR}/EMEBSDmaster.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMEBSDmaster.template)
 #Add_EMSoft_Executable(TARGET EMPEDKIN SOURCES ${APP_DIR}/EMPEDKIN.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMPEDKIN.template)
+Add_EMSoft_Executable(TARGET EMMCOpenCL SOURCES ${APP_DIR}/EMMCOpenCL.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMMCOpenCL.template)
+
 Add_EMSoft_Executable(TARGET EMmkxtal SOURCES ${APP_DIR}/EMmkxtal.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES})
 Add_EMSoft_Executable(TARGET EMlistSG SOURCES ${APP_DIR}/EMlistSG.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES})
 Add_EMSoft_Executable(TARGET EMqg SOURCES ${APP_DIR}/EMqg.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES})
@@ -100,6 +102,8 @@ Add_EMSoft_Executable(TARGET EMxtalinfo SOURCES ${APP_DIR}/EMxtalinfo.f90 LINK_L
 Add_EMSoft_Executable(TARGET EMzap SOURCES ${APP_DIR}/EMzap.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES})
 Add_EMSoft_Executable(TARGET EMdrawcell SOURCES ${APP_DIR}/EMdrawcell.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES})
 
+Add_EMSoft_Executable(TARGET EMOpenCLinfo SOURCES ${APP_DIR}/EMOpenCLinfo.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES})
+
 
 Add_EMSoft_Executable(TARGET rotationtest SOURCES ${APP_DIR}/rotationtest.f90 LINK_LIBRARIES ${EXE_LINK_LIBRARIES} TEMPLATE ${TMPLT_DIR}/EMECP.template)
 #---------------------------------------------------------------------
@@ -111,51 +115,7 @@ ADD_CUSTOM_TARGET(ZZ_RotationsFile-Copy ALL
 #add_dependencies(rotationtest ZZ_RotationsFile-Copy )
 
 
-#------------------------------------------------------------------------------
-# Fine the OpenCL Package
-find_package( OpenCL REQUIRED )
-if(OpenCL_FOUND)
-  message(STATUS "OpenCL_FOUND: ${OpenCL_FOUND}")
-  message(STATUS "OpenCL_VERSION_STRING: ${OpenCL_VERSION_STRING}")
-  message(STATUS "OpenCL_INCLUDE_DIRS: ${OpenCL_INCLUDE_DIRS}")
-  message(STATUS "OpenCL_LIBRARIES: ${OpenCL_LIBRARIES}")
-#  message(STATUS "OpenCL_INCLUDE_DIR: ${OpenCL_INCLUDE_DIR}")
-#  message(STATUS "OpenCL_LIBRARY: ${OpenCL_LIBRARY}")
-else()
-  message(FATAL_ERROR "OpenCL is needed to compile some programs in EMSoft. Please install a package appropriate for your Operating System")
-endif()
 
-include_directories( ${OpenCL_INCLUDE_DIRS} )
-
-# Figure out if the OpenCL Package has CPP bindings
-if( OPENCL_HAS_CPP_BINDINGS )
-  message(STATUS "OpenCL has CPP bindings. Full include is: " ${OpenCL_INCLUDE_DIRS} )
-else( OPENCL_HAS_CPP_BINDINGS )
-  message(STATUS "No OpenCL CPP bindings found" )
-endif( OPENCL_HAS_CPP_BINDINGS )
-
-#------------------------------------------------------------------------------
-# Find the Fortran OpenCL Bindings Package
-find_package(CLFortran REQUIRED)
-if( NOT CLFORTRAN_FOUND)
-  message(STATUS "CLFortran is REQUIRED for this project.")
-  message(STATUS "CLFortran source repository is at http://code.google.com/p/fortrancl/downloads/list")
-  message(FATAL_ERROR "Please Download, Build and install. After install export the environment variable CLFORTRAN_INSTALL to point to the installation location.")
-endif()
-
-message(STATUS "CLFORTRAN_INCLUDE_DIR: ${CLFORTRAN_INCLUDE_DIR}" )
-
-
-# Add executables to be compiled.
- Add_EMSoft_Executable(TARGET EMMCOpenCL 
-                       SOURCES ${APP_DIR}/EMMCOpenCL.f90 
-                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${OpenCL_LIBRARY}
-                       TEMPLATE ${TMPLT_DIR}/EMMCOpenCL.template
-                       )
- Add_EMSoft_Executable(TARGET EMOpenCLinfo
-                       SOURCES ${APP_DIR}/EMOpenCLinfo.f90 
-                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${OpenCL_LIBRARY}
-                       )
 # Add_EMsoft_Executable(TARGET EMECPDictionaryIndexing
 #                       SOURCES ${APP_DIR}/EMECPDictionaryIndexing.f90 
 #                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES} ${LAPACK_LIB} ${CLFORTRAN_LIBRARIES} ${OpenCL_LIBRARY}

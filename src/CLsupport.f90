@@ -38,7 +38,7 @@ contains
 
 !--------------------------------------------------------------------------
 !
-! SUBROUTINE:query_platform_info
+! SUBROUTINE:CLquery_platform_info
 !
 !> @author Marc De Graef, Carnegie Mellon University
 !
@@ -77,7 +77,7 @@ contains
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 !
 ! -----------------------------------------------------------------------------
-subroutine query_platform_info(platform_id)
+subroutine CLquery_platform_info(platform_id)
 
 use ISO_C_BINDING
 
@@ -179,13 +179,72 @@ do i = 1, num_devices
   allocate(device_name(temp_size))
   err = clGetDeviceInfo(device_ids(i), CL_DEVICE_NAME, temp_size, C_LOC(device_name), temp_size)
 
-! Print brief device details.
-  write (*, '(A,I2,A,I3,A)', advance='no') ' Device (#', i, ', Compute Units: ', device_cu, ') - '
+! Print brief device details. Since this routine can be used by the user to determine GPU device IDs,
+! we subtract 1 from the device ID to make sure that the CPU gets number 0...
+  write (*, '(A,I2,A,I3,A)', advance='no') ' Device (#', i-1, ', Compute Units: ', device_cu, ') - '
   print *, device_name
 
   deallocate(device_name)
 end do
-end subroutine query_platform_info
+end subroutine CLquery_platform_info
+
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE:CLread_source_file
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief read an OpenCL source file and return the source properly formatted
+!
+!> @param sourcefile filename for the OpenCL source code
+!> @param source c_str containing the source, NULL-terminated
+!> @param slength source string length
+!
+!> @date 02/18/16  MDG 1.0 original
+!--------------------------------------------------------------------------
+subroutine CLread_source_file(sourcefile, csource, slength)
+
+use local
+use error
+use ISO_C_BINDING
+
+IMPLICIT NONE
+
+integer, parameter                      :: source_length = 50000
+
+character(fnlen), INTENT(IN)            :: sourcefile
+character(len=source_length, KIND=c_char),INTENT(OUT) :: csource
+integer(c_size_t),INTENT(OUT)           :: slength
+
+
+character(len=source_length),target     :: source
+character(fnlen)                        :: fname
+integer(kind=irg)                       :: irec, ierr 
+
+! read the source file in the EMsoft/opencl folder
+fname = trim(openclpathname)//trim(sourcefile)
+fname = EMsoft_toNativePath(fname)
+open(unit = dataunit, file = trim(fname), access='direct', status = 'old', &
+     action = 'read', iostat = ierr, recl = 1)
+if (ierr /= 0) call FatalError("CLread_source_file: ",'Cannot open file '//fname)
+
+source = ''
+irec = 1
+do
+  read(unit = dataunit, rec = irec, iostat = ierr) source(irec:irec)
+  if (ierr /= 0) exit
+  if(irec == source_length) call FatalError("CLread_source_file: ",'Error: CL source file is too big')
+  irec = irec + 1
+end do
+close(unit=dataunit)
+
+csource = trim(source)
+csource(irec:irec) = C_NULL_CHAR
+slength = irec
+
+end subroutine CLread_source_file
+
 
 
 end module CLsupport
