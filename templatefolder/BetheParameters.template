@@ -1,4 +1,4 @@
-&Bethelist
+ &Bethelist
 ! Do not change the line above !
 !
 ! Details about the particular implementation of the Bethe potentials can be 
@@ -7,11 +7,11 @@
 ! vol 160, pp. 35-43 (2016)
 !
 ! strong beam cutoff
-c1 = 5.0
+ c1 = 5.0,
 ! weak beam cutoff
-c2 = 10.0
+ c2 = 10.0,
 ! complete cutoff
-c3 = 100.0
+ c3 = 100.0,
 ! double diffraction reflections: maximum excitation error to include [nm^{-1}]
-sgdbdiff = 1.00    
-/
+ sgdbdiff = 1.00
+ /

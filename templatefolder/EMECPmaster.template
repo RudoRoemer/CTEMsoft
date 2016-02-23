@@ -1,12 +1,12 @@
-&ECPmastervars
+ &ECPmastervars
 ! no. of pixels in the X and Y direction
-npx = 500
+ npx = 500,
 ! smallest d-spacing to take into account [nm]
-dmin = 0.05
+ dmin = 0.05,
 ! name of output file (to be read by IDL visualization routine); relative to EMdatapathname
-outname = 'ECPmasterout.data'
+ outname = 'ECPmasterout.data',
 ! name of the energy statistics file produced by EMMCOpenCL program; relative to EMdatapathname
-energyfile = 'MCoutput.data'
+ energyfile = 'MCoutput.data',
 ! number of threads to run the master pattern
-nthreads = 1
-/
+ nthreads = 1
+ /

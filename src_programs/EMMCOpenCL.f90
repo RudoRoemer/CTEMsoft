@@ -277,7 +277,7 @@ omega = mcnl%omega*dtoR
 globalworkgrpsz = mcnl%globalworkgrpsz
 num_el = mcnl%num_el ! no. of electron simulation by one work item
 num_max = globalworkgrpsz*globalworkgrpsz*num_el ! total simulation in one loop
-totnum_el = mcnl%totnum_el_ill ! total number of electrons to simulate
+totnum_el = mcnl%totnum_el * mcnl%multiplier ! total number of electrons to simulate
 globalsize = (/ mcnl%globalworkgrpsz, mcnl%globalworkgrpsz /)
 localsize = (/ mcnl%globalworkgrpsz/10, mcnl%globalworkgrpsz/10 /)
 
@@ -673,7 +673,10 @@ dataset = 'numzbins'
 hdferr = HDF_writeDatasetInteger(dataset, numzbins, HDF_head)
 
 dataset = 'totnum_el'
-hdferr = HDF_writeDatasetInteger(dataset, INT(totnum_el,4), HDF_head)
+hdferr = HDF_writeDatasetInteger(dataset, mcnl%totnum_el, HDF_head)
+
+dataset = 'multiplier'
+hdferr = HDF_writeDatasetInteger(dataset, mcnl%multiplier, HDF_head)
 
 if (mode .eq. 'full') then
 

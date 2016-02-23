@@ -417,7 +417,7 @@ IMPLICIT NONE
 type(HDFobjectStackType),INTENT(INOUT),pointer        :: HDF_head
 type(MCCLNameListType),INTENT(INOUT)                  :: mcnl
 
-integer(kind=irg),parameter                           :: n_int = 6, n_real_bse1 = 9, n_real_full = 7
+integer(kind=irg),parameter                           :: n_int = 7, n_real_bse1 = 9, n_real_full = 7
 integer(kind=irg)                                     :: hdferr,  io_int(n_int)
 real(kind=dbl)                                        :: io_real_bse1(n_real_bse1), io_real_full(n_real_full)
 character(20)                                         :: reallist_bse1(n_real_bse1), reallist_full(n_real_full)
@@ -429,13 +429,14 @@ character(fnlen,kind=c_char)                          :: line2(1)
 hdferr = HDF_createGroup('MCCLNameList',HDF_head)
 
 ! write all the single integers
-io_int = (/ mcnl%stdout, mcnl%numsx, mcnl%globalworkgrpsz, mcnl%num_el, mcnl%totnum_el, mcnl%devid /)
+io_int = (/ mcnl%stdout, mcnl%numsx, mcnl%globalworkgrpsz, mcnl%num_el, mcnl%totnum_el, mcnl%multiplier, mcnl%devid /)
 intlist(1) = 'stdout'
 intlist(2) = 'numsx'
 intlist(3) = 'globalworkgrpsz'
 intlist(4) = 'num_el'
 intlist(5) = 'totnum_el'
-intlist(6) = 'devid'
+intlist(6) = 'multiplier'
+intlist(7) = 'devid'
 call HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
 
 ! write all the single doubles

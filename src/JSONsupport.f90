@@ -545,7 +545,7 @@ integer(kind=irg),INTENT(INOUT)                       :: error_cnt
 
 type(json_value),pointer                              :: p, inp
 
-integer(kind=irg),parameter                           :: n_int = 6, n_real_bse1 = 9, n_real_full = 7
+integer(kind=irg),parameter                           :: n_int = 7, n_real_bse1 = 9, n_real_full = 7
 integer(kind=irg)                                     :: io_int(n_int)
 real(kind=dbl)                                        :: io_real_bse1(n_real_bse1), io_real_full(n_real_full)
 character(20)                                         :: intlist(n_int), reallist_bse1(n_real_bse1), reallist_full(n_real_full)
@@ -557,13 +557,14 @@ namelistname = 'MCCLdata'
 call JSON_initpointers(p, inp, jsonname, namelistname, error_cnt)
 
 ! write all the single integers
-io_int = (/ mcnl%stdout, mcnl%numsx, mcnl%globalworkgrpsz, mcnl%num_el, mcnl%totnum_el, mcnl%devid /)
+io_int = (/ mcnl%stdout, mcnl%numsx, mcnl%globalworkgrpsz, mcnl%num_el, mcnl%totnum_el, mcnl%multiplier, mcnl%devid /)
 intlist(1) = 'stdout'
 intlist(2) = 'numsx'
 intlist(3) = 'globalworkgrpsz'
 intlist(4) = 'num_el'
 intlist(5) = 'totnum_el'
-intlist(6) = 'devid'
+intlist(6) = 'multiplier'
+intlist(7) = 'devid'
 call JSON_writeNMLintegers(inp, io_int, intlist, n_int, error_cnt)
 
 ! write all the single doubles for bse1 mode
@@ -2311,6 +2312,8 @@ else
   call JSONreadInteger(json, ep, mcnl%num_el, defmcnl%num_el)
   ep = 'MCCLdata.totnum_el'
   call JSONreadInteger(json, ep, mcnl%totnum_el, defmcnl%totnum_el)
+  ep = 'MCCLdata.multiplier'
+  call JSONreadInteger(json, ep, mcnl%multiplier, defmcnl%multiplier)
   ep = 'MCCLdata.devid'
   call JSONreadInteger(json, ep, mcnl%devid, defmcnl%devid)
 

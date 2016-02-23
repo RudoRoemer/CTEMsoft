@@ -1,14 +1,14 @@
-&EBSDmastervars
+ &EBSDmastervars
 ! smallest d-spacing to take into account [nm]
-dmin = 0.05
+ dmin = 0.05,
 ! number of pixels along x-direction of the square master pattern  (2*npx+1 = total number)
-npx = 500
+ npx = 500,
 ! name of output file (to be read by IDL visualization routine); relative to EMdatapathname
-outname = 'EBSDmasterout.h5'
+ outname = 'EBSDmasterout.h5',
 ! name of the energy statistics file produced by EMMCOpenCL program; relative to EMdatapathname
-energyfile = 'MCoutput.h5'
+ energyfile = 'MCoutput.h5',
 ! restart computation ?
-restart = .FALSE.
+ restart = .FALSE.,
 ! number of OpenMP threads
-nthreads = 2
-/
+ nthreads = 2
+ /

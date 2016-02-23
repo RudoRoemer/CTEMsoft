@@ -106,7 +106,7 @@ type MCCLNameListType
         integer(kind=irg)       :: globalworkgrpsz
         integer(kind=irg)       :: num_el
         integer(kind=irg)       :: totnum_el
-        integer(kind=ill)       :: totnum_el_ill
+        integer(kind=irg)       :: multiplier
         integer(kind=irg)       :: devid
         real(kind=dbl)          :: sig
         real(kind=dbl)          :: sigstart

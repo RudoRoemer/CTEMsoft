@@ -361,7 +361,7 @@ integer(kind=irg)       :: numsx
 integer(kind=irg)       :: globalworkgrpsz
 integer(kind=irg)       :: num_el
 integer(kind=irg)       :: totnum_el
-integer(kind=ill)       :: totnum_el_ill
+integer(kind=irg)       :: multiplier
 integer(kind=irg)       :: devid
 real(kind=dbl)          :: sig
 real(kind=dbl)          :: sigstart
@@ -379,8 +379,8 @@ character(fnlen)        :: dataname
 character(fnlen)        :: mode
 
 ! define the IO namelist to facilitate passing variables to the program.
-namelist  / MCCLdata / stdout, xtalname, sigstart, numsx, num_el, globalworkgrpsz, EkeV, &
-dataname, totnum_el_ill, Ehistmin, Ebinsize, depthmax, depthstep, omega, MCmode, mode, devid, &
+namelist  / MCCLdata / stdout, xtalname, sigstart, numsx, num_el, globalworkgrpsz, EkeV, multiplier, &
+dataname, totnum_el, Ehistmin, Ebinsize, depthmax, depthstep, omega, MCmode, mode, devid, &
 sigend, sigstep, sig
 
 ! set the input parameters to default values (except for xtalname, which must be present)
@@ -388,7 +388,8 @@ stdout = 6
 numsx = 1501
 globalworkgrpsz = 100
 num_el = 10
-totnum_el_ill = 100000
+totnum_el = 2000000000
+multiplier = 1
 devid = 1
 sig = 70.D0
 sigstart = 70.D0
@@ -426,8 +427,8 @@ mcnl%stdout = stdout
 mcnl%numsx = numsx
 mcnl%globalworkgrpsz = globalworkgrpsz
 mcnl%num_el = num_el
-mcnl%totnum_el = totnum_el_ill
-mcnl%totnum_el_ill = totnum_el_ill
+mcnl%totnum_el = totnum_el
+mcnl%multiplier = multiplier
 mcnl%devid = devid
 mcnl%sigstart = sigstart
 mcnl%sigend = sigend
