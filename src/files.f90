@@ -70,6 +70,7 @@ contains
 !> @date   06/06/14 MDG 4.1 added cell pointer as argument, corrected Message routine
 !--------------------------------------------------------------------------
 subroutine DumpXtalInfo(cell, stdout)    
+!DEC$ ATTRIBUTES DLLEXPORT :: DumpXtalInfo
 
 use constants
 use io
@@ -157,6 +158,7 @@ end subroutine DumpXtalInfo
 !> @date   03/30/15 MDG 5.0 changed file format to HDF; always assume that the file exists
 !--------------------------------------------------------------------------
 subroutine CrystalData(cell,verbose)
+!DEC$ ATTRIBUTES DLLEXPORT :: CrystalData
 
 use io
 use crystal
@@ -229,6 +231,7 @@ end subroutine CrystalData
 !> @date   11/07/15 MDG 5.1 correction to writing of SEM_SGset variable
 !--------------------------------------------------------------------------
 subroutine SaveDataHDF(cell)
+!DEC$ ATTRIBUTES DLLEXPORT :: SaveDataHDF
 
 use io
 use crystal
@@ -331,6 +334,7 @@ end subroutine SaveDataHDF
 !> @date   11/07/15 MDG 5.1 corrected reading of SYM_SGset for older xtal files
 !--------------------------------------------------------------------------
 subroutine ReadDataHDF(cell)
+!DEC$ ATTRIBUTES DLLEXPORT :: ReadDataHDF
 
 use io
 use crystal
@@ -453,6 +457,7 @@ end subroutine ReadDataHDF
 !> @date   05/05/15 MDG 2.2 removed getenv() call; replaced by global path string
 !--------------------------------------------------------------------------
 subroutine CopyTemplateFiles(nt,templatelist,stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: CopyTemplateFiles
 
 use io
 
@@ -530,6 +535,7 @@ end subroutine CopyTemplateFiles
 !> @date   06/08/14 MDG 2.0 added stdout argument
 !--------------------------------------------------------------------------
 subroutine Interpret_Program_Arguments(nmldefault,numt,templatelist,progname,stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: Interpret_Program_Arguments
 
 use io
 

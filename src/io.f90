@@ -101,6 +101,7 @@ contains
 !> @date 06/05/14 MDG 4.0 added stdout and mess as mandatory arguments
 !--------------------------------------------------------------------------
 subroutine Message(mess,frm,stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: Message
 
 character(*),INTENT(IN)         :: mess         !< message string
 character(*),OPTIONAL,INTENT(IN)        :: frm          !< optional formatting string
@@ -142,6 +143,7 @@ end subroutine Message
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
 subroutine ReadValueString( Qstring, rd_string, frm, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: ReadValueString
 
 character(*),INTENT(IN)			:: Qstring
 character(*),INTENT(OUT)			:: rd_string
@@ -181,6 +183,7 @@ end subroutine ReadValueString
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
 subroutine ReadValueStringArray(Qstring, rd_string, num, frm, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: ReadValueStringArray
 
 character(*),INTENT(IN)			:: Qstring
 character(1),INTENT(OUT)			:: rd_string(num)
@@ -224,6 +227,7 @@ end subroutine ReadValueStringArray
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
 subroutine ReadValueIntShort(Qstring, rd_int, num, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: ReadValueIntShort
 
 character(*), INTENT(IN)			:: Qstring
 integer(kind=ish),INTENT(OUT)			:: rd_int(*)
@@ -263,6 +267,7 @@ end subroutine ReadValueIntShort
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
 subroutine ReadValueIntLong(Qstring, rd_int, num, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: ReadValueIntLong
 
 character(*), INTENT(IN)			:: Qstring
 integer(kind=irg),INTENT(OUT)			:: rd_int(*)
@@ -302,6 +307,7 @@ end subroutine ReadValueIntLong
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
 subroutine ReadValueRealSingle(Qstring, rd_real, num, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: ReadValueRealSingle
 
 character(*), INTENT(IN)			:: Qstring
 real(kind=sgl),INTENT(OUT)			:: rd_real(*)
@@ -341,6 +347,7 @@ end subroutine ReadValueRealSingle
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
 subroutine ReadValueRealDouble(Qstring, rd_real, num, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: ReadValueRealDouble
 
 character(*), INTENT(IN)			:: Qstring
 real(kind=dbl),INTENT(OUT)			:: rd_real(*)
@@ -385,6 +392,7 @@ end subroutine ReadValueRealDouble
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
 subroutine WriteValueString(Qstring, out_string, frm, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: WriteValueString
 
 character(*),INTENT(IN)			:: Qstring 
 character(*),INTENT(IN)			:: out_string
@@ -426,6 +434,7 @@ end subroutine WriteValueString
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
 subroutine WriteValueIntShort(Qstring, out_int, num, frm, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: WriteValueIntShort
 
 character(*), INTENT(IN)			:: Qstring
 integer(kind=ish),INTENT(IN)			:: out_int(*)
@@ -475,6 +484,7 @@ end subroutine WriteValueIntShort
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
 subroutine WriteValueIntLong(Qstring, out_int, num, frm, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: WriteValueIntLong
 
 character(*), INTENT(IN)			:: Qstring
 integer(kind=irg),INTENT(IN)			:: out_int(*)
@@ -524,6 +534,7 @@ end subroutine WriteValueIntLong
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
 subroutine WriteValueIntLongLong(Qstring, out_int, num, frm, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: WriteValueIntLongLong
 
 character(*), INTENT(IN)			:: Qstring
 integer(kind=ill),INTENT(IN)			:: out_int(*)
@@ -574,6 +585,7 @@ end subroutine WriteValueIntLongLong
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
 subroutine WriteValueRealSingle(Qstring, out_real, num, frm, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: WriteValueRealSingle
 
 character(*), INTENT(IN)			:: Qstring
 real(kind=sgl),INTENT(IN)			:: out_real(*)
@@ -625,6 +637,7 @@ end subroutine WriteValueRealSingle
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
 subroutine WriteValueRealDouble(Qstring, out_real, num, frm, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: WriteValueRealDouble
 
 character(*), INTENT(IN)			:: Qstring
 real(kind=dbl),INTENT(IN)			:: out_real(*)
@@ -675,6 +688,7 @@ end subroutine WriteValueRealDouble
 !> @date 06/05/14 MDG 2.0 changed io handling
 ! ###################################################################
 subroutine WriteValueRealComplex(Qstring, out_cmplx, num, frm, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: WriteValueRealComplex
 
 character(*), INTENT(IN)			:: Qstring
 complex(kind=sgl),INTENT(IN)			:: out_cmplx(*)

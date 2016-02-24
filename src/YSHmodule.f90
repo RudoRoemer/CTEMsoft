@@ -254,6 +254,7 @@ end function YSHDisp
 !> @date 06/10/14 MDG 4.1 added foil argument
 !--------------------------------------------------------------------------
 subroutine makeYSHdislocation(defects,cell,foil,i,dinfo, L)    
+!DEC$ ATTRIBUTES DLLEXPORT :: makeYSHdislocation
 
 use foilmodule
 use constants
@@ -420,6 +421,7 @@ end subroutine makeYSHdislocation
 !> @date 06/10/14 MDG 4.0 added defects, cell and foil arguments
 !--------------------------------------------------------------------------
 subroutine read_YSH_dislocation_data(defects,cell,foil,DF_npix,DF_npiy,DF_gf,L,dinfo)
+!DEC$ ATTRIBUTES DLLEXPORT :: read_YSH_dislocation_data
 
 use io
 use files

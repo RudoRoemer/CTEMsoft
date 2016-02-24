@@ -184,6 +184,7 @@ contains
 !> @date   12/02/14 MDG 3.1 added voltage as argument
 !--------------------------------------------------------------------------
 subroutine GetVoltage(cell, rlp)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetVoltage
 
 use io
 
@@ -224,6 +225,7 @@ end subroutine
 !> @date   12/02/14 MDG 3.1 removed mAccvol as global variable
 !--------------------------------------------------------------------------
 subroutine CalcWaveLength(cell,rlp,skip,verbose)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcWaveLength
 
 use constants
 use symmetry
@@ -395,6 +397,7 @@ end function
 !> @date  09/11/15 MDG 4.3 added optional argument
 !--------------------------------------------------------------------------
 recursive subroutine CalcUcg(cell,rlp,hkl,applyqgshift)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcUcg
 
 use crystal
 use symmetry
@@ -664,6 +667,7 @@ end subroutine CalcUcg
 !> @date   06/09/14 MDG 4.0 added cell as argument 
 !--------------------------------------------------------------------------
 recursive function CalcsgSingle(cell,gg,kk,FN) result(sg)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcsgSingle
 
 use crystal
 
@@ -711,6 +715,7 @@ end function CalcsgSingle
 !> @date   06/09/14 MDG 4.0 added cell as argument
 !--------------------------------------------------------------------------
 recursive function CalcsgDouble(cell,gg,kk,FN) result(sg)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcsgDouble
 
 use crystal
 
@@ -765,6 +770,7 @@ end function CalcsgDouble
 !> @date   03/26/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine TBCalcSM(Ar,Ai,sg,z,xig,xigp,xizero,betag)
+!DEC$ ATTRIBUTES DLLEXPORT :: TBCalcSM
 
 use constants
 
@@ -866,6 +872,7 @@ end subroutine
 !> @date   03/26/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine TBCalcInten(It,Is,sg,z,xig,xigp,xizero,betag)
+!DEC$ ATTRIBUTES DLLEXPORT :: TBCalcInten
 
 use constants
 
@@ -944,6 +951,7 @@ end subroutine
 !> @date   12/02/14 MDG 4.2 added camlen as argument; modified Vg and Vgsave arrays
 !--------------------------------------------------------------------------
 subroutine DiffPage(PS,cell,rlp,camlen)
+!DEC$ ATTRIBUTES DLLEXPORT :: DiffPage
 
 use postscript
 use crystal
@@ -1270,6 +1278,7 @@ end subroutine DiffPage
 !> @date  06/09/14  MDG 4.0 added PS argument
 !--------------------------------------------------------------------------
 subroutine DumpZAP(PS,cell,xo,yo,u,v,w,p,np,first,indi,laL,icnt,dbdiff,Vg,Vgsave,rg,rfamily,rnumfam,hhcc)
+!DEC$ ATTRIBUTES DLLEXPORT :: DumpZAP
 
 use io
 use postscript
@@ -1445,6 +1454,7 @@ end subroutine
 !> @date  06/09/14  MDG 4.0 added PS, cell as arguments
 !--------------------------------------------------------------------------
 subroutine DumpPP(PS,cell,xo,yo,np,laL,icnt,Vgsave,rg,rnumfam)
+!DEC$ ATTRIBUTES DLLEXPORT :: DumpPP
 
 use postscript
 
@@ -1544,6 +1554,7 @@ end subroutine
 !> @date   03/26/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine studylist(list,slect,np,ppat)
+!DEC$ ATTRIBUTES DLLEXPORT :: studylist
 
 IMPLICIT NONE
 
@@ -1669,6 +1680,7 @@ end subroutine
 !> @date  06/15/14 MDG 4.0 updated for removal of all globals
 !--------------------------------------------------------------------------
 recursive subroutine BWsolve(M,W,CGG,CGinv,nn,IPIV)
+!DEC$ ATTRIBUTES DLLEXPORT :: BWsolve
 
 use local
 use error
@@ -1858,6 +1870,7 @@ end subroutine BWsolve
 !  11/27/01 MDG 2.1 added kind support
 ! ###################################################################
 subroutine CalcFresnelPropagator(beam,dimi,dimj,dz,scl,propname,lambda)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcFresnelPropagator
 
 use constants
 use io

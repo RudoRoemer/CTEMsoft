@@ -70,6 +70,7 @@ contains
 !> @date   06/05/14 MDG 4.0 added stdout argument
 ! ###################################################################
 subroutine FatalError(var1,var2,stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: FatalError
 
 use io
 

@@ -70,6 +70,7 @@ contains
 !> @date   06/04/13 MDG 3.0 rewrite
 !--------------------------------------------------------------------------
 subroutine TransFourthRankTensor(al,cin,cout)
+!DEC$ ATTRIBUTES DLLEXPORT :: TransFourthRankTensor
 
 IMPLICIT NONE
 
@@ -157,6 +158,7 @@ end subroutine TransFourthRankTensor
 !> @date   06/04/13 MDG 3.0 rewrite
 !--------------------------------------------------------------------------
 subroutine laguer(a,m,x,eps,polish)
+!DEC$ ATTRIBUTES DLLEXPORT :: laguer
 
 use local
 
@@ -236,6 +238,7 @@ end subroutine laguer
 !> @date   06/04/13 MDG 3.0 rewrite
 !--------------------------------------------------------------------------
 subroutine zroots(a,roots)
+!DEC$ ATTRIBUTES DLLEXPORT :: zroots
 
 use local
 
@@ -293,6 +296,7 @@ end subroutine
 ! using a proper interface for all possible formats
 !------------------------
 subroutine PrintMatrix(s,a)
+!DEC$ ATTRIBUTES DLLEXPORT :: PrintMatrix
 
 use local
 use io
@@ -312,6 +316,7 @@ write (*,"(/)")
 end subroutine
 
 subroutine PrintMatrixd(s,a)
+!DEC$ ATTRIBUTES DLLEXPORT :: PrintMatrixd
 
 use local
 use io
@@ -331,6 +336,7 @@ write (*,"(/)")
 end subroutine
 
 subroutine PrintMatrixcd(s,a)
+!DEC$ ATTRIBUTES DLLEXPORT :: PrintMatrixcd
 
 use local
 use io
@@ -389,6 +395,7 @@ end subroutine
 !> @date  06/10/14 MDG 4.1 added foil as argument
 !--------------------------------------------------------------------------
 subroutine makedislocation(defects,cell,foil,inum,dinfo,DF_L)
+!DEC$ ATTRIBUTES DLLEXPORT :: makedislocation
 
 use math
 use constants
@@ -711,6 +718,7 @@ end subroutine makedislocation
 !> @date   06/09/14 MDG 4.0 added cell, DL argument
 !--------------------------------------------------------------------------
 subroutine read_dislocation_data(defects,cell,foil,DF_npix,DF_npiy,DF_gf,L,dinfo)
+!DEC$ ATTRIBUTES DLLEXPORT :: read_dislocation_data
 
 use io
 use files

@@ -100,6 +100,7 @@ contains
 !> @date  06/10/14 MDG 4.1 added foil argument
 !--------------------------------------------------------------------------
 subroutine CalcR(defects,cell,foil,i,j)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcR
 
 use local
 use constants

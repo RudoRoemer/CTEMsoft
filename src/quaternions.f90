@@ -213,6 +213,7 @@ contains
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
 recursive subroutine quaternion_print(q)
+!DEC$ ATTRIBUTES DLLEXPORT :: quaternion_print
 
 use io
 
@@ -236,6 +237,7 @@ end subroutine quaternion_print
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
 recursive subroutine quaternion_print_d(q)
+!DEC$ ATTRIBUTES DLLEXPORT :: quaternion_print_d
 
 use io
 
@@ -261,6 +263,7 @@ end subroutine quaternion_print_d
 !> @date 3/11/15   MDG 3.0 redefined quaternion product (see rotations tutorial paper)
 !--------------------------------------------------------------------------
 recursive function quat_mult(x,y) result (res)
+!DEC$ ATTRIBUTES DLLEXPORT :: quat_mult
 
 use constants
 
@@ -309,6 +312,7 @@ end function quat_mult
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
 recursive function quat_mult_d(x,y) result (res)
+!DEC$ ATTRIBUTES DLLEXPORT :: quat_mult_d
 
 use constants
 
@@ -336,6 +340,7 @@ end function quat_mult_d
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
 recursive function quat_conjg(x) result (res)
+!DEC$ ATTRIBUTES DLLEXPORT :: quat_conjg
 
     real(kind=sgl), intent(in)          :: x(4)         !< input quaternion
     real(kind=sgl)                      :: res(4)
@@ -358,6 +363,7 @@ end function quat_conjg
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
 recursive function quat_conjg_d(x) result (res)
+!DEC$ ATTRIBUTES DLLEXPORT :: quat_conjg_d
 
     real(kind=dbl), intent(in)          :: x(4)         !< input quaternion
     real(kind=dbl)                      :: res(4)
@@ -381,6 +387,7 @@ end function quat_conjg_d
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
 recursive function quat_norm(x) result (res)
+!DEC$ ATTRIBUTES DLLEXPORT :: quat_norm
 
    real(kind=sgl), intent(in)           :: x(4)         !< input quaternion
    real(kind=sgl)                       :: res
@@ -403,6 +410,7 @@ end function quat_norm
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
 recursive function quat_norm_d(x) result (res)
+!DEC$ ATTRIBUTES DLLEXPORT :: quat_norm_d
 
     real(kind=dbl), intent(in)  :: x(4)         !< input quaternion
     real(kind=dbl)              :: res
@@ -426,6 +434,7 @@ end function quat_norm_d
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
 recursive function quat_div(x,y) result (res)
+!DEC$ ATTRIBUTES DLLEXPORT :: quat_div
 
     real(kind=sgl), intent(in)          :: x(4),y(4)            !< input quaternions
     real(kind=sgl)                      :: res(4), p(4), q
@@ -451,6 +460,7 @@ end function quat_div
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
 recursive function quat_div_d(x,y) result (res)
+!DEC$ ATTRIBUTES DLLEXPORT :: quat_div_d
 
     real(kind=dbl), intent(in)          :: x(4),y(4)            !< input quaternions
     real(kind=dbl)                      :: res(4), p(4), q
@@ -476,6 +486,7 @@ end function quat_div_d
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
 recursive function quat_innerproduct(x,y) result (res)
+!DEC$ ATTRIBUTES DLLEXPORT :: quat_innerproduct
 
     real(kind=sgl), intent(in)          :: x(4),y(4)            !< input quaternions
     real(kind=sgl)                      :: res
@@ -499,6 +510,7 @@ end function quat_innerproduct
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------
 recursive function quat_innerproduct_d(x,y) result (res)
+!DEC$ ATTRIBUTES DLLEXPORT :: quat_innerproduct_d
 
     real(kind=dbl), intent(in)          :: x(4),y(4)            !< input quaternions
     real(kind=dbl)                      :: res
@@ -522,6 +534,7 @@ end function quat_innerproduct_d
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------!
 recursive function quat_angle(x,y) result (res)
+!DEC$ ATTRIBUTES DLLEXPORT :: quat_angle
 
     real(kind=sgl), intent(in)                  :: x(4),y(4)            !< input quaternions
     real(kind=sgl)                              :: res, q
@@ -546,6 +559,7 @@ end function quat_angle
 !> @date 8/12/13   MDG 2.0 rewrite
 !--------------------------------------------------------------------------!
 recursive function quat_angle_d(x,y) result (res)
+!DEC$ ATTRIBUTES DLLEXPORT :: quat_angle_d
 
     real(kind=dbl), intent(in)          :: x(4),y(4)            !< input quaternions
     real(kind=dbl)                      :: res, q
@@ -571,6 +585,7 @@ end function quat_angle_d
 !> @date 3/11/15   MDG 3.0 name change, to be compatible with rotations tutorial paper
 !--------------------------------------------------------------------------!
 recursive function quat_Lp(q,v) result (res)
+!DEC$ ATTRIBUTES DLLEXPORT :: quat_Lp
 
     real(kind=sgl),intent(in)                   :: q(4)         !< input quaternion
     real(kind=sgl),intent(in)                   :: v(3)         !< input vector (must be normalized)
@@ -599,6 +614,7 @@ end function quat_Lp
 !> @date 3/11/15   MDG 3.0 name change, to be compatible with rotations tutorial paper
 !--------------------------------------------------------------------------!
 recursive function quat_Lp_d(q,v) result (res)
+!DEC$ ATTRIBUTES DLLEXPORT :: quat_Lp_d
 
     real(kind=dbl),intent(in)                   :: q(4)         !< input quaternion
     real(kind=dbl),intent(in)                   :: v(3)         !< input vector (must be normalized)
@@ -626,6 +642,7 @@ end function quat_Lp_d
 !> @date 02/06/15   MDG 1.0 original
 !--------------------------------------------------------------------------!
 recursive function quat_slerp(qa,qb,n) result (res)
+!DEC$ ATTRIBUTES DLLEXPORT :: quat_slerp
 
 
     real(kind=sgl),intent(in)                   :: qa(4)         !< input quaternion
@@ -669,6 +686,7 @@ end function quat_slerp
 !> @date 02/06/15   MDG 1.0 original
 !--------------------------------------------------------------------------!
 recursive function quat_slerp_d(qa,qb,n) result (res)
+!DEC$ ATTRIBUTES DLLEXPORT :: quat_slerp_d
 
 
     real(kind=dbl),intent(in)                   :: qa(4)         !< input quaternion

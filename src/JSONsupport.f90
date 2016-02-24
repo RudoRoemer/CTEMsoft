@@ -94,6 +94,7 @@ contains
 !> @date 08/12/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSON_failtest(error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSON_failtest
 
 IMPLICIT NONE
 
@@ -123,6 +124,7 @@ end subroutine JSON_failtest
 !> @date 08/11/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSON_writeNMLintegers(inp, io_int, intlist, n_int, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSON_writeNMLintegers
 
 IMPLICIT NONE
 
@@ -159,6 +161,7 @@ end subroutine JSON_writeNMLintegers
 !> @date 08/11/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSON_writeNMLreals(inp, io_real, reallist, n_real, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSON_writeNMLreals
 
 IMPLICIT NONE
 
@@ -195,6 +198,7 @@ end subroutine JSON_writeNMLreals
 !> @date 08/11/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSON_writeNMLdoubles(inp, io_real, reallist, n_real, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSON_writeNMLdoubles
 
 IMPLICIT NONE
 
@@ -231,6 +235,7 @@ end subroutine JSON_writeNMLdoubles
 !> @date 08/11/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSON_initpointers(p, inp, jsonname, namelistname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSON_initpointers
 
 IMPLICIT NONE
 
@@ -267,6 +272,7 @@ end subroutine JSON_initpointers
 !> @date 08/11/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSON_cleanuppointers(p, inp, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSON_cleanuppointers
 
 use io 
 
@@ -312,6 +318,7 @@ end subroutine JSON_cleanuppointers
 !> @date 08/11/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONwriteKosselNameList(knl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONwriteKosselNameList
 
 use ISO_C_BINDING
 
@@ -389,6 +396,7 @@ end subroutine JSONwriteKosselNameList
 !> @date 08/11/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONwriteKosselMasterNameList(knl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONwriteKosselMasterNameList
 
 use ISO_C_BINDING
 
@@ -460,6 +468,7 @@ end subroutine JSONwriteKosselMasterNameList
 !> @date 08/11/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONwriteMCNameList(mcnl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONwriteMCNameList
 
 use ISO_C_BINDING
 
@@ -534,6 +543,7 @@ end subroutine JSONwriteMCNameList
 !> @date 10/12/15 SS  1.2 changes to handle new mc program
 !--------------------------------------------------------------------------
 subroutine JSONwriteMCCLNameList(mcnl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONwriteMCCLNameList
 
 use ISO_C_BINDING
 
@@ -626,6 +636,7 @@ end subroutine JSONwriteMCCLNameList
 !> @date 08/11/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONwriteMCCLMultiLayerNameList(mcnl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONwriteMCCLMultiLayerNameList
 
 use ISO_C_BINDING
 
@@ -707,6 +718,7 @@ end subroutine JSONwriteMCCLMultiLayerNameList
 !> @date 08/12/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONwriteEBSDMasterNameList(emnl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONwriteEBSDMasterNameList
 
 use ISO_C_BINDING
 
@@ -769,6 +781,7 @@ end subroutine JSONwriteEBSDMasterNameList
 !> @date 09/15/15 SS  1.1 changes after clean up of ECPmasterListType
 !--------------------------------------------------------------------------
 subroutine JSONwriteECPMasterNameList(ecpnl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONwriteECPMasterNameList
 
 use ISO_C_BINDING
 
@@ -849,6 +862,7 @@ end subroutine JSONwriteECPMasterNameList
 !> @date 08/12/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONwriteEBSDNameList(enl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONwriteEBSDNameList
 
 use ISO_C_BINDING
 
@@ -953,6 +967,7 @@ end subroutine JSONwriteEBSDNameList
 !> @date 10/15/15 SS  1.2 changes for release
 !--------------------------------------------------------------------------
 subroutine JSONwriteECPNameList(ecpnl, jsonname, error_cnt, twolayerflag)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONwriteECPNameList
 
 use ISO_C_BINDING
 use error
@@ -1098,6 +1113,7 @@ end subroutine JSONwriteECPNameList
 !> @date 08/12/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONwriteLACBEDNameList(lacbednl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONwriteLACBEDNameList
 
 use ISO_C_BINDING
 
@@ -1173,6 +1189,7 @@ end subroutine JSONwriteLACBEDNameList
 !> @date 08/12/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONwriteECPpatternNameList(ecpnl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONwriteECPpatternNameList
 
 use ISO_C_BINDING
 
@@ -1236,6 +1253,7 @@ end subroutine JSONwriteECPpatternNameList
 !> @date 08/12/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONwritePEDKINNameList(pednl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONwritePEDKINNameList
 
 use ISO_C_BINDING
 
@@ -1304,6 +1322,7 @@ end subroutine JSONwritePEDKINNameList
 !> @date 08/12/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONwritePEDNameList(pednl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONwritePEDNameList
 
 use ISO_C_BINDING
 
@@ -1383,6 +1402,7 @@ end subroutine JSONwritePEDNameList
 !> @date 08/12/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONwriteECCINameList(eccinl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONwriteECCINameList
 
 use ISO_C_BINDING
 
@@ -1516,6 +1536,7 @@ end subroutine JSONwriteECCINameList
 !> @date 08/18/15 MDG 1.1 added other rotation representations
 !--------------------------------------------------------------------------
 subroutine JSONwriteRFZNameList(rfznl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONwriteRFZNameList
 
 use ISO_C_BINDING
 
@@ -1587,6 +1608,7 @@ end subroutine JSONwriteRFZNameList
 !> @date 08/12/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONwriteDictIndxOpenCLNameList(dictindxnl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONwriteDictIndxOpenCLNameList
 
 use ISO_C_BINDING
 
@@ -1674,6 +1696,7 @@ end subroutine JSONwriteDictIndxOpenCLNameList
 !> @date 08/12/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONreadInteger(json, ep, ival, dval)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONreadInteger
 
 use ISO_C_BINDING
 use io
@@ -1713,6 +1736,7 @@ end subroutine JSONreadInteger
 !> @date 08/12/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONreadIntegerVec(json, ep, ivec, dvec, n)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONreadIntegerVec
 
 use ISO_C_BINDING
 use io
@@ -1756,6 +1780,7 @@ end subroutine JSONreadIntegerVec
 !> @date 08/12/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONreadReal(json, ep, rval, dval)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONreadReal
 
 use ISO_C_BINDING
 use io
@@ -1798,6 +1823,7 @@ end subroutine JSONreadReal
 !> @date 08/12/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONreadRealVec(json, ep, rvec, dvec, n)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONreadRealVec
 
 use ISO_C_BINDING
 use io
@@ -1841,6 +1867,7 @@ end subroutine JSONreadRealVec
 !> @date 08/12/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONreadDouble(json, ep, rval, dval)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONreadDouble
 
 use ISO_C_BINDING
 use io
@@ -1883,6 +1910,7 @@ end subroutine JSONreadDouble
 !> @date 08/12/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONreadDoubleVec(json, ep, rvec, dvec, n)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONreadDoubleVec
 
 use ISO_C_BINDING
 use io
@@ -1926,6 +1954,7 @@ end subroutine JSONreadDoubleVec
 !> @date 08/12/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONreadString(json, ep, sval, dval)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONreadString
 
 use ISO_C_BINDING
 use io
@@ -1968,6 +1997,7 @@ end subroutine JSONreadString
 !> @date 08/20/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONreadLogical(json, ep, sval, dval)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONreadLogical
 
 use ISO_C_BINDING
 use io
@@ -2010,6 +2040,7 @@ end subroutine JSONreadLogical
 !> @date 08/12/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONreadKosselNameList(knl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONreadKosselNameList
 
 use ISO_C_BINDING
 use NameListHandlers
@@ -2097,6 +2128,7 @@ end subroutine JSONreadKosselNameList
 !> @date 08/19/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONreadKosselMasterNameList(knl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONreadKosselMasterNameList
 
 use ISO_C_BINDING
 use NameListHandlers
@@ -2180,6 +2212,7 @@ end subroutine JSONreadKosselMasterNameList
 !> @date 08/19/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONreadMCNameList(mcnl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONreadMCNameList
 
 use ISO_C_BINDING
 use NameListHandlers
@@ -2269,6 +2302,7 @@ end subroutine JSONreadMCNameList
 !> @date 09/09/15  MDG 1.1 added devid
 !--------------------------------------------------------------------------
 subroutine JSONreadMCCLNameList(mcnl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONreadMCCLNameList
 
 use ISO_C_BINDING
 use NameListHandlers
@@ -2367,6 +2401,7 @@ end subroutine JSONreadMCCLNameList
 !> @date 08/19/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONreadMCCLMultiLayerNameList(mcnl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONreadMCCLMultiLayerNameList
 
 use ISO_C_BINDING
 use NameListHandlers
@@ -2463,6 +2498,7 @@ end subroutine JSONreadMCCLMultiLayerNameList
 !> @date 08/19/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONreadEBSDMasterNameList(emnl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONreadEBSDMasterNameList
 
 use ISO_C_BINDING
 use NameListHandlers
@@ -2537,6 +2573,7 @@ end subroutine JSONreadEBSDMasterNameList
 !> @date 09/15/15  SS  1.1 changes after clean up of ECPmasterListType
 !--------------------------------------------------------------------------
 subroutine JSONreadECPMasterNameList(ecpnl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONreadECPMasterNameList
 
 use ISO_C_BINDING
 use NameListHandlers
@@ -2621,6 +2658,7 @@ end subroutine JSONreadECPMasterNameList
 !> @date 08/20/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONreadEBSDNameList(enl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONreadEBSDNameList
 
 use ISO_C_BINDING
 use NameListHandlers
@@ -2740,6 +2778,7 @@ end subroutine JSONreadEBSDNameList
 !> @date 08/20/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine JSONreadEBSDoverlapNameList(enl, jsonname, error_cnt)
+!DEC$ ATTRIBUTES DLLEXPORT :: JSONreadEBSDoverlapNameList
 
 use ISO_C_BINDING
 use NameListHandlers

@@ -128,6 +128,7 @@ end function point_inside_triangle
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine rank_points(p1,p2,p3,p4,xx,yy)
+!DEC$ ATTRIBUTES DLLEXPORT :: rank_points
 
 IMPLICIT NONE
 
@@ -294,6 +295,7 @@ end function point_inside_polygon
 !> @date   06/10/14 MDG 2.1 added foil as argument 
 !--------------------------------------------------------------------------
 subroutine makestackingfault(defects,cell,foil,inum,DF_L,nx,ny,DF_g,dinfo)
+!DEC$ ATTRIBUTES DLLEXPORT :: makestackingfault
  
 use math
 use constants
@@ -488,6 +490,7 @@ end subroutine makestackingfault
 !> @date   06/10/14 MDG 2.1 added foil argument
 !--------------------------------------------------------------------------
 subroutine makestackingfaultECCI(defects,cell,foil,inum,DF_L,nx,ny,DF_g,dinfo)
+!DEC$ ATTRIBUTES DLLEXPORT :: makestackingfaultECCI
  
 use math
 use constants
@@ -739,6 +742,7 @@ end subroutine makestackingfaultECCI
 !> @date   06/10/14 MDG 4.1 added foil argument
 !--------------------------------------------------------------------------
 subroutine read_stacking_fault_data(defects,cell,foil,DF_L,DF_npix,DF_npiy,DF_g,dinfo,ECCI)
+!DEC$ ATTRIBUTES DLLEXPORT :: read_stacking_fault_data
 
 use YSHmodule
 use io

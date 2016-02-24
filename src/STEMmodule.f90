@@ -64,6 +64,7 @@ contains
 !> @date   06/09/14 MDG 3.0 added STEM and cell arguments
 !--------------------------------------------------------------------------
 subroutine init_STEM(STEM,cell,nn,g)
+!DEC$ ATTRIBUTES DLLEXPORT :: init_STEM
 
 use io
 use crystal
@@ -463,6 +464,7 @@ end subroutine init_STEM
 !> @date   06/10/14 MDG 3.1 added foil, Dyn argument
 !--------------------------------------------------------------------------
 subroutine init_STEM_ZA(STEM,cell,foil,Dyn,khead,reflist,nn)
+!DEC$ ATTRIBUTES DLLEXPORT :: init_STEM_ZA
 
 use crystal
 use diffraction
@@ -566,6 +568,7 @@ end subroutine init_STEM_ZA
 !> @date   06/10/14 MDG 3.0 added STEM, cell, foil, and Dyn arguments
 !--------------------------------------------------------------------------
 subroutine read_STEM_data(STEM,cell,foil,Dyn,STEMnmlfile,khead,reflist,geometry,nn,g,kt,numk,beamdiv)
+!DEC$ ATTRIBUTES DLLEXPORT :: read_STEM_data
 
 use io
 use files

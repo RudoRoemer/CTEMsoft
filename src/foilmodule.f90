@@ -76,6 +76,7 @@ contains
 !> @date 06/09/14 MDG 4.0 added cell and foil as argument
 !--------------------------------------------------------------------------
 subroutine initialize_foil_geometry(cell,foil,dinfo)
+!DEC$ ATTRIBUTES DLLEXPORT :: initialize_foil_geometry
 
 use local
 use typedefs
@@ -255,6 +256,7 @@ end subroutine initialize_foil_geometry
 !> @date 06/10/14 MDG 3.0 added cell and foil as arguments
 !--------------------------------------------------------------------------
 subroutine read_foil_data(cell,foil,foilnmlfile,npix,npiy,L,dinfo)
+!DEC$ ATTRIBUTES DLLEXPORT :: read_foil_data
 
 use crystal
 use io

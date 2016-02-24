@@ -74,6 +74,7 @@ contains
 !
 !--------------------------------------------------------------------------
 subroutine mInvert(a,b,uni)
+!DEC$ ATTRIBUTES DLLEXPORT :: mInvert
 
 use error
 
@@ -130,6 +131,7 @@ end subroutine mInvert
 !
 !--------------------------------------------------------------------------
 subroutine cInvert(a,b)
+!DEC$ ATTRIBUTES DLLEXPORT :: cInvert
 
 use error
 
@@ -184,6 +186,7 @@ end subroutine cInvert
 !> @date 06/05/14 MDG 1.1 updated IO
 !--------------------------------------------------------------------------
 recursive subroutine MatrixExponential(A,E,z0,TP,nn)
+!DEC$ ATTRIBUTES DLLEXPORT :: MatrixExponential
 
 use io
 use error
@@ -327,6 +330,7 @@ end subroutine MatrixExponential
 !> @date 12/31/14 MDG 1.0 original, rewritten with EMsoft module calls and renamed
 !--------------------------------------------------------------------------
 recursive function BesselIn(X,N) result(BESSI)
+!DEC$ ATTRIBUTES DLLEXPORT :: BesselIn
 ! original comment:
 !     This subroutine calculates the first kind modified Bessel function
 !     of integer order N, for any REAL X. We use here the classical
@@ -408,6 +412,7 @@ end function BesselIn
 !> @date 12/31/14 MDG 1.0 original, rewritten with EMsoft module calls and renamed
 !--------------------------------------------------------------------------
 recursive function BesselI0(X) result(BESSI0)
+!DEC$ ATTRIBUTES DLLEXPORT :: BesselI0
 
 use local
 
@@ -458,6 +463,7 @@ end function BesselI0
 !> @date 12/31/14 MDG 1.0 original, rewritten with EMsoft module calls and renamed
 !--------------------------------------------------------------------------
 recursive function BesselI1(X) result(BESSI1)
+!DEC$ ATTRIBUTES DLLEXPORT :: BesselI1
 
 use local
 
@@ -948,6 +954,7 @@ function r4_uniform_01 ( seed )
   return
 end
 subroutine r4vec_uniform_01 ( n, seed, r )
+!DEC$ ATTRIBUTES DLLEXPORT :: r4vec_uniform_01 
 
 !*****************************************************************************80
 !
@@ -1042,6 +1049,7 @@ subroutine r4vec_uniform_01 ( n, seed, r )
   return
 end
 subroutine r4vec_normal_ab ( n, a, b, seed, x )
+!DEC$ ATTRIBUTES DLLEXPORT :: r4vec_normal_ab 
 
 !*****************************************************************************80
 !
@@ -1369,6 +1377,7 @@ function r8_uniform_01 ( seed )
   return
 end
 subroutine r8mat_normal_01 ( m, n, seed, r )
+!DEC$ ATTRIBUTES DLLEXPORT :: r8mat_normal_01 
 
 !*****************************************************************************80
 !
@@ -1438,6 +1447,7 @@ subroutine r8mat_normal_01 ( m, n, seed, r )
   return
 end
 subroutine r8mat_normal_ab ( m, n, a, b, seed, r )
+!DEC$ ATTRIBUTES DLLEXPORT :: r8mat_normal_ab 
 
 !*****************************************************************************80
 !
@@ -1511,6 +1521,7 @@ subroutine r8mat_normal_ab ( m, n, a, b, seed, r )
   return
 end
 subroutine r8vec_normal_01 ( n, seed, x )
+!DEC$ ATTRIBUTES DLLEXPORT :: r8vec_normal_01 
 
 !*****************************************************************************80
 !
@@ -1633,6 +1644,7 @@ subroutine r8vec_normal_01 ( n, seed, x )
   return
 end
 subroutine r8vec_normal_ab ( n, a, b, seed, x )
+!DEC$ ATTRIBUTES DLLEXPORT :: r8vec_normal_ab 
 
 !*****************************************************************************80
 !
@@ -1759,6 +1771,7 @@ subroutine r8vec_normal_ab ( n, a, b, seed, x )
   return
 end
 subroutine r8vec_uniform_01 ( n, seed, r )
+!DEC$ ATTRIBUTES DLLEXPORT :: r8vec_uniform_01 
 
 !*****************************************************************************80
 !

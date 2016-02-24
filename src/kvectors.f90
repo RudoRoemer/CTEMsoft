@@ -117,6 +117,7 @@ end function Kdelta
 !> @date   11/13/15 MDG 3.1 inclusion of small epsilon in trigonal and hexagonal cases, to eliminate rounding errors
 !--------------------------------------------------------------------------
 subroutine Calckvectors(khead,cell,k,ga,ktmax,npx,npy,numk,isym,ijmax,mapmode,usehex)
+!DEC$ ATTRIBUTES DLLEXPORT :: Calckvectors
 
 use io
 use error
@@ -808,6 +809,7 @@ end subroutine Calckvectors
 !> @date   08/31/15 MDG 1.0 original 
 !--------------------------------------------------------------------------
 recursive function InsideHexGrid(xy) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: InsideHexGrid
 
 use Lambert
 
@@ -867,6 +869,7 @@ end function InsideHexGrid
 !> @date   06/09/14 MDG 2.0 added khead and cell arguments
 !--------------------------------------------------------------------------
 recursive subroutine CalckvectorsSymmetry(khead,cell,TDPG,k,ga,ktmax,npx,npy,numk,isym,ijmax,klaue,debug)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalckvectorsSymmetry
 
 use io
 use error
@@ -1016,6 +1019,7 @@ end subroutine CalckvectorsSymmetry
 !> @date   06/09/14 MDG 2.0 added ktail and cell as arguments
 !--------------------------------------------------------------------------
 subroutine Add_knode(ktail,cell,i,j,numk,delta,gan,gperp,kstar,klaue,hexgrid)
+!DEC$ ATTRIBUTES DLLEXPORT :: Add_knode
 
 use error
 use crystal
@@ -1145,6 +1149,7 @@ end function GetSextant
 !> @date   08/31/15 MDG 2.4 replaced integer coordinates by actual scaled coordinates
 !--------------------------------------------------------------------------
 subroutine AddkVector(ktail,cell,numk,xy,i,j,usehex,addSH)
+!DEC$ ATTRIBUTES DLLEXPORT :: AddkVector
 
 use io
 use typedefs
@@ -1236,6 +1241,7 @@ end subroutine AddkVector
 !> @date   04/29/13 MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine Delete_kvectorlist(khead)
+!DEC$ ATTRIBUTES DLLEXPORT :: Delete_kvectorlist
 
 IMPLICIT NONE
 
@@ -1275,6 +1281,7 @@ end subroutine Delete_kvectorlist
 !> @date   08/25/14 SS 1.0 original
 !--------------------------------------------------------------------------
 subroutine CalckvectorsECP(khead,cell,rotmat,thetac,npx,npy,numk,FN)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalckvectorsECP
 
 use io
 use local
@@ -1392,6 +1399,7 @@ end subroutine CalckvectorsECP
 !> @date   08/31/15 MDG 1.1 changes to AddkVector; THIS ROUTINE WILL NEED TO BE MODIFIED !!!!!!
 !--------------------------------------------------------------------------
 subroutine CalckvectorsGPU(khead,cell,npx,npix,centralpix,numk,usehex)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalckvectorsGPU
 
 use io
 use local

@@ -75,6 +75,7 @@ contains
 !> @date 03/20/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine HDF_writeNMLintegers(HDF_head, io_int, intlist, n_int)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeNMLintegers
 
 IMPLICIT NONE
 
@@ -110,6 +111,7 @@ end subroutine HDF_writeNMLintegers
 !> @date 03/20/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine HDF_writeNMLreals(HDF_head, io_real, reallist, n_real)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeNMLreals
 
 IMPLICIT NONE
 
@@ -145,6 +147,7 @@ end subroutine HDF_writeNMLreals
 !> @date 03/20/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine HDF_writeNMLdbles(HDF_head, io_real, reallist, n_real)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeNMLdbles
 
 IMPLICIT NONE
 
@@ -187,6 +190,7 @@ end subroutine HDF_writeNMLdbles
 !> @date 03/20/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine HDFwriteKosselNameList(HDF_head, knl)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDFwriteKosselNameList
 
 use ISO_C_BINDING
 
@@ -263,6 +267,7 @@ end subroutine HDFwriteKosselNameList
 !> @date 03/21/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine HDFwriteKosselMasterNameList(HDF_head, knl)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDFwriteKosselMasterNameList
 
 use ISO_C_BINDING
 
@@ -334,6 +339,7 @@ end subroutine HDFwriteKosselMasterNameList
 !> @date 03/21/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine HDFwriteMCNameList(HDF_head, mcnl)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDFwriteMCNameList
 
 use ISO_C_BINDING
 
@@ -409,6 +415,7 @@ end subroutine HDFwriteMCNameList
 !> @date 10/12/15 SS  1.2 changes to handle new mc program
 !--------------------------------------------------------------------------
 subroutine HDFwriteMCCLNameList(HDF_head, mcnl)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDFwriteMCCLNameList
 
 use ISO_C_BINDING
 
@@ -506,6 +513,7 @@ end subroutine HDFwriteMCCLNameList
 !> @date 03/21/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine HDFwriteMCCLMultiLayerNameList(HDF_head, mcnl)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDFwriteMCCLMultiLayerNameList
 
 use ISO_C_BINDING
 
@@ -592,6 +600,7 @@ end subroutine HDFwriteMCCLMultiLayerNameList
 !> @date 03/21/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine HDFwriteEBSDMasterNameList(HDF_head, emnl)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDFwriteEBSDMasterNameList
 
 use ISO_C_BINDING
 
@@ -660,6 +669,7 @@ end subroutine HDFwriteEBSDMasterNameList
 !> @date 09/15/15 SS  1.1 changes after clean up of ECPmasterNameList
 !--------------------------------------------------------------------------
 subroutine HDFwriteECPMasterNameList(HDF_head, ecpnl)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDFwriteECPMasterNameList
 
 use ISO_C_BINDING
 
@@ -735,6 +745,7 @@ end subroutine HDFwriteECPMasterNameList
 !> @date 03/22/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine HDFwriteEBSDNameList(HDF_head, enl)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDFwriteEBSDNameList
 
 use ISO_C_BINDING
 
@@ -853,6 +864,7 @@ end subroutine HDFwriteEBSDNameList
 !> @date 10/15/15 SS  1.2 changes for release
 !--------------------------------------------------------------------------
 subroutine HDFwriteECPNameList(HDF_head, ecpnl, twolayerflag)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDFwriteECPNameList
 
 use ISO_C_BINDING
 use error
@@ -1026,6 +1038,7 @@ end subroutine HDFwriteECPNameList
 !> @date 06/22/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine HDFwriteLACBEDNameList(HDF_head, lacbednl)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDFwriteLACBEDNameList
 
 use ISO_C_BINDING
 
@@ -1103,6 +1116,7 @@ end subroutine HDFwriteLACBEDNameList
 !> @date 03/22/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine HDFwriteECPpatternNameList(HDF_head,ecpnl)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDFwriteECPpatternNameList
 
 use ISO_C_BINDING
 
@@ -1167,6 +1181,7 @@ end subroutine HDFwriteECPpatternNameList
 !> @date 03/22/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine HDFwritePEDKINNameList(HDF_head,pednl)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDFwritePEDKINNameList
 
 use ISO_C_BINDING
 
@@ -1236,6 +1251,7 @@ end subroutine HDFwritePEDKINNameList
 !> @date 03/23/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine HDFwritePEDNameList(HDF_head,pednl)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDFwritePEDNameList
 
 use ISO_C_BINDING
 
@@ -1318,6 +1334,7 @@ end subroutine HDFwritePEDNameList
 !> @date 03/23/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine HDFwriteECCINameList(HDF_head,eccinl)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDFwriteECCINameList
 
 use ISO_C_BINDING
 
@@ -1474,6 +1491,7 @@ end subroutine HDFwriteECCINameList
 !> @date 03/23/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine HDFwriteRFZNameList(HDF_head,rfznl)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDFwriteRFZNameList
 
 use ISO_C_BINDING
 
@@ -1554,6 +1572,7 @@ end subroutine HDFwriteRFZNameList
 !> @date 03/23/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine HDFwriteDictIndxOpenCLNameList(HDF_head,dictindxnl)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDFwriteDictIndxOpenCLNameList
 
 use ISO_C_BINDING
 

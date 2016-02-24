@@ -78,6 +78,7 @@ contains
 !> @date 11/04/15 MDG 1.2 added array of quaternions as input parameter; used complete mLPNH/SH arrays with local sum
 !--------------------------------------------------------------------------
 subroutine SingleEBSDPattern(ipar, fpar, EBSDpattern, quats, accum_e, mLPNH, mLPSH)
+!DEC$ ATTRIBUTES DLLEXPORT :: SingleEBSDPattern
 
 ! the input parameters are all part of a ipar and fpar input arrays instead of the usual namelist structures.
 ! The following is the mapping:
@@ -326,6 +327,7 @@ end subroutine SingleEBSDPattern
 !> @date 11/04/15 MDG 1.2 added array of quaternions as input parameter
 !--------------------------------------------------------------------------
 subroutine SingleECPattern(ipar, fpar, ECpattern, quats, accum_e, mLPNH, mLPSH)
+!DEC$ ATTRIBUTES DLLEXPORT :: SingleECPattern
 
 ! the input parameters are all part of a ipar and fpar input arrays instead of the usual namelist structures.
 ! The following is the mapping:
@@ -605,6 +607,7 @@ end subroutine SingleECPattern
 !> @date 11/09/15 MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine SingleKosselPattern(ipar, fpar, Kosselpattern, quats, mLPNH, mLPSH)
+!DEC$ ATTRIBUTES DLLEXPORT :: SingleKosselPattern
 
 ! the input parameters are all part of a ipar and fpar input arrays instead of the usual namelist structures.
 ! The following is the mapping:

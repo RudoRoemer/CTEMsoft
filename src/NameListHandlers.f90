@@ -62,6 +62,7 @@ contains
 !> @date 06/13/14  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 recursive subroutine GetKosselNameList(nmlfile, knl, initonly)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetKosselNameList
 
 use error
 
@@ -158,6 +159,7 @@ end subroutine GetKosselNameList
 !> @date 09/09/14  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine GetKosselMasterNameList(nmlfile, knl, initonly)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetKosselMasterNameList
 
 use error
 
@@ -246,6 +248,7 @@ end subroutine GetKosselMasterNameList
 !> @date 06/18/14  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine GetMCNameList(nmlfile, mcnl, initonly)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetMCNameList
 
 use error
 
@@ -345,6 +348,7 @@ end subroutine GetMCNameList
 !> @date 09/09/15 MDG 1.1 added devid (GPU device id)
 !--------------------------------------------------------------------------
 subroutine GetMCCLNameList(nmlfile, mcnl, initonly)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetMCCLNameList
 
 use error
 
@@ -461,6 +465,7 @@ end subroutine GetMCCLNameList
 !> @date 06/18/14  SS 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine GetMCCLMultiLayerNameList(nmlfile, mcnl, initonly)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetMCCLMultiLayerNameList
 
 use error
 
@@ -573,6 +578,7 @@ end subroutine GetMCCLMultiLayerNameList
 !> @date 06/19/14  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine GetEBSDMasterNameList(nmlfile, emnl, initonly)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetEBSDMasterNameList
 
 use error
 
@@ -650,6 +656,7 @@ end subroutine GetEBSDMasterNameList
 !> @date 09/15/15  SS 1.2 clean up of the subroutine
 !--------------------------------------------------------------------------
 subroutine GetECPMasterNameList(nmlfile, ecpnl, initonly)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetECPMasterNameList
 
 use error
 
@@ -726,6 +733,7 @@ end subroutine GetECPMasterNameList
 !> @date 06/23/14  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine GetEBSDNameList(nmlfile, enl, initonly)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetEBSDNameList
 
 use error
 
@@ -871,6 +879,7 @@ end subroutine GetEBSDNameList
 !> @date 04/29/15  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine GetEBSDoverlapNameList(nmlfile, enl, initonly)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetEBSDoverlapNameList
 
 use error
 
@@ -965,6 +974,7 @@ end subroutine GetEBSDoverlapNameList
 !> @date 10/15/15 SS  1.2 changes for release
 !--------------------------------------------------------------------------
 subroutine GetECPNameList(nmlfile, ecpnl, initonly)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetECPNameList
 
 use error
 
@@ -1105,6 +1115,7 @@ end subroutine GetECPNameList
 !> @date 07/01/14  MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine GetLACBEDNameList(nmlfile, lacbednl, initonly)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetLACBEDNameList
 
 use error
 
@@ -1202,6 +1213,7 @@ end subroutine GetLACBEDNameList
 !> @date 06/19/14  SS 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine GetECPpatternNameList(nmlfile,ecpnl, initonly)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetECPpatternNameList
 
 use error
 
@@ -1271,6 +1283,7 @@ end subroutine GetECPpatternNameList
 !> @date 03/02/15 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine GetPEDKINNameList(nmlfile,pednl, initonly)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetPEDKINNameList
 
 use error
 
@@ -1355,6 +1368,7 @@ end subroutine GetPEDKINNameList
 !> @date 07/09/14 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine GetPEDNameList(nmlfile,pednl, initonly)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetPEDNameList
 
 use error
 
@@ -1457,6 +1471,7 @@ end subroutine GetPEDNameList
 !> @date 10/04/14 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine GetECCINameList(nmlfile,eccinl, initonly)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetECCINameList
 
 use error
 
@@ -1617,6 +1632,7 @@ end subroutine GetECCINameList
 !> @date 08/18/15 MDG 1.1 added options for all seven representations
 !--------------------------------------------------------------------------
 subroutine GetRFZNameList(nmlfile,rfznl, initonly)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetRFZNameList
 
 use error
 
@@ -1689,6 +1705,7 @@ end subroutine GetRFZNameList
 !> @date 13/01/15 SS 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine GetDictIndxOpenCLNameList(nmlfile,dictindxnl, initonly)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetDictIndxOpenCLNameList
 
 use error
 use local
@@ -1803,6 +1820,7 @@ end subroutine GetDictIndxOpenCLNameList
 !> @date 13/01/15 SS 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine GetPEDIndxNameList(nmlfile,pednl, initonly)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetPEDIndxNameList
 
 use error
 use local
@@ -1922,6 +1940,7 @@ end subroutine GetPEDIndxNameList
 !> @date 06/10/15  SS 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine GetEBSDIndxNameList(nmlfile, enl, initonly)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetEBSDIndxNameList
 
 use error
 
@@ -2053,6 +2072,7 @@ end subroutine GetEBSDIndxNameList
 !> @date 06/24/15  SS 1.0 new routine
 !--------------------------------------------------------------------------
 subroutine GetZAdefectNameList(nmlfile, ZAdefect, initonly)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetZAdefectNameList
 
 use error
 

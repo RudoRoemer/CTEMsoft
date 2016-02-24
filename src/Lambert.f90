@@ -191,6 +191,7 @@ contains
 !> @date 08/31/15   MDG 1.1 coordinates are prescaled 
 !--------------------------------------------------------------------------
 recursive function Lambert2DSquareForwardSingle(xy,ierr) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: Lambert2DSquareForwardSingle
 
 IMPLICIT NONE
 
@@ -244,6 +245,7 @@ end function Lambert2DSquareForwardSingle
 !> @date 08/31/15   MDG 1.1 coordinates are prescaled 
 !--------------------------------------------------------------------------
 recursive function Lambert2DSquareForwardDouble(xy,ierr) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: Lambert2DSquareForwardDouble
 
 IMPLICIT NONE
 
@@ -300,6 +302,7 @@ end function Lambert2DSquareForwardDouble
 !> @date 08/31/15   MDG 1.1 return scaled coordinates
 !--------------------------------------------------------------------------
 recursive function Lambert2DSquareInverseSingle(xyz,ierr) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: Lambert2DSquareInverseSingle
 
 IMPLICIT NONE
 
@@ -351,6 +354,7 @@ end function Lambert2DSquareInverseSingle
 !> @date 08/31/15   MDG 1.1 return scaled coordinates
 !--------------------------------------------------------------------------
 recursive function Lambert2DSquareInverseDouble(xyz,ierr) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: Lambert2DSquareInverseDouble
 
 IMPLICIT NONE
 
@@ -410,6 +414,7 @@ end function Lambert2DSquareInverseDouble
 !> @date 08/30/15   MDG 1.2 moved grid-to-cartesian coordinate transformation inside routine
 !--------------------------------------------------------------------------
 recursive function Lambert2DHexForwardSingle(xy,ierr) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: Lambert2DHexForwardSingle
 
 IMPLICIT NONE
 
@@ -480,6 +485,7 @@ end function Lambert2DHexForwardSingle
 !> @date 08/30/15   MDG 1.2 moved grid-to-cartesian coordinate transformation inside routine
 !--------------------------------------------------------------------------
 recursive function Lambert2DHexForwardDouble(xy,ierr) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: Lambert2DHexForwardDouble
 
 IMPLICIT NONE
 
@@ -556,6 +562,7 @@ end function Lambert2DHexForwardDouble
 !> @date 08/30/15   MDG 1.3 moved grid-to-cartesian coordinate transformation inside routine
 !--------------------------------------------------------------------------
 recursive function Lambert2DHexInverseSingle(xyz,ierr) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: Lambert2DHexInverseSingle
 
 IMPLICIT NONE
 
@@ -641,6 +648,7 @@ end function Lambert2DHexInverseSingle
 !> @date 08/30/15   MDG 1.3 moved grid-to-cartesian coordinate transformation inside routine
 !--------------------------------------------------------------------------
 recursive function Lambert2DHexInverseDouble(xyz,ierr) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: Lambert2DHexInverseDouble
 
 IMPLICIT NONE
 
@@ -719,6 +727,7 @@ end function Lambert2DHexInverseDouble
 !> @date 08/29/15    MDG 1.1 debug
 !--------------------------------------------------------------------------
 recursive function GetSextantSingle(xy) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetSextantSingle
 
 IMPLICIT NONE
 
@@ -767,6 +776,7 @@ end function GetSextantSingle
 !> @date 08/29/15    MDG 1.1 debug
 !--------------------------------------------------------------------------
 recursive function GetSextantDouble(xy) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetSextantDouble
 
 IMPLICIT NONE
 
@@ -829,6 +839,7 @@ end function GetSextantDouble
 !> @date 7/7/14  MDG 2.0 correction to cube edge length check
 !--------------------------------------------------------------------------
 recursive function Lambert3DCubeForwardSingle(xyzin,ierr) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: Lambert3DCubeForwardSingle
 
 IMPLICIT NONE
 
@@ -921,6 +932,7 @@ end function Lambert3DCubeForwardSingle
 !> @date 7/7/14  MDG 2.0 correction to cube edge length check
 !--------------------------------------------------------------------------
 recursive function Lambert3DCubeForwardDouble(xyzin,ierr) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: Lambert3DCubeForwardDouble
 
 IMPLICIT NONE
 
@@ -1015,6 +1027,7 @@ end function Lambert3DCubeForwardDouble
 !> @date 8/12/14    MDG 1.1 fixed acos() problem
 !--------------------------------------------------------------------------
 recursive function Lambert3DCubeInverseSingle(xyz,ierr) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: Lambert3DCubeInverseSingle
 
 IMPLICIT NONE
 
@@ -1122,6 +1135,7 @@ end function Lambert3DCubeInverseSingle
 !> @date 8/12/14    MDG 1.1 fixed dacos() problem
 !--------------------------------------------------------------------------
 recursive function Lambert3DCubeInverseDouble(xyz,ierr) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: Lambert3DCubeInverseDouble
 
 IMPLICIT NONE
 
@@ -1226,6 +1240,7 @@ end function Lambert3DCubeInverseDouble
 !> @date 11/21/12    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function GetPyramidSingle(xyz) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetPyramidSingle
 
 IMPLICIT NONE
 
@@ -1288,6 +1303,7 @@ end function GetPyramidSingle
 !> @date 11/21/12    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function GetPyramidDouble(xyz) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetPyramidDouble
 
 IMPLICIT NONE
 
@@ -1356,6 +1372,7 @@ end function GetPyramidDouble
 !> @date 7/12/13    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function Lambert3DBallToQuaternionSingle(xyz, ierr) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: Lambert3DBallToQuaternionSingle
 
 use quaternions
 use constants
@@ -1413,6 +1430,7 @@ end function Lambert3DBallToQuaternionSingle
 !> @date 7/12/13    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function Lambert3DBallToQuaternionDouble(xyz, ierr) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: Lambert3DBallToQuaternionDouble
 
 use quaternions
 use constants
@@ -1471,6 +1489,7 @@ end function Lambert3DBallToQuaternionDouble
 !> @date 7/12/13    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function Lambert3DCubeToQuaternionSingle(xyz, ierr) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: Lambert3DCubeToQuaternionSingle
 
 use quaternions
 
@@ -1502,6 +1521,7 @@ end function Lambert3DCubeToQuaternionSingle
 !> @date 7/12/13    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function Lambert3DCubeToQuaternionDouble(xyz, ierr) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: Lambert3DCubeToQuaternionDouble
 
 use quaternions
 
@@ -1540,6 +1560,7 @@ end function Lambert3DCubeToQuaternionDouble
 !> @date 7/12/13    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function StereoGraphicForwardSingle(xyz, ierr, Radius) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: StereoGraphicForwardSingle
 
 IMPLICIT NONE
 
@@ -1580,6 +1601,7 @@ end function StereoGraphicForwardSingle
 !> @date 7/12/13    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function StereoGraphicForwardDouble(xyz, ierr, Radius) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: StereoGraphicForwardDouble
 
 IMPLICIT NONE
 
@@ -1620,6 +1642,7 @@ end function StereoGraphicForwardDouble
 !> @date 7/12/13    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function StereoGraphicInverseSingle(xy, ierr, Radius) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: StereoGraphicInverseSingle
 
 IMPLICIT NONE
 
@@ -1661,6 +1684,7 @@ end function StereoGraphicInverseSingle
 !> @date 7/12/13    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function StereoGraphicInverseDouble(xy, ierr, Radius) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: StereoGraphicInverseDouble
 
 IMPLICIT NONE
 
@@ -1708,6 +1732,7 @@ end function StereoGraphicInverseDouble
 !> @date 8/01/13    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function LambertForwardSingle(xyz, ierr, Radius) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: LambertForwardSingle
 
 IMPLICIT NONE
 
@@ -1755,6 +1780,7 @@ end function LambertForwardSingle
 !> @date 8/01/13    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function LambertForwardDouble(xyz, ierr, Radius) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: LambertForwardDouble
 
 IMPLICIT NONE
 
@@ -1804,6 +1830,7 @@ end function LambertForwardDouble
 !> @date 8/01/13    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function LambertInverseSingle(xy, ierr, Radius) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: LambertInverseSingle
 
 IMPLICIT NONE
 
@@ -1843,6 +1870,7 @@ end function LambertInverseSingle
 !> @date 8/01/13    MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function LambertInverseDouble(xy, ierr, Radius) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: LambertInverseDouble
 
 IMPLICIT NONE
 
@@ -1898,6 +1926,7 @@ end function LambertInverseDouble
 !> @date  09/20/13 MDG 3.0 re-adapted to generate 2D equivalent point list
 !--------------------------------------------------------------------------
 recursive subroutine Apply2DLaueSymmetry(ipx,ipy,isym,iequiv,nequiv)
+!DEC$ ATTRIBUTES DLLEXPORT :: Apply2DLaueSymmetry
 
 IMPLICIT NONE
 
@@ -2020,6 +2049,7 @@ end subroutine Apply2DLaueSymmetry
 !> @date  06/09/14 MDG 2.0 added TDPG argument 
 !--------------------------------------------------------------------------
 recursive subroutine Apply2DPGSymmetry(TDPG,ipx,ipy,isym,iequiv,nequiv)
+!DEC$ ATTRIBUTES DLLEXPORT :: Apply2DPGSymmetry
 
 use io
 use typedefs
@@ -2101,6 +2131,7 @@ end subroutine Apply2DPGSymmetry
 !> @date  09/01/15 MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive subroutine Apply3DPGSymmetry(cell,ipx,ipy,ipz,npx,iequiv,nequiv,usehex,stereographic,cubictype)
+!DEC$ ATTRIBUTES DLLEXPORT :: Apply3DPGSymmetry
 
 use local
 use crystal

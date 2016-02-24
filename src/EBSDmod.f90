@@ -76,6 +76,7 @@ contains
 !> @date 06/24/14  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine EBSDreadangles(enl,angles,verbose)
+!DEC$ ATTRIBUTES DLLEXPORT :: EBSDreadangles
 
 use NameListTypedefs
 use io
@@ -188,6 +189,7 @@ end subroutine EBSDreadangles
 !> @date 09/15/15  SS  2.2 added accum_z reading 
 !--------------------------------------------------------------------------
 subroutine EBSDreadMCfile(enl,acc,efile,verbose)
+!DEC$ ATTRIBUTES DLLEXPORT :: EBSDreadMCfile
 
 use NameListTypedefs
 use files
@@ -389,6 +391,7 @@ end subroutine EBSDreadMCfile
 !> @date 09/03/15  MDG 3.1 removed support for old file format (too difficult to maintain after above changes)
 !--------------------------------------------------------------------------
 subroutine EBSDreadMasterfile(enl, master, mfile, verbose)
+!DEC$ ATTRIBUTES DLLEXPORT :: EBSDreadMasterfile
 
 use NameListTypedefs
 use files
@@ -544,6 +547,7 @@ end subroutine EBSDreadMasterfile
 !> @date 09/03/15  MDG 2.1 removed old file format support
 !--------------------------------------------------------------------------
 subroutine EBSDreadMasterfile_overlap(enl, master, mfile, verbose)
+!DEC$ ATTRIBUTES DLLEXPORT :: EBSDreadMasterfile_overlap
 
 use NameListTypedefs
 use files
@@ -697,6 +701,7 @@ end subroutine EBSDreadMasterfile_overlap
 
 !--------------------------------------------------------------------------
 subroutine EBSDGenerateDetector(enl, acc, master, verbose)
+!DEC$ ATTRIBUTES DLLEXPORT :: EBSDGenerateDetector
 
 use NameListTypedefs
 use files
@@ -852,6 +857,7 @@ end subroutine EBSDGenerateDetector
 !> @date 09/03/15 MDG 1.2 added support for Northern and Southern Lambert hemispheres
 !--------------------------------------------------------------------------
 subroutine TwinCubicMasterPattern(enl,master)
+!DEC$ ATTRIBUTES DLLEXPORT :: TwinCubicMasterPattern
 
 use local
 use io
@@ -938,6 +944,7 @@ end subroutine TwinCubicMasterPattern
 !> added master_inp and master_out variables in the subroutine for NtAg dataset
 !--------------------------------------------------------------------------
 recursive subroutine OverlapMasterPattern(enl,master_in,master_out,q,alpha)
+!DEC$ ATTRIBUTES DLLEXPORT :: OverlapMasterPattern
 
 use local
 use io
@@ -1041,6 +1048,7 @@ end subroutine OverlapMasterPattern
 !> @date 04/20/15 MDG 1.0 original, based on Saransh's twin routine above
 !--------------------------------------------------------------------------
 subroutine GenerateBackground(enl,acc,EBSDBackground)
+!DEC$ ATTRIBUTES DLLEXPORT :: GenerateBackground
 
 use local 
 use typedefs

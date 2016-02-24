@@ -86,6 +86,7 @@ contains
 !> @date 06/04/15 MDG 1.1 corrected infty to inftyd (double precision infinity)
 !--------------------------------------------------------------------------
 recursive function IsinsideFZ(rod,FZtype,FZorder) result(insideFZ)
+!DEC$ ATTRIBUTES DLLEXPORT :: IsinsideFZ
 
 use constants
 
@@ -130,6 +131,7 @@ end function IsinsideFZ
 !> @date 06/04/15 MDG 2.1 corrected infty to inftyd (double precision infinity)
 !--------------------------------------------------------------------------
 recursive function insideCyclicFZ(rod,order) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: insideCyclicFZ
 
 use constants
 
@@ -169,6 +171,7 @@ end function insideCyclicFZ
 !> @date 10/02/14  MDG 2.0 rewrite
 !--------------------------------------------------------------------------
 recursive function insideDihedralFZ(rod,order) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: insideDihedralFZ
 
 use constants
 
@@ -229,6 +232,7 @@ end function insideDihedralFZ
 !> @date 06/04/15 MDG 2.2 simplified handling of components of r
 !--------------------------------------------------------------------------
 recursive function insideCubicFZ(rod,ot) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: insideCubicFZ
 
 use constants
 
@@ -315,6 +319,7 @@ end function insideCubicFZ
 !> @date 09/15/15  MDG 2.1 removed explicit origin allocation; changed while to do loops.
 !--------------------------------------------------------------------------
 recursive subroutine SampleRFZ(nsteps,pgnum,FZcnt,FZlist)
+!DEC$ ATTRIBUTES DLLEXPORT :: SampleRFZ
 
 use typedefs
 use constants
@@ -414,6 +419,7 @@ end subroutine SampleRFZ
 !> @date 04/07/15 SS 1.0 original
 !--------------------------------------------------------------------------
 recursive subroutine CubochoricNeighbors(cubneighbor,nn,cub,stepsize)
+!DEC$ ATTRIBUTES DLLEXPORT :: CubochoricNeighbors
 
 use constants
 
@@ -476,6 +482,7 @@ end subroutine CubochoricNeighbors
 !> @date 04/07/15 SS 1.0 original
 !--------------------------------------------------------------------------
 recursive subroutine SampleRFZtwin(nsteps,pgnum,qt,FZcnt,FZlist)
+!DEC$ ATTRIBUTES DLLEXPORT :: SampleRFZtwin
 
 use local
 use constants

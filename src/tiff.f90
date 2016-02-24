@@ -114,6 +114,7 @@ contains
 !> @date    8/28/01 MDG 2.0 commented and change of variable names
 !--------------------------------------------------------------------------
 subroutine TIFF_Write_Byte_Into_Buffer(Bite)
+!DEC$ ATTRIBUTES DLLEXPORT :: TIFF_Write_Byte_Into_Buffer
 
 IMPLICIT NONE
 
@@ -153,6 +154,7 @@ end subroutine TIFF_Write_Byte_Into_Buffer
 !> @date    8/28/01 MDG 2.0 commented and change of variable names
 !--------------------------------------------------------------------------
 subroutine TIFF_Write_Word(Word,Length)
+!DEC$ ATTRIBUTES DLLEXPORT :: TIFF_Write_Word
 
 IMPLICIT NONE
 
@@ -190,6 +192,7 @@ end subroutine TIFF_Write_Word
 !> @date    8/28/01 MDG 2.0 commented and change of variable names
 !--------------------------------------------------------------------------
 subroutine TIFF_Make_Tag(Numbre,Tag_ID, Data_Type,Cnt,Offset)
+!DEC$ ATTRIBUTES DLLEXPORT :: TIFF_Make_Tag
 
 IMPLICIT NONE
 
@@ -225,6 +228,7 @@ end subroutine TIFF_Make_Tag
 !
 !--------------------------------------------------------------------------
 subroutine TIFF_Write_File
+!DEC$ ATTRIBUTES DLLEXPORT :: 
 
 IMPLICIT NONE
 

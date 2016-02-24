@@ -51,6 +51,7 @@ IMPLICIT NONE
 contains
 
 subroutine PGM_Write_File(fname, nx, ny, image) 
+!DEC$ ATTRIBUTES DLLEXPORT :: PGM_Write_File
 
 character(fnlen),INTENT(IN) 		:: fname
 integer(kind=irg),INTENT(IN)   	:: image(nx,ny)

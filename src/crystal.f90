@@ -108,6 +108,7 @@ contains
 !> @date   06/06/14 MDG 4.2 moved routine to crystal module
 !--------------------------------------------------------------------------
 subroutine ResetCell(cell)
+!DEC$ ATTRIBUTES DLLEXPORT :: ResetCell
 
 IMPLICIT NONE
 
@@ -179,6 +180,7 @@ end subroutine ResetCell
 !> @date   01/10/14 MDG 3.0 removed Kronecker delta matrix
 !--------------------------------------------------------------------------
 subroutine CalcMatrices(cell)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcMatrices
 
 use error
 use constants
@@ -302,6 +304,7 @@ end subroutine CalcMatrices
 !> @date    01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 recursive subroutine TransSpaceDouble(cell,t,d,inspace,outspace)
+!DEC$ ATTRIBUTES DLLEXPORT :: TransSpaceDouble
 
 IMPLICIT NONE
 
@@ -372,6 +375,7 @@ end subroutine TransSpaceDouble
 !> @date    06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
 recursive subroutine TransSpaceSingle(cell, t, d, inspace, outspace)
+!DEC$ ATTRIBUTES DLLEXPORT :: TransSpaceSingle
 
 IMPLICIT NONE
 
@@ -450,6 +454,7 @@ end subroutine  TransSpaceSingle
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
 recursive subroutine TransCoor(cell, t, d, talpha, space, direction)
+!DEC$ ATTRIBUTES DLLEXPORT :: TransCoor
 
 use math, ONLY: mInvert 
 
@@ -509,6 +514,7 @@ end subroutine TransCoor
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
 recursive function CalcDotSingle(cell, p,q,space) result(cdot)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcDotSingle
 
 
 IMPLICIT NONE
@@ -550,6 +556,7 @@ end function CalcDotSingle
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
 recursive function CalcDotDouble(cell, p, q, space) result(cdot)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcDotDouble
 
 IMPLICIT NONE
 
@@ -592,6 +599,7 @@ end function CalcDotDouble
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
 recursive subroutine NormVecSingle(cell, p, space)
+!DEC$ ATTRIBUTES DLLEXPORT :: NormVecSingle
 
 IMPLICIT NONE
 
@@ -632,6 +640,7 @@ end subroutine NormVecSingle
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
 recursive subroutine NormVecDouble(cell, p, space)
+!DEC$ ATTRIBUTES DLLEXPORT :: NormVecDouble
 
 IMPLICIT NONE
 
@@ -672,6 +681,7 @@ end subroutine NormVecDouble
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
 recursive function CalcLengthSingle(cell, p, space) result(x)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcLengthSingle
 
 IMPLICIT NONE
 
@@ -708,6 +718,7 @@ end function CalcLengthSingle
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
 recursive function CalcLengthDouble(cell, p, space) result(x)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcLengthDouble
 
 IMPLICIT NONE
 
@@ -744,6 +755,7 @@ end function CalcLengthDouble
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
 recursive function CalcAngleSingle(cell, p, q, space) result(a)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcAngleSingle
 
 use error
 use constants
@@ -802,6 +814,7 @@ end function CalcAngleSingle
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
 recursive function CalcAngleDouble(cell,p,q,space) result(a)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcAngleDouble
 
 use error
 use constants
@@ -870,6 +883,7 @@ end function CalcAngleDouble
 !> @date   06/05/14 MDG 4.1 cell pointer argument
 !--------------------------------------------------------------------------
 recursive subroutine CalcCrossSingle(cell,p,q,r,inspace,outspace,iv)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcCrossSingle
 
 use math
 
@@ -962,6 +976,7 @@ end subroutine CalcCrossSingle
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 recursive subroutine CalcCrossDouble(cell,p,q,r,inspace,outspace,iv)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcCrossDouble
 
 use math
 
@@ -1045,6 +1060,7 @@ end subroutine CalcCrossDouble
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 recursive subroutine MilBrav(p,q,d)
+!DEC$ ATTRIBUTES DLLEXPORT :: MilBrav
 
 IMPLICIT NONE
 
@@ -1119,6 +1135,7 @@ end subroutine MilBrav
 !> @date   08/30/15 MDG 4.2 validated trigonal setting
 !--------------------------------------------------------------------------
 subroutine GetLatParm(cell, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetLatParm
 
 use io
 
@@ -1270,6 +1287,7 @@ end subroutine GetLatParm
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 subroutine GetAsymPos(cell, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetAsymPos
 
 use io
 
@@ -1345,6 +1363,7 @@ end subroutine GetAsymPos
 !> @date   01/10/14 MDG 4.0 modified to a fixed size table
 !--------------------------------------------------------------------------
 subroutine DisplayElements(stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: DisplayElements
 
 use io
 
@@ -1405,6 +1424,7 @@ end subroutine DisplayElements
 !> @date   01/10/14 MDG 4.0 checked for changes to unitcell type
 !--------------------------------------------------------------------------
 subroutine extractposition(list,pt)
+!DEC$ ATTRIBUTES DLLEXPORT :: extractposition
 
 IMPLICIT NONE
 
@@ -1547,6 +1567,7 @@ end subroutine extractposition
 !> @date   06/05/14 MDG 4.1 added unit cell pointer argument
 !--------------------------------------------------------------------------
 subroutine CalcDensity(cell, dens, avZ, avA)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcDensity
 
 use constants
 
@@ -1600,6 +1621,7 @@ end subroutine CalcDensity
 !> @date   06/05/14 MDG 4.1 added stdout 
 !--------------------------------------------------------------------------
 subroutine GetOR(orel, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetOR
 
 use io
 
@@ -1803,6 +1825,7 @@ end function CalcsgHOLZ
 !> @date   06/05/14 MDG 4.1 added unit cell pointer argument and HOLZdata argument
 !--------------------------------------------------------------------------
 subroutine GetHOLZGeometry(cell,HOLZdata,g1,g2,uvw,fn)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetHOLZGeometry
 
 use io
 use error
@@ -1979,6 +2002,7 @@ end function GetHOLZcoordinates
 !> @date 09/23/15 commented out a few lines
 !--------------------------------------------------------------------------
 recursive function Convert_kgs_to_Substrate(cell, cellS, kg, TTinv, FN) result(kgS)
+!DEC$ ATTRIBUTES DLLEXPORT :: Convert_kgs_to_Substrate
 
 use local
 use typedefs

@@ -63,6 +63,7 @@ contains
 !> @date   06/05/14 MDG 3.0 added TT as argument
 !--------------------------------------------------------------------------
 subroutine Time_reset(TT)
+!DEC$ ATTRIBUTES DLLEXPORT :: Time_reset
 
 IMPLICIT NONE
 
@@ -96,6 +97,7 @@ end subroutine Time_reset
 !> @date   06/05/14 MDG 3.0 added TT as argument
 !--------------------------------------------------------------------------
 subroutine Time_report(TT, interval, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: Time_report
 
 IMPLICIT NONE
 
@@ -127,6 +129,7 @@ end subroutine Time_report
 !> @date   06/05/14 MDG 3.0 added TT as argument
 !--------------------------------------------------------------------------
 subroutine Time_start(TT)
+!DEC$ ATTRIBUTES DLLEXPORT :: Time_start
 
 IMPLICIT NONE
 
@@ -155,6 +158,7 @@ end subroutine Time_start
 !> @date   06/05/14 MDG 3.0 added TT as argument
 !--------------------------------------------------------------------------
 subroutine Time_estimate(TT, numk, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: Time_estimate
 
 IMPLICIT NONE
 
@@ -198,6 +202,7 @@ end subroutine Time_estimate
 !> @date   06/05/14 MDG 3.0 added TT as argument
 !--------------------------------------------------------------------------
 subroutine Time_remaining(TT, ik, numk, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: Time_remaining
 
 IMPLICIT NONE
 
@@ -256,6 +261,7 @@ end subroutine Time_remaining
 !> @date   06/05/14 MDG 3.0 changed IO
 !--------------------------------------------------------------------------
 subroutine PrintTime(tm, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: PrintTime
 
 IMPLICIT NONE
 
@@ -308,6 +314,7 @@ end subroutine PrintTime
 !> @date   06/05/14 MDG 3.0 added TT; changed IO
 !--------------------------------------------------------------------------
 subroutine Time_stop(TT, numk, stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: Time_stop
 
 IMPLICIT NONE
 

@@ -77,6 +77,7 @@ contains
 !> @date  06/10/14 MDG 4.0 added Dyn, cell, ktmp, and BetheParameter arguments
 !--------------------------------------------------------------------------
 subroutine CalcBWint(Dyn,cell,ktmp,BetheParameter,nn,nw,nt,thick,inten)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcBWint
 
 use io
 use diffraction
@@ -176,6 +177,7 @@ end subroutine CalcBWint
 !> @date  11/28/14 MDG 4.1 forked from CalcBWint
 !--------------------------------------------------------------------------
 subroutine CalcPEDint(DynMat,cell,kn,nn,nt,thick,inten)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcPEDint
 
 use io
 use diffraction
@@ -256,6 +258,7 @@ end subroutine CalcPEDint
 !> @date  06/16/14 MDG 4.2 made routine recursive for OPenMP
 !--------------------------------------------------------------------------
 recursive subroutine CalcKint(DynMat,kn,nn,nt,thick,Iz)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcKint
 
 use local
 use io
@@ -332,6 +335,7 @@ end subroutine CalcKint
 !> @date  02/14/15 MDG 4.3 spawned from CalcKint
 !--------------------------------------------------------------------------
 recursive subroutine CalcKthick(DynMat,kn,nn,thresh,Iz)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcKthick
 
 use local
 use io
@@ -404,6 +408,7 @@ end subroutine CalcKthick
 !> @date 09/07/15  MDG 2.1 added zeroing of Sgh array
 !--------------------------------------------------------------------------
 recursive subroutine CalcSgh(cell,reflist,nn,numset,Sgh,nat)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcSgh
 
 use local
 use typedefs
@@ -486,6 +491,7 @@ end subroutine CalcSgh
 !> @date 04/22/15  SS 1.0 original
 !--------------------------------------------------------------------------
 recursive subroutine CalcSghMaster(cell,reflist,nn,numset,Sgh,nat)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcSghMaster
 
 use local
 use typedefs
@@ -576,6 +582,7 @@ end subroutine CalcSghMaster
 !> @date 09/09/15  MDG 4.1 verification of matrix multiplications after Silicon pattern issues
 ! ###################################################################
 recursive subroutine CalcLgh(DMat,Lgh,thick,kn,nn,gzero,depthstep,lambdaE,izz)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcLgh
 
 use local
 use io
@@ -716,6 +723,7 @@ end subroutine CalcLgh
 !> @date  09/14/15 SS  3.1 added exp(-pi/xgp) to the diagonal elements of the bloch dynamical matrix
 !--------------------------------------------------------------------------
 recursive subroutine GetDynMat(cell, listroot, listrootw, rlp, DynMat, nns, nnw, BlochMode)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetDynMat
 
 use local
 use typedefs
@@ -928,6 +936,7 @@ end subroutine GetDynMat
 !> @date  06/18/14 MDG 2.2 corrected some pointer allocation errors in other routines; this one now works fine.
 !--------------------------------------------------------------------------
 recursive subroutine GetDynMatMaster(cell, listroot, DynMat, nref)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetDynMatMaster
 
 use local
 use typedefs
@@ -997,6 +1006,7 @@ end subroutine GetDynMatMaster
 !> @date 11/18/13  MDG 1.0 major rewrite from older ECP program; merged with ECPz
 !--------------------------------------------------------------------------
 recursive subroutine CalcLghECP(DMat,Lgh,nn,nt,thick,kn,gzero)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcLghECP
 
 use local
 use io
@@ -1085,6 +1095,7 @@ end subroutine CalcLghECP
 !> @date 09/01/15  SS  1.1 complete rewrite
 !--------------------------------------------------------------------------
 recursive subroutine CalcsigmaggSubstrate(cell_subs,nns_film,refliststrong_subs,S0,Sigmagg,&
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcsigmaggSubstrate
                                           filmthickness,substhickness,lambdaZ,thick,nt)
 
 use local
@@ -1243,6 +1254,7 @@ end subroutine CalcsigmaggSubstrate
 !--------------------------------------------------------------------------
 
 recursive subroutine GetStrongBeamsSubs(cell_film,cell_subs,reflist_film,refliststrong_subs,&
+!DEC$ ATTRIBUTES DLLEXPORT :: GetStrongBeamsSubs
 k0,FN_film,FN_subs,nns_film,dmin,TTinv,rlp_subs,dthick)
 
 
@@ -1390,6 +1402,7 @@ end subroutine GetStrongBeamsSubs
 !> @date   12/2/14 SS 1.0 original
 !--------------------------------------------------------------------------
 recursive subroutine Delete_StrongBeamList(self)
+!DEC$ ATTRIBUTES DLLEXPORT :: Delete_StrongBeamList
 
 use local
 use typedefs

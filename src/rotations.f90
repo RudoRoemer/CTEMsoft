@@ -530,6 +530,7 @@ contains
 !> @date 9/23/15 MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function close_enough(a,b) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: close_enough
 
 use local
 use constants
@@ -562,6 +563,7 @@ end function close_enough
 !> @date 9/23/15 MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function close_enough_d(a,b) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: close_enough_d
 
 use local
 use constants
@@ -596,6 +598,7 @@ end function close_enough_d
 !> @date 9/30/14   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function eu_check(eu) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: eu_check
 
 use local
 use constants
@@ -637,6 +640,7 @@ end function eu_check
 !> @date 9/30/14   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function eu_check_d(eu) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: eu_check_d
 
 use local
 use constants
@@ -678,6 +682,7 @@ end function eu_check_d
 !> @date 9/30/14   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ro_check(ro) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ro_check
 
 use local
 use constants
@@ -717,6 +722,7 @@ end function ro_check
 !> @date 9/30/14   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ro_check_d(ro) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ro_check_d
 
 use local
 use constants
@@ -756,6 +762,7 @@ end function ro_check_d
 !> @date 9/30/14   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ho_check(ho) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ho_check
 
 use local
 use constants
@@ -793,6 +800,7 @@ end function ho_check
 !> @date 9/30/14   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ho_check_d(ho) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ho_check_d
 
 use local
 use constants
@@ -830,6 +838,7 @@ end function ho_check_d
 !> @date 9/30/14   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function cu_check(cu) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: cu_check
 
 use local
 use constants
@@ -867,6 +876,7 @@ end function cu_check
 !> @date 9/30/14   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function cu_check_d(cu) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: cu_check_d
 
 use local
 use constants
@@ -904,6 +914,7 @@ end function cu_check_d
 !> @date 9/30/14   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function qu_check(qu) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: qu_check
 
 use local
 use constants
@@ -945,6 +956,7 @@ end function qu_check
 !> @date 9/30/14   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function qu_check_d(qu) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: qu_check_d
 
 use local
 use constants
@@ -986,6 +998,7 @@ end function qu_check_d
 !> @date 9/30/14   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ax_check(ax) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ax_check
 
 use local
 use constants
@@ -1027,6 +1040,7 @@ end function ax_check
 !> @date 9/30/14   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ax_check_D(ax) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ax_check_D
 
 use local
 use constants
@@ -1068,6 +1082,7 @@ end function ax_check_d
 !> @date 9/30/14   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function om_check(om) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: om_check
 
 use local
 use constants
@@ -1118,6 +1133,7 @@ end function om_check
 !> @date 9/30/14   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function om_check_d(om) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: om_check_d
 
 use local
 use constants
@@ -1175,6 +1191,7 @@ end function om_check_d
 !> @date 9/30/14   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function genrot(av,omega) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: genrot
 
 use local
 use constants
@@ -1226,6 +1243,7 @@ end function genrot
 !> @date 9/30/14   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function genrot_d(av,omega) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: genrot_d
 
 use local
 use constants
@@ -1278,6 +1296,7 @@ end function genrot_d
 !> @date 9/30/14   MDG 1.1 added testing of valid ranges
 !--------------------------------------------------------------------------
 recursive function init_orientation(orient,intype,rotcheck) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: init_orientation
 
 use local
 
@@ -1384,6 +1403,7 @@ end function init_orientation
 !> @date 9/30/14   MDG 1.1 added testing of valid ranges
 !--------------------------------------------------------------------------
 recursive function init_orientation_d(orient,intype,rotcheck) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: init_orientation_d
 
 use local
 use error
@@ -1491,6 +1511,7 @@ end function init_orientation_d
 !> @date 8/04/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function init_orientation_om(orient,intype,rotcheck) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: init_orientation_om
 
 use local
 
@@ -1537,6 +1558,7 @@ end function init_orientation_om
 !> @date 8/04/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function init_orientation_om_d(orient,intype,rotcheck) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: init_orientation_om_d
 
 use local
 
@@ -1589,6 +1611,7 @@ end function init_orientation_om_d
 !> @data 7/23/14   MDG 1.1 verified
 !--------------------------------------------------------------------------
 recursive function eu2om(e) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: eu2om
 
 use local
 
@@ -1641,6 +1664,7 @@ end function eu2om
 !> @data 7/23/14   MDG 1.1 verified
 !--------------------------------------------------------------------------
 recursive function eu2om_d(e) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: eu2om_d
 
 use local
 
@@ -1695,6 +1719,7 @@ end function eu2om_d
 !> @date 9/23/15   MDG 2.2 moved alphe.lt.0 test inside else statement
 !--------------------------------------------------------------------------
 recursive function eu2ax(e) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: eu2ax
 
 use local 
 use constants
@@ -1744,6 +1769,7 @@ end function eu2ax
 !> @date 9/23/15   MDG 2.2 moved alphe.lt.0 test inside else statement
 !--------------------------------------------------------------------------
 recursive function eu2ax_d(e) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: eu2ax_d
 
 use local 
 use constants
@@ -1791,6 +1817,7 @@ end function eu2ax_d
 !> @date 8/04/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function eu2ro(e) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: eu2ro
 
 use local
 use constants
@@ -1835,6 +1862,7 @@ end function eu2ro
 !> @date 8/04/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function eu2ro_d(e) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: eu2ro_d
 
 use local
 use constants
@@ -1882,6 +1910,7 @@ end function eu2ro_d
 !> @date 8/07/14   MDG 1.1 verified
 !--------------------------------------------------------------------------
 recursive function eu2qu(e) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: eu2qu
 
 use local
 use constants
@@ -1927,6 +1956,7 @@ end function eu2qu
 !> @date 8/07/14   MDG 1.1 verified
 !--------------------------------------------------------------------------
 recursive function eu2qu_d(e) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: eu2qu_d
 
 use local
 use constants
@@ -1971,6 +2001,7 @@ end function eu2qu_d
 !> @date 8/19/14   MDG 1.1 verification using Mathematica
 !--------------------------------------------------------------------------
 recursive function om2eu(o) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: om2eu
 
 use local
 use constants
@@ -2022,6 +2053,7 @@ end function om2eu
 !> @date 8/19/14   MDG 1.1 verification using Mathematica
 !--------------------------------------------------------------------------
 recursive function om2eu_d(o) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: om2eu_d
 
 use local
 use constants
@@ -2073,6 +2105,7 @@ end function om2eu_d
 !> @date 8/04/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ax2om(a) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ax2om
 
 use local
 use constants
@@ -2125,6 +2158,7 @@ end function ax2om
 !> @date 8/04/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ax2om_d(a) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ax2om_d
 
 use local
 use constants
@@ -2177,6 +2211,7 @@ end function ax2om_d
 !> @date 4/17/15   MDG 1.1 simplification based on M. Jackson question
 !--------------------------------------------------------------------------
 recursive function qu2eu(q) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: qu2eu
 
 use local
 use constants
@@ -2235,6 +2270,7 @@ end function qu2eu
 !> @date 4/17/15   MDG 1.1 simplification based on M. Jackson question
 !--------------------------------------------------------------------------
 recursive function qu2eu_d(q) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: qu2eu_d
 
 use local
 use constants
@@ -2294,6 +2330,7 @@ end function qu2eu_d
 !> @date 8/04/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ax2ho(a) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ax2ho
 
 use local
 use constants
@@ -2328,6 +2365,7 @@ end function ax2ho
 !> @date 8/04/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ax2ho_d(a) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ax2ho_d
 
 use local
 
@@ -2363,6 +2401,7 @@ end function ax2ho_d
 !> @date 07/21/14 MDG 1.1 double precision fit coefficients
 !--------------------------------------------------------------------------
 recursive function ho2ax(h) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ho2ax
 
 use local
 use constants
@@ -2416,6 +2455,7 @@ end function ho2ax
 !> @date 07/21/14 MDG 1.1 double precision fit coefficients
 !--------------------------------------------------------------------------
 recursive function ho2ax_d(h) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ho2ax_d
 
 use local
 use constants
@@ -2472,6 +2512,7 @@ end function ho2ax_d
 !> @date 09/28/15 MDG 2.1 corrected dgeev -> sgeev
 !--------------------------------------------------------------------------
 recursive function om2ax(om) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: om2ax
 
 use local 
 use constants
@@ -2551,6 +2592,7 @@ end function om2ax
 !> @date 08/20/14 MDG 3.0 replaced by eigenvalue-based method
 !--------------------------------------------------------------------------
 recursive function om2ax_d(om) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: om2ax_d
 
 use local 
 use constants
@@ -2628,6 +2670,7 @@ end function om2ax_d
 !> @date 8/11/14   MDG 1.1 added infty handling
 !--------------------------------------------------------------------------
 recursive function ro2ax(r) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ro2ax
 
 use local
 use constants
@@ -2671,6 +2714,7 @@ end function ro2ax
 !> @date 8/11/14   MDG 1.1 added infty handling
 !--------------------------------------------------------------------------
 recursive function ro2ax_d(r) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ro2ax_d
 
 use local
 use constants
@@ -2716,6 +2760,7 @@ end function ro2ax_d
 !> @date 8/11/14 MDG 2.1 added infty handling
 !--------------------------------------------------------------------------
 recursive function ax2ro(a) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ax2ro
 
 use local 
 use constants
@@ -2759,6 +2804,7 @@ end function ax2ro
 !> @date 8/11/14 MDG 2.1 added infty handling
 !--------------------------------------------------------------------------
 recursive function ax2ro_d(a) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ax2ro_d
 
 use local 
 use constants
@@ -2803,6 +2849,7 @@ end function ax2ro_d
 !> @date 7/23/14   MDG 1.1 explicit transformation
 !--------------------------------------------------------------------------
 recursive function ax2qu(a) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ax2qu
 
 use local 
 
@@ -2835,6 +2882,7 @@ end function ax2qu
 !> @date 7/23/14   MDG 1.1 explicit transformation
 !--------------------------------------------------------------------------
 recursive function ax2qu_d(a) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ax2qu_d
 
 use local 
 
@@ -2870,6 +2918,7 @@ end function ax2qu_d
 !> @date 8/11/14   MDG 3.0 added infty handling
 !--------------------------------------------------------------------------
 recursive function ro2ho(r) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ro2ho
 
 use local 
 use constants
@@ -2909,6 +2958,7 @@ end function ro2ho
 !> @date 7/24/14   MDG 2.0 explicit transformation
 !--------------------------------------------------------------------------
 recursive function ro2ho_d(r) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ro2ho_d
 
 use local 
 use constants
@@ -2951,6 +3001,7 @@ end function ro2ho_d
 !> @date 6/03/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function qu2om(q) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: qu2om
 
 use local
 use constants
@@ -2996,6 +3047,7 @@ end function qu2om
 !> @date 6/03/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function qu2om_d(q) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: qu2om_d
 
 use local
 use constants
@@ -3040,6 +3092,7 @@ end function qu2om_d
 !> @date 8/18/14   MDG 2.0 new version
 !--------------------------------------------------------------------------
 recursive function om2qu(x) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: om2qu
 
 use local 
 use constants
@@ -3104,6 +3157,7 @@ end function om2qu
 !> @date 8/18/14   MDG 2.0 new version
 !--------------------------------------------------------------------------
 recursive function om2qu_d(x) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: om2qu_d
 
 use local 
 use constants
@@ -3173,6 +3227,7 @@ end function om2qu_d
 !> @date 7/23/14   MDG 2.0 explicit transformation
 !--------------------------------------------------------------------------
 recursive function qu2ax(q) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: qu2ax
 
 use local 
 use constants
@@ -3210,6 +3265,7 @@ end function qu2ax
 !> @date 7/23/14   MDG 2.0 explicit transformation
 !--------------------------------------------------------------------------
 recursive function qu2ax_d(q) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: qu2ax_d
 
 use local 
 use constants
@@ -3248,6 +3304,7 @@ end function qu2ax_d
 !> @date 8/11/14   MDG 2.1 added infty handling
 !--------------------------------------------------------------------------
 recursive function qu2ro(q) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: qu2ro
 
 use local 
 use constants
@@ -3291,6 +3348,7 @@ end function qu2ro
 !> @date 8/11/14   MDG 2.1 added infty handling
 !--------------------------------------------------------------------------
 recursive function qu2ro_d(q) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: qu2ro_d
 
 use local 
 use constants
@@ -3333,6 +3391,7 @@ end function qu2ro_d
 !> @date 7/23/14   MDG 2.0 explicit transformation
 !--------------------------------------------------------------------------
 recursive function qu2ho(q) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: qu2ho
 
 use local 
 
@@ -3367,6 +3426,7 @@ end function qu2ho
 !> @date 7/23/14   MDG 2.0 explicit transformation
 !--------------------------------------------------------------------------
 recursive function qu2ho_d(q) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: qu2ho_d
 
 use local 
 
@@ -3399,6 +3459,7 @@ end function qu2ho_d
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ho2cu(h) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ho2cu
 
 use local
 use Lambert, only: LambertBallToCube
@@ -3428,6 +3489,7 @@ end function ho2cu
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ho2cu_d(h) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ho2cu_d
 
 use local 
 use Lambert, only: LambertBallToCube
@@ -3458,6 +3520,7 @@ end function ho2cu_d
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function cu2ho(c) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: cu2ho
 
 use local 
 use Lambert, only: LambertCubeToBall
@@ -3490,6 +3553,7 @@ end function cu2ho
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function cu2ho_d(c) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: cu2ho_d
 
 use local 
 use Lambert, only: LambertCubeToBall
@@ -3535,6 +3599,7 @@ end function cu2ho_d
 !> @date 8/11/14   MDG 1.1 added infty handling
 !--------------------------------------------------------------------------
 recursive function ro2eu(r) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ro2eu
 
 use local
 use constants
@@ -3565,6 +3630,7 @@ end function ro2eu
 !> @date 8/11/14   MDG 1.1 added infty handling
 !--------------------------------------------------------------------------
 recursive function ro2eu_d(r) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ro2eu_d
 
 use local
 use constants
@@ -3595,6 +3661,7 @@ end function ro2eu_d
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function eu2ho(e) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: eu2ho
 
 use local 
 
@@ -3619,6 +3686,7 @@ end function eu2ho
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function eu2ho_d(e) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: eu2ho_d
 
 use local 
 
@@ -3643,6 +3711,7 @@ end function eu2ho_d
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function om2ro(om) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: om2ro
 
 use local 
 
@@ -3667,6 +3736,7 @@ end function om2ro
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function om2ro_d(om) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: om2ro_d
 
 use local 
 
@@ -3692,6 +3762,7 @@ end function om2ro_d
 !> @date 07/08/14 MDG 2.0 simplification via ax (shorter path)
 !--------------------------------------------------------------------------
 recursive function om2ho(om) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: om2ho
 
 use local 
 
@@ -3717,6 +3788,7 @@ end function om2ho
 !> @date 07/08/14 MDG 2.0 simplification via ax (shorter path)
 !--------------------------------------------------------------------------
 recursive function om2ho_d(om) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: om2ho_d
 
 use local 
 
@@ -3742,6 +3814,7 @@ end function om2ho_d
 !> @date 07/08/14 MDG 2.0 simplification via ro (shorter path)
 !--------------------------------------------------------------------------
 recursive function ax2eu(a) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ax2eu
 
 use local 
 
@@ -3767,6 +3840,7 @@ end function ax2eu
 !> @date 07/08/14 MDG 2.0 simplification via ro (shorter path)
 !--------------------------------------------------------------------------
 recursive function ax2eu_d(a) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ax2eu_d
 
 use local 
 
@@ -3793,6 +3867,7 @@ end function ax2eu_d
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ro2om(r) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ro2om
 
 use local 
 
@@ -3817,6 +3892,7 @@ end function ro2om
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ro2om_d(r) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ro2om_d
 
 use local 
 
@@ -3842,6 +3918,7 @@ end function ro2om_d
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ro2qu(r) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ro2qu
 
 use local 
 
@@ -3867,6 +3944,7 @@ end function ro2qu
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ro2qu_d(r) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ro2qu_d
 
 use local 
 
@@ -3893,6 +3971,7 @@ end function ro2qu_d
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ho2eu(h) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ho2eu
 
 use local 
 
@@ -3917,6 +3996,7 @@ end function ho2eu
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ho2eu_d(h) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ho2eu_d
 
 use local 
 
@@ -3941,6 +4021,7 @@ end function ho2eu_d
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ho2om(h) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ho2om
 
 use local 
 
@@ -3965,6 +4046,7 @@ end function ho2om
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ho2om_d(h) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ho2om_d
 
 use local 
 
@@ -3989,6 +4071,7 @@ end function ho2om_d
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ho2ro(h) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ho2ro
 
 use local 
 
@@ -4013,6 +4096,7 @@ end function ho2ro
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ho2ro_d(h) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ho2ro_d
 
 use local 
 
@@ -4037,6 +4121,7 @@ end function ho2ro_d
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ho2qu(h) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ho2qu
 
 use local 
 
@@ -4061,6 +4146,7 @@ end function ho2qu
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ho2qu_d(h) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ho2qu_d
 
 use local 
 
@@ -4088,6 +4174,7 @@ end function ho2qu_d
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function eu2cu(e) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: eu2cu
 
 use local 
 
@@ -4115,6 +4202,7 @@ end function eu2cu
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function eu2cu_d(e) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: eu2cu_d
 
 use local 
 
@@ -4142,6 +4230,7 @@ end function eu2cu_d
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function om2cu(o) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: om2cu
 
 use local 
 
@@ -4169,6 +4258,7 @@ end function om2cu
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function om2cu_d(o) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: om2cu_d
 
 use local 
 
@@ -4196,6 +4286,7 @@ end function om2cu_d
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ax2cu(a) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ax2cu
 
 use local 
 
@@ -4223,6 +4314,7 @@ end function ax2cu
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ax2cu_d(a) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ax2cu_d
 
 use local 
 
@@ -4250,6 +4342,7 @@ end function ax2cu_d
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ro2cu(r) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ro2cu
 
 use local 
 
@@ -4277,6 +4370,7 @@ end function ro2cu
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function ro2cu_d(r) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: ro2cu_d
 
 use local 
 
@@ -4304,6 +4398,7 @@ end function ro2cu_d
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function qu2cu(q) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: qu2cu
 
 use local 
 
@@ -4331,6 +4426,7 @@ end function qu2cu
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function qu2cu_d(q) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: qu2cu_d
 
 use local 
 
@@ -4359,6 +4455,7 @@ end function qu2cu_d
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function cu2eu(c) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: cu2eu
 
 use local 
 
@@ -4386,6 +4483,7 @@ end function cu2eu
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function cu2eu_d(c) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: cu2eu_d
 
 use local 
 
@@ -4413,6 +4511,7 @@ end function cu2eu_d
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function cu2om(c) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: cu2om
 
 use local 
 
@@ -4440,6 +4539,7 @@ end function cu2om
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function cu2om_d(c) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: cu2om_d
 
 use local 
 
@@ -4467,6 +4567,7 @@ end function cu2om_d
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function cu2ax(c) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: cu2ax
 
 use local 
 
@@ -4494,6 +4595,7 @@ end function cu2ax
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function cu2ax_d(c) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: cu2ax_d
 
 use local 
 
@@ -4521,6 +4623,7 @@ end function cu2ax_d
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function cu2ro(c) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: cu2ro
 
 use local 
 
@@ -4548,6 +4651,7 @@ end function cu2ro
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function cu2ro_d(c) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: cu2ro_d
 
 use local 
 
@@ -4575,6 +4679,7 @@ end function cu2ro_d
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function cu2qu(c) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: cu2qu
 
 use local 
 
@@ -4602,6 +4707,7 @@ end function cu2qu
 !> @date 8/12/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function cu2qu_d(c) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: cu2qu_d
 
 use local 
 
@@ -4641,6 +4747,7 @@ end function cu2qu_d
 !> @date 8/18/14   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function RotVec_om(vec,om,ap) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: RotVec_om
 
 use local
 
@@ -4680,6 +4787,7 @@ end function RotVec_om
 !> @date 8/18/14   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function RotVec_om_d(vec,om,ap) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: RotVec_om_d
 
 use local
 
@@ -4713,6 +4821,7 @@ end function RotVec_om_d
 !> @date 8/18/14   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function RotTensor2_om(tensor,om,ap) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: RotTensor2_om
 
 use local
 
@@ -4747,6 +4856,7 @@ end function RotTensor2_om
 !> @date 8/18/14   MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function RotTensor2_om_d(tensor,om,ap) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: RotTensor2_om_d
 
 use local
 
@@ -4786,6 +4896,7 @@ end function RotTensor2_om_d
 !> @date 03/16/15 MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function quat_average(qlist,numq,qstdev) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: quat_average
 
 use local
 
@@ -4842,6 +4953,7 @@ end function quat_average
 !> @date 03/16/15 MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function quat_average_d(qlist,numq,qstdev) result(res)
+!DEC$ ATTRIBUTES DLLEXPORT :: quat_average_d
 
 use local
 
@@ -4905,6 +5017,7 @@ end function quat_average_d
 !> @date  8/4/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine print_orientation(o,outtype,pretext)
+!DEC$ ATTRIBUTES DLLEXPORT :: print_orientation
 
 use local
 use io
@@ -5010,6 +5123,7 @@ end subroutine print_orientation
 !> @date  8/4/13   MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine print_orientation_d(o,outtype,pretext)
+!DEC$ ATTRIBUTES DLLEXPORT :: print_orientation_d
 
 use local
 use io

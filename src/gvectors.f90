@@ -77,6 +77,7 @@ contains
 !> @date  06/17/14 MDG 4.2 modification for separate reflist pointers; removed cell pointer
 !--------------------------------------------------------------------------
 recursive subroutine MakeRefList(listroot, rltail, nref)
+!DEC$ ATTRIBUTES DLLEXPORT :: MakeRefList
 
 use error
 
@@ -125,6 +126,7 @@ end subroutine MakeRefList
 !> @date  09/08/15 MDG 4.3 added qg entry
 !--------------------------------------------------------------------------
 recursive subroutine AddReflection(rltail,listroot,cell,nref,hkl)
+!DEC$ ATTRIBUTES DLLEXPORT :: AddReflection
 
 use error
 use constants
@@ -188,6 +190,7 @@ end subroutine AddReflection
 !> @date  06/09/14 MDG 4.0 added rlp and stdout arguments
 !--------------------------------------------------------------------------
 subroutine Printrlp(rlp,first,stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: Printrlp
 
 use io
 use constants
@@ -281,6 +284,7 @@ end subroutine Printrlp
 !> @date  06/17/14 MDG 2.1 added listroot, listrootw, nns, nnw arguments
 !--------------------------------------------------------------------------
 recursive subroutine Apply_BethePotentials(cell, listroot, listrootw, BetheParameter, nref, nns, nnw)
+!DEC$ ATTRIBUTES DLLEXPORT :: Apply_BethePotentials
 
 use io
 use diffraction
@@ -419,6 +423,7 @@ end subroutine Apply_BethePotentials
 !> @date  06/09/14 MDG 4.1 added cell, reflist, BetheParameter and khead arguments
 !--------------------------------------------------------------------------
 subroutine Prune_ReflectionList(cell,khead,reflist,Dyn,BetheParameter,numk,nbeams)
+!DEC$ ATTRIBUTES DLLEXPORT :: Prune_ReflectionList
 
 use io
 use crystal
@@ -585,6 +590,7 @@ end subroutine Prune_ReflectionList
 !> @date   06/09/14 MDG 2.0 added cell, reflist and BetheParameter as arguments
 !--------------------------------------------------------------------------
 recursive subroutine Compute_DynMat(cell,reflist,Dyn,BetheParameter,calcmode,kk,kt,IgnoreFoilNormal,IncludeSecondOrder)
+!DEC$ ATTRIBUTES DLLEXPORT :: Compute_DynMat
 
 use error
 use constants
@@ -922,6 +928,7 @@ end subroutine Compute_DynMat
 !> @date   10/07/15 MDG 1.1 added c1 etc parameters to namelist file
 !--------------------------------------------------------------------------
 subroutine Set_Bethe_Parameters(BetheParameter,silent)
+!DEC$ ATTRIBUTES DLLEXPORT :: Set_Bethe_Parameters
 
 use io
 
@@ -991,6 +998,7 @@ end subroutine Set_Bethe_Parameters
 !> @date  06/09/14 MDG 2.1 added cell argument 
 !--------------------------------------------------------------------------
 subroutine ShortestGFOLZ(cell,k,ga,gb,gshort,gp)
+!DEC$ ATTRIBUTES DLLEXPORT :: ShortestGFOLZ
 
 use io
 use crystal
@@ -1070,6 +1078,7 @@ end subroutine ShortestGFOLZ
 !> @date   06/17/14 MDG 1.2 replaced cell by top
 !--------------------------------------------------------------------------
 recursive subroutine Delete_gvectorlist(top)
+!DEC$ ATTRIBUTES DLLEXPORT :: Delete_gvectorlist
 
 IMPLICIT NONE
 
@@ -1115,6 +1124,7 @@ end subroutine Delete_gvectorlist
 !> @date 10/05/13 MDG 1.2 limit the range of reflections by means of the convergence angle (optional)
 !--------------------------------------------------------------------------
 subroutine Compute_ReflectionListZoneAxis(cell,listroot,BetheParameter,FN,dmin,k,ga,gb,nref)
+!DEC$ ATTRIBUTES DLLEXPORT :: Compute_ReflectionListZoneAxis
 
 use local
 use io

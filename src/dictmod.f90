@@ -132,6 +132,7 @@ contains
 !> @date 02/05/15 MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function DI_RotateToMu(N, lmu, y) result(ymu)
+!DEC$ ATTRIBUTES DLLEXPORT :: DI_RotateToMu
 
 use local
 
@@ -188,6 +189,7 @@ end function DI_RotateToMu
 !> @date 01/07/15 MDG 1.0 original, based on Yu-Hui's Matlab code, output transposed
 !--------------------------------------------------------------------------
 recursive function randUniformSphere(N,seed) result(ranSphere)
+!DEC$ ATTRIBUTES DLLEXPORT :: randUniformSphere
 
 use local
 use math
@@ -230,6 +232,7 @@ end function randUniformSphere
 !> @date 01/07/15 MDG 1.0 original, based on Yu-Hui's Matlab code
 !--------------------------------------------------------------------------
 recursive function DI_SampleDD(N, seed, mu, kappa, Dtype) result(sDD)
+!DEC$ ATTRIBUTES DLLEXPORT :: DI_SampleDD
 
 use local
 use error
@@ -295,6 +298,7 @@ end function DI_SampleDD
 !> @date 02/05/15 MDG 1.1 consolidated routines for VMF and WAT distributions
 !--------------------------------------------------------------------------
 recursive function randDDMarginal(N, k, seed, Dtype) result(t)
+!DEC$ ATTRIBUTES DLLEXPORT :: randDDMarginal
 
 use local
 use math
@@ -344,6 +348,7 @@ end function randDDMarginal
 !> @date 02/05/15 MDG 1.1 consolidated routines for VMF and WAT distributions
 !--------------------------------------------------------------------------
 recursive function getDDDensityLBM(k,C,Dtype) result(LBM)
+!DEC$ ATTRIBUTES DLLEXPORT :: getDDDensityLBM
 
 use local
 use error
@@ -408,6 +413,7 @@ end function getDDDensityLBM
 !> @date 01/07/15 MDG 1.0 original, based on Yu-Hui's Matlab code
 !--------------------------------------------------------------------------
 recursive function VMFMeanDirDensity(x, k, C) result(y)
+!DEC$ ATTRIBUTES DLLEXPORT :: VMFMeanDirDensity
 
 use local
 use constants
@@ -452,6 +458,7 @@ end function VMFMeanDirDensity
 !> @date 02/05/15 MDG 1.0 original
 !--------------------------------------------------------------------------
 recursive function WatsonMeanDirDensity(x, k, C) result(y)
+!DEC$ ATTRIBUTES DLLEXPORT :: WatsonMeanDirDensity
 
 use local
 use constants
@@ -512,6 +519,7 @@ end function WatsonMeanDirDensity
 !> @date 02/06/15 MDG 1.2 removed full again after extensive testing; no need to use 2M operators
 !--------------------------------------------------------------------------
 recursive subroutine DI_Init(dict,Dtype) 
+!DEC$ ATTRIBUTES DLLEXPORT :: DI_Init
 
 use local
 use typedefs
@@ -673,6 +681,7 @@ end subroutine DI_Init
 !> @date 02/06/15 MDG 1.2 removed full again, added Dtype and streamlined code; removed duplications
 !--------------------------------------------------------------------------
 recursive subroutine DI_EMforDD(X, dict, nums, seed, muhat, kappahat, Dtype)
+!DEC$ ATTRIBUTES DLLEXPORT :: DI_EMforDD
 
 use local
 use constants
@@ -820,6 +829,7 @@ end subroutine DI_EMforDD
 !> @date 02/06/15 MDG 1.4 merged VMF and Watson Esteps into a single routine and renamed
 !--------------------------------------------------------------------------
 recursive function DD_Estep(X,dict,Pmdims,nums,Mu,Kappa,Dtype) result(R)
+!DEC$ ATTRIBUTES DLLEXPORT :: DD_Estep
 
 use local
 use typedefs
@@ -877,6 +887,7 @@ end function DD_Estep
 !> @date 02/06/15 MDG 1.5 merged Msteps for VMF and WAT and renamed
 !--------------------------------------------------------------------------
 recursive function DD_Mstep(X,dict,Pmdims,nums,R,Dtype) result(MuKa)
+!DEC$ ATTRIBUTES DLLEXPORT :: DD_Mstep
 
 use local
 use typedefs
@@ -984,6 +995,7 @@ end function DD_Mstep
 !> @date 02/06/15 MDG 1.4 merged VMF and WAT routines and renamed
 !--------------------------------------------------------------------------
 recursive subroutine DD_getQandL(X,dict,Pmdims,nums,MuKa,R,Q,L,Dtype)
+!DEC$ ATTRIBUTES DLLEXPORT :: DD_getQandL
 
 use local
 use typedefs
@@ -1049,6 +1061,7 @@ end subroutine DD_getQandL
 !> @date 02/06/15 MDG 1.3 merged 'VMF' and 'WAT' routines and renamed
 !--------------------------------------------------------------------------
 recursive function DD_Density(X,nums,mu,kappa,C,Dtype) result(y)
+!DEC$ ATTRIBUTES DLLEXPORT :: DD_Density
 
 use local
 
@@ -1101,6 +1114,7 @@ end function DD_Density
 !> @date 02/06/15 MDG 1.3 merged VMF and WAT routines
 !--------------------------------------------------------------------------
 recursive function logCp(kappa,Dtype) result(lCp)
+!DEC$ ATTRIBUTES DLLEXPORT :: logCp
 
 use local
 use constants
@@ -1166,6 +1180,7 @@ end function logCp
 !> @date 01/06/15 MDG 1.1 simplified summation loop and renamed routine
 !--------------------------------------------------------------------------
 recursive subroutine DI_Similarity_Classifier(array,k,npx,npy,returnarr)
+!DEC$ ATTRIBUTES DLLEXPORT :: DI_Similarity_Classifier
 
 use local
 
@@ -1222,6 +1237,7 @@ end subroutine DI_Similarity_Classifier
 !> @date MDG 1.1 changed types to integer 
 !--------------------------------------------------------------------------
 recursive subroutine CardIntersection(set1,set2,k,res)
+!DEC$ ATTRIBUTES DLLEXPORT :: CardIntersection
 
 use local
 

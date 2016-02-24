@@ -101,6 +101,7 @@ contains
 !> @date 03/26/15 MDG 2.0 modified with fortran2003 resources
 !--------------------------------------------------------------------------
 subroutine HDF_writeEMheader(HDF_head, dstr, tstrb, tstre, prn)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeEMheader
 
 use local
 use io
@@ -216,6 +217,7 @@ end subroutine HDF_writeEMheader
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_push(HDF_head, oT, oID, oName, verbose)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_push
 
 use local
 use io
@@ -270,6 +272,7 @@ end subroutine HDF_push
 !> @date 04/15/15  MDG 1.1 corrected off-by-one error in linked list, causing file to be improperly closed
 !--------------------------------------------------------------------------
 subroutine HDF_pop(HDF_head, closeall, verbose)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_pop
 
 use local
 use io
@@ -367,6 +370,7 @@ end subroutine HDF_pop
 !> @date 03/19/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_stackdump(HDF_head)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_stackdump
 
 use local
 use io
@@ -409,6 +413,7 @@ end subroutine HDF_stackdump
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_handleError(error,OffendingRoutine, NonFatal)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_handleError
 
 use io
 use local
@@ -801,6 +806,7 @@ end function HDF_readfromTextfile
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_readDatasetStringArray(dataname, nlines, HDF_head, hdferr, stringarray)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readDatasetStringArray
 
 use ISO_C_BINDING
 
@@ -2541,6 +2547,7 @@ end function HDF_writeDatasetDoubleArray4D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_readDatasetCharArray1D(dataname, dims, HDF_head, hdferr, rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readDatasetCharArray1D
 
 use ISO_C_BINDING
 
@@ -2597,6 +2604,7 @@ end subroutine HDF_readDatasetCharArray1D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_readDatasetCharArray2D(dataname, dims, HDF_head, hdferr, rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readDatasetCharArray2D
 
 use ISO_C_BINDING
 
@@ -2654,6 +2662,7 @@ end subroutine HDF_readDatasetCharArray2D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_readDatasetCharArray3D(dataname, dims, HDF_head, hdferr, rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readDatasetCharArray3D
 
 use ISO_C_BINDING
 
@@ -2711,6 +2720,7 @@ end subroutine HDF_readDatasetCharArray3D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_readDatasetCharArray4D(dataname, dims, HDF_head, hdferr, rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readDatasetCharArray4D
 
 use ISO_C_BINDING
 
@@ -2767,6 +2777,7 @@ end subroutine HDF_readDatasetCharArray4D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_readDatasetInteger(dataname, HDF_head, hdferr, rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readDatasetInteger
 
 use ISO_C_BINDING
 
@@ -2818,6 +2829,7 @@ end subroutine HDF_readDatasetInteger
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_readDatasetIntegerArray1D(dataname, dims, HDF_head, hdferr, rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readDatasetIntegerArray1D
 
 use ISO_C_BINDING
 
@@ -2874,6 +2886,7 @@ end subroutine HDF_readDatasetIntegerArray1D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_readDatasetIntegerArray2D(dataname, dims, HDF_head, hdferr, rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readDatasetIntegerArray2D
 
 use ISO_C_BINDING
 
@@ -2930,6 +2943,7 @@ end subroutine HDF_readDatasetIntegerArray2D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_readDatasetIntegerArray3D(dataname, dims, HDF_head, hdferr, rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readDatasetIntegerArray3D
 
 use ISO_C_BINDING
 
@@ -2986,6 +3000,7 @@ end subroutine HDF_readDatasetIntegerArray3D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_readDatasetIntegerArray4D(dataname, dims, HDF_head, hdferr, rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readDatasetIntegerArray4D
 
 use ISO_C_BINDING
 
@@ -3041,6 +3056,7 @@ end subroutine HDF_readDatasetIntegerArray4D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_readDatasetFloat(dataname, HDF_head, hdferr, rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readDatasetFloat
 
 use ISO_C_BINDING
 
@@ -3093,6 +3109,7 @@ end subroutine HDF_readDatasetFloat
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_readDatasetFloatArray1D(dataname, dims, HDF_head, hdferr, rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readDatasetFloatArray1D
 
 use ISO_C_BINDING
 
@@ -3151,6 +3168,7 @@ end subroutine HDF_readDatasetFloatArray1D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_readDatasetFloatArray2D(dataname, dims, HDF_head, hdferr, rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readDatasetFloatArray2D
 
 use ISO_C_BINDING
 
@@ -3209,6 +3227,7 @@ end subroutine HDF_readDatasetFloatArray2D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_readDatasetFloatArray3D(dataname, dims, HDF_head, hdferr, rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readDatasetFloatArray3D
 
 use ISO_C_BINDING
 
@@ -3267,6 +3286,7 @@ end subroutine HDF_readDatasetFloatArray3D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_readDatasetFloatArray4D(dataname, dims, HDF_head, hdferr, rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readDatasetFloatArray4D
 
 use ISO_C_BINDING
 
@@ -3324,6 +3344,7 @@ end subroutine HDF_readDatasetFloatArray4D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_readDatasetDouble(dataname, HDF_head, hdferr, rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readDatasetDouble
 
 use ISO_C_BINDING
 
@@ -3377,6 +3398,7 @@ end subroutine HDF_readDatasetDouble
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_readDatasetDoubleArray1D(dataname, dims, HDF_head, hdferr, rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readDatasetDoubleArray1D
 
 use ISO_C_BINDING
 
@@ -3435,6 +3457,7 @@ end subroutine HDF_readDatasetDoubleArray1D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_readDatasetDoubleArray2D(dataname, dims, HDF_head, hdferr, rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readDatasetDoubleArray2D
 
 use ISO_C_BINDING
 
@@ -3493,6 +3516,7 @@ end subroutine HDF_readDatasetDoubleArray2D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_readDatasetDoubleArray3D(dataname, dims, HDF_head, hdferr, rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readDatasetDoubleArray3D
 
 use ISO_C_BINDING
 
@@ -3552,6 +3576,7 @@ end subroutine HDF_readDatasetDoubleArray3D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine HDF_readDatasetDoubleArray4D(dataname, dims, HDF_head, hdferr, rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readDatasetDoubleArray4D
 
 use ISO_C_BINDING
 

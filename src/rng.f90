@@ -20,6 +20,7 @@ contains
 
 ! Seeds the RNG using a single integer and a default seed vector. 
 subroutine rng_seed(self, seed) 
+!DEC$ ATTRIBUTES DLLEXPORT :: rng_seed
 type(rng_t), intent(inout) :: self 
 integer, intent(in) :: seed 
 self%state(1) = seed 

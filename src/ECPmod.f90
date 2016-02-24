@@ -89,6 +89,7 @@ contains
 !>                         not supported anymore
 !--------------------------------------------------------------------------
 subroutine ECPreadMCfile(enl,acc,efile,verbose)
+!DEC$ ATTRIBUTES DLLEXPORT :: ECPreadMCfile
 
 use NameListTypedefs
 use files
@@ -270,6 +271,7 @@ end subroutine ECPreadMCfile
 !> @date 09/15/15  SS  4.0 modified for ECP master program
 !--------------------------------------------------------------------------
 subroutine ECPreadMasterfile(enl, master, mfile, verbose)
+!DEC$ ATTRIBUTES DLLEXPORT :: ECPreadMasterfile
 
 use NameListTypedefs
 use files
@@ -422,6 +424,7 @@ end subroutine ECPreadMasterfile
 !> @date 11/02/15  SS 1.1 changed output image to be ecpnl%npix x ecpnl%npix instead of 2*ecpnl%npix+1
 !--------------------------------------------------------------------------
 subroutine GetVectorsCone(ecpnl, klist, numk)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetVectorsCone
 
 use local
 use io
@@ -485,6 +488,7 @@ end subroutine GetVectorsCone
 !> @date 10/12/15  SS 1.0 original
 !--------------------------------------------------------------------------
 subroutine ECPreadangles(enl,angles,verbose)
+!DEC$ ATTRIBUTES DLLEXPORT :: ECPreadangles
 
 use NameListTypedefs
 use io
@@ -599,6 +603,7 @@ end subroutine ECPreadangles
 !> @date 10/27/15  SS 1.0 original
 !--------------------------------------------------------------------------
 subroutine ECPGenerateDetector(ecpnl, master, verbose)
+!DEC$ ATTRIBUTES DLLEXPORT :: ECPGenerateDetector
 
 use NameListTypedefs
 use io
@@ -699,6 +704,7 @@ end subroutine ECPGenerateDetector
 !> @date 10/27/15  SS 1.0 original
 !--------------------------------------------------------------------------
 subroutine ECPGetWeightFactors(ecpnl, master, acc, weightfact, nsig, verbose)
+!DEC$ ATTRIBUTES DLLEXPORT :: ECPGetWeightFactors
 
 use NameListTypedefs
 use io

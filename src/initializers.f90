@@ -69,6 +69,7 @@ contains
 !> @date 09/08/15 MDG 2.2 added LUTqg array to cell
 !--------------------------------------------------------------------------
 recursive subroutine Initialize_Cell(cell,Dyn,rlp,xtalname, dmin, voltage, verbose)
+!DEC$ ATTRIBUTES DLLEXPORT :: Initialize_Cell
 
 use local
 use typedefs
@@ -241,6 +242,7 @@ end subroutine Initialize_Cell
 !> @date 06/23/14 MDG 2.2 replaced Dyn structure by FN
 !--------------------------------------------------------------------------
 recursive subroutine Initialize_ReflectionList(cell, listroot, BetheParameter, FN, k, dmin, nref, verbose)
+!DEC$ ATTRIBUTES DLLEXPORT :: Initialize_ReflectionList
 
 use local
 use typedefs
@@ -355,6 +357,7 @@ end subroutine Initialize_ReflectionList
 !> @date 11/30/14 MDG 3.0 forked from original to accommodate PED case
 !--------------------------------------------------------------------------
 recursive subroutine Initialize_ReflectionList_EwaldSweep(cell, listroot, FN, k, nref, pedangle, goffset, verbose)
+!DEC$ ATTRIBUTES DLLEXPORT :: Initialize_ReflectionList_EwaldSweep
 
 use local
 use typedefs

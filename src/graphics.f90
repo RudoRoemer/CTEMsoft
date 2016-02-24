@@ -74,6 +74,7 @@ contains
 !> @date   06/0914  MDG 3.0 added cell argument
 !--------------------------------------------------------------------------
 subroutine ProjectionMatrix(cell,iview,M)
+!DEC$ ATTRIBUTES DLLEXPORT :: ProjectionMatrix
 
 use crystal
 
@@ -136,6 +137,7 @@ end subroutine
 !> @date   06/09/14 MDG 4.0 added hexset argument
 !--------------------------------------------------------------------------
 subroutine GetViewingDirection(hexset,iview)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetViewingDirection
 
 use crystal
 use postscript
@@ -178,6 +180,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 modified IO 
 !--------------------------------------------------------------------------
 subroutine GetDrawingSpace(sp)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetDrawingSpace
 
 use io
 
@@ -215,6 +218,7 @@ end subroutine
 !> @date   06/09/14 MDG 4.0 added PS and cell arguments
 !--------------------------------------------------------------------------
 subroutine StereoProj(PS,cell,sp,iview,hm,km,lm,topbot)
+!DEC$ ATTRIBUTES DLLEXPORT :: StereoProj
 
 use crystal
 use symmetry
@@ -339,6 +343,7 @@ end subroutine
 !> @date   06/09/14 MDG 4.0 added cell argument 
 !--------------------------------------------------------------------------
 subroutine ComputeViewTrans(cell,iview,M,VD)
+!DEC$ ATTRIBUTES DLLEXPORT :: ComputeViewTrans
 
 use crystal
 
@@ -420,6 +425,7 @@ end subroutine
 !> @date   06/09/14 MDG 4.0 made AXO and PS as arguments instead of globals
 !--------------------------------------------------------------------------
 subroutine initparameterset(AXO)
+!DEC$ ATTRIBUTES DLLEXPORT :: initparameterset
 
 use postscript
 
@@ -438,6 +444,7 @@ type(axonotype),INTENT(INOUT)	:: AXO
 end subroutine
 ! ###################################################################
 subroutine setmenu(AXO,what)
+!DEC$ ATTRIBUTES DLLEXPORT :: setmenu
 
 use postscript
 
@@ -510,6 +517,7 @@ end subroutine
 ! ###################################################################
 
 subroutine drawing(AXO,PS,AX,progdesc,imanum,zz,inten,nx,ny,dmode,axname)
+!DEC$ ATTRIBUTES DLLEXPORT :: drawing
 
 use postscript
 use constants
@@ -767,6 +775,7 @@ real(kind=sgl)      :: alfa,v1,v2,w1,w2,w3,n(3),e(3),l(3),h(3),pointx,pointy,xr,
 end subroutine drawing
 ! ###################################################################
 subroutine initframe(AX,mode,db)
+!DEC$ ATTRIBUTES DLLEXPORT :: initframe
  
 use postscript
 
@@ -805,6 +814,7 @@ end subroutine
 
 ! ###################################################################
 subroutine axonometry(AXO,PS,AX,progdesc,imanum,zz,nx,ny,g,axname)
+!DEC$ ATTRIBUTES DLLEXPORT :: axonometry
 
 use postscript
 use io
@@ -1062,6 +1072,7 @@ intent(INOUT)     :: l
 end function
 !  ******************************************************************************
 subroutine border(mode,xmin,xmax,n)
+!DEC$ ATTRIBUTES DLLEXPORT :: border
 !    
 !     border determines the world coordinates of the upper and
 !                                 n
@@ -1157,6 +1168,7 @@ character(3)                  :: mode
 end subroutine
 !  ******************************************************************************
 subroutine setticks(cp,d,low,high,ts,cs,cw,ch,sh,ich,typ,sx,sy)
+!DEC$ ATTRIBUTES DLLEXPORT :: setticks
 
 use postscript
 
@@ -1255,6 +1267,7 @@ real(kind=sgl),parameter      :: logtick(9) = (/0.000000000,0.301029996,0.477121
 end subroutine
 !  ******************************************************************************)
 subroutine setexponent(n,s)
+!DEC$ ATTRIBUTES DLLEXPORT :: setexponent
 
 use postscript
 
@@ -1359,6 +1372,7 @@ character(3)      :: m
 end function 
 !  ******************************************************************************)
 subroutine drawborder(low,high,n,s,m)
+!DEC$ ATTRIBUTES DLLEXPORT :: drawborder
 
 use postscript
 
@@ -1463,6 +1477,7 @@ character(4)            :: settick
 end subroutine
 !  ******************************************************************************
 subroutine drawfigure(xmin,xmax,ymin,ymax,pmode,mark,points,xmode,ymode,xvec,yvec)
+!DEC$ ATTRIBUTES DLLEXPORT :: drawfigure
 
 use postscript
  
@@ -1532,6 +1547,7 @@ real(kind=sgl)       :: xvec(points),yvec(points)
 end subroutine
 !  ******************************************************************************
 subroutine axis(AX,points,xvec,yvec,xmin,xmax,ymin,ymax,xautorange,yautorange, &
+!DEC$ ATTRIBUTES DLLEXPORT :: axis
                 xmode,ymode,pmode,mark,scalex,scaley,overplot,db,title,xtitle,ytitle)
 
 use postscript
@@ -1686,6 +1702,7 @@ contains
 
 !---------------------------------------------
 subroutine make_node(i,j,nd)
+!DEC$ ATTRIBUTES DLLEXPORT :: make_node
 
 
 IMPLICIT NONE
@@ -1704,6 +1721,7 @@ end subroutine make_node
 
 !---------------------------------------------
 subroutine make_central_node(i,j,nd)
+!DEC$ ATTRIBUTES DLLEXPORT :: make_central_node
 
 IMPLICIT NONE
 
@@ -1720,6 +1738,7 @@ end subroutine make_central_node
 
 !---------------------------------------------
 subroutine make_triangle(n1,n2,n3,t)
+!DEC$ ATTRIBUTES DLLEXPORT :: make_triangle
 
 IMPLICIT NONE
 
@@ -1746,6 +1765,7 @@ end subroutine make_triangle
 
 !---------------------------------------------
 subroutine make_vector(n1,n2,t1,t2)
+!DEC$ ATTRIBUTES DLLEXPORT :: make_vector
 
 IMPLICIT NONE
 
@@ -1796,6 +1816,7 @@ end subroutine
 !---------------------------------------------
 
 subroutine plot_line(t,v)
+!DEC$ ATTRIBUTES DLLEXPORT :: plot_line
 
 use postscript 
 
@@ -1827,6 +1848,7 @@ end subroutine
 
 !---------------------------------------------
 subroutine plot_contour
+!DEC$ ATTRIBUTES DLLEXPORT :: 
 
 use postscript 
 
@@ -1890,6 +1912,7 @@ end subroutine
 !---------------------------------------------
 
 subroutine contour
+!DEC$ ATTRIBUTES DLLEXPORT :: 
                       
 !                                              
 ! definition of vectors, nodes and triangles

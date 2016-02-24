@@ -69,6 +69,7 @@ contains
 !> @date  06/10/14 MDG 4.1 added foil argument
 !--------------------------------------------------------------------------
 subroutine read_inclusion_data(defects,foil,DF_L,DF_npix,DF_npiy,dinfo)
+!DEC$ ATTRIBUTES DLLEXPORT :: read_inclusion_data
 
 use io
 use files

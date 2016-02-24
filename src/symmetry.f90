@@ -75,6 +75,7 @@ contains
 !> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable 
 !--------------------------------------------------------------------------
 subroutine SYM_fillgen(cell,t,isgn)
+!DEC$ ATTRIBUTES DLLEXPORT :: SYM_fillgen
 
 IMPLICIT NONE
 
@@ -150,6 +151,7 @@ end subroutine SYM_fillgen
 !> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable 
 !--------------------------------------------------------------------------!     
 subroutine MakeGenerators(cell)
+!DEC$ ATTRIBUTES DLLEXPORT :: MakeGenerators
 
 use math
 
@@ -274,6 +276,7 @@ end subroutine MakeGenerators
 !> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable 
 !--------------------------------------------------------------------------
 subroutine matrixmult(cell, k1, k2)
+!DEC$ ATTRIBUTES DLLEXPORT :: matrixmult
    
 IMPLICIT NONE
 
@@ -385,6 +388,7 @@ end function isitnew
 !> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable 
 !--------------------------------------------------------------------------
 subroutine GenerateSymmetry(cell,dopg)
+!DEC$ ATTRIBUTES DLLEXPORT :: GenerateSymmetry
 
 IMPLICIT NONE
 
@@ -493,6 +497,7 @@ end subroutine GenerateSymmetry
 !> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable; replaced itmp by argument
 !--------------------------------------------------------------------------
 subroutine Calc2DFamily(cell,ind,ksame,numksame,nunique,itmp)
+!DEC$ ATTRIBUTES DLLEXPORT :: Calc2DFamily
         
 IMPLICIT NONE
 
@@ -563,6 +568,7 @@ end subroutine Calc2DFamily
 !> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable; replaced itmp by argument
 !--------------------------------------------------------------------------
 recursive subroutine CalcFamily(cell,ind,num,space,itmp)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcFamily
 
 IMPLICIT NONE
 
@@ -638,6 +644,7 @@ end subroutine CalcFamily
 !> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable; replaced itmp by argument
 !--------------------------------------------------------------------------
 recursive subroutine CalcOrbit(cell,m,n,ctmp)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcOrbit
 
 IMPLICIT NONE
 
@@ -725,6 +732,7 @@ end subroutine CalcOrbit
 !> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable; replaced itmp by argument
 !--------------------------------------------------------------------------
 recursive subroutine CalcStar(cell,kk,n,stmp,space)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcStar
 
 IMPLICIT NONE
 
@@ -801,6 +809,7 @@ end subroutine CalcStar
 !> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable; replaced itmp by argument
 !--------------------------------------------------------------------------
 subroutine CalcPositions(cell,switch)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcPositions
 
 use io
 use error
@@ -915,6 +924,7 @@ end subroutine CalcPositions
 !> @date  08/14/15 MDG 4.2 minor change in handling of iset for space group with only one setting
 !--------------------------------------------------------------------------
 subroutine GetSetting(cell, iset)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetSetting
 
 use io
 
@@ -1006,6 +1016,7 @@ end subroutine GetSetting
 !> @date  06/05/14 MDG 4.1 made cell an argument instead of global variable
 !--------------------------------------------------------------------------
 subroutine GetSpaceGroup(cell)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetSpaceGroup
 
 use io
 
@@ -1107,6 +1118,7 @@ end subroutine GetSpaceGroup
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 subroutine GetOrder(k,il,num,jcnt,itmp)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetOrder
 
 IMPLICIT NONE
 
@@ -1182,6 +1194,7 @@ end subroutine GetOrder
 !> @date  06/05/14 MDG 4.1 added unit cell pointer as argument
 !--------------------------------------------------------------------------
 subroutine ShortestG(cell,k,gone,gtwo,isym)
+!DEC$ ATTRIBUTES DLLEXPORT :: ShortestG
 
 use error
 use crystal
@@ -1443,6 +1456,7 @@ end function IsGAllowed
 !> @date  06/05/14 MDG 4.1 added unit cell pointer as argument
 !--------------------------------------------------------------------------
 subroutine BFsymmetry(cell,uvw,j,isym,ir)
+!DEC$ ATTRIBUTES DLLEXPORT :: BFsymmetry
 
 IMPLICIT NONE
 
@@ -2108,6 +2122,7 @@ end function GetDiffractionGroup
 !> @date  01/10/14 MDG 4.0 SG is now part of the unitcell type
 !--------------------------------------------------------------------------
 subroutine Generate2DSymmetry(TDPG,pgn)
+!DEC$ ATTRIBUTES DLLEXPORT :: Generate2DSymmetry
 
 use error
 
@@ -2254,6 +2269,7 @@ end subroutine Generate2DSymmetry
 !> @date  06/05/14 MDG 4.1 added unit cell pointer as argument
 !--------------------------------------------------------------------------
 subroutine CheckPatternSymmetry(cell,k,ga,isym,thetam)
+!DEC$ ATTRIBUTES DLLEXPORT :: CheckPatternSymmetry
 
 use error
 use crystal
@@ -2319,6 +2335,7 @@ end subroutine CheckPatternSymmetry
 !> @date  11/06/15 MDG 1.2 fixed special cases (errors for trigonal symmetry)
 !--------------------------------------------------------------------------
 recursive function getHexvsRho(cell,pgnum) result(stnum)
+!DEC$ ATTRIBUTES DLLEXPORT :: getHexvsRho
 
 use local
 use constants

@@ -145,6 +145,7 @@ contains
 !> @date   06/08/14 MDG 4.0 added PS, progdesc, imanum as arguments
 !--------------------------------------------------------------------------
 subroutine PS_openfile(PS, progdesc, imanum, dontask)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_openfile
 
 use io
 use files
@@ -216,6 +217,7 @@ end subroutine
 !> @date   06/08/14 MDG 4.0 added PS as argument
 !--------------------------------------------------------------------------
 subroutine PS_closefile(PS)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_closefile
 
 use files
 
@@ -253,6 +255,7 @@ end subroutine
 !> @date   06/08/14 MDG 4.0 added PS as argument
 !--------------------------------------------------------------------------
 subroutine PS_newpage(PS, frm, btxt)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_newpage
 
 IMPLICIT NONE
 
@@ -305,6 +308,7 @@ end subroutine
 !> @date   06/08/14 MDG 4.0 added PS and cell as argument
 !--------------------------------------------------------------------------
 subroutine PS_cellinfo(PS, cell, xo, yo)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_cellinfo
 
 IMPLICIT NONE
 
@@ -344,6 +348,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_clippath
+!DEC$ ATTRIBUTES DLLEXPORT :: 
 
 IMPLICIT NONE
 
@@ -368,6 +373,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_translate(x,y)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_translate
 
 IMPLICIT NONE
 
@@ -394,6 +400,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_move(x,y)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_move
 
 IMPLICIT NONE
 
@@ -420,6 +427,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_draw(x,y)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_draw
 
 IMPLICIT NONE
 
@@ -449,6 +457,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_line_gray(x1,y1,x2,y2,gray)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_line_gray
         
 IMPLICIT NONE
 
@@ -481,6 +490,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_setlinewidth(x)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_setlinewidth
 
 IMPLICIT NONE
 
@@ -508,6 +518,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_square(x,y,edge)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_square
 
 IMPLICIT NONE
 
@@ -545,6 +556,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_filledsquare(x,y,edge,graylevel)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_filledsquare
        
 IMPLICIT NONE
 
@@ -583,6 +595,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_cross(x,y,edge,lw)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_cross
         
 IMPLICIT NONE
 
@@ -625,6 +638,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_sphere(x,y,r,clr)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_sphere
 
 IMPLICIT NONE
 
@@ -664,6 +678,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_arc(x0,y0,x,y,radius,ang1,ang2)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_arc
 
 IMPLICIT NONE
 
@@ -695,6 +710,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_circle(x,y,radius)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_circle
 
 IMPLICIT NONE
 
@@ -724,6 +740,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_filledcircle(x,y,radius,graylevel)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_filledcircle
         
 IMPLICIT NONE
 
@@ -753,6 +770,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_drawframe(x,y)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_drawframe
         
 IMPLICIT NONE
 
@@ -782,6 +800,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_drawrect(x1,y1,x2,y2)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_drawrect
         
 IMPLICIT NONE
 
@@ -819,6 +838,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_line(x1,y1,x2,y2)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_line
         
 IMPLICIT NONE
 
@@ -851,6 +871,7 @@ end subroutine
 !> @date   06/08/14 MDG 4.0 added PS as argument
 !--------------------------------------------------------------------------
 subroutine PS_setdash(PS, num)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_setdash
 
 IMPLICIT NONE
 
@@ -881,6 +902,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_closepathS  
+!DEC$ ATTRIBUTES DLLEXPORT :: 
 
 IMPLICIT NONE
 
@@ -902,6 +924,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_stroke
+!DEC$ ATTRIBUTES DLLEXPORT :: 
 
 IMPLICIT NONE
 
@@ -923,6 +946,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_gsave
+!DEC$ ATTRIBUTES DLLEXPORT :: 
 
 IMPLICIT NONE
 
@@ -944,6 +968,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_grestore
+!DEC$ ATTRIBUTES DLLEXPORT :: 
 
 IMPLICIT NONE
 
@@ -965,6 +990,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_closepath   
+!DEC$ ATTRIBUTES DLLEXPORT :: 
 
 IMPLICIT NONE
 
@@ -986,6 +1012,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_newpath     
+!DEC$ ATTRIBUTES DLLEXPORT :: 
 
 IMPLICIT NONE
 
@@ -1011,6 +1038,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_text(x,y,line)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_text
 
 IMPLICIT NONE
 
@@ -1042,6 +1070,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_textv(x,y,line)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_textv
 
 IMPLICIT NONE
 
@@ -1074,6 +1103,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_texttitle(x,y,line,q)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_texttitle
 
 IMPLICIT NONE
 
@@ -1107,6 +1137,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_textvtitle(x,y,line,q)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_textvtitle
 
 IMPLICIT NONE
 
@@ -1143,6 +1174,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_textint(x,y,line,vl)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_textint
 
 IMPLICIT NONE
 
@@ -1177,6 +1209,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_textvar(x,y,line,vl)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_textvar
 
 IMPLICIT NONE
 
@@ -1211,6 +1244,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_textvar8(x,y,line,vl)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_textvar8
 
 IMPLICIT NONE
 
@@ -1246,6 +1280,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_textballoon(x,y,line,font,sc)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_textballoon
 
 IMPLICIT NONE
 
@@ -1291,6 +1326,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_balloon(x,y,le,he,w)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_balloon
 
 IMPLICIT NONE
 
@@ -1324,6 +1360,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_setfont(line,sc)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_setfont
 
 IMPLICIT NONE
 
@@ -1361,6 +1398,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine Printhkl(x,y,h,k,l)
+!DEC$ ATTRIBUTES DLLEXPORT :: Printhkl
 
 IMPLICIT NONE
 
@@ -1430,6 +1468,7 @@ end subroutine
 !> @date   06/08/14 MDG 4.0 added PS as argument
 !--------------------------------------------------------------------------
 subroutine DumpIndices(PS,hexset,S,h,k,l,c,x,y,n)
+!DEC$ ATTRIBUTES DLLEXPORT :: DumpIndices
 
 use crystal
 
@@ -1560,6 +1599,7 @@ end subroutine
 !> @date   06/09/14 MDG 4.0 added argument hexset
 !--------------------------------------------------------------------------
 subroutine PrintIndices(S,hexset,h,k,l,x,y)
+!DEC$ ATTRIBUTES DLLEXPORT :: PrintIndices
 
 IMPLICIT NONE
 
@@ -1600,6 +1640,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_DumpImage(imaint,imanum,x0,y0,npx,npy,scl)
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_DumpImage
 
 IMPLICIT NONE
 
@@ -1639,6 +1680,7 @@ end subroutine
 !> @date   06/08/14 MDG 4.0 added imaint and imanum as arguments
 !--------------------------------------------------------------------------
 subroutine PS_DumpImageDistort(imaint,imanum,x0,y0,npx,npy,sclx,scly)   
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_DumpImageDistort
 
 IMPLICIT NONE
 
@@ -1703,6 +1745,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine IndexReduce(hkl)
+!DEC$ ATTRIBUTES DLLEXPORT :: IndexReduce
 
 IMPLICIT NONE
 
@@ -1744,6 +1787,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine IndexReduceMB(hkl)
+!DEC$ ATTRIBUTES DLLEXPORT :: IndexReduceMB
 
 IMPLICIT NONE
 
@@ -1789,6 +1833,7 @@ end subroutine
 !< @date   06/09/14 MDG 4.0 added argument hexset
 !--------------------------------------------------------------------------
 subroutine IndexString(hexset,st,hkl,sp)
+!DEC$ ATTRIBUTES DLLEXPORT :: IndexString
 
 use crystal 
 
@@ -1888,6 +1933,7 @@ end subroutine
 !> @date   06/09/14 MDG 4.0 added arguments PS, cell
 !--------------------------------------------------------------------------
 subroutine DrawSPFrame(PS,cell,CX,CY,CRad,iview,sp)
+!DEC$ ATTRIBUTES DLLEXPORT :: DrawSPFrame
 
 IMPLICIT NONE
 
@@ -1945,6 +1991,7 @@ end subroutine
 !> @date   06/09/14 MDG 4.0 added hexset argument
 !--------------------------------------------------------------------------
 subroutine GetIndex(hexset,ind,sp)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetIndex
 
 use crystal
 use io
