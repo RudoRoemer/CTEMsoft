@@ -118,8 +118,13 @@ cd $SCRIPT_DIR
 sudo ./Build_FFTW3.sh "${SDK_INSTALL}" ${PARALLEL_BUILD}
 
 #-------------------------------------------------
-# Build FotranCL
-sudo ./Build_FortranCL.sh "${SDK_INSTALL}" ${PARALLEL_BUILD}
+# Build FortranCL    [disabled after switch to clfortran]
+#sudo ./Build_FortranCL.sh "${SDK_INSTALL}" ${PARALLEL_BUILD}
+
+#-------------------------------------------------
+# Build CLFortran
+sudo ./Build_CLFortran.sh "${SDK_INSTALL}" ${PARALLEL_BUILD}
+
 
 #-------------------------------------------------
 # Build JsonFortran Library
