@@ -2561,7 +2561,7 @@ character(len=1), allocatable, TARGET, INTENT(OUT)      :: rdata(:)
 
 integer(HID_T)                                          :: space, dset ! Handles
 integer                                                 :: rnk
-integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+integer(HSIZE_T), DIMENSION(1:1)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
 
@@ -2676,7 +2676,7 @@ character(len=1), allocatable, TARGET, INTENT(OUT)      :: rdata(:,:,:)
 
 integer(HID_T)                                          :: space, dset ! Handles
 integer                                                 :: rnk
-integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+integer(HSIZE_T), DIMENSION(1:3)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
 
@@ -2734,7 +2734,7 @@ character(len=1), allocatable, TARGET, INTENT(OUT)      :: rdata(:,:,:,:)
 
 integer(HID_T)                                          :: space, dset ! Handles
 integer                                                 :: rnk
-integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+integer(HSIZE_T), DIMENSION(1:4)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
 
@@ -2843,7 +2843,7 @@ integer, allocatable, TARGET, INTENT(OUT)               :: rdata(:)
 
 integer(HID_T)                                          :: space, dset ! Handles
 integer                                                 :: rnk
-integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+integer(HSIZE_T), DIMENSION(1:1)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
 
@@ -2957,7 +2957,7 @@ integer, allocatable, TARGET, INTENT(OUT)               :: rdata(:,:,:)
 
 integer(HID_T)                                          :: space, dset ! Handles
 integer                                                 :: rnk
-integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+integer(HSIZE_T), DIMENSION(1:3)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
 
@@ -3014,7 +3014,7 @@ integer, allocatable, TARGET, INTENT(OUT)               :: rdata(:,:,:,:)
 
 integer(HID_T)                                          :: space, dset ! Handles
 integer                                                 :: rnk
-integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+integer(HSIZE_T), DIMENSION(1:4)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
 
@@ -3125,7 +3125,7 @@ real(real_kind), allocatable, TARGET, INTENT(OUT)       :: rdata(:)
 
 integer(HID_T)                                          :: space, dset ! Handles
 integer                                                 :: rnk
-integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+integer(HSIZE_T), DIMENSION(1:1)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
 
@@ -3243,7 +3243,7 @@ real(real_kind), allocatable, TARGET, INTENT(OUT)       :: rdata(:,:,:)
 
 integer(HID_T)                                          :: space, dset ! Handles
 integer                                                 :: rnk
-integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+integer(HSIZE_T), DIMENSION(1:3)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
 
@@ -3302,7 +3302,7 @@ real(real_kind), allocatable, TARGET, INTENT(OUT)       :: rdata(:,:,:,:)
 
 integer(HID_T)                                          :: space, dset ! Handles
 integer                                                 :: rnk
-integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+integer(HSIZE_T), DIMENSION(1:4)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
 
@@ -3414,7 +3414,7 @@ real(real_kind), allocatable, TARGET, INTENT(OUT)       :: rdata(:)
 
 integer(HID_T)                                          :: space, dset ! Handles
 integer                                                 :: rnk
-integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+integer(HSIZE_T), DIMENSION(1:1)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
 
@@ -3532,7 +3532,7 @@ real(real_kind), allocatable, TARGET, INTENT(OUT)       :: rdata(:,:,:)
 
 integer(HID_T)                                          :: space, dset ! Handles
 integer                                                 :: rnk
-integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+integer(HSIZE_T), DIMENSION(1:3)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
 
@@ -3592,7 +3592,7 @@ real(real_kind), allocatable, TARGET, INTENT(OUT)       :: rdata(:,:,:,:)
 
 integer(HID_T)                                          :: space, dset ! Handles
 integer                                                 :: rnk
-integer(HSIZE_T), DIMENSION(1:2)                        :: maxdims
+integer(HSIZE_T), DIMENSION(1:4)                        :: maxdims
 
 TYPE(C_PTR)                                             :: f_ptr
 
