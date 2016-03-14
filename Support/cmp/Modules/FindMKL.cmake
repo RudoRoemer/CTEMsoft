@@ -47,7 +47,7 @@ set(MKL_POSSIBLE_LOCATIONS
     "C:/Program Files/Intel/Composer XE 2013/mkl"
     "C:/Program Files (x86)/Intel/Composer XE 2015/mkl/"
     "C:/Program Files/Intel/Composer XE 2015/mkl/"
-    "C:/Program Files (x86)/IntelSWTools/compilers_and_libraries/windows/mkl"
+    "C:/Program Files (x86)/IntelSWTools/compilers_and_libraries_2016/windows/mkl"
 )
 
 foreach (i ${MKL_POSSIBLE_LOCATIONS})
