@@ -1254,8 +1254,8 @@ end subroutine CalcsigmaggSubstrate
 !--------------------------------------------------------------------------
 
 recursive subroutine GetStrongBeamsSubs(cell_film,cell_subs,reflist_film,refliststrong_subs,&
-!DEC$ ATTRIBUTES DLLEXPORT :: GetStrongBeamsSubs
 k0,FN_film,FN_subs,nns_film,dmin,TTinv,rlp_subs,dthick)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetStrongBeamsSubs
 
 
 use typedefs
