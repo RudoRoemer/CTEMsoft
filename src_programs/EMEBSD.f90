@@ -48,6 +48,7 @@
 !> @date  09/01/15  MDG 5.1 change from single to double Lambert master patterns (lots of changes)
 !> @date  09/26/15  MDG 5.2 added json support for nml file
 !> @date  10/07/15  MDG 5.3 minor clean up in preparation for release 3.0
+!> #date  03/15/16  MDG 5.4 changed OMP loop mode to DYNAMIC to improve performance
 ! ###################################################################
 
 program EMEBSD
@@ -483,7 +484,7 @@ do ibatch=1,nbatches+1
 ! initialize the random number generator for the Poison noise
   idum = -1-TID               
 
-!$OMP DO SCHEDULE(STATIC,1024)  
+!$OMP DO SCHEDULE(DYNAMIC)  
   do iang=istart,istop
 ! convert the direction cosines to quaternions, include the 
 ! sample quaternion orientation, and then back to direction cosines...
