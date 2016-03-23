@@ -228,7 +228,7 @@ end subroutine TIFF_Make_Tag
 !
 !--------------------------------------------------------------------------
 subroutine TIFF_Write_File
-!DEC$ ATTRIBUTES DLLEXPORT :: 
+!DEC$ ATTRIBUTES DLLEXPORT :: TIFF_Write_File
 
 IMPLICIT NONE
 

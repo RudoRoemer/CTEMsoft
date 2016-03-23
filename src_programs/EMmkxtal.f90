@@ -72,6 +72,9 @@ character(fnlen)                :: progname, progdesc, fname
  cell%fname = fname
  call SaveDataHDF(cell)
 
- call Message('File '//trim(fname)//' created in XtalFolder')
+ fname = EMsoft_toNativePath(trim(xtalpathname)//"\\"//trim(cell%fname))
+
+
+ call Message('Created File '//trim(fname)//'')
 
 end program EMmkxtal

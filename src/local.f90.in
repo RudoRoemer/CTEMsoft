@@ -119,14 +119,23 @@ module local
 !> pathnames to the namelist template files
 ! This should be reworked via CMake commands
   character(fnlen)                      :: EMsoftpathname
+!DEC$ ATTRIBUTES DLLEXPORT :: EMsoftpathname
   character(fnlen)                      :: EMdatapathname
+!DEC$ ATTRIBUTES DLLEXPORT :: EMdatapathname
   character(fnlen)                      :: templatepathname 
+!DEC$ ATTRIBUTES DLLEXPORT :: templatepathname
   character(fnlen)                      :: EMtmppathname 
+!DEC$ ATTRIBUTES DLLEXPORT :: EMtmppathname
   character(fnlen)                      :: resourcepathname
+!DEC$ ATTRIBUTES DLLEXPORT :: resourcepathname
   character(fnlen)                      :: openclpathname
+!DEC$ ATTRIBUTES DLLEXPORT :: openclpathname
   character(fnlen)                      :: xtalpathname
+!DEC$ ATTRIBUTES DLLEXPORT :: xtalpathname
   character(fnlen)                      :: templatecodefilename 
+!DEC$ ATTRIBUTES DLLEXPORT :: templatecodefilename
   character(fnlen)                      :: randomseedfilename 
+!DEC$ ATTRIBUTES DLLEXPORT :: randomseedfilename
 
 contains
 
@@ -333,8 +342,14 @@ if (pathstring.eq.'') then ! try the EMsoftConfig.json file
     stop
   end if
 
-! get the user's home directory to prepend to the config file name
-  call getenv("HOME",dirstring)
+  ! get the user's home directory to prepend to the config file name
+  if (trim(EMsoftplatform).eq.'Windows') then
+    call getenv("USERPROFILE",dirstring)
+    dirstring = EMsoft_fromNativePath(dirstring)
+  else
+    call getenv("HOME",dirstring)
+  end if 
+
   jsonname = trim(dirstring)//'/.config/EMsoft/EMsoftConfig.json'
 
 ! and load the file

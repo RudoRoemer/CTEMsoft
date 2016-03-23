@@ -190,7 +190,7 @@ character(11),parameter :: SYM_SGname(237)= (/" P  1      " ," P -1      ", & ! 
         " F d 3 m   " ," F d 3 c   " ," I m 3 m   " ," I a 3 d   ", & ! TRIGONAL GROUPS RHOMBOHEDRAL SETTING
         " R 3   |146" ," R -3  |148" ," R 3 2 |155" ," R 3 m |160", &
         " R 3 c |161" ," R -3 m|166" ," R -3 c|167"/)
-
+!DEC$ ATTRIBUTES DLLEXPORT :: SYM_SGname
 
 !>  SYM_GL	encoded generator strings
 character(40),parameter :: SYM_GL(237)= (/  &
@@ -280,6 +280,7 @@ character(40),parameter :: SYM_GL(237)= (/  &
 integer(kind=irg),parameter :: SGPG(32) =(/1,2,3,6,10,16,25,47,75,81,83,89,99,111,123,143, &
                                           147,149,156,162,168,174,175,177,183,187,191,195, &
                                           200,207,215,221/)
+!DEC$ ATTRIBUTES DLLEXPORT :: SGPG
 
 !>  SGsym contains the numbers of all the symmorphic space groups
 integer(kind=irg),parameter :: SGsym(73) =(/1,2,3,5,6,8,10,12,16,21,22,23,25,35,38,42,44,47, &
@@ -288,6 +289,7 @@ integer(kind=irg),parameter :: SGsym(73) =(/1,2,3,5,6,8,10,12,16,21,22,23,25,35,
                                             157,160,162,164,165,168,174,175,177,183,187,189, &
                                             191,195,196,197,200,202,204,207,209,211,215,216, &
                                             217,221,225,229/)
+!DEC$ ATTRIBUTES DLLEXPORT :: SGsym
 
 ! these parameters implement the diffraction group
 ! formalism described in the BESR paper.
@@ -295,9 +297,11 @@ integer(kind=irg),parameter :: SGsym(73) =(/1,2,3,5,6,8,10,12,16,21,22,23,25,35,
 !> 10 2D point group symbols in International Tables order
 character(10),parameter  :: PGTWD(0:11) = (/ ' none     ','    1     ','    2     ','    m     ','  2mm     ','    4     ', &
                                              '  4mm     ','    3     ','   3m1    ','    6     ','  6mm     ','   31m    ' /)
+!DEC$ ATTRIBUTES DLLEXPORT :: PGTWD
 
 !> 10 2D point group orders in International Tables order
 integer(kind=irg),parameter       :: PGTWDorder(0:11) = (/0,1,2,2,4,4,8,3,6,6,12,6/)
+!DEC$ ATTRIBUTES DLLEXPORT :: PGTWDorder
 
 !> inverse table for 2D point groups; this essentially implements the inverse of Table 4 in BESR paper for the Bright Field symmetry.
 integer(kind=irg),parameter       :: PGTWDinverse(12,11) = reshape((/ & 
@@ -307,6 +311,7 @@ integer(kind=irg),parameter       :: PGTWDinverse(12,11) = reshape((/ &
                                    1,2,0,0,0,8,0,0,0,0,0,0,  1,3,0,0,0,9,0,0,0,0,0,0, &
                                    1,3,0,4,0,0,0,0,0,0,0,10, 1,3,7,4,0,0,0,0,0,0,0,0, &
                                    1,3,0,4,0,8,0,6,0,0,0,0 /), (/ 12,11 /))
+!DEC$ ATTRIBUTES DLLEXPORT :: PGTWDinverse
 
 
 !> 32 3D point group symbols in International Tables order
@@ -316,22 +321,28 @@ character(5),parameter  :: PGTHD(32) =(/'    1','   -1','    2','    m','  2/m',
                                         '   3m','  -3m','    6','   -6','  6/m','  622', &
                                         '  6mm',' -6m2','6/mmm','   23','   m3','  432', &
                                         ' -43m',' m-3m'/)
+!DEC$ ATTRIBUTES DLLEXPORT :: PGTHD
 
 !> 3D point groups : purely rotational point groups corresponding to each point group
 integer(kind=irg),parameter       :: PGrot(32) = (/1,1,3,3,3,6,6,6,9,9,9,12,12,12,12,16,16, &
                                                   18,18,18,21,21,21,24,24,24,24,28,28,30,30,30/)
-                                                  
+!DEC$ ATTRIBUTES DLLEXPORT :: PGrot
+
 !> 3D point groups : Laue group number
 integer(kind=irg),parameter       :: PGLaue(32) =(/2,2,5,5,5,8,8,8,11,11,11,15,15,15,15,17,17, &
                                                   20,20,20,23,23,23,27,27,27,27,29,29,32,32,32/)
+!DEC$ ATTRIBUTES DLLEXPORT :: PGLaue
+
 !> 3D point groups : inverted Laue group number
 integer(kind=irg),parameter       :: PGLaueinv(32) = (/1,1,2,2,2,3,3,3,4,4,4,5,5,5,5,6,6, &
                                                        7,7,7,8,8,8,9,9,9,9,10,10,11,11,11/)
+!DEC$ ATTRIBUTES DLLEXPORT :: PGLaueinv
 
 !> 3D point groups mapped onto kvector sampling type (used for master pattern computations) [-1 for special cases]
 integer(kind=irg),parameter       :: PGSamplingType(32) = (/1, 2, 3, 4, 5, 5, 5, 6, 5, 5, &
                                                             6, 6, 7,-1, 9,-1,-1,-1,-1,-1, &
                                                            15,12,17,16,18,-1,19, 3, 6, 6, 8, 9 /)
+!DEC$ ATTRIBUTES DLLEXPORT :: PGSamplingType
 
 !> 31 diffraction group symbols in BESR order
 character(5),parameter  :: DG(31) =(/'    1','   1R','    2','   2R','  21R','   mR', &
@@ -340,27 +351,34 @@ character(5),parameter  :: DG(31) =(/'    1','   1R','    2','   2R','  21R','  
                                      '4mm1R','    3','   6R','  3mR','   3m','6RmmR', &
                                      '    6','  31R','  61R','6mRmR','  6mm',' 3m1R', &
                                      '6mm1R'/)
+!DEC$ ATTRIBUTES DLLEXPORT :: DG
 
 !> 31 diffraction group orders in BESR order
 integer(kind=irg),parameter       :: DGorder(31) =(/1, 2, 2, 2, 4, 2, 2, 4, 4, 4, 4, 8, &
                                           4, 4, 8, 8, 8, 8,16, 3, 6, 6, 6,12, &
                                           6, 6,12,12,12,12,24/)
+!DEC$ ATTRIBUTES DLLEXPORT :: DGorder
 
 !> Bright Field planar point group for 31 diffraction groups (Table 2, column 2, BESR, with change in row ordering)
 integer(kind=irg),parameter       :: BFPG(31) =(/1,2,2,1,2,3,3,4,4,4,3,4,5,5,5,6,6,6,6,7,7,8,8,8,9,9,9,10,10,10,10/)
+!DEC$ ATTRIBUTES DLLEXPORT :: BFPG
 
 !> Whole Pattern planar point group for 31 diffraction groups (Table 2, column 3, BESR, with change in row ordering)
 integer(kind=irg),parameter       :: WPPG(31) =(/1,1,2,1,2,1,3,3,2,4,3,4,5,2,5,5,6,4,6,7,7,7,8,8,9,7,9,9,10,8,10/)
+!DEC$ ATTRIBUTES DLLEXPORT :: WPPG
 
 !> Dark Field planar point group for 31 diffraction groups (Table 2, column 4, BESR, with change in row ordering)
 integer(kind=irg),parameter       :: DFGN(31) = (/1,2,1,1,2,1,1,2,1,1,1,2,1,1,2,1,1,1,2,1,1,1,1,1,1,2,2,1,1,2,2/)
+!DEC$ ATTRIBUTES DLLEXPORT :: DFGN
 
 !> Dark Field planar point group for 31 diffraction groups (Table 2, column 5, BESR, with change in row ordering)
 integer(kind=irg),parameter       :: DFSP(31) = (/0,0,0,0,0,3,3,4,3,3,3,4,0,0,0,3,3,3,4,0,0,3,3,3,0,0,0,3,3,4,4/)
+!DEC$ ATTRIBUTES DLLEXPORT :: DFSP
 
 !> 10 projection diffraction groups in BESR order (Table 2, column 8, BESR, with change in row ordering)
 integer(kind=irg),parameter       :: PDG(31) = (/2,2,5,5,5,8,8,8,12,12,12,12,15,15,15,19,19,19,19,26,27,30,30, &
                                                  31,27,26,27,31,31,30,31/)
+!DEC$ ATTRIBUTES DLLEXPORT :: PDG
 
 !> short hand for .FALSE. logical parameter
 logical,parameter,private :: FF=.FALSE.

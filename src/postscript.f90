@@ -121,6 +121,7 @@ character(20),parameter :: PSfonts(5) = (/"Symbol              ", &
                                           "Times-BoldItalic    ", &
                                           "Times-Italic        ", &
                                           "Times-Roman         "/)
+!DEC$ ATTRIBUTES DLLEXPORT :: PSfonts
 
 contains 
 
@@ -348,7 +349,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_clippath
-!DEC$ ATTRIBUTES DLLEXPORT :: 
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_clippath
 
 IMPLICIT NONE
 
@@ -902,7 +903,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_closepathS  
-!DEC$ ATTRIBUTES DLLEXPORT :: 
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_closepathS
 
 IMPLICIT NONE
 
@@ -924,7 +925,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_stroke
-!DEC$ ATTRIBUTES DLLEXPORT :: 
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_stroke
 
 IMPLICIT NONE
 
@@ -946,7 +947,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_gsave
-!DEC$ ATTRIBUTES DLLEXPORT :: 
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_gsave
 
 IMPLICIT NONE
 
@@ -968,7 +969,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_grestore
-!DEC$ ATTRIBUTES DLLEXPORT :: 
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_grestore
 
 IMPLICIT NONE
 
@@ -990,7 +991,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_closepath   
-!DEC$ ATTRIBUTES DLLEXPORT :: 
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_closepath
 
 IMPLICIT NONE
 
@@ -1012,7 +1013,7 @@ end subroutine
 !> @date   03/25/13 MDG 3.0 updated IO
 !--------------------------------------------------------------------------
 subroutine PS_newpath     
-!DEC$ ATTRIBUTES DLLEXPORT :: 
+!DEC$ ATTRIBUTES DLLEXPORT :: PS_newpath
 
 IMPLICIT NONE
 

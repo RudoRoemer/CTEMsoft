@@ -97,6 +97,8 @@ real(kind=dbl), parameter :: epsijkd = 1.D0
 ! the rotations.f90 routines need to have access to the value +Infinity
 ! which is defined here (using the LaTeX name infty)
 REAL(kind=sgl),public :: infty = HUGE(0.0_sgl)
+!DEC$ ATTRIBUTES DLLEXPORT :: infty
+
 
 ! INTEGER(kind=4),private :: inf
 ! REAL(kind=sgl),parameter :: infty
@@ -143,6 +145,7 @@ character(2), parameter :: ATOM_sym(98)=(/' H','He','Li','Be',' B',' C',' N',' O
                                           'Lu','Hf','Ta',' W','Re','Os','Ir','Pt','Au','Hg', &
                                           'Tl','Pb','Bi','Po','At','Rn','Fr','Ra','Ac','Th', &
                                           'Pa',' U','Np','Pu','Am','Cm','Bk','Cf'/)
+!DEC$ ATTRIBUTES DLLEXPORT :: ATOM_sym
 
 !> Shannon-Prewitt ionic radii in nanometer
 real(kind=sgl), parameter :: ATOM_SPradii(98)=(/0.010,0.010,0.680,0.300,0.160,0.150,0.148,0.146,0.133,0.500, &
@@ -155,6 +158,7 @@ real(kind=sgl), parameter :: ATOM_SPradii(98)=(/0.010,0.010,0.680,0.300,0.160,0.
                                                 0.050,0.050,0.680,0.600,0.520,0.500,0.500,0.500,0.137,0.112, &
                                                 0.140,0.132,0.740,0.230,0.227,0.500,0.175,0.137,0.111,0.990, &
                                                 0.090,0.083,0.500,0.108,0.500,0.500,0.500,0.500/)
+!DEC$ ATTRIBUTES DLLEXPORT :: ATOM_SPradii
 
 !> atomic (metallic) radii in nanometer (0.100 if not known/applicable)
 real(kind=sgl), parameter :: ATOM_MTradii(98)=(/0.100,0.100,0.156,0.112,0.100,0.100,0.100,0.100,0.100,0.100, &
@@ -167,6 +171,7 @@ real(kind=sgl), parameter :: ATOM_MTradii(98)=(/0.100,0.100,0.156,0.112,0.100,0.
                                                 0.173,0.158,0.147,0.141,0.137,0.135,0.135,0.138,0.144,0.155, &
                                                 0.171,0.174,0.182,0.168,0.100,0.100,0.100,0.100,0.100,0.180, &
                                                 0.163,0.154,0.150,0.164,0.100,0.100,0.100,0.100/)
+!DEC$ ATTRIBUTES DLLEXPORT :: ATOM_MTradii
 
 !> atom colors for PostScript drawings
 character(3), parameter :: ATOM_color(98)=(/'blu','grn','blu','blu','red','bro','blu','red','grn','grn', &
@@ -179,6 +184,7 @@ character(3), parameter :: ATOM_color(98)=(/'blu','grn','blu','blu','red','bro',
                                             'blu','blu','grn','red','pnk','cyn','blu','blu','grn','grn', &
                                             'blu','blu','grn','red','pnk','cyn','blu','blu','grn','grn', &
                                             'blu','blu','grn','red','pnk','cyn','blu','grn'/)
+!DEC$ ATTRIBUTES DLLEXPORT :: ATOM_color
 
 !> atomic weights for things like density computations (from NIST elemental data base)
 real(kind=sgl),parameter        :: ATOM_weights(98) = (/1.00794, 4.002602, 6.941, 9.012182, 10.811, &
@@ -201,6 +207,7 @@ real(kind=sgl),parameter        :: ATOM_weights(98) = (/1.00794, 4.002602, 6.941
                                                         222.0, 223.0, 226.0, 227.0, 232.03806, &
                                                         231.03588, 238.02891, 237.0, 244.0, 243.0, &
                                                         247.0, 251.0, 252.0 /)
+!DEC$ ATTRIBUTES DLLEXPORT :: ATOM_weights
 
 
 ! these are a bunch of constants used for Lambert and related projections; they are all in double precision
@@ -246,7 +253,7 @@ type LambertParametersType
 end type LambertParametersType
 
 type(LambertParametersType)        :: LPs
-
+!DEC$ ATTRIBUTES DLLEXPORT :: LPs
 
 ! The following two arrays are used to determine the FZtype (FZtarray) and primary rotation axis order (FZoarray)
 ! for each of the 32 crystallographic point group symmetries (in the order of the International Tables)
