@@ -155,6 +155,7 @@ contains
 !--------------------------------------------------------------------------
 
 subroutine EMsoft(progname,progdesc,stdout)
+!DEC$ ATTRIBUTES DLLEXPORT :: EMsoft
 
 IMPLICIT NONE
 
@@ -199,6 +200,7 @@ end subroutine EMsoft
 !> @date  02/16/16 MDG 1.0 new routine
 !--------------------------------------------------------------------------
 function EMsoft_toNativePath(inpath) result(outpath)
+!DEC$ ATTRIBUTES DLLEXPORT :: EMsoft_toNativePath
 
 IMPLICIT NONE
 
@@ -241,6 +243,7 @@ end function EMsoft_toNativePath
 !> @date  02/16/16 MDG 1.0 original version 
 !--------------------------------------------------------------------------
 function EMsoft_fromNativePath(inpath) result(outpath)
+!DEC$ ATTRIBUTES DLLEXPORT :: EMsoft_fromNativePath
 
 IMPLICIT NONE
 
@@ -288,6 +291,7 @@ end function EMsoft_fromNativePath
 !--------------------------------------------------------------------------
 
 subroutine EMsoft_path_init
+!DEC$ ATTRIBUTES DLLEXPORT :: EMsoft_path_init
 
 use json_module
 use, intrinsic :: iso_fortran_env , only: error_unit, wp => real64
@@ -426,7 +430,8 @@ end subroutine EMsoft_path_init
 !> @date 06/05/14 MDG added stdout as optional argument
 !> @date 03/19/15 MDG added timestring and datestring optional arguments
 !--------------------------------------------------------------------------
-subroutine timestamp (stdout, timestring, datestring)
+subroutine timestamp(stdout, timestring, datestring)
+!DEC$ ATTRIBUTES DLLEXPORT :: timestamp
 
   IMPLICIT NONE
   

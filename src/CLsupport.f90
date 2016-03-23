@@ -78,6 +78,7 @@ contains
 !
 ! -----------------------------------------------------------------------------
 subroutine CLquery_platform_info(platform_id)
+!DEC$ ATTRIBUTES DLLEXPORT :: CLquery_platform_info
 
 use ISO_C_BINDING
 
@@ -204,6 +205,7 @@ end subroutine CLquery_platform_info
 !> @date 02/18/16  MDG 1.0 original
 !--------------------------------------------------------------------------
 subroutine CLread_source_file(sourcefile, csource, slength)
+!DEC$ ATTRIBUTES DLLEXPORT :: CLread_source_file
 
 use local
 use error

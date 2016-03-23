@@ -3648,6 +3648,7 @@ end subroutine HDF_readDatasetDoubleArray4D
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabCharArray2D(dataname, wdata, hdims, offset, &
                                        dim0, dim1, HDF_head, insert) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeHyperslabCharArray2D
 
 use ISO_C_BINDING
 
@@ -3713,6 +3714,7 @@ end function HDF_writeHyperslabCharArray2D
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabCharArray3D(dataname, wdata, hdims, offset, &
                                        dim0, dim1, dim2, HDF_head, insert) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeHyperslabCharArray3D
 
 use ISO_C_BINDING
 
@@ -3776,6 +3778,7 @@ end function HDF_writeHyperslabCharArray3D
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabCharArray4D(dataname, wdata, hdims, offset, &
                                        dim0, dim1, dim2, dim3, HDF_head, insert) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeHyperslabCharArray4D
 
 use ISO_C_BINDING
 
@@ -3839,6 +3842,7 @@ end function HDF_writeHyperslabCharArray4D
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabIntegerArray2D(dataname, wdata, hdims, offset, &
                                           dim0, dim1, HDF_head, insert) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeHyperslabIntegerArray2D
 
 IMPLICIT NONE
 
@@ -3898,6 +3902,7 @@ end function HDF_writeHyperslabIntegerArray2D
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabIntegerArray3D(dataname, wdata, hdims, offset, &
                                           dim0, dim1, dim2, HDF_head, insert) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeHyperslabIntegerArray3D
 
 IMPLICIT NONE
 
@@ -3958,6 +3963,7 @@ end function HDF_writeHyperslabIntegerArray3D
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabIntegerArray4D(dataname, wdata, hdims, offset, &
                                           dim0, dim1, dim2, dim3, HDF_head, insert) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeHyperslabIntegerArray4D
 
 IMPLICIT NONE
 
@@ -4019,6 +4025,7 @@ end function HDF_writeHyperslabIntegerArray4D
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabFloatArray2D(dataname, wdata, hdims, offset, &
                                           dim0, dim1, HDF_head, insert) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeHyperslabFloatArray2D
 
 IMPLICIT NONE
 
@@ -4080,6 +4087,7 @@ end function HDF_writeHyperslabFloatArray2D
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabFloatArray3D(dataname, wdata, hdims, offset, &
                                           dim0, dim1, dim2, HDF_head, insert) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeHyperslabFloatArray3D
 
 IMPLICIT NONE
 
@@ -4142,6 +4150,7 @@ end function HDF_writeHyperslabFloatArray3D
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabFloatArray4D(dataname, wdata, hdims, offset, &
                                           dim0, dim1, dim2, dim3, HDF_head, insert) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeHyperslabFloatArray4D
 
 IMPLICIT NONE
 
@@ -4205,6 +4214,7 @@ end function HDF_writeHyperslabFloatArray4D
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabDoubleArray2D(dataname, wdata, hdims, offset, &
                                           dim0, dim1, HDF_head, insert) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeHyperslabDoubleArray2D
 
 IMPLICIT NONE
 
@@ -4266,6 +4276,7 @@ end function HDF_writeHyperslabDoubleArray2D
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabDoubleArray3D(dataname, wdata, hdims, offset, &
                                           dim0, dim1, dim2, HDF_head, insert) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeHyperslabDoubleArray3D
 
 IMPLICIT NONE
 
@@ -4328,6 +4339,7 @@ end function HDF_writeHyperslabDoubleArray3D
 !--------------------------------------------------------------------------
 function HDF_writeHyperslabDoubleArray4D(dataname, wdata, hdims, offset, &
                                           dim0, dim1, dim2, dim3, HDF_head, insert) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeHyperslabDoubleArray4D
 
 IMPLICIT NONE
 
@@ -4387,6 +4399,7 @@ end function HDF_writeHyperslabDoubleArray4D
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_readHyperslabCharArray2D(dataname, offset, dims, HDF_head) result(rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readHyperslabCharArray2D
 
 use ISO_C_BINDING
 
@@ -4438,6 +4451,7 @@ end function HDF_readHyperslabCharArray2D
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_readHyperslabCharArray3D(dataname, offset, dims, HDF_head) result(rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readHyperslabCharArray3D
 
 use ISO_C_BINDING
 
@@ -4489,6 +4503,7 @@ end function HDF_readHyperslabCharArray3D
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_readHyperslabCharArray4D(dataname, offset, dims, HDF_head) result(rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readHyperslabCharArray4D
 
 use ISO_C_BINDING
 
@@ -4541,6 +4556,7 @@ end function HDF_readHyperslabCharArray4D
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_readHyperslabIntegerArray2D(dataname, offset, dims, HDF_head) result(rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readHyperslabIntegerArray2D
 
 IMPLICIT NONE
 
@@ -4588,6 +4604,7 @@ end function HDF_readHyperslabIntegerArray2D
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_readHyperslabIntegerArray3D(dataname, offset, dims, HDF_head) result(rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readHyperslabIntegerArray3D
 
 IMPLICIT NONE
 
@@ -4635,6 +4652,7 @@ end function HDF_readHyperslabIntegerArray3D
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_readHyperslabIntegerArray4D(dataname, offset, dims, HDF_head) result(rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readHyperslabIntegerArray4D
 
 IMPLICIT NONE
 
@@ -4682,6 +4700,7 @@ end function HDF_readHyperslabIntegerArray4D
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_readHyperslabFloatArray2D(dataname, offset, dims, HDF_head) result(rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readHyperslabFloatArray2D
 
 IMPLICIT NONE
 
@@ -4731,6 +4750,7 @@ end function HDF_readHyperslabFloatArray2D
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_readHyperslabFloatArray3D(dataname, offset, dims, HDF_head) result(rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readHyperslabFloatArray3D
 
 IMPLICIT NONE
 
@@ -4780,6 +4800,7 @@ end function HDF_readHyperslabFloatArray3D
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_readHyperslabFloatArray4D(dataname, offset, dims, HDF_head) result(rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readHyperslabFloatArray4D
 
 IMPLICIT NONE
 
@@ -4829,6 +4850,7 @@ end function HDF_readHyperslabFloatArray4D
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_readHyperslabDoubleArray2D(dataname, offset, dims, HDF_head) result(rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readHyperslabDoubleArray2D
 
 IMPLICIT NONE
 
@@ -4878,6 +4900,7 @@ end function HDF_readHyperslabDoubleArray2D
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_readHyperslabDoubleArray3D(dataname, offset, dims, HDF_head) result(rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readHyperslabDoubleArray3D
 
 IMPLICIT NONE
 
@@ -4927,6 +4950,7 @@ end function HDF_readHyperslabDoubleArray3D
 !> @date 04/06/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_readHyperslabDoubleArray4D(dataname, offset, dims, HDF_head) result(rdata)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readHyperslabDoubleArray4D
 
 IMPLICIT NONE
 

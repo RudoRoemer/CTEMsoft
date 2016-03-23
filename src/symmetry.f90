@@ -1394,6 +1394,7 @@ end subroutine ShortestG
 !> @date  06/05/14 MDG 4.1 added unit cell pointer as argument
 !--------------------------------------------------------------------------
 recursive logical function IsGAllowed(cell,g)
+!DEC$ ATTRIBUTES DLLEXPORT :: IsGAllowed
 
 IMPLICIT NONE
 
@@ -1504,6 +1505,7 @@ end subroutine BFsymmetry
 !> @date  06/05/14 MDG 4.1 added unit cell pointer as argument
 !--------------------------------------------------------------------------
 function GetPatternSymmetry(cell,uvw,pgnum,verbose) result(dgn)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetPatternSymmetry
 
 use io
 
@@ -1571,6 +1573,7 @@ end function GetPatternSymmetry
 !> @date  06/05/14 MDG 4.1 added unit cell pointer as argument
 !--------------------------------------------------------------------------
 function GetDiffractionGroup(cell,uvw,pgn) result(dgn)
+!DEC$ ATTRIBUTES DLLEXPORT :: GetDiffractionGroup
 
 use io
 

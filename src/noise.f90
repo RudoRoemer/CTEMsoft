@@ -165,6 +165,7 @@ real(kind=sgl) FUNCTION ran(idum)
 END FUNCTION ran
 !*****************************************************************************
 real(kind=sgl) FUNCTION POIDEV(XM,IDUM)
+!DEC$ ATTRIBUTES DLLEXPORT :: POIDEV
 ! 
 ! this is essentially the poidev routine from Numerical Recipes,
 ! but converted to Fortran-90
