@@ -1095,8 +1095,8 @@ end subroutine CalcLghECP
 !> @date 09/01/15  SS  1.1 complete rewrite
 !--------------------------------------------------------------------------
 recursive subroutine CalcsigmaggSubstrate(cell_subs,nns_film,refliststrong_subs,S0,Sigmagg,&
-!DEC$ ATTRIBUTES DLLEXPORT :: CalcsigmaggSubstrate
                                           filmthickness,substhickness,lambdaZ,thick,nt)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalcsigmaggSubstrate
 
 use local
 use io

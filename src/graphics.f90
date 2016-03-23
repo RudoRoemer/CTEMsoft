@@ -1547,8 +1547,8 @@ real(kind=sgl)       :: xvec(points),yvec(points)
 end subroutine
 !  ******************************************************************************
 subroutine axis(AX,points,xvec,yvec,xmin,xmax,ymin,ymax,xautorange,yautorange, &
-!DEC$ ATTRIBUTES DLLEXPORT :: axis
                 xmode,ymode,pmode,mark,scalex,scaley,overplot,db,title,xtitle,ytitle)
+!DEC$ ATTRIBUTES DLLEXPORT :: axis
 
 use postscript
 
@@ -1848,7 +1848,7 @@ end subroutine
 
 !---------------------------------------------
 subroutine plot_contour
-!DEC$ ATTRIBUTES DLLEXPORT :: 
+!DEC$ ATTRIBUTES DLLEXPORT :: plot_contour
 
 use postscript 
 
@@ -1912,7 +1912,7 @@ end subroutine
 !---------------------------------------------
 
 subroutine contour
-!DEC$ ATTRIBUTES DLLEXPORT :: 
+!DEC$ ATTRIBUTES DLLEXPORT :: contour
                       
 !                                              
 ! definition of vectors, nodes and triangles

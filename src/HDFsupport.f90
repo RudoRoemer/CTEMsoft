@@ -457,7 +457,8 @@ end subroutine HDF_handleError
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_createFile(HDFname, HDF_head) result(success)
- 
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_createFile
+
 use local
 
 IMPLICIT NONE
@@ -498,6 +499,7 @@ end function HDF_createFile
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_openFile(HDFname, HDF_head, readonly) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_openFile
 
 use local
 
@@ -541,6 +543,7 @@ end function HDF_openFile
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_createGroup(groupname, HDF_head) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_createGroup
 
 IMPLICIT NONE
 
@@ -578,6 +581,7 @@ end function HDF_createGroup
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_openGroup(groupname, HDF_head) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_openGroup
 
 IMPLICIT NONE
 
@@ -615,6 +619,7 @@ end function HDF_openGroup
 !> @date 03/17/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_openDataset(dataname, HDF_head) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_openDataset
 
 IMPLICIT NONE
 
@@ -656,6 +661,7 @@ end function HDF_openDataset
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetTextFile(dataname, filename, HDF_head) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetTextFile
 
 use ISO_C_BINDING
 
@@ -744,6 +750,7 @@ end function HDF_writeDatasetTextFile
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_readfromTextfile(filename,nlines) result(stringarray)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_readfromTextfile
 
 use ISO_C_BINDING
 
@@ -888,6 +895,7 @@ end subroutine HDF_readDatasetStringArray
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_extractDatasetTextfile(dataname, textfile, HDF_head) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_extractDatasetTextfile
 
 use ISO_C_BINDING
 
@@ -970,6 +978,7 @@ end function HDF_extractDatasetTextfile
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetStringArray(dataname, inputarray, nlines, HDF_head, overwrite) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetStringArray
 
 use ISO_C_BINDING
 
@@ -1067,6 +1076,7 @@ end function HDF_writeDatasetStringArray
 !> @date 03/31/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetCharArray1D(dataname, chararray, dim0, HDF_head, overwrite) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetCharArray1D
 
 use ISO_C_BINDING
 
@@ -1141,6 +1151,7 @@ end function HDF_writeDatasetCharArray1D
 !> @date 03/31/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetCharArray2D(dataname, chararray, dim0, dim1, HDF_head, overwrite) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetCharArray2D
 
 use ISO_C_BINDING
 
@@ -1215,6 +1226,7 @@ end function HDF_writeDatasetCharArray2D
 !> @date 03/31/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetCharArray3D(dataname, chararray, dim0, dim1, dim2, HDF_head, overwrite) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetCharArray3D
 
 use ISO_C_BINDING
 
@@ -1290,6 +1302,7 @@ end function HDF_writeDatasetCharArray3D
 !> @date 03/31/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetCharArray4D(dataname, chararray, dim0, dim1, dim2, dim3, HDF_head, overwrite) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetCharArray4D
 
 use ISO_C_BINDING
 
@@ -1368,6 +1381,7 @@ end function HDF_writeDatasetCharArray4D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetInteger(dataname, intval, HDF_head, overwrite) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetInteger
 
 use ISO_C_BINDING
 
@@ -1445,6 +1459,7 @@ end function HDF_writeDatasetInteger
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetIntegerArray1D(dataname, intarr, dim0, HDF_head, overwrite) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetIntegerArray1D
 
 use ISO_C_BINDING
 
@@ -1521,6 +1536,7 @@ end function HDF_writeDatasetIntegerArray1D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetIntegerArray2D(dataname, intarr, dim0, dim1, HDF_head, overwrite) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetIntegerArray2D
 
 use ISO_C_BINDING
 
@@ -1599,6 +1615,7 @@ end function HDF_writeDatasetIntegerArray2D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetIntegerArray3D(dataname, intarr, dim0, dim1, dim2, HDF_head, overwrite) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetIntegerArray3D
 
 use ISO_C_BINDING
 
@@ -1677,6 +1694,7 @@ end function HDF_writeDatasetIntegerArray3D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetIntegerArray4D(dataname, intarr, dim0, dim1, dim2, dim3, HDF_head, overwrite) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetIntegerArray4D
 
 use ISO_C_BINDING
 
@@ -1756,6 +1774,7 @@ end function HDF_writeDatasetIntegerArray4D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetFloat(dataname, fltval, HDF_head, overwrite) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetFloat
 
 use ISO_C_BINDING
 
@@ -1832,6 +1851,7 @@ end function HDF_writeDatasetFloat
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetDouble(dataname, dblval, HDF_head, overwrite) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetDouble
 
 use ISO_C_BINDING
 
@@ -1910,6 +1930,7 @@ end function HDF_writeDatasetDouble
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetFloatArray1D(dataname, fltarr, dim0, HDF_head, overwrite) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetFloatArray1D
 
 use ISO_C_BINDING
 
@@ -1988,6 +2009,7 @@ end function HDF_writeDatasetFloatArray1D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetFloatArray2D(dataname, fltarr, dim0, dim1, HDF_head, overwrite) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetFloatArray2D
 
 use ISO_C_BINDING
 
@@ -2066,6 +2088,7 @@ end function HDF_writeDatasetFloatArray2D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetFloatArray3D(dataname, fltarr, dim0, dim1, dim2, HDF_head, overwrite) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetFloatArray3D
 
 use ISO_C_BINDING
 
@@ -2145,6 +2168,7 @@ end function HDF_writeDatasetFloatArray3D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetFloatArray4D(dataname, fltarr, dim0, dim1, dim2, dim3, HDF_head, overwrite) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetFloatArray4D
 
 use ISO_C_BINDING
 
@@ -2225,6 +2249,7 @@ end function HDF_writeDatasetFloatArray4D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetDoubleArray1D(dataname, dblarr, dim0, HDF_head, overwrite) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetDoubleArray1D
 
 use ISO_C_BINDING
 
@@ -2302,6 +2327,7 @@ end function HDF_writeDatasetDoubleArray1D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetDoubleArray2D(dataname, dblarr, dim0, dim1, HDF_head, overwrite) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetDoubleArray2D
 
 use ISO_C_BINDING
 
@@ -2380,6 +2406,7 @@ end function HDF_writeDatasetDoubleArray2D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetDoubleArray3D(dataname, dblarr, dim0, dim1, dim2, HDF_head, overwrite) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetDoubleArray3D
 
 use ISO_C_BINDING
 
@@ -2459,6 +2486,7 @@ end function HDF_writeDatasetDoubleArray3D
 !> @date 03/26/15  MDG 1.0 original
 !--------------------------------------------------------------------------
 function HDF_writeDatasetDoubleArray4D(dataname, dblarr, dim0, dim1, dim2, dim3, HDF_head, overwrite) result(success)
+!DEC$ ATTRIBUTES DLLEXPORT :: HDF_writeDatasetDoubleArray4D
 
 use ISO_C_BINDING
 
