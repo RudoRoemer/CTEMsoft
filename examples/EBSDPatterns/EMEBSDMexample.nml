@@ -1,15 +1,15 @@
 &EBSDmastervars
 ! smallest d-spacing to take into account [nm]
-dmin = 0.05
+ dmin = 0.05,
 ! number of pixels along x-direction of the square master pattern  (2*npx+1 = total number)
-npx = 400
+ npx = 400,
 ! name of output file; relative to EMdatapathname
-outname = 'Al_EBSDmaster.h5'
+ outname = 'Al_EBSDmaster.h5',
 ! name of the energy statistics file produced by EMMCOpenCL program [note that
 ! this file will also contain parameters such as the microscope accelerating voltage]; relative to EMdatapathname
-energyfile = 'Al_MCoutput.h5'
+ energyfile = 'Al_MCoutput.h5',
 ! restart computation ?
-restart = .FALSE.
+ restart = .FALSE.,
 ! number of threads
-nthreads = 6
+ nthreads = 6
 /

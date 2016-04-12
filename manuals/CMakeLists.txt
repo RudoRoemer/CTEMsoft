@@ -92,6 +92,15 @@ if (BUILD_EMSOFT_DOCS)
     OUTPUT_DIR "${PROJECT_BINARY_DIR}/manuals/EMEBSD"
     CITATIONS_FILE "${PROJECT_SOURCE_DIR}/manuals/citations.bib"
   )
+
+  ADD_EMSOFT_LATEX_TARGETS(
+    PROJECT_NAME "HDFsupport_Manual"
+    PROJECT_BINARY_DIR "${PROJECT_BINARY_DIR}/manuals"
+    SOURCE_FILE "${PROJECT_SOURCE_DIR}/manuals/HDFsupport.tex"
+    FIGURES_DIR "${PROJECT_SOURCE_DIR}/manuals/figs"
+    OUTPUT_DIR "${PROJECT_BINARY_DIR}/manuals/HDFsupport"
+    CITATIONS_FILE "${PROJECT_SOURCE_DIR}/manuals/citations.bib"
+  )
   
   ADD_EMSOFT_LATEX_TARGETS(
     PROJECT_NAME "EMSoft_Manual"
