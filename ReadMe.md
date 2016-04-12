@@ -6,13 +6,13 @@ This package contains a series of programs along with a library, mostly written 
 Current development of this package is supported by an AFOSR/MURI grant, FA9550-12-1-0458; the original EBSD code from CTEMsoft 2.0 was developed with support from an ONR grant, N00014-12-1-0075.
 
 ## Source ##
-Source codes are here on GitHub. Precompiled binaries, manuals, and IDL Virtual Machine apps, as well as additional information about the package are located at [Here](http://muri.materials.cmu.edu/?p=858). 
+Source codes are here on GitHub. Precompiled binaries, manuals, and IDL Virtual Machine apps (currently only for Mac OS X), as well as additional information about the package are located [Here](http://muri.materials.cmu.edu/?p=858). 
 
 ## Installation/Compilation ##
-See [here](http://muri.materials.cmu.edu/wp-content/uploads/2015/11/EMsoft.pdf).
+For detailed instructions on installation of the Software Developer toolKit (SDK) see [here](http://muri.materials.cmu.edu/wp-content/uploads/2015/11/EMsoft.pdf).
 
 ## Future Releases ##
-Our plan is to provide Release 3.1 in the Spring of 2016, and 3.2 in the Fall.  3.1 will include ECCI defect image simulations as well as dictionary-based indexing codes for EBSD and ECP.  In 3.2 we will re-introduce all of the TEM simulations that were available in the original [CTEMsoft 2.0](https://github.com/marcdegraef/CTEMsoft) release. 
+Our plan is to provide Release 3.1 in the Summer of 2016, and 3.2 in the Winter.  3.1 will include ECCI defect image simulations as well as dictionary-based indexing codes for EBSD and ECP.  In 3.2 we will re-introduce all of the TEM simulations that were available in the original [CTEMsoft 2.0](https://github.com/marcdegraef/CTEMsoft) release. 
  
 ## Feedback ##
 Feedback on the code and visualization routines is always welcome!
@@ -23,7 +23,7 @@ This code has a long history. The very first version was written in the mid-1990
 ## License ##
 
 	!###################################################################
-	! Copyright (c) 2013-2015, Marc De Graef/Carnegie Mellon University
+	! Copyright (c) 2013-2016, Marc De Graef Research Group/Carnegie Mellon University
 	! All rights reserved.
 	!
 	! Redistribution and use in source and binary forms, with or without modification, are 
