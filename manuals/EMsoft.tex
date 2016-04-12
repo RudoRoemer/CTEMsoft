@@ -52,8 +52,8 @@
 \rhead{}
 
 % Footers
-%\lfoot{\textsf{EMSoft--2015} manual, Release 3.0, \today}
-\lfoot{\textsf{EMSoft--2015} manual, Release 3.0.3, \today}
+%\lfoot{\textsf{EMsoft--2015} manual, Release 3.0, \today}
+\lfoot{\textsf{EMsoft--2015} manual, Release 3.0.3, \today}
 \cfoot{}
 \rfoot{\footnotesize Page \thepage\ of \pageref{LastPage}} % "Page 1 of 2"
 
@@ -72,7 +72,7 @@
 
 \pretitle{\vspace{-1.5in} \begin{center} \HorRule \fontsize{25}{25} \usefont{OT1}{phv}{b}{n} \color{DarkRed} \selectfont} % Horizontal rule before the title
 
-\title{EMSoft:\\ General User and\\ Development Manual} % Your article title
+\title{EMsoft:\\ General User and\\ Development Manual} % Your article title
 
 \posttitle{\par\end{center}\vskip 0.5em} % Whitespace under the title
 
@@ -86,8 +86,8 @@
 %\date{Program Manual, Release 3.0, \today}
 \date{Program Manual, Release 3.0.3, \today}
 
-\newcommand{\ctp}{\textsf{EMSoft}}
-\newcommand{\ctpb}{\textbf{\textsf{EMSoft}}}
+\newcommand{\ctp}{\textsf{EMsoft}}
+\newcommand{\ctpb}{\textbf{\textsf{EMsoft}}}
 %
 \begin{document}
 \maketitle
@@ -101,7 +101,7 @@
 core routines for crystallography, symmetry, dynamical scattering, Monte Carlo simulations, and so on, plus a series of programs for the different modalities.
 The package is based on the older, and now discontinued, \textsf{CTEMsoft} package, for which the version 2.0 source code is still
 available at \textit{http://www.github.com/marcdegraef/CTEMsoft}.  This code base is no longer supported and is replaced
-by a new source code base, version 3.0, available from \textit{http://www.github.com/marcdegraef/EMSoft}.  The two versions are not 
+by a new source code base, version 3.0, available from \textit{http://www.github.com/marcdegraef/EMsoft}.  The two versions are not 
 compatible with each other (with one exception; see section~\ref{sec:f90input5}).  In the current release, only EBSD and ECP programs are
 available, along with a number of support programs; in a later release, we will make updated versions of the TEM programs available as well.
 
@@ -114,7 +114,7 @@ This manual describes a few aspects of the \ctp\ package:
 \end{itemize}
 
 At the time of writing of this manual, these programs have been successfully compiled and executed on the Mac OS X platform (Yosemite) and on 
-Linux CentOS 7 using the public domain gfortran compiler. Starting in version 3.0.3, Windows 10 systems are also supported.
+Linux CentOS 7 using the public domain gfortran compiler. Starting in the next version, 3.0.4, Windows 10 systems will also be supported. 
 Where appropriate, computations are carried out using \textsf{OpenMP} directives, so that multiple cores are used.  In addition, several programs make use of a 
 GPU (if available), using \textit{OpenCL} code.
 
@@ -124,12 +124,13 @@ executables, please jump ahead to section~\ref{sec:todo}.
 
 \section{The \ctpb\ Software Developer Kit\label{sec:SDK}}
 If you wish to compile the package code yourself, then you will first need to pull the code base from github; you can 
-clone the repository from \textit{http://www.github.com/marcdegraef/EMSoft}.  Select a location on your hard drive to 
+clone the repository from \textit{http://www.github.com/marcdegraef/EMsoft}.  Select a location on your hard drive to 
 host the source code tree; we recommend that the foldername be \ctp, but you are obviously free to change this.
 
 Before you can start to compile the code, you must install the software developer kit (SDK).  This is made very easy thanks to our
-friends at BlueQuartz.net; open a terminal window, navigate inside the \ctp\ tree to the folder \textsf{Support/SDK\_Build\_Scripts}.
-On the Mac OS X and Linux platforms, the SDK will be installed by default in a new \textsf{/opt/EMSoft\_SDK}
+friends at BlueQuartz.net; open a terminal window, navigate inside the \ctp\ tree to the folder \textsf{Support/SDK\_Build\_Scripts}, and then into
+the correct subfolder (for Mac OS X or Linux).
+On the Mac OS X and Linux platforms, the SDK will be installed by default in a new \textsf{/opt/EMsoft\_SDK}
 folder; this can be changed by editing the \textsf{SDK\_PARENT}  and \textsf{SDK\_INSTALL} variables in the \textsf{SDK\_Configuration.conf}  file.
 Depending on the number of cores on your system, you can also set the \textsf{PARALLEL\_BUILD} parameter; if you have
 $N$ cores, you can in theory put this variable at $2N$, in which case the compilation process will pretty much use all the 
@@ -140,8 +141,8 @@ The build script should be executed with
 \begin{verbatim}
 	sudo ./Build_SDK.sh
 \end{verbatim}
-(Note that you will not need sudo access if you opt to place the SDK inside your home folder; if you do so, the SDK will not be accessible
-to other users.) This shell script will first download the \textsf{EMSoft\_SDK} archive from one of the BlueQuartz web servers and install
+%(Note that you will not need sudo access if you opt to place the SDK inside your home folder; if you do so, the SDK will not be accessible to other users.) 
+This shell script will first download the \textsf{EMsoft\_SDK} archive from one of the BlueQuartz web servers and install
 and unpack the archive. Then the script will install the following program and libraries:
 \begin{itemize}
 \item \textsf{CMake}: CMake is a package that manages the entire compilation process.  To make sure that the correct version is used, it is installed first.
@@ -155,25 +156,28 @@ the entire SDK by removing the folder and starting a fresh build.}
 \end{itemize}
 All five of these packages should compile and install without any issues, assuming that you have the correct compilers on your system.  Note that the 
 installation is sandboxed, i.e., it will not interfere with or overwrite any existing implementations of these libraries;  you should only use the libraries
-inside the sandbox, though.  Make sure that your PATH variable lists the SDK before any other collections of libraries that may already be on your system.  The compilation process should only take about five minutes.  Once the SDK has been compiled, you will be ready to compile \ctp, 
+inside the sandbox, though.  Make sure that your PATH variable lists the SDK before any other collections of libraries that may already be on your system;
+in particular, make sure that the CMake bin folder is in your path.  There is no guarantee that the compilation process will work with other versions
+of CMake.  The compilation process should only take about five minutes.  Once the SDK has been compiled, you will be ready to compile \ctp, 
 as described in the next section.
 
 \section{Compiling \ctpb\label{sec:compile}}
 Add the location of the bin folder inside the SDK to your path variable; this will depend on your operating system and the type 
-of shell you are using.  For Mac OS X, the command is as follows (assuming the default SDK location):
+of shell you are using.  For the bash shell on Mac OS X, the command is as follows (assuming the default SDK location):
 \begin{verbatim}
-	export PATH=$PATH:/opt/EMSoft_SDK/cmake-3.3.1-Darwin-x86_64/CMake.app/Contents/bin/
+	export PATH=$PATH:/opt/EMsoft_SDK/cmake-3.4.3-Darwin-x86_64/CMake.app/Contents/bin/
 \end{verbatim}
-For Linux, use
+For bash on Linux, use
 \begin{verbatim}
-	export PATH=$PATH:/opt/EMSoft_SDK/cmake-3.3.1-Linux-x86_64/bin/
+	export PATH=$PATH:/opt/EMsoft_SDK/cmake-3.4.3-Linux-x86_64/bin/
 \end{verbatim}
+If you installed the SDK elsewhere, please adjust the actual paths above.
 Typically, you would add this line, or a similar one for other shells, to your \textsf{.bashrc} or \textsf{.cshrc} file.
 
 In a terminal window, cd to your \textsf{EMsoft} top folder, create a \textsf{Build} folder, cd inside it and enter the following command (if you changed the 
 location of the SDK, make sure you select the correct path instead of \textsf{/opt}):
 \begin{verbatim}
-	cmake -DEMSoft_SDK=/opt/EMSoft_SDK -DCMAKE_BUILD_TYPE=Debug ../
+	cmake -DEMsoft_SDK=/opt/EMsoft_SDK -DCMAKE_BUILD_TYPE=Debug ../
 \end{verbatim}
 This will spit out a number of variables and path names.\footnote{If you get any error messages or notice things that do not look right, please contact us with a 
 screen dump as well as a description of your system, including the OS version.} This is the first cmake run, which will set up all necessary variables
@@ -205,10 +209,9 @@ as the first program that you execute.
 a folder named \textsf{packages} inside the \textsf{/Users/me} folder, and download the archive inside \textsf{/Users/me/packages}.
 Then unpack the archive, which will create an \textsf{EMsoft} folder containing several other folders.
 
-\item Check whether or not the \textsf{.config} folder exists in your home folder; if it doesn't exist, create it (don't forget the 
-period in front of the folder name). Then go into this folder and create the \textsf{EMsoft} folder; go into
-that folder and create a \textsf{tmp} folder.  Then, at the same level as the tmp folder, use a text editor to
-create a file with the name \textsf{EMsoftConfig.json} and enter the following nine lines:
+\item {\color{red}[CHANGED IN RELEASE 3.0.3]} Run the \textsf{EMsoftinit} program to create the configuration file inside the 
+\textsf{[home].config/EMsoft} folder.  Use a text editor to
+open the \textsf{EMsoftConfig.json} file and verify that the information is correct:
 \begin{verbatim}
 {
         "EMsoftpathname" : "/full/path/to/the/top/EMsoft/installation/folder/",
@@ -220,7 +223,7 @@ create a file with the name \textsf{EMsoftConfig.json} and enter the following n
         "UserEmail" : "Your email address"
 }
 \end{verbatim}
-Note that the white space at the start of lines 2 through 8 is a tab.  Obviously, you will need to change the paths above.
+Note that the white space at the start of lines 2 through 8 is a tab.  
 Typically, the installation folder would be somewhere below your home folder, so on Mac OS X for instance, this 
 could be \textsf{/Users/me/packages/EMsoft/};  note that the path must be terminated with a \textsf{/}.
 The second variable indicates where you will keep your data files, i.e., all the files generated by the \ctp\ programs.
@@ -288,12 +291,14 @@ will make use of namelist or json input files and will likely be callable from a
 \section{Program input files\label{sec:f90input}}
 All user input for the \ctp\ programs is performed either via namelist files or via json files; the namelist is a special f90 IO format that allows one to list 
 \textit{name-value} pairs in an ordinary text file, and then this file will be read and interpreted by the 
-program.  The basic format of a namelist file is as follows:
+program.  The basic format of a namelist file is as follows:\footnote{\color{red}Note that the .nml format has been changed slightly from the one in the previous
+release.  The main reason is compatibility with the ifort compiler on Windows, which expects each line in the .nml file to start with a space and end with a comma.
+On non-Windows platforms, the older .nml format should continue to work.}
 \begin{verbatim}
 &nmlname
-var1 = val1
-var2 = val2
-...
+ var1 = val1,
+ var2 = val2,
+ ...
 /
 \end{verbatim}
 The first line must begin with the ampersand character ``\&'' and is followed (without spaces) by the internal name used by the program 
@@ -301,9 +306,6 @@ to identify the set of variables (this is similar to a \textit{common block} in 
 list of name-value pairs follows.  These can appear in any order, and variables may be omitted from the file, in which case the program
 will use a default value (this value can be found in the template file; see section~\ref{sec:structure}).  The final line of the file must contain a single forward slash
 character, ``/'', to end the namelist.
-
-{\color{blue}\textbf{Special Note for Windows Users:} On Windows with the Intel fortran compiler (ifort), the compiled code expects an nml format that is slightly different from the format described above.
-}
 
 The json format (JavaScript Object Notation) is an xml-like version of the name-value pairs, and is very similar to the namelist format, with the exception 
 of the presence of curly braces.  For the example namelist file shown above, the equivalent json file would look as follows:
@@ -325,10 +327,10 @@ As a concrete example, consider the namelist file used to define a dislocation:
 \begin{Verbatim}%
 	[formatcom=\color{blue},frame=lines]
 &dislocationdata
-id = 0.501
-jd = 0.501
-u = 1.0,0.0,1.0
-bv = 0.5,0.0,0.5
+ id = 0.501,
+ jd = 0.501,
+ u = 1.0,0.0,1.0,
+ bv = 0.5,0.0,0.5
 /
 \end{Verbatim}
 Internally, the program identifies this set of variables with the namelist identifier ``dislocationdata,'' as shown on the first line of the file.
@@ -341,15 +343,15 @@ have components, such as the two vectors above, one may also define each compone
 as follows:
 \begin{verbatim}
 &dislocationdata
-id = 0.501
-jd = 0.501
+ id = 0.501,
+ jd = 0.501,
 ! these vectors are defined one component at a time
-u(1) = 1.0 
-u(2) = 0.0 
-u(3) = 1.0
-bv(1) = 0.5
-bv(2) = 0.0
-bv(3) = 0.5
+ u(1) = 1.0, 
+ u(2) = 0.0,
+ u(3) = 1.0,
+ bv(1) = 0.5,
+ bv(2) = 0.0,
+ bv(3) = 0.5
 /
 \end{verbatim}
 It is not necessary to leave spaces before and after the ``='' symbol, but it does improve the readability of the namelist file to do so. Since 
@@ -379,6 +381,9 @@ occupation parameter (a real number between $0$ and $1$), and the isotropic Deby
 Once all atoms in the asymmetric unit have been entered, the program will ask for a structure file name; we
 recommend that all such files have the extension \textsf{.xtal}, to make them easily recognizable.  All .xtal files
 will be automatically placed in the \textsf{XtalFolder} inside the main \ctp\ data folder.
+
+In the next major release, 3.1, we will make available a DREAM.3D filter that can generate the *.xtal file interactively.
+
 %
 %With very few exceptions, all programs in the \ctp\ suite of programs require a crystallographic input file that defines the 
 %crystal system, crystal lattice parameters, space group number, and all unique positions in the 
@@ -468,14 +473,7 @@ Program & Short description & Manual? \\
 \newpage
 \section{Release Updates}
 \begin{itemize}
-	\item[3.0.1] (11/20/15) added ability to set UserName, UserLocation, and UserEmail in \textsf{EMsoftConfig.json} file.
-	\item[3.0.2] (12/11/15) \begin{itemize}
-		\item added EMsoftLibraryLocation to \textsf{EMsoftConfig.json} file;
-		\item corrected several of the example .nml files;
-		\item added EMZAgeom program to bin folder; was missing in 3.0 and 3.0.1;
-		\item moved VMapps folder into IDL folder and added symbolic link so that the virtual apps can find the EMsoft libraries.
-	\end{itemize}
-        \item[3.0.3] () \begin{itemize}
+        \item[3.0.3] (04/13/16) \begin{itemize}
                 \item added option to turn off requirement for \LaTeX\ installation to be present in order to compile package;
                 \item modified variable definitions in MBmodule and EMdymod to eliminate compilation errors when using the Intel fortran 
                 compiler in Visual Studio [S. Wright]; 
@@ -484,17 +482,26 @@ Program & Short description & Manual? \\
                 \item added DLLexport comment lines to all module files;
                 \item changed OpenCL support from the \textsf{fortrancl} library to the more complete \textsf{clfortran} library;
                 \item added \textsf{EMOpenCLinfo} program to display the computing environment;
-                \item added CMake support for compilation with ifort on Windows 10 (thanks to Mike Jackson);
+%                \item added CMake support for compilation with ifort on Windows 10 (thanks to Mike Jackson);
+                \item added CMake support for compilation on Linux (tested on CentOS 7);
                 \item automatic generation of configuration file upon first execution of any \ctp\ program;
                 \item removed dispfield.f90, family.f90, and hdftest.f90 from src folder;
+                \item started preparation of source code for Windows 10 support in the next version.
         \end{itemize}
+	\item[3.0.2] (12/11/15) \begin{itemize}
+		\item added EMsoftLibraryLocation to \textsf{EMsoftConfig.json} file;
+		\item corrected several of the example .nml files;
+		\item added EMZAgeom program to bin folder; was missing in 3.0 and 3.0.1;
+		\item moved VMapps folder into IDL folder and added symbolic link so that the virtual apps can find the EMsoft libraries.
+	\end{itemize}
+	\item[3.0.1] (11/20/15) added ability to set UserName, UserLocation, and UserEmail in \textsf{EMsoftConfig.json} file.
 \end{itemize}
 
 \section{Future releases}
 The following future releases are currently planned:
 \begin{itemize}
-	\item 3.1, Summer 2016: addition of dictionary indexing codes for EBSD and ECP; ECCI defect imaging code; integration with DREAM.3D filters.
-	\item 3.2, Fall 2016: addition of updated TEM codes (currently still available in release 2.0); further integration with DREAM.3D.
+	\item 3.1, Mid Summer 2016: addition of dictionary indexing codes for EBSD and ECP; ECCI defect imaging code; integration with DREAM.3D filters.
+	\item 3.2, Winter 2016: addition of updated TEM codes (currently still available in release 2.0); further integration with DREAM.3D.
 \end{itemize}
 
 

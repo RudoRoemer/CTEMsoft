@@ -125,7 +125,6 @@ sudo ./Build_FFTW3.sh "${SDK_INSTALL}" ${PARALLEL_BUILD}
 # Build CLFortran
 sudo ./Build_CLFortran.sh "${SDK_INSTALL}" ${PARALLEL_BUILD}
 
-
 #-------------------------------------------------
 # Build JsonFortran Library
 sudo ./Build_JsonFortran.sh "${SDK_INSTALL}" ${PARALLEL_BUILD}
