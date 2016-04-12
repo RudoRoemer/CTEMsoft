@@ -52,6 +52,7 @@
 !> @date 04/05/15 MDG 4.3 added additional path variables and an EMsoft_path_init routine
 !> @date 11/20/15 MDG 4.4 Issue 1 resolution
 !> @date 02/16/16 MDG 4.5 added path delimiter conversion routines for Windows implementation
+!> @date 02/25/16 MDG 4.6 added automatic generation of .config/EMsoft/EMsoftConfig.json file
 !--------------------------------------------------------------------------
 
 !---------------------------
@@ -137,6 +138,7 @@ module local
   character(fnlen)                      :: randomseedfilename 
 !DEC$ ATTRIBUTES DLLEXPORT :: randomseedfilename
 
+
 contains
 
 !--------------------------------------------------------------------------
@@ -155,15 +157,17 @@ contains
 !> @param progname program name string
 !> @param progdesc program descriptor string
 !> @param stdout optional output unit identifier
+!> @param config optional passed on to EMsoft_path_init
 !
 !> @date  12/08/01 MDG 1.0 original
 !> @date  03/19/13 MDG 2.0 minor modifications
 !> @date  05/16/13 MDG 2.1 added timestamp and stdout
 !> @date  01/10/14 MDG 3.0 new version
 !> @date  06/05/14 MDG 4.0 progname and progdesc are now subroutine arguments; made stdout optional
+!> @date  02/25/16 MDG 4.1 added config optional parameter 
 !--------------------------------------------------------------------------
 
-subroutine EMsoft(progname,progdesc,stdout)
+subroutine EMsoft(progname,progdesc,stdout,config)
 !DEC$ ATTRIBUTES DLLEXPORT :: EMsoft
 
 IMPLICIT NONE
@@ -171,6 +175,7 @@ IMPLICIT NONE
 character(fnlen),INTENT(IN)           :: progname
 character(fnlen),INTENT(IN)           :: progdesc
 integer(kind=irg),INTENT(IN),OPTIONAL :: stdout
+logical,INTENT(IN),OPTIONAL           :: config
 
 integer(kind=irg)                     :: std 
 
@@ -189,7 +194,13 @@ integer(kind=irg)                     :: std
  call timestamp(std)
  write (std,"(1x,/)")
 
- call EMsoft_path_init
+ if (present(config)) then ! we need to (re-)create the EMsoftConfig.json file...
+    if (config.eqv..TRUE.) then
+      call EMsoft_path_init(config)
+    end if
+ else
+   call EMsoft_path_init
+ end if
  
 end subroutine EMsoft
 
@@ -297,9 +308,10 @@ end function EMsoft_fromNativePath
 !> @date  05/05/15 MDG 1.0 new routine
 !> @date  09/26/15 MDG 1.1 added .json config support
 !> @date  11/20/15 MDG 1.2 added UserName, UserLocation, and UserEmail options
+!> @date  02/25/16 MDG 1.4 added optional config parameter
 !--------------------------------------------------------------------------
 
-subroutine EMsoft_path_init
+subroutine EMsoft_path_init(config)
 !DEC$ ATTRIBUTES DLLEXPORT :: EMsoft_path_init
 
 use json_module
@@ -308,12 +320,28 @@ use, intrinsic :: iso_fortran_env , only: error_unit, wp => real64
 
 IMPLICIT NONE
 
+logical,INTENT(IN),OPTIONAL             :: config
+
 character(fnlen)                        :: pathstring, dirstring, ep
 type(json_file)                         :: json
-character(fnlen)                        :: jsonname
-integer(kind=irg)                       :: error_cnt
+integer(kind=irg)                       :: i, error_cnt
 character(kind=CK,len=:),allocatable    :: cval
-logical                                 :: found
+logical                                 :: found, fexists, jexists
+character(fnlen)                        :: confname, emsoftname, jsonname, jsonfilename, fname, cwd, &
+                                           dirname, library, dataname, xtalname
+character(3)                            :: release
+character(len=1)                        :: edp, tab, yesno
+
+edp = '"'
+tab = CHAR(9)
+yesno = 'n'
+EMsoftpathname = ''
+EMdatapathname = ''
+
+! default names for the json configuration file
+confname = '.config'
+emsoftname = 'EMsoft'
+jsonfilename = 'EMsoftConfig.json'
 
 ! determine the pathname delimiter character
 if (trim(EMsoftplatform).eq.'Windows') then
@@ -322,18 +350,52 @@ else
   EMsoftnativedelimiter = '/'
 end if 
 
-! first try to get the environment variables using the getenv command; if
-! an empty string is returned, then try to find the .EMsoft/EMsoftConfig.json file;
-! if that fails, then abort the program with an error message.
+! get the user's home directory to prepend to the config file name
+if (trim(EMsoftplatform).eq."Windows") then
+! TO BE COMPLETED AND TESTED
+! call getenv("HOME",dirstring)
+! jsonname = trim(dirstring)//'/.config/EMsoft/EMsoftConfig.json'
+else
+  call getenv("HOME",dirstring)
+  jsonname = trim(dirstring)//EMsoftnativedelimiter//trim(confname)//EMsoftnativedelimiter// &
+             trim(emsoftname)//EMsoftnativedelimiter//trim(jsonfilename)
+end if
 
-! get the environment variables for the EMsoft root and data folders
-pathstring = ''
-call getenv("EMsoftpathname",pathstring)
-EMsoftpathname = ''
-EMdatapathname = ''
+! test whether or not this file actually exists
+inquire(file=trim(jsonname),exist=jexists)
 
-if (pathstring.eq.'') then ! try the EMsoftConfig.json file
+! if this routine is called with config=.TRUE. parameter, then that means that we
+! must create a new EMsoftConfig.json file if it doesn't already exist; we will inform
+! the user if it does exist, and rename the existing file
+if (present(config)) then
+  if (config.eqv..TRUE.) then
+    call getcwd(cwd)
+    fname = trim(cwd)//EMsoftnativedelimiter//'EMsoftinit'
+    inquire(file=trim(fname),exist=fexists)
+    if (.not.(fexists)) then
+      write (*,*) 'Please execute the EMsoftinit program from inside the EMsoft Bin or bin folder'
+      stop
+    end if 
+    if (jexists) then 
+! first of all, we need to figure out where the EMsoftinit executable is located
+      write (*,*) '-------'
+      write (*,*) 'WARNING: An older configuration file already exists in the .config/EMsoft folder'
+      write (*,*) '         The existing file will be renamed and a new file created.'
+      write (*,"(/'          Do you want to continue ? (y/n) ',$)")
+      read(*,"(A1)") yesno
+      if (yesno.eq.'n') then 
+        stop 'program terminated'
+      end if
+      write (*,*) '         Renaming old file to ',trim(jsonname)//'.save'
+      write (*,*) '         Creating new configuration file'
+      write (*,*) '-------'
+      call system('mv '//trim(jsonname)//' '//trim(jsonname)//'.save')
+    end if
+    jexists = .FALSE.
+  end if
+end if
 
+if (jexists) then ! this is not the first time an EMsoft program is executed... 
 ! initialize the json state variables
   error_cnt = 0
   call json_initialize()
@@ -342,16 +404,6 @@ if (pathstring.eq.'') then ! try the EMsoftConfig.json file
     stop
   end if
 
-  ! get the user's home directory to prepend to the config file name
-  if (trim(EMsoftplatform).eq.'Windows') then
-    call getenv("USERPROFILE",dirstring)
-    dirstring = EMsoft_fromNativePath(dirstring)
-  else
-    call getenv("HOME",dirstring)
-  end if 
-
-  jsonname = trim(dirstring)//'/.config/EMsoft/EMsoftConfig.json'
-
 ! and load the file
   call json%load_file(filename = trim(jsonname))
   if (json_failed()) then    !if there was an error reading the file
@@ -359,14 +411,24 @@ if (pathstring.eq.'') then ! try the EMsoftConfig.json file
     stop
   end if
 
-! if we find the field 'ep' in the file, then we read its corresponding value
-! if it is not there, then we abort
+! if we find the field 'ep' in the file, then we read its corresponding value;
+! if either one of the main variables EMsoftpathname or EMdatapathname is not there, then we abort
   ep = 'EMsoftpathname'
   call json%get(trim(ep), cval, found)
   if (.not. found) then
     write(error_unit,'(A)') 'WARNING: field '//trim(ep)//' not found in json file'
+    stop
   else
     EMsoftpathname = trim(cval)
+  end if
+
+  ep = 'EMdatapathname'
+  call json%get(trim(ep), cval, found)
+  if (.not. found) then
+    write(error_unit,'(A)') 'WARNING: field '//trim(ep)//' not found in json file'
+    stop
+  else
+    EMdatapathname = trim(cval)
   end if
 
   ep = 'EMtmppathname'
@@ -375,14 +437,6 @@ if (pathstring.eq.'') then ! try the EMsoftConfig.json file
     write(error_unit,'(A)') 'WARNING: field '//trim(ep)//' not found in json file'
   else
     EMtmppathname = trim(cval)
-  end if
-
-  ep = 'EMdatapathname'
-  call json%get(trim(ep), cval, found)
-  if (.not. found) then
-    write(error_unit,'(A)') 'WARNING: field '//trim(ep)//' not found in json file'
-  else
-    EMdatapathname = trim(cval)
   end if
 
   ep = 'UserName'
@@ -403,18 +457,118 @@ if (pathstring.eq.'') then ! try the EMsoftConfig.json file
     useremail = trim(cval)
   end if
 
-  if ((EMsoftpathname.eq.'').or.(EMdatapathname.eq.'')) then
-    write (error_unit,'(A)') 'ERROR: environment variables are undefined; aborting program'
-    stop
-  end if 
-
 ! and cleanup
   call json%destroy()
-else  ! read the other string from the environment variables
-  EMsoftpathname = trim(pathstring)
-  pathstring=''
-  call getenv("EMdatapathname",pathstring)
-  EMdatapathname = trim(pathstring)
+else  ! the config file does not exist, so we create it with "smart" default values
+
+! next, we look for the .config/EMsoft/EMsoftConfig.json file one step at a time
+  call getenv("HOME",dirstring)
+  call chdir(trim(dirstring))
+
+! check for the .config folder
+  dirname = trim(dirstring)//EMsoftnativedelimiter//trim(confname)
+  inquire(file=trim(dirname),exist=fexists)
+  if (.not.(fexists)) then
+    call system('mkdir '//trim(dirname))
+  end if
+  call chdir(trim(dirname))
+
+! check for the EMsoft folder
+  dirname = trim(dirname)//EMsoftnativedelimiter//'EMsoft'
+  inquire(file=trim(dirname),exist=fexists)
+  if (.not.(fexists)) then
+    call system('mkdir '//trim(dirname))
+  end if
+  call chdir(trim(dirname))
+
+! check whether or not the tmp folder exists...
+  fname = trim(dirname)//EMsoftnativedelimiter//'tmp'
+  inquire(file=trim(dirname),exist=fexists)
+  if (.not.(fexists)) then
+    call system('mkdir '//trim(dirname))
+  end if
+
+! ok, so we have created the correct folder structure; now we need to generate the 
+! EMsoftConfig.json file
+
+! first, guess at where the EMsoft main folder is located; we'll check if this is 
+! a Debug or release version
+  i = index(trim(cwd),'Build')
+  if (i.gt.0) then   ! this is an EMsoft Build, not a release package
+    release = 'No'
+! get the substring upto '/Build'
+    EMsoftpathname = cwd(1:i-2)
+  else
+    release = 'Yes'
+    i = index(trim(cwd),'bin')
+    EMsoftpathname = cwd(1:i-2)
+  end if
+
+! the default EMdata folder is at the same level as EMsoft, so we 
+! we initialize this variable
+  i = index(trim(EMsoftpathname),'EMsoft')
+  if (i.eq.0) then
+    write (*,*) '------'
+    write (*,*) 'Installation problem !!!'
+    write (*,*) 'The top folder of this package *must* be called EMsoft'
+    write (*,*) '------'
+    stop  
+  else
+    EMdatapathname = EMsoftpathname(1:i-2)//EMsoftnativedelimiter//'EMdata'
+  end if
+
+! if EMdata does not exist, create it and also create an XtalFolder inside of it.
+  dataname = trim(EMdatapathname)
+  inquire(file=trim(dataname),exist=fexists)
+  if (.not.(fexists)) then
+    call system('mkdir '//trim(dataname))
+    write (*,*) trim(dataname),' folder did not exist and has been created'
+  end if
+  xtalname = trim(dataname)//EMsoftnativedelimiter//'XtalFolder'
+  inquire(file=trim(xtalname),exist=fexists)
+  if (.not.(fexists)) then
+    call system('mkdir '//trim(xtalname))
+    write (*,*) trim(xtalname),' folder did not exist and has been created'
+  end if
+
+! library location
+  library = ''
+  if (release.eq.'Yes') then
+    library = trim(EMsoftpathname)//'/lib'
+  else
+    library = trim(EMsoftpathname)//'/Build/Bin'
+  end if
+
+! generate the json file
+  open(unit=dataunit,file=trim(jsonname),status='new',form='formatted')
+  write (dataunit,"('{')")
+  write (dataunit,"(A,A,'EMsoftpathname',A,': ',A,A,A,',')") tab, edp, edp, edp, trim(EMsoftpathname)//'/',edp
+  write (dataunit,"(A,A,'EMdatapathname',A,': ',A,A,A,',')") tab, edp, edp, edp, trim(EMdatapathname)//'/',edp
+  write (dataunit,"(A,A,'EMtmppathname',A,': ',A,A,A,',')") tab, edp, edp, edp, trim(fname)//'/',edp
+  write (dataunit,"(A,A,'EMsoftLibraryLocation',A,': ',A,A,A,',')") tab, edp, edp, edp, trim(library)//'/',edp
+  write (dataunit,"(A,A,'Release',A,': ',A,A,A,',')") tab, edp, edp, edp, trim(release), edp
+  
+  write (*,*) '------'
+  write (*,*) 'Please respond to the following questions (each entry should be less than 132 characters)'
+  write(*,"(A,$)") '  Enter your user name : '
+  read(*,"(A)") username
+  write (dataunit,"(A,A,'UserName',A,': ',A,A,A,',')") tab, edp, edp, edp, trim(username), edp
+
+  write(*,"(A,$)") '  Enter your email address : '
+  read(*,"(A,$)") useremail
+  write (dataunit,"(A,A,'UserEmail',A,': ',A,A,A,',')") tab, edp, edp, edp, trim(useremail), edp
+
+  write(*,"(A,$)") '  Enter your affiliation : '
+  read(*,"(A,$)") userlocn
+  write (dataunit,"(A,A,'UserLocation',A,': ',A,A,A)") tab, edp, edp, edp, trim(userlocn), edp
+
+  write (dataunit,"('}')")
+  close(unit=dataunit,status='keep')
+
+  write (*,"(/' A new EMsoftConfig.json file has been created in the .config/EMsoft folder.')")
+  write (*,"(' You can edit this file to change the parameters as needed.')")
+  write (*,"(' Every EMsoft program will read the configuration file to figure out where things are located.'/)")
+
 end if
 
 ! define the derived pathname variables (globals)

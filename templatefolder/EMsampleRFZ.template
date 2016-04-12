@@ -1,0 +1,24 @@
+ &RFZlist
+! template file for the EMsampleRFZ program
+!
+! point group number
+ pgnum = 32,
+! number of sampling points along cube semi-edge
+ nsteps = 100,
+! grid type: 0 contains origin, 1 is has origin at center of grid box
+ gridtype = 0,
+! euler angle output file name
+ euoutname = 'undefined',
+! cubochoric output file name
+ cuoutname = 'undefined',
+! homochoric output file name
+ hooutname = 'undefined',
+! Rodrigues output file name
+ rooutname = 'undefined',
+! quaternion output file name
+ quoutname = 'undefined',
+! orientation matrix output file name
+ omoutname = 'undefined',
+! axis angle pair output file name
+ axoutname = 'undefined'
+ /

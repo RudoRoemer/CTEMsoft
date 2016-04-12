@@ -13,6 +13,7 @@ set(EMSoft_RESOURCE_FILES
   ${APP_DIR}/EMECPmaster.template
   ${APP_DIR}/EMKosselmaster.template
   ${APP_DIR}/EMMCOpenCL.template
+  ${APP_DIR}/EMsampleRFZ.template
 )
 
 file(COPY "${EMsoft_SOURCE_DIR}/templatefolder" DESTINATION "${PROJECT_BINARY_DIR}/")
